@@ -50,6 +50,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 {
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     NameNode name = objectTypeDefinitionNode.Name;
+                    
+                    // Skip types that don't have a corresponding entity configuration
+                    // This can happen when merging schemas from multiple data sources
+                    if (!entities.ContainsKey(dbEntityName))
+                    {
+                        continue;
+                    }
+                    
                     Entity entity = entities[dbEntityName];
                     // For stored procedures, only one mutation is created in the schema
                     // unlike table/views where we create one for each CUD operation.

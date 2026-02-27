@@ -67,6 +67,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 {
                     NameNode name = objectTypeDefinitionNode.Name;
                     string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
+                    
+                    // Skip types that don't have a corresponding entity configuration
+                    // This can happen when merging schemas from multiple data sources
+                    if (!entities.ContainsKey(entityName))
+                    {
+                        continue;
+                    }
+                    
                     Entity entity = entities[entityName];
 
                     if (entity.Source.Type is EntitySourceType.StoredProcedure)

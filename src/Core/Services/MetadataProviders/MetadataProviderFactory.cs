@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             {
                 ISqlMetadataProvider metadataProvider = dataSource.DatabaseType switch
                 {
-                    DatabaseType.CosmosDB_NoSQL => new CosmosSqlMetadataProvider(_runtimeConfigProvider, _fileSystem),
+                    DatabaseType.CosmosDB_NoSQL => new CosmosSqlMetadataProvider(_runtimeConfigProvider, _fileSystem, dataSourceName),
                     DatabaseType.MSSQL => new MsSqlMetadataProvider(_runtimeConfigProvider, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
                     DatabaseType.DWSQL => new MsSqlMetadataProvider(_runtimeConfigProvider, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
                     DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(_runtimeConfigProvider, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),

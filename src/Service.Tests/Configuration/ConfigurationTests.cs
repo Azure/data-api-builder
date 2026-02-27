@@ -3682,7 +3682,7 @@ type Moon {
             RuntimeConfigProvider provider = new(loader);
 
             DataApiBuilderException exception =
-                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
+                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem, provider.GetConfig().DefaultDataSourceName));
             Assert.AreEqual("Circular reference detected in the provided GraphQL schema for entity 'Character'.", exception.Message);
             Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
@@ -3734,7 +3734,7 @@ type Planet @model(name:""PlanetAlias"") {
             RuntimeConfigProvider provider = new(loader);
 
             DataApiBuilderException exception =
-                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
+                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem, provider.GetConfig().DefaultDataSourceName));
             Assert.AreEqual("The entity 'Character' was not found in the runtime config.", exception.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, exception.SubStatusCode);

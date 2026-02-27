@@ -700,6 +700,67 @@ public static class FieldFilterParser
                     op = isNull ? PredicateOperation.IS : PredicateOperation.IS_NOT;
                     value = GQLFilterParser.NullStringValue;
                     break;
+                case "some":
+                    op = PredicateOperation.ARRAY_SOME;
+                    if (value is List<ObjectFieldNode> elementFields && elementFields.Count > 0)
+                    {
+                        IInputValueDefinition elementFilterSchema = argumentObject.Fields["some"];
+                        Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, elementFields, processLiterals, false);
+                        predicates.Push(new PredicateOperand(new Predicate(
+                            new PredicateOperand(column),
+                            op,
+                            new PredicateOperand(nestedPredicate)
+                        )));
+                        continue;
+                    }
+
+                    break;
+                case "none":
+                    op = PredicateOperation.ARRAY_NONE;
+                    if (value is List<ObjectFieldNode> noneFields && noneFields.Count > 0)
+                    {
+                        IInputValueDefinition elementFilterSchema = argumentObject.Fields["none"];
+                        Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, noneFields, processLiterals, false);
+                        predicates.Push(new PredicateOperand(new Predicate(
+                            new PredicateOperand(column),
+                            op,
+                            new PredicateOperand(nestedPredicate)
+                        )));
+                        continue;
+                    }
+
+                    break;
+                case "all":
+                    op = PredicateOperation.ARRAY_ALL;
+                    if (value is List<ObjectFieldNode> allFields && allFields.Count > 0)
+                    {
+                        IInputValueDefinition elementFilterSchema = argumentObject.Fields["all"];
+                        Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, allFields, processLiterals, false);
+                        predicates.Push(new PredicateOperand(new Predicate(
+                            new PredicateOperand(column),
+                            op,
+                            new PredicateOperand(nestedPredicate)
+                        )));
+                        continue;
+                    }
+
+                    break;
+                case "any":
+                    processLiteral = false;
+                    bool hasAny = (bool)value;
+                    if (hasAny)
+                    {
+                        op = PredicateOperation.ARRAY_ANY;
+                        value = "true";
+                    }
+                    else
+                    {
+                        // If any is false, check if array is null or empty
+                        op = PredicateOperation.IS;
+                        value = GQLFilterParser.NullStringValue;
+                    }
+
+                    break;
                 default:
                     throw new NotSupportedException($"Operation {name} on int type not supported.");
             }

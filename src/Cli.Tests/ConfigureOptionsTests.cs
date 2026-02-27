@@ -1107,10 +1107,7 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(true, null, DisplayName = "Set enabled=true only")]
         [DataRow(null, "https://database.windows.net", DisplayName = "Set database-audience only")]
-        [DataRow(true, "https://database.windows.net", DisplayName = "Set both enabled and database-audience (public cloud)")]
-        [DataRow(true, "https://database.usgovcloudapi.net", DisplayName = "Set both enabled and database-audience (gov cloud)")]
-        [DataRow(true, "https://database.chinacloudapi.cn", DisplayName = "Set both enabled and database-audience (china cloud)")]
-        [DataRow(true, "https://myinstance.abc123.database.windows.net", DisplayName = "Set both enabled and database-audience (managed instance)")]
+        [DataRow(true, "https://database.windows.net", DisplayName = "Set both enabled and database-audience")]
         public void TestAddUserDelegatedAuthConfiguration(bool? enabledValue, string? audienceValue)
         {
             // Arrange

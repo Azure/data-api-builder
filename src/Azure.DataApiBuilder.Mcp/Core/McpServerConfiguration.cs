@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Azure.DataApiBuilder.Mcp.Model;
-using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;

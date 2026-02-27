@@ -782,6 +782,30 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test that when OBO is enabled, connection pooling is forcibly enabled even if
+        /// the original connection string has Pooling=false. Per-user pooling is required
+        /// for OBO to prevent connection exhaustion, so DAB intentionally overrides this setting.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void TestOboEnabled_ForciblyEnablesPooling_EvenWhenConnectionStringDisablesIt()
+        {
+            // Arrange - connection string explicitly disables pooling
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            (MsSqlQueryExecutor queryExecutor, RuntimeConfigProvider provider) = CreateQueryExecutorForPoolingTest(
+                connectionString: "Server=localhost;Database=test;Pooling=false;",
+                enableObo: true,
+                httpContextAccessor: httpContextAccessor);
+
+            // Act - check the stored connection string builder
+            SqlConnectionStringBuilder connBuilder = new(
+                queryExecutor.ConnectionStringBuilders[provider.GetConfig().DefaultDataSourceName].ConnectionString);
+
+            // Assert - pooling should be forcibly enabled despite Pooling=false in original connection string
+            Assert.IsTrue(connBuilder.Pooling,
+                "OBO requires per-user pooling, so Pooling should be forcibly enabled even when connection string specifies Pooling=false");
+        }
+
+        /// <summary>
         /// Test that when OBO is enabled and user claims are present, CreateConnection returns
         /// a connection string with a user-specific Application Name containing the pool hash.
         /// </summary>
@@ -834,12 +858,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 issuer: "https://login.microsoftonline.com/tenant-id/v2.0",
                 objectId: "user2-oid-bbbb");
 
-            (MsSqlQueryExecutor queryExecutor2, _) = CreateQueryExecutorForPoolingTest(
+            (MsSqlQueryExecutor queryExecutor2, RuntimeConfigProvider provider2) = CreateQueryExecutorForPoolingTest(
                 connectionString: "Server=localhost;Database=test;Application Name=DAB;",
                 enableObo: true,
                 httpContextAccessor: httpContextAccessor2);
 
-            SqlConnection conn2 = queryExecutor2.CreateConnection(provider.GetConfig().DefaultDataSourceName);
+            SqlConnection conn2 = queryExecutor2.CreateConnection(provider2.GetConfig().DefaultDataSourceName);
             SqlConnectionStringBuilder connBuilder2 = new(conn2.ConnectionString);
 
             // Assert - both should have |obo: in Application Name but different hashes
@@ -873,6 +897,81 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 $"Without user context, Application Name should start with 'BaseApp' but was '{connBuilder.ApplicationName}'");
             Assert.IsFalse(connBuilder.ApplicationName.Contains("|obo:"),
                 $"Without user context, Application Name should not contain '|obo:' but was '{connBuilder.ApplicationName}'");
+        }
+
+        /// <summary>
+        /// Test that when OBO is enabled and a user is authenticated but missing required claims
+        /// (iss or oid/sub), CreateConnection throws DataApiBuilderException with OboAuthenticationFailure.
+        /// This fail-safe behavior prevents cross-user connection pool contamination.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [DataRow("https://login.microsoftonline.com/tenant/v2.0", null, "oid/sub",
+            DisplayName = "Authenticated user with iss but missing oid/sub throws OboAuthenticationFailure")]
+        [DataRow(null, "user-object-id", "iss",
+            DisplayName = "Authenticated user with oid but missing iss throws OboAuthenticationFailure")]
+        [DataRow(null, null, "iss and oid/sub",
+            DisplayName = "Authenticated user with no claims throws OboAuthenticationFailure")]
+        public void TestOboEnabled_AuthenticatedUserMissingClaims_ThrowsException(
+            string? issuer,
+            string? objectId,
+            string missingClaimDescription)
+        {
+            // Arrange - Create an authenticated HttpContext with incomplete claims
+            Mock<IHttpContextAccessor> httpContextAccessor = CreateHttpContextAccessorWithAuthenticatedUserMissingClaims(
+                issuer: issuer,
+                objectId: objectId);
+
+            (MsSqlQueryExecutor queryExecutor, RuntimeConfigProvider provider) = CreateQueryExecutorForPoolingTest(
+                connectionString: "Server=localhost;Database=test;Application Name=TestApp;",
+                enableObo: true,
+                httpContextAccessor: httpContextAccessor);
+
+            // Act & Assert - CreateConnection should throw DataApiBuilderException
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+            {
+                queryExecutor.CreateConnection(provider.GetConfig().DefaultDataSourceName);
+            });
+
+            Assert.AreEqual(HttpStatusCode.Unauthorized, exception.StatusCode,
+                $"Expected Unauthorized status code when missing {missingClaimDescription}");
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure, exception.SubStatusCode,
+                $"Expected OboAuthenticationFailure sub-status code when missing {missingClaimDescription}");
+            Assert.IsTrue(exception.Message.Contains("iss") && exception.Message.Contains("oid"),
+                $"Exception message should mention required claims. Actual: {exception.Message}");
+        }
+
+        /// <summary>
+        /// Creates an HttpContextAccessor mock with an authenticated user that has incomplete claims.
+        /// Used to test fail-safe behavior when OBO is enabled but required claims are missing.
+        /// </summary>
+        /// <param name="issuer">The issuer claim value, or null to omit.</param>
+        /// <param name="objectId">The oid claim value, or null to omit.</param>
+        /// <returns>A configured HttpContextAccessor mock with authenticated user.</returns>
+        private static Mock<IHttpContextAccessor> CreateHttpContextAccessorWithAuthenticatedUserMissingClaims(
+            string? issuer,
+            string? objectId)
+        {
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DefaultHttpContext context = new();
+
+            // Create an authenticated identity (passing authenticationType makes IsAuthenticated = true)
+            System.Security.Claims.ClaimsIdentity identity = new("TestAuth");
+
+            // Only add claims if they are provided (non-null)
+            if (!string.IsNullOrEmpty(issuer))
+            {
+                identity.AddClaim(new System.Security.Claims.Claim("iss", issuer));
+            }
+
+            if (!string.IsNullOrEmpty(objectId))
+            {
+                identity.AddClaim(new System.Security.Claims.Claim("oid", objectId));
+            }
+
+            context.User = new System.Security.Claims.ClaimsPrincipal(identity);
+            httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
+
+            return httpContextAccessor;
         }
 
         #endregion

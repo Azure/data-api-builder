@@ -235,6 +235,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (HttpContextAccessor?.HttpContext?.User is null)
             {
+                QueryExecutorLogger.LogDebug(
+                    "Cannot create per-user pool key for data source {DataSourceName}: no HTTP context or user available.",
+                    dataSourceName);
                 return null;
             }
 
@@ -245,7 +248,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Callers are responsible for enforcing fail-safe behavior when claims are missing.
             string? iss = user.FindFirst("iss")?.Value;
 
-            // Prefer oid (stable GUID), fall back to sub for guest/B2B users
+            // User identifier claim resolution (in priority order):
+            // 1. "oid" - Short claim name for object ID, used in Entra ID v2.0 tokens
+            // 2. Full URI form - "http://schemas.microsoft.com/identity/claims/objectidentifier"
+            //    Used in Entra ID v1.0 tokens and some SAML-based flows
+            // 3. "sub" - Subject claim, unique per user per application. Used as fallback for
+            //    guest/B2B users where oid may not be present or stable across tenants
+            // 4. ClaimTypes.NameIdentifier - .NET standard claim type (maps to various underlying claims)
+            //    Acts as a last-resort fallback for non-Entra identity providers
             string? userKey = user.FindFirst("oid")?.Value
                 ?? user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
                 ?? user.FindFirst("sub")?.Value

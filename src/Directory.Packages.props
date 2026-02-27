@@ -39,11 +39,11 @@
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Primitives" Version="9.0.0" />
     <PackageVersion Include="Microsoft.ModelContextProtocol.HttpServer" Version="0.1.0-preview.25" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.9.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.13.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.13.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.9.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
     <!--When updating Microsoft.Data.SqlClient, update license URL in scripts/notice-generation.ps1-->
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.3" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.0" />

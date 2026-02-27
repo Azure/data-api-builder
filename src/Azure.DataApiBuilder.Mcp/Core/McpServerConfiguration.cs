@@ -4,9 +4,7 @@
 using System.Text.Json;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.ModelContextProtocol.HttpServer;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -19,38 +17,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
     internal static class McpServerConfiguration
     {
         /// <summary>
-        /// Determines whether Entra ID (AzureAd) is configured for Microsoft MCP authentication.
-        /// </summary>
-        internal static bool IsEntraIdConfigured(IConfiguration configuration)
-        {
-            string? clientId = configuration["AzureAd:ClientId"];
-            return !string.IsNullOrEmpty(clientId);
-        }
-
-        /// <summary>
         /// Configures the MCP server with tool capabilities.
-        /// Uses Microsoft MCP server (with MISE/Entra ID auth) when AzureAd is configured,
-        /// otherwise falls back to base MCP server without enterprise auth.
         /// </summary>
-        internal static IServiceCollection ConfigureMcpServer(this IServiceCollection services, IConfiguration configuration)
+        internal static IServiceCollection ConfigureMcpServer(this IServiceCollection services)
         {
-            IMcpServerBuilder builder;
-
-            if (IsEntraIdConfigured(configuration))
-            {
-                // Use Microsoft MCP server with MISE/Entra ID authentication
-                builder = services.AddMicrosoftMcpServer(configuration, options =>
-                {
-                    options.ResourceHost = "https://localhost";
-                });
-            }
-            else
-            {
-                // Fall back to base MCP server without enterprise auth
-                builder = services.AddMcpServer();
-            }
-
-            builder
+            services.AddMcpServer()
             .WithListToolsHandler((RequestContext<ListToolsRequestParams> request, CancellationToken ct) =>
             {
                 McpToolRegistry? toolRegistry = request.Services?.GetRequiredService<McpToolRegistry>();
@@ -85,6 +56,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     throw new McpException($"Unknown tool: '{toolName}'");
                 }
 
+                if (tool is null || request.Services is null)
+                {
+                    throw new InvalidOperationException("Tool or service provider unexpectedly null.");
+                }
+
                 JsonDocument? arguments = null;
                 try
                 {
@@ -102,7 +78,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     }
 
                     return await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                        tool!, toolName, arguments, request.Services!, ct);
+                        tool, toolName, arguments, request.Services, ct);
                 }
                 finally
                 {
@@ -111,14 +87,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
             })
             .WithHttpTransport();
 
-            // Configure underlying MCP server options
-            services.Configure<McpServerOptions>(options =>
+            // Configure underlying MCP server options defensively to avoid overwriting any defaults
+            services.PostConfigure<McpServerOptions>(options =>
             {
-                options.ServerInfo = new() { Name = McpProtocolDefaults.MCP_SERVER_NAME, Version = McpProtocolDefaults.MCP_SERVER_VERSION };
-                options.Capabilities = new()
-                {
-                    Tools = new()
-                };
+                options.ServerInfo ??= new() { Name = McpProtocolDefaults.MCP_SERVER_NAME, Version = McpProtocolDefaults.MCP_SERVER_VERSION };
+                options.ServerInfo.Name = McpProtocolDefaults.MCP_SERVER_NAME;
+                options.ServerInfo.Version = McpProtocolDefaults.MCP_SERVER_VERSION;
+                options.Capabilities ??= new();
+                options.Capabilities.Tools ??= new();
             });
 
             return services;

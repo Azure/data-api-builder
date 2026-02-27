@@ -142,6 +142,50 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Test that registering the same tool instance twice is silently ignored (idempotent).
+        /// This supports stdio mode where both McpToolRegistryInitializer and McpStdioHelper may register the same tools.
+        /// </summary>
+        [TestMethod]
+        public void RegisterTool_SameInstanceTwice_IsIdempotent()
+        {
+            // Arrange
+            McpToolRegistry registry = new();
+            IMcpTool tool = new MockMcpTool("my_tool", ToolType.BuiltIn);
+
+            // Act - Register the same instance twice
+            registry.RegisterTool(tool);
+            registry.RegisterTool(tool);
+
+            // Assert - Tool should be registered only once
+            IEnumerable<Tool> allTools = registry.GetAllTools();
+            Assert.AreEqual(1, allTools.Count());
+        }
+
+        /// <summary>
+        /// Test that registering a different instance with the same name throws an exception,
+        /// even though a same-instance re-registration would be allowed.
+        /// </summary>
+        [TestMethod]
+        public void RegisterTool_DifferentInstanceSameName_ThrowsException()
+        {
+            // Arrange
+            McpToolRegistry registry = new();
+            IMcpTool tool1 = new MockMcpTool("my_tool", ToolType.BuiltIn);
+            IMcpTool tool2 = new MockMcpTool("my_tool", ToolType.BuiltIn);
+
+            // Act - Register first instance
+            registry.RegisterTool(tool1);
+
+            // Assert - Different instance with same name should throw
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
+                () => registry.RegisterTool(tool2)
+            );
+
+            Assert.IsTrue(exception.Message.Contains("Duplicate MCP tool name 'my_tool' detected"));
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
+        }
+
+        /// <summary>
         /// Test that GetAllTools returns all registered tools.
         /// </summary>
         [TestMethod]

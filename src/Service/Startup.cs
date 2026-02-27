@@ -56,7 +56,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Client;
-using Microsoft.ModelContextProtocol.HttpServer;
 using NodaTime;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -500,7 +499,7 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton<DabCacheService>();
 
-            services.AddDabMcpServer(configProvider, Configuration);
+            services.AddDabMcpServer(configProvider);
 
             services.AddSingleton<IMcpStdioServer, McpStdioServer>();
 
@@ -812,13 +811,6 @@ namespace Azure.DataApiBuilder.Service
             // When enabled, the middleware will prevent Banana Cake Pop(GraphQL client) from loading
             // without proper authorization headers.
             app.UseClientRoleHeaderAuthorizationMiddleware();
-
-            // Only use Microsoft MCP middleware (MISE/Entra ID auth, rate limiting) when AzureAd is configured.
-            // When AzureAd is not configured, base MCP endpoints are used without enterprise auth.
-            if (McpServiceCollectionExtensions.IsEntraIdConfigured(Configuration))
-            {
-                app.UseMicrosoftMcpServer();
-            }
 
             IRequestExecutorManager requestExecutorManager = app.ApplicationServices.GetRequiredService<IRequestExecutorManager>();
             _hotReloadEventHandler.Subscribe(

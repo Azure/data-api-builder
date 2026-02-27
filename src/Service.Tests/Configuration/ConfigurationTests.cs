@@ -3735,7 +3735,6 @@ type Planet @model(name:""PlanetAlias"") {
             });
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
-            
             Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
             RuntimeConfigValidator validator = new(provider, fileSystem, loggerValidator.Object);
 

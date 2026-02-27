@@ -3,14 +3,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data.Common;
 using System.IO;
 using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;

@@ -105,6 +105,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(options => options.EnableDwNto1JoinOpt);
         // Ignore the FeatureFlags as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.FeatureFlags);
+        // Ignore the JSON schema path as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Autoentities);
         // Ignore the message as that's not serialized in our config file anyway.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
         // Ignore DefaultDataSourceName as that's not serialized in our config file.

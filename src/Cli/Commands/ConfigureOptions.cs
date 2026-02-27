@@ -29,6 +29,8 @@ namespace Cli.Commands
             string? dataSourceOptionsSchema = null,
             bool? dataSourceOptionsSetSessionContext = null,
             string? dataSourceHealthName = null,
+            bool? dataSourceUserDelegatedAuthEnabled = null,
+            string? dataSourceUserDelegatedAuthDatabaseAudience = null,
             int? depthLimit = null,
             bool? runtimeGraphQLEnabled = null,
             string? runtimeGraphQLPath = null,
@@ -84,6 +86,8 @@ namespace Cli.Commands
             DataSourceOptionsSchema = dataSourceOptionsSchema;
             DataSourceOptionsSetSessionContext = dataSourceOptionsSetSessionContext;
             DataSourceHealthName = dataSourceHealthName;
+            DataSourceUserDelegatedAuthEnabled = dataSourceUserDelegatedAuthEnabled;
+            DataSourceUserDelegatedAuthDatabaseAudience = dataSourceUserDelegatedAuthDatabaseAudience;
             // GraphQL
             DepthLimit = depthLimit;
             RuntimeGraphQLEnabled = runtimeGraphQLEnabled;
@@ -159,6 +163,12 @@ namespace Cli.Commands
 
         [Option("data-source.health.name", Required = false, HelpText = "Identifier for data source in health check report.")]
         public string? DataSourceHealthName { get; }
+
+        [Option("data-source.user-delegated-auth.enabled", Required = false, HelpText = "Enable user-delegated authentication (OBO) for Azure SQL and SQL Server. Default: false (boolean).")]
+        public bool? DataSourceUserDelegatedAuthEnabled { get; }
+
+        [Option("data-source.user-delegated-auth.database-audience", Required = false, HelpText = "Database resource identifier for token acquisition (e.g., https://database.windows.net for Azure SQL).")]
+        public string? DataSourceUserDelegatedAuthDatabaseAudience { get; }
 
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]
         public int? DepthLimit { get; }

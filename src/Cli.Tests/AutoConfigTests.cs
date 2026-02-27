@@ -55,9 +55,9 @@ public class AutoConfigTests
         Assert.IsTrue(success);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? config));
         Assert.IsNotNull(config.Autoentities);
-        Assert.IsTrue(config.Autoentities.AutoEntities.ContainsKey("test-def"));
+        Assert.IsTrue(config.Autoentities.Autoentities.ContainsKey("test-def"));
 
-        Autoentity autoentity = config.Autoentities.AutoEntities["test-def"];
+        Autoentity autoentity = config.Autoentities.Autoentities["test-def"];
         Assert.AreEqual(2, autoentity.Patterns.Include.Length);
         Assert.AreEqual("dbo.%", autoentity.Patterns.Include[0]);
         Assert.AreEqual("sys.%", autoentity.Patterns.Include[1]);
@@ -95,7 +95,7 @@ public class AutoConfigTests
         Assert.IsTrue(success);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? config));
 
-        Autoentity autoentity = config.Autoentities!.AutoEntities["test-def"];
+        Autoentity autoentity = config.Autoentities!.Autoentities["test-def"];
         Assert.IsTrue(autoentity.Template.Rest.Enabled);
         Assert.IsFalse(autoentity.Template.GraphQL.Enabled);
         Assert.IsTrue(autoentity.Template.Mcp!.DmlToolEnabled);
@@ -141,7 +141,7 @@ public class AutoConfigTests
         Assert.IsTrue(success);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? config));
 
-        Autoentity autoentity = config.Autoentities!.AutoEntities["test-def"];
+        Autoentity autoentity = config.Autoentities!.Autoentities["test-def"];
         // Include should remain from initial setup
         Assert.AreEqual(1, autoentity.Patterns.Include.Length);
         Assert.AreEqual("dbo.%", autoentity.Patterns.Include[0]);
@@ -178,7 +178,7 @@ public class AutoConfigTests
         Assert.IsTrue(success);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? config));
 
-        Autoentity autoentity = config.Autoentities!.AutoEntities["test-def"];
+        Autoentity autoentity = config.Autoentities!.Autoentities["test-def"];
         Assert.AreEqual(1, autoentity.Permissions.Length);
         Assert.AreEqual("authenticated", autoentity.Permissions[0].Role);
         Assert.AreEqual(4, autoentity.Permissions[0].Actions.Length);
@@ -265,9 +265,9 @@ public class AutoConfigTests
         // Assert
         Assert.IsTrue(success);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? config));
-        Assert.AreEqual(2, config.Autoentities!.AutoEntities.Count);
-        Assert.IsTrue(config.Autoentities.AutoEntities.ContainsKey("def-1"));
-        Assert.IsTrue(config.Autoentities.AutoEntities.ContainsKey("def-2"));
+        Assert.AreEqual(2, config.Autoentities!.Autoentities.Count);
+        Assert.IsTrue(config.Autoentities.Autoentities.ContainsKey("def-1"));
+        Assert.IsTrue(config.Autoentities.Autoentities.ContainsKey("def-2"));
     }
 
     /// <summary>

@@ -757,51 +757,33 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test that pooling remains enabled regardless of whether user-delegated-auth is configured.
-        /// When OBO is enabled, per-user pooling is automatic. When disabled, pooling stays as configured.
+        /// Test that the Pooling property from the connection string is never modified by DAB,
+        /// regardless of whether OBO is enabled or disabled. If Pooling=true, it stays true.
+        /// If Pooling=false, it stays false. DAB respects the user's explicit configuration.
         /// </summary>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
-        [DataRow(true, DisplayName = "OBO enabled - per-user pooling is automatic")]
-        [DataRow(false, DisplayName = "OBO disabled - pooling not modified")]
-        public void TestPoolingBehaviorWithAndWithoutUserDelegatedAuth(bool enableUserDelegatedAuth)
+        [DataRow(true, true, DisplayName = "OBO enabled, Pooling=true stays true")]
+        [DataRow(true, false, DisplayName = "OBO enabled, Pooling=false stays false")]
+        [DataRow(false, true, DisplayName = "OBO disabled, Pooling=true stays true")]
+        [DataRow(false, false, DisplayName = "OBO disabled, Pooling=false stays false")]
+        public void TestPoolingPropertyIsNeverModified(bool enableObo, bool poolingValue)
         {
-            // Arrange & Act
+            // Arrange
             Mock<IHttpContextAccessor> httpContextAccessor = new();
+            string connectionString = $"Server=localhost;Database=test;Pooling={poolingValue};";
+
+            // Act
             (MsSqlQueryExecutor queryExecutor, RuntimeConfigProvider provider) = CreateQueryExecutorForPoolingTest(
-                connectionString: "Server=localhost;Database=test;Pooling=true;",
-                enableObo: enableUserDelegatedAuth,
+                connectionString: connectionString,
+                enableObo: enableObo,
                 httpContextAccessor: httpContextAccessor);
 
-            SqlConnectionStringBuilder connBuilder = new(queryExecutor.ConnectionStringBuilders[provider.GetConfig().DefaultDataSourceName].ConnectionString);
-
-            // Assert - pooling should be enabled in both cases
-            string expectedMessage = enableUserDelegatedAuth
-                ? "Pooling should be enabled when user-delegated-auth is configured (per-user pooling is automatic)"
-                : "Pooling should remain as configured when user-delegated-auth is not used";
-            Assert.IsTrue(connBuilder.Pooling, expectedMessage);
-        }
-
-        /// <summary>
-        /// Test that when OBO is enabled, the user's pooling setting from the connection string is respected.
-        /// DAB does not override the user's choice - if they set Pooling=false, it stays false.
-        /// </summary>
-        [TestMethod, TestCategory(TestCategory.MSSQL)]
-        public void TestOboEnabled_RespectsUserPoolingSetting()
-        {
-            // Arrange - connection string explicitly disables pooling
-            Mock<IHttpContextAccessor> httpContextAccessor = new();
-            (MsSqlQueryExecutor queryExecutor, RuntimeConfigProvider provider) = CreateQueryExecutorForPoolingTest(
-                connectionString: "Server=localhost;Database=test;Pooling=false;",
-                enableObo: true,
-                httpContextAccessor: httpContextAccessor);
-
-            // Act - check the stored connection string builder
             SqlConnectionStringBuilder connBuilder = new(
                 queryExecutor.ConnectionStringBuilders[provider.GetConfig().DefaultDataSourceName].ConnectionString);
 
-            // Assert - pooling setting should be respected from user's connection string
-            Assert.IsFalse(connBuilder.Pooling,
-                "User's Pooling=false setting should be respected, not overridden by OBO");
+            // Assert - Pooling property should be unchanged from the original connection string
+            Assert.AreEqual(poolingValue, connBuilder.Pooling,
+                $"Pooling={poolingValue} should remain unchanged when OBO is {(enableObo ? "enabled" : "disabled")}");
         }
 
         /// <summary>
@@ -825,17 +807,64 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SqlConnectionStringBuilder connBuilder = new(conn.ConnectionString);
 
             // Assert - Application Name should have hash prefix followed by the base name
-            // Format: {hash}|{user-custom-appname} where hash is ~22 chars
+            // Format: {hash}|{user-custom-appname}
+            // Hash is 16 bytes truncated SHA256, Base64-encoded to ~22 chars (16 bytes * 4/3 = 21.3)
             // Hash is placed first to ensure it's never truncated if app name exceeds 128 chars
             Assert.IsTrue(connBuilder.ApplicationName.Contains("|"),
                 $"Application Name should contain '|' separator but was '{connBuilder.ApplicationName}'");
             Assert.IsTrue(connBuilder.ApplicationName.Contains("TestApp"),
                 $"Application Name should contain 'TestApp' but was '{connBuilder.ApplicationName}'");
             // Hash should be at the start (before the | separator)
+            // 16 bytes Base64-encoded (without padding) = ~22 characters
             string hashPart = connBuilder.ApplicationName.Split('|')[0];
             Assert.IsTrue(hashPart.Length >= 20 && hashPart.Length <= 25,
-                $"Hash prefix should be ~22 chars but was {hashPart.Length} chars: '{hashPart}'");
+                $"Hash prefix should be ~22 chars (16 bytes Base64) but was {hashPart.Length} chars: '{hashPart}'");
             Assert.IsTrue(connBuilder.Pooling, "Pooling should be enabled");
+        }
+
+        /// <summary>
+        /// Test that when the base Application Name + hash prefix exceeds 128 characters,
+        /// the base app name is truncated (not the hash) to fit within SQL Server's limit.
+        /// This verifies the hash-first format ensures pool isolation even with long app names.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void TestOboWithLongAppName_TruncatesToFitWithinLimit()
+        {
+            // Arrange - Create an Application Name that would exceed 128 chars when hash is added
+            // Hash prefix is ~22 chars + "|" = 23 chars, so base app name of 120 chars would exceed limit
+            string longAppName = new('A', 120); // 120 chars, plus 23 for hash = 143 total
+
+            Mock<IHttpContextAccessor> httpContextAccessor = CreateHttpContextAccessorWithClaims(
+                issuer: "https://login.microsoftonline.com/tenant-id/v2.0",
+                objectId: "user-object-id-12345");
+
+            (MsSqlQueryExecutor queryExecutor, RuntimeConfigProvider provider) = CreateQueryExecutorForPoolingTest(
+                connectionString: $"Server=localhost;Database=test;Application Name={longAppName};",
+                enableObo: true,
+                httpContextAccessor: httpContextAccessor);
+
+            // Act
+            SqlConnection conn = queryExecutor.CreateConnection(provider.GetConfig().DefaultDataSourceName);
+            SqlConnectionStringBuilder connBuilder = new(conn.ConnectionString);
+
+            // Assert - Application Name should be truncated to 128 chars max
+            Assert.IsTrue(connBuilder.ApplicationName.Length <= 128,
+                $"Application Name should be <= 128 chars but was {connBuilder.ApplicationName.Length} chars");
+
+            // Hash should still be at the start and complete (not truncated)
+            string[] parts = connBuilder.ApplicationName.Split('|');
+            Assert.AreEqual(2, parts.Length, "Application Name should have exactly one '|' separator");
+
+            string hashPart = parts[0];
+            Assert.IsTrue(hashPart.Length >= 20 && hashPart.Length <= 25,
+                $"Hash prefix should be ~22 chars (16 bytes Base64) but was {hashPart.Length} chars: '{hashPart}'");
+
+            // The base app name should be truncated, not the hash
+            string truncatedAppName = parts[1];
+            Assert.IsTrue(truncatedAppName.Length < longAppName.Length,
+                $"Base app name should be truncated from {longAppName.Length} chars but was {truncatedAppName.Length} chars");
+            Assert.IsTrue(truncatedAppName.All(c => c == 'A'),
+                "Truncated app name should contain only the original characters (no corruption)");
         }
 
         /// <summary>
@@ -900,7 +929,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(connBuilder.ApplicationName.StartsWith("BaseApp"),
                 $"Without user context, Application Name should start with 'BaseApp' but was '{connBuilder.ApplicationName}'");
             // When no user context, the app name should NOT have the hash prefix pattern
-            // (hash prefix would be ~22 chars followed by |)
+            // (hash prefix is 16 bytes Base64-encoded = ~22 chars, followed by |)
             string[] parts = connBuilder.ApplicationName.Split('|');
             bool hasHashPrefix = parts.Length > 1 && parts[0].Length >= 20 && parts[0].Length <= 25;
             Assert.IsFalse(hasHashPrefix,

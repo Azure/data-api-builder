@@ -279,7 +279,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// while providing sufficient collision resistance.
         /// </summary>
         /// <param name="key">The pool key to hash (format: iss|oid or iss|sub).</param>
-        /// <returns>A URL-safe Base64-encoded hash of the key (~22 characters).</returns>
+        /// <returns>A URL-safe Base64-encoded hash of the key (16 characters).</returns>
         private static string HashPoolKey(string key)
         {
             byte[] fullHash = System.Security.Cryptography.SHA256.HashData(

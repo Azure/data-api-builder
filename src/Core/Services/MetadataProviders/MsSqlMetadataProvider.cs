@@ -33,11 +33,12 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public MsSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
+            RuntimeConfigValidator runtimeConfigValidator,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,
             bool isValidateOnly = false)
-            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly)
+            : base(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
         }
@@ -374,7 +375,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (addedEntities == 0)
                 {
-                    _logger.LogWarning($"No new entities were generated from the autoentity {autoentityName} defined in the configuration.");
+                    _logger.LogWarning("No new entities were generated from the autoentity {autoentityName} defined in the configuration.", autoentityName);
                 }
             }
 

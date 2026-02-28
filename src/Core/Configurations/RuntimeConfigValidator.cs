@@ -96,18 +96,6 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateLoggerFilters(runtimeConfig);
         ValidateAzureLogAnalyticsAuth(runtimeConfig);
         ValidateFileSinkPath(runtimeConfig);
-
-        // Running these graphQL validations only in development mode to ensure
-        // fast startup of engine in production mode.
-        if (runtimeConfig.IsDevelopmentMode())
-        {
-            ValidateEntityConfiguration(runtimeConfig);
-
-            if (runtimeConfig.IsGraphQLEnabled)
-            {
-                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
-            }
-        }
     }
 
     /// <summary>
@@ -330,6 +318,19 @@ public class RuntimeConfigValidator : IConfigValidator
 
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
+
+        // Running these graphQL validations only in development mode to ensureExpand commentComment on line L100
+        // fast startup of engine in production mode.
+        if (runtimeConfig.IsDevelopmentMode())
+        {
+            ValidateEntityConfiguration(runtimeConfig);
+
+            if (runtimeConfig.IsGraphQLEnabled)
+            {
+                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
+            }
+        }
+
         ValidatePermissionsInConfig(runtimeConfig);
 
         _logger.LogInformation("Validating entity relationships.");
@@ -499,6 +500,7 @@ public class RuntimeConfigValidator : IConfigValidator
         // Only used for validation so we don't need the handler which is for hot reload scenarios.
         MetadataProviderFactory metadataProviderFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
+            runtimeConfigValidator: this,
             queryManagerFactory: queryManagerFactory,
             logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
             fileSystem: _fileSystem,
@@ -1593,5 +1595,30 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Checks that all of the entities created with the Entities and Autoentities properties
+    /// are valid by having unique paths for both REST and GraphQL, that there are no duplicate
+    /// Queries or Mutation entities, and ensure the semantic correctness of all the entities.
+    /// </summary>
+    /// <param name="runtimeConfig">The runtime configuration.</param>
+    public async Task ValidateEntityAndAutoentityConfigurations(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.IsDevelopmentMode())
+        {
+            ValidateEntityConfiguration(runtimeConfig);
+
+            if (runtimeConfig.IsGraphQLEnabled)
+            {
+                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
+            }
+
+            // Running only in developer mode to ensure fast and smooth startup in production.
+            ValidatePermissionsInConfig(runtimeConfig);
+        }
+
+        ILoggerFactory loggerFactory = new LoggerFactory();
+        await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
     }
 }

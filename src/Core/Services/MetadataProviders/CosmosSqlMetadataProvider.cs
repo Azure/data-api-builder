@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public List<Exception> SqlMetadataExceptions { get; private set; } = new();
 
-        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
+        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, RuntimeConfigValidator runtimeConfigValidator, IFileSystem fileSystem)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             _fileSystem = fileSystem;

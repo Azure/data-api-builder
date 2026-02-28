@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -158,7 +159,10 @@ type PlanetAgain @model {
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
         RuntimeConfigProvider provider = new(loader);
 
-        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem);
+        Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
+        RuntimeConfigValidator validator = new(provider, fileSystem, loggerValidator.Object);
+
+        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, validator, fileSystem);
         Mock<IMetadataProviderFactory> metadataProviderFactory = new();
         metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(cosmosSqlMetadataProvider);
 

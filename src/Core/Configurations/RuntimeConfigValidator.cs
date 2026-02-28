@@ -318,6 +318,19 @@ public class RuntimeConfigValidator : IConfigValidator
 
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
+
+        // Running these graphQL validations only in development mode to ensureExpand commentComment on line L100
+        // fast startup of engine in production mode.
+        if (runtimeConfig.IsDevelopmentMode())
+        {
+            ValidateEntityConfiguration(runtimeConfig);
+
+            if (runtimeConfig.IsGraphQLEnabled)
+            {
+                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
+            }
+        }
+
         ValidatePermissionsInConfig(runtimeConfig);
 
         _logger.LogInformation("Validating entity relationships.");
@@ -1590,7 +1603,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// Queries or Mutation entities, and ensure the semantic correctness of all the entities.
     /// </summary>
     /// <param name="runtimeConfig">The runtime configuration.</param>
-    public void ValidateEntityAndAutoentityConfigurations(RuntimeConfig runtimeConfig)
+    public async Task ValidateEntityAndAutoentityConfigurations(RuntimeConfig runtimeConfig)
     {
         if (runtimeConfig.IsDevelopmentMode())
         {
@@ -1604,5 +1617,8 @@ public class RuntimeConfigValidator : IConfigValidator
             // Running only in developer mode to ensure fast and smooth startup in production.
             ValidatePermissionsInConfig(runtimeConfig);
         }
+
+        ILoggerFactory loggerFactory = new LoggerFactory();
+        await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
     }
 }

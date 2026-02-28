@@ -339,7 +339,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Running these graphQL validations only in development mode to ensure
             // fast startup of engine in production mode.
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            _runtimeConfigValidator.ValidateEntityAndAutoentityConfigurations(runtimeConfig);
+            await _runtimeConfigValidator.ValidateEntityAndAutoentityConfigurations(runtimeConfig);
 
             GenerateDatabaseObjectForEntities();
 

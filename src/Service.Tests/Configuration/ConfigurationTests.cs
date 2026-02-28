@@ -5541,14 +5541,12 @@ type Planet @model(name:""PlanetAlias"") {
             Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
             RuntimeConfigValidator configValidator = new(configProvider, fileSystem, loggerValidator.Object);
 
-            LoggerFactory loggerFactory = new();
-
             try
             {
-                await configValidator.ValidateEntitiesMetadata(configuration, loggerFactory);
+                await configValidator.ValidateEntityAndAutoentityConfigurations(configuration);
                 Assert.Fail("It is expected for DAB to fail due to entities not containing unique parameters.");
             }
-            catch (Exception ex)
+            catch (DataApiBuilderException ex)
             {
                 Assert.AreEqual(exceptionMessage, ex.Message);
             }

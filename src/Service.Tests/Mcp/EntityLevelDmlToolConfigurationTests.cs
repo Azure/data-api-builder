@@ -48,6 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow("UpdateRecord", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}, \"fields\": {\"title\": \"Updated\"}}", false, DisplayName = "UpdateRecord respects entity-level DmlToolEnabled=false")]
         [DataRow("DeleteRecord", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}}", false, DisplayName = "DeleteRecord respects entity-level DmlToolEnabled=false")]
         [DataRow("ExecuteEntity", "{\"entity\": \"GetBook\"}", true, DisplayName = "ExecuteEntity respects entity-level DmlToolEnabled=false")]
+        [DataRow("AggregateRecords", "{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\"}", false, DisplayName = "AggregateRecords respects entity-level DmlToolEnabled=false")]
         public async Task DmlTool_RespectsEntityLevelDmlToolDisabled(string toolType, string jsonArguments, bool isStoredProcedure)
         {
             // Arrange
@@ -238,6 +239,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 "UpdateRecord" => new UpdateRecordTool(),
                 "DeleteRecord" => new DeleteRecordTool(),
                 "ExecuteEntity" => new ExecuteEntityTool(),
+                "AggregateRecords" => new AggregateRecordsTool(),
                 _ => throw new ArgumentException($"Unknown tool type: {toolType}", nameof(toolType))
             };
         }

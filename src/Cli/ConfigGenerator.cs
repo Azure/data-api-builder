@@ -1181,6 +1181,7 @@ namespace Cli
                 bool? updateRecord = currentDmlTools?.UpdateRecord;
                 bool? deleteRecord = currentDmlTools?.DeleteRecord;
                 bool? executeEntity = currentDmlTools?.ExecuteEntity;
+                bool? aggregateRecords = currentDmlTools?.AggregateRecords;
 
                 updatedValue = options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
                 if (updatedValue != null)
@@ -1230,6 +1231,14 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.execute-entity as '{updatedValue}'", updatedValue);
                 }
 
+                updatedValue = options?.RuntimeMcpDmlToolsAggregateRecordsEnabled;
+                if (updatedValue != null)
+                {
+                    aggregateRecords = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.aggregate-records as '{updatedValue}'", updatedValue);
+                }
+
                 if (hasToolUpdates)
                 {
                     updatedMcpOptions = updatedMcpOptions! with
@@ -1242,7 +1251,8 @@ namespace Cli
                             ReadRecords = readRecord,
                             UpdateRecord = updateRecord,
                             DeleteRecord = deleteRecord,
-                            ExecuteEntity = executeEntity
+                            ExecuteEntity = executeEntity,
+                            AggregateRecords = aggregateRecords
                         }
                     };
                 }

@@ -224,6 +224,9 @@ namespace Cli.Commands
         [Option("runtime.mcp.dml-tools.execute-entity.enabled", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsExecuteEntityEnabled { get; }
 
+        [Option("runtime.mcp.dml-tools.aggregate-records.enabled", Required = false, HelpText = "Enable DAB's MCP aggregate records tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsAggregateRecordsEnabled { get; }
+
         [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's cache globally. (You must also enable each entity's cache separately.). Default: false (boolean).")]
         public bool? RuntimeCacheEnabled { get; }
 

@@ -44,6 +44,7 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
             bool? updateRecord = null;
             bool? deleteRecord = null;
             bool? executeEntity = null;
+            bool? aggregateRecords = null;
 
             while (reader.Read())
             {
@@ -82,6 +83,9 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                             case "execute-entity":
                                 executeEntity = value;
                                 break;
+                            case "aggregate-records":
+                                aggregateRecords = value;
+                                break;
                             default:
                                 // Skip unknown properties
                                 break;
@@ -91,7 +95,8 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                     {
                         // Error on non-boolean values for known properties
                         if (property?.ToLowerInvariant() is "describe-entities" or "create-record"
-                            or "read-records" or "update-record" or "delete-record" or "execute-entity")
+                            or "read-records" or "update-record" or "delete-record" or "execute-entity"
+                            or "aggregate-records")
                         {
                             throw new JsonException($"Property '{property}' must be a boolean value.");
                         }
@@ -110,7 +115,8 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                 readRecords: readRecords,
                 updateRecord: updateRecord,
                 deleteRecord: deleteRecord,
-                executeEntity: executeEntity);
+                executeEntity: executeEntity,
+                aggregateRecords: aggregateRecords);
         }
 
         // For any other unexpected token type, return default (all enabled)
@@ -135,7 +141,8 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                                     value.UserProvidedReadRecords ||
                                     value.UserProvidedUpdateRecord ||
                                     value.UserProvidedDeleteRecord ||
-                                    value.UserProvidedExecuteEntity;
+                                    value.UserProvidedExecuteEntity ||
+                                    value.UserProvidedAggregateRecords;
 
         // Only write the boolean value if it's provided by user
         // This prevents writing "dml-tools": true when it's the default
@@ -179,6 +186,11 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
             if (value.UserProvidedExecuteEntity && value.ExecuteEntity.HasValue)
             {
                 writer.WriteBoolean("execute-entity", value.ExecuteEntity.Value);
+            }
+
+            if (value.UserProvidedAggregateRecords && value.AggregateRecords.HasValue)
+            {
+                writer.WriteBoolean("aggregate-records", value.AggregateRecords.Value);
             }
 
             writer.WriteEndObject();

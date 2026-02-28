@@ -275,7 +275,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Hashes the pool key using SHA256 truncated to 16 bytes for a compact, URL-safe identifier.
         /// Uses SHA256 (SHA-2 family) with 128-bit truncation per Microsoft security requirements.
-        /// This produces a ~22 character hash that fits well within SQL Server's 128-char Application Name limit
+        /// This produces a 16 character hash that fits well within SQL Server's 128-char Application Name limit
         /// while providing sufficient collision resistance.
         /// </summary>
         /// <param name="key">The pool key to hash (format: iss|oid or iss|sub).</param>

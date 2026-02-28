@@ -29,8 +29,8 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.10" />
     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.10" />
     <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.38.1" />
-    <PackageVersion Include="ModelContextProtocol" Version="0.3.0-preview.4" />
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.3.0-preview.4" />
+    <PackageVersion Include="ModelContextProtocol" Version="1.0.0" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.0.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />

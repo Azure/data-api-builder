@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -344,6 +343,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         public virtual Task PatchOneUpdateTestOnTableWithSecurityPolicy()
         {
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route on an entity with an auto-generated primary key.
+        /// With keyless PATCH support, this converts to an Insert operation and succeeds
+        /// with 201 Created.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Insert_KeylessWithAutoGenPK_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_KeylessWithAutoGenPK_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
         }
 
         /// <summary>
@@ -931,8 +957,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
 
         /// <summary>
         /// Tests the Patch functionality with a REST PATCH request
-        /// without a primary key route. We expect a failure and so
-        /// no sql query is provided.
+        /// without a primary key route. With keyless PUT/PATCH support,
+        /// this converts to an Insert operation. Since the entity has a
+        /// non-auto-generated PK and it's missing from the request body,
+        /// the Insert validation catches it with a BadRequest.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchWithNoPrimaryKeyRouteTest()
@@ -951,8 +979,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     exceptionExpected: true,
-                    expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
-                    expectedStatusCode: HttpStatusCode.BadRequest
+                    expectedErrorMessage: "Invalid request body. Missing field in body: id.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
             );
         }
 
@@ -988,7 +1017,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate failure of PATCH operation failing to satisfy the database policy for the update operation.
+        /// Test to validate failure of PATCH operation failing to satisfy the database policy for the insert operation.
         /// (because no record exists for given PK).
         /// </summary>
         [TestMethod]

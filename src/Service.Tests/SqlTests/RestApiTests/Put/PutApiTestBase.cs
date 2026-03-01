@@ -228,6 +228,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// without a primary key route on an entity with an auto-generated primary key.
+        /// With keyless PUT support, this converts to an Insert operation and succeeds
+        /// with 201 Created.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Insert_KeylessWithAutoGenPK_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PutOne_Insert_KeylessWithAutoGenPK_Test)),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
         /// Tests the PutOne functionality with a REST PUT request using
         /// headers that include as a key "If-Match" with an item that does exist,
         /// resulting in an update occuring. We then verify that the update occurred.
@@ -998,8 +1025,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         /// <summary>
         /// Tests the Put functionality with a REST PUT request
-        /// without a primary key route. We expect a failure and so
-        /// no sql query is provided.
+        /// without a primary key route. With keyless PUT/PATCH support,
+        /// this converts to an Insert operation. Since the entity has a
+        /// non-auto-generated PK and it's missing from the request body,
+        /// the Insert validation catches it with a BadRequest.
         /// </summary>
         [TestMethod]
         public virtual async Task PutWithNoPrimaryKeyRouteTest()
@@ -1018,11 +1047,41 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     exceptionExpected: true,
+                    expectedErrorMessage: "Invalid request body. Missing field in body: id.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
+        /// Tests that a PUT request with If-Match header (strict update semantics)
+        /// still requires a primary key route. When If-Match is present, the operation
+        /// becomes Update (not Upsert), so it cannot be converted to Insert.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutWithNoPrimaryKeyRouteAndIfMatchHeaderTest()
+        {
+            Dictionary<string, StringValues> headerDictionary = new();
+            headerDictionary.Add("If-Match", "*");
+            string requestBody = @"
+            {
+                ""title"": ""Batman Returns"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: string.Empty,
+                    operationType: EntityActionOperation.Upsert,
+                    headers: new HeaderDictionary(headerDictionary),
+                    requestBody: requestBody,
+                    exceptionExpected: true,
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
                     expectedStatusCode: HttpStatusCode.BadRequest
                 );
         }
-
         /// <summary>
         /// Tests that a cast failure of primary key value type results in HTTP 400 Bad Request.
         /// e.g. Attempt to cast a string '{}' to the 'publisher_id' column type of int will fail.

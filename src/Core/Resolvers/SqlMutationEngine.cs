@@ -397,9 +397,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 case EntityActionOperation.Insert:
 
                     HttpContext httpContext = GetHttpContext();
+                    // Use scheme/host from X-Forwarded-* headers if present, else fallback to request values
+                    string scheme = SqlPaginationUtil.ResolveRequestScheme(httpContext.Request);
+                    string host = SqlPaginationUtil.ResolveRequestHost(httpContext.Request);
                     string locationHeaderURL = UriHelper.BuildAbsolute(
-                            scheme: httpContext.Request.Scheme,
-                            host: httpContext.Request.Host,
+                            scheme: scheme,
+                            host: new HostString(host),
                             pathBase: GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()),
                             path: httpContext.Request.Path);
 

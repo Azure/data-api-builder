@@ -352,7 +352,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     tool, "aggregate_records", arguments: null, serviceProvider, CancellationToken.None));
 
             Assert.IsTrue(thrownEx.Message.Contains("aggregate_records"), "Exception message should contain tool name");
-            Assert.IsTrue(thrownEx.Message.Contains("1 seconds"), "Exception message should contain timeout duration");
+            Assert.IsTrue(thrownEx.Message.Contains("1 second"), "Exception message should contain timeout duration");
         }
 
         /// <summary>

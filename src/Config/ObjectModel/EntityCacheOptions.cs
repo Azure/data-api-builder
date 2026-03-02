@@ -30,26 +30,29 @@ public record EntityCacheOptions
 
     /// <summary>
     /// Whether the cache should be used for the entity.
+    /// When null, indicates the user did not explicitly set this property, and the entity
+    /// should inherit the runtime-level cache enabled setting.
+    /// Using Enabled.HasValue (rather than a separate UserProvided flag) ensures correct
+    /// behavior regardless of whether the object was created via JsonConstructor or with-expression.
     /// </summary>
     [JsonPropertyName("enabled")]
-    public bool? Enabled { get; init; } = false;
+    public bool? Enabled { get; init; }
 
     /// <summary>
     /// The number of seconds a cache entry is valid before eligible for cache eviction.
     /// </summary>
     [JsonPropertyName("ttl-seconds")]
-    public int? TtlSeconds { get; init; } = null;
+    public int? TtlSeconds { get; init; }
 
     /// <summary>
     /// The cache levels to use for a cache entry.
     /// </summary>
     [JsonPropertyName("level")]
-    public EntityCacheLevel? Level { get; init; } = null;
+    public EntityCacheLevel? Level { get; init; }
 
     [JsonConstructor]
     public EntityCacheOptions(bool? Enabled = null, int? TtlSeconds = null, EntityCacheLevel? Level = null)
     {
-        // TODO: shouldn't we apply the same "UserProvidedXyz" logic to Enabled, too?
         this.Enabled = Enabled;
 
         if (TtlSeconds is not null)

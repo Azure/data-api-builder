@@ -565,7 +565,8 @@ public record RuntimeConfig
 
     /// <summary>
     /// Returns the cache level value for a given entity.
-    /// If the property is not set, returns the default (L1L2) for a given entity.
+    /// If the entity explicitly sets level, that value is used.
+    /// Otherwise, the level is inferred from the runtime cache Level2 configuration.
     /// </summary>
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Cache level that a cache entry should be stored in.</returns>
@@ -592,10 +593,65 @@ public record RuntimeConfig
         {
             return entityConfig.Cache.Level.Value;
         }
-        else
+
+        return GlobalCacheEntryLevel();
+    }
+
+    /// <summary>
+    /// Determines whether caching is enabled for a given entity, taking into account
+    /// inheritance from the runtime cache settings.
+    /// If the entity explicitly sets Enabled (Enabled.HasValue is true), that value is used.
+    /// If the entity does not set Enabled (Enabled is null), the runtime cache enabled value is inherited.
+    /// Using Enabled.HasValue instead of a separate UserProvided flag ensures correctness
+    /// regardless of whether the object was created via JsonConstructor or with-expression.
+    /// </summary>
+    /// <param name="entityName">Name of the entity to check cache configuration.</param>
+    /// <returns>Whether caching is enabled for the entity.</returns>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided.</exception>
+    public virtual bool IsEntityCachingEnabled(string entityName)
+    {
+        if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
         {
-            return EntityCacheLevel.L1L2;
+            throw new DataApiBuilderException(
+                message: $"{entityName} is not a valid entity.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
+
+        // If the entity explicitly set Enabled, use that value.
+        if (entityConfig.Cache is not null && entityConfig.Cache.Enabled.HasValue)
+        {
+            return entityConfig.Cache.Enabled.Value;
+        }
+
+        // Otherwise, inherit from the runtime cache enabled setting.
+        return Runtime?.Cache?.Enabled is true;
+    }
+
+    /// <summary>
+    /// Returns the ttl-seconds value for the global cache entry.
+    /// If no value is explicitly set, returns the global default value.
+    /// </summary>
+    /// <returns>Number of seconds a cache entry should be valid before cache eviction.</returns>
+    public virtual int GlobalCacheEntryTtl()
+    {
+        return Runtime is not null && Runtime.IsCachingEnabled && Runtime.Cache.UserProvidedTtlOptions
+            ? Runtime.Cache.TtlSeconds.Value
+            : EntityCacheOptions.DEFAULT_TTL_SECONDS;
+    }
+
+    /// <summary>
+    /// Returns the cache level value for the global cache entry.
+    /// The level is inferred from the runtime cache Level2 configuration:
+    /// if Level2 is enabled, the level is L1L2; otherwise L1.
+    /// If runtime cache is not configured, the default cache level is used.
+    /// </summary>
+    /// <returns>Cache level that a cache entry should be stored in.</returns>
+    public virtual EntityCacheLevel GlobalCacheEntryLevel()
+    {
+        return Runtime?.Cache is not null
+            ? Runtime.Cache.InferredLevel
+            : EntityCacheOptions.DEFAULT_LEVEL;
     }
 
     /// <summary>
@@ -608,18 +664,6 @@ public record RuntimeConfig
     {
         bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
         return IsCachingEnabled && !setSessionContextEnabled;
-    }
-
-    /// <summary>
-    /// Returns the ttl-seconds value for the global cache entry.
-    /// If no value is explicitly set, returns the global default value.
-    /// </summary>
-    /// <returns>Number of seconds a cache entry should be valid before cache eviction.</returns>
-    public int GlobalCacheEntryTtl()
-    {
-        return Runtime is not null && Runtime.IsCachingEnabled && Runtime.Cache.UserProvidedTtlOptions
-            ? Runtime.Cache.TtlSeconds.Value
-            : EntityCacheOptions.DEFAULT_TTL_SECONDS;
     }
 
     private void CheckDataSourceNamePresent(string dataSourceName)

@@ -534,7 +534,7 @@ public record RuntimeConfig
     /// </summary>
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Number of seconds (ttl) that a cache entry should be valid before cache eviction.</returns>
-    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided.</exception>
     public virtual int GetEntityCacheEntryTtl(string entityName)
     {
         if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
@@ -547,10 +547,7 @@ public record RuntimeConfig
 
         if (!entityConfig.IsCachingEnabled)
         {
-            throw new DataApiBuilderException(
-                message: $"{entityName} does not have caching enabled.",
-                statusCode: HttpStatusCode.BadRequest,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+            return GlobalCacheEntryTtl();
         }
 
         if (entityConfig.Cache.UserProvidedTtlOptions)
@@ -569,7 +566,7 @@ public record RuntimeConfig
     /// </summary>
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Cache level that a cache entry should be stored in.</returns>
-    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided.</exception>
     public virtual EntityCacheLevel GetEntityCacheEntryLevel(string entityName)
     {
         if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
@@ -582,10 +579,7 @@ public record RuntimeConfig
 
         if (!entityConfig.IsCachingEnabled)
         {
-            throw new DataApiBuilderException(
-                message: $"{entityName} does not have caching enabled.",
-                statusCode: HttpStatusCode.BadRequest,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+            return EntityCacheOptions.DEFAULT_LEVEL;
         }
 
         if (entityConfig.Cache.UserProvidedLevelOptions)
@@ -594,7 +588,7 @@ public record RuntimeConfig
         }
         else
         {
-            return EntityCacheLevel.L1L2;
+            return EntityCacheOptions.DEFAULT_LEVEL;
         }
     }
 

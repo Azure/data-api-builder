@@ -60,8 +60,33 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                     operation: operation,
                     dbProcedure: dbProcedure);
 
-                // Execute the tool
-                CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, cancellationToken);
+                // Read query-timeout from current config per invocation (hot-reload safe).
+                int timeoutSeconds = McpRuntimeOptions.DEFAULT_QUERY_TIMEOUT_SECONDS;
+                RuntimeConfigProvider? runtimeConfigProvider = serviceProvider.GetService<RuntimeConfigProvider>();
+                if (runtimeConfigProvider is not null)
+                {
+                    RuntimeConfig config = runtimeConfigProvider.GetConfig();
+                    timeoutSeconds = config.Runtime?.Mcp?.EffectiveQueryTimeoutSeconds ?? McpRuntimeOptions.DEFAULT_QUERY_TIMEOUT_SECONDS;
+                }
+
+                // Wrap tool execution with the configured timeout using a linked CancellationTokenSource.
+                using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+
+                CallToolResult result;
+                try
+                {
+                    result = await tool.ExecuteAsync(arguments, serviceProvider, timeoutCts.Token);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // The timeout CTS fired, not the caller's token. Surface as TimeoutException
+                    // so downstream telemetry and tool handlers see TIMEOUT, not cancellation.
+                    throw new TimeoutException(
+                        $"The MCP tool '{toolName}' did not complete within {timeoutSeconds} seconds. "
+                        + "This is NOT a tool error. The operation exceeded the configured query-timeout. "
+                        + "Try narrowing results with a filter, reducing groupby fields, or using pagination.");
+                }
 
                 // Check if the tool returned an error result (tools catch exceptions internally
                 // and return CallToolResult with IsError=true instead of throwing)
@@ -124,6 +149,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 "delete_record" => "delete",
                 "describe_entities" => "describe",
                 "execute_entity" => "execute",
+                "aggregate_records" => "aggregate",
                 _ => "execute" // Fallback for any unknown built-in tools
             };
         }
@@ -188,6 +214,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             return ex switch
             {
                 OperationCanceledException => McpTelemetryErrorCodes.OPERATION_CANCELLED,
+                TimeoutException => McpTelemetryErrorCodes.TIMEOUT,
                 DataApiBuilderException dabEx when dabEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.AuthenticationChallenge
                     => McpTelemetryErrorCodes.AUTHENTICATION_FAILED,
                 DataApiBuilderException dabEx when dabEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed

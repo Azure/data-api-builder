@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         public const string OPERATION_CANCELLED = "OperationCancelled";
 
         /// <summary>
-        /// Timeout error code.
+        /// Operation timed out error code.
         /// </summary>
         public const string TIMEOUT = "Timeout";
     }

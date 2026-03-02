@@ -37,8 +37,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
         private static readonly HashSet<string> _validFunctions = new(StringComparer.OrdinalIgnoreCase) { "count", "avg", "sum", "min", "max" };
 
-        private static readonly HashSet<string> _numericFunctions = new(StringComparer.OrdinalIgnoreCase) { "avg", "sum", "min", "max" };
-
         public Tool GetToolMetadata()
         {
             return new Tool
@@ -82,18 +80,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             },
                             ""distinct"": {
                                 ""type"": ""boolean"",
-                                ""description"": ""When true, removes duplicate values before applying the aggregation function. Not applicable when field is '*'. Default is false."",
+                                ""description"": ""When true, removes duplicate values before applying the aggregation function. For example, count with distinct counts unique values only. Default is false."",
                                 ""default"": false
                             },
                             ""filter"": {
                                 ""type"": ""string"",
-                                ""description"": ""OData filter expression applied before aggregating (acts as a WHERE clause). Supported operators: eq, ne, gt, ge, lt, le, and, or, not. Example: 'unitPrice lt 10' filters to rows where unitPrice is less than 10 before aggregating."",
+                                ""description"": ""OData filter expression applied before aggregating (acts as a WHERE clause). Supported operators: eq, ne, gt, ge, lt, le, and, or, not. Example: 'unitPrice lt 10' filters to rows where unitPrice is less than 10 before aggregating. Example: 'discontinued eq true and categoryName eq ''Seafood''' filters discontinued seafood products."",
                                 ""default"": """"
                             },
                             ""groupby"": {
                                 ""type"": ""array"",
                                 ""items"": { ""type"": ""string"" },
-                                ""description"": ""Array of exact field names from describe_entities to group results by. Each unique combination of grouped field values produces one aggregated row."",
+                                ""description"": ""Array of exact field names from describe_entities to group results by. Each unique combination of grouped field values produces one aggregated row. Grouped field values are included in the response alongside the aggregated value. Example: ['categoryName'] groups by category. Example: ['categoryName', 'region'] groups by both fields."",
                                 ""default"": []
                             },
                             ""orderby"": {
@@ -104,7 +102,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             },
                             ""having"": {
                                 ""type"": ""object"",
-                                ""description"": ""Filter applied AFTER aggregating to filter grouped results by the computed aggregated value (acts as a HAVING clause). ONLY applies when groupby is provided."",
+                                ""description"": ""Filter applied AFTER aggregating to filter grouped results by the computed aggregated value (acts as a HAVING clause). ONLY applies when groupby is provided. Multiple operators are AND-ed together. For example, use gt with value 20 to keep groups where the aggregated value exceeds 20. Combine gte and lte to define a range."",
                                 ""properties"": {
                                     ""eq"":  { ""type"": ""number"", ""description"": ""Keep groups where the aggregated value equals this number."" },
                                     ""neq"": { ""type"": ""number"", ""description"": ""Keep groups where the aggregated value does not equal this number."" },
@@ -115,18 +113,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                                     ""in"":  {
                                         ""type"": ""array"",
                                         ""items"": { ""type"": ""number"" },
-                                        ""description"": ""Keep groups where the aggregated value matches any number in this list.""
+                                        ""description"": ""Keep groups where the aggregated value matches any number in this list. Example: [5, 10] keeps groups with aggregated value 5 or 10.""
                                     }
                                 }
                             },
                             ""first"": {
                                 ""type"": ""integer"",
-                                ""description"": ""Maximum number of grouped results to return. Used for pagination of grouped results. ONLY applies when groupby is provided. Must be >= 1."",
+                                ""description"": ""Maximum number of grouped results to return. Used for pagination of grouped results. ONLY applies when groupby is provided. Must be >= 1. When set, the response includes 'items', 'endCursor', and 'hasNextPage' fields for pagination."",
                                 ""minimum"": 1
                             },
                             ""after"": {
                                 ""type"": ""string"",
-                                ""description"": ""Opaque cursor string for pagination. Pass the 'endCursor' value from a previous response to get the next page of results.""
+                                ""description"": ""Opaque cursor string for pagination. Pass the 'endCursor' value from a previous response to get the next page of results. REQUIRES both groupby and first to be set. Do not construct this value manually; always use the endCursor from a previous response.""
                             }
                         },
                         ""required"": [""entity"", ""function"", ""field""]
@@ -212,13 +210,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
                         "Cannot use distinct=true with field='*'. DISTINCT requires a specific field name. Use a field name instead of '*' to count distinct values.", logger);
-                }
-
-                // For avg/sum/min/max, warn the caller that they need a numeric field
-                if (_numericFunctions.Contains(function) && field == "*")
-                {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
-                        $"Function '{function}' requires a numeric field name. Use a numeric field name from describe_entities instead of '*'.", logger);
                 }
 
                 string? filter = root.TryGetProperty("filter", out JsonElement filterEl) ? filterEl.GetString() : null;
@@ -348,7 +339,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // Execute query to get records
                 IQueryEngineFactory queryEngineFactory = serviceProvider.GetRequiredService<IQueryEngineFactory>();
                 IQueryEngine queryEngine = queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
-
                 JsonDocument? queryResult = await queryEngine.ExecuteAsync(context);
 
                 IActionResult actionResult = queryResult is null
@@ -584,7 +574,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <summary>
         /// Applies cursor-based pagination to aggregated results.
         /// The cursor is an opaque base64-encoded offset integer.
-        /// When after is provided without first, the cursor is ignored and all results from the start are returned.
         /// </summary>
         internal static PaginationResult ApplyPagination(
             List<Dictionary<string, object?>> allResults,

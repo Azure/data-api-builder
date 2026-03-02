@@ -315,6 +315,11 @@
                       "type": "boolean",
                       "description": "Enable/disable the execute-entity tool.",
                       "default": false
+                    },
+                    "aggregate-records": {
+                      "type": "boolean",
+                      "description": "Enable/disable the aggregate-records tool.",
+                      "default": false
                     }
                   }
                 }

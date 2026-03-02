@@ -150,6 +150,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 return McpErrorHelpers.ToolDisabled(toolName, logger);
             }
 
+            string entityName = string.Empty;
+
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -162,10 +164,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 JsonElement root = arguments.RootElement;
 
                 // Parse required arguments
-                if (!McpArgumentParser.TryParseEntity(root, out string entityName, out string parseError))
+                if (!McpArgumentParser.TryParseEntity(root, out string parsedEntityName, out string parseError))
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
+
+                entityName = parsedEntityName;
 
                 if (runtimeConfig.Entities?.TryGetValue(entityName, out Entity? entity) == true &&
                     entity.Mcp?.DmlToolEnabled == false)
@@ -381,13 +385,44 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     logger,
                     $"AggregateRecordsTool success for entity {entityName}.");
             }
+            catch (TimeoutException timeoutEx)
+            {
+                logger?.LogError(timeoutEx, "Aggregation operation timed out for entity {Entity}.", entityName);
+                return McpResponseBuilder.BuildErrorResult(
+                    toolName,
+                    "TimeoutError",
+                    $"The aggregation query for entity '{entityName}' timed out. "
+                    + "This is NOT a tool error. The database did not respond in time. "
+                    + "This may occur with large datasets or complex aggregations. "
+                    + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.",
+                    logger);
+            }
+            catch (TaskCanceledException taskEx)
+            {
+                logger?.LogError(taskEx, "Aggregation task was canceled for entity {Entity}.", entityName);
+                return McpResponseBuilder.BuildErrorResult(
+                    toolName,
+                    "TimeoutError",
+                    $"The aggregation query for entity '{entityName}' was canceled, likely due to a timeout. "
+                    + "This is NOT a tool error. The database did not respond in time. "
+                    + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.",
+                    logger);
+            }
             catch (OperationCanceledException)
             {
-                return McpResponseBuilder.BuildErrorResult(toolName, "OperationCanceled", "The aggregate operation was canceled.", logger);
+                logger?.LogWarning("Aggregation operation was canceled for entity {Entity}.", entityName);
+                return McpResponseBuilder.BuildErrorResult(
+                    toolName,
+                    "OperationCanceled",
+                    $"The aggregation query for entity '{entityName}' was canceled before completion. "
+                    + "This is NOT a tool error. The operation was interrupted, possibly due to a timeout or client disconnect. "
+                    + "No results were returned. You may retry the same request.",
+                    logger);
             }
-            catch (DbException argEx)
+            catch (DbException dbEx)
             {
-                return McpResponseBuilder.BuildErrorResult(toolName, "DatabaseOperationFailed", argEx.Message, logger);
+                logger?.LogError(dbEx, "Database error during aggregation for entity {Entity}.", entityName);
+                return McpResponseBuilder.BuildErrorResult(toolName, "DatabaseOperationFailed", dbEx.Message, logger);
             }
             catch (ArgumentException argEx)
             {

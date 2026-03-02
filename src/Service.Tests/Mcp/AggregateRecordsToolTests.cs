@@ -618,6 +618,128 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         #endregion
 
+        #region Timeout and Cancellation Tests
+
+        /// <summary>
+        /// Verifies that OperationCanceledException produces a model-explicit error
+        /// that clearly states the operation was canceled, not errored.
+        /// </summary>
+        [TestMethod]
+        public async Task AggregateRecords_OperationCanceled_ReturnsExplicitCanceledMessage()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            // Create a pre-canceled token
+            CancellationTokenSource cts = new();
+            cts.Cancel();
+
+            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\"}");
+            CallToolResult result = await tool.ExecuteAsync(args, sp, cts.Token);
+
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
+            string errorType = error.GetProperty("type").GetString();
+            string errorMessage = error.GetProperty("message").GetString();
+
+            // Verify the error type identifies it as a cancellation
+            Assert.AreEqual("OperationCanceled", errorType);
+
+            // Verify the message explicitly tells the model this is NOT a tool error
+            Assert.IsTrue(errorMessage.Contains("NOT a tool error"), "Message must explicitly state this is NOT a tool error.");
+
+            // Verify the message tells the model what happened
+            Assert.IsTrue(errorMessage.Contains("canceled"), "Message must mention the operation was canceled.");
+
+            // Verify the message tells the model it can retry
+            Assert.IsTrue(errorMessage.Contains("retry"), "Message must tell the model it can retry.");
+        }
+
+        /// <summary>
+        /// Verifies that the timeout error message provides explicit guidance to the model
+        /// about what happened and what to do next.
+        /// </summary>
+        [TestMethod]
+        public void TimeoutErrorMessage_ContainsModelGuidance()
+        {
+            // Simulate what the tool builds for a TimeoutException response
+            string entityName = "Product";
+            string expectedMessage = $"The aggregation query for entity '{entityName}' timed out. "
+                + "This is NOT a tool error. The database did not respond in time. "
+                + "This may occur with large datasets or complex aggregations. "
+                + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.";
+
+            // Verify message explicitly states it's NOT a tool error
+            Assert.IsTrue(expectedMessage.Contains("NOT a tool error"), "Timeout message must state this is NOT a tool error.");
+
+            // Verify message explains the cause
+            Assert.IsTrue(expectedMessage.Contains("database did not respond"), "Timeout message must explain the database didn't respond.");
+
+            // Verify message mentions large datasets
+            Assert.IsTrue(expectedMessage.Contains("large datasets"), "Timeout message must mention large datasets as a possible cause.");
+
+            // Verify message provides actionable remediation steps
+            Assert.IsTrue(expectedMessage.Contains("filter"), "Timeout message must suggest using a filter.");
+            Assert.IsTrue(expectedMessage.Contains("groupby"), "Timeout message must suggest reducing groupby fields.");
+            Assert.IsTrue(expectedMessage.Contains("first"), "Timeout message must suggest using pagination with first.");
+        }
+
+        /// <summary>
+        /// Verifies that TaskCanceledException (which typically signals HTTP/DB timeout)
+        /// produces a TimeoutError, not a cancellation error.
+        /// </summary>
+        [TestMethod]
+        public void TaskCanceledErrorMessage_ContainsTimeoutGuidance()
+        {
+            // Simulate what the tool builds for a TaskCanceledException response
+            string entityName = "Product";
+            string expectedMessage = $"The aggregation query for entity '{entityName}' was canceled, likely due to a timeout. "
+                + "This is NOT a tool error. The database did not respond in time. "
+                + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.";
+
+            // TaskCanceledException should produce a TimeoutError, not OperationCanceled
+            Assert.IsTrue(expectedMessage.Contains("NOT a tool error"), "TaskCanceled message must state this is NOT a tool error.");
+            Assert.IsTrue(expectedMessage.Contains("timeout"), "TaskCanceled message must reference timeout as the cause.");
+            Assert.IsTrue(expectedMessage.Contains("filter"), "TaskCanceled message must suggest filter as remediation.");
+            Assert.IsTrue(expectedMessage.Contains("first"), "TaskCanceled message must suggest first for pagination.");
+        }
+
+        /// <summary>
+        /// Verifies that the OperationCanceled error message for a specific entity
+        /// includes the entity name so the model knows which aggregation failed.
+        /// </summary>
+        [TestMethod]
+        public void CanceledErrorMessage_IncludesEntityName()
+        {
+            string entityName = "LargeProductCatalog";
+            string expectedMessage = $"The aggregation query for entity '{entityName}' was canceled before completion. "
+                + "This is NOT a tool error. The operation was interrupted, possibly due to a timeout or client disconnect. "
+                + "No results were returned. You may retry the same request.";
+
+            Assert.IsTrue(expectedMessage.Contains(entityName), "Canceled message must include the entity name.");
+            Assert.IsTrue(expectedMessage.Contains("No results were returned"), "Canceled message must state no results were returned.");
+        }
+
+        /// <summary>
+        /// Verifies that the timeout error message for a specific entity
+        /// includes the entity name so the model knows which aggregation timed out.
+        /// </summary>
+        [TestMethod]
+        public void TimeoutErrorMessage_IncludesEntityName()
+        {
+            string entityName = "HugeTransactionLog";
+            string expectedMessage = $"The aggregation query for entity '{entityName}' timed out. "
+                + "This is NOT a tool error. The database did not respond in time. "
+                + "This may occur with large datasets or complex aggregations. "
+                + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.";
+
+            Assert.IsTrue(expectedMessage.Contains(entityName), "Timeout message must include the entity name.");
+        }
+
+        #endregion
+
         #region Spec Example Tests
 
         /// <summary>

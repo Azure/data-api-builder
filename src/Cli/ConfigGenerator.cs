@@ -876,13 +876,15 @@ namespace Cli
             if (options.RuntimeMcpEnabled != null ||
                 options.RuntimeMcpPath != null ||
                 options.RuntimeMcpDescription != null ||
+                options.RuntimeMcpQueryTimeout != null ||
                 options.RuntimeMcpDmlToolsEnabled != null ||
                 options.RuntimeMcpDmlToolsDescribeEntitiesEnabled != null ||
                 options.RuntimeMcpDmlToolsCreateRecordEnabled != null ||
                 options.RuntimeMcpDmlToolsReadRecordsEnabled != null ||
                 options.RuntimeMcpDmlToolsUpdateRecordEnabled != null ||
                 options.RuntimeMcpDmlToolsDeleteRecordEnabled != null ||
-                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null)
+                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null ||
+                options.RuntimeMcpDmlToolsAggregateRecordsEnabled != null)
             {
                 McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
                 bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
@@ -1159,6 +1161,14 @@ namespace Cli
                 {
                     updatedMcpOptions = updatedMcpOptions! with { Description = (string)updatedValue };
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Description as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Mcp.QueryTimeout
+                updatedValue = options?.RuntimeMcpQueryTimeout;
+                if (updatedValue != null)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with { QueryTimeout = (int)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.QueryTimeout as '{updatedValue}'", updatedValue);
                 }
 
                 // Handle DML tools configuration

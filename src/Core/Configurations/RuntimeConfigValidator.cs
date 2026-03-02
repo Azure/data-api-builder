@@ -914,6 +914,16 @@ public class RuntimeConfigValidator : IConfigValidator
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
+
+        // Validate query-timeout if provided
+        if (runtimeConfig.Runtime.Mcp.QueryTimeout is not null && runtimeConfig.Runtime.Mcp.QueryTimeout < 1)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "MCP query-timeout must be a positive integer (>= 1 second). " +
+                         $"Provided value: {runtimeConfig.Runtime.Mcp.QueryTimeout}.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
     }
 
     private void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)

@@ -1223,7 +1223,7 @@ public class EndToEndTests
     [DataTestMethod]
     [DataRow(true, false, DisplayName = "dab init command specifies --rest.request-body-strict as false - REST request body allows extraneous fields.")]
     [DataRow(true, true, DisplayName = "dab init command specifies --rest.request-body-strict as true - REST request body doesn't allow extraneous fields.")]
-    [DataRow(false, true, DisplayName = "dab init command does not include --rest.request-body-strict flag. The default behavior is followed - REST request body doesn't allow extraneous fields.")]
+    [DataRow(false, false, DisplayName = "dab init command does not include --rest.request-body-strict flag. The default behavior is followed - REST request body allows extraneous fields.")]
     public void TestRestRequestBodyStrictMode(bool includeRestRequestBodyStrictFlag, bool isRequestBodyStrict)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",

@@ -35,7 +35,7 @@ public sealed class DetermineStatusCodeMiddleware(RequestDelegate next)
                 }
 
                 contextData[ExecutionContextData.HttpStatusCode] = HttpStatusCode.BadRequest;
-                context.Result = singleResult.WithContextData(contextData.ToImmutable());
+                singleResult.ContextData = contextData.ToImmutable();
             }
         }
     }

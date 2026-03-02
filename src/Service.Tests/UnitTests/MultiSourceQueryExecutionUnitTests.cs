@@ -26,6 +26,7 @@ using Azure.Identity;
 using HotChocolate;
 using HotChocolate.Execution;
 using HotChocolate.Resolvers;
+using HotChocolate.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -118,18 +119,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(1, cosmosQueryEngine.Invocations.Count, "Cosmos query engine should be invoked for multi-source query as an entity belongs to cosmos db.");
 
             OperationResult singleResult = result.ExpectOperationResult();
-            Assert.IsNull(singleResult.Errors, "There should be no errors in processing of multisource query.");
+            Assert.IsTrue(singleResult.Errors.IsEmpty, "There should be no errors in processing of multisource query.");
             Assert.IsNotNull(singleResult.Data, "Data should be returned for multisource query.");
-            IReadOnlyDictionary<string, object> data = singleResult.Data;
-            Assert.IsTrue(data.TryGetValue(QUERY_NAME_1, out object queryNode1), $"Query node for {QUERY_NAME_1} should have data populated.");
-            Assert.IsTrue(data.TryGetValue(QUERY_NAME_2, out object queryNode2), $"Query node for {QUERY_NAME_2} should have data populated.");
+            ResultDocument document = (ResultDocument)singleResult.Data.Value.Value;
+            Assert.IsTrue(document.Data.TryGetProperty(QUERY_NAME_1, out ResultElement queryNode1), $"Query node for {QUERY_NAME_1} should have data populated.");
+            Assert.IsTrue(document.Data.TryGetProperty(QUERY_NAME_2, out ResultElement queryNode2), $"Query node for {QUERY_NAME_2} should have data populated.");
 
-            KeyValuePair<string, object> firstEntryMap1 = ((IReadOnlyDictionary<string, object>)queryNode1).FirstOrDefault();
-            KeyValuePair<string, object> firstEntryMap2 = ((IReadOnlyDictionary<string, object>)queryNode2).FirstOrDefault();
+            ResultProperty firstEntryMap1 = queryNode1.EnumerateObject().FirstOrDefault();
+            ResultProperty firstEntryMap2 = queryNode2.EnumerateObject().FirstOrDefault();
 
             // validate that the data returned for the queries we did matches the moq data we set up for the respective query engines.
-            Assert.AreEqual("db1", firstEntryMap1.Value, $"Data returned for {QUERY_NAME_1} is incorrect for multi-source query");
-            Assert.AreEqual("db2", firstEntryMap2.Value, $"Data returned for {QUERY_NAME_2} is incorrect for multi-source query");
+            Assert.AreEqual("db1", firstEntryMap1.Value.GetString(), $"Data returned for {QUERY_NAME_1} is incorrect for multi-source query");
+            Assert.AreEqual("db2", firstEntryMap2.Value.GetString(), $"Data returned for {QUERY_NAME_2} is incorrect for multi-source query");
         }
 
         /// <summary>

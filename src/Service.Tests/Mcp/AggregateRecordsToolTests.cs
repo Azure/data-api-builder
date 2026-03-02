@@ -643,14 +643,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(result.IsError == true);
             JsonElement content = ParseContent(result);
             Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            string errorType = error.GetProperty("type").GetString();
-            string errorMessage = error.GetProperty("message").GetString();
+            string? errorType = error.GetProperty("type").GetString();
+            string? errorMessage = error.GetProperty("message").GetString();
 
             // Verify the error type identifies it as a cancellation
             Assert.AreEqual("OperationCanceled", errorType);
 
             // Verify the message explicitly tells the model this is NOT a tool error
-            Assert.IsTrue(errorMessage.Contains("NOT a tool error"), "Message must explicitly state this is NOT a tool error.");
+            Assert.IsNotNull(errorMessage);
+            Assert.IsTrue(errorMessage!.Contains("NOT a tool error"), "Message must explicitly state this is NOT a tool error.");
 
             // Verify the message tells the model what happened
             Assert.IsTrue(errorMessage.Contains("canceled"), "Message must mention the operation was canceled.");

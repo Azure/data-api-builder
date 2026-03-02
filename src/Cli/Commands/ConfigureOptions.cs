@@ -205,7 +205,7 @@ namespace Cli.Commands
         [Option("runtime.mcp.description", Required = false, HelpText = "Set the MCP server description to be exposed in the initialize response.")]
         public string? RuntimeMcpDescription { get; }
 
-        [Option("runtime.mcp.query-timeout", Required = false, HelpText = "Set the query timeout in seconds for MCP tool operations. Default: 10 (integer). Must be >= 1.")]
+        [Option("runtime.mcp.query-timeout", Required = false, HelpText = "Set the execution timeout in seconds for MCP tool operations. Applies to all MCP tools. Default: 30 (integer). Must be >= 1.")]
         public int? RuntimeMcpQueryTimeout { get; }
 
         [Option("runtime.mcp.dml-tools.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools endpoint. Default: true (boolean).")]

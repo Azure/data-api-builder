@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
     {
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
-        private static readonly HashSet<string> ValidFunctions = new(StringComparer.OrdinalIgnoreCase) { "count", "avg", "sum", "min", "max" };
+        private static readonly HashSet<string> _validFunctions = new(StringComparer.OrdinalIgnoreCase) { "count", "avg", "sum", "min", "max" };
 
         public Tool GetToolMetadata()
         {
@@ -183,7 +183,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 string function = funcEl.GetString()!.ToLowerInvariant();
-                if (!ValidFunctions.Contains(function))
+                if (!_validFunctions.Contains(function))
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", $"Invalid function '{function}'. Must be one of: count, avg, sum, min, max.", logger);
                 }

@@ -10,7 +10,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record McpRuntimeOptions
 {
     public const string DEFAULT_PATH = "/mcp";
-    public const int DEFAULT_QUERY_TIMEOUT_SECONDS = 10;
+    public const int DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
 
     /// <summary>
     /// Whether MCP endpoints are enabled
@@ -38,9 +38,10 @@ public record McpRuntimeOptions
     public string? Description { get; init; }
 
     /// <summary>
-    /// Query timeout in seconds for MCP tool operations.
-    /// This timeout is applied to database queries executed by MCP tools.
-    /// Default: 10 seconds.
+    /// Execution timeout in seconds for MCP tool operations.
+    /// This timeout wraps the entire tool execution including database queries.
+    /// It applies to all MCP tools, not just aggregation.
+    /// Default: 30 seconds.
     /// </summary>
     [JsonPropertyName("query-timeout")]
     public int? QueryTimeout { get; init; }

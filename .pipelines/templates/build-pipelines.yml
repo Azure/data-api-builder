@@ -9,6 +9,8 @@
 steps:
 - task: NuGetAuthenticate@1
   displayName: 'NuGet Authenticate'
+  inputs:
+    nuGetServiceConnections: 'EngThriveNugetFeedAccessForSqlDab'
 
 # If this is a release, do not append the build number at the end as it will 
 # generate the prerelease nuget version.

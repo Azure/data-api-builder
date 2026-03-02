@@ -37,6 +37,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // Check for duplicate tool names (case-insensitive)
             if (_tools.TryGetValue(toolName, out IMcpTool? existingTool))
             {
+                // If the same tool instance is already registered, skip silently.
+                // This can happen when both McpToolRegistryInitializer (hosted service)
+                // and McpStdioHelper register tools during stdio mode startup.
+                if (ReferenceEquals(existingTool, tool))
+                {
+                    return;
+                }
+
                 string existingToolType = existingTool.ToolType == ToolType.BuiltIn ? "built-in" : "custom";
                 string newToolType = tool.ToolType == ToolType.BuiltIn ? "built-in" : "custom";
 

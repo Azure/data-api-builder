@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthentication;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -900,7 +901,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
                 HostMode mode = runtimeConfig.Runtime.Host.Mode;
-                if (!authOptions.IsAuthenticationSimulatorEnabled() && !authOptions.IsEasyAuthAuthenticationProvider())
+                if (authOptions.IsJwtConfiguredIdentityProvider())
                 {
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
@@ -936,6 +937,11 @@ namespace Azure.DataApiBuilder.Service
 
                     _logger.LogInformation("Registered EasyAuth scheme: {Scheme}", defaultScheme);
 
+                }
+                else if (authOptions.IsUnauthenticatedAuthenticationProvider())
+                {
+                    services.AddAuthentication(UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                        .AddUnauthenticatedAuthentication();
                 }
                 else if (mode == HostMode.Development && authOptions.IsAuthenticationSimulatorEnabled())
                 {
@@ -978,7 +984,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddAuthentication()
                     .AddEnvDetectedEasyAuth()
                     .AddJwtBearer()
-                    .AddSimulatorAuthentication();
+                    .AddSimulatorAuthentication()
+                    .AddUnauthenticatedAuthentication();
         }
 
         /// <summary>

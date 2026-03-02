@@ -1399,8 +1399,8 @@ namespace Cli
                 string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
                 if (updatedProviderValue != null)
                 {
-                    // Default to AppService when provider string is not provided
-                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.AppService);
+                    // Default to Unauthenticated when provider string is not provided
+                    updatedValue = updatedProviderValue?.ToString() ?? AuthenticationOptions.UNAUTHENTICATED_AUTHENTICATION;
                     AuthenticationOptions AuthOptions;
                     if (updatedHostOptions?.Authentication == null)
                     {
@@ -2572,6 +2572,22 @@ namespace Cli
                                 _logger.LogWarning($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled. " +
                                     "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
                             }
+                        }
+                    }
+
+                    // Warn if Unauthenticated provider is used with authenticated or custom roles
+                    if (config.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
+                    {
+                        bool hasNonAnonymousRoles = config.Entities
+                            .Where(e => e.Value.Permissions is not null)
+                            .SelectMany(e => e.Value.Permissions!)
+                            .Any(p => !p.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase));
+
+                        if (hasNonAnonymousRoles)
+                        {
+                            _logger.LogWarning(
+                                "Authentication provider is 'Unauthenticated' but some entities have permissions configured for non-anonymous roles. " +
+                                "All requests will be treated as anonymous.");
                         }
                     }
                 }

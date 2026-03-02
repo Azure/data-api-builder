@@ -4,6 +4,7 @@
 using System.Security.Claims;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthentication;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -191,6 +192,10 @@ public class ClientRoleHeaderAuthenticationMiddleware
         else if (string.Equals(configuredProviderName, SupportedAuthNProviders.SIMULATOR, StringComparison.OrdinalIgnoreCase))
         {
             return SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME;
+        }
+        else if (string.Equals(configuredProviderName, SupportedAuthNProviders.UNAUTHENTICATED, StringComparison.OrdinalIgnoreCase))
+        {
+            return UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME;
         }
         else if (string.Equals(configuredProviderName, SupportedAuthNProviders.AZURE_AD, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(configuredProviderName, SupportedAuthNProviders.ENTRA_ID, StringComparison.OrdinalIgnoreCase))

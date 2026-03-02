@@ -664,6 +664,7 @@ namespace Cli.Tests
         [DataRow("Appservice", DisplayName = "Update authentication.provider to AppService for Host.")]
         [DataRow("azuread", DisplayName = "Update authentication.provider to AzureAD for Host.")]
         [DataRow("entraid", DisplayName = "Update authentication.provider to EntraID for Host.")]
+        [DataRow("Unauthenticated", DisplayName = "Update authentication.provider to Unauthenticated for Host.")]
         public void TestUpdateAuthenticationProviderHostSettings(string authenticationProviderValue)
         {
             // Arrange -> all the setup which includes creating options.

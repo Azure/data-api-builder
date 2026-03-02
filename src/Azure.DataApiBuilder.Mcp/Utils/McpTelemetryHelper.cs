@@ -83,7 +83,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                     // The timeout CTS fired, not the caller's token. Surface as TimeoutException
                     // so downstream telemetry and tool handlers see TIMEOUT, not cancellation.
                     throw new TimeoutException(
-                        $"The MCP tool '{toolName}' did not complete within {timeoutSeconds} seconds. "
+                        $"The MCP tool '{toolName}' did not complete within {timeoutSeconds} {(timeoutSeconds == 1 ? "second" : "seconds")}. "
                         + "This is NOT a tool error. The operation exceeded the configured query-timeout. "
                         + "Try narrowing results with a filter, reducing groupby fields, or using pagination.");
                 }

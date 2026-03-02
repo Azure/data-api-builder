@@ -156,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             catch (TimeoutException ex)
             {
                 Assert.IsTrue(ex.Message.Contains("aggregate_records"), "Message should contain tool name");
-                Assert.IsTrue(ex.Message.Contains("1 seconds"), "Message should contain timeout value");
+                Assert.IsTrue(ex.Message.Contains("1 second"), "Message should contain timeout value");
                 Assert.IsTrue(ex.Message.Contains("NOT a tool error"), "Message should clarify it is not a tool error");
             }
         }

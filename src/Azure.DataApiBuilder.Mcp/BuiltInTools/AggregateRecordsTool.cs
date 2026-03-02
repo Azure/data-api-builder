@@ -52,16 +52,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     + "orderby ('asc' or 'desc' to sort grouped results by aggregated value; requires groupby), "
                     + "having (object to filter groups after aggregating, operators: eq, neq, gt, gte, lt, lte, in; requires groupby), "
                     + "first (integer >= 1, maximum grouped results to return; requires groupby), "
-                    + "after (opaque cursor string from a previous response's endCursor; requires first and groupby). "
+                    + "after (opaque cursor string from a previous response's endCursor for pagination). "
                     + "RESPONSE: The aggregated value is aliased as '{function}_{field}' (e.g. avg_unitPrice, sum_revenue). "
                     + "For count with field '*', the alias is 'count'. "
                     + "When first is used with groupby, response contains: items (array), endCursor (string), hasNextPage (boolean). "
                     + "RULES: 1) ALWAYS call describe_entities first to get valid entity and field names. "
                     + "2) Use field '*' ONLY with function 'count'. "
                     + "3) For avg, sum, min, max: field MUST be a numeric field name from describe_entities. "
-                    + "4) orderby, having, first, and after ONLY apply when groupby is provided. "
-                    + "5) after REQUIRES first to also be set. "
-                    + "6) Use first and after for paginating large grouped result sets.",
+                    + "4) orderby, having, and first ONLY apply when groupby is provided. "
+                    + "5) Use first and after for paginating large grouped result sets.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
                         ""type"": ""object"",
@@ -194,7 +193,25 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 string field = fieldEl.GetString()!;
+
+                // Validate field/function compatibility
+                bool isCountStar = function == "count" && field == "*";
+
+                if (field == "*" && function != "count")
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                        $"Field '*' is only valid with function 'count'. For function '{function}', provide a specific field name.", logger);
+                }
+
                 bool distinct = root.TryGetProperty("distinct", out JsonElement distinctEl) && distinctEl.GetBoolean();
+
+                // Reject count(*) with distinct as it is semantically undefined
+                if (isCountStar && distinct)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                        "Cannot use distinct=true with field='*'. DISTINCT requires a specific field name. Use a field name instead of '*' to count distinct values.", logger);
+                }
+
                 string? filter = root.TryGetProperty("filter", out JsonElement filterEl) ? filterEl.GetString() : null;
                 string orderby = root.TryGetProperty("orderby", out JsonElement orderbyEl) ? (orderbyEl.GetString() ?? "desc") : "desc";
 
@@ -285,7 +302,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 // Build select list: groupby fields + aggregation field
                 List<string> selectFields = new(groupby);
-                bool isCountStar = function == "count" && field == "*";
                 if (!isCountStar && !selectFields.Contains(field, StringComparer.OrdinalIgnoreCase))
                 {
                     selectFields.Add(field);
@@ -610,7 +626,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             if (isCountStar)
             {
-                return distinct ? 0 : records.Count;
+                // count(*) always counts all rows; distinct is rejected at ExecuteAsync validation level
+                return records.Count;
             }
 
             List<double> values = new();

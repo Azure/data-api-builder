@@ -647,6 +647,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             string? errorMessage = error.GetProperty("message").GetString();
 
             // Verify the error type identifies it as a cancellation
+            Assert.IsNotNull(errorType);
             Assert.AreEqual("OperationCanceled", errorType);
 
             // Verify the message explicitly tells the model this is NOT a tool error

@@ -420,7 +420,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc/>
         public virtual void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, DbParameter parameter)
         {
-            // DbType for parameter is currently only populated for MsSql which has its own overridden implementation.
+            // DbType for parameter is currently only populated for MsSql and PostgreSql which has its own overridden implementation.
             return;
         }
 

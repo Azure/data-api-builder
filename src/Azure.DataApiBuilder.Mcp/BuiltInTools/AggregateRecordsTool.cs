@@ -42,71 +42,90 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return new Tool
             {
                 Name = "aggregate_records",
-                Description = "STEP 1: describe_entities -> find entities with READ permission and their fields. STEP 2: call this tool to compute aggregations (count, avg, sum, min, max) with optional filter, groupby, having, and orderby.",
+                Description = "Computes aggregations (count, avg, sum, min, max) on entity data. "
+                    + "STEP 1: Call describe_entities to discover entities with READ permission and their field names. "
+                    + "STEP 2: Call this tool with the exact entity name, an aggregation function, and a field name from STEP 1. "
+                    + "REQUIRED: entity (exact entity name), function (one of: count, avg, sum, min, max), field (exact field name, or '*' ONLY for count). "
+                    + "OPTIONAL: filter (OData WHERE clause applied before aggregating, e.g. 'unitPrice lt 10'), "
+                    + "distinct (true to deduplicate values before aggregating), "
+                    + "groupby (array of field names to group results by, e.g. ['categoryName']), "
+                    + "orderby ('asc' or 'desc' to sort grouped results by aggregated value; requires groupby), "
+                    + "having (object to filter groups after aggregating, operators: eq, neq, gt, gte, lt, lte, in; requires groupby), "
+                    + "first (integer >= 1, maximum grouped results to return; requires groupby), "
+                    + "after (opaque cursor string from a previous response's endCursor; requires first and groupby). "
+                    + "RESPONSE: The aggregated value is aliased as '{function}_{field}' (e.g. avg_unitPrice, sum_revenue). "
+                    + "For count with field '*', the alias is 'count'. "
+                    + "When first is used with groupby, response contains: items (array), endCursor (string), hasNextPage (boolean). "
+                    + "RULES: 1) ALWAYS call describe_entities first to get valid entity and field names. "
+                    + "2) Use field '*' ONLY with function 'count'. "
+                    + "3) For avg, sum, min, max: field MUST be a numeric field name from describe_entities. "
+                    + "4) orderby, having, first, and after ONLY apply when groupby is provided. "
+                    + "5) after REQUIRES first to also be set. "
+                    + "6) Use first and after for paginating large grouped result sets.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
                         ""type"": ""object"",
                         ""properties"": {
                             ""entity"": {
                                 ""type"": ""string"",
-                                ""description"": ""Entity name with READ permission.""
+                                ""description"": ""Exact entity name from describe_entities that has READ permission. Must match exactly (case-sensitive).""
                             },
                             ""function"": {
                                 ""type"": ""string"",
                                 ""enum"": [""count"", ""avg"", ""sum"", ""min"", ""max""],
-                                ""description"": ""Aggregation function to apply.""
+                                ""description"": ""Aggregation function to apply. Use 'count' to count records, 'avg' for average, 'sum' for total, 'min' for minimum, 'max' for maximum. For count use field '*' or a specific field name. For avg, sum, min, max the field must be numeric.""
                             },
                             ""field"": {
                                 ""type"": ""string"",
-                                ""description"": ""Field to aggregate. Use '*' for count.""
+                                ""description"": ""Exact field name from describe_entities to aggregate. Use '*' ONLY with function 'count' to count all records. For avg, sum, min, max, provide a numeric field name.""
                             },
                             ""distinct"": {
                                 ""type"": ""boolean"",
-                                ""description"": ""Apply DISTINCT before aggregating."",
+                                ""description"": ""When true, removes duplicate values before applying the aggregation function. For example, count with distinct counts unique values only. Default is false."",
                                 ""default"": false
                             },
                             ""filter"": {
                                 ""type"": ""string"",
-                                ""description"": ""OData filter applied before aggregating (WHERE). Example: 'unitPrice lt 10'"",
+                                ""description"": ""OData filter expression applied before aggregating (acts as a WHERE clause). Supported operators: eq, ne, gt, ge, lt, le, and, or, not. Example: 'unitPrice lt 10' filters to rows where unitPrice is less than 10 before aggregating. Example: 'discontinued eq true and categoryName eq ''Seafood''' filters discontinued seafood products."",
                                 ""default"": """"
                             },
                             ""groupby"": {
                                 ""type"": ""array"",
                                 ""items"": { ""type"": ""string"" },
-                                ""description"": ""Fields to group by, e.g., ['category', 'region']. Grouped field values are included in the response."",
+                                ""description"": ""Array of exact field names from describe_entities to group results by. Each unique combination of grouped field values produces one aggregated row. Grouped field values are included in the response alongside the aggregated value. Example: ['categoryName'] groups by category. Example: ['categoryName', 'region'] groups by both fields."",
                                 ""default"": []
                             },
                             ""orderby"": {
                                 ""type"": ""string"",
                                 ""enum"": [""asc"", ""desc""],
-                                ""description"": ""Sort aggregated results by the computed value. Only applies with groupby."",
+                                ""description"": ""Sort direction for grouped results by the computed aggregated value. 'desc' returns highest values first, 'asc' returns lowest first. ONLY applies when groupby is provided. Default is 'desc'."",
                                 ""default"": ""desc""
                             },
                             ""having"": {
                                 ""type"": ""object"",
-                                ""description"": ""Filter applied after aggregating on the result (HAVING). Operators are AND-ed together."",
+                                ""description"": ""Filter applied AFTER aggregating to filter grouped results by the computed aggregated value (acts as a HAVING clause). ONLY applies when groupby is provided. Multiple operators are AND-ed together. For example, use gt with value 20 to keep groups where the aggregated value exceeds 20. Combine gte and lte to define a range."",
                                 ""properties"": {
-                                    ""eq"":  { ""type"": ""number"", ""description"": ""Aggregated value equals."" },
-                                    ""neq"": { ""type"": ""number"", ""description"": ""Aggregated value not equals."" },
-                                    ""gt"":  { ""type"": ""number"", ""description"": ""Aggregated value greater than."" },
-                                    ""gte"": { ""type"": ""number"", ""description"": ""Aggregated value greater than or equal."" },
-                                    ""lt"":  { ""type"": ""number"", ""description"": ""Aggregated value less than."" },
-                                    ""lte"": { ""type"": ""number"", ""description"": ""Aggregated value less than or equal."" },
+                                    ""eq"":  { ""type"": ""number"", ""description"": ""Keep groups where the aggregated value equals this number."" },
+                                    ""neq"": { ""type"": ""number"", ""description"": ""Keep groups where the aggregated value does not equal this number."" },
+                                    ""gt"":  { ""type"": ""number"", ""description"": ""Keep groups where the aggregated value is greater than this number."" },
+                                    ""gte"": { ""type"": ""number"", ""description"": ""Keep groups where the aggregated value is greater than or equal to this number."" },
+                                    ""lt"":  { ""type"": ""number"", ""description"": ""Keep groups where the aggregated value is less than this number."" },
+                                    ""lte"": { ""type"": ""number"", ""description"": ""Keep groups where the aggregated value is less than or equal to this number."" },
                                     ""in"":  {
                                         ""type"": ""array"",
                                         ""items"": { ""type"": ""number"" },
-                                        ""description"": ""Aggregated value is in the given list.""
+                                        ""description"": ""Keep groups where the aggregated value matches any number in this list. Example: [5, 10] keeps groups with aggregated value 5 or 10.""
                                     }
                                 }
                             },
                             ""first"": {
                                 ""type"": ""integer"",
-                                ""description"": ""Maximum number of results to return. Used for pagination. Only applies with groupby."",
+                                ""description"": ""Maximum number of grouped results to return. Used for pagination of grouped results. ONLY applies when groupby is provided. Must be >= 1. When set, the response includes 'items', 'endCursor', and 'hasNextPage' fields for pagination."",
                                 ""minimum"": 1
                             },
                             ""after"": {
                                 ""type"": ""string"",
-                                ""description"": ""Cursor for pagination. Returns results after this cursor. Only applies with groupby and first.""
+                                ""description"": ""Opaque cursor string for pagination. Pass the 'endCursor' value from a previous response to get the next page of results. REQUIRES both groupby and first to be set. Do not construct this value manually; always use the endCursor from a previous response.""
                             }
                         },
                         ""required"": [""entity"", ""function"", ""field""]

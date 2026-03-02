@@ -570,6 +570,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             Assert.AreEqual(2, result.Items.Count);
             Assert.AreEqual("A", result.Items[0]["category"]?.ToString());
+            Assert.IsFalse(result.HasNextPage);
+            Assert.IsNotNull(result.EndCursor);
         }
 
         [TestMethod]
@@ -612,6 +614,443 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AggregateRecordsTool.PaginationResult page3 = AggregateRecordsTool.ApplyPagination(allResults, 3, page2.EndCursor);
             Assert.AreEqual(2, page3.Items.Count);
             Assert.IsFalse(page3.HasNextPage);
+        }
+
+        #endregion
+
+        #region Spec Example Tests
+
+        /// <summary>
+        /// Spec Example 1: "How many products are there?"
+        /// COUNT(*) → 77
+        /// </summary>
+        [TestMethod]
+        public void SpecExample01_CountStar_ReturnsTotal()
+        {
+            // Build 77 product records
+            List<string> items = new();
+            for (int i = 1; i <= 77; i++)
+            {
+                items.Add($"{{\"id\":{i}}}");
+            }
+
+            JsonElement records = ParseArray($"[{string.Join(",", items)}]");
+            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
+            var result = AggregateRecordsTool.PerformAggregation(records, "count", "*", false, new(), null, null, "desc", alias);
+
+            Assert.AreEqual(1, result.Count);
+            Assert.AreEqual("count", alias);
+            Assert.AreEqual(77.0, result[0]["count"]);
+        }
+
+        /// <summary>
+        /// Spec Example 2: "What is the average price of products under $10?"
+        /// AVG(unitPrice) WHERE unitPrice &lt; 10 → 6.74
+        /// Filter is applied at DB level; we supply pre-filtered records.
+        /// </summary>
+        [TestMethod]
+        public void SpecExample02_AvgWithFilter_ReturnsFilteredAverage()
+        {
+            // Pre-filtered records (unitPrice < 10) that average to 6.74
+            // 4.50 + 6.00 + 9.72 = 20.22 / 3 = 6.74
+            JsonElement records = ParseArray("[{\"unitPrice\":4.5},{\"unitPrice\":6.0},{\"unitPrice\":9.72}]");
+            string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
+            var result = AggregateRecordsTool.PerformAggregation(records, "avg", "unitPrice", false, new(), null, null, "desc", alias);
+
+            Assert.AreEqual(1, result.Count);
+            Assert.AreEqual("avg_unitPrice", alias);
+            Assert.AreEqual(6.74, result[0]["avg_unitPrice"]);
+        }
+
+        /// <summary>
+        /// Spec Example 3: "Which categories have more than 20 products?"
+        /// COUNT(*) GROUP BY categoryName HAVING COUNT(*) &gt; 20
+        /// Expected: Beverages=24, Condiments=22
+        /// </summary>
+        [TestMethod]
+        public void SpecExample03_CountGroupByHavingGt_FiltersGroups()
+        {
+            List<string> items = new();
+            for (int i = 0; i < 24; i++)
+            {
+                items.Add("{\"categoryName\":\"Beverages\"}");
+            }
+
+            for (int i = 0; i < 22; i++)
+            {
+                items.Add("{\"categoryName\":\"Condiments\"}");
+            }
+
+            for (int i = 0; i < 12; i++)
+            {
+                items.Add("{\"categoryName\":\"Seafood\"}");
+            }
+
+            JsonElement records = ParseArray($"[{string.Join(",", items)}]");
+            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
+            var having = new Dictionary<string, double> { ["gt"] = 20 };
+            var result = AggregateRecordsTool.PerformAggregation(records, "count", "*", false, new() { "categoryName" }, having, null, "desc", alias);
+
+            Assert.AreEqual(2, result.Count);
+            // Desc order: Beverages(24), Condiments(22)
+            Assert.AreEqual("Beverages", result[0]["categoryName"]?.ToString());
+            Assert.AreEqual(24.0, result[0]["count"]);
+            Assert.AreEqual("Condiments", result[1]["categoryName"]?.ToString());
+            Assert.AreEqual(22.0, result[1]["count"]);
+        }
+
+        /// <summary>
+        /// Spec Example 4: "For discontinued products, which categories have a total revenue between $500 and $10,000?"
+        /// SUM(unitPrice) WHERE discontinued=1 GROUP BY categoryName HAVING SUM &gt;= 500 AND &lt;= 10000
+        /// Expected: Seafood=1834.50, Produce=742.00
+        /// </summary>
+        [TestMethod]
+        public void SpecExample04_SumFilterGroupByHavingRange_ReturnsMatchingGroups()
+        {
+            // Pre-filtered (discontinued) records with prices summing per category
+            JsonElement records = ParseArray(
+                "[" +
+                "{\"categoryName\":\"Seafood\",\"unitPrice\":900}," +
+                "{\"categoryName\":\"Seafood\",\"unitPrice\":934.5}," +
+                "{\"categoryName\":\"Produce\",\"unitPrice\":400}," +
+                "{\"categoryName\":\"Produce\",\"unitPrice\":342}," +
+                "{\"categoryName\":\"Dairy\",\"unitPrice\":50}" +  // Sum 50, below 500
+                "]");
+            string alias = AggregateRecordsTool.ComputeAlias("sum", "unitPrice");
+            var having = new Dictionary<string, double> { ["gte"] = 500, ["lte"] = 10000 };
+            var result = AggregateRecordsTool.PerformAggregation(records, "sum", "unitPrice", false, new() { "categoryName" }, having, null, "desc", alias);
+
+            Assert.AreEqual(2, result.Count);
+            Assert.AreEqual("sum_unitPrice", alias);
+            // Desc order: Seafood(1834.5), Produce(742)
+            Assert.AreEqual("Seafood", result[0]["categoryName"]?.ToString());
+            Assert.AreEqual(1834.5, result[0]["sum_unitPrice"]);
+            Assert.AreEqual("Produce", result[1]["categoryName"]?.ToString());
+            Assert.AreEqual(742.0, result[1]["sum_unitPrice"]);
+        }
+
+        /// <summary>
+        /// Spec Example 5: "How many distinct suppliers do we have?"
+        /// COUNT(DISTINCT supplierId) → 29
+        /// </summary>
+        [TestMethod]
+        public void SpecExample05_CountDistinct_ReturnsDistinctCount()
+        {
+            // Build records with 29 distinct supplierIds plus duplicates
+            List<string> items = new();
+            for (int i = 1; i <= 29; i++)
+            {
+                items.Add($"{{\"supplierId\":{i}}}");
+            }
+
+            // Add duplicates
+            items.Add("{\"supplierId\":1}");
+            items.Add("{\"supplierId\":5}");
+            items.Add("{\"supplierId\":10}");
+
+            JsonElement records = ParseArray($"[{string.Join(",", items)}]");
+            string alias = AggregateRecordsTool.ComputeAlias("count", "supplierId");
+            var result = AggregateRecordsTool.PerformAggregation(records, "count", "supplierId", true, new(), null, null, "desc", alias);
+
+            Assert.AreEqual(1, result.Count);
+            Assert.AreEqual("count_supplierId", alias);
+            Assert.AreEqual(29.0, result[0]["count_supplierId"]);
+        }
+
+        /// <summary>
+        /// Spec Example 6: "Which categories have exactly 5 or 10 products?"
+        /// COUNT(*) GROUP BY categoryName HAVING COUNT(*) IN (5, 10)
+        /// Expected: Grains=5, Produce=5
+        /// </summary>
+        [TestMethod]
+        public void SpecExample06_CountGroupByHavingIn_FiltersExactCounts()
+        {
+            List<string> items = new();
+            for (int i = 0; i < 5; i++)
+            {
+                items.Add("{\"categoryName\":\"Grains\"}");
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                items.Add("{\"categoryName\":\"Produce\"}");
+            }
+
+            for (int i = 0; i < 12; i++)
+            {
+                items.Add("{\"categoryName\":\"Beverages\"}");
+            }
+
+            JsonElement records = ParseArray($"[{string.Join(",", items)}]");
+            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
+            var havingIn = new List<double> { 5, 10 };
+            var result = AggregateRecordsTool.PerformAggregation(records, "count", "*", false, new() { "categoryName" }, null, havingIn, "desc", alias);
+
+            Assert.AreEqual(2, result.Count);
+            // Both have count=5, same order as grouped
+            Assert.AreEqual(5.0, result[0]["count"]);
+            Assert.AreEqual(5.0, result[1]["count"]);
+        }
+
+        /// <summary>
+        /// Spec Example 7: "What is the average distinct unit price per category, for categories averaging over $25?"
+        /// AVG(DISTINCT unitPrice) GROUP BY categoryName HAVING AVG(DISTINCT unitPrice) &gt; 25
+        /// Expected: Meat/Poultry=54.01, Beverages=32.50
+        /// </summary>
+        [TestMethod]
+        public void SpecExample07_AvgDistinctGroupByHavingGt_FiltersAboveThreshold()
+        {
+            // Meat/Poultry: distinct prices {40.00, 68.02} → avg = 54.01
+            // Beverages: distinct prices {25.00, 40.00} → avg = 32.50
+            // Condiments: distinct prices {10.00, 15.00} → avg = 12.50 (below threshold)
+            JsonElement records = ParseArray(
+                "[" +
+                "{\"categoryName\":\"Meat/Poultry\",\"unitPrice\":40.00}," +
+                "{\"categoryName\":\"Meat/Poultry\",\"unitPrice\":68.02}," +
+                "{\"categoryName\":\"Meat/Poultry\",\"unitPrice\":40.00}," +  // duplicate
+                "{\"categoryName\":\"Beverages\",\"unitPrice\":25.00}," +
+                "{\"categoryName\":\"Beverages\",\"unitPrice\":40.00}," +
+                "{\"categoryName\":\"Beverages\",\"unitPrice\":25.00}," +  // duplicate
+                "{\"categoryName\":\"Condiments\",\"unitPrice\":10.00}," +
+                "{\"categoryName\":\"Condiments\",\"unitPrice\":15.00}" +
+                "]");
+            string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
+            var having = new Dictionary<string, double> { ["gt"] = 25 };
+            var result = AggregateRecordsTool.PerformAggregation(records, "avg", "unitPrice", true, new() { "categoryName" }, having, null, "desc", alias);
+
+            Assert.AreEqual(2, result.Count);
+            Assert.AreEqual("avg_unitPrice", alias);
+            // Desc order: Meat/Poultry(54.01), Beverages(32.5)
+            Assert.AreEqual("Meat/Poultry", result[0]["categoryName"]?.ToString());
+            Assert.AreEqual(54.01, result[0]["avg_unitPrice"]);
+            Assert.AreEqual("Beverages", result[1]["categoryName"]?.ToString());
+            Assert.AreEqual(32.5, result[1]["avg_unitPrice"]);
+        }
+
+        /// <summary>
+        /// Spec Example 8: "Which categories have the most products?"
+        /// COUNT(*) GROUP BY categoryName ORDER BY DESC
+        /// Expected: Confections=13, Beverages=12, Condiments=12, Seafood=12
+        /// </summary>
+        [TestMethod]
+        public void SpecExample08_CountGroupByOrderByDesc_ReturnsSortedDesc()
+        {
+            List<string> items = new();
+            for (int i = 0; i < 13; i++)
+            {
+                items.Add("{\"categoryName\":\"Confections\"}");
+            }
+
+            for (int i = 0; i < 12; i++)
+            {
+                items.Add("{\"categoryName\":\"Beverages\"}");
+            }
+
+            for (int i = 0; i < 12; i++)
+            {
+                items.Add("{\"categoryName\":\"Condiments\"}");
+            }
+
+            for (int i = 0; i < 12; i++)
+            {
+                items.Add("{\"categoryName\":\"Seafood\"}");
+            }
+
+            JsonElement records = ParseArray($"[{string.Join(",", items)}]");
+            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
+            var result = AggregateRecordsTool.PerformAggregation(records, "count", "*", false, new() { "categoryName" }, null, null, "desc", alias);
+
+            Assert.AreEqual(4, result.Count);
+            Assert.AreEqual("Confections", result[0]["categoryName"]?.ToString());
+            Assert.AreEqual(13.0, result[0]["count"]);
+            // Remaining 3 all have count=12
+            Assert.AreEqual(12.0, result[1]["count"]);
+            Assert.AreEqual(12.0, result[2]["count"]);
+            Assert.AreEqual(12.0, result[3]["count"]);
+        }
+
+        /// <summary>
+        /// Spec Example 9: "What are the cheapest categories by average price?"
+        /// AVG(unitPrice) GROUP BY categoryName ORDER BY ASC
+        /// Expected: Grains/Cereals=20.25, Condiments=23.06, Produce=32.37
+        /// </summary>
+        [TestMethod]
+        public void SpecExample09_AvgGroupByOrderByAsc_ReturnsSortedAsc()
+        {
+            // Grains/Cereals: {15.50, 25.00} → avg = 20.25
+            // Condiments: {20.12, 26.00} → avg = 23.06
+            // Produce: {28.74, 36.00} → avg = 32.37
+            JsonElement records = ParseArray(
+                "[" +
+                "{\"categoryName\":\"Grains/Cereals\",\"unitPrice\":15.50}," +
+                "{\"categoryName\":\"Grains/Cereals\",\"unitPrice\":25.00}," +
+                "{\"categoryName\":\"Condiments\",\"unitPrice\":20.12}," +
+                "{\"categoryName\":\"Condiments\",\"unitPrice\":26.00}," +
+                "{\"categoryName\":\"Produce\",\"unitPrice\":28.74}," +
+                "{\"categoryName\":\"Produce\",\"unitPrice\":36.00}" +
+                "]");
+            string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
+            var result = AggregateRecordsTool.PerformAggregation(records, "avg", "unitPrice", false, new() { "categoryName" }, null, null, "asc", alias);
+
+            Assert.AreEqual(3, result.Count);
+            // Asc order: Grains/Cereals(20.25), Condiments(23.06), Produce(32.37)
+            Assert.AreEqual("Grains/Cereals", result[0]["categoryName"]?.ToString());
+            Assert.AreEqual(20.25, result[0]["avg_unitPrice"]);
+            Assert.AreEqual("Condiments", result[1]["categoryName"]?.ToString());
+            Assert.AreEqual(23.06, result[1]["avg_unitPrice"]);
+            Assert.AreEqual("Produce", result[2]["categoryName"]?.ToString());
+            Assert.AreEqual(32.37, result[2]["avg_unitPrice"]);
+        }
+
+        /// <summary>
+        /// Spec Example 10: "For categories with over $500 revenue from discontinued products, which has the highest total?"
+        /// SUM(unitPrice) WHERE discontinued=1 GROUP BY categoryName HAVING SUM &gt; 500 ORDER BY DESC
+        /// Expected: Seafood=1834.50, Meat/Poultry=1062.50, Produce=742.00
+        /// </summary>
+        [TestMethod]
+        public void SpecExample10_SumFilterGroupByHavingGtOrderByDesc_ReturnsSortedFiltered()
+        {
+            // Pre-filtered (discontinued) records
+            JsonElement records = ParseArray(
+                "[" +
+                "{\"categoryName\":\"Seafood\",\"unitPrice\":900}," +
+                "{\"categoryName\":\"Seafood\",\"unitPrice\":934.5}," +
+                "{\"categoryName\":\"Meat/Poultry\",\"unitPrice\":500}," +
+                "{\"categoryName\":\"Meat/Poultry\",\"unitPrice\":562.5}," +
+                "{\"categoryName\":\"Produce\",\"unitPrice\":400}," +
+                "{\"categoryName\":\"Produce\",\"unitPrice\":342}," +
+                "{\"categoryName\":\"Dairy\",\"unitPrice\":50}" +  // Sum 50, below 500
+                "]");
+            string alias = AggregateRecordsTool.ComputeAlias("sum", "unitPrice");
+            var having = new Dictionary<string, double> { ["gt"] = 500 };
+            var result = AggregateRecordsTool.PerformAggregation(records, "sum", "unitPrice", false, new() { "categoryName" }, having, null, "desc", alias);
+
+            Assert.AreEqual(3, result.Count);
+            // Desc order: Seafood(1834.5), Meat/Poultry(1062.5), Produce(742)
+            Assert.AreEqual("Seafood", result[0]["categoryName"]?.ToString());
+            Assert.AreEqual(1834.5, result[0]["sum_unitPrice"]);
+            Assert.AreEqual("Meat/Poultry", result[1]["categoryName"]?.ToString());
+            Assert.AreEqual(1062.5, result[1]["sum_unitPrice"]);
+            Assert.AreEqual("Produce", result[2]["categoryName"]?.ToString());
+            Assert.AreEqual(742.0, result[2]["sum_unitPrice"]);
+        }
+
+        /// <summary>
+        /// Spec Example 11: "Show me the first 5 categories by product count"
+        /// COUNT(*) GROUP BY categoryName ORDER BY DESC FIRST 5
+        /// Expected: 5 items with hasNextPage=true, endCursor set
+        /// </summary>
+        [TestMethod]
+        public void SpecExample11_CountGroupByOrderByDescFirst5_ReturnsPaginatedResults()
+        {
+            List<string> items = new();
+            string[] categories = { "Confections", "Beverages", "Condiments", "Seafood", "Dairy", "Grains/Cereals", "Meat/Poultry", "Produce" };
+            int[] counts = { 13, 12, 12, 12, 10, 7, 6, 5 };
+            for (int c = 0; c < categories.Length; c++)
+            {
+                for (int i = 0; i < counts[c]; i++)
+                {
+                    items.Add($"{{\"categoryName\":\"{categories[c]}\"}}");
+                }
+            }
+
+            JsonElement records = ParseArray($"[{string.Join(",", items)}]");
+            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
+            var allResults = AggregateRecordsTool.PerformAggregation(records, "count", "*", false, new() { "categoryName" }, null, null, "desc", alias);
+
+            Assert.AreEqual(8, allResults.Count);
+
+            // Apply pagination: first=5
+            AggregateRecordsTool.PaginationResult page1 = AggregateRecordsTool.ApplyPagination(allResults, 5, null);
+
+            Assert.AreEqual(5, page1.Items.Count);
+            Assert.AreEqual("Confections", page1.Items[0]["categoryName"]?.ToString());
+            Assert.AreEqual(13.0, page1.Items[0]["count"]);
+            Assert.AreEqual("Dairy", page1.Items[4]["categoryName"]?.ToString());
+            Assert.AreEqual(10.0, page1.Items[4]["count"]);
+            Assert.IsTrue(page1.HasNextPage);
+            Assert.IsNotNull(page1.EndCursor);
+        }
+
+        /// <summary>
+        /// Spec Example 12: "Show me the next 5 categories" (continuation of Example 11)
+        /// COUNT(*) GROUP BY categoryName ORDER BY DESC FIRST 5 AFTER cursor
+        /// Expected: 3 items (remaining), hasNextPage=false
+        /// </summary>
+        [TestMethod]
+        public void SpecExample12_CountGroupByOrderByDescFirst5After_ReturnsNextPage()
+        {
+            List<string> items = new();
+            string[] categories = { "Confections", "Beverages", "Condiments", "Seafood", "Dairy", "Grains/Cereals", "Meat/Poultry", "Produce" };
+            int[] counts = { 13, 12, 12, 12, 10, 7, 6, 5 };
+            for (int c = 0; c < categories.Length; c++)
+            {
+                for (int i = 0; i < counts[c]; i++)
+                {
+                    items.Add($"{{\"categoryName\":\"{categories[c]}\"}}");
+                }
+            }
+
+            JsonElement records = ParseArray($"[{string.Join(",", items)}]");
+            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
+            var allResults = AggregateRecordsTool.PerformAggregation(records, "count", "*", false, new() { "categoryName" }, null, null, "desc", alias);
+
+            // Page 1
+            AggregateRecordsTool.PaginationResult page1 = AggregateRecordsTool.ApplyPagination(allResults, 5, null);
+            Assert.IsTrue(page1.HasNextPage);
+
+            // Page 2 (continuation)
+            AggregateRecordsTool.PaginationResult page2 = AggregateRecordsTool.ApplyPagination(allResults, 5, page1.EndCursor);
+
+            Assert.AreEqual(3, page2.Items.Count);
+            Assert.AreEqual("Grains/Cereals", page2.Items[0]["categoryName"]?.ToString());
+            Assert.AreEqual(7.0, page2.Items[0]["count"]);
+            Assert.AreEqual("Meat/Poultry", page2.Items[1]["categoryName"]?.ToString());
+            Assert.AreEqual(6.0, page2.Items[1]["count"]);
+            Assert.AreEqual("Produce", page2.Items[2]["categoryName"]?.ToString());
+            Assert.AreEqual(5.0, page2.Items[2]["count"]);
+            Assert.IsFalse(page2.HasNextPage);
+        }
+
+        /// <summary>
+        /// Spec Example 13: "Show me the top 3 most expensive categories by average price"
+        /// AVG(unitPrice) GROUP BY categoryName ORDER BY DESC FIRST 3
+        /// Expected: Meat/Poultry=54.01, Beverages=37.98, Seafood=37.08
+        /// </summary>
+        [TestMethod]
+        public void SpecExample13_AvgGroupByOrderByDescFirst3_ReturnsTop3()
+        {
+            // Meat/Poultry: {40.00, 68.02} → avg = 54.01
+            // Beverages: {30.96, 45.00} → avg = 37.98
+            // Seafood: {25.16, 49.00} → avg = 37.08
+            // Condiments: {10.00, 15.00} → avg = 12.50
+            JsonElement records = ParseArray(
+                "[" +
+                "{\"categoryName\":\"Meat/Poultry\",\"unitPrice\":40.00}," +
+                "{\"categoryName\":\"Meat/Poultry\",\"unitPrice\":68.02}," +
+                "{\"categoryName\":\"Beverages\",\"unitPrice\":30.96}," +
+                "{\"categoryName\":\"Beverages\",\"unitPrice\":45.00}," +
+                "{\"categoryName\":\"Seafood\",\"unitPrice\":25.16}," +
+                "{\"categoryName\":\"Seafood\",\"unitPrice\":49.00}," +
+                "{\"categoryName\":\"Condiments\",\"unitPrice\":10.00}," +
+                "{\"categoryName\":\"Condiments\",\"unitPrice\":15.00}" +
+                "]");
+            string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
+            var allResults = AggregateRecordsTool.PerformAggregation(records, "avg", "unitPrice", false, new() { "categoryName" }, null, null, "desc", alias);
+
+            Assert.AreEqual(4, allResults.Count);
+
+            // Apply pagination: first=3
+            AggregateRecordsTool.PaginationResult page = AggregateRecordsTool.ApplyPagination(allResults, 3, null);
+
+            Assert.AreEqual(3, page.Items.Count);
+            Assert.AreEqual("Meat/Poultry", page.Items[0]["categoryName"]?.ToString());
+            Assert.AreEqual(54.01, page.Items[0]["avg_unitPrice"]);
+            Assert.AreEqual("Beverages", page.Items[1]["categoryName"]?.ToString());
+            Assert.AreEqual(37.98, page.Items[1]["avg_unitPrice"]);
+            Assert.AreEqual("Seafood", page.Items[2]["categoryName"]?.ToString());
+            Assert.AreEqual(37.08, page.Items[2]["avg_unitPrice"]);
+            Assert.IsTrue(page.HasNextPage);
         }
 
         #endregion

@@ -110,7 +110,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public string Build(SqlExecuteStructure structure)
         {
-            throw new NotImplementedException();
+            return $"SELECT * FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}({BuildProcedureParameterList(structure.ProcedureParameters)})";
+        }
+        private string BuildProcedureParameterList(Dictionary<string, object> parameters)
+        {
+            if (parameters == null || parameters.Count == 0)
+            {
+                return "";
+            }
+
+            List<string> parameterList = new();
+            foreach (KeyValuePair<string, object> param in parameters)
+            {
+                parameterList.Add($"{QuoteIdentifier(param.Key)} := {FormatParameterValue(param.Value)}");
+            }
+
+            return string.Join(", ", parameterList);
+        }
+
+        private static string FormatParameterValue(object value)
+        {
+            if (value == null)
+            {
+                return "NULL";
+            }
+
+            if (value is string || value is char)
+            {
+                // Handle string values, escaping single quotes
+                return $"'{value.ToString()!.Replace("'", "''")}'";
+            }
+
+            if (value is bool boolValue)
+            {
+                return boolValue ? "TRUE" : "FALSE";
+            }
+
+            if (value is DateTime dateTimeValue)
+            {
+                return $"'{dateTimeValue:yyyy-MM-dd HH:mm:ss}'";
+            }
+
+            // Handle numeric and other types
+            return value.ToString()!;
         }
 
         public string Build(SqlUpsertQueryStructure structure)
@@ -227,11 +269,48 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return string.Join(", ", builtColumns);
         }
-
-        /// <inheritdoc/>
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
-            throw new NotImplementedException();
+            // Parse schema and procedure name from the fully qualified name (schema.procedure)
+            string schemaName;
+            string procedureName;
+            string[] parts = databaseObjectName.Split('.');
+            if (parts.Length == 2)
+            {
+                schemaName = parts[0];
+                procedureName = parts[1];
+            }
+            else
+            {
+                schemaName = "public";
+                procedureName = databaseObjectName;
+            }
+
+            // Escape single quotes to prevent SQL injection
+            schemaName = schemaName.Replace("'", "''");
+            procedureName = procedureName.Replace("'", "''");
+
+            string query = $@"
+    SELECT
+        p.parameter_name AS name,
+        p.data_type AS system_type_name,
+        CASE
+            WHEN p.parameter_mode = 'IN' THEN FALSE
+            ELSE TRUE
+        END AS is_nullable
+    FROM
+        information_schema.parameters p
+    JOIN
+        information_schema.routines r
+        ON p.specific_name = r.specific_name
+    WHERE
+        r.routine_schema = '{schemaName}'
+        AND p.parameter_mode = 'OUT'
+        AND r.routine_name = '{procedureName}'
+    ORDER BY
+        p.ordinal_position";
+
+            return query;
         }
 
         /// <inheritdoc/>

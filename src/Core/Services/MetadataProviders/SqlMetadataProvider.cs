@@ -529,6 +529,15 @@ namespace Azure.DataApiBuilder.Core.Services
             GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureGraphQLFieldName(entityName, procedureEntity), entityName);
         }
 
+        protected virtual Task FillSchemaForFunctionAsync(
+            Entity procedureEntity,
+            string entityName,
+            string schemaName,
+            string storedProcedureSourceName,
+            StoredProcedureDefinition storedProcedureDefinition)
+        {
+            throw new NotImplementedException("FillSchemaForFunctionAsync must be implemented in a database-specific provider.");
+        }
         /// <summary>
         /// Takes a string version of a sql data type and returns its .NET common language runtime (CLR) counterpart
         /// </summary>
@@ -732,6 +741,14 @@ namespace Azure.DataApiBuilder.Core.Services
                         // else with DatabaseTable (for tables) / DatabaseView (for views).
 
                         if (sourceType is EntitySourceType.StoredProcedure)
+                        {
+                            sourceObject = new DatabaseStoredProcedure(schemaName, dbObjectName)
+                            {
+                                SourceType = sourceType,
+                                StoredProcedureDefinition = new()
+                            };
+                        }
+                        else if (sourceType is EntitySourceType.Function)
                         {
                             sourceObject = new DatabaseStoredProcedure(schemaName, dbObjectName)
                             {
@@ -1137,6 +1154,23 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (entitySourceType is EntitySourceType.StoredProcedure)
                 {
                     await FillSchemaForStoredProcedureAsync(
+                        entity,
+                        entityName,
+                        GetSchemaName(entityName),
+                        GetDatabaseObjectName(entityName),
+                        GetStoredProcedureDefinition(entityName));
+
+                    if (GetDatabaseType() == DatabaseType.MSSQL || GetDatabaseType() == DatabaseType.DWSQL || GetDatabaseType() == DatabaseType.PostgreSQL)
+                    {
+                        await PopulateResultSetDefinitionsForStoredProcedureAsync(
+                            GetSchemaName(entityName),
+                            GetDatabaseObjectName(entityName),
+                            GetStoredProcedureDefinition(entityName));
+                    }
+                }
+                else if (entitySourceType is EntitySourceType.Function)
+                {
+                    await FillSchemaForFunctionAsync(
                         entity,
                         entityName,
                         GetSchemaName(entityName),

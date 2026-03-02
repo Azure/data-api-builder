@@ -98,6 +98,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                                         ""description"": ""Aggregated value is in the given list.""
                                     }
                                 }
+                            },
+                            ""first"": {
+                                ""type"": ""integer"",
+                                ""description"": ""Maximum number of results to return. Used for pagination. Only applies with groupby."",
+                                ""minimum"": 1
+                            },
+                            ""after"": {
+                                ""type"": ""string"",
+                                ""description"": ""Cursor for pagination. Returns results after this cursor. Only applies with groupby and first.""
                             }
                         },
                         ""required"": [""entity"", ""function"", ""field""]
@@ -165,6 +174,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 bool distinct = root.TryGetProperty("distinct", out JsonElement distinctEl) && distinctEl.GetBoolean();
                 string? filter = root.TryGetProperty("filter", out JsonElement filterEl) ? filterEl.GetString() : null;
                 string orderby = root.TryGetProperty("orderby", out JsonElement orderbyEl) ? (orderbyEl.GetString() ?? "desc") : "desc";
+
+                int? first = null;
+                if (root.TryGetProperty("first", out JsonElement firstEl) && firstEl.ValueKind == JsonValueKind.Number)
+                {
+                    first = firstEl.GetInt32();
+                    if (first < 1)
+                    {
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Argument 'first' must be at least 1.", logger);
+                    }
+                }
+
+                string? after = root.TryGetProperty("after", out JsonElement afterEl) ? afterEl.GetString() : null;
 
                 List<string> groupby = new();
                 if (root.TryGetProperty("groupby", out JsonElement groupbyEl) && groupbyEl.ValueKind == JsonValueKind.Array)
@@ -311,6 +332,26 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 List<Dictionary<string, object?>> aggregatedResults = PerformAggregation(
                     records, function, field, distinct, groupby, havingOps, havingIn, orderby, alias);
 
+                // Apply pagination if first is specified with groupby
+                if (first.HasValue && groupby.Count > 0)
+                {
+                    PaginationResult paginatedResult = ApplyPagination(aggregatedResults, first.Value, after);
+                    return McpResponseBuilder.BuildSuccessResult(
+                        new Dictionary<string, object?>
+                        {
+                            ["entity"] = entityName,
+                            ["result"] = new Dictionary<string, object?>
+                            {
+                                ["items"] = paginatedResult.Items,
+                                ["endCursor"] = paginatedResult.EndCursor,
+                                ["hasNextPage"] = paginatedResult.HasNextPage
+                            },
+                            ["message"] = $"Successfully aggregated records for entity '{entityName}'"
+                        },
+                        logger,
+                        $"AggregateRecordsTool success for entity {entityName}.");
+                }
+
                 return McpResponseBuilder.BuildSuccessResult(
                     new Dictionary<string, object?>
                     {
@@ -448,6 +489,67 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 return results;
             }
+        }
+
+        /// <summary>
+        /// Represents the result of applying pagination to aggregated results.
+        /// </summary>
+        internal sealed class PaginationResult
+        {
+            public List<Dictionary<string, object?>> Items { get; set; } = new();
+            public string? EndCursor { get; set; }
+            public bool HasNextPage { get; set; }
+        }
+
+        /// <summary>
+        /// Applies cursor-based pagination to aggregated results.
+        /// The cursor is an opaque base64-encoded offset integer.
+        /// </summary>
+        internal static PaginationResult ApplyPagination(
+            List<Dictionary<string, object?>> allResults,
+            int first,
+            string? after)
+        {
+            int startIndex = 0;
+
+            if (!string.IsNullOrWhiteSpace(after))
+            {
+                try
+                {
+                    byte[] bytes = Convert.FromBase64String(after);
+                    string decoded = System.Text.Encoding.UTF8.GetString(bytes);
+                    if (int.TryParse(decoded, out int cursorOffset))
+                    {
+                        startIndex = cursorOffset;
+                    }
+                }
+                catch (FormatException)
+                {
+                    // Invalid cursor format; start from beginning
+                }
+            }
+
+            List<Dictionary<string, object?>> pageItems = allResults
+                .Skip(startIndex)
+                .Take(first)
+                .ToList();
+
+            bool hasNextPage = startIndex + first < allResults.Count;
+            string? endCursor = null;
+
+            if (pageItems.Count > 0)
+            {
+                int lastItemIndex = startIndex + pageItems.Count;
+                endCursor = Convert.ToBase64String(
+                    System.Text.Encoding.UTF8.GetBytes(lastItemIndex.ToString()));
+            }
+
+            return new PaginationResult
+            {
+                Items = pageItems,
+                EndCursor = endCursor,
+                HasNextPage = hasNextPage
+            };
         }
 
         private static double? ComputeAggregateValue(List<JsonElement> records, string function, string field, bool distinct, bool isCountStar)

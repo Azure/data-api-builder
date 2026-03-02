@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AggregateRecordsTool tool = new();
             Tool metadata = tool.GetToolMetadata();
             Assert.AreEqual(JsonValueKind.Object, metadata.InputSchema.ValueKind);
-            Assert.IsTrue(metadata.InputSchema.TryGetProperty("properties", out _));
+            Assert.IsTrue(metadata.InputSchema.TryGetProperty("properties", out JsonElement properties));
             Assert.IsTrue(metadata.InputSchema.TryGetProperty("required", out JsonElement required));
 
             List<string> requiredFields = new();
@@ -69,6 +69,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             CollectionAssert.Contains(requiredFields, "entity");
             CollectionAssert.Contains(requiredFields, "function");
             CollectionAssert.Contains(requiredFields, "field");
+
+            // Verify first and after properties exist in schema
+            Assert.IsTrue(properties.TryGetProperty("first", out JsonElement firstProp));
+            Assert.AreEqual("integer", firstProp.GetProperty("type").GetString());
+            Assert.IsTrue(properties.TryGetProperty("after", out JsonElement afterProp));
+            Assert.AreEqual("string", afterProp.GetProperty("type").GetString());
         }
 
         #endregion
@@ -456,6 +462,156 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             var result = AggregateRecordsTool.PerformAggregation(records, "sum", "price", false, new(), having, null, "desc", "sum_price");
 
             Assert.AreEqual(0, result.Count);
+        }
+
+        #endregion
+
+        #region Pagination Tests
+
+        [TestMethod]
+        public void ApplyPagination_FirstOnly_ReturnsFirstNItems()
+        {
+            List<Dictionary<string, object?>> allResults = new()
+            {
+                new() { ["category"] = "A", ["count"] = 10.0 },
+                new() { ["category"] = "B", ["count"] = 8.0 },
+                new() { ["category"] = "C", ["count"] = 6.0 },
+                new() { ["category"] = "D", ["count"] = 4.0 },
+                new() { ["category"] = "E", ["count"] = 2.0 }
+            };
+
+            AggregateRecordsTool.PaginationResult result = AggregateRecordsTool.ApplyPagination(allResults, 3, null);
+
+            Assert.AreEqual(3, result.Items.Count);
+            Assert.AreEqual("A", result.Items[0]["category"]?.ToString());
+            Assert.AreEqual("C", result.Items[2]["category"]?.ToString());
+            Assert.IsTrue(result.HasNextPage);
+            Assert.IsNotNull(result.EndCursor);
+        }
+
+        [TestMethod]
+        public void ApplyPagination_FirstWithAfter_ReturnsNextPage()
+        {
+            List<Dictionary<string, object?>> allResults = new()
+            {
+                new() { ["category"] = "A", ["count"] = 10.0 },
+                new() { ["category"] = "B", ["count"] = 8.0 },
+                new() { ["category"] = "C", ["count"] = 6.0 },
+                new() { ["category"] = "D", ["count"] = 4.0 },
+                new() { ["category"] = "E", ["count"] = 2.0 }
+            };
+
+            // First page
+            AggregateRecordsTool.PaginationResult firstPage = AggregateRecordsTool.ApplyPagination(allResults, 3, null);
+            Assert.AreEqual(3, firstPage.Items.Count);
+            Assert.IsTrue(firstPage.HasNextPage);
+
+            // Second page using cursor from first page
+            AggregateRecordsTool.PaginationResult secondPage = AggregateRecordsTool.ApplyPagination(allResults, 3, firstPage.EndCursor);
+            Assert.AreEqual(2, secondPage.Items.Count);
+            Assert.AreEqual("D", secondPage.Items[0]["category"]?.ToString());
+            Assert.AreEqual("E", secondPage.Items[1]["category"]?.ToString());
+            Assert.IsFalse(secondPage.HasNextPage);
+        }
+
+        [TestMethod]
+        public void ApplyPagination_FirstExceedsTotalCount_ReturnsAllItems()
+        {
+            List<Dictionary<string, object?>> allResults = new()
+            {
+                new() { ["category"] = "A", ["count"] = 10.0 },
+                new() { ["category"] = "B", ["count"] = 8.0 }
+            };
+
+            AggregateRecordsTool.PaginationResult result = AggregateRecordsTool.ApplyPagination(allResults, 5, null);
+
+            Assert.AreEqual(2, result.Items.Count);
+            Assert.IsFalse(result.HasNextPage);
+        }
+
+        [TestMethod]
+        public void ApplyPagination_FirstExactlyMatchesTotalCount_HasNextPageIsFalse()
+        {
+            List<Dictionary<string, object?>> allResults = new()
+            {
+                new() { ["category"] = "A", ["count"] = 10.0 },
+                new() { ["category"] = "B", ["count"] = 8.0 },
+                new() { ["category"] = "C", ["count"] = 6.0 }
+            };
+
+            AggregateRecordsTool.PaginationResult result = AggregateRecordsTool.ApplyPagination(allResults, 3, null);
+
+            Assert.AreEqual(3, result.Items.Count);
+            Assert.IsFalse(result.HasNextPage);
+        }
+
+        [TestMethod]
+        public void ApplyPagination_EmptyResults_ReturnsEmptyPage()
+        {
+            List<Dictionary<string, object?>> allResults = new();
+
+            AggregateRecordsTool.PaginationResult result = AggregateRecordsTool.ApplyPagination(allResults, 5, null);
+
+            Assert.AreEqual(0, result.Items.Count);
+            Assert.IsFalse(result.HasNextPage);
+            Assert.IsNull(result.EndCursor);
+        }
+
+        [TestMethod]
+        public void ApplyPagination_InvalidCursor_StartsFromBeginning()
+        {
+            List<Dictionary<string, object?>> allResults = new()
+            {
+                new() { ["category"] = "A", ["count"] = 10.0 },
+                new() { ["category"] = "B", ["count"] = 8.0 }
+            };
+
+            AggregateRecordsTool.PaginationResult result = AggregateRecordsTool.ApplyPagination(allResults, 5, "not-valid-base64!!!");
+
+            Assert.AreEqual(2, result.Items.Count);
+            Assert.AreEqual("A", result.Items[0]["category"]?.ToString());
+        }
+
+        [TestMethod]
+        public void ApplyPagination_CursorBeyondResults_ReturnsEmptyPage()
+        {
+            List<Dictionary<string, object?>> allResults = new()
+            {
+                new() { ["category"] = "A", ["count"] = 10.0 }
+            };
+
+            // Cursor pointing beyond the end
+            string cursor = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("100"));
+            AggregateRecordsTool.PaginationResult result = AggregateRecordsTool.ApplyPagination(allResults, 5, cursor);
+
+            Assert.AreEqual(0, result.Items.Count);
+            Assert.IsFalse(result.HasNextPage);
+            Assert.IsNull(result.EndCursor);
+        }
+
+        [TestMethod]
+        public void ApplyPagination_MultiplePages_TraversesAllResults()
+        {
+            List<Dictionary<string, object?>> allResults = new();
+            for (int i = 0; i < 8; i++)
+            {
+                allResults.Add(new() { ["category"] = $"Cat{i}", ["count"] = (double)(8 - i) });
+            }
+
+            // Page 1
+            AggregateRecordsTool.PaginationResult page1 = AggregateRecordsTool.ApplyPagination(allResults, 3, null);
+            Assert.AreEqual(3, page1.Items.Count);
+            Assert.IsTrue(page1.HasNextPage);
+
+            // Page 2
+            AggregateRecordsTool.PaginationResult page2 = AggregateRecordsTool.ApplyPagination(allResults, 3, page1.EndCursor);
+            Assert.AreEqual(3, page2.Items.Count);
+            Assert.IsTrue(page2.HasNextPage);
+
+            // Page 3 (last page)
+            AggregateRecordsTool.PaginationResult page3 = AggregateRecordsTool.ApplyPagination(allResults, 3, page2.EndCursor);
+            Assert.AreEqual(2, page3.Items.Count);
+            Assert.IsFalse(page3.HasNextPage);
         }
 
         #endregion

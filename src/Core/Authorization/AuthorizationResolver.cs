@@ -119,6 +119,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <inheritdoc />
     public bool AreRoleAndOperationDefinedForEntity(string entityIdentifier, string roleName, EntityActionOperation operation)
     {
+        roleName = GetEffectiveRoleName(entityIdentifier, roleName);
         if (EntityPermissionsMap.TryGetValue(entityIdentifier, out EntityMetadata? valueOfEntityToRole))
         {
             if (valueOfEntityToRole.RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? valueOfRoleToOperation))
@@ -135,6 +136,7 @@ public class AuthorizationResolver : IAuthorizationResolver
 
     public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, SupportedHttpVerb httpVerb)
     {
+        roleName = GetEffectiveRoleName(entityName, roleName);
         bool executionPermitted = EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? entityMetadata)
             && entityMetadata is not null
             && entityMetadata.RoleToOperationMap.TryGetValue(roleName, out _);
@@ -144,6 +146,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <inheritdoc />
     public bool AreColumnsAllowedForOperation(string entityName, string roleName, EntityActionOperation operation, IEnumerable<string> columns)
     {
+        roleName = GetEffectiveRoleName(entityName, roleName);
         string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
         ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
@@ -210,6 +213,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <inheritdoc />
     public string GetDBPolicyForRequest(string entityName, string roleName, EntityActionOperation operation)
     {
+        roleName = GetEffectiveRoleName(entityName, roleName);
         if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))
         {
             return string.Empty;
@@ -427,6 +431,46 @@ public class AuthorizationResolver : IAuthorizationResolver
     }
 
     /// <summary>
+    /// Returns the effective role name for permission lookups, implementing role inheritance.
+    /// System roles (anonymous, authenticated) always resolve to themselves.
+    /// For any other named role not explicitly configured for the entity, this method falls back
+    /// to the 'authenticated' role if it is present (which itself may already inherit from 'anonymous').
+    /// Inheritance chain: named-role → authenticated → anonymous → none.
+    /// </summary>
+    /// <param name="entityName">Name of the entity being accessed.</param>
+    /// <param name="roleName">Role name from the request.</param>
+    /// <returns>The role name whose permissions should apply for this request.</returns>
+    private string GetEffectiveRoleName(string entityName, string roleName)
+    {
+        // System roles always resolve to themselves; they do not inherit from other roles.
+        if (roleName.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase) ||
+            roleName.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase))
+        {
+            return roleName;
+        }
+
+        if (!EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? entityMetadata))
+        {
+            return roleName;
+        }
+
+        // Named role explicitly configured: use its own permissions.
+        if (entityMetadata.RoleToOperationMap.ContainsKey(roleName))
+        {
+            return roleName;
+        }
+
+        // Named role not configured: inherit from 'authenticated' if present.
+        // Note: 'authenticated' itself may already inherit from 'anonymous' via setup-time copy.
+        if (entityMetadata.RoleToOperationMap.ContainsKey(ROLE_AUTHENTICATED))
+        {
+            return ROLE_AUTHENTICATED;
+        }
+
+        return roleName;
+    }
+
+    /// <summary>
     /// Returns a list of all possible operations depending on the provided EntitySourceType.
     /// Stored procedures only support Operation.Execute.
     /// In case the operation is Operation.All (wildcard), it gets resolved to a set of CRUD operations.
@@ -474,6 +518,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <inheritdoc />
     public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, EntityActionOperation operation)
     {
+        roleName = GetEffectiveRoleName(entityName, roleName);
         return EntityPermissionsMap[entityName].RoleToOperationMap[roleName].OperationToColumnMap[operation].AllowedExposedColumns;
     }
 

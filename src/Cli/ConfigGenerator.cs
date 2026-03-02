@@ -585,6 +585,63 @@ namespace Cli
 
             return true;
         }
+
+        /// <summary>
+        /// Displays the effective permissions for all entities defined in the config, listed alphabetically by entity name.
+        /// Effective permissions include explicitly configured roles as well as inherited permissions:
+        /// - anonymous → authenticated (when authenticated is not explicitly configured)
+        /// - authenticated → any named role not explicitly configured for the entity
+        /// </summary>
+        /// <returns>True if the effective permissions were successfully displayed; otherwise, false.</returns>
+        public static bool TryShowEffectivePermissions(ConfigureOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            const string ROLE_ANONYMOUS = "anonymous";
+            const string ROLE_AUTHENTICATED = "authenticated";
+
+            // Iterate entities sorted a-z by name.
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Entity: {entityName}", entityName);
+
+                bool hasAnonymous = entity.Permissions.Any(p => p.Role.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase));
+                bool hasAuthenticated = entity.Permissions.Any(p => p.Role.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase));
+
+                foreach (EntityPermission permission in entity.Permissions.OrderBy(p => p.Role, StringComparer.OrdinalIgnoreCase))
+                {
+                    string actions = string.Join(", ", permission.Actions.Select(a => a.Action.ToString()));
+                    _logger.LogInformation("  Role: {role} | Actions: {actions}", permission.Role, actions);
+                }
+
+                // Show inherited authenticated permissions when authenticated is not explicitly configured.
+                if (hasAnonymous && !hasAuthenticated)
+                {
+                    EntityPermission anonPermission = entity.Permissions.First(p => p.Role.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase));
+                    string inheritedActions = string.Join(", ", anonPermission.Actions.Select(a => a.Action.ToString()));
+                    _logger.LogInformation("  Role: {role} | Actions: {actions} (inherited from: {source})", ROLE_AUTHENTICATED, inheritedActions, ROLE_ANONYMOUS);
+                }
+
+                // Show inheritance note for named roles.
+                string inheritSource = hasAuthenticated ? ROLE_AUTHENTICATED : (hasAnonymous ? ROLE_ANONYMOUS : string.Empty);
+                if (!string.IsNullOrEmpty(inheritSource))
+                {
+                    _logger.LogInformation("  Any unconfigured named role inherits from: {inheritSource}", inheritSource);
+                }
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// Tries to update the runtime settings based on the provided runtime options.
         /// </summary>

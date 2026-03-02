@@ -706,7 +706,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
             }
 
-            return string.Join("|", parts);
+            // Use null character (\0) as delimiter to avoid collisions with
+            // field values that may contain printable characters like '|'.
+            return string.Join("\0", parts);
         }
 
         private static Dictionary<string, object?> ExtractGroupFields(JsonElement record, List<string> groupby)

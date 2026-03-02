@@ -170,7 +170,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         private static InputObjectTypeDefinitionNode CreateListFilter(
             string name,
             string description,
-            string elementFilterTypeName) =>
+            string elementFilterTypeName,
+            ITypeNode elementScalarType) =>
             new(
                 location: null,
                 new NameNode(name),
@@ -181,48 +182,56 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, _none, _noneDescription, new NamedTypeNode(elementFilterTypeName), null, []),
                     new(null, _all, _allDescription, new NamedTypeNode(elementFilterTypeName), null, []),
                     new(null, _any, _anyDescription, _boolean, null, []),
-                    new(null, _isNull, _isNullDescription, _boolean, null, [])
+                    new(null, _isNull, _isNullDescription, _boolean, null, []),
+                    // Legacy support - these operations work directly on scalar values
+                    new(null, _eq, _eqDescription, elementScalarType, null, []),
+                    new(null, _contains, _containsDescription, elementScalarType, null, []),
+                    new(null, _notContains, _notContainsDescription, elementScalarType, null, []),
+                    new(null, _startsWith, _startsWithDescription, elementScalarType, null, []),
+                    new(null, _endsWith, _endsWithDescription, elementScalarType, null, []),
+                    new(null, _neq, _neqDescription, elementScalarType, null, []),
+                    new(null, _in, _inDescription, new ListTypeNode(elementScalarType), null, [])
                 ]
             );
 
         private static InputObjectTypeDefinitionNode IdListInputType() =>
-            CreateListFilter("IdListFilterInput", "Input type for adding list of ID filters", "IdFilterInput");
+            CreateListFilter("IdListFilterInput", "Input type for adding list of ID filters", "IdFilterInput", _id);
 
         private static InputObjectTypeDefinitionNode BooleanListInputType() =>
-            CreateListFilter("BooleanListFilterInput", "Input type for adding list of Boolean filters", "BooleanFilterInput");
+            CreateListFilter("BooleanListFilterInput", "Input type for adding list of Boolean filters", "BooleanFilterInput", _boolean);
 
         private static InputObjectTypeDefinitionNode ByteListInputType() =>
-            CreateListFilter("ByteListFilterInput", "Input type for adding list of Byte filters", "ByteFilterInput");
+            CreateListFilter("ByteListFilterInput", "Input type for adding list of Byte filters", "ByteFilterInput", _byte);
 
         private static InputObjectTypeDefinitionNode ShortListInputType() =>
-            CreateListFilter("ShortListFilterInput", "Input type for adding list of Short filters", "ShortFilterInput");
+            CreateListFilter("ShortListFilterInput", "Input type for adding list of Short filters", "ShortFilterInput", _short);
 
         private static InputObjectTypeDefinitionNode IntListInputType() =>
-            CreateListFilter("IntListFilterInput", "Input type for adding list of Int filters", "IntFilterInput");
+            CreateListFilter("IntListFilterInput", "Input type for adding list of Int filters", "IntFilterInput", _int);
 
         private static InputObjectTypeDefinitionNode LongListInputType() =>
-            CreateListFilter("LongListFilterInput", "Input type for adding list of Long filters", "LongFilterInput");
+            CreateListFilter("LongListFilterInput", "Input type for adding list of Long filters", "LongFilterInput", _long);
 
         private static InputObjectTypeDefinitionNode SingleListInputType() =>
-            CreateListFilter("SingleListFilterInput", "Input type for adding list of Single filters", "SingleFilterInput");
+            CreateListFilter("SingleListFilterInput", "Input type for adding list of Single filters", "SingleFilterInput", _single);
 
         private static InputObjectTypeDefinitionNode FloatListInputType() =>
-            CreateListFilter("FloatListFilterInput", "Input type for adding list of Float filters", "FloatFilterInput");
+            CreateListFilter("FloatListFilterInput", "Input type for adding list of Float filters", "FloatFilterInput", _float);
 
         private static InputObjectTypeDefinitionNode DecimalListInputType() =>
-            CreateListFilter("DecimalListFilterInput", "Input type for adding list of Decimal filters", "DecimalFilterInput");
+            CreateListFilter("DecimalListFilterInput", "Input type for adding list of Decimal filters", "DecimalFilterInput", _decimal);
 
         private static InputObjectTypeDefinitionNode StringListInputType() =>
-            CreateListFilter("StringListFilterInput", "Input type for adding list of String filters", "StringFilterInput");
+            CreateListFilter("StringListFilterInput", "Input type for adding list of String filters", "StringFilterInput", _string);
 
         private static InputObjectTypeDefinitionNode DateTimeListInputType() =>
-            CreateListFilter("DateTimeListFilterInput", "Input type for adding list of DateTime filters", "DateTimeFilterInput");
+            CreateListFilter("DateTimeListFilterInput", "Input type for adding list of DateTime filters", "DateTimeFilterInput", _dateTime);
 
         private static InputObjectTypeDefinitionNode LocalTimeListInputType() =>
-            CreateListFilter("LocalTimeListFilterInput", "Input type for adding list of LocalTime filters", "LocalTimeFilterInput");
+            CreateListFilter("LocalTimeListFilterInput", "Input type for adding list of LocalTime filters", "LocalTimeFilterInput", _localTime);
 
         private static InputObjectTypeDefinitionNode UuidListInputType() =>
-            CreateListFilter("UuidListFilterInput", "Input type for adding list of Uuid filters", "UuidFilterInput");
+            CreateListFilter("UuidListFilterInput", "Input type for adding list of Uuid filters", "UuidFilterInput", _uuid);
 
         /// <summary>
         /// Gets a filter input object type by the corresponding scalar type name.

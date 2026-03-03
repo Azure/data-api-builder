@@ -25,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.Sql.SchemaConverter;
 
 namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
@@ -379,19 +380,164 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 string alias = ComputeAlias(function, field);
 
-                // Build aggregate SQL query that pushes all computation to the database
-                string sql = BuildAggregateSql(
-                    queryBuilder, structure, dbObject, function, backingField, distinct, isCountStar,
-                    groupbyMapping, havingOps, havingIn, orderby, first, after, alias, databaseType);
+                // Clear default columns from FindRequestContext
+                structure.Columns.Clear();
+
+                // Add groupby columns as LabelledColumns and GroupByMetadata.Fields
+                foreach (var (entityField, backingCol) in groupbyMapping)
+                {
+                    structure.Columns.Add(new LabelledColumn(
+                        dbObject.SchemaName, dbObject.Name, backingCol, entityField, structure.SourceAlias));
+                    structure.GroupByMetadata.Fields[backingCol] = new Column(
+                        dbObject.SchemaName, dbObject.Name, backingCol, structure.SourceAlias);
+                }
+
+                // Build aggregation column using engine's AggregationColumn type
+                AggregationType aggType = Enum.Parse<AggregationType>(function);
+                AggregationColumn aggColumn = isCountStar
+                    ? new AggregationColumn("", "", "*", AggregationType.count, alias, false)
+                    : new AggregationColumn(dbObject.SchemaName, dbObject.Name, backingField!, aggType, alias, distinct, structure.SourceAlias);
+
+                // Build HAVING predicates using engine's Predicate model
+                List<Predicate> havingPredicates = new();
+                if (havingOps != null)
+                {
+                    foreach (var op in havingOps)
+                    {
+                        PredicateOperation predOp = op.Key.ToLowerInvariant() switch
+                        {
+                            "eq" => PredicateOperation.Equal,
+                            "neq" => PredicateOperation.NotEqual,
+                            "gt" => PredicateOperation.GreaterThan,
+                            "gte" => PredicateOperation.GreaterThanOrEqual,
+                            "lt" => PredicateOperation.LessThan,
+                            "lte" => PredicateOperation.LessThanOrEqual,
+                            _ => throw new ArgumentException($"Invalid having operator: {op.Key}")
+                        };
+                        string paramName = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
+                        structure.Parameters.Add(paramName, new DbConnectionParam(op.Value));
+                        havingPredicates.Add(new Predicate(
+                            new PredicateOperand(aggColumn),
+                            predOp,
+                            new PredicateOperand(paramName)));
+                    }
+                }
+
+                if (havingIn != null && havingIn.Count > 0)
+                {
+                    List<string> inParams = new();
+                    foreach (double val in havingIn)
+                    {
+                        string paramName = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
+                        structure.Parameters.Add(paramName, new DbConnectionParam(val));
+                        inParams.Add(paramName);
+                    }
+
+                    havingPredicates.Add(new Predicate(
+                        new PredicateOperand(aggColumn),
+                        PredicateOperation.IN,
+                        new PredicateOperand($"({string.Join(", ", inParams)})")));
+                }
+
+                // Combine multiple HAVING predicates with AND
+                Predicate? combinedHaving = null;
+                foreach (var pred in havingPredicates)
+                {
+                    combinedHaving = combinedHaving == null
+                        ? pred
+                        : new Predicate(new PredicateOperand(combinedHaving), PredicateOperation.AND, new PredicateOperand(pred));
+                }
+
+                structure.GroupByMetadata.Aggregations.Add(
+                    new AggregationOperation(aggColumn, having: combinedHaving != null ? new List<Predicate> { combinedHaving } : null));
+                structure.GroupByMetadata.RequestedAggregations = true;
+
+                // Clear default OrderByColumns (PK-based)
+                structure.OrderByColumns.Clear();
+
+                // Set pagination limit if using first
+                if (first.HasValue && groupbyMapping.Count > 0)
+                {
+                    structure.IsListQuery = true;
+                }
+
+                // Use engine's query builder to generate SQL
+                string sql = queryBuilder.Build(structure);
+
+                // For groupby queries: add ORDER BY aggregate expression before FOR JSON PATH
+                if (groupbyMapping.Count > 0)
+                {
+                    string direction = orderby.Equals("asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
+                    string orderByAggExpr = isCountStar
+                        ? "COUNT(*)"
+                        : distinct
+                            ? $"{function.ToUpperInvariant()}(DISTINCT {queryBuilder.QuoteIdentifier(structure.SourceAlias)}.{queryBuilder.QuoteIdentifier(backingField!)})"
+                            : $"{function.ToUpperInvariant()}({queryBuilder.QuoteIdentifier(structure.SourceAlias)}.{queryBuilder.QuoteIdentifier(backingField!)})";
+                    string orderByClause = $" ORDER BY {orderByAggExpr} {direction}";
+
+                    // Insert ORDER BY before FOR JSON PATH (MsSql/DWSQL) or before LIMIT (PG/MySQL)
+                    int insertIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
+                    if (insertIdx < 0)
+                    {
+                        insertIdx = sql.IndexOf(" LIMIT ", StringComparison.OrdinalIgnoreCase);
+                    }
+
+                    if (insertIdx > 0)
+                    {
+                        sql = sql.Insert(insertIdx, orderByClause);
+                    }
+                    else
+                    {
+                        sql += orderByClause;
+                    }
+
+                    // Add pagination (OFFSET/FETCH or LIMIT/OFFSET) for grouped results
+                    if (first.HasValue)
+                    {
+                        int offset = DecodeCursorOffset(after);
+                        int fetchCount = first.Value + 1;
+                        string offsetParam = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
+                        structure.Parameters.Add(offsetParam, new DbConnectionParam(offset));
+                        string limitParam = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
+                        structure.Parameters.Add(limitParam, new DbConnectionParam(fetchCount));
+
+                        int paginationIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
+                        string paginationClause;
+                        if (databaseType == DatabaseType.MSSQL || databaseType == DatabaseType.DWSQL)
+                        {
+                            paginationClause = $" OFFSET {offsetParam} ROWS FETCH NEXT {limitParam} ROWS ONLY";
+                        }
+                        else
+                        {
+                            paginationClause = $" LIMIT {limitParam} OFFSET {offsetParam}";
+                        }
+
+                        if (paginationIdx > 0)
+                        {
+                            sql = sql.Insert(paginationIdx, paginationClause);
+                        }
+                        else
+                        {
+                            sql += paginationClause;
+                        }
+                    }
+                }
 
                 // Execute the SQL aggregate query against the database
                 cancellationToken.ThrowIfCancellationRequested();
-                JsonArray? resultArray = await queryExecutor.ExecuteQueryAsync(
+                JsonDocument? queryResult = await queryExecutor.ExecuteQueryAsync(
                     sql,
                     structure.Parameters,
-                    queryExecutor.GetJsonArrayAsync,
+                    queryExecutor.GetJsonResultAsync<JsonDocument>,
                     dataSourceName,
                     httpContext);
+
+                // Parse result
+                JsonArray? resultArray = null;
+                if (queryResult != null)
+                {
+                    resultArray = JsonSerializer.Deserialize<JsonArray>(queryResult.RootElement.GetRawText());
+                }
 
                 // Format and return results
                 if (first.HasValue && groupby.Count > 0)
@@ -467,213 +613,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
 
             return $"{function}_{field}";
-        }
-
-        /// <summary>
-        /// Builds a SQL aggregate query that pushes all computation to the database.
-        /// Generates SELECT {aggExpr} FROM {table} WHERE ... GROUP BY ... HAVING ... ORDER BY ...
-        /// with proper parameterization and identifier quoting.
-        /// </summary>
-        internal static string BuildAggregateSql(
-            IQueryBuilder queryBuilder,
-            SqlQueryStructure structure,
-            DatabaseObject dbObject,
-            string function,
-            string? backingField,
-            bool distinct,
-            bool isCountStar,
-            List<(string entityField, string backingCol)> groupbyMapping,
-            Dictionary<string, double>? havingOps,
-            List<double>? havingIn,
-            string orderby,
-            int? first,
-            string? after,
-            string alias,
-            DatabaseType databaseType)
-        {
-            string aggExpr = BuildAggregateExpression(function, backingField, distinct, isCountStar, queryBuilder);
-            string quotedTableRef = BuildQuotedTableRef(dbObject, queryBuilder);
-
-            StringBuilder sql = new();
-
-            // SELECT
-            sql.Append("SELECT ");
-            foreach ((string entityField, string backingCol) in groupbyMapping)
-            {
-                sql.Append($"{queryBuilder.QuoteIdentifier(backingCol)} AS {queryBuilder.QuoteIdentifier(entityField)}, ");
-            }
-
-            sql.Append($"{aggExpr} AS {queryBuilder.QuoteIdentifier(alias)}");
-
-            // FROM
-            sql.Append($" FROM {quotedTableRef}");
-
-            // WHERE (OData filter predicates + DB policy predicates)
-            string? whereClause = BuildWhereClause(structure);
-            if (!string.IsNullOrEmpty(whereClause))
-            {
-                sql.Append($" WHERE {whereClause}");
-            }
-
-            // GROUP BY
-            if (groupbyMapping.Count > 0)
-            {
-                string groupByClause = string.Join(", ", groupbyMapping.Select(g => queryBuilder.QuoteIdentifier(g.backingCol)));
-                sql.Append($" GROUP BY {groupByClause}");
-            }
-
-            // HAVING
-            string? havingClause = BuildHavingClause(aggExpr, havingOps, havingIn, structure);
-            if (!string.IsNullOrEmpty(havingClause))
-            {
-                sql.Append($" HAVING {havingClause}");
-            }
-
-            // ORDER BY (only with groupby)
-            if (groupbyMapping.Count > 0)
-            {
-                string direction = orderby.Equals("asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
-                sql.Append($" ORDER BY {aggExpr} {direction}");
-            }
-
-            // PAGINATION (only with groupby and first)
-            if (first.HasValue && groupbyMapping.Count > 0)
-            {
-                int offset = DecodeCursorOffset(after);
-                int fetchCount = first.Value + 1; // Fetch one extra row to detect hasNextPage
-                AppendPagination(sql, offset, fetchCount, structure, databaseType);
-            }
-
-            return sql.ToString();
-        }
-
-        /// <summary>
-        /// Builds the SQL aggregate expression (e.g., COUNT(*), SUM(DISTINCT [column])).
-        /// </summary>
-        internal static string BuildAggregateExpression(
-            string function, string? backingField, bool distinct, bool isCountStar, IQueryBuilder queryBuilder)
-        {
-            if (isCountStar)
-            {
-                return "COUNT(*)";
-            }
-
-            string quotedCol = queryBuilder.QuoteIdentifier(backingField!);
-            string func = function.ToUpperInvariant();
-
-            return distinct ? $"{func}(DISTINCT {quotedCol})" : $"{func}({quotedCol})";
-        }
-
-        /// <summary>
-        /// Builds a properly quoted table reference from a DatabaseObject.
-        /// </summary>
-        internal static string BuildQuotedTableRef(DatabaseObject dbObject, IQueryBuilder queryBuilder)
-        {
-            return string.IsNullOrEmpty(dbObject.SchemaName)
-                ? queryBuilder.QuoteIdentifier(dbObject.Name)
-                : $"{queryBuilder.QuoteIdentifier(dbObject.SchemaName)}.{queryBuilder.QuoteIdentifier(dbObject.Name)}";
-        }
-
-        /// <summary>
-        /// Builds the WHERE clause from OData filter predicates and DB policy predicates.
-        /// Both are required for correct and secure query execution.
-        /// </summary>
-        internal static string? BuildWhereClause(SqlQueryStructure structure)
-        {
-            List<string> clauses = new();
-
-            if (!string.IsNullOrEmpty(structure.FilterPredicates))
-            {
-                clauses.Add(structure.FilterPredicates);
-            }
-
-            string? dbPolicy = structure.GetDbPolicyForOperation(EntityActionOperation.Read);
-            if (!string.IsNullOrEmpty(dbPolicy))
-            {
-                clauses.Add(dbPolicy);
-            }
-
-            return clauses.Count > 0 ? string.Join(" AND ", clauses) : null;
-        }
-
-        /// <summary>
-        /// Builds the HAVING clause from having operator conditions and IN list.
-        /// Adds parameterized values to the structure's Parameters dictionary.
-        /// </summary>
-        internal static string? BuildHavingClause(
-            string aggExpr,
-            Dictionary<string, double>? havingOps,
-            List<double>? havingIn,
-            SqlQueryStructure structure)
-        {
-            if (havingOps == null && havingIn == null)
-            {
-                return null;
-            }
-
-            List<string> conditions = new();
-
-            if (havingOps != null)
-            {
-                foreach (KeyValuePair<string, double> op in havingOps)
-                {
-                    string sqlOp = op.Key.ToLowerInvariant() switch
-                    {
-                        "eq" => "=",
-                        "neq" => "<>",
-                        "gt" => ">",
-                        "gte" => ">=",
-                        "lt" => "<",
-                        "lte" => "<=",
-                        _ => throw new ArgumentException($"Invalid having operator: {op.Key}")
-                    };
-
-                    string paramName = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
-                    structure.Parameters.Add(paramName, new DbConnectionParam(op.Value));
-                    conditions.Add($"{aggExpr} {sqlOp} {paramName}");
-                }
-            }
-
-            if (havingIn != null && havingIn.Count > 0)
-            {
-                List<string> inParams = new();
-                foreach (double val in havingIn)
-                {
-                    string paramName = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
-                    structure.Parameters.Add(paramName, new DbConnectionParam(val));
-                    inParams.Add(paramName);
-                }
-
-                conditions.Add($"{aggExpr} IN ({string.Join(", ", inParams)})");
-            }
-
-            return conditions.Count > 0 ? string.Join(" AND ", conditions) : null;
-        }
-
-        /// <summary>
-        /// Appends database-specific pagination syntax to the SQL query.
-        /// MsSql/DWSQL: OFFSET ... ROWS FETCH NEXT ... ROWS ONLY
-        /// PostgreSQL/MySQL: LIMIT ... OFFSET ...
-        /// </summary>
-        internal static void AppendPagination(
-            StringBuilder sql, int offset, int fetchCount,
-            SqlQueryStructure structure, DatabaseType databaseType)
-        {
-            string offsetParam = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
-            structure.Parameters.Add(offsetParam, new DbConnectionParam(offset));
-
-            string limitParam = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
-            structure.Parameters.Add(limitParam, new DbConnectionParam(fetchCount));
-
-            if (databaseType == DatabaseType.MSSQL || databaseType == DatabaseType.DWSQL)
-            {
-                sql.Append($" OFFSET {offsetParam} ROWS FETCH NEXT {limitParam} ROWS ONLY");
-            }
-            else
-            {
-                // PostgreSQL, MySQL
-                sql.Append($" LIMIT {limitParam} OFFSET {offsetParam}");
-            }
         }
 
         /// <summary>

@@ -10,11 +10,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.AspNetCore.Http;
@@ -248,138 +246,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         #endregion
 
-        #region SQL Expression Generation Tests
-
-        /// <summary>
-        /// Creates a mock IQueryBuilder that wraps identifiers with square brackets (MsSql-style).
-        /// </summary>
-        private static Mock<IQueryBuilder> CreateMockQueryBuilder()
-        {
-            Mock<IQueryBuilder> mock = new();
-            mock.Setup(qb => qb.QuoteIdentifier(It.IsAny<string>()))
-                .Returns((string id) => $"[{id}]");
-            return mock;
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_CountStar_GeneratesCountStarSql()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", null, false, true, qb.Object);
-            Assert.AreEqual("COUNT(*)", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_Avg_GeneratesAvgSql()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("avg", "price", false, false, qb.Object);
-            Assert.AreEqual("AVG([price])", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_Sum_GeneratesSumSql()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("sum", "price", false, false, qb.Object);
-            Assert.AreEqual("SUM([price])", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_Min_GeneratesMinSql()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("min", "price", false, false, qb.Object);
-            Assert.AreEqual("MIN([price])", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_Max_GeneratesMaxSql()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("max", "price", false, false, qb.Object);
-            Assert.AreEqual("MAX([price])", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_CountDistinct_GeneratesCountDistinctSql()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", "supplierId", true, false, qb.Object);
-            Assert.AreEqual("COUNT(DISTINCT [supplierId])", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_AvgDistinct_GeneratesAvgDistinctSql()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("avg", "price", true, false, qb.Object);
-            Assert.AreEqual("AVG(DISTINCT [price])", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_SumDistinct_GeneratesSumDistinctSql()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("sum", "price", true, false, qb.Object);
-            Assert.AreEqual("SUM(DISTINCT [price])", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_CountField_GeneratesCountFieldSql()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", "id", false, false, qb.Object);
-            Assert.AreEqual("COUNT([id])", expr);
-        }
-
-        [TestMethod]
-        public void BuildQuotedTableRef_WithSchema_GeneratesSchemaQualifiedRef()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            DatabaseTable table = new("dbo", "Products");
-            string result = AggregateRecordsTool.BuildQuotedTableRef(table, qb.Object);
-            Assert.AreEqual("[dbo].[Products]", result);
-        }
-
-        [TestMethod]
-        public void BuildQuotedTableRef_WithoutSchema_GeneratesTableOnlyRef()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            DatabaseTable table = new("", "Products");
-            string result = AggregateRecordsTool.BuildQuotedTableRef(table, qb.Object);
-            Assert.AreEqual("[Products]", result);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_GroupByScenario_ExpressionAndQuotingCorrect()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("sum", "price", false, false, qb.Object);
-            Assert.AreEqual("SUM([price])", aggExpr);
-            Assert.AreEqual("[category]", qb.Object.QuoteIdentifier("category"));
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_MultipleGroupByFields_AllFieldsQuotedCorrectly()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("sum", "price", false, false, qb.Object);
-            Assert.AreEqual("SUM([price])", aggExpr);
-            Assert.AreEqual("[cat]", qb.Object.QuoteIdentifier("cat"));
-            Assert.AreEqual("[region]", qb.Object.QuoteIdentifier("region"));
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_EmptyDataset_ExpressionStillValid()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("avg", "price", false, false, qb.Object);
-            Assert.AreEqual("AVG([price])", expr);
-        }
-
-        #endregion
-
         #region Cursor and Pagination Tests
 
         [TestMethod]
@@ -568,21 +434,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         #endregion
 
-        #region Spec Example SQL Pattern Tests
+        #region Spec Example Tests
 
         /// <summary>
         /// Spec Example 1: "How many products are there?"
-        /// COUNT(*) - expects alias "count" and expression COUNT(*)
+        /// COUNT(*) - expects alias "count"
         /// </summary>
         [TestMethod]
-        public void SpecExample01_CountStar_GeneratesCorrectSqlPattern()
+        public void SpecExample01_CountStar_CorrectAlias()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", null, false, true, qb.Object);
-
             Assert.AreEqual("count", alias);
-            Assert.AreEqual("COUNT(*)", expr);
         }
 
         /// <summary>
@@ -590,14 +452,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// AVG(unitPrice) with filter
         /// </summary>
         [TestMethod]
-        public void SpecExample02_AvgWithFilter_GeneratesCorrectSqlPattern()
+        public void SpecExample02_AvgWithFilter_CorrectAlias()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("avg", "unitPrice", false, false, qb.Object);
-
             Assert.AreEqual("avg_unitPrice", alias);
-            Assert.AreEqual("AVG([unitPrice])", expr);
         }
 
         /// <summary>
@@ -605,15 +463,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// COUNT(*) GROUP BY categoryName HAVING gt 20
         /// </summary>
         [TestMethod]
-        public void SpecExample03_CountGroupByHavingGt_GeneratesCorrectSqlPattern()
+        public void SpecExample03_CountGroupByHavingGt_CorrectAlias()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", null, false, true, qb.Object);
-
             Assert.AreEqual("count", alias);
-            Assert.AreEqual("COUNT(*)", expr);
-            Assert.AreEqual("[categoryName]", qb.Object.QuoteIdentifier("categoryName"));
         }
 
         /// <summary>
@@ -621,14 +474,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// SUM(unitPrice) GROUP BY categoryName HAVING gte 500 AND lte 10000
         /// </summary>
         [TestMethod]
-        public void SpecExample04_SumFilterGroupByHavingRange_GeneratesCorrectSqlPattern()
+        public void SpecExample04_SumFilterGroupByHavingRange_CorrectAlias()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("sum", "unitPrice");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("sum", "unitPrice", false, false, qb.Object);
-
             Assert.AreEqual("sum_unitPrice", alias);
-            Assert.AreEqual("SUM([unitPrice])", expr);
         }
 
         /// <summary>
@@ -636,14 +485,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// COUNT(DISTINCT supplierId)
         /// </summary>
         [TestMethod]
-        public void SpecExample05_CountDistinct_GeneratesCorrectSqlPattern()
+        public void SpecExample05_CountDistinct_CorrectAlias()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("count", "supplierId");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", "supplierId", true, false, qb.Object);
-
             Assert.AreEqual("count_supplierId", alias);
-            Assert.AreEqual("COUNT(DISTINCT [supplierId])", expr);
         }
 
         /// <summary>
@@ -651,14 +496,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// COUNT(*) GROUP BY categoryName HAVING IN (5, 10)
         /// </summary>
         [TestMethod]
-        public void SpecExample06_CountGroupByHavingIn_GeneratesCorrectSqlPattern()
+        public void SpecExample06_CountGroupByHavingIn_CorrectAlias()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", null, false, true, qb.Object);
-
             Assert.AreEqual("count", alias);
-            Assert.AreEqual("COUNT(*)", expr);
         }
 
         /// <summary>
@@ -666,14 +507,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// AVG(DISTINCT unitPrice) GROUP BY categoryName HAVING gt 25
         /// </summary>
         [TestMethod]
-        public void SpecExample07_AvgDistinctGroupByHavingGt_GeneratesCorrectSqlPattern()
+        public void SpecExample07_AvgDistinctGroupByHavingGt_CorrectAlias()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("avg", "unitPrice", true, false, qb.Object);
-
             Assert.AreEqual("avg_unitPrice", alias);
-            Assert.AreEqual("AVG(DISTINCT [unitPrice])", expr);
         }
 
         /// <summary>
@@ -681,14 +518,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// COUNT(*) GROUP BY categoryName ORDER BY DESC
         /// </summary>
         [TestMethod]
-        public void SpecExample08_CountGroupByOrderByDesc_GeneratesCorrectSqlPattern()
+        public void SpecExample08_CountGroupByOrderByDesc_CorrectAlias()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", null, false, true, qb.Object);
-
             Assert.AreEqual("count", alias);
-            Assert.AreEqual("COUNT(*)", expr);
         }
 
         /// <summary>
@@ -696,14 +529,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// AVG(unitPrice) GROUP BY categoryName ORDER BY ASC
         /// </summary>
         [TestMethod]
-        public void SpecExample09_AvgGroupByOrderByAsc_GeneratesCorrectSqlPattern()
+        public void SpecExample09_AvgGroupByOrderByAsc_CorrectAlias()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("avg", "unitPrice", false, false, qb.Object);
-
             Assert.AreEqual("avg_unitPrice", alias);
-            Assert.AreEqual("AVG([unitPrice])", expr);
         }
 
         /// <summary>
@@ -711,14 +540,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// SUM(unitPrice) GROUP BY categoryName HAVING gt 500 ORDER BY DESC
         /// </summary>
         [TestMethod]
-        public void SpecExample10_SumFilterGroupByHavingGtOrderByDesc_GeneratesCorrectSqlPattern()
+        public void SpecExample10_SumFilterGroupByHavingGtOrderByDesc_CorrectAlias()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("sum", "unitPrice");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("sum", "unitPrice", false, false, qb.Object);
-
             Assert.AreEqual("sum_unitPrice", alias);
-            Assert.AreEqual("SUM([unitPrice])", expr);
         }
 
         /// <summary>
@@ -726,14 +551,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// COUNT(*) GROUP BY categoryName ORDER BY DESC FIRST 5
         /// </summary>
         [TestMethod]
-        public void SpecExample11_CountGroupByOrderByDescFirst5_GeneratesCorrectSqlPattern()
+        public void SpecExample11_CountGroupByOrderByDescFirst5_CorrectAliasAndCursor()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", null, false, true, qb.Object);
-
             Assert.AreEqual("count", alias);
-            Assert.AreEqual("COUNT(*)", expr);
             Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(null));
         }
 
@@ -742,18 +563,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// COUNT(*) GROUP BY categoryName ORDER BY DESC FIRST 5 AFTER cursor
         /// </summary>
         [TestMethod]
-        public void SpecExample12_CountGroupByOrderByDescFirst5After_GeneratesCorrectSqlPattern()
+        public void SpecExample12_CountGroupByOrderByDescFirst5After_CorrectCursorDecode()
         {
             string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("5"));
             int offset = AggregateRecordsTool.DecodeCursorOffset(cursor);
             Assert.AreEqual(5, offset);
 
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", null, false, true, qb.Object);
-
             Assert.AreEqual("count", alias);
-            Assert.AreEqual("COUNT(*)", expr);
         }
 
         /// <summary>
@@ -761,14 +578,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// AVG(unitPrice) GROUP BY categoryName ORDER BY DESC FIRST 3
         /// </summary>
         [TestMethod]
-        public void SpecExample13_AvgGroupByOrderByDescFirst3_GeneratesCorrectSqlPattern()
+        public void SpecExample13_AvgGroupByOrderByDescFirst3_CorrectAlias()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
             string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
-            string expr = AggregateRecordsTool.BuildAggregateExpression("avg", "unitPrice", false, false, qb.Object);
-
             Assert.AreEqual("avg_unitPrice", alias);
-            Assert.AreEqual("AVG([unitPrice])", expr);
         }
 
         #endregion

@@ -5,34 +5,19 @@
 
 using System;
 using System.Text;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
-using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     /// <summary>
-    /// Unit tests for AggregateRecordsTool's SQL generation methods.
-    /// Validates that the tool builds correct SQL queries to push aggregation to the database.
-    /// Tests cover: alias computation, aggregate expressions, table references,
-    /// cursor decoding, and full SQL generation matching blog-documented patterns.
+    /// Unit tests for AggregateRecordsTool helper methods.
+    /// Validates alias computation, cursor decoding, and input validation logic.
+    /// SQL generation is delegated to the engine's query builder (GroupByMetadata/AggregationColumn).
     /// </summary>
     [TestClass]
     public class AggregateRecordsToolTests
     {
-        /// <summary>
-        /// Creates a mock IQueryBuilder that wraps identifiers with square brackets (MsSql-style).
-        /// </summary>
-        private static Mock<IQueryBuilder> CreateMockQueryBuilder()
-        {
-            Mock<IQueryBuilder> mock = new();
-            mock.Setup(qb => qb.QuoteIdentifier(It.IsAny<string>()))
-                .Returns((string id) => $"[{id}]");
-            return mock;
-        }
-
         #region ComputeAlias tests
 
         [TestMethod]
@@ -46,80 +31,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             string result = AggregateRecordsTool.ComputeAlias(function, field);
             Assert.AreEqual(expectedAlias, result);
-        }
-
-        #endregion
-
-        #region BuildAggregateExpression tests
-
-        [TestMethod]
-        public void BuildAggregateExpression_CountStar_ReturnsCountStar()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", null, false, true, qb.Object);
-            Assert.AreEqual("COUNT(*)", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_SumField_ReturnsSumQuotedColumn()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("sum", "totalRevenue", false, false, qb.Object);
-            Assert.AreEqual("SUM([totalRevenue])", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_AvgDistinct_ReturnsAvgDistinct()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("avg", "price", true, false, qb.Object);
-            Assert.AreEqual("AVG(DISTINCT [price])", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_CountDistinctField_ReturnsCountDistinct()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("count", "supplierId", true, false, qb.Object);
-            Assert.AreEqual("COUNT(DISTINCT [supplierId])", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_MinField_ReturnsMin()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("min", "price", false, false, qb.Object);
-            Assert.AreEqual("MIN([price])", expr);
-        }
-
-        [TestMethod]
-        public void BuildAggregateExpression_MaxField_ReturnsMax()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            string expr = AggregateRecordsTool.BuildAggregateExpression("max", "price", false, false, qb.Object);
-            Assert.AreEqual("MAX([price])", expr);
-        }
-
-        #endregion
-
-        #region BuildQuotedTableRef tests
-
-        [TestMethod]
-        public void BuildQuotedTableRef_WithSchema_ReturnsSchemaQualified()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            DatabaseTable table = new("dbo", "Products");
-            string result = AggregateRecordsTool.BuildQuotedTableRef(table, qb.Object);
-            Assert.AreEqual("[dbo].[Products]", result);
-        }
-
-        [TestMethod]
-        public void BuildQuotedTableRef_WithoutSchema_ReturnsTableOnly()
-        {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-            DatabaseTable table = new("", "Products");
-            string result = AggregateRecordsTool.BuildQuotedTableRef(table, qb.Object);
-            Assert.AreEqual("[Products]", result);
         }
 
         #endregion
@@ -220,23 +131,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         #endregion
 
-        #region Blog scenario tests - SQL generation patterns
+        #region Blog scenario tests - alias and type validation
 
         /// <summary>
         /// Blog Example 1: Strategic customer importance
         /// "Who is our most important customer based on total revenue?"
-        /// Expected: SELECT customerId, customerName, SUM(totalRevenue) ... GROUP BY ... ORDER BY ... DESC LIMIT 1
+        /// SUM(totalRevenue) grouped by customerId, customerName, ORDER BY DESC, FIRST 1
         /// </summary>
         [TestMethod]
-        public void BlogScenario_StrategicCustomerImportance_SqlContainsGroupByAndOrderByDesc()
+        public void BlogScenario_StrategicCustomerImportance_AliasAndTypeCorrect()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-
-            // Validate the aggregate expression
-            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("sum", "totalRevenue", false, false, qb.Object);
-            Assert.AreEqual("SUM([totalRevenue])", aggExpr);
-
-            // Validate the alias
             string alias = AggregateRecordsTool.ComputeAlias("sum", "totalRevenue");
             Assert.AreEqual("sum_totalRevenue", alias);
         }
@@ -246,13 +150,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Lowest totalRevenue with orderby=asc, first=1
         /// </summary>
         [TestMethod]
-        public void BlogScenario_ProductDiscontinuation_SqlContainsOrderByAsc()
+        public void BlogScenario_ProductDiscontinuation_AliasAndTypeCorrect()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-
-            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("sum", "totalRevenue", false, false, qb.Object);
-            Assert.AreEqual("SUM([totalRevenue])", aggExpr);
-
             string alias = AggregateRecordsTool.ComputeAlias("sum", "totalRevenue");
             Assert.AreEqual("sum_totalRevenue", alias);
         }
@@ -262,13 +161,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// AVG quarterlyRevenue with HAVING gt 2000000
         /// </summary>
         [TestMethod]
-        public void BlogScenario_QuarterlyPerformance_AvgWithHaving()
+        public void BlogScenario_QuarterlyPerformance_AliasAndTypeCorrect()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-
-            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("avg", "quarterlyRevenue", false, false, qb.Object);
-            Assert.AreEqual("AVG([quarterlyRevenue])", aggExpr);
-
             string alias = AggregateRecordsTool.ComputeAlias("avg", "quarterlyRevenue");
             Assert.AreEqual("avg_quarterlyRevenue", alias);
         }
@@ -278,13 +172,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// SUM totalRevenue grouped by region and customerTier, HAVING gt 5000000
         /// </summary>
         [TestMethod]
-        public void BlogScenario_RevenueConcentration_MultipleGroupByFields()
+        public void BlogScenario_RevenueConcentration_AliasAndTypeCorrect()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-
-            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("sum", "totalRevenue", false, false, qb.Object);
-            Assert.AreEqual("SUM([totalRevenue])", aggExpr);
-
             string alias = AggregateRecordsTool.ComputeAlias("sum", "totalRevenue");
             Assert.AreEqual("sum_totalRevenue", alias);
         }
@@ -294,13 +183,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// SUM onHandValue grouped by productLine and warehouseRegion, HAVING gt 2500000
         /// </summary>
         [TestMethod]
-        public void BlogScenario_RiskExposure_SumWithMultiGroupByAndHaving()
+        public void BlogScenario_RiskExposure_AliasAndTypeCorrect()
         {
-            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
-
-            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("sum", "onHandValue", false, false, qb.Object);
-            Assert.AreEqual("SUM([onHandValue])", aggExpr);
-
             string alias = AggregateRecordsTool.ComputeAlias("sum", "onHandValue");
             Assert.AreEqual("sum_onHandValue", alias);
         }

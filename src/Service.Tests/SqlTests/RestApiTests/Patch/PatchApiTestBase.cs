@@ -348,8 +348,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         /// <summary>
         /// Tests the PatchOne functionality with a REST PATCH request
         /// without a primary key route on an entity with an auto-generated primary key.
-        /// With keyless PATCH support, this converts to an Insert operation and succeeds
-        /// with 201 Created.
+        /// With keyless PATCH support, ValidateUpsertRequestContext allows this because
+        /// all PK columns are auto-generated. The mutation engine then performs an insert
+        /// and succeeds with 201 Created.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchOne_Insert_KeylessWithAutoGenPK_Test()
@@ -957,10 +958,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
 
         /// <summary>
         /// Tests the Patch functionality with a REST PATCH request
-        /// without a primary key route. With keyless PUT/PATCH support,
-        /// this converts to an Insert operation. Since the entity has a
-        /// non-auto-generated PK and it's missing from the request body,
-        /// the Insert validation catches it with a BadRequest.
+        /// without a primary key route. For non-auto-generated PK entities,
+        /// ValidateUpsertRequestContext detects the missing required
+        /// non-auto-generated PK field in the body and returns a BadRequest.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchWithNoPrimaryKeyRouteTest()
@@ -983,6 +983,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedStatusCode: HttpStatusCode.BadRequest,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
             );
+        }
+
+        /// <summary>
+        /// Tests the Patch functionality with a REST PATCH request
+        /// without a primary key route on an entity with a composite non-auto-generated primary key,
+        /// where the body only contains a partial key. ValidateUpsertRequestContext detects the
+        /// missing non-auto-generated PK field and returns a BadRequest.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchWithNoPrimaryKeyRouteAndPartialCompositeKeyInBodyTest()
+        {
+            // Body only contains categoryid but not pieceid — both are required
+            // since neither is auto-generated.
+            string requestBody = @"
+            {
+                ""categoryid"": 100,
+                ""categoryName"": ""SciFi"",
+                ""piecesAvailable"": 5,
+                ""piecesRequired"": 3
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: string.Empty,
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    exceptionExpected: true,
+                    expectedErrorMessage: "Invalid request body. Missing field in body: pieceid.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
         }
 
         /// <summary>

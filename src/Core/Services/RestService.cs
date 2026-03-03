@@ -70,14 +70,11 @@ namespace Azure.DataApiBuilder.Core.Services
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
-            // When a PUT or PATCH request arrives without a primary key in the route,
-            // convert it to an Insert operation. This supports entities with identity/auto-generated
-            // keys where the caller doesn't know the key value before creation.
-            if (string.IsNullOrEmpty(primaryKeyRoute) &&
-                (operationType is EntityActionOperation.Upsert ||
-                 operationType is EntityActionOperation.UpsertIncremental))
+            // Read the request body early so it can be used for downstream processing.
+            string requestBody = string.Empty;
+            using (StreamReader reader = new(GetHttpContext().Request.Body))
             {
-                operationType = EntityActionOperation.Insert;
+                requestBody = await reader.ReadToEndAsync();
             }
 
             if (dbObject.SourceType is not EntitySourceType.StoredProcedure)
@@ -91,12 +88,6 @@ namespace Azure.DataApiBuilder.Core.Services
 
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
-
-            string requestBody = string.Empty;
-            using (StreamReader reader = new(GetHttpContext().Request.Body))
-            {
-                requestBody = await reader.ReadToEndAsync();
-            }
 
             RestRequestContext context;
 
@@ -154,7 +145,21 @@ namespace Azure.DataApiBuilder.Core.Services
                     case EntityActionOperation.UpdateIncremental:
                     case EntityActionOperation.Upsert:
                     case EntityActionOperation.UpsertIncremental:
-                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        // For Upsert/UpsertIncremental, a keyless URL is allowed. When the
+                        // primary key route is absent, ValidateUpsertRequestContext checks that
+                        // the body contains all non-auto-generated PK columns so the mutation
+                        // engine can resolve the target row (or insert a new one).
+                        // Update/UpdateIncremental always require the PK in the URL.
+                        if (!string.IsNullOrEmpty(primaryKeyRoute))
+                        {
+                            RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        }
+                        else if (operationType is not EntityActionOperation.Upsert and
+                                 not EntityActionOperation.UpsertIncremental)
+                        {
+                            RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        }
+
                         JsonElement upsertPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                         context = new UpsertRequestContext(
                             entityName,
@@ -163,7 +168,9 @@ namespace Azure.DataApiBuilder.Core.Services
                             operationType);
                         if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
-                            _requestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context);
+                            _requestValidator.ValidateUpsertRequestContext(
+                                (UpsertRequestContext)context,
+                                primaryKeyInUrl: !string.IsNullOrEmpty(primaryKeyRoute));
                         }
 
                         break;

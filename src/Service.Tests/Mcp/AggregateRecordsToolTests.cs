@@ -204,6 +204,51 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("100000"));
         }
 
+        [TestMethod]
+        public async Task AggregateRecords_StarFieldWithAvg_ReturnsInvalidArguments()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"avg\", \"field\": \"*\"}");
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
+            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("count"));
+        }
+
+        [TestMethod]
+        public async Task AggregateRecords_DistinctCountStar_ReturnsInvalidArguments()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"distinct\": true}");
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
+            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("DISTINCT"));
+        }
+
+        [TestMethod]
+        public async Task AggregateRecords_HavingWithoutGroupBy_ReturnsInvalidArguments()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"having\": {\"gt\": 5}}");
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
+            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("groupby"));
+        }
+
         #endregion
 
         #region Alias Convention Tests

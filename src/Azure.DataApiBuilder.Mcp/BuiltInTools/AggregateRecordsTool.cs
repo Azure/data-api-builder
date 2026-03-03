@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -251,6 +252,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 List<double>? havingIn = null;
                 if (root.TryGetProperty("having", out JsonElement havingEl) && havingEl.ValueKind == JsonValueKind.Object)
                 {
+                    if (groupby.Count == 0)
+                    {
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                            "The 'having' parameter requires 'groupby' to be specified. HAVING filters groups after aggregation.", logger);
+                    }
+
                     havingOps = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
                     foreach (JsonProperty prop in havingEl.EnumerateObject())
                     {
@@ -350,6 +357,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 // Get database-specific components
                 DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+
+                // Aggregation is only supported for MsSql/DWSQL (matching engine's GraphQL aggregation support)
+                if (databaseType != DatabaseType.MSSQL && databaseType != DatabaseType.DWSQL)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "UnsupportedDatabase",
+                        $"Aggregation is not supported for database type '{databaseType}'. Aggregation is only available for Azure SQL, SQL Server, and SQL Data Warehouse.", logger);
+                }
+
                 IAbstractQueryManagerFactory queryManagerFactory = serviceProvider.GetRequiredService<IAbstractQueryManagerFactory>();
                 IQueryBuilder queryBuilder = queryManagerFactory.GetQueryBuilder(databaseType);
                 IQueryExecutor queryExecutor = queryManagerFactory.GetQueryExecutor(databaseType);
@@ -362,6 +377,17 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
                             $"Field '{field}' not found for entity '{entityName}'.", logger);
+                    }
+                }
+                else
+                {
+                    // For COUNT(*), use primary key column since PK is always NOT NULL,
+                    // making COUNT(pk) equivalent to COUNT(*). The engine's Build(AggregationColumn)
+                    // does not support "*" as a column name (it would produce invalid SQL like count([].[*])).
+                    SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
+                    if (sourceDefinition.PrimaryKey.Count > 0)
+                    {
+                        backingField = sourceDefinition.PrimaryKey[0];
                     }
                 }
 
@@ -392,11 +418,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         dbObject.SchemaName, dbObject.Name, backingCol, structure.SourceAlias);
                 }
 
-                // Build aggregation column using engine's AggregationColumn type
+                // Build aggregation column using engine's AggregationColumn type.
+                // For COUNT(*), we use the primary key column (PK is always NOT NULL, so COUNT(pk) ≡ COUNT(*)).
                 AggregationType aggType = Enum.Parse<AggregationType>(function);
-                AggregationColumn aggColumn = isCountStar
-                    ? new AggregationColumn("", "", "*", AggregationType.count, alias, false)
-                    : new AggregationColumn(dbObject.SchemaName, dbObject.Name, backingField!, aggType, alias, distinct, structure.SourceAlias);
+                AggregationColumn aggColumn = new(
+                    dbObject.SchemaName, dbObject.Name, backingField!, aggType, alias, distinct, structure.SourceAlias);
 
                 // Build HAVING predicates using engine's Predicate model
                 List<Predicate> havingPredicates = new();
@@ -464,36 +490,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // Use engine's query builder to generate SQL
                 string sql = queryBuilder.Build(structure);
 
-                // For groupby queries: add ORDER BY aggregate expression before FOR JSON PATH
+                // For groupby queries: add ORDER BY aggregate expression and pagination
                 if (groupbyMapping.Count > 0)
                 {
                     string direction = orderby.Equals("asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
-                    string orderByAggExpr = isCountStar
-                        ? "COUNT(*)"
-                        : distinct
-                            ? $"{function.ToUpperInvariant()}(DISTINCT {queryBuilder.QuoteIdentifier(structure.SourceAlias)}.{queryBuilder.QuoteIdentifier(backingField!)})"
-                            : $"{function.ToUpperInvariant()}({queryBuilder.QuoteIdentifier(structure.SourceAlias)}.{queryBuilder.QuoteIdentifier(backingField!)})";
+                    string quotedCol = $"{queryBuilder.QuoteIdentifier(structure.SourceAlias)}.{queryBuilder.QuoteIdentifier(backingField!)}";
+                    string orderByAggExpr = distinct
+                        ? $"{function.ToUpperInvariant()}(DISTINCT {quotedCol})"
+                        : $"{function.ToUpperInvariant()}({quotedCol})";
                     string orderByClause = $" ORDER BY {orderByAggExpr} {direction}";
 
-                    // Insert ORDER BY before FOR JSON PATH (MsSql/DWSQL) or before LIMIT (PG/MySQL)
-                    int insertIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
-                    if (insertIdx < 0)
-                    {
-                        insertIdx = sql.IndexOf(" LIMIT ", StringComparison.OrdinalIgnoreCase);
-                    }
-
-                    if (insertIdx > 0)
-                    {
-                        sql = sql.Insert(insertIdx, orderByClause);
-                    }
-                    else
-                    {
-                        sql += orderByClause;
-                    }
-
-                    // Add pagination (OFFSET/FETCH or LIMIT/OFFSET) for grouped results
                     if (first.HasValue)
                     {
+                        // With pagination: SQL Server requires ORDER BY for OFFSET/FETCH and
+                        // does not allow both TOP and OFFSET/FETCH. Remove TOP and add ORDER BY + OFFSET/FETCH.
                         int offset = DecodeCursorOffset(after);
                         int fetchCount = first.Value + 1;
                         string offsetParam = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
@@ -501,24 +511,33 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         string limitParam = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
                         structure.Parameters.Add(limitParam, new DbConnectionParam(fetchCount));
 
-                        int paginationIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
-                        string paginationClause;
-                        if (databaseType == DatabaseType.MSSQL || databaseType == DatabaseType.DWSQL)
-                        {
-                            paginationClause = $" OFFSET {offsetParam} ROWS FETCH NEXT {limitParam} ROWS ONLY";
-                        }
-                        else
-                        {
-                            paginationClause = $" LIMIT {limitParam} OFFSET {offsetParam}";
-                        }
+                        string paginationClause = $" OFFSET {offsetParam} ROWS FETCH NEXT {limitParam} ROWS ONLY";
 
-                        if (paginationIdx > 0)
+                        // Remove TOP N from the SELECT clause (TOP conflicts with OFFSET/FETCH)
+                        sql = Regex.Replace(sql, @"SELECT TOP \d+", "SELECT");
+
+                        // Insert ORDER BY + pagination before FOR JSON PATH
+                        int jsonPathIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
+                        if (jsonPathIdx > 0)
                         {
-                            sql = sql.Insert(paginationIdx, paginationClause);
+                            sql = sql.Insert(jsonPathIdx, orderByClause + paginationClause);
                         }
                         else
                         {
-                            sql += paginationClause;
+                            sql += orderByClause + paginationClause;
+                        }
+                    }
+                    else
+                    {
+                        // Without pagination: insert ORDER BY before FOR JSON PATH
+                        int jsonPathIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
+                        if (jsonPathIdx > 0)
+                        {
+                            sql = sql.Insert(jsonPathIdx, orderByClause);
+                        }
+                        else
+                        {
+                            sql += orderByClause;
                         }
                     }
                 }

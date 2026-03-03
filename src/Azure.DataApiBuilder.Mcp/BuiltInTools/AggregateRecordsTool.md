@@ -19,86 +19,33 @@ MCP tool that computes SQL-level aggregations (COUNT, AVG, SUM, MIN, MAX) on DAB
 
 ```mermaid
 sequenceDiagram
-    participant Model as LLM / MCP Client
+    participant Client as MCP Client
     participant Tool as AggregateRecordsTool
-    participant Config as RuntimeConfigProvider
-    participant Meta as ISqlMetadataProvider
-    participant Auth as IAuthorizationService
-    participant QB as IQueryBuilder (engine)
-    participant QE as IQueryExecutor
+    participant Engine as DAB Engine
     participant DB as Database
 
-    Model->>Tool: ExecuteAsync(arguments, serviceProvider, cancellationToken)
-
-    Note over Tool: 1. Input validation
-    Tool->>Config: GetConfig()
-    Config-->>Tool: RuntimeConfig
-    Tool->>Tool: Validate tool enabled (runtime + entity level)
-    Tool->>Tool: Parse & validate arguments (entity, function, field, distinct, filter, groupby, having, first, after)
-
-    Note over Tool: 2. Metadata resolution
-    Tool->>Meta: TryResolveMetadata(entityName)
-    Meta-->>Tool: sqlMetadataProvider, dbObject, dataSourceName
-
-    Note over Tool: 3. Early field validation
-    Tool->>Meta: TryGetBackingColumn(entityName, field)
-    Meta-->>Tool: backingColumn (or FieldNotFound error)
-    loop Each groupby field
-        Tool->>Meta: TryGetBackingColumn(entityName, groupbyField)
-        Meta-->>Tool: backingColumn (or FieldNotFound error)
+    Client->>Tool: ExecuteAsync(arguments)
+    Tool->>Tool: Validate inputs & check tool enabled
+    Tool->>Engine: Resolve entity metadata & validate fields
+    Tool->>Engine: Authorize (column-level permissions)
+    Tool->>Engine: Build SQL via queryBuilder.Build(SqlQueryStructure)
+    Tool->>Tool: Post-process SQL (ORDER BY, pagination)
+    Tool->>DB: ExecuteQueryAsync → JSON result
+    alt Paginated (first provided)
+        Tool-->>Client: { items, endCursor, hasNextPage }
+    else Simple
+        Tool-->>Client: { entity, result: [{alias: value}] }
     end
 
-    Note over Tool: 4. Authorization
-    Tool->>Auth: AuthorizeAsync(user, FindRequestContext, ColumnsPermissionsRequirement)
-    Auth-->>Tool: AuthorizationResult
-
-    Note over Tool: 5. Build SqlQueryStructure
-    Tool->>Tool: Create SqlQueryStructure from FindRequestContext
-    Tool->>Tool: Populate GroupByMetadata (fields, AggregationColumn, HAVING predicates)
-    Tool->>Tool: Clear default columns/OrderBy, set aggregation flag
-
-    Note over Tool: 6. Generate SQL via engine
-    Tool->>QB: Build(SqlQueryStructure)
-    QB-->>Tool: SQL string (SELECT ... GROUP BY ... HAVING ... FOR JSON PATH)
-
-    Note over Tool: 7. Post-process SQL
-    Tool->>Tool: Insert ORDER BY aggregate expression before FOR JSON PATH
-    opt Pagination (first provided)
-        Tool->>Tool: Remove TOP N (conflicts with OFFSET/FETCH)
-        Tool->>Tool: Append OFFSET/FETCH NEXT
-    end
-
-    Note over Tool: 8. Execute query
-    Tool->>QE: ExecuteQueryAsync(sql, parameters, GetJsonResultAsync, dataSourceName)
-    QE->>DB: Execute SQL
-    DB-->>QE: JSON result
-    QE-->>Tool: JsonDocument
-
-    Note over Tool: 9. Format response
-    alt first provided (paginated)
-        Tool->>Tool: BuildPaginatedResponse(resultArray, first, after)
-        Tool-->>Model: { items, endCursor, hasNextPage }
-    else simple
-        Tool->>Tool: BuildSimpleResponse(resultArray, alias)
-        Tool-->>Model: { entity, result: [{alias: value}] }
-    end
-
-    Note over Tool: Exception handling
-    alt TimeoutException
-        Tool-->>Model: TimeoutError — "query timed out, narrow filters or paginate"
-    else TaskCanceledException
-        Tool-->>Model: TimeoutError — "canceled, likely timeout"
-    else OperationCanceledException
-        Tool-->>Model: OperationCanceled — "interrupted, retry"
-    else DbException
-        Tool-->>Model: DatabaseOperationFailed
-    end
+    Note over Tool,Client: On error: TimeoutError, OperationCanceled, or DatabaseOperationFailed
 ```
 
 ## Key Design Decisions
 
-- **No in-memory aggregation.** The engine's `GroupByMetadata` / `AggregationColumn` types drive SQL generation via `queryBuilder.Build(structure)`.
-- **COUNT(\*) workaround.** The engine's `Build(AggregationColumn)` doesn't support `*` as a column name, so the primary key column is used instead (`COUNT(pk)` ≡ `COUNT(*)` since PK is NOT NULL).
-- **ORDER BY aggregate.** Neither the GraphQL nor REST paths support ORDER BY on an aggregate expression, so the tool post-processes the generated SQL to insert it before `FOR JSON PATH`.
-- **TOP vs OFFSET/FETCH.** SQL Server forbids both in the same query. When pagination is used, `TOP N` is stripped via regex.
+- **No in-memory aggregation.** The engine's `GroupByMetadata` / `AggregationColumn` types drive SQL generation via `queryBuilder.Build(structure)`. All aggregation is performed by the database.
+- **COUNT(\*) workaround.** The engine's `Build(AggregationColumn)` doesn't support `*` as a column name (it produces invalid SQL like `count([].[*])`), so the primary key column is used instead. `COUNT(pk)` ≡ `COUNT(*)` since PK is NOT NULL.
+- **ORDER BY post-processing.** Neither the GraphQL nor REST code paths support ORDER BY on an aggregate expression, so this tool inserts `ORDER BY {func}({col}) ASC|DESC` into the generated SQL before `FOR JSON PATH`.
+- **TOP vs OFFSET/FETCH.** SQL Server forbids both in the same query. When pagination (`first`) is used, `TOP N` is stripped via regex before appending `OFFSET/FETCH NEXT`.
+- **Early field validation.** All user-supplied field names (aggregation field, groupby fields) are validated against the entity's metadata before authorization or query building, so typos surface immediately with actionable guidance.
+- **Timeout vs cancellation.** `TimeoutException` (from `query-timeout` config) and `OperationCanceledException` (from client disconnect) are handled separately with distinct model-facing messages. Timeouts guide the model to narrow filters or paginate; cancellations suggest retry.
 - **Database support.** Only MsSql / DWSQL — matches the engine's GraphQL aggregation support. PostgreSQL, MySQL, and CosmosDB return an `UnsupportedDatabase` error.

@@ -835,8 +835,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             Assert.IsTrue(metadata.Description!.Contains("describe_entities"),
                 "Tool description must instruct models to call describe_entities first.");
-            Assert.IsTrue(metadata.Description.Contains("STEP 1"),
-                "Tool description must use numbered steps starting with STEP 1.");
+            Assert.IsTrue(metadata.Description.Contains("1)"),
+                "Tool description must use numbered workflow steps.");
         }
 
         /// <summary>

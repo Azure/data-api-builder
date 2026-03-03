@@ -168,23 +168,23 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpErrorHelpers.ToolDisabled(toolName, logger, $"DML tools are disabled for entity '{entityName}'.");
                 }
 
-                if (!root.TryGetProperty("function", out JsonElement funcEl) || string.IsNullOrWhiteSpace(funcEl.GetString()))
+                if (!root.TryGetProperty("function", out JsonElement functionElement) || string.IsNullOrWhiteSpace(functionElement.GetString()))
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Missing required argument 'function'.", logger);
                 }
 
-                string function = funcEl.GetString()!.ToLowerInvariant();
+                string function = functionElement.GetString()!.ToLowerInvariant();
                 if (!_validFunctions.Contains(function))
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", $"Invalid function '{function}'. Must be one of: count, avg, sum, min, max.", logger);
                 }
 
-                if (!root.TryGetProperty("field", out JsonElement fieldEl) || string.IsNullOrWhiteSpace(fieldEl.GetString()))
+                if (!root.TryGetProperty("field", out JsonElement fieldElement) || string.IsNullOrWhiteSpace(fieldElement.GetString()))
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Missing required argument 'field'.", logger);
                 }
 
-                string field = fieldEl.GetString()!;
+                string field = fieldElement.GetString()!;
 
                 // Validate field/function compatibility
                 bool isCountStar = function == "count" && field == "*";
@@ -195,7 +195,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         $"Field '*' is only valid with function 'count'. For function '{function}', provide a specific field name.", logger);
                 }
 
-                bool distinct = root.TryGetProperty("distinct", out JsonElement distinctEl) && distinctEl.GetBoolean();
+                bool distinct = root.TryGetProperty("distinct", out JsonElement distinctElement) && distinctElement.GetBoolean();
 
                 // Reject count(*) with distinct as it is semantically undefined
                 if (isCountStar && distinct)
@@ -204,13 +204,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         "Cannot use distinct=true with field='*'. DISTINCT requires a specific field name. Use a field name instead of '*' to count distinct values.", logger);
                 }
 
-                string? filter = root.TryGetProperty("filter", out JsonElement filterEl) ? filterEl.GetString() : null;
-                string orderby = root.TryGetProperty("orderby", out JsonElement orderbyEl) ? (orderbyEl.GetString() ?? "desc") : "desc";
+                string? filter = root.TryGetProperty("filter", out JsonElement filterElement) ? filterElement.GetString() : null;
+                string orderby = root.TryGetProperty("orderby", out JsonElement orderbyElement) ? (orderbyElement.GetString() ?? "desc") : "desc";
 
                 int? first = null;
-                if (root.TryGetProperty("first", out JsonElement firstEl) && firstEl.ValueKind == JsonValueKind.Number)
+                if (root.TryGetProperty("first", out JsonElement firstElement) && firstElement.ValueKind == JsonValueKind.Number)
                 {
-                    first = firstEl.GetInt32();
+                    first = firstElement.GetInt32();
                     if (first < 1)
                     {
                         return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Argument 'first' must be at least 1.", logger);
@@ -222,24 +222,24 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
-                string? after = root.TryGetProperty("after", out JsonElement afterEl) ? afterEl.GetString() : null;
+                string? after = root.TryGetProperty("after", out JsonElement afterElement) ? afterElement.GetString() : null;
 
                 List<string> groupby = new();
-                if (root.TryGetProperty("groupby", out JsonElement groupbyEl) && groupbyEl.ValueKind == JsonValueKind.Array)
+                if (root.TryGetProperty("groupby", out JsonElement groupbyElement) && groupbyElement.ValueKind == JsonValueKind.Array)
                 {
-                    foreach (JsonElement g in groupbyEl.EnumerateArray())
+                    foreach (JsonElement groupbyItem in groupbyElement.EnumerateArray())
                     {
-                        string? gVal = g.GetString();
-                        if (!string.IsNullOrWhiteSpace(gVal))
+                        string? groupbyFieldName = groupbyItem.GetString();
+                        if (!string.IsNullOrWhiteSpace(groupbyFieldName))
                         {
-                            groupby.Add(gVal);
+                            groupby.Add(groupbyFieldName);
                         }
                     }
                 }
 
-                Dictionary<string, double>? havingOps = null;
-                List<double>? havingIn = null;
-                if (root.TryGetProperty("having", out JsonElement havingEl) && havingEl.ValueKind == JsonValueKind.Object)
+                Dictionary<string, double>? havingOperators = null;
+                List<double>? havingInValues = null;
+                if (root.TryGetProperty("having", out JsonElement havingElement) && havingElement.ValueKind == JsonValueKind.Object)
                 {
                     if (groupby.Count == 0)
                     {
@@ -247,20 +247,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             "The 'having' parameter requires 'groupby' to be specified. HAVING filters groups after aggregation.", logger);
                     }
 
-                    havingOps = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
-                    foreach (JsonProperty prop in havingEl.EnumerateObject())
+                    havingOperators = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+                    foreach (JsonProperty prop in havingElement.EnumerateObject())
                     {
                         if (prop.Name.Equals("in", StringComparison.OrdinalIgnoreCase) && prop.Value.ValueKind == JsonValueKind.Array)
                         {
-                            havingIn = new List<double>();
+                            havingInValues = new List<double>();
                             foreach (JsonElement item in prop.Value.EnumerateArray())
                             {
-                                havingIn.Add(item.GetDouble());
+                                havingInValues.Add(item.GetDouble());
                             }
                         }
                         else if (prop.Value.ValueKind == JsonValueKind.Number)
                         {
-                            havingOps[prop.Name] = prop.Value.GetDouble();
+                            havingOperators[prop.Name] = prop.Value.GetDouble();
                         }
                     }
                 }
@@ -288,11 +288,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
-                foreach (string gField in groupby)
+                foreach (string groupbyField in groupby)
                 {
-                    if (!sqlMetadataProvider.TryGetBackingColumn(entityName, gField, out _))
+                    if (!sqlMetadataProvider.TryGetBackingColumn(entityName, groupbyField, out _))
                     {
-                        return McpErrorHelpers.FieldNotFound(toolName, entityName, gField, "groupby", logger);
+                        return McpErrorHelpers.FieldNotFound(toolName, entityName, groupbyField, "groupby", logger);
                     }
                 }
 
@@ -395,11 +395,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 // Resolve backing column names for groupby fields (already validated early)
-                List<(string entityField, string backingCol)> groupbyMapping = new();
-                foreach (string gField in groupby)
+                List<(string entityField, string backingColumn)> groupbyMapping = new();
+                foreach (string groupbyField in groupby)
                 {
-                    sqlMetadataProvider.TryGetBackingColumn(entityName, gField, out string? backingGCol);
-                    groupbyMapping.Add((gField, backingGCol!));
+                    sqlMetadataProvider.TryGetBackingColumn(entityName, groupbyField, out string? backingGroupbyColumn);
+                    groupbyMapping.Add((groupbyField, backingGroupbyColumn!));
                 }
 
                 string alias = ComputeAlias(function, field);
@@ -408,27 +408,27 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 structure.Columns.Clear();
 
                 // Add groupby columns as LabelledColumns and GroupByMetadata.Fields
-                foreach (var (entityField, backingCol) in groupbyMapping)
+                foreach (var (entityField, backingColumn) in groupbyMapping)
                 {
                     structure.Columns.Add(new LabelledColumn(
-                        dbObject.SchemaName, dbObject.Name, backingCol, entityField, structure.SourceAlias));
-                    structure.GroupByMetadata.Fields[backingCol] = new Column(
-                        dbObject.SchemaName, dbObject.Name, backingCol, structure.SourceAlias);
+                        dbObject.SchemaName, dbObject.Name, backingColumn, entityField, structure.SourceAlias));
+                    structure.GroupByMetadata.Fields[backingColumn] = new Column(
+                        dbObject.SchemaName, dbObject.Name, backingColumn, structure.SourceAlias);
                 }
 
                 // Build aggregation column using engine's AggregationColumn type.
                 // For COUNT(*), we use the primary key column (PK is always NOT NULL, so COUNT(pk) ≡ COUNT(*)).
-                AggregationType aggType = Enum.Parse<AggregationType>(function);
-                AggregationColumn aggColumn = new(
-                    dbObject.SchemaName, dbObject.Name, backingField!, aggType, alias, distinct, structure.SourceAlias);
+                AggregationType aggregationType = Enum.Parse<AggregationType>(function);
+                AggregationColumn aggregationColumn = new(
+                    dbObject.SchemaName, dbObject.Name, backingField!, aggregationType, alias, distinct, structure.SourceAlias);
 
                 // Build HAVING predicates using engine's Predicate model
                 List<Predicate> havingPredicates = new();
-                if (havingOps != null)
+                if (havingOperators != null)
                 {
-                    foreach (var op in havingOps)
+                    foreach (var havingOperator in havingOperators)
                     {
-                        PredicateOperation predOp = op.Key.ToLowerInvariant() switch
+                        PredicateOperation predicateOperation = havingOperator.Key.ToLowerInvariant() switch
                         {
                             "eq" => PredicateOperation.Equal,
                             "neq" => PredicateOperation.NotEqual,
@@ -436,21 +436,21 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             "gte" => PredicateOperation.GreaterThanOrEqual,
                             "lt" => PredicateOperation.LessThan,
                             "lte" => PredicateOperation.LessThanOrEqual,
-                            _ => throw new ArgumentException($"Invalid having operator: {op.Key}")
+                            _ => throw new ArgumentException($"Invalid having operator: {havingOperator.Key}")
                         };
                         string paramName = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
-                        structure.Parameters.Add(paramName, new DbConnectionParam(op.Value));
+                        structure.Parameters.Add(paramName, new DbConnectionParam(havingOperator.Value));
                         havingPredicates.Add(new Predicate(
-                            new PredicateOperand(aggColumn),
-                            predOp,
+                            new PredicateOperand(aggregationColumn),
+                            predicateOperation,
                             new PredicateOperand(paramName)));
                     }
                 }
 
-                if (havingIn != null && havingIn.Count > 0)
+                if (havingInValues != null && havingInValues.Count > 0)
                 {
                     List<string> inParams = new();
-                    foreach (double val in havingIn)
+                    foreach (double val in havingInValues)
                     {
                         string paramName = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
                         structure.Parameters.Add(paramName, new DbConnectionParam(val));
@@ -458,22 +458,22 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
 
                     havingPredicates.Add(new Predicate(
-                        new PredicateOperand(aggColumn),
+                        new PredicateOperand(aggregationColumn),
                         PredicateOperation.IN,
                         new PredicateOperand($"({string.Join(", ", inParams)})")));
                 }
 
                 // Combine multiple HAVING predicates with AND
                 Predicate? combinedHaving = null;
-                foreach (var pred in havingPredicates)
+                foreach (var predicate in havingPredicates)
                 {
                     combinedHaving = combinedHaving == null
-                        ? pred
-                        : new Predicate(new PredicateOperand(combinedHaving), PredicateOperation.AND, new PredicateOperand(pred));
+                        ? predicate
+                        : new Predicate(new PredicateOperand(combinedHaving), PredicateOperation.AND, new PredicateOperand(predicate));
                 }
 
                 structure.GroupByMetadata.Aggregations.Add(
-                    new AggregationOperation(aggColumn, having: combinedHaving != null ? new List<Predicate> { combinedHaving } : null));
+                    new AggregationOperation(aggregationColumn, having: combinedHaving != null ? new List<Predicate> { combinedHaving } : null));
                 structure.GroupByMetadata.RequestedAggregations = true;
 
                 // Clear default OrderByColumns (PK-based)
@@ -564,9 +564,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 return BuildSimpleResponse(resultArray, entityName, alias, logger);
             }
-            catch (TimeoutException timeoutEx)
+            catch (TimeoutException timeoutException)
             {
-                logger?.LogError(timeoutEx, "Aggregation operation timed out for entity {Entity}.", entityName);
+                logger?.LogError(timeoutException, "Aggregation operation timed out for entity {Entity}.", entityName);
                 return McpResponseBuilder.BuildErrorResult(
                     toolName,
                     "TimeoutError",
@@ -576,9 +576,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.",
                     logger);
             }
-            catch (TaskCanceledException taskEx)
+            catch (TaskCanceledException taskCanceledException)
             {
-                logger?.LogError(taskEx, "Aggregation task was canceled for entity {Entity}.", entityName);
+                logger?.LogError(taskCanceledException, "Aggregation task was canceled for entity {Entity}.", entityName);
                 return McpResponseBuilder.BuildErrorResult(
                     toolName,
                     "TimeoutError",
@@ -598,18 +598,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     + "No results were returned. You may retry the same request.",
                     logger);
             }
-            catch (DbException dbEx)
+            catch (DbException dbException)
             {
-                logger?.LogError(dbEx, "Database error during aggregation for entity {Entity}.", entityName);
-                return McpResponseBuilder.BuildErrorResult(toolName, "DatabaseOperationFailed", dbEx.Message, logger);
+                logger?.LogError(dbException, "Database error during aggregation for entity {Entity}.", entityName);
+                return McpResponseBuilder.BuildErrorResult(toolName, "DatabaseOperationFailed", dbException.Message, logger);
             }
-            catch (ArgumentException argEx)
+            catch (ArgumentException argumentException)
             {
-                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argEx.Message, logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argumentException.Message, logger);
             }
-            catch (DataApiBuilderException argEx)
+            catch (DataApiBuilderException dabException)
             {
-                return McpResponseBuilder.BuildErrorResult(toolName, argEx.StatusCode.ToString(), argEx.Message, logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, dabException.StatusCode.ToString(), dabException.Message, logger);
             }
             catch (Exception ex)
             {

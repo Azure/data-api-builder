@@ -277,9 +277,10 @@
             },
             "query-timeout": {
               "type": "integer",
-              "description": "Execution timeout in seconds for MCP tool operations. Applies to all MCP tools.",
+              "description": "Execution timeout in seconds for MCP tool operations. Applies to all MCP tools. Range: 1-600.",
               "default": 30,
-              "minimum": 1
+              "minimum": 1,
+              "maximum": 600
             },
             "dml-tools": {
               "oneOf": [

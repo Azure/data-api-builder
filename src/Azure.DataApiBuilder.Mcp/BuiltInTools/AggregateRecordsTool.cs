@@ -40,89 +40,91 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
         private static readonly HashSet<string> _validFunctions = new(StringComparer.OrdinalIgnoreCase) { "count", "avg", "sum", "min", "max" };
 
-        public Tool GetToolMetadata()
+        private static readonly Tool _cachedToolMetadata = new()
         {
-            return new Tool
-            {
-                Name = "aggregate_records",
-                Description = "Computes aggregations (count, avg, sum, min, max) on entity data. "
-                    + "WORKFLOW: 1) Call describe_entities first to get entity names and field names. "
-                    + "2) Call this tool with entity, function, and field from step 1. "
-                    + "RULES: field '*' is ONLY valid with count. "
-                    + "orderby, having, first, and after ONLY apply when groupby is provided. "
-                    + "RESPONSE: Result is aliased as '{function}_{field}' (e.g. avg_unitPrice). "
-                    + "For count(*), the alias is 'count'. "
-                    + "With groupby and first, response includes items, endCursor, and hasNextPage for pagination.",
-                InputSchema = JsonSerializer.Deserialize<JsonElement>(
-                    @"{
-                        ""type"": ""object"",
-                        ""properties"": {
-                            ""entity"": {
-                                ""type"": ""string"",
-                                ""description"": ""Entity name from describe_entities with READ permission (case-sensitive).""
-                            },
-                            ""function"": {
-                                ""type"": ""string"",
-                                ""enum"": [""count"", ""avg"", ""sum"", ""min"", ""max""],
-                                ""description"": ""Aggregation function. count supports field '*'; avg, sum, min, max require a numeric field.""
-                            },
-                            ""field"": {
-                                ""type"": ""string"",
-                                ""description"": ""Field name to aggregate, or '*' with count to count all rows.""
-                            },
-                            ""distinct"": {
-                                ""type"": ""boolean"",
-                                ""description"": ""Remove duplicate values before aggregating. Not valid with field '*'."",
-                                ""default"": false
-                            },
-                            ""filter"": {
-                                ""type"": ""string"",
-                                ""description"": ""OData WHERE clause applied before aggregating. Operators: eq, ne, gt, ge, lt, le, and, or, not. Example: 'unitPrice lt 10'."",
-                                ""default"": """"
-                            },
-                            ""groupby"": {
-                                ""type"": ""array"",
-                                ""items"": { ""type"": ""string"" },
-                                ""description"": ""Field names to group by. Each unique combination produces one aggregated row. Enables orderby, having, first, and after."",
-                                ""default"": []
-                            },
-                            ""orderby"": {
-                                ""type"": ""string"",
-                                ""enum"": [""asc"", ""desc""],
-                                ""description"": ""Sort grouped results by the aggregated value. Requires groupby."",
-                                ""default"": ""desc""
-                            },
-                            ""having"": {
-                                ""type"": ""object"",
-                                ""description"": ""Filter groups by the aggregated value (HAVING clause). Requires groupby. Multiple operators are AND-ed."",
-                                ""properties"": {
-                                    ""eq"":  { ""type"": ""number"", ""description"": ""Equals."" },
-                                    ""neq"": { ""type"": ""number"", ""description"": ""Not equals."" },
-                                    ""gt"":  { ""type"": ""number"", ""description"": ""Greater than."" },
-                                    ""gte"": { ""type"": ""number"", ""description"": ""Greater than or equal."" },
-                                    ""lt"":  { ""type"": ""number"", ""description"": ""Less than."" },
-                                    ""lte"": { ""type"": ""number"", ""description"": ""Less than or equal."" },
-                                    ""in"":  {
-                                        ""type"": ""array"",
-                                        ""items"": { ""type"": ""number"" },
-                                        ""description"": ""Matches any value in the list.""
-                                    }
+            Name = "aggregate_records",
+            Description = "Computes aggregations (count, avg, sum, min, max) on entity data. "
+                + "WORKFLOW: 1) Call describe_entities first to get entity names and field names. "
+                + "2) Call this tool with entity, function, and field from step 1. "
+                + "RULES: field '*' is ONLY valid with count. "
+                + "orderby, having, first, and after ONLY apply when groupby is provided. "
+                + "RESPONSE: Result is aliased as '{function}_{field}' (e.g. avg_unitPrice). "
+                + "For count(*), the alias is 'count'. "
+                + "With groupby and first, response includes items, endCursor, and hasNextPage for pagination.",
+            InputSchema = JsonSerializer.Deserialize<JsonElement>(
+                @"{
+                    ""type"": ""object"",
+                    ""properties"": {
+                        ""entity"": {
+                            ""type"": ""string"",
+                            ""description"": ""Entity name from describe_entities with READ permission (case-sensitive).""
+                        },
+                        ""function"": {
+                            ""type"": ""string"",
+                            ""enum"": [""count"", ""avg"", ""sum"", ""min"", ""max""],
+                            ""description"": ""Aggregation function. count supports field '*'; avg, sum, min, max require a numeric field.""
+                        },
+                        ""field"": {
+                            ""type"": ""string"",
+                            ""description"": ""Field name to aggregate, or '*' with count to count all rows.""
+                        },
+                        ""distinct"": {
+                            ""type"": ""boolean"",
+                            ""description"": ""Remove duplicate values before aggregating. Not valid with field '*'."",
+                            ""default"": false
+                        },
+                        ""filter"": {
+                            ""type"": ""string"",
+                            ""description"": ""OData WHERE clause applied before aggregating. Operators: eq, ne, gt, ge, lt, le, and, or, not. Example: 'unitPrice lt 10'."",
+                            ""default"": """"
+                        },
+                        ""groupby"": {
+                            ""type"": ""array"",
+                            ""items"": { ""type"": ""string"" },
+                            ""description"": ""Field names to group by. Each unique combination produces one aggregated row. Enables orderby, having, first, and after."",
+                            ""default"": []
+                        },
+                        ""orderby"": {
+                            ""type"": ""string"",
+                            ""enum"": [""asc"", ""desc""],
+                            ""description"": ""Sort grouped results by the aggregated value. Requires groupby."",
+                            ""default"": ""desc""
+                        },
+                        ""having"": {
+                            ""type"": ""object"",
+                            ""description"": ""Filter groups by the aggregated value (HAVING clause). Requires groupby. Multiple operators are AND-ed."",
+                            ""properties"": {
+                                ""eq"":  { ""type"": ""number"", ""description"": ""Equals."" },
+                                ""neq"": { ""type"": ""number"", ""description"": ""Not equals."" },
+                                ""gt"":  { ""type"": ""number"", ""description"": ""Greater than."" },
+                                ""gte"": { ""type"": ""number"", ""description"": ""Greater than or equal."" },
+                                ""lt"":  { ""type"": ""number"", ""description"": ""Less than."" },
+                                ""lte"": { ""type"": ""number"", ""description"": ""Less than or equal."" },
+                                ""in"":  {
+                                    ""type"": ""array"",
+                                    ""items"": { ""type"": ""number"" },
+                                    ""description"": ""Matches any value in the list.""
                                 }
-                            },
-                            ""first"": {
-                                ""type"": ""integer"",
-                                ""description"": ""Max grouped results to return. Requires groupby. Enables paginated response with endCursor and hasNextPage."",
-                                ""minimum"": 1
-                            },
-                            ""after"": {
-                                ""type"": ""string"",
-                                ""description"": ""Opaque cursor from a previous endCursor for next-page retrieval. Requires groupby and first. Do not construct manually.""
                             }
                         },
-                        ""required"": [""entity"", ""function"", ""field""]
-                    }"
-                )
-            };
+                        ""first"": {
+                            ""type"": ""integer"",
+                            ""description"": ""Max grouped results to return. Requires groupby. Enables paginated response with endCursor and hasNextPage."",
+                            ""minimum"": 1
+                        },
+                        ""after"": {
+                            ""type"": ""string"",
+                            ""description"": ""Opaque cursor from a previous endCursor for next-page retrieval. Requires groupby and first. Do not construct manually.""
+                        }
+                    },
+                    ""required"": [""entity"", ""function"", ""field""]
+                }"
+            )
+        };
+
+        public Tool GetToolMetadata()
+        {
+            return _cachedToolMetadata;
         }
 
         public async Task<CallToolResult> ExecuteAsync(
@@ -230,6 +232,28 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             groupby.Add(groupbyFieldName);
                         }
                     }
+                }
+
+                // Validate that first, after, and non-default orderby require groupby
+                if (groupby.Count == 0)
+                {
+                    if (first.HasValue)
+                    {
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                            "The 'first' parameter requires 'groupby' to be specified. Pagination applies to grouped aggregation results.", logger);
+                    }
+
+                    if (!string.IsNullOrEmpty(after))
+                    {
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                            "The 'after' parameter requires 'groupby' to be specified. Pagination applies to grouped aggregation results.", logger);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(after) && !first.HasValue)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                        "The 'after' parameter requires 'first' to be specified. Provide 'first' to enable pagination.", logger);
                 }
 
                 Dictionary<string, double>? havingOperators = null;

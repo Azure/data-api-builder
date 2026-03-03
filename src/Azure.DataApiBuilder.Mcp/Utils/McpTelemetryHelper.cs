@@ -69,6 +69,12 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                     timeoutSeconds = config.Runtime?.Mcp?.EffectiveQueryTimeoutSeconds ?? McpRuntimeOptions.DEFAULT_QUERY_TIMEOUT_SECONDS;
                 }
 
+                // Defensive runtime guard: clamp timeout to valid range [1, MAX_QUERY_TIMEOUT_SECONDS].
+                if (timeoutSeconds < 1 || timeoutSeconds > McpRuntimeOptions.MAX_QUERY_TIMEOUT_SECONDS)
+                {
+                    timeoutSeconds = McpRuntimeOptions.DEFAULT_QUERY_TIMEOUT_SECONDS;
+                }
+
                 // Wrap tool execution with the configured timeout using a linked CancellationTokenSource.
                 using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));

@@ -916,10 +916,11 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         // Validate query-timeout if provided
-        if (runtimeConfig.Runtime.Mcp.QueryTimeout is not null && runtimeConfig.Runtime.Mcp.QueryTimeout < 1)
+        if (runtimeConfig.Runtime.Mcp.QueryTimeout is not null &&
+            (runtimeConfig.Runtime.Mcp.QueryTimeout < 1 || runtimeConfig.Runtime.Mcp.QueryTimeout > McpRuntimeOptions.MAX_QUERY_TIMEOUT_SECONDS))
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: "MCP query-timeout must be a positive integer (>= 1 second). " +
+                message: $"MCP query-timeout must be between 1 and {McpRuntimeOptions.MAX_QUERY_TIMEOUT_SECONDS} seconds. " +
                          $"Provided value: {runtimeConfig.Runtime.Mcp.QueryTimeout}.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));

@@ -11,6 +11,7 @@ public record McpRuntimeOptions
 {
     public const string DEFAULT_PATH = "/mcp";
     public const int DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
+    public const int MAX_QUERY_TIMEOUT_SECONDS = 600;
 
     /// <summary>
     /// Whether MCP endpoints are enabled

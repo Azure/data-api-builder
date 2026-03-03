@@ -631,6 +631,231 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         #endregion
 
+        #region Blog Scenario Tests (devblogs.microsoft.com/azure-sql/data-api-builder-mcp-questions)
+
+        // These tests verify that the exact JSON payloads from the DAB MCP blog
+        // pass input validation. The tool will fail at metadata resolution (no real DB)
+        // but must NOT return "InvalidArguments", proving the input shape is valid.
+
+        /// <summary>
+        /// Blog Scenario 1: Strategic customer importance
+        /// "Who is our most important customer based on total revenue?"
+        /// Uses: sum, totalRevenue, filter, groupby [customerId, customerName], orderby desc, first 1
+        /// </summary>
+        [TestMethod]
+        public async Task BlogScenario1_StrategicCustomerImportance_PassesInputValidation()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            string json = @"{
+                ""entity"": ""Book"",
+                ""function"": ""sum"",
+                ""field"": ""totalRevenue"",
+                ""filter"": ""isActive eq true and orderDate ge 2025-01-01"",
+                ""groupby"": [""customerId"", ""customerName""],
+                ""orderby"": ""desc"",
+                ""first"": 1
+            }";
+
+            JsonDocument args = JsonDocument.Parse(json);
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
+            Assert.AreNotEqual("InvalidArguments", errorType,
+                "Blog scenario 1 JSON must pass input validation (sum/totalRevenue/groupby/orderby/first).");
+            Assert.AreEqual("sum_totalRevenue", AggregateRecordsTool.ComputeAlias("sum", "totalRevenue"));
+        }
+
+        /// <summary>
+        /// Blog Scenario 2: Product discontinuation candidate
+        /// "Which product should we consider discontinuing based on lowest totalRevenue?"
+        /// Uses: sum, totalRevenue, filter, groupby [productId, productName], orderby asc, first 1
+        /// </summary>
+        [TestMethod]
+        public async Task BlogScenario2_ProductDiscontinuation_PassesInputValidation()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            string json = @"{
+                ""entity"": ""Book"",
+                ""function"": ""sum"",
+                ""field"": ""totalRevenue"",
+                ""filter"": ""isActive eq true and inStock gt 0 and orderDate ge 2025-01-01"",
+                ""groupby"": [""productId"", ""productName""],
+                ""orderby"": ""asc"",
+                ""first"": 1
+            }";
+
+            JsonDocument args = JsonDocument.Parse(json);
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
+            Assert.AreNotEqual("InvalidArguments", errorType,
+                "Blog scenario 2 JSON must pass input validation (sum/totalRevenue/groupby/orderby asc/first).");
+            Assert.AreEqual("sum_totalRevenue", AggregateRecordsTool.ComputeAlias("sum", "totalRevenue"));
+        }
+
+        /// <summary>
+        /// Blog Scenario 3: Forward-looking performance expectation
+        /// "Average quarterlyRevenue per region, regions averaging > $2,000,000?"
+        /// Uses: avg, quarterlyRevenue, filter, groupby [region], having {gt: 2000000}, orderby desc
+        /// </summary>
+        [TestMethod]
+        public async Task BlogScenario3_QuarterlyPerformance_PassesInputValidation()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            string json = @"{
+                ""entity"": ""Book"",
+                ""function"": ""avg"",
+                ""field"": ""quarterlyRevenue"",
+                ""filter"": ""fiscalYear eq 2025"",
+                ""groupby"": [""region""],
+                ""having"": { ""gt"": 2000000 },
+                ""orderby"": ""desc""
+            }";
+
+            JsonDocument args = JsonDocument.Parse(json);
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
+            Assert.AreNotEqual("InvalidArguments", errorType,
+                "Blog scenario 3 JSON must pass input validation (avg/quarterlyRevenue/groupby/having gt).");
+            Assert.AreEqual("avg_quarterlyRevenue", AggregateRecordsTool.ComputeAlias("avg", "quarterlyRevenue"));
+        }
+
+        /// <summary>
+        /// Blog Scenario 4: Revenue concentration across regions
+        /// "Total revenue of active retail customers in Midwest/Southwest, >$5M, by region and customerTier"
+        /// Uses: sum, totalRevenue, complex filter with OR, groupby [region, customerTier], having {gt: 5000000}, orderby desc
+        /// </summary>
+        [TestMethod]
+        public async Task BlogScenario4_RevenueConcentration_PassesInputValidation()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            string json = @"{
+                ""entity"": ""Book"",
+                ""function"": ""sum"",
+                ""field"": ""totalRevenue"",
+                ""filter"": ""isActive eq true and customerType eq 'Retail' and (region eq 'Midwest' or region eq 'Southwest')"",
+                ""groupby"": [""region"", ""customerTier""],
+                ""having"": { ""gt"": 5000000 },
+                ""orderby"": ""desc""
+            }";
+
+            JsonDocument args = JsonDocument.Parse(json);
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
+            Assert.AreNotEqual("InvalidArguments", errorType,
+                "Blog scenario 4 JSON must pass input validation (sum/totalRevenue/complex filter/multi-groupby/having).");
+            Assert.AreEqual("sum_totalRevenue", AggregateRecordsTool.ComputeAlias("sum", "totalRevenue"));
+        }
+
+        /// <summary>
+        /// Blog Scenario 5: Risk exposure by product line
+        /// "For discontinued products, total onHandValue by productLine and warehouseRegion, >$2.5M"
+        /// Uses: sum, onHandValue, filter, groupby [productLine, warehouseRegion], having {gt: 2500000}, orderby desc
+        /// </summary>
+        [TestMethod]
+        public async Task BlogScenario5_RiskExposure_PassesInputValidation()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            string json = @"{
+                ""entity"": ""Book"",
+                ""function"": ""sum"",
+                ""field"": ""onHandValue"",
+                ""filter"": ""discontinued eq true and onHandValue gt 0"",
+                ""groupby"": [""productLine"", ""warehouseRegion""],
+                ""having"": { ""gt"": 2500000 },
+                ""orderby"": ""desc""
+            }";
+
+            JsonDocument args = JsonDocument.Parse(json);
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
+            Assert.AreNotEqual("InvalidArguments", errorType,
+                "Blog scenario 5 JSON must pass input validation (sum/onHandValue/filter/multi-groupby/having).");
+            Assert.AreEqual("sum_onHandValue", AggregateRecordsTool.ComputeAlias("sum", "onHandValue"));
+        }
+
+        /// <summary>
+        /// Verifies that the tool schema supports all properties used across the 5 blog scenarios.
+        /// </summary>
+        [TestMethod]
+        public void BlogScenarios_ToolSchema_SupportsAllRequiredProperties()
+        {
+            AggregateRecordsTool tool = new();
+            Tool metadata = tool.GetToolMetadata();
+            JsonElement properties = metadata.InputSchema.GetProperty("properties");
+
+            string[] blogProperties = { "entity", "function", "field", "filter", "groupby", "orderby", "having", "first" };
+            foreach (string prop in blogProperties)
+            {
+                Assert.IsTrue(properties.TryGetProperty(prop, out _),
+                    $"Tool schema must include '{prop}' property used in blog scenarios.");
+            }
+
+            // Additional schema properties used in spec but not blog
+            Assert.IsTrue(properties.TryGetProperty("distinct", out _), "Tool schema must include 'distinct'.");
+            Assert.IsTrue(properties.TryGetProperty("after", out _), "Tool schema must include 'after'.");
+        }
+
+        /// <summary>
+        /// Verifies that the tool description instructs models to call describe_entities first.
+        /// </summary>
+        [TestMethod]
+        public void BlogScenarios_ToolDescription_ForcesDescribeEntitiesFirst()
+        {
+            AggregateRecordsTool tool = new();
+            Tool metadata = tool.GetToolMetadata();
+
+            Assert.IsTrue(metadata.Description!.Contains("describe_entities"),
+                "Tool description must instruct models to call describe_entities first.");
+            Assert.IsTrue(metadata.Description.Contains("STEP 1"),
+                "Tool description must use numbered steps starting with STEP 1.");
+        }
+
+        /// <summary>
+        /// Verifies that the tool description documents the alias convention used in blog examples.
+        /// </summary>
+        [TestMethod]
+        public void BlogScenarios_ToolDescription_DocumentsAliasConvention()
+        {
+            AggregateRecordsTool tool = new();
+            Tool metadata = tool.GetToolMetadata();
+
+            Assert.IsTrue(metadata.Description!.Contains("{function}_{field}"),
+                "Tool description must document the alias pattern '{function}_{field}'.");
+            Assert.IsTrue(metadata.Description.Contains("'count'"),
+                "Tool description must mention the special 'count' alias for count(*).");
+        }
+
+        #endregion
+
         #region Helper Methods
 
         private static JsonElement ParseContent(CallToolResult result)

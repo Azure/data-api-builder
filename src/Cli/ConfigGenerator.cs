@@ -3133,6 +3133,11 @@ namespace Cli
             return parsedPermissions;
         }
 
+        // Column names returned by the autoentities SQL query.
+        private const string AUTOENTITIES_COLUMN_ENTITY_NAME = "entity_name";
+        private const string AUTOENTITIES_COLUMN_OBJECT = "object";
+        private const string AUTOENTITIES_COLUMN_SCHEMA = "schema";
+
         /// <summary>
         /// Simulates the autoentities generation by querying the database and displaying
         /// which entities would be created for each autoentities filter definition.
@@ -3202,9 +3207,9 @@ namespace Cli
                     using SqlDataReader reader = command.ExecuteReader();
                     while (reader.Read())
                     {
-                        string entityName = reader["entity_name"]?.ToString() ?? string.Empty;
-                        string objectName = reader["object"]?.ToString() ?? string.Empty;
-                        string schemaName = reader["schema"]?.ToString() ?? string.Empty;
+                        string entityName = reader[AUTOENTITIES_COLUMN_ENTITY_NAME]?.ToString() ?? string.Empty;
+                        string objectName = reader[AUTOENTITIES_COLUMN_OBJECT]?.ToString() ?? string.Empty;
+                        string schemaName = reader[AUTOENTITIES_COLUMN_SCHEMA]?.ToString() ?? string.Empty;
 
                         if (!string.IsNullOrWhiteSpace(entityName) && !string.IsNullOrWhiteSpace(objectName))
                         {
@@ -3288,7 +3293,7 @@ namespace Cli
                 {
                     foreach ((string entityName, string schemaName, string objectName) in matches)
                     {
-                        sb.AppendLine($"{filterName},{entityName},{schemaName}.{objectName}");
+                        sb.AppendLine($"{QuoteCsvValue(filterName)},{QuoteCsvValue(entityName)},{QuoteCsvValue($"{schemaName}.{objectName}")}");
                     }
                 }
 
@@ -3301,6 +3306,23 @@ namespace Cli
                 _logger.LogError("Failed to write output file: {Message}", ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Quotes a value for inclusion in a CSV field.
+        /// If the value contains a comma, double-quote, or newline, it is wrapped in double-quotes
+        /// and any embedded double-quotes are escaped by doubling them.
+        /// </summary>
+        /// <param name="value">The value to quote.</param>
+        /// <returns>A properly escaped CSV field value.</returns>
+        private static string QuoteCsvValue(string value)
+        {
+            if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
+            {
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            }
+
+            return value;
         }
 
         /// <summary>

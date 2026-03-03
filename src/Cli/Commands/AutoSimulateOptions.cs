@@ -13,9 +13,9 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 namespace Cli.Commands
 {
     /// <summary>
-    /// AutoSimulateOptions command options.
-    /// This command simulates the autoentities generation by querying the database
-    /// and displaying which entities would be created for each filter definition.
+    /// Command options for the autoentities-simulate verb.
+    /// Simulates autoentities generation by querying the database and displaying
+    /// which entities would be created for each filter definition.
     /// </summary>
     [Verb("autoentities-simulate", isDefault: false, HelpText = "Simulate autoentities generation by querying the database and displaying the results.", Hidden = false)]
     public class AutoSimulateOptions : Options

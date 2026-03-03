@@ -87,12 +87,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
             })
             .WithHttpTransport();
 
-            // Configure underlying MCP server options defensively to avoid overwriting any defaults
+            // Configure underlying MCP server options
             services.PostConfigure<McpServerOptions>(options =>
             {
-                options.ServerInfo ??= new() { Name = McpProtocolDefaults.MCP_SERVER_NAME, Version = McpProtocolDefaults.MCP_SERVER_VERSION };
-                options.ServerInfo.Name = McpProtocolDefaults.MCP_SERVER_NAME;
-                options.ServerInfo.Version = McpProtocolDefaults.MCP_SERVER_VERSION;
+                options.ServerInfo = new() { Name = McpProtocolDefaults.MCP_SERVER_NAME, Version = McpProtocolDefaults.MCP_SERVER_VERSION };
                 options.Capabilities ??= new();
                 options.Capabilities.Tools ??= new();
             });

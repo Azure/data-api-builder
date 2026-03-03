@@ -278,6 +278,24 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
                 }
 
+                // Early field validation: check all user-supplied field names before authorization or query building.
+                // This lets the model discover and fix typos immediately.
+                if (!isCountStar)
+                {
+                    if (!sqlMetadataProvider.TryGetBackingColumn(entityName, field, out _))
+                    {
+                        return McpErrorHelpers.FieldNotFound(toolName, entityName, field, "field", logger);
+                    }
+                }
+
+                foreach (string gField in groupby)
+                {
+                    if (!sqlMetadataProvider.TryGetBackingColumn(entityName, gField, out _))
+                    {
+                        return McpErrorHelpers.FieldNotFound(toolName, entityName, gField, "groupby", logger);
+                    }
+                }
+
                 // Authorization
                 IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
                 IAuthorizationService authorizationService = serviceProvider.GetRequiredService<IAuthorizationService>();
@@ -358,15 +376,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IQueryBuilder queryBuilder = queryManagerFactory.GetQueryBuilder(databaseType);
                 IQueryExecutor queryExecutor = queryManagerFactory.GetQueryExecutor(databaseType);
 
-                // Resolve backing column name for the aggregation field
+                // Resolve backing column name for the aggregation field (already validated early)
                 string? backingField = null;
                 if (!isCountStar)
                 {
-                    if (!sqlMetadataProvider.TryGetBackingColumn(entityName, field, out backingField))
-                    {
-                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
-                            $"Field '{field}' not found for entity '{entityName}'.", logger);
-                    }
+                    sqlMetadataProvider.TryGetBackingColumn(entityName, field, out backingField);
                 }
                 else
                 {
@@ -380,17 +394,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
-                // Resolve backing column names for groupby fields
+                // Resolve backing column names for groupby fields (already validated early)
                 List<(string entityField, string backingCol)> groupbyMapping = new();
                 foreach (string gField in groupby)
                 {
-                    if (!sqlMetadataProvider.TryGetBackingColumn(entityName, gField, out string? backingGCol))
-                    {
-                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
-                            $"GroupBy field '{gField}' not found for entity '{entityName}'.", logger);
-                    }
-
-                    groupbyMapping.Add((gField, backingGCol));
+                    sqlMetadataProvider.TryGetBackingColumn(entityName, gField, out string? backingGCol);
+                    groupbyMapping.Add((gField, backingGCol!));
                 }
 
                 string alias = ComputeAlias(function, field);

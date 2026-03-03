@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -852,6 +853,48 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 "Tool description must document the alias pattern '{function}_{field}'.");
             Assert.IsTrue(metadata.Description.Contains("'count'"),
                 "Tool description must mention the special 'count' alias for count(*).");
+        }
+
+        #endregion
+
+        #region FieldNotFound Error Helper Tests
+
+        /// <summary>
+        /// Verifies the FieldNotFound error helper produces the correct error type
+        /// and a model-friendly message that includes the field name, entity, and guidance.
+        /// </summary>
+        [TestMethod]
+        public void FieldNotFound_ReturnsCorrectErrorTypeAndMessage()
+        {
+            CallToolResult result = McpErrorHelpers.FieldNotFound("aggregate_records", "Product", "badField", "field", null);
+
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            JsonElement error = content.GetProperty("error");
+
+            Assert.AreEqual("FieldNotFound", error.GetProperty("type").GetString());
+            string message = error.GetProperty("message").GetString()!;
+            Assert.IsTrue(message.Contains("badField"), "Message must include the invalid field name.");
+            Assert.IsTrue(message.Contains("Product"), "Message must include the entity name.");
+            Assert.IsTrue(message.Contains("field"), "Message must identify which parameter was invalid.");
+            Assert.IsTrue(message.Contains("describe_entities"), "Message must guide the model to call describe_entities.");
+        }
+
+        /// <summary>
+        /// Verifies the FieldNotFound error helper identifies the groupby parameter.
+        /// </summary>
+        [TestMethod]
+        public void FieldNotFound_GroupBy_IdentifiesParameter()
+        {
+            CallToolResult result = McpErrorHelpers.FieldNotFound("aggregate_records", "Product", "invalidCol", "groupby", null);
+
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            string message = content.GetProperty("error").GetProperty("message").GetString()!;
+
+            Assert.IsTrue(message.Contains("invalidCol"), "Message must include the invalid field name.");
+            Assert.IsTrue(message.Contains("groupby"), "Message must identify 'groupby' as the parameter.");
+            Assert.IsTrue(message.Contains("describe_entities"), "Message must guide the model to call describe_entities.");
         }
 
         #endregion

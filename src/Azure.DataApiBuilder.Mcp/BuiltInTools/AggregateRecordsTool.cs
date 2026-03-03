@@ -216,10 +216,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Argument 'first' must be at least 1.", logger);
                     }
 
-                    if (first > 100_000)
-                    {
-                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Argument 'first' must not exceed 100000.", logger);
-                    }
+
                 }
 
                 string? after = root.TryGetProperty("after", out JsonElement afterElement) ? afterElement.GetString() : null;

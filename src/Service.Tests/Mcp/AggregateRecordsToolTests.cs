@@ -191,21 +191,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [TestMethod]
-        public async Task AggregateRecords_FirstExceedsMax_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"first\": 200000, \"groupby\": [\"title\"]}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("100000"));
-        }
-
-        [TestMethod]
         public async Task AggregateRecords_StarFieldWithAvg_ReturnsInvalidArguments()
         {
             RuntimeConfig config = CreateConfig();

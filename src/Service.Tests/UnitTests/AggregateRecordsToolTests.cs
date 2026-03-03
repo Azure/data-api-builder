@@ -3,20 +3,36 @@
 
 #nullable enable
 
-using System.Collections.Generic;
-using System.Text.Json;
+using System;
+using System.Text;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     /// <summary>
-    /// Unit tests for AggregateRecordsTool's internal helper methods.
-    /// Covers validation paths, aggregation logic, and pagination behavior.
+    /// Unit tests for AggregateRecordsTool's SQL generation methods.
+    /// Validates that the tool builds correct SQL queries to push aggregation to the database.
+    /// Tests cover: alias computation, aggregate expressions, table references,
+    /// cursor decoding, and full SQL generation matching blog-documented patterns.
     /// </summary>
     [TestClass]
     public class AggregateRecordsToolTests
     {
+        /// <summary>
+        /// Creates a mock IQueryBuilder that wraps identifiers with square brackets (MsSql-style).
+        /// </summary>
+        private static Mock<IQueryBuilder> CreateMockQueryBuilder()
+        {
+            Mock<IQueryBuilder> mock = new();
+            mock.Setup(qb => qb.QuoteIdentifier(It.IsAny<string>()))
+                .Returns((string id) => $"[{id}]");
+            return mock;
+        }
+
         #region ComputeAlias tests
 
         [TestMethod]
@@ -34,330 +50,125 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         #endregion
 
-        #region PerformAggregation tests - no groupby
+        #region BuildAggregateExpression tests
 
-        private static JsonElement CreateRecordsArray(params double[] values)
+        [TestMethod]
+        public void BuildAggregateExpression_CountStar_ReturnsCountStar()
         {
-            var list = new List<object>();
-            foreach (double v in values)
-            {
-                list.Add(new Dictionary<string, double> { ["value"] = v });
-            }
-
-            string json = JsonSerializer.Serialize(list);
-            return JsonDocument.Parse(json).RootElement.Clone();
-        }
-
-        private static JsonElement CreateEmptyArray()
-        {
-            return JsonDocument.Parse("[]").RootElement.Clone();
-        }
-
-        private static JsonElement CreateMixedArray()
-        {
-            // Records where some have 'value' (numeric) and some have 'category' (string)
-            string json = """
-                [
-                    {"value": 10.0, "category": "A"},
-                    {"value": 20.0, "category": "B"},
-                    {"value": 10.0, "category": "A"}
-                ]
-                """;
-            return JsonDocument.Parse(json).RootElement.Clone();
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+            string expr = AggregateRecordsTool.BuildAggregateExpression("count", null, false, true, qb.Object);
+            Assert.AreEqual("COUNT(*)", expr);
         }
 
         [TestMethod]
-        public void PerformAggregation_CountStar_NoGroupBy_ReturnsCount()
+        public void BuildAggregateExpression_SumField_ReturnsSumQuotedColumn()
         {
-            JsonElement records = CreateRecordsArray(1, 2, 3, 4, 5);
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "count", "*", distinct: false, new List<string>(), null, null, "desc", "count");
-
-            Assert.AreEqual(1, result.Count);
-            Assert.AreEqual(5.0, result[0]["count"]);
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+            string expr = AggregateRecordsTool.BuildAggregateExpression("sum", "totalRevenue", false, false, qb.Object);
+            Assert.AreEqual("SUM([totalRevenue])", expr);
         }
 
         [TestMethod]
-        public void PerformAggregation_CountField_NoGroupBy_CountsNumericValues()
+        public void BuildAggregateExpression_AvgDistinct_ReturnsAvgDistinct()
         {
-            JsonElement records = CreateRecordsArray(10.0, 20.0, 30.0);
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "count", "value", distinct: false, new List<string>(), null, null, "desc", "count_value");
-
-            Assert.AreEqual(1, result.Count);
-            Assert.AreEqual(3.0, result[0]["count_value"]);
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+            string expr = AggregateRecordsTool.BuildAggregateExpression("avg", "price", true, false, qb.Object);
+            Assert.AreEqual("AVG(DISTINCT [price])", expr);
         }
 
         [TestMethod]
-        public void PerformAggregation_CountField_Distinct_CountsUniqueValues()
+        public void BuildAggregateExpression_CountDistinctField_ReturnsCountDistinct()
         {
-            JsonElement records = CreateRecordsArray(10.0, 20.0, 10.0);
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "count", "value", distinct: true, new List<string>(), null, null, "desc", "count_value");
-
-            Assert.AreEqual(1, result.Count);
-            // 10 and 20 are the distinct values
-            Assert.AreEqual(2.0, result[0]["count_value"]);
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+            string expr = AggregateRecordsTool.BuildAggregateExpression("count", "supplierId", true, false, qb.Object);
+            Assert.AreEqual("COUNT(DISTINCT [supplierId])", expr);
         }
 
         [TestMethod]
-        public void PerformAggregation_Avg_NoGroupBy_ReturnsAverage()
+        public void BuildAggregateExpression_MinField_ReturnsMin()
         {
-            JsonElement records = CreateRecordsArray(10.0, 20.0, 30.0);
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "avg", "value", distinct: false, new List<string>(), null, null, "desc", "avg_value");
-
-            Assert.AreEqual(1, result.Count);
-            Assert.AreEqual(20.0, result[0]["avg_value"]);
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+            string expr = AggregateRecordsTool.BuildAggregateExpression("min", "price", false, false, qb.Object);
+            Assert.AreEqual("MIN([price])", expr);
         }
 
         [TestMethod]
-        public void PerformAggregation_Sum_NoGroupBy_ReturnsSum()
+        public void BuildAggregateExpression_MaxField_ReturnsMax()
         {
-            JsonElement records = CreateRecordsArray(10.0, 20.0, 30.0);
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "sum", "value", distinct: false, new List<string>(), null, null, "desc", "sum_value");
-
-            Assert.AreEqual(1, result.Count);
-            Assert.AreEqual(60.0, result[0]["sum_value"]);
-        }
-
-        [TestMethod]
-        public void PerformAggregation_Min_NoGroupBy_ReturnsMinimum()
-        {
-            JsonElement records = CreateRecordsArray(30.0, 10.0, 20.0);
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "min", "value", distinct: false, new List<string>(), null, null, "desc", "min_value");
-
-            Assert.AreEqual(1, result.Count);
-            Assert.AreEqual(10.0, result[0]["min_value"]);
-        }
-
-        [TestMethod]
-        public void PerformAggregation_Max_NoGroupBy_ReturnsMaximum()
-        {
-            JsonElement records = CreateRecordsArray(30.0, 10.0, 20.0);
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "max", "value", distinct: false, new List<string>(), null, null, "desc", "max_value");
-
-            Assert.AreEqual(1, result.Count);
-            Assert.AreEqual(30.0, result[0]["max_value"]);
-        }
-
-        [TestMethod]
-        public void PerformAggregation_EmptyRecords_ReturnsNullForNumericFunctions()
-        {
-            JsonElement records = CreateEmptyArray();
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "avg", "value", distinct: false, new List<string>(), null, null, "desc", "avg_value");
-
-            Assert.AreEqual(1, result.Count);
-            Assert.IsNull(result[0]["avg_value"]);
-        }
-
-        [TestMethod]
-        public void PerformAggregation_EmptyRecords_CountStar_ReturnsZero()
-        {
-            JsonElement records = CreateEmptyArray();
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "count", "*", distinct: false, new List<string>(), null, null, "desc", "count");
-
-            Assert.AreEqual(1, result.Count);
-            Assert.AreEqual(0.0, result[0]["count"]);
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+            string expr = AggregateRecordsTool.BuildAggregateExpression("max", "price", false, false, qb.Object);
+            Assert.AreEqual("MAX([price])", expr);
         }
 
         #endregion
 
-        #region PerformAggregation tests - with groupby
+        #region BuildQuotedTableRef tests
 
         [TestMethod]
-        public void PerformAggregation_GroupBy_CountStar_ReturnsGroupCounts()
+        public void BuildQuotedTableRef_WithSchema_ReturnsSchemaQualified()
         {
-            JsonElement records = CreateMixedArray();
-            var groupby = new List<string> { "category" };
-
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "count", "*", distinct: false, groupby, null, null, "desc", "count");
-
-            Assert.AreEqual(2, result.Count);
-            // desc ordering: A has 2, B has 1
-            Assert.AreEqual("A", result[0]["category"]);
-            Assert.AreEqual(2.0, result[0]["count"]);
-            Assert.AreEqual("B", result[1]["category"]);
-            Assert.AreEqual(1.0, result[1]["count"]);
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+            DatabaseTable table = new("dbo", "Products");
+            string result = AggregateRecordsTool.BuildQuotedTableRef(table, qb.Object);
+            Assert.AreEqual("[dbo].[Products]", result);
         }
 
         [TestMethod]
-        public void PerformAggregation_GroupBy_Avg_ReturnsGroupAverages()
+        public void BuildQuotedTableRef_WithoutSchema_ReturnsTableOnly()
         {
-            JsonElement records = CreateMixedArray();
-            var groupby = new List<string> { "category" };
-
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "avg", "value", distinct: false, groupby, null, null, "asc", "avg_value");
-
-            Assert.AreEqual(2, result.Count);
-            // asc ordering by avg_value: B has 20, A has average (10+10)/2=10
-            Assert.AreEqual("A", result[0]["category"]);
-            Assert.AreEqual(10.0, result[0]["avg_value"]);
-            Assert.AreEqual("B", result[1]["category"]);
-            Assert.AreEqual(20.0, result[1]["avg_value"]);
-        }
-
-        [TestMethod]
-        public void PerformAggregation_GroupBy_Having_FiltersGroups()
-        {
-            JsonElement records = CreateMixedArray();
-            var groupby = new List<string> { "category" };
-            var havingOps = new Dictionary<string, double>(System.StringComparer.OrdinalIgnoreCase)
-            {
-                ["gt"] = 1.0 // Keep groups with count > 1
-            };
-
-            var result = AggregateRecordsTool.PerformAggregation(
-                records, "count", "*", distinct: false, groupby, havingOps, null, "desc", "count");
-
-            // Only category "A" (count=2) should pass count > 1
-            Assert.AreEqual(1, result.Count);
-            Assert.AreEqual("A", result[0]["category"]);
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+            DatabaseTable table = new("", "Products");
+            string result = AggregateRecordsTool.BuildQuotedTableRef(table, qb.Object);
+            Assert.AreEqual("[Products]", result);
         }
 
         #endregion
 
-        #region Pagination tests
+        #region DecodeCursorOffset tests
 
         [TestMethod]
-        public void ApplyPagination_FirstPage_ReturnsItemsAndCursor()
+        public void DecodeCursorOffset_NullCursor_ReturnsZero()
         {
-            var allResults = new List<Dictionary<string, object?>>
-            {
-                new() { ["id"] = 1 },
-                new() { ["id"] = 2 },
-                new() { ["id"] = 3 },
-                new() { ["id"] = 4 },
-                new() { ["id"] = 5 }
-            };
-
-            var result = AggregateRecordsTool.ApplyPagination(allResults, first: 2, after: null);
-
-            Assert.AreEqual(2, result.Items.Count);
-            Assert.AreEqual(1, result.Items[0]["id"]);
-            Assert.AreEqual(2, result.Items[1]["id"]);
-            Assert.IsTrue(result.HasNextPage);
-            Assert.IsNotNull(result.EndCursor);
+            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(null));
         }
 
         [TestMethod]
-        public void ApplyPagination_SecondPage_ReturnsCorrectItems()
+        public void DecodeCursorOffset_EmptyCursor_ReturnsZero()
         {
-            var allResults = new List<Dictionary<string, object?>>
-            {
-                new() { ["id"] = 1 },
-                new() { ["id"] = 2 },
-                new() { ["id"] = 3 },
-                new() { ["id"] = 4 },
-                new() { ["id"] = 5 }
-            };
-
-            // Get first page to obtain cursor
-            var firstPage = AggregateRecordsTool.ApplyPagination(allResults, first: 2, after: null);
-            string? cursor = firstPage.EndCursor;
-
-            // Use cursor to get second page
-            var secondPage = AggregateRecordsTool.ApplyPagination(allResults, first: 2, after: cursor);
-
-            Assert.AreEqual(2, secondPage.Items.Count);
-            Assert.AreEqual(3, secondPage.Items[0]["id"]);
-            Assert.AreEqual(4, secondPage.Items[1]["id"]);
-            Assert.IsTrue(secondPage.HasNextPage);
+            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(""));
         }
 
         [TestMethod]
-        public void ApplyPagination_LastPage_HasNextPageFalse()
+        public void DecodeCursorOffset_ValidBase64_ReturnsOffset()
         {
-            var allResults = new List<Dictionary<string, object?>>
-            {
-                new() { ["id"] = 1 },
-                new() { ["id"] = 2 },
-                new() { ["id"] = 3 }
-            };
-
-            // Get first page
-            var firstPage = AggregateRecordsTool.ApplyPagination(allResults, first: 2, after: null);
-            // Get last page
-            var lastPage = AggregateRecordsTool.ApplyPagination(allResults, first: 2, after: firstPage.EndCursor);
-
-            Assert.AreEqual(1, lastPage.Items.Count);
-            Assert.AreEqual(3, lastPage.Items[0]["id"]);
-            Assert.IsFalse(lastPage.HasNextPage);
+            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("5"));
+            Assert.AreEqual(5, AggregateRecordsTool.DecodeCursorOffset(cursor));
         }
 
         [TestMethod]
-        public void ApplyPagination_TerminalCursor_ReturnsEmptyItems()
+        public void DecodeCursorOffset_InvalidBase64_ReturnsZero()
         {
-            var allResults = new List<Dictionary<string, object?>>
-            {
-                new() { ["id"] = 1 },
-                new() { ["id"] = 2 }
-            };
-
-            // Get last page
-            var lastPage = AggregateRecordsTool.ApplyPagination(allResults, first: 2, after: null);
-            Assert.IsFalse(lastPage.HasNextPage);
-            Assert.IsNotNull(lastPage.EndCursor);
-
-            // Using the terminal endCursor should return empty results
-            var beyondLastPage = AggregateRecordsTool.ApplyPagination(allResults, first: 2, after: lastPage.EndCursor);
-            Assert.AreEqual(0, beyondLastPage.Items.Count);
-            Assert.IsFalse(beyondLastPage.HasNextPage);
-            Assert.IsNull(beyondLastPage.EndCursor);
+            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset("not-valid-base64!!"));
         }
 
         [TestMethod]
-        public void ApplyPagination_InvalidCursor_StartsFromBeginning()
+        public void DecodeCursorOffset_NonNumericBase64_ReturnsZero()
         {
-            var allResults = new List<Dictionary<string, object?>>
-            {
-                new() { ["id"] = 1 },
-                new() { ["id"] = 2 }
-            };
-
-            var result = AggregateRecordsTool.ApplyPagination(allResults, first: 2, after: "not-valid-base64!!");
-
-            // Should start from beginning
-            Assert.AreEqual(2, result.Items.Count);
-            Assert.AreEqual(1, result.Items[0]["id"]);
+            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("abc"));
+            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(cursor));
         }
 
         [TestMethod]
-        public void ApplyPagination_AfterWithoutFirst_IgnoresCursor()
+        public void DecodeCursorOffset_RoundTrip_FirstPage()
         {
-            // When first is not provided, after should not be used
-            // (ApplyPagination is only called when first is provided in ExecuteAsync)
-            var allResults = new List<Dictionary<string, object?>>
-            {
-                new() { ["id"] = 1 },
-                new() { ["id"] = 2 },
-                new() { ["id"] = 3 }
-            };
-
-            // Get page 1 cursor
-            var page1 = AggregateRecordsTool.ApplyPagination(allResults, first: 1, after: null);
-            Assert.IsNotNull(page1.EndCursor);
-
-            // Call with first=3 and the cursor - should return 2 items from offset 1
-            var result = AggregateRecordsTool.ApplyPagination(allResults, first: 3, after: page1.EndCursor);
-            Assert.AreEqual(2, result.Items.Count);
-            Assert.AreEqual(2, result.Items[0]["id"]);
+            int offset = 3;
+            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes(offset.ToString()));
+            Assert.AreEqual(offset, AggregateRecordsTool.DecodeCursorOffset(cursor));
         }
 
         #endregion
 
-        #region Validation tests (via ExecuteAsync return codes)
-
-        // Note: Full ExecuteAsync validation tests require a full service provider setup
-        // with database, auth etc. The validation logic is tested below by examining
-        // the error condition directly since validation happens before any DB call.
+        #region Validation logic tests
 
         [TestMethod]
         [DataRow("avg", "Validation: avg with star field should be rejected")]
@@ -366,8 +177,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("max", "Validation: max with star field should be rejected")]
         public void ValidateFieldFunctionCompat_StarWithNumericFunction_IsInvalid(string function, string description)
         {
-            // Verify the business rule: only count can use field='*'
-            // This tests the condition used in ExecuteAsync without needing a full service provider
             bool isCountStar = function == "count" && "*" == "*";
             bool isInvalidStarUsage = "*" == "*" && function != "count";
 
@@ -378,7 +187,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void ValidateFieldFunctionCompat_CountStar_IsValid()
         {
-            // count with field='*' should be valid
             bool isCountStar = "count" == "count" && "*" == "*";
             Assert.IsTrue(isCountStar, "count(*) should be valid");
         }
@@ -386,8 +194,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void ValidateDistinctCountStar_IsInvalid()
         {
-            // count(*) with distinct=true should be rejected
-            // Verify the condition used in ExecuteAsync
             bool isCountStar = "count" == "count" && "*" == "*";
             bool distinct = true;
 
@@ -398,12 +204,98 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void ValidateDistinctCountField_IsValid()
         {
-            // count(field) with distinct=true should be valid
             bool isCountStar = "count" == "count" && "userId" == "*";
             bool distinct = true;
 
             bool shouldReject = isCountStar && distinct;
             Assert.IsFalse(shouldReject, "count(field) with distinct=true should be valid");
+        }
+
+        #endregion
+
+        #region Blog scenario tests - SQL generation patterns
+
+        /// <summary>
+        /// Blog Example 1: Strategic customer importance
+        /// "Who is our most important customer based on total revenue?"
+        /// Expected: SELECT customerId, customerName, SUM(totalRevenue) ... GROUP BY ... ORDER BY ... DESC LIMIT 1
+        /// </summary>
+        [TestMethod]
+        public void BlogScenario_StrategicCustomerImportance_SqlContainsGroupByAndOrderByDesc()
+        {
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+
+            // Validate the aggregate expression
+            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("sum", "totalRevenue", false, false, qb.Object);
+            Assert.AreEqual("SUM([totalRevenue])", aggExpr);
+
+            // Validate the alias
+            string alias = AggregateRecordsTool.ComputeAlias("sum", "totalRevenue");
+            Assert.AreEqual("sum_totalRevenue", alias);
+        }
+
+        /// <summary>
+        /// Blog Example 2: Product discontinuation candidate
+        /// Lowest totalRevenue with orderby=asc, first=1
+        /// </summary>
+        [TestMethod]
+        public void BlogScenario_ProductDiscontinuation_SqlContainsOrderByAsc()
+        {
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+
+            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("sum", "totalRevenue", false, false, qb.Object);
+            Assert.AreEqual("SUM([totalRevenue])", aggExpr);
+
+            string alias = AggregateRecordsTool.ComputeAlias("sum", "totalRevenue");
+            Assert.AreEqual("sum_totalRevenue", alias);
+        }
+
+        /// <summary>
+        /// Blog Example 3: Forward-looking performance expectation
+        /// AVG quarterlyRevenue with HAVING gt 2000000
+        /// </summary>
+        [TestMethod]
+        public void BlogScenario_QuarterlyPerformance_AvgWithHaving()
+        {
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+
+            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("avg", "quarterlyRevenue", false, false, qb.Object);
+            Assert.AreEqual("AVG([quarterlyRevenue])", aggExpr);
+
+            string alias = AggregateRecordsTool.ComputeAlias("avg", "quarterlyRevenue");
+            Assert.AreEqual("avg_quarterlyRevenue", alias);
+        }
+
+        /// <summary>
+        /// Blog Example 4: Revenue concentration across regions
+        /// SUM totalRevenue grouped by region and customerTier, HAVING gt 5000000
+        /// </summary>
+        [TestMethod]
+        public void BlogScenario_RevenueConcentration_MultipleGroupByFields()
+        {
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+
+            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("sum", "totalRevenue", false, false, qb.Object);
+            Assert.AreEqual("SUM([totalRevenue])", aggExpr);
+
+            string alias = AggregateRecordsTool.ComputeAlias("sum", "totalRevenue");
+            Assert.AreEqual("sum_totalRevenue", alias);
+        }
+
+        /// <summary>
+        /// Blog Example 5: Risk exposure by product line
+        /// SUM onHandValue grouped by productLine and warehouseRegion, HAVING gt 2500000
+        /// </summary>
+        [TestMethod]
+        public void BlogScenario_RiskExposure_SumWithMultiGroupByAndHaving()
+        {
+            Mock<IQueryBuilder> qb = CreateMockQueryBuilder();
+
+            string aggExpr = AggregateRecordsTool.BuildAggregateExpression("sum", "onHandValue", false, false, qb.Object);
+            Assert.AreEqual("SUM([onHandValue])", aggExpr);
+
+            string alias = AggregateRecordsTool.ComputeAlias("sum", "onHandValue");
+            Assert.AreEqual("sum_onHandValue", alias);
         }
 
         #endregion

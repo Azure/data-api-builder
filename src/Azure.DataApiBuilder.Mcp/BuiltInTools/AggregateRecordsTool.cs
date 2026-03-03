@@ -224,6 +224,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Argument 'first' must be at least 1.", logger);
                     }
+
+                    if (first > 100_000)
+                    {
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Argument 'first' must not exceed 100000.", logger);
+                    }
                 }
 
                 string? after = root.TryGetProperty("after", out JsonElement afterEl) ? afterEl.GetString() : null;
@@ -686,7 +691,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 byte[] bytes = Convert.FromBase64String(after);
                 string decoded = Encoding.UTF8.GetString(bytes);
-                return int.TryParse(decoded, out int cursorOffset) ? cursorOffset : 0;
+                return int.TryParse(decoded, out int cursorOffset) && cursorOffset >= 0 ? cursorOffset : 0;
             }
             catch (FormatException)
             {

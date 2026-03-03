@@ -166,6 +166,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(offset, AggregateRecordsTool.DecodeCursorOffset(cursor));
         }
 
+        [TestMethod]
+        public void DecodeCursorOffset_NegativeValue_ReturnsZero()
+        {
+            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("-5"));
+            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(cursor));
+        }
+
         #endregion
 
         #region Validation logic tests

@@ -5529,6 +5529,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
 
+            ILoggerFactory loggerFactory = new LoggerFactory();
             IFileSystem fileSystem = new FileSystem();
 
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem)
@@ -5538,12 +5539,35 @@ type Planet @model(name:""PlanetAlias"") {
 
             RuntimeConfigProvider configProvider = new(configLoader);
 
-            Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
-            RuntimeConfigValidator configValidator = new(configProvider, fileSystem, loggerValidator.Object);
+            RuntimeConfigValidator configValidator = new(configProvider, fileSystem, loggerFactory.CreateLogger<RuntimeConfigValidator>());
+
+            QueryManagerFactory queryManagerFactory = new(
+                runtimeConfigProvider: configProvider,
+                logger: loggerFactory.CreateLogger<IQueryExecutor>(),
+                contextAccessor: null!,
+                handler: null);
+
+            MetadataProviderFactory metadataProviderFactory = new(
+                runtimeConfigProvider: configProvider,
+                runtimeConfigValidator: configValidator,
+                queryManagerFactory: queryManagerFactory,
+                logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
+                fileSystem: fileSystem,
+                isValidateOnly: false,
+                handler: null);
+
+            MsSqlMetadataProvider provider = new(
+                configProvider,
+                configValidator,
+                metadataProviderFactory,
+                queryManagerFactory,
+                loggerFactory.CreateLogger<MsSqlMetadataProvider>(),
+                configLoader.RuntimeConfig.DefaultDataSourceName,
+                false);
 
             try
             {
-                await configValidator.ValidateEntityAndAutoentityConfigurations(configuration);
+                await provider.InitializeAsync();
                 Assert.Fail("It is expected for DAB to fail due to entities not containing unique parameters.");
             }
             catch (DataApiBuilderException ex)

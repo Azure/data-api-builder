@@ -28,7 +28,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "Unauthenticated"
+        "provider": "Simulator"
       },
       "mode": "development"
     }
@@ -49,7 +49,7 @@
         {
           "role": "anonymous",
           "actions": [
-            "*"
+            "create", "read", "update", "delete"
           ]
         }
       ]

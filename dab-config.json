@@ -1,5 +1,5 @@
 {
-  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v1.7.86-rc/dab.draft.schema.json",
+  "$schema": "https://github.com/Azure/data-api-builder/releases/latest/download/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
     "connection-string": "@env('DAB_CONNSTRING')",
@@ -37,7 +37,7 @@
   "autoentities": {
     "default": {
       "template": {
-        "mcp": { "dml-tool": true },
+        "mcp": { "dml-tools": true },
         "rest": { "enabled": true },
         "graphql": { "enabled": true },
         "health": { "enabled": true },

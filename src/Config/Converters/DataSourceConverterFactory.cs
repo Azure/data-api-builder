@@ -51,12 +51,16 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                 string connectionString = string.Empty;
                 DatasourceHealthCheckConfig? health = null;
                 Dictionary<string, object?>? datasourceOptions = null;
+                UserDelegatedAuthOptions? userDelegatedAuth = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new DataSource(databaseType, connectionString, datasourceOptions, health);
+                        return new DataSource(databaseType, connectionString, datasourceOptions, health)
+                        {
+                            UserDelegatedAuth = userDelegatedAuth
+                        };
                     }
 
                     if (reader.TokenType is JsonTokenType.PropertyName)
@@ -134,6 +138,20 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                     }
 
                                     datasourceOptions = optionsDict;
+                                }
+
+                                break;
+                            case "user-delegated-auth":
+                                if (reader.TokenType != JsonTokenType.Null)
+                                {
+                                    try
+                                    {
+                                        userDelegatedAuth = JsonSerializer.Deserialize<UserDelegatedAuthOptions>(ref reader, options);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        throw new JsonException($"Error while deserializing DataSource user-delegated-auth: {e.Message}");
+                                    }
                                 }
 
                                 break;

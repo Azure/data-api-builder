@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Data.SqlClient;
@@ -34,11 +35,12 @@ namespace Azure.DataApiBuilder.Core.Services
         public MsSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             RuntimeConfigValidator runtimeConfigValidator,
+            MetadataProviderFactory metadataProviderFactory,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,
             bool isValidateOnly = false)
-            : base(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory, logger, dataSourceName, isValidateOnly)
+            : base(runtimeConfigProvider, runtimeConfigValidator, metadataProviderFactory, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
         }

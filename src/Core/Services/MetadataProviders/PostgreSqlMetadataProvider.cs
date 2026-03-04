@@ -4,6 +4,7 @@
 using System.Net;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -23,11 +24,12 @@ namespace Azure.DataApiBuilder.Core.Services
         public PostgreSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             RuntimeConfigValidator runtimeConfigValidator,
+            MetadataProviderFactory metadataProviderFactory,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,
             bool isValidateOnly = false)
-            : base(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory, logger, dataSourceName, isValidateOnly)
+            : base(runtimeConfigProvider, runtimeConfigValidator, metadataProviderFactory, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
         }
 

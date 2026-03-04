@@ -43,6 +43,13 @@ public record Entity
     [JsonConverter(typeof(EntityMcpOptionsConverterFactory))]
     public EntityMcpOptions? Mcp { get; init; }
 
+    /// <summary>
+    /// Measures to expose as virtual fields on this entity (Semantic Model only).
+    /// Can be a list of measure names, or ["*"] to expose all non-hidden measures.
+    /// Null means no measures are exposed.
+    /// </summary>
+    public string[]? Measures { get; init; }
+
     [JsonIgnore]
     public bool IsLinkingEntity { get; init; }
 
@@ -59,7 +66,8 @@ public record Entity
         bool IsLinkingEntity = false,
         EntityHealthCheckConfig? Health = null,
         string? Description = null,
-        EntityMcpOptions? Mcp = null)
+        EntityMcpOptions? Mcp = null,
+        string[]? Measures = null)
     {
         this.Health = Health;
         this.Source = Source;
@@ -73,6 +81,7 @@ public record Entity
         this.IsLinkingEntity = IsLinkingEntity;
         this.Description = Description;
         this.Mcp = Mcp;
+        this.Measures = Measures;
     }
 
     /// <summary>

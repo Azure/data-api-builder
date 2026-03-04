@@ -24,7 +24,8 @@
             "postgresql",
             "mysql",
             "cosmosdb_nosql",
-            "cosmosdb_postgresql"
+            "cosmosdb_postgresql",
+            "semanticmodel"
           ]
         },
         "connection-string": {
@@ -159,6 +160,33 @@
                 "additionalProperties": false,
                 "properties": {},
                 "required": []
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "database-type": {
+                "const": "semanticmodel"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "options": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "workspace": {
+                    "type": "string",
+                    "description": "Name of the Power BI workspace (optional if embedded in connection string)"
+                  },
+                  "dataset": {
+                    "type": "string",
+                    "description": "Name of the dataset / semantic model (optional if embedded in connection string)"
+                  }
+                }
               }
             }
           }

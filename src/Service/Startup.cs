@@ -1214,7 +1214,7 @@ namespace Azure.DataApiBuilder.Service
 
                 // OpenAPI document creation is only attempted for REST supporting database types.
                 // CosmosDB is not supported for OpenAPI document creation.
-                if (!runtimeConfig.CosmosDataSourceUsed)
+                if (!runtimeConfig.CosmosDataSourceUsed && !runtimeConfig.SemanticModelDataSourceUsed)
                 {
                     // Attempt to create OpenAPI document.
                     // Errors must not crash nor halt the intialization of the engine

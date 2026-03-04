@@ -94,7 +94,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                         if (rolesAllowedForRead.Any())
                         {
                             queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, paginationReturnType, inputTypes, entity, rolesAllowedForRead));
-                            queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseTypes[entityName], entity, rolesAllowedForRead));
+
+                            // SemanticModel entities don't have primary keys, so skip ByPK query generation.
+                            if (databaseTypes[entityName] is not DatabaseType.SemanticModel)
+                            {
+                                queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseTypes[entityName], entity, rolesAllowedForRead));
+                            }
                         }
 
                         if (paginationReturnType is not null)

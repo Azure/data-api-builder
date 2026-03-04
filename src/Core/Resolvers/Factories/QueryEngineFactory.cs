@@ -87,6 +87,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                 IQueryEngine queryEngine = new CosmosQueryEngine(_cosmosClientProvider, _metadataProviderFactory, _authorizationResolver, _gQLFilterParser, _runtimeConfigProvider, _cache);
                 _queryEngines.Add(DatabaseType.CosmosDB_NoSQL, queryEngine);
             }
+
+            if (config.SemanticModelDataSourceUsed)
+            {
+                IQueryEngine queryEngine = new SemanticModelQueryEngine(_queryManagerFactory, _metadataProviderFactory, _runtimeConfigProvider, _logger);
+                _queryEngines.Add(DatabaseType.SemanticModel, queryEngine);
+            }
         }
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)

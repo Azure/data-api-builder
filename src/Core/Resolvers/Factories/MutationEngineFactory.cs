@@ -90,6 +90,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                 IMutationEngine mutationEngine = new CosmosMutationEngine(_cosmosClientProvider, _metadataProviderFactory, _authorizationResolver);
                 _mutationEngines.Add(DatabaseType.CosmosDB_NoSQL, mutationEngine);
             }
+
+            if (config.SemanticModelDataSourceUsed)
+            {
+                IMutationEngine mutationEngine = new SemanticModelMutationEngine();
+                _mutationEngines.Add(DatabaseType.SemanticModel, mutationEngine);
+            }
         }
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)

@@ -192,6 +192,9 @@ namespace Cli
                 case DatabaseType.PostgreSQL:
                 case DatabaseType.CosmosDB_PostgreSQL:
                     break;
+                case DatabaseType.SemanticModel:
+                    // Semantic models are read-only; mutations are not supported.
+                    break;
                 default:
                     throw new Exception($"DatabaseType: ${dbType} not supported.Please provide a valid database-type.");
             }

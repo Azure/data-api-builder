@@ -37,6 +37,9 @@ public record RuntimeConfig
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public bool SqlDataSourceUsed { get; private set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public bool SemanticModelDataSourceUsed { get; private set; }
+
     /// <summary>
     /// Retrieves the value of runtime.CacheEnabled property if present, default is false.
     /// Caching is enabled only when explicitly set to true.
@@ -648,6 +651,9 @@ public record RuntimeConfig
 
         CosmosDataSourceUsed = _dataSourceNameToDataSource.Values.Any
             (x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL);
+
+        SemanticModelDataSourceUsed = _dataSourceNameToDataSource.Values.Any
+            (x => x.DatabaseType is DatabaseType.SemanticModel);
     }
 
     /// <summary>

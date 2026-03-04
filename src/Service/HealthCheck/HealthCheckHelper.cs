@@ -162,7 +162,18 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (comprehensiveHealthCheckReport.Checks != null && runtimeConfig.DataSource.IsDatasourceHealthEnabled)
             {
                 string query = Utilities.GetDatSourceQuery(runtimeConfig.DataSource.DatabaseType);
-                (int, string?) response = await ExecuteDatasourceQueryCheckAsync(query, runtimeConfig.DataSource.ConnectionString, Utilities.GetDbProviderFactory(runtimeConfig.DataSource.DatabaseType), runtimeConfig.DataSource.DatabaseType);
+                (int, string?) response;
+
+                // SemanticModel uses ADOMD.NET which does not extend DbConnection/DbProviderFactory.
+                if (runtimeConfig.DataSource.DatabaseType is DatabaseType.SemanticModel)
+                {
+                    response = await ExecuteAdomdDatasourceQueryCheckAsync(query, runtimeConfig.DataSource.ConnectionString);
+                }
+                else
+                {
+                    response = await ExecuteDatasourceQueryCheckAsync(query, runtimeConfig.DataSource.ConnectionString, Utilities.GetDbProviderFactory(runtimeConfig.DataSource.DatabaseType), runtimeConfig.DataSource.DatabaseType);
+                }
+
                 bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < runtimeConfig.DataSource.DatasourceThresholdMs;
 
                 // Add DataSource Health Check Results
@@ -190,6 +201,39 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
                 errorMessage = await _httpUtility.ExecuteDbQueryAsync(query, connectionString, dbProviderFactory, databaseType);
+                stopwatch.Stop();
+                return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
+            }
+
+            return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
+        }
+
+        /// <summary>
+        /// Executes a DAX health check query using ADOMD.NET directly.
+        /// ADOMD.NET connections don't extend DbConnection, so they require a separate code path.
+        /// </summary>
+        private async Task<(int, string?)> ExecuteAdomdDatasourceQueryCheckAsync(string query, string connectionString)
+        {
+            string? errorMessage = null;
+            if (!string.IsNullOrEmpty(query) && !string.IsNullOrEmpty(connectionString))
+            {
+                Stopwatch stopwatch = new();
+                stopwatch.Start();
+                try
+                {
+                    using Microsoft.AnalysisServices.AdomdClient.AdomdConnection connection = new(connectionString);
+                    await Task.Run(() => connection.Open());
+                    using Microsoft.AnalysisServices.AdomdClient.AdomdCommand command = connection.CreateCommand();
+                    command.CommandText = query;
+                    using Microsoft.AnalysisServices.AdomdClient.AdomdDataReader reader = command.ExecuteReader();
+                    _logger.LogTrace("The ADOMD.NET health check query for datasource executed successfully.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("An exception occurred while executing the ADOMD.NET health check query: {Message}", ex.Message);
+                    errorMessage = ex.Message;
+                }
+
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }

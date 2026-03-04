@@ -94,6 +94,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                         exceptionParser = new MsSqlDbExceptionParser(_runtimeConfigProvider);
                         queryExecutor = new MsSqlQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger, _contextAccessor, _handler, _oboTokenProvider);
                         break;
+                    case DatabaseType.SemanticModel:
+                        exceptionParser = new SemanticModelDbExceptionParser(_runtimeConfigProvider);
+                        queryExecutor = new SemanticModelQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger);
+                        break;
                     default:
                         throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage);
                 }

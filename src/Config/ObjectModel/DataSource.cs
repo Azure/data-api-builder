@@ -83,6 +83,15 @@ public record DataSource(
                 SetSessionContext: ReadBoolOption(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext))));
         }
 
+        if (typeof(TOptionType).IsAssignableFrom(typeof(SemanticModelOptions)))
+        {
+            return Options is not null ?
+                (TOptionType)(object)new SemanticModelOptions(
+                Workspace: ReadStringOption(namingPolicy.ConvertName(nameof(SemanticModelOptions.Workspace))),
+                Dataset: ReadStringOption(namingPolicy.ConvertName(nameof(SemanticModelOptions.Dataset))))
+                : default;
+        }
+
         throw new NotSupportedException($"The type {typeof(TOptionType).FullName} is not a supported strongly typed options object");
     }
 
@@ -125,6 +134,13 @@ public record CosmosDbNoSQLDataSourceOptions(string? Database, string? Container
 /// Options for MsSql database.
 /// </summary>
 public record MsSqlOptions(bool SetSessionContext = true) : IDataSourceOptions;
+
+/// <summary>
+/// Options for Semantic Model (Power BI / Fabric / Analysis Services) database.
+/// </summary>
+/// <param name="Workspace">Name of the Power BI workspace (optional, can be embedded in connection string).</param>
+/// <param name="Dataset">Name of the dataset / semantic model (optional, can be embedded in connection string).</param>
+public record SemanticModelOptions(string? Workspace, string? Dataset) : IDataSourceOptions;
 
 /// <summary>
 /// Options for user-delegated authentication (OBO) for a data source.

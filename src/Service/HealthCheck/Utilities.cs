@@ -33,6 +33,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     return "SELECT VALUE 1";
                 case DatabaseType.DWSQL:
                     return "SELECT 1";
+                case DatabaseType.SemanticModel:
+                    return "EVALUATE ROW(\"status\", 1)";
                 default:
                     return string.Empty;
             }

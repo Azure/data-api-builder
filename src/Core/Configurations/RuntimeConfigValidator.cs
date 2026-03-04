@@ -573,6 +573,36 @@ public class RuntimeConfigValidator : IConfigValidator
                     HandleOrRecordException(e);
                 }
             }
+
+            if (dataSource.DatabaseType is DatabaseType.SemanticModel)
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(dataSource.ConnectionString))
+                    {
+                        throw new DataApiBuilderException(
+                            "SemanticModel is specified but no connection string has been provided.",
+                            HttpStatusCode.ServiceUnavailable,
+                            DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
+                    // Validate that SemanticModel entities don't use stored procedures.
+                    foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+                    {
+                        if (entity.Source.Type is EntitySourceType.StoredProcedure)
+                        {
+                            throw new DataApiBuilderException(
+                                $"Entity '{entityName}' is configured as a stored procedure, which is not supported for SemanticModel data sources. Semantic models only support table entities.",
+                                HttpStatusCode.ServiceUnavailable,
+                                DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    HandleOrRecordException(e);
+                }
+            }
         }
     }
 

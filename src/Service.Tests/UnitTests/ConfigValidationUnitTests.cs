@@ -10,6 +10,7 @@ using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -2099,6 +2100,63 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             else
             {
                 configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+        }
+
+        [TestMethod]
+        public async Task ValidateAutoentitiesConfiguration()
+        {
+            EntityAction entityAction = new(EntityActionOperation.Read, null, null);
+
+            Dictionary<string, Autoentity> autoentityMap = new();
+            string autoentityName = "AutoentityA";
+
+            Autoentity autoentity = new(
+                Patterns: new AutoentityPatterns(
+                    Include: new[] { "%patterns%" },
+                    Exclude: new[] { "%books%" },
+                    Name: "{object}"),
+                Template: new AutoentityTemplate(
+                    Rest: new(Enabled: false),
+                    GraphQL: new(Enabled: true, Singular: "", Plural: ""),
+                    Health: new(enabled: true),
+                    Cache: new(Enabled: true, TtlSeconds: 50)),
+                Permissions: new EntityPermission[] { new("anonymous", new EntityAction[] { entityAction }) });
+
+                autoentityMap.Add(autoentityName, autoentity);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new(
+                    DatabaseType: DatabaseType.MSSQL,
+                    ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\"),
+                    Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null)),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new(autoentityMap));
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(CUSTOM_CONFIG, new MockFileData(runtimeConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            loader.UpdateConfigFilePath(CUSTOM_CONFIG);
+
+            RuntimeConfigProvider provider = new(loader);
+            Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+
+            try
+            {
+                Assert.IsTrue(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail(ex.Message);
             }
         }
 

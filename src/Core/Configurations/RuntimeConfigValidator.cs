@@ -318,19 +318,6 @@ public class RuntimeConfigValidator : IConfigValidator
 
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
-
-        // Running these graphQL validations only in development mode to ensure
-        // fast startup of engine in production mode.
-        if (runtimeConfig.IsDevelopmentMode())
-        {
-            ValidateEntityConfiguration(runtimeConfig);
-
-            if (runtimeConfig.IsGraphQLEnabled)
-            {
-                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
-            }
-        }
-
         ValidatePermissionsInConfig(runtimeConfig);
 
         _logger.LogInformation("Validating entity relationships.");

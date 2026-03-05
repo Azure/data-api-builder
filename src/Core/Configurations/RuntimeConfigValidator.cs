@@ -319,7 +319,7 @@ public class RuntimeConfigValidator : IConfigValidator
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
 
-        // Running these graphQL validations only in development mode to ensureExpand commentComment on line L100
+        // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
         if (runtimeConfig.IsDevelopmentMode())
         {

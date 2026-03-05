@@ -76,6 +76,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
+            runtimeConfigValidator.ValidateEntityAndAutoentityConfigurations(runtimeConfig);
             _cosmosDb = cosmosDb;
             ParseSchemaGraphQLDocument();
 

@@ -347,13 +347,14 @@ public class CachingConfigProcessingTests
     }
 
     /// <summary>
-    /// Validates that IsEntityCachingEnabled correctly inherits from the runtime cache enabled
+    /// Validates that Entity.IsCachingEnabled correctly reflects inheritance from the runtime cache enabled
     /// setting when the entity does not explicitly set cache enabled.
+    /// Inheritance is resolved at RuntimeConfig construction time via ResolveEntityCacheInheritance().
     /// Also validates that entity-level explicit enabled overrides the runtime setting.
     /// </summary>
     /// <param name="globalCacheConfig">Global cache configuration JSON fragment.</param>
     /// <param name="entityCacheConfig">Entity cache configuration JSON fragment.</param>
-    /// <param name="expectedIsEntityCachingEnabled">Whether IsEntityCachingEnabled should return true.</param>
+    /// <param name="expectedIsEntityCachingEnabled">Whether Entity.IsCachingEnabled should return true.</param>
     [DataRow(@",""cache"": { ""enabled"": true }", @"", true, DisplayName = "Global cache enabled, entity cache omitted: entity inherits enabled from runtime.")]
     [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": {}", true, DisplayName = "Global cache enabled, entity cache empty: entity inherits enabled from runtime.")]
     [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": { ""enabled"": false }", false, DisplayName = "Global cache enabled, entity cache explicitly disabled: entity explicit value wins.")]
@@ -363,7 +364,7 @@ public class CachingConfigProcessingTests
     [DataRow(@"", @"", false, DisplayName = "No global cache, no entity cache: defaults to disabled.")]
     [DataRow(@"", @",""cache"": { ""enabled"": true }", true, DisplayName = "No global cache, entity cache explicitly enabled: entity explicit value wins.")]
     [DataTestMethod]
-    public void IsEntityCachingEnabled_InheritsFromRuntimeCache(
+    public void EntityIsCachingEnabled_InheritsFromRuntimeCache(
         string globalCacheConfig,
         string entityCacheConfig,
         bool expectedIsEntityCachingEnabled)
@@ -377,14 +378,14 @@ public class CachingConfigProcessingTests
 
         Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
 
-        string entityName = config.Entities.First().Key;
+        Entity entity = config.Entities.First().Value;
 
-        // Act
-        bool actualIsEntityCachingEnabled = config.IsEntityCachingEnabled(entityName);
+        // Act - Entity.IsCachingEnabled should reflect the inherited value resolved at construction time.
+        bool actualIsEntityCachingEnabled = entity.IsCachingEnabled;
 
         // Assert
         Assert.AreEqual(expected: expectedIsEntityCachingEnabled, actual: actualIsEntityCachingEnabled,
-            message: $"IsEntityCachingEnabled should be {expectedIsEntityCachingEnabled}.");
+            message: $"Entity.IsCachingEnabled should be {expectedIsEntityCachingEnabled}.");
     }
 
     /// <summary>

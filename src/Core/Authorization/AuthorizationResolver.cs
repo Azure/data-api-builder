@@ -820,39 +820,10 @@ public class AuthorizationResolver : IAuthorizationResolver
         }
     }
 
-    /// <summary>
-    /// Get list of roles defined for entity within runtime configuration.. This is applicable for GraphQL when creating authorization
-    /// directive on Object type.
-    /// </summary>
-    /// <param name="entityName">Name of entity.</param>
-    /// <returns>Collection of role names.</returns>
+    /// <inheritdoc />
     public IEnumerable<string> GetRolesForEntity(string entityName)
     {
         return EntityPermissionsMap[entityName].RoleToOperationMap.Keys;
-    }
-
-    /// <inheritdoc />
-    public bool IsRoleAllowedByDirective(string clientRole, IReadOnlyList<string>? directiveRoles)
-    {
-        if (directiveRoles is null || directiveRoles.Count == 0)
-        {
-            return false;
-        }
-
-        // Explicit match — role is directly listed.
-        if (directiveRoles.Any(role => role.Equals(clientRole, StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
-
-        // Role inheritance: any non-anonymous role inherits from 'authenticated'.
-        if (!clientRole.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase) &&
-            directiveRoles.Any(role => role.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
-
-        return false;
     }
 
     /// <summary>

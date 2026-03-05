@@ -13,14 +13,14 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 namespace Cli.Commands
 {
     /// <summary>
-    /// Command options for the autoentities-simulate verb.
+    /// Command options for the auto-config-simulate verb.
     /// Simulates autoentities generation by querying the database and displaying
     /// which entities would be created for each filter definition.
     /// </summary>
-    [Verb("autoentities-simulate", isDefault: false, HelpText = "Simulate autoentities generation by querying the database and displaying the results.", Hidden = false)]
-    public class AutoSimulateOptions : Options
+    [Verb("auto-config-simulate", isDefault: false, HelpText = "Simulate autoentities generation by querying the database and displaying the results.", Hidden = false)]
+    public class AutoConfigSimulateOptions : Options
     {
-        public AutoSimulateOptions(
+        public AutoConfigSimulateOptions(
             string? output = null,
             string? config = null)
             : base(config)

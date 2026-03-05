@@ -4,7 +4,7 @@
 namespace Cli.Tests;
 
 /// <summary>
-/// Tests for the autoentities-simulate CLI command.
+/// Tests for the auto-config-simulate CLI command.
 /// </summary>
 [TestClass]
 public class AutoSimulateTests
@@ -37,7 +37,7 @@ public class AutoSimulateTests
     public void TestSimulateAutoentities_NoConfigFile()
     {
         // Arrange
-        AutoSimulateOptions options = new();
+        AutoConfigSimulateOptions options = new();
 
         // Act
         bool success = TrySimulateAutoentities(options, _runtimeConfigLoader!, _fileSystem!);
@@ -67,7 +67,7 @@ public class AutoSimulateTests
             config: TEST_RUNTIME_CONFIG_FILE);
         Assert.IsTrue(TryGenerateConfig(initOptions, _runtimeConfigLoader!, _fileSystem!));
 
-        AutoSimulateOptions options = new(config: TEST_RUNTIME_CONFIG_FILE);
+        AutoConfigSimulateOptions options = new(config: TEST_RUNTIME_CONFIG_FILE);
 
         // Act
         bool success = TrySimulateAutoentities(options, _runtimeConfigLoader!, _fileSystem!);
@@ -86,7 +86,7 @@ public class AutoSimulateTests
         InitOptions initOptions = CreateBasicInitOptionsForMsSqlWithConfig(config: TEST_RUNTIME_CONFIG_FILE);
         Assert.IsTrue(TryGenerateConfig(initOptions, _runtimeConfigLoader!, _fileSystem!));
 
-        AutoSimulateOptions options = new(config: TEST_RUNTIME_CONFIG_FILE);
+        AutoConfigSimulateOptions options = new(config: TEST_RUNTIME_CONFIG_FILE);
 
         // Act
         bool success = TrySimulateAutoentities(options, _runtimeConfigLoader!, _fileSystem!);
@@ -105,7 +105,7 @@ public class AutoSimulateTests
         string outputPath = "simulation-output.csv";
 
         // Act
-        AutoSimulateOptions options = new(output: outputPath, config: TEST_RUNTIME_CONFIG_FILE);
+        AutoConfigSimulateOptions options = new(output: outputPath, config: TEST_RUNTIME_CONFIG_FILE);
 
         // Assert
         Assert.AreEqual(outputPath, options.Output);
@@ -119,7 +119,7 @@ public class AutoSimulateTests
     public void TestSimulateAutoentitiesOptions_DefaultOutputIsNull()
     {
         // Arrange & Act
-        AutoSimulateOptions options = new();
+        AutoConfigSimulateOptions options = new();
 
         // Assert
         Assert.IsNull(options.Output);

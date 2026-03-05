@@ -443,6 +443,41 @@ public class CachingConfigProcessingTests
     }
 
     /// <summary>
+    /// Validates that the entity cache level is serialized with the correct casing (e.g. "L1", "L1L2")
+    /// when writing the runtime config to JSON. This ensures the serialized config passes JSON schema
+    /// validation which expects uppercase enum values.
+    /// </summary>
+    /// <param name="levelValue">The cache level value as written in the JSON config.</param>
+    /// <param name="expectedSerializedLevel">The expected string in the serialized JSON output.</param>
+    [DataRow("L1", "L1", DisplayName = "L1 level serialized with correct casing.")]
+    [DataRow("L1L2", "L1L2", DisplayName = "L1L2 level serialized with correct casing.")]
+    [DataTestMethod]
+    public void EntityCacheLevelSerializedWithCorrectCasing(string levelValue, string expectedSerializedLevel)
+    {
+        // Arrange
+        string entityCacheConfig = @",""cache"": { ""enabled"": true, ""level"": """ + levelValue + @""" }";
+        string fullConfig = GetRawConfigJson(globalCacheConfig: @",""cache"": { ""enabled"": true }", entityCacheConfig: entityCacheConfig);
+        RuntimeConfigLoader.TryParseConfig(
+            json: fullConfig,
+            out RuntimeConfig? config,
+            replacementSettings: null);
+        Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
+
+        // Act
+        string serializedConfig = config.ToJson();
+
+        // Assert
+        using JsonDocument parsedConfig = JsonDocument.Parse(serializedConfig);
+        JsonElement entityElement = parsedConfig.RootElement
+            .GetProperty("entities")
+            .EnumerateObject().First().Value;
+        JsonElement cacheElement = entityElement.GetProperty("cache");
+        string? actualLevel = cacheElement.GetProperty("level").GetString();
+        Assert.AreEqual(expected: expectedSerializedLevel, actual: actualLevel,
+            message: $"Cache level should be serialized as '{expectedSerializedLevel}', not lowercase.");
+    }
+
+    /// <summary>
     /// Returns a JSON string of the runtime config with the test-provided
     /// cache configuration.
     /// </summary>

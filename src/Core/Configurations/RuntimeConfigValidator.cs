@@ -1603,7 +1603,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// Queries or Mutation entities, and ensure the semantic correctness of all the entities.
     /// </summary>
     /// <param name="runtimeConfig">The runtime configuration.</param>
-    public void ValidateEntityAndAutoentityConfigurations(RuntimeConfig runtimeConfig, MetadataProviderFactory metadataProviderFactory)
+    public void ValidateEntityAndAutoentityConfigurations(RuntimeConfig runtimeConfig)
     {
         if (runtimeConfig.IsDevelopmentMode())
         {
@@ -1616,14 +1616,6 @@ public class RuntimeConfigValidator : IConfigValidator
 
             // Running only in developer mode to ensure fast and smooth startup in production.
             ValidatePermissionsInConfig(runtimeConfig);
-
-            ConfigValidationExceptions.AddRange(metadataProviderFactory.GetAllMetadataExceptions());
-
-            // Validation below relies on metadata being populated from backend, only execute when there were no connection errors
-            if (!ConfigValidationExceptions.Any(x => x.Message.StartsWith(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
-            {
-                ValidateRelationships(runtimeConfig, metadataProviderFactory);
-            }
         }
     }
 }

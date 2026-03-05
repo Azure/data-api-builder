@@ -1399,8 +1399,7 @@ namespace Cli
                 string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
                 if (updatedProviderValue != null)
                 {
-                    // Default to Unauthenticated when provider string is not provided
-                    updatedValue = updatedProviderValue?.ToString() ?? AuthenticationOptions.UNAUTHENTICATED_AUTHENTICATION;
+                    updatedValue = updatedProviderValue;
                     AuthenticationOptions AuthOptions;
                     if (updatedHostOptions?.Authentication == null)
                     {

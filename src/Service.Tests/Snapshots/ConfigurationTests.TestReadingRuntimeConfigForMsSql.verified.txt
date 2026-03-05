@@ -42,7 +42,6 @@
         UserProvidedExecuteEntity: false,
         UserProvidedAggregateRecords: false
       },
-      UserProvidedPath: false,
       UserProvidedQueryTimeout: false,
       EffectiveQueryTimeoutSeconds: 30
     },

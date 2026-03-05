@@ -353,7 +353,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// is expected in the request body, so non-auto-generated PK columns must be present and
         /// the full composite key (if applicable) must be supplied.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public void ValidateUpsertRequestContext(UpsertRequestContext upsertRequestCtx, bool primaryKeyInUrl = true)
+        public void ValidateUpsertRequestContext(UpsertRequestContext upsertRequestCtx, bool isPrimaryKeyInUrl = true)
         {
             ISqlMetadataProvider sqlMetadataProvider = GetSqlMetadataProvider(upsertRequestCtx.EntityName);
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
@@ -394,7 +394,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // all non-auto-generated PK columns are present in the body to form a complete key.
                 if (sourceDefinition.PrimaryKey.Contains(column.Key))
                 {
-                    if (primaryKeyInUrl)
+                    if (isPrimaryKeyInUrl)
                     {
                         continue;
                     }

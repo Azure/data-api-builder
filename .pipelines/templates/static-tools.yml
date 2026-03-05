@@ -16,6 +16,8 @@ jobs:
   steps:
   - task: NuGetAuthenticate@1
     displayName: 'NuGet Authenticate'
+    inputs:
+      nuGetServiceConnections: 'EngThriveNugetFeedAccessForSqlDab'
 
   - checkout: self  # self represents the repo where the initial Pipelines YAML file was found
     clean: true  # if true, execute `execute git clean -ffdx && git reset --hard HEAD` before fetching

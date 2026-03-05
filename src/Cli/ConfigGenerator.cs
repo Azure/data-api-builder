@@ -3147,7 +3147,7 @@ namespace Cli
         /// <param name="loader">The config loader to read the existing config.</param>
         /// <param name="fileSystem">The filesystem used for reading the config file and writing output.</param>
         /// <returns>True if the simulation completed successfully; otherwise, false.</returns>
-        public static bool TrySimulateAutoentities(AutoSimulateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        public static bool TrySimulateAutoentities(AutoConfigSimulateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {

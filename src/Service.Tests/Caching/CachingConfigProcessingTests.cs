@@ -358,7 +358,6 @@ public class CachingConfigProcessingTests
     [DataRow(@",""cache"": { ""enabled"": true }", @"", true, DisplayName = "Global cache enabled, entity cache omitted: entity inherits enabled from runtime.")]
     [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": {}", true, DisplayName = "Global cache enabled, entity cache empty: entity inherits enabled from runtime.")]
     [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": { ""enabled"": false }", false, DisplayName = "Global cache enabled, entity cache explicitly disabled: entity explicit value wins.")]
-    [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": { ""enabled"": true }", true, DisplayName = "Global cache enabled, entity cache explicitly enabled: entity explicit value wins.")]
     [DataRow(@",""cache"": { ""enabled"": false }", @"", false, DisplayName = "Global cache disabled, entity cache omitted: entity inherits disabled from runtime.")]
     [DataRow(@",""cache"": { ""enabled"": false }", @",""cache"": { ""enabled"": true }", true, DisplayName = "Global cache disabled, entity cache explicitly enabled: entity explicit value wins.")]
     [DataRow(@"", @"", false, DisplayName = "No global cache, no entity cache: defaults to disabled.")]

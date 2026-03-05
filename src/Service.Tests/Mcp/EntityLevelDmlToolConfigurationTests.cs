@@ -201,15 +201,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// <param name="entityName">The entity name to use.</param>
         /// <param name="jsonArguments">The JSON arguments for the tool.</param>
         [DataTestMethod]
-        [DataRow("CreateRecord", "Table", "Book", "{\"entity\": \"Book\", \"data\": {\"id\": 1, \"title\": \"Test\"}}", DisplayName = "CreateRecord allows Table")]
-        [DataRow("CreateRecord", "View", "BookView", "{\"entity\": \"BookView\", \"data\": {\"id\": 1, \"title\": \"Test\"}}", DisplayName = "CreateRecord allows View")]
-        [DataRow("ReadRecords", "Table", "Book", "{\"entity\": \"Book\"}", DisplayName = "ReadRecords allows Table")]
-        [DataRow("ReadRecords", "View", "BookView", "{\"entity\": \"BookView\"}", DisplayName = "ReadRecords allows View")]
-        [DataRow("UpdateRecord", "Table", "Book", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}, \"fields\": {\"title\": \"Updated\"}}", DisplayName = "UpdateRecord allows Table")]
-        [DataRow("UpdateRecord", "View", "BookView", "{\"entity\": \"BookView\", \"keys\": {\"id\": 1}, \"fields\": {\"title\": \"Updated\"}}", DisplayName = "UpdateRecord allows View")]
-        [DataRow("DeleteRecord", "Table", "Book", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}}", DisplayName = "DeleteRecord allows Table")]
-        [DataRow("DeleteRecord", "View", "BookView", "{\"entity\": \"BookView\", \"keys\": {\"id\": 1}}", DisplayName = "DeleteRecord allows View")]
-        public async Task DmlTool_AllowsTablesAndViews(string toolType, string sourceType, string entityName, string jsonArguments)
+        [DataRow("CreateRecord", "Table", "{\"entity\": \"Book\", \"data\": {\"id\": 1, \"title\": \"Test\"}}", DisplayName = "CreateRecord allows Table")]
+        [DataRow("CreateRecord", "View", "{\"entity\": \"BookView\", \"data\": {\"id\": 1, \"title\": \"Test\"}}", DisplayName = "CreateRecord allows View")]
+        [DataRow("ReadRecords", "Table", "{\"entity\": \"Book\"}", DisplayName = "ReadRecords allows Table")]
+        [DataRow("ReadRecords", "View", "{\"entity\": \"BookView\"}", DisplayName = "ReadRecords allows View")]
+        [DataRow("UpdateRecord", "Table", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}, \"fields\": {\"title\": \"Updated\"}}", DisplayName = "UpdateRecord allows Table")]
+        [DataRow("UpdateRecord", "View", "{\"entity\": \"BookView\", \"keys\": {\"id\": 1}, \"fields\": {\"title\": \"Updated\"}}", DisplayName = "UpdateRecord allows View")]
+        [DataRow("DeleteRecord", "Table", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}}", DisplayName = "DeleteRecord allows Table")]
+        [DataRow("DeleteRecord", "View", "{\"entity\": \"BookView\", \"keys\": {\"id\": 1}}", DisplayName = "DeleteRecord allows View")]
+        public async Task DmlTool_AllowsTablesAndViews(string toolType, string sourceType, string jsonArguments)
         {
             // Arrange
             RuntimeConfig config = sourceType == "View"

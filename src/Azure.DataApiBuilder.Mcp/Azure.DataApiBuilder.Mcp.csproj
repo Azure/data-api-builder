@@ -4,6 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Suppress transitive dependency version mismatch warnings from MCP SDK -->
+    <NoWarn>$(NoWarn);NU1603</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,8 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ModelContextProtocol" />
-    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <PackageReference Include="Microsoft.ModelContextProtocol.HttpServer" />
   </ItemGroup>
 
   <ItemGroup>

@@ -326,6 +326,8 @@ public class AuthorizationResolver : IAuthorizationResolver
 
                         // When a wildcard (*) is defined for Excluded columns, all of the table's
                         // columns must be resolved and placed in the operationToColumn Key/Value store.
+                        // This is especially relevant for delete requests, where the operation may not include
+                        // any columns, but the policy still needs to be evaluated.
                         if (entityAction.Fields.Exclude is null ||
                             (entityAction.Fields.Exclude.Count == 1 && entityAction.Fields.Exclude.Contains(WILDCARD)))
                         {
@@ -803,6 +805,30 @@ public class AuthorizationResolver : IAuthorizationResolver
     public IEnumerable<string> GetRolesForEntity(string entityName)
     {
         return EntityPermissionsMap[entityName].RoleToOperationMap.Keys;
+    }
+
+    /// <inheritdoc />
+    public bool IsRoleAllowedByDirective(string clientRole, IReadOnlyList<string>? directiveRoles)
+    {
+        if (directiveRoles is null || directiveRoles.Count == 0)
+        {
+            return false;
+        }
+
+        // Explicit match — role is directly listed.
+        if (directiveRoles.Any(role => role.Equals(clientRole, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // Role inheritance: any non-anonymous role inherits from 'authenticated'.
+        if (!clientRole.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase) &&
+            directiveRoles.Any(role => role.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>

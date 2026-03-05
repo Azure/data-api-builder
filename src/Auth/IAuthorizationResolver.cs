@@ -152,26 +152,5 @@ public interface IAuthorizationResolver
     /// <param name="clientRole">The role from the X-MS-API-ROLE header.</param>
     /// <param name="directiveRoles">The roles listed on the @authorize directive.</param>
     /// <returns>True if the client role should be allowed through the gate.</returns>
-    public bool IsRoleAllowedByDirective(string clientRole, IReadOnlyList<string>? directiveRoles)
-    {
-        if (directiveRoles is null || directiveRoles.Count == 0)
-        {
-            return false;
-        }
-
-        // Explicit match — role is directly listed.
-        if (directiveRoles.Any(role => role.Equals(clientRole, StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
-
-        // Role inheritance: any non-anonymous role inherits from 'authenticated'.
-        if (!clientRole.Equals("anonymous", StringComparison.OrdinalIgnoreCase) &&
-            directiveRoles.Any(role => role.Equals("authenticated", StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
-
-        return false;
-    }
+    public bool IsRoleAllowedByDirective(string clientRole, IReadOnlyList<string>? directiveRoles);
 }

@@ -529,13 +529,14 @@ public record RuntimeConfig
 
     /// <summary>
     /// Returns the ttl-seconds value for a given entity.
+    /// If entity caching is disabled, returns null (there is no TTL when caching is off).
     /// If the property is not set, returns the global default value set in the runtime config.
     /// If the global default value is not set, the default value is used (5 seconds).
     /// </summary>
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
-    /// <returns>Number of seconds (ttl) that a cache entry should be valid before cache eviction.</returns>
+    /// <returns>Number of seconds (ttl) that a cache entry should be valid before cache eviction, or null if entity caching is disabled.</returns>
     /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided.</exception>
-    public virtual int GetEntityCacheEntryTtl(string entityName)
+    public virtual int? GetEntityCacheEntryTtl(string entityName)
     {
         if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
         {
@@ -547,7 +548,7 @@ public record RuntimeConfig
 
         if (!entityConfig.IsCachingEnabled)
         {
-            return GlobalCacheEntryTtl();
+            return null;
         }
 
         if (entityConfig.Cache.UserProvidedTtlOptions)
@@ -562,12 +563,13 @@ public record RuntimeConfig
 
     /// <summary>
     /// Returns the cache level value for a given entity.
+    /// If entity caching is disabled, returns null (there is no cache level when caching is off).
     /// If the property is not set, returns the default (L1L2) for a given entity.
     /// </summary>
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
-    /// <returns>Cache level that a cache entry should be stored in.</returns>
+    /// <returns>Cache level that a cache entry should be stored in, or null if entity caching is disabled.</returns>
     /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided.</exception>
-    public virtual EntityCacheLevel GetEntityCacheEntryLevel(string entityName)
+    public virtual EntityCacheLevel? GetEntityCacheEntryLevel(string entityName)
     {
         if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
         {
@@ -579,7 +581,7 @@ public record RuntimeConfig
 
         if (!entityConfig.IsCachingEnabled)
         {
-            return EntityCacheOptions.DEFAULT_LEVEL;
+            return null;
         }
 
         if (entityConfig.Cache.UserProvidedLevelOptions)

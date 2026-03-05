@@ -342,7 +342,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     queryString,
                     dataSourceName,
                     queryExecutor,
-                    runtimeConfig.GetEntityCacheEntryLevel(structure.EntityName)
+                    runtimeConfig.GetEntityCacheEntryLevel(structure.EntityName)!.Value
                     );
                 }
             }
@@ -387,7 +387,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         dataSourceName: queryMetadata.DataSource);
                     _cache.Set<JsonElement?>(
                         queryMetadata,
-                        cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName),
+                        cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName)!.Value,
                         result,
                         cacheEntryLevel);
                     return ParseResultIntoJsonDocument(result);
@@ -435,7 +435,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     result = await _cache.GetOrSetAsync<JsonElement>(
                         queryExecutor,
                         queryMetadata,
-                        cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName),
+                        cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName)!.Value,
                         cacheEntryLevel);
                     return ParseResultIntoJsonDocument(result);
             }
@@ -488,8 +488,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             args: null,
                             dataSourceName: dataSourceName),
                         queryMetadata,
-                        runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName),
-                        runtimeConfig.GetEntityCacheEntryLevel(entityName: structure.EntityName));
+                        runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName)!.Value,
+                        runtimeConfig.GetEntityCacheEntryLevel(entityName: structure.EntityName)!.Value);
 
                     JsonDocument? cacheServiceResponse = null;
 

@@ -779,10 +779,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                 .Returns(true);
             mockRuntimeConfig
                 .Setup(c => c.GetEntityCacheEntryTtl(It.IsAny<string>()))
-                .Returns(60);
+                .Returns((int?)60);
             mockRuntimeConfig
                 .Setup(c => c.GetEntityCacheEntryLevel(It.IsAny<string>()))
-                .Returns(EntityCacheLevel.L1);
+                .Returns((EntityCacheLevel?)EntityCacheLevel.L1);
             Mock<RuntimeConfigLoader> mockLoader = new(null, null);
             Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(mockLoader.Object);
             mockRuntimeConfigProvider

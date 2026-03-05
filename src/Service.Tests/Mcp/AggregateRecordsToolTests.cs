@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -235,6 +233,82 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("groupby"));
         }
 
+        [TestMethod]
+        public async Task AggregateRecords_OrderByWithoutGroupBy_ReturnsInvalidArguments()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"desc\"}");
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
+            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("groupby"));
+        }
+
+        [TestMethod]
+        public async Task AggregateRecords_UnsupportedHavingOperator_ReturnsInvalidArguments()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"between\": 5}}");
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
+            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("between"));
+            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("Supported operators"));
+        }
+
+        [TestMethod]
+        public async Task AggregateRecords_NonNumericHavingValue_ReturnsInvalidArguments()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"eq\": \"ten\"}}");
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
+            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("numeric"));
+        }
+
+        [TestMethod]
+        public async Task AggregateRecords_NonNumericHavingInArray_ReturnsInvalidArguments()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"in\": [5, \"abc\"]}}");
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
+            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("numeric"));
+        }
+
+        [TestMethod]
+        public async Task AggregateRecords_HavingInNotArray_ReturnsInvalidArguments()
+        {
+            RuntimeConfig config = CreateConfig();
+            IServiceProvider sp = CreateServiceProvider(config);
+            AggregateRecordsTool tool = new();
+
+            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"in\": 5}}");
+            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
+            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("numeric array"));
+        }
+
         #endregion
 
         #region Alias Convention Tests
@@ -364,8 +438,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(result.IsError == true);
             JsonElement content = ParseContent(result);
             Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            string? errorType = error.GetProperty("type").GetString();
-            string? errorMessage = error.GetProperty("message").GetString();
+            string errorType = error.GetProperty("type").GetString();
+            string errorMessage = error.GetProperty("message").GetString();
 
             // Verify the error type identifies it as a cancellation
             Assert.IsNotNull(errorType);

@@ -39,6 +39,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
         private static readonly HashSet<string> _validFunctions = new(StringComparer.OrdinalIgnoreCase) { "count", "avg", "sum", "min", "max" };
+        private static readonly HashSet<string> _validHavingOperators = new(StringComparer.OrdinalIgnoreCase) { "eq", "neq", "gt", "gte", "lt", "lte", "in" };
 
         private static readonly Tool _cachedToolMetadata = new()
         {
@@ -207,7 +208,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 string? filter = root.TryGetProperty("filter", out JsonElement filterElement) ? filterElement.GetString() : null;
-                string orderby = root.TryGetProperty("orderby", out JsonElement orderbyElement) ? (orderbyElement.GetString() ?? "desc") : "desc";
+                bool userProvidedOrderby = root.TryGetProperty("orderby", out JsonElement orderbyElement) && !string.IsNullOrWhiteSpace(orderbyElement.GetString());
+                string orderby = userProvidedOrderby ? (orderbyElement.GetString() ?? "desc") : "desc";
 
                 int? first = null;
                 if (root.TryGetProperty("first", out JsonElement firstElement) && firstElement.ValueKind == JsonValueKind.Number)
@@ -234,9 +236,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
-                // Validate that first, after, and non-default orderby require groupby
+                // Validate that first, after, orderby, and having require groupby
                 if (groupby.Count == 0)
                 {
+                    if (userProvidedOrderby)
+                    {
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                            "The 'orderby' parameter requires 'groupby' to be specified. Sorting applies to grouped aggregation results.", logger);
+                    }
+
                     if (first.HasValue)
                     {
                         return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
@@ -269,16 +277,42 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     havingOperators = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
                     foreach (JsonProperty prop in havingElement.EnumerateObject())
                     {
-                        if (prop.Name.Equals("in", StringComparison.OrdinalIgnoreCase) && prop.Value.ValueKind == JsonValueKind.Array)
+                        // Reject unsupported operators (e.g. between, notIn, like)
+                        if (!_validHavingOperators.Contains(prop.Name))
                         {
+                            return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                                $"Unsupported having operator '{prop.Name}'. Supported operators: {string.Join(", ", _validHavingOperators)}.", logger);
+                        }
+
+                        if (prop.Name.Equals("in", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (prop.Value.ValueKind != JsonValueKind.Array)
+                            {
+                                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                                    "The 'having.in' value must be a numeric array. Example: {\"in\": [5, 10]}.", logger);
+                            }
+
                             havingInValues = new List<double>();
                             foreach (JsonElement item in prop.Value.EnumerateArray())
                             {
+                                if (item.ValueKind != JsonValueKind.Number)
+                                {
+                                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                                        $"All values in 'having.in' must be numeric. Found non-numeric value: '{item}'.", logger);
+                                }
+
                                 havingInValues.Add(item.GetDouble());
                             }
                         }
-                        else if (prop.Value.ValueKind == JsonValueKind.Number)
+                        else
                         {
+                            // Scalar operators (eq, neq, gt, gte, lt, lte) must have numeric values
+                            if (prop.Value.ValueKind != JsonValueKind.Number)
+                            {
+                                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                                    $"The 'having.{prop.Name}' value must be numeric. Got: '{prop.Value}'. HAVING filters compare aggregated numeric results.", logger);
+                            }
+
                             havingOperators[prop.Name] = prop.Value.GetDouble();
                         }
                     }

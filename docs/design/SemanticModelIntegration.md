@@ -471,6 +471,92 @@ The SemanticModel components are conditionally registered in the factory classes
 
 This follows the same conditional registration pattern used by CosmosDB.
 
+## Multi-Source Configuration
+
+DAB supports running multiple data sources in a single instance using `data-source-files`.
+This enables scenarios like combining a transactional SQL database with a semantic model for
+analytics — the SQL entities handle CRUD operations while semantic model entities provide
+read-only analytical queries with measures and relationships.
+
+### How It Works
+
+The main config file references secondary config files via `data-source-files`. Each secondary
+config is a complete DAB config with its own `data-source`, `runtime`, and `entities`. At
+startup, DAB merges all data sources and entities into a single runtime, routing each request
+to the correct engine based on the entity's data source.
+
+### Config Structure
+
+**Main config** (`dab-config.json`):
+```json
+{
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "Server=localhost;Database=MyApp;Trusted_Connection=True"
+  },
+  "data-source-files": [
+    "dab-config.semanticmodel.json"
+  ],
+  "runtime": {
+    "rest": { "enabled": true, "path": "/api" },
+    "graphql": { "enabled": true, "path": "/graphql" },
+    "host": { "mode": "development" }
+  },
+  "entities": {
+    "Order": {
+      "source": { "object": "dbo.Orders", "type": "table" },
+      "permissions": [{ "role": "anonymous", "actions": ["*"] }]
+    }
+  }
+}
+```
+
+**Secondary config** (`dab-config.semanticmodel.json`):
+```json
+{
+  "data-source": {
+    "database-type": "semanticmodel",
+    "connection-string": "Data Source=localhost:60488",
+    "options": { "auto-discover": true }
+  },
+  "runtime": {
+    "rest": { "enabled": true },
+    "graphql": { "enabled": true }
+  },
+  "entities": {}
+}
+```
+
+### Request Routing
+
+Each entity is mapped to its data source at startup:
+1. Main config entities → mapped to the primary data source (mssql)
+2. Secondary config entities (or auto-discovered) → mapped to their data source (semanticmodel)
+
+When a request arrives:
+```
+Request for /api/Order → entity "Order" → data source "mssql" → SqlQueryEngine
+Request for /api/Customer → entity "Customer" → data source "semanticmodel" → SemanticModelQueryEngine
+```
+
+GraphQL exposes all entities from all data sources in a single schema. Clients query them
+uniformly — the routing is transparent.
+
+### Auto-Discovery in Multi-Source
+
+When the secondary semantic model config has `"auto-discover": true` and empty `"entities": {}`,
+DAB discovers all tables from the semantic model and adds them to the global entity registry.
+Each auto-discovered entity is correctly mapped to the semantic model data source, not the
+primary data source.
+
+### Key Implementation Details
+
+- `SemanticModelMetadataProvider` receives its `dataSourceName` from `MetadataProviderFactory`
+- Entity-to-datasource registration uses the provider's specific data source name (not `DefaultDataSourceName`)
+- Auto-discovered entities are merged into `RuntimeConfig.Entities` without removing entities from other data sources
+- `SetupDataSourcesUsed()` detects all database types across all data sources
+- Each factory creates engines only for database types that are in use
+
 ## Known Limitations
 
 | Limitation | Reason |

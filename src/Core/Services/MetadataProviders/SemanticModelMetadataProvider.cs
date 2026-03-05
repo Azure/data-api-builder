@@ -26,6 +26,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private readonly bool _isDevelopmentMode;
         private readonly DatabaseType _databaseType;
         private readonly string _connectionString;
+        private readonly string _dataSourceName;
         private readonly ILogger? _logger;
         private ODataParser? _odataParser;
 
@@ -93,15 +94,31 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <inheritdoc />
         public List<Exception> SqlMetadataExceptions { get; } = new();
 
-        public SemanticModelMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, ILogger<ISqlMetadataProvider>? logger = null)
+        public SemanticModelMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, ILogger<ISqlMetadataProvider>? logger = null, string? dataSourceName = null)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
             _logger = logger;
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            _runtimeConfigEntities = new RuntimeEntities(runtimeConfig.Entities.Entities);
             _isDevelopmentMode = runtimeConfig.IsDevelopmentMode();
-            _databaseType = runtimeConfig.DataSource.DatabaseType;
-            _connectionString = runtimeConfig.DataSource.ConnectionString;
+
+            // In multi-source configs, use the specific data source; in single-source, use the default.
+            _dataSourceName = dataSourceName ?? runtimeConfig.DefaultDataSourceName;
+            DataSource ds = runtimeConfig.GetDataSourceFromDataSourceName(_dataSourceName);
+            _databaseType = ds.DatabaseType;
+            _connectionString = ds.ConnectionString;
+
+            // Filter entities to only those belonging to this data source.
+            Dictionary<string, Entity> myEntities = new();
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+            {
+                string entityDsName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+                if (string.Equals(entityDsName, _dataSourceName, StringComparison.OrdinalIgnoreCase))
+                {
+                    myEntities[entityName] = entity;
+                }
+            }
+
+            _runtimeConfigEntities = new RuntimeEntities(myEntities);
 
             // Build the GraphQL type name to entity name map.
             foreach ((string entityName, Entity entity) in _runtimeConfigEntities)
@@ -267,7 +284,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 }
 
                 // Register entity-to-datasource mapping.
-                runtimeConfig.TryAddEntityNameToDataSourceName(entityName);
+                runtimeConfig.TryAddEntityNameToDataSourceName(entityName, _dataSourceName);
             }
 
             // Wire relationships from entity config and log discovered model relationships.
@@ -380,14 +397,15 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <summary>
         /// Checks if auto-discovery is enabled in the SemanticModel data source options.
         /// </summary>
-        private static bool IsAutoDiscoverEnabled(RuntimeConfig runtimeConfig)
+        private bool IsAutoDiscoverEnabled(RuntimeConfig runtimeConfig)
         {
-            if (runtimeConfig.DataSource.DatabaseType != DatabaseType.SemanticModel)
+            DataSource ds = runtimeConfig.GetDataSourceFromDataSourceName(_dataSourceName);
+            if (ds.DatabaseType != DatabaseType.SemanticModel)
             {
                 return false;
             }
 
-            SemanticModelOptions? options = runtimeConfig.DataSource.GetTypedOptions<SemanticModelOptions>();
+            SemanticModelOptions? options = ds.GetTypedOptions<SemanticModelOptions>();
             return options?.AutoDiscover == true;
         }
 
@@ -474,7 +492,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 // Use the processed entity from _runtimeConfigEntities (has GraphQL defaults applied).
                 Entity processedEntity = _runtimeConfigEntities[entityName];
 
-                runtimeConfig.TryAddEntityNameToDataSourceName(entityName);
+                runtimeConfig.TryAddEntityNameToDataSourceName(entityName, _dataSourceName);
                 string path = GetEntityPath(processedEntity, entityName).TrimStart('/');
                 if (!string.IsNullOrEmpty(path))
                 {
@@ -500,9 +518,21 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
             _logger?.LogInformation("Auto-discovery: added {Count} entities from semantic model.", newEntities.Count);
 
-            // Update the RuntimeConfig's Entities so that authorization, GraphQL schema,
-            // and REST routing can see the auto-discovered entities.
-            runtimeConfig.Entities = _runtimeConfigEntities;
+            // Merge auto-discovered entities into the RuntimeConfig's global entity set.
+            // In multi-source configs, the RuntimeConfig.Entities contains entities from ALL data sources.
+            // We must add our new entities without removing entities from other data sources.
+            Dictionary<string, Entity> globalEntities = new(StringComparer.OrdinalIgnoreCase);
+            foreach ((string name, Entity entity) in runtimeConfig.Entities)
+            {
+                globalEntities[name] = entity;
+            }
+
+            foreach ((string name, Entity _) in newEntities)
+            {
+                globalEntities[name] = _runtimeConfigEntities[name];
+            }
+
+            runtimeConfig.Entities = new RuntimeEntities(globalEntities);
         }
 
         /// <summary>

@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     DatabaseType.DWSQL => new MsSqlMetadataProvider(_runtimeConfigProvider, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
                     DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(_runtimeConfigProvider, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
                     DatabaseType.MySQL => new MySqlMetadataProvider(_runtimeConfigProvider, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
-                    DatabaseType.SemanticModel => new SemanticModelMetadataProvider(_runtimeConfigProvider, _logger),
+                    DatabaseType.SemanticModel => new SemanticModelMetadataProvider(_runtimeConfigProvider, _logger, dataSourceName),
                     _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
                 };
 

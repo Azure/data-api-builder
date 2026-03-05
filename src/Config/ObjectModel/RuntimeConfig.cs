@@ -255,6 +255,14 @@ public record RuntimeConfig
         return _entityNameToDataSourceName.TryAdd(entityName, this.DefaultDataSourceName);
     }
 
+    /// <summary>
+    /// Registers an entity with a specific data source name (used by auto-discovery in multi-source configs).
+    /// </summary>
+    public bool TryAddEntityNameToDataSourceName(string entityName, string dataSourceName)
+    {
+        return _entityNameToDataSourceName.TryAdd(entityName, dataSourceName);
+    }
+
     public bool TryAddGeneratedAutoentityNameToDataSourceName(string entityName, string autoEntityDefinition)
     {
         if (_autoentityNameToDataSourceName.TryGetValue(autoEntityDefinition, out string? dataSourceName))

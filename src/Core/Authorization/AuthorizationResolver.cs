@@ -435,6 +435,30 @@ public class AuthorizationResolver : IAuthorizationResolver
         }
     }
 
+    /// <inheritdoc />
+    public bool IsRoleAllowedByDirective(string clientRole, IReadOnlyList<string>? directiveRoles)
+    {
+        if (directiveRoles is null || directiveRoles.Count == 0)
+        {
+            return false;
+        }
+
+        // Explicit match — role is directly listed.
+        if (directiveRoles.Any(role => role.Equals(clientRole, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // Role inheritance: any non-anonymous role inherits from 'authenticated'.
+        if (!clientRole.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase) &&
+            directiveRoles.Any(role => role.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Returns the effective role name for permission lookups, implementing role inheritance.
     /// System roles (anonymous, authenticated) always resolve to themselves.

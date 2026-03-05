@@ -1183,6 +1183,257 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Validates that --show-effective-permissions returns true and outputs entities sorted a-z by name.
+        /// </summary>
+        [TestMethod]
+        public void TestShowEffectivePermissions_EntitiesSortedAlphabetically()
+        {
+            // Arrange: Config with "Zebra" entity before "Apple" entity (insertion order reversed).
+            string config = $@"{{
+                {SAMPLE_SCHEMA_DATA_SOURCE},
+                {RUNTIME_SECTION},
+                ""entities"": {{
+                    ""Zebra"": {{
+                        ""source"": ""dbo.Zebra"",
+                        ""permissions"": [
+                            {{ ""role"": ""anonymous"", ""actions"": [""read""] }}
+                        ]
+                    }},
+                    ""Apple"": {{
+                        ""source"": ""dbo.Apple"",
+                        ""permissions"": [
+                            {{ ""role"": ""anonymous"", ""actions"": [""read""] }}
+                        ]
+                    }}
+                }}
+            }}";
+
+            List<string> logMessages = new();
+            ListLogger<ConfigGenerator> logger = new(logMessages);
+            SetLoggerForCliConfigGenerator(logger);
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config));
+
+            ConfigureOptions options = new(
+                config: TEST_RUNTIME_CONFIG_FILE,
+                showEffectivePermissions: true
+            );
+
+            // Act
+            bool isSuccess = TryShowEffectivePermissions(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            int appleIndex = logMessages.FindIndex(m => m.Contains("Apple"));
+            int zebraIndex = logMessages.FindIndex(m => m.Contains("Zebra"));
+            Assert.IsTrue(appleIndex >= 0, "Expected 'Apple' entity in output.");
+            Assert.IsTrue(zebraIndex >= 0, "Expected 'Zebra' entity in output.");
+            Assert.IsTrue(appleIndex < zebraIndex, "Expected 'Apple' to appear before 'Zebra' in output.");
+        }
+
+        /// <summary>
+        /// Validates that --show-effective-permissions outputs roles sorted a-z within each entity.
+        /// </summary>
+        [TestMethod]
+        public void TestShowEffectivePermissions_RolesSortedAlphabeticallyWithinEntity()
+        {
+            // Arrange: Config with roles "zebra-role" before "admin" (insertion order reversed).
+            string config = $@"{{
+                {SAMPLE_SCHEMA_DATA_SOURCE},
+                {RUNTIME_SECTION},
+                ""entities"": {{
+                    ""Book"": {{
+                        ""source"": ""dbo.Book"",
+                        ""permissions"": [
+                            {{ ""role"": ""zebra-role"", ""actions"": [""read""] }},
+                            {{ ""role"": ""admin"", ""actions"": [""create"", ""read"", ""update"", ""delete""] }}
+                        ]
+                    }}
+                }}
+            }}";
+
+            List<string> logMessages = new();
+            ListLogger<ConfigGenerator> logger = new(logMessages);
+            SetLoggerForCliConfigGenerator(logger);
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config));
+
+            ConfigureOptions options = new(
+                config: TEST_RUNTIME_CONFIG_FILE,
+                showEffectivePermissions: true
+            );
+
+            // Act
+            bool isSuccess = TryShowEffectivePermissions(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+
+            // Within the entity, "admin" should appear before "zebra-role".
+            int adminIndex = logMessages.FindIndex(m => m.Contains("admin"));
+            int zebraRoleIndex = logMessages.FindIndex(m => m.Contains("zebra-role"));
+            Assert.IsTrue(adminIndex >= 0, "Expected 'admin' role in output.");
+            Assert.IsTrue(zebraRoleIndex >= 0, "Expected 'zebra-role' role in output.");
+            Assert.IsTrue(adminIndex < zebraRoleIndex, "Expected 'admin' to appear before 'zebra-role' in output.");
+        }
+
+        /// <summary>
+        /// Validates that --show-effective-permissions shows the authenticated-inherits-anonymous line
+        /// when anonymous is configured but authenticated is not.
+        /// </summary>
+        [TestMethod]
+        public void TestShowEffectivePermissions_AuthenticatedInheritsAnonymousNote()
+        {
+            // Arrange: anonymous defined, authenticated not defined.
+            string config = $@"{{
+                {SAMPLE_SCHEMA_DATA_SOURCE},
+                {RUNTIME_SECTION},
+                ""entities"": {{
+                    ""Book"": {{
+                        ""source"": ""dbo.Book"",
+                        ""permissions"": [
+                            {{ ""role"": ""anonymous"", ""actions"": [""read""] }}
+                        ]
+                    }}
+                }}
+            }}";
+
+            List<string> logMessages = new();
+            ListLogger<ConfigGenerator> logger = new(logMessages);
+            SetLoggerForCliConfigGenerator(logger);
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config));
+
+            ConfigureOptions options = new(
+                config: TEST_RUNTIME_CONFIG_FILE,
+                showEffectivePermissions: true
+            );
+
+            // Act
+            bool isSuccess = TryShowEffectivePermissions(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+
+            // Should show "authenticated" inheriting from "anonymous".
+            bool hasAuthenticatedInheritedLine = logMessages.Any(m =>
+                m.Contains("authenticated") && m.Contains("inherited from") && m.Contains("anonymous"));
+            Assert.IsTrue(hasAuthenticatedInheritedLine, "Expected a line showing authenticated inherits from anonymous.");
+
+            // Should show inheritance note for unconfigured named roles.
+            // When only anonymous is defined, the note points to "anonymous" (since authenticated
+            // is itself shown as inheriting from anonymous via the line above).
+            bool hasInheritanceNote = logMessages.Any(m =>
+                m.Contains("unconfigured named role") && m.Contains("anonymous"));
+            Assert.IsTrue(hasInheritanceNote, "Expected an inheritance note pointing to 'anonymous'.");
+        }
+
+        /// <summary>
+        /// Validates that --show-effective-permissions does not show an authenticated-inherits-anonymous
+        /// line when authenticated is explicitly configured for the entity.
+        /// </summary>
+        [TestMethod]
+        public void TestShowEffectivePermissions_NoInheritanceNoteWhenAuthenticatedExplicitlyConfigured()
+        {
+            // Arrange: Both anonymous and authenticated explicitly defined.
+            string config = $@"{{
+                {SAMPLE_SCHEMA_DATA_SOURCE},
+                {RUNTIME_SECTION},
+                ""entities"": {{
+                    ""Book"": {{
+                        ""source"": ""dbo.Book"",
+                        ""permissions"": [
+                            {{ ""role"": ""anonymous"", ""actions"": [""read""] }},
+                            {{ ""role"": ""authenticated"", ""actions"": [""read"", ""create""] }}
+                        ]
+                    }}
+                }}
+            }}";
+
+            List<string> logMessages = new();
+            ListLogger<ConfigGenerator> logger = new(logMessages);
+            SetLoggerForCliConfigGenerator(logger);
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config));
+
+            ConfigureOptions options = new(
+                config: TEST_RUNTIME_CONFIG_FILE,
+                showEffectivePermissions: true
+            );
+
+            // Act
+            bool isSuccess = TryShowEffectivePermissions(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+
+            // Should NOT show an "authenticated inherits from anonymous" line.
+            bool hasUnexpectedInheritanceLine = logMessages.Any(m =>
+                m.Contains("authenticated") && m.Contains("inherited from") && m.Contains("anonymous"));
+            Assert.IsFalse(hasUnexpectedInheritanceLine,
+                "Should not show authenticated-inherits-anonymous when authenticated is explicitly configured.");
+        }
+
+        /// <summary>
+        /// Validates that --show-effective-permissions does not modify the config file.
+        /// </summary>
+        [TestMethod]
+        public void TestShowEffectivePermissions_DoesNotModifyConfigFile()
+        {
+            // Arrange
+            string config = $@"{{
+                {SAMPLE_SCHEMA_DATA_SOURCE},
+                {RUNTIME_SECTION},
+                ""entities"": {{
+                    ""Book"": {{
+                        ""source"": ""dbo.Book"",
+                        ""permissions"": [
+                            {{ ""role"": ""anonymous"", ""actions"": [""read""] }}
+                        ]
+                    }}
+                }}
+            }}";
+
+            List<string> logMessages = new();
+            ListLogger<ConfigGenerator> logger = new(logMessages);
+            SetLoggerForCliConfigGenerator(logger);
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config));
+            string originalContent = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+
+            ConfigureOptions options = new(
+                config: TEST_RUNTIME_CONFIG_FILE,
+                showEffectivePermissions: true
+            );
+
+            // Act
+            bool isSuccess = TryShowEffectivePermissions(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string afterContent = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.AreEqual(originalContent, afterContent, "Config file should not be modified by --show-effective-permissions.");
+        }
+
+        /// <summary>
+        /// Validates that --show-effective-permissions returns false when the config file does not exist.
+        /// </summary>
+        [TestMethod]
+        public void TestShowEffectivePermissions_ReturnsFalseWhenConfigMissing()
+        {
+            // Arrange: no config file added to the file system.
+            List<string> logMessages = new();
+            ListLogger<ConfigGenerator> logger = new(logMessages);
+            SetLoggerForCliConfigGenerator(logger);
+
+            ConfigureOptions options = new(
+                config: "nonexistent-config.json",
+                showEffectivePermissions: true
+            );
+
+            // Act
+            bool isSuccess = TryShowEffectivePermissions(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
         /// Sets up the mock file system with an initial configuration file.
         /// This method adds a config file to the mock file system and verifies its existence.
         /// It also attempts to parse the config file to ensure it is valid.
@@ -1196,6 +1447,34 @@ namespace Cli.Tests
 
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
+        }
+
+        /// <summary>
+        /// A simple ILogger implementation that records all log messages to a list,
+        /// enabling tests to assert on log output without redirecting console streams.
+        /// </summary>
+        private sealed class ListLogger<T> : ILogger<T>
+        {
+            private readonly List<string> _messages;
+
+            public ListLogger(List<string> messages)
+            {
+                _messages = messages;
+            }
+
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                _messages.Add(formatter(state, exception));
+            }
         }
     }
 }

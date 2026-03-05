@@ -64,13 +64,11 @@ steps:
 
 - task: NuGetToolInstaller@1
 
-- task: DotNetCoreCLI@2
+# Use script-based restore so NuGetAuthenticate@1 cross-org credentials
+# (EngThrive-MCP feed) are picked up by the Azure Artifacts Credential Provider.
+# DotNetCoreCLI@2 feedsToUse:config creates a temp config that bypasses them.
+- script: dotnet restore $(solution) --configfile $(Build.SourcesDirectory)/Nuget.config --verbosity Normal
   displayName: Restore NuGet packages
-  inputs:
-    command: restore
-    projects: '$(solution)'
-    feedsToUse: config
-    nugetConfigPath: Nuget.config
 
 - task: DotNetCoreCLI@2
   displayName: Check formatting

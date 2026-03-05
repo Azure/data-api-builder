@@ -594,7 +594,10 @@ public record RuntimeConfig
             return entityConfig.Cache.Level.Value;
         }
 
-        return GlobalCacheEntryLevel();
+        // GlobalCacheEntryLevel() returns null when runtime cache is not configured.
+        // Callers guard with IsCachingEnabled, so null is not expected here,
+        // but we default to L1 defensively.
+        return GlobalCacheEntryLevel() ?? EntityCacheLevel.L1;
     }
 
     /// <summary>
@@ -644,14 +647,12 @@ public record RuntimeConfig
     /// Returns the cache level value for the global cache entry.
     /// The level is inferred from the runtime cache Level2 configuration:
     /// if Level2 is enabled, the level is L1L2; otherwise L1.
-    /// If runtime cache is not configured, the default cache level is used.
+    /// Returns null when runtime cache is not configured.
     /// </summary>
-    /// <returns>Cache level that a cache entry should be stored in.</returns>
-    public virtual EntityCacheLevel GlobalCacheEntryLevel()
+    /// <returns>Cache level for a cache entry, or null if runtime cache is not configured.</returns>
+    public virtual EntityCacheLevel? GlobalCacheEntryLevel()
     {
-        return Runtime?.Cache is not null
-            ? Runtime.Cache.InferredLevel
-            : EntityCacheOptions.DEFAULT_LEVEL;
+        return Runtime?.Cache?.InferredLevel;
     }
 
     /// <summary>

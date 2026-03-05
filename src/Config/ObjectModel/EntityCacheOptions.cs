@@ -20,6 +20,10 @@ public record EntityCacheOptions
 
     /// <summary>
     /// Default cache level for an entity.
+    /// Placeholder cache level value used when the entity does not explicitly set a level.
+    /// This value is stored on the EntityCacheOptions object but is NOT used at runtime
+    /// for resolution — GetEntityCacheEntryLevel() falls through to GlobalCacheEntryLevel()
+    /// (which infers the level from the runtime Level2 configuration) when UserProvidedLevelOptions is false.
     /// </summary>
     public const EntityCacheLevel DEFAULT_LEVEL = EntityCacheLevel.L1L2;
 

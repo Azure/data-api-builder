@@ -129,11 +129,97 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Takes a string version of a MySql data type and returns its .NET common language runtime (CLR) counterpart
-        /// TODO: For MySql stored procedure support, this needs to be implemented.
         /// </summary>
         public override Type SqlToCLRType(string sqlType)
         {
-            throw new NotImplementedException();
+            switch (sqlType.ToLower())
+            {
+                case "tinyint":
+                    return typeof(sbyte);
+                case "tinyint unsigned":
+                    return typeof(byte);
+                case "bool":
+                case "boolean":
+                    return typeof(bool);
+
+                case "smallint":
+                    return typeof(short);
+                case "smallint unsigned":
+                    return typeof(ushort);
+
+                case "mediumint":
+                    return typeof(int);
+                case "mediumint unsigned":
+                    return typeof(uint);
+
+                case "int":
+                case "integer":
+                    return typeof(int);
+                case "int unsigned":
+                case "integer unsigned":
+                    return typeof(uint);
+
+                case "bigint":
+                    return typeof(long);
+                case "bigint unsigned":
+                    return typeof(ulong);
+
+                case "float":
+                    return typeof(float);
+
+                case "double":
+                case "double precision":
+                    return typeof(double);
+
+                case "decimal":
+                case "dec":
+                case "fixed":
+                case "numeric":
+                    return typeof(decimal);
+
+                case "bit":
+                    return typeof(ulong);
+
+                case "char":
+                case "nchar":
+                case "varchar":
+                case "nvarchar":
+                case "text":
+                case "tinytext":
+                case "mediumtext":
+                case "longtext":
+                    return typeof(string);
+
+                case "binary":
+                case "varbinary":
+                case "blob":
+                case "tinyblob":
+                case "mediumblob":
+                case "longblob":
+                    return typeof(byte[]);
+
+                case "enum":
+                case "set":
+                    return typeof(string);
+
+                case "date":
+                case "datetime":
+                case "timestamp":
+                    return typeof(DateTime);
+
+                case "time":
+                    return typeof(TimeSpan);
+
+                case "year":
+                    return typeof(int);
+
+                case "json":
+                    return typeof(string);
+
+                default:
+                    throw new NotSupportedException($"The SQL type '{sqlType}' is not supported.");
+            }
         }
+
     }
 }

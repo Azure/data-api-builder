@@ -50,6 +50,7 @@ namespace Cli.Commands
             bool? runtimeMcpDmlToolsUpdateRecordEnabled = null,
             bool? runtimeMcpDmlToolsDeleteRecordEnabled = null,
             bool? runtimeMcpDmlToolsExecuteEntityEnabled = null,
+            bool? runtimeMcpDmlToolsAggregateRecordsEnabled = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
             CompressionLevel? runtimeCompressionLevel = null,
@@ -111,6 +112,7 @@ namespace Cli.Commands
             RuntimeMcpDmlToolsUpdateRecordEnabled = runtimeMcpDmlToolsUpdateRecordEnabled;
             RuntimeMcpDmlToolsDeleteRecordEnabled = runtimeMcpDmlToolsDeleteRecordEnabled;
             RuntimeMcpDmlToolsExecuteEntityEnabled = runtimeMcpDmlToolsExecuteEntityEnabled;
+            RuntimeMcpDmlToolsAggregateRecordsEnabled = runtimeMcpDmlToolsAggregateRecordsEnabled;
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;

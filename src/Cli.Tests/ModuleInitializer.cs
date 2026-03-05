@@ -85,6 +85,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsStaticWebAppsIdentityProvider);
         // Ignore the IsAppServiceIdentityProvider as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsAppServiceIdentityProvider);
+        // Ignore the IsUnauthenticatedIdentityProvider as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsUnauthenticatedIdentityProvider);
         // Ignore the RestPath as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.RestPath);
         // Ignore the GraphQLPath as that's unimportant from a test standpoint.

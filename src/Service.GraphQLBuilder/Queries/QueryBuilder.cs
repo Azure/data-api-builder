@@ -36,6 +36,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         {
             DatabaseType.MSSQL,
             DatabaseType.DWSQL,
+            DatabaseType.SemanticModel,
         };
 
         /// <summary>

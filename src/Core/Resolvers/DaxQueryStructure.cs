@@ -55,5 +55,29 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Parameters for the query, mapped by name.
         /// </summary>
         public Dictionary<string, object?> Parameters { get; set; } = new();
+
+        /// <summary>
+        /// Whether this is a groupBy (aggregation) query using SUMMARIZECOLUMNS.
+        /// </summary>
+        public bool IsGroupByQuery { get; set; }
+
+        /// <summary>
+        /// Columns to group by in SUMMARIZECOLUMNS.
+        /// Key: alias (GraphQL field name), Value: original column name from the semantic model.
+        /// </summary>
+        public Dictionary<string, string> GroupByColumns { get; set; } = new();
+
+        /// <summary>
+        /// Ad-hoc aggregation expressions for SUMMARIZECOLUMNS.
+        /// Key: alias for the result, Value: DAX aggregation expression (e.g., SUMX('table', 'table'[col])).
+        /// </summary>
+        public Dictionary<string, string> AggregationExpressions { get; set; } = new();
+
+        /// <summary>
+        /// Measure references to include in SUMMARIZECOLUMNS groupBy queries.
+        /// Key: alias for the result, Value: DAX measure reference (e.g., [Sales]).
+        /// These are model-defined aggregations that automatically respect the groupBy context.
+        /// </summary>
+        public Dictionary<string, string> GroupByMeasures { get; set; } = new();
     }
 }

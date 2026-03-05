@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -59,6 +60,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string tableName = metadataProvider.GetDatabaseObjectName(entityName);
 
             DaxQueryStructure queryStructure = BuildQueryStructureFromParameters(tableName, parameters, dataSourceName);
+
+            // Check if this is a groupBy query by inspecting the selection set.
+            DaxGroupByInfo? groupByInfo = TryParseGroupBy(context, entityName, tableName, metadataProvider);
+
+            if (groupByInfo is not null)
+            {
+                return await ExecuteGroupByAsync(queryStructure, groupByInfo, dataSourceName);
+            }
 
             // Extract requested fields from the GraphQL selection set to push down to DAX.
             // This avoids evaluating expensive measures that aren't needed.
@@ -482,6 +491,251 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return fkColumns.Count > 0 ? fkColumns : null;
+        }
+
+        /// <summary>
+        /// Holds parsed groupBy information from the GraphQL selection set.
+        /// </summary>
+        private sealed class DaxGroupByInfo
+        {
+            /// <summary>Group-by column aliases → original column names.</summary>
+            public Dictionary<string, string> GroupByColumns { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+            /// <summary>Aggregation aliases → DAX expressions (e.g., SUMX(...)).</summary>
+            public Dictionary<string, string> AggregationExpressions { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+            /// <summary>Measure aliases → DAX measure references (e.g., [Sales]).</summary>
+            public Dictionary<string, string> GroupByMeasures { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+            /// <summary>Whether the "fields" sub-selection was requested in the response.</summary>
+            public bool RequestedFields { get; set; }
+
+            /// <summary>Whether the "aggregations" sub-selection was requested.</summary>
+            public bool RequestedAggregations { get; set; }
+        }
+
+        /// <summary>
+        /// Inspects the GraphQL selection set for a groupBy field at the connection level.
+        /// If found, parses the fields argument and aggregation sub-selections.
+        /// Returns null if this is not a groupBy query.
+        /// </summary>
+        private static DaxGroupByInfo? TryParseGroupBy(
+            IMiddlewareContext context,
+            string entityName,
+            string tableName,
+            ISqlMetadataProvider metadataProvider)
+        {
+            var connectionSelections = context.Selection.SyntaxNode.SelectionSet?.Selections;
+            if (connectionSelections is null)
+            {
+                return null;
+            }
+
+            HotChocolate.Language.FieldNode? groupByFieldNode = null;
+            foreach (var sel in connectionSelections)
+            {
+                if (sel is HotChocolate.Language.FieldNode fn && fn.Name.Value == QueryBuilder.GROUP_BY_FIELD_NAME)
+                {
+                    groupByFieldNode = fn;
+                    break;
+                }
+            }
+
+            if (groupByFieldNode is null)
+            {
+                return null;
+            }
+
+            DaxGroupByInfo info = new();
+
+            // Parse the "fields" argument: groupBy(fields: [State, City])
+            var fieldsArg = groupByFieldNode.Arguments
+                .FirstOrDefault(a => a.Name.Value == QueryBuilder.GROUP_BY_FIELDS_FIELD_NAME);
+
+            if (fieldsArg?.Value is HotChocolate.Language.ListValueNode fieldsList)
+            {
+                foreach (var item in fieldsList.Items)
+                {
+                    if (item is HotChocolate.Language.EnumValueNode enumVal)
+                    {
+                        string fieldName = enumVal.Value;
+                        string originalName = GetColumnOriginalName(fieldName, metadataProvider);
+                        info.GroupByColumns[fieldName] = originalName;
+                    }
+                }
+            }
+
+            // Parse sub-selections: fields { ... } and aggregations { ... }
+            if (groupByFieldNode.SelectionSet is not null)
+            {
+                foreach (var sel in groupByFieldNode.SelectionSet.Selections)
+                {
+                    if (sel is not HotChocolate.Language.FieldNode subField)
+                    {
+                        continue;
+                    }
+
+                    if (subField.Name.Value == QueryBuilder.GROUP_BY_FIELDS_FIELD_NAME)
+                    {
+                        info.RequestedFields = true;
+                    }
+                    else if (subField.Name.Value == QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME)
+                    {
+                        info.RequestedAggregations = true;
+                        ParseAggregations(subField, tableName, entityName, metadataProvider, info);
+                    }
+                }
+            }
+
+            return info;
+        }
+
+        /// <summary>
+        /// Parses the aggregation sub-selections within a groupBy query.
+        /// Maps each aggregation operation (sum, avg, min, max, count) to a DAX expression.
+        /// </summary>
+        private static void ParseAggregations(
+            HotChocolate.Language.FieldNode aggregationsField,
+            string tableName,
+            string entityName,
+            ISqlMetadataProvider metadataProvider,
+            DaxGroupByInfo info)
+        {
+            if (aggregationsField.SelectionSet is null)
+            {
+                return;
+            }
+
+            HashSet<string> measureNames = GetEntityMeasureNames(entityName, metadataProvider);
+
+            foreach (var sel in aggregationsField.SelectionSet.Selections)
+            {
+                if (sel is not HotChocolate.Language.FieldNode aggField)
+                {
+                    continue;
+                }
+
+                // The operation name is the field name (sum, avg, min, max, count)
+                string operationName = aggField.Name.Value;
+
+                // The alias is the response key
+                string alias = aggField.Alias?.Value ?? operationName;
+
+                // Extract the "field" argument: sum(field: Units)
+                var fieldArg = aggField.Arguments
+                    .FirstOrDefault(a => a.Name.Value == QueryBuilder.GROUP_BY_AGGREGATE_FIELD_ARG_NAME);
+
+                if (fieldArg is null)
+                {
+                    continue;
+                }
+
+                string fieldName = fieldArg.Value is HotChocolate.Language.EnumValueNode enumFieldVal
+                    ? enumFieldVal.Value
+                    : fieldArg.Value.Value?.ToString() ?? string.Empty;
+
+                if (string.IsNullOrEmpty(fieldName))
+                {
+                    continue;
+                }
+
+                // Check distinct
+                bool distinct = false;
+                var distinctArg = aggField.Arguments
+                    .FirstOrDefault(a => a.Name.Value == QueryBuilder.GROUP_BY_AGGREGATE_FIELD_DISTINCT_NAME);
+                if (distinctArg?.Value is HotChocolate.Language.BooleanValueNode boolVal)
+                {
+                    distinct = boolVal.Value;
+                }
+
+                // If the target field is a measure, use its DAX expression directly
+                if (measureNames.Contains(fieldName))
+                {
+                    string originalMeasure = GetMeasureOriginalName(fieldName, metadataProvider);
+                    info.GroupByMeasures[alias] = $"[{originalMeasure}]";
+                }
+                else
+                {
+                    // Ad-hoc aggregation on a raw column
+                    string originalColName = GetColumnOriginalName(fieldName, metadataProvider);
+                    string daxExpr = DaxQueryBuilder.BuildAggregationExpression(
+                        operationName, tableName, originalColName, distinct);
+                    info.AggregationExpressions[alias] = daxExpr;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Executes a groupBy (aggregation) query using SUMMARIZECOLUMNS.
+        /// Shapes the flat DAX results into the groupBy JSON structure expected by HotChocolate.
+        /// </summary>
+        private async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteGroupByAsync(
+            DaxQueryStructure baseStructure,
+            DaxGroupByInfo groupByInfo,
+            string dataSourceName)
+        {
+            // Configure the query structure for SUMMARIZECOLUMNS
+            baseStructure.IsGroupByQuery = true;
+            baseStructure.GroupByColumns = groupByInfo.GroupByColumns;
+            baseStructure.AggregationExpressions = groupByInfo.AggregationExpressions;
+            baseStructure.GroupByMeasures = groupByInfo.GroupByMeasures;
+
+            string daxQuery = DaxQueryBuilder.Build(baseStructure);
+            _logger.LogDebug("GroupBy DAX query: {DaxQuery}", daxQuery);
+
+            IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(DatabaseType.SemanticModel);
+
+            JsonArray? result = await queryExecutor.ExecuteQueryAsync<JsonArray>(
+                daxQuery,
+                new Dictionary<string, DbConnectionParam>(),
+                async (reader, args) => await queryExecutor.GetJsonArrayAsync(reader, args),
+                dataSourceName);
+
+            // Shape the flat SUMMARIZECOLUMNS results into groupBy JSON structure:
+            // [{ "fields": { col1: v1, ... }, "aggregations": { sum: v2, ... } }, ...]
+            JsonArray groupByArray = new();
+            if (result is not null)
+            {
+                foreach (JsonNode? row in result)
+                {
+                    if (row is not JsonObject rowObj)
+                    {
+                        continue;
+                    }
+
+                    JsonObject fieldsObj = new();
+                    JsonObject aggregationsObj = new();
+
+                    foreach (var prop in rowObj)
+                    {
+                        if (groupByInfo.GroupByColumns.ContainsKey(prop.Key))
+                        {
+                            if (groupByInfo.RequestedFields)
+                            {
+                                fieldsObj.Add(prop.Key, prop.Value?.DeepClone());
+                            }
+                        }
+                        else
+                        {
+                            aggregationsObj.Add(prop.Key, prop.Value?.DeepClone());
+                        }
+                    }
+
+                    JsonObject combined = new();
+                    combined.Add(QueryBuilder.GROUP_BY_FIELDS_FIELD_NAME, fieldsObj);
+                    combined.Add(QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME, aggregationsObj);
+                    groupByArray.Add(combined);
+                }
+            }
+
+            // Build connection object with items (empty for groupBy) and groupBy results
+            JsonObject connection = new();
+            connection.Add("items", "[]");
+            connection.Add("hasNextPage", false);
+            connection.Add(QueryBuilder.GROUP_BY_FIELD_NAME, groupByArray.ToJsonString());
+
+            JsonDocument doc = JsonDocument.Parse(connection.ToJsonString());
+            return new Tuple<JsonDocument?, IMetadata?>(doc, null);
         }
 
         /// <summary>

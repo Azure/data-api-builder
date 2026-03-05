@@ -763,6 +763,99 @@ This is because `RuntimeEntities` is immutable (`IReadOnlyDictionary`) at runtim
 configuration cannot be mutated after startup. The discovered relationships serve as a reference
 for users to populate their config.
 
+## Aggregations (GroupBy)
+
+DAB supports ad-hoc aggregations on semantic model entities via GraphQL `groupBy` queries.
+This uses DAX `SUMMARIZECOLUMNS` under the hood, which is the DAX equivalent of SQL
+`GROUP BY` + aggregate functions.
+
+### GraphQL Syntax
+
+```graphql
+{
+  sales {
+    groupBy(fields: [CustomerID]) {
+      fields {
+        CustomerID
+      }
+      aggregations {
+        totalUnits: sum(field: Units)
+        maxUnits: max(field: Units)
+        avgUnits: avg(field: Units)
+        rowCount: count(field: Units)
+        distinctProducts: count(field: ProductID, distinct: true)
+      }
+    }
+  }
+}
+```
+
+### Supported Aggregation Functions
+
+| Function | DAX Translation | Notes |
+|----------|----------------|-------|
+| `sum(field: X)` | `SUMX('table', 'table'[X])` | Sum of values |
+| `avg(field: X)` | `AVERAGEX('table', 'table'[X])` | Average of values |
+| `min(field: X)` | `MINX('table', 'table'[X])` | Minimum value |
+| `max(field: X)` | `MAXX('table', 'table'[X])` | Maximum value |
+| `count(field: X)` | `COUNTAX('table', 'table'[X])` | Count of non-blank values |
+| `count(field: X, distinct: true)` | `DISTINCTCOUNT('table'[X])` | Count of distinct values |
+
+### Measures in GroupBy
+
+When the aggregation target field is a **measure** (not a raw column), the measure's DAX
+expression is used directly in `SUMMARIZECOLUMNS`. This leverages DAX's automatic context
+transition — the measure evaluates in the filter context of each group:
+
+```graphql
+{
+  customers {
+    groupBy(fields: [State]) {
+      fields { State }
+      aggregations {
+        sum(field: Sales)    # [Sales] measure, evaluated per-State
+      }
+    }
+  }
+}
+```
+
+Generates:
+```dax
+EVALUATE
+SUMMARIZECOLUMNS(
+    'customer'[State],
+    "sum", [Sales]
+)
+```
+
+### Implementation
+
+The aggregation flow in `SemanticModelQueryEngine`:
+
+1. `TryParseGroupBy()` inspects the HotChocolate selection set for a `groupBy` field
+2. Parses the `fields` argument (group-by columns) and `aggregations` sub-selections
+3. Maps each aggregation to either a DAX iterator function (ad-hoc) or a measure reference
+4. `DaxQueryBuilder.BuildSummarizeColumnsExpression()` generates the `SUMMARIZECOLUMNS` DAX
+5. `ExecuteGroupByAsync()` shapes the flat results into `{ fields: {...}, aggregations: {...} }`
+
+### Combining with Filters
+
+GroupBy queries can be combined with entity-level filters:
+
+```graphql
+{
+  sales(filter: { CustomerID: { gt: 10000 } }) {
+    groupBy(fields: [CustomerID]) {
+      fields { CustomerID }
+      aggregations { sum(field: Units) }
+    }
+  }
+}
+```
+
+This generates `SUMMARIZECOLUMNS` with `KEEPFILTERS(FILTER(ALL(...), ...))` predicates.
+
 ## Codegen / Introspection
 
 The GraphQL schema exposes everything needed for code generation tools to produce typed clients:

@@ -161,5 +161,180 @@ namespace Azure.DataApiBuilder.Service.Tests.SemanticModelTests
 
             Assert.AreEqual("'Sales'[Region] = \"West\"", result);
         }
+
+        /// <summary>
+        /// A groupBy query with a single group-by column and one aggregation
+        /// should produce SUMMARIZECOLUMNS.
+        /// </summary>
+        [TestMethod]
+        public void Build_GroupBy_SingleColumn_SingleAggregation()
+        {
+            DaxQueryStructure structure = new()
+            {
+                TableName = "Sales",
+                IsGroupByQuery = true,
+                GroupByColumns = new Dictionary<string, string> { { "Region", "Region" } },
+                AggregationExpressions = new Dictionary<string, string>
+                {
+                    { "sum", "SUMX('Sales', 'Sales'[Amount])" }
+                }
+            };
+
+            string result = DaxQueryBuilder.Build(structure);
+
+            Assert.IsTrue(result.Contains("SUMMARIZECOLUMNS("), "Expected SUMMARIZECOLUMNS.");
+            Assert.IsTrue(result.Contains("'Sales'[Region]"), "Expected group-by column.");
+            Assert.IsTrue(result.Contains("\"sum\", SUMX('Sales', 'Sales'[Amount])"), "Expected aggregation expression.");
+            Assert.IsFalse(result.Contains("SELECTCOLUMNS("), "Should NOT contain SELECTCOLUMNS.");
+            Assert.IsFalse(result.Contains("ADDCOLUMNS("), "Should NOT contain ADDCOLUMNS.");
+        }
+
+        /// <summary>
+        /// A groupBy query with multiple group-by columns, ad-hoc aggregations, and measures.
+        /// </summary>
+        [TestMethod]
+        public void Build_GroupBy_MultipleColumns_MixedAggregations()
+        {
+            DaxQueryStructure structure = new()
+            {
+                TableName = "Sales",
+                IsGroupByQuery = true,
+                GroupByColumns = new Dictionary<string, string>
+                {
+                    { "Region", "Region" },
+                    { "Category", "Category" }
+                },
+                AggregationExpressions = new Dictionary<string, string>
+                {
+                    { "max", "MAXX('Sales', 'Sales'[Amount])" },
+                    { "count", "COUNTAX('Sales', 'Sales'[Amount])" }
+                },
+                GroupByMeasures = new Dictionary<string, string>
+                {
+                    { "Total_Sales", "[Sales]" }
+                }
+            };
+
+            string result = DaxQueryBuilder.Build(structure);
+
+            Assert.IsTrue(result.Contains("SUMMARIZECOLUMNS("), "Expected SUMMARIZECOLUMNS.");
+            Assert.IsTrue(result.Contains("'Sales'[Region]"), "Expected first group-by column.");
+            Assert.IsTrue(result.Contains("'Sales'[Category]"), "Expected second group-by column.");
+            Assert.IsTrue(result.Contains("\"max\", MAXX('Sales', 'Sales'[Amount])"), "Expected MAX aggregation.");
+            Assert.IsTrue(result.Contains("\"count\", COUNTAX('Sales', 'Sales'[Amount])"), "Expected COUNT aggregation.");
+            Assert.IsTrue(result.Contains("\"Total_Sales\", [Sales]"), "Expected measure reference.");
+        }
+
+        /// <summary>
+        /// A groupBy query with filter predicates should use KEEPFILTERS(FILTER(ALL(...), ...)).
+        /// </summary>
+        [TestMethod]
+        public void Build_GroupBy_WithFilter()
+        {
+            DaxQueryStructure structure = new()
+            {
+                TableName = "Sales",
+                IsGroupByQuery = true,
+                GroupByColumns = new Dictionary<string, string> { { "Region", "Region" } },
+                AggregationExpressions = new Dictionary<string, string>
+                {
+                    { "sum", "SUMX('Sales', 'Sales'[Amount])" }
+                },
+                FilterPredicates = new List<string> { "'Sales'[Year] = 2024" }
+            };
+
+            string result = DaxQueryBuilder.Build(structure);
+
+            Assert.IsTrue(result.Contains("KEEPFILTERS(FILTER(ALL('Sales'), 'Sales'[Year] = 2024))"),
+                "Expected KEEPFILTERS/FILTER/ALL wrapping for filter predicate in SUMMARIZECOLUMNS.");
+        }
+
+        /// <summary>
+        /// A groupBy query with TOPN should wrap SUMMARIZECOLUMNS in TOPN.
+        /// </summary>
+        [TestMethod]
+        public void Build_GroupBy_WithTopN()
+        {
+            DaxQueryStructure structure = new()
+            {
+                TableName = "Sales",
+                IsGroupByQuery = true,
+                TopCount = 5,
+                GroupByColumns = new Dictionary<string, string> { { "Region", "Region" } },
+                AggregationExpressions = new Dictionary<string, string>
+                {
+                    { "sum", "SUMX('Sales', 'Sales'[Amount])" }
+                }
+            };
+
+            string result = DaxQueryBuilder.Build(structure);
+
+            Assert.IsTrue(result.Contains("TOPN("), "Expected TOPN wrapping.");
+            Assert.IsTrue(result.Contains("SUMMARIZECOLUMNS("), "Expected SUMMARIZECOLUMNS inside TOPN.");
+            Assert.IsTrue(result.Contains("5"), "Expected top count 5.");
+        }
+
+        /// <summary>
+        /// A groupBy query with ORDER BY should append ORDER BY after SUMMARIZECOLUMNS.
+        /// </summary>
+        [TestMethod]
+        public void Build_GroupBy_WithOrderBy()
+        {
+            DaxQueryStructure structure = new()
+            {
+                TableName = "Sales",
+                IsGroupByQuery = true,
+                GroupByColumns = new Dictionary<string, string> { { "Region", "Region" } },
+                AggregationExpressions = new Dictionary<string, string>
+                {
+                    { "sum", "SUMX('Sales', 'Sales'[Amount])" }
+                },
+                OrderByColumns = new List<(string, bool)> { ("Region", true) }
+            };
+
+            string result = DaxQueryBuilder.Build(structure);
+
+            Assert.IsTrue(result.Contains("ORDER BY"), "Expected ORDER BY clause.");
+        }
+
+        /// <summary>
+        /// BuildAggregationExpression should generate correct DAX for each aggregation type.
+        /// </summary>
+        [TestMethod]
+        public void BuildAggregationExpression_AllTypes()
+        {
+            Assert.AreEqual("SUMX('Sales', 'Sales'[Amount])", DaxQueryBuilder.BuildAggregationExpression("sum", "Sales", "Amount"));
+            Assert.AreEqual("AVERAGEX('Sales', 'Sales'[Amount])", DaxQueryBuilder.BuildAggregationExpression("avg", "Sales", "Amount"));
+            Assert.AreEqual("MINX('Sales', 'Sales'[Amount])", DaxQueryBuilder.BuildAggregationExpression("min", "Sales", "Amount"));
+            Assert.AreEqual("MAXX('Sales', 'Sales'[Amount])", DaxQueryBuilder.BuildAggregationExpression("max", "Sales", "Amount"));
+            Assert.AreEqual("COUNTAX('Sales', 'Sales'[Amount])", DaxQueryBuilder.BuildAggregationExpression("count", "Sales", "Amount"));
+            Assert.AreEqual("DISTINCTCOUNT('Sales'[Amount])", DaxQueryBuilder.BuildAggregationExpression("count", "Sales", "Amount", distinct: true));
+        }
+
+        /// <summary>
+        /// A groupBy query with only measures (no ad-hoc aggregations) should work.
+        /// </summary>
+        [TestMethod]
+        public void Build_GroupBy_MeasuresOnly()
+        {
+            DaxQueryStructure structure = new()
+            {
+                TableName = "customer",
+                IsGroupByQuery = true,
+                GroupByColumns = new Dictionary<string, string> { { "State", "State" } },
+                GroupByMeasures = new Dictionary<string, string>
+                {
+                    { "Sales", "[Sales]" },
+                    { "Margin_pct", "[Margin %]" }
+                }
+            };
+
+            string result = DaxQueryBuilder.Build(structure);
+
+            Assert.IsTrue(result.Contains("SUMMARIZECOLUMNS("), "Expected SUMMARIZECOLUMNS.");
+            Assert.IsTrue(result.Contains("'customer'[State]"), "Expected group-by column.");
+            Assert.IsTrue(result.Contains("\"Sales\", [Sales]"), "Expected Sales measure.");
+            Assert.IsTrue(result.Contains("\"Margin_pct\", [Margin %]"), "Expected Margin % measure.");
+        }
     }
 }

@@ -395,6 +395,8 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <summary>
     /// Helper method to copy over permissions from anonymous role to authenticated role in the case
     /// when anonymous role is defined for an entity in the config but authenticated role is not.
+    /// Uses deep cloning to ensure the authenticated role's RoleMetadata is a separate instance
+    /// from anonymous, preventing shared mutable state between the two roles.
     /// </summary>
     /// <param name="entityToRoleMap">The EntityMetadata for the entity for which we want to copy permissions
     /// from anonymous to authenticated role.</param>
@@ -403,9 +405,10 @@ public class AuthorizationResolver : IAuthorizationResolver
         EntityMetadata entityToRoleMap,
         HashSet<string> allowedColumnsForAnonymousRole)
     {
-        // Using assignment operator overrides the existing value for the key /
-        // adds a new entry for (key,value) pair if absent, to the map.
-        entityToRoleMap.RoleToOperationMap[ROLE_AUTHENTICATED] = entityToRoleMap.RoleToOperationMap[ROLE_ANONYMOUS];
+        // Deep clone the RoleMetadata so that anonymous and authenticated roles
+        // do not share mutable OperationMetadata instances. Without deep cloning,
+        // any future mutation of one role's permissions would silently affect the other.
+        entityToRoleMap.RoleToOperationMap[ROLE_AUTHENTICATED] = entityToRoleMap.RoleToOperationMap[ROLE_ANONYMOUS].DeepClone();
 
         // Copy over OperationToRolesMap for authenticated role from anonymous role.
         Dictionary<EntityActionOperation, OperationMetadata> allowedOperationMap =

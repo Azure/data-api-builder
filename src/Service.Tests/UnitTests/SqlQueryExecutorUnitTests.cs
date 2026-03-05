@@ -1153,7 +1153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Schema: "UnitTestSchema",
                 DataSource: new DataSource(
                     DatabaseType: DatabaseType.MSSQL,
-                    "Server=localhost;Database=TestDb;",
+                    ConnectionString: "Server=localhost;Database=TestDb;",
                     Options: new Dictionary<string, object> { { "set-session-context", true } }),
                 Runtime: new(
                     Rest: new(),

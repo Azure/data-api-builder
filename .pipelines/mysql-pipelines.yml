@@ -41,6 +41,8 @@ jobs:
   steps:
   - task: NuGetAuthenticate@1
     displayName: 'NuGet Authenticate'
+    inputs:
+      nuGetServiceConnections: 'EngThriveNugetFeedAccessForSqlDab'
 
   # The .NET CLI commands in proceeding tasks use the .NET SDK version specified ("selected") here.
   # Per Microsoft Learn Docs, "Selecting the .NET SDK version is independent from 

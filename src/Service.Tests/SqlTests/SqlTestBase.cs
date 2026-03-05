@@ -284,14 +284,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, loggerValidator.Object);
 
-            MetadataProviderFactory metadataProviderFactory = new(
-                        runtimeConfigProvider,
-                        runtimeConfigValidator,
-                        _queryManagerFactory.Object,
-                        _sqlMetadataLogger,
-                        fileSystem,
-                        null);
-
             switch (DatabaseEngine)
             {
                 case TestCategory.POSTGRESQL:
@@ -311,7 +303,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         new PostgreSqlMetadataProvider(
                             runtimeConfigProvider,
                             runtimeConfigValidator,
-                            metadataProviderFactory,
                             _queryManagerFactory.Object,
                             _sqlMetadataLogger,
                             dataSourceName);
@@ -333,7 +324,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         new MsSqlMetadataProvider(
                             runtimeConfigProvider,
                             runtimeConfigValidator,
-                            metadataProviderFactory,
                             _queryManagerFactory.Object,
                             _sqlMetadataLogger,
                             dataSourceName);
@@ -355,7 +345,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                          new MySqlMetadataProvider(
                              runtimeConfigProvider,
                              runtimeConfigValidator,
-                             metadataProviderFactory,
                              _queryManagerFactory.Object,
                              _sqlMetadataLogger,
                              dataSourceName);
@@ -377,7 +366,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                          new MsSqlMetadataProvider(
                              runtimeConfigProvider,
                              runtimeConfigValidator,
-                             metadataProviderFactory,
                              _queryManagerFactory.Object,
                              _sqlMetadataLogger,
                              dataSourceName);

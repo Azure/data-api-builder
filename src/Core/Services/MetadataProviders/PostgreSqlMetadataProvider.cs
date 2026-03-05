@@ -24,12 +24,11 @@ namespace Azure.DataApiBuilder.Core.Services
         public PostgreSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             RuntimeConfigValidator runtimeConfigValidator,
-            MetadataProviderFactory metadataProviderFactory,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,
             bool isValidateOnly = false)
-            : base(runtimeConfigProvider, runtimeConfigValidator, metadataProviderFactory, queryManagerFactory, logger, dataSourceName, isValidateOnly)
+            : base(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
         }
 

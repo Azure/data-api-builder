@@ -135,20 +135,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ILogger<RuntimeConfigValidator> validatorLogger = new Mock<ILogger<RuntimeConfigValidator>>().Object;
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, validatorLogger);
 
-            ILogger<ISqlMetadataProvider> metadataProviderFactoryLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
-            MetadataProviderFactory metadataProviderFactory = new(
-                runtimeConfigProvider: runtimeConfigProvider,
-                runtimeConfigValidator: runtimeConfigValidator,
-                queryManagerFactory: queryManagerFactory.Object,
-                logger: metadataProviderFactoryLogger,
-                fileSystem: fileSystem,
-                isValidateOnly: false,
-                handler: null);
-
             SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(
                 runtimeConfigProvider,
                 runtimeConfigValidator,
-                metadataProviderFactory,
                 queryManagerFactory.Object,
                 sqlMetadataLogger,
                 dataSourceName);
@@ -236,19 +225,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 IFileSystem fileSystem = new FileSystem();
                 Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
                 RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, loggerValidator.Object);
-                MetadataProviderFactory metadataProviderFactory = new(
-                        runtimeConfigProvider,
-                        runtimeConfigValidator,
-                        _queryManagerFactory.Object,
-                        _sqlMetadataLogger,
-                        fileSystem,
-                        null);
 
                 ISqlMetadataProvider sqlMetadataProvider = databaseType switch
                 {
-                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator, metadataProviderFactory, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
-                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator, metadataProviderFactory, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
-                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator, metadataProviderFactory, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
                     _ => throw new ArgumentException($"Invalid database type: {databaseType}")
                 };
 
@@ -512,18 +494,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 IFileSystem fileSystem = new FileSystem();
                 Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
                 RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, loggerValidator.Object);
-                MetadataProviderFactory metadataProviderFactory = new(
-                        runtimeConfigProvider,
-                        runtimeConfigValidator,
-                        _queryManagerFactory.Object,
-                        _sqlMetadataLogger,
-                        fileSystem,
-                        null);
 
                 ISqlMetadataProvider sqlMetadataProvider = new MsSqlMetadataProvider(
                     runtimeConfigProvider,
                     runtimeConfigValidator,
-                    metadataProviderFactory,
                     queryManagerFactory.Object,
                     sqlMetadataLogger,
                     dataSourceName);

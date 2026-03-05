@@ -5547,19 +5547,9 @@ type Planet @model(name:""PlanetAlias"") {
                 contextAccessor: null!,
                 handler: null);
 
-            MetadataProviderFactory metadataProviderFactory = new(
-                runtimeConfigProvider: configProvider,
-                runtimeConfigValidator: configValidator,
-                queryManagerFactory: queryManagerFactory,
-                logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
-                fileSystem: fileSystem,
-                isValidateOnly: false,
-                handler: null);
-
             MsSqlMetadataProvider provider = new(
                 configProvider,
                 configValidator,
-                metadataProviderFactory,
                 queryManagerFactory,
                 loggerFactory.CreateLogger<MsSqlMetadataProvider>(),
                 configLoader.RuntimeConfig.DefaultDataSourceName,

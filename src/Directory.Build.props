@@ -3,10 +3,6 @@
     <Nullable>enable</Nullable>
     <BaseOutputPath>..\out</BaseOutputPath>
     <Version>2.0</Version>
-    <!-- NU1900: Warning about inability to fetch package vulnerability data from a feed.
-         This is suppressed because the EngThrive-MCP feed's vulnerability endpoint may
-         not always be reachable, and this warning is purely informational. -->
-    <NoWarn>$(NoWarn);NU1900</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

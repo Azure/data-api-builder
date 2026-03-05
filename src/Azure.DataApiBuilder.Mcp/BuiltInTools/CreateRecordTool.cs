@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 RequestValidator requestValidator = serviceProvider.GetRequiredService<RequestValidator>();
 
-                // Only validate tables
+                // Only validate tables. For views, skip validation and let the database handle any errors.
                 if (dbObject.SourceType is EntitySourceType.Table)
                 {
                     try
@@ -144,12 +144,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         return McpResponseBuilder.BuildErrorResult(toolName, "ValidationFailed", $"Request validation failed: {ex.Message}", logger);
                     }
                 }
-                else
+                else if (dbObject.SourceType is EntitySourceType.StoredProcedure)
                 {
                     return McpResponseBuilder.BuildErrorResult(
                         toolName,
                         "InvalidCreateTarget",
-                        "The create_record tool is only available for tables.",
+                        "The create_record tool is only available for tables and views.",
                         logger);
                 }
 

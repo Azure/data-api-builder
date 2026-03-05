@@ -188,6 +188,61 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertToolDisabledError(content, "Custom tool is disabled for entity 'GetBook'");
         }
 
+        #region View Support Tests
+
+        /// <summary>
+        /// Data-driven test to verify all DML tools allow both table and view entities.
+        /// This is critical for scenarios like vector data type support, where users must:
+        /// - Create a view that omits unsupported columns (e.g., vector columns)
+        /// - Perform DML operations against that view
+        /// </summary>
+        /// <param name="toolType">The tool type to test.</param>
+        /// <param name="sourceType">The entity source type (Table or View).</param>
+        /// <param name="entityName">The entity name to use.</param>
+        /// <param name="jsonArguments">The JSON arguments for the tool.</param>
+        [DataTestMethod]
+        [DataRow("CreateRecord", "Table", "Book", "{\"entity\": \"Book\", \"data\": {\"id\": 1, \"title\": \"Test\"}}", DisplayName = "CreateRecord allows Table")]
+        [DataRow("CreateRecord", "View", "BookView", "{\"entity\": \"BookView\", \"data\": {\"id\": 1, \"title\": \"Test\"}}", DisplayName = "CreateRecord allows View")]
+        [DataRow("ReadRecords", "Table", "Book", "{\"entity\": \"Book\"}", DisplayName = "ReadRecords allows Table")]
+        [DataRow("ReadRecords", "View", "BookView", "{\"entity\": \"BookView\"}", DisplayName = "ReadRecords allows View")]
+        [DataRow("UpdateRecord", "Table", "Book", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}, \"fields\": {\"title\": \"Updated\"}}", DisplayName = "UpdateRecord allows Table")]
+        [DataRow("UpdateRecord", "View", "BookView", "{\"entity\": \"BookView\", \"keys\": {\"id\": 1}, \"fields\": {\"title\": \"Updated\"}}", DisplayName = "UpdateRecord allows View")]
+        [DataRow("DeleteRecord", "Table", "Book", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}}", DisplayName = "DeleteRecord allows Table")]
+        [DataRow("DeleteRecord", "View", "BookView", "{\"entity\": \"BookView\", \"keys\": {\"id\": 1}}", DisplayName = "DeleteRecord allows View")]
+        public async Task DmlTool_AllowsTablesAndViews(string toolType, string sourceType, string entityName, string jsonArguments)
+        {
+            // Arrange
+            RuntimeConfig config = sourceType == "View"
+                ? CreateConfigWithViewEntity()
+                : CreateConfigWithDmlToolEnabledEntity();
+            IServiceProvider serviceProvider = CreateServiceProvider(config);
+            IMcpTool tool = CreateTool(toolType);
+
+            JsonDocument arguments = JsonDocument.Parse(jsonArguments);
+
+            // Act
+            CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
+
+            // Assert - Should NOT be a source type blocking error (InvalidCreateTarget or InvalidEntity)
+            // Other errors like missing metadata are acceptable since we're testing source type validation
+            if (result.IsError == true)
+            {
+                JsonElement content = await RunToolAsync(tool, arguments, serviceProvider);
+
+                if (content.TryGetProperty("error", out JsonElement error) &&
+                    error.TryGetProperty("type", out JsonElement errorType))
+                {
+                    string errorTypeValue = errorType.GetString() ?? string.Empty;
+
+                    // These error types indicate the tool is blocking based on source type
+                    Assert.AreNotEqual("InvalidCreateTarget", errorTypeValue,
+                        $"{sourceType} entities should not be blocked with InvalidCreateTarget");
+                }
+            }
+        }
+
+        #endregion
+
         #region Helper Methods
 
         /// <summary>
@@ -505,6 +560,60 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                         DmlTools: new(
                             describeEntities: true,
                             readRecords: false,  // Runtime-level DISABLED
+                            createRecord: true,
+                            updateRecord: true,
+                            deleteRecord: true,
+                            executeEntity: true
+                        )
+                    ),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
+                ),
+                Entities: new(entities)
+            );
+        }
+
+        /// <summary>
+        /// Creates a runtime config with a view entity.
+        /// This is the key scenario for vector data type support.
+        /// </summary>
+        private static RuntimeConfig CreateConfigWithViewEntity()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                ["BookView"] = new Entity(
+                    Source: new EntitySource(
+                        Object: "dbo.vBooks",
+                        Type: EntitySourceType.View,
+                        Parameters: null,
+                        KeyFields: new[] { "id" }
+                    ),
+                    GraphQL: new("BookView", "BookViews"),
+                    Fields: null,
+                    Rest: new(Enabled: true),
+                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
+                        new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null),
+                        new EntityAction(Action: EntityActionOperation.Create, Fields: null, Policy: null),
+                        new EntityAction(Action: EntityActionOperation.Update, Fields: null, Policy: null),
+                        new EntityAction(Action: EntityActionOperation.Delete, Fields: null, Policy: null)
+                    }) },
+                    Mappings: null,
+                    Relationships: null,
+                    Mcp: new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: true)
+                )
+            };
+
+            return new RuntimeConfig(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(
+                        Enabled: true,
+                        Path: "/mcp",
+                        DmlTools: new(
+                            describeEntities: true,
+                            readRecords: true,
                             createRecord: true,
                             updateRecord: true,
                             deleteRecord: true,

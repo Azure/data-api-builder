@@ -2103,6 +2103,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
+        /// <summary>
+        /// Validates the autoentity configuration inside the configuration file and also
+        /// validates that entities created from the autoentity configuration do not generate
+        /// duplicate entities and paths for REST and GraphQL.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task ValidateAutoentitiesConfiguration()
         {

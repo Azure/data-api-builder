@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SemanticModelTests
             DaxQueryStructure structure = new()
             {
                 TableName = "Sales",
-                SelectedColumns = new List<string> { "Region", "Amount" }
+                SelectedColumns = new Dictionary<string, string> { { "Region", "Region" }, { "Amount", "Amount" } }
             };
 
             string result = DaxQueryBuilder.Build(structure);

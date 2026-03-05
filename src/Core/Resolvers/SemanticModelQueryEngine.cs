@@ -60,8 +60,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             DaxQueryStructure queryStructure = BuildQueryStructureFromParameters(tableName, parameters, dataSourceName);
 
-            // Add all columns and measures since GraphQL field resolution handles column selection.
-            PopulateColumnsAndMeasures(queryStructure, entityName, metadataProvider);
+            // Extract requested fields from the GraphQL selection set to push down to DAX.
+            // This avoids evaluating expensive measures that aren't needed.
+            HashSet<string>? requestedFields = ExtractRequestedFields(context);
+
+            // Populate columns and measures, optionally filtered to requested fields.
+            // Relationship FK columns are always included to support relationship resolution.
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            Entity entity = runtimeConfig.Entities[entityName];
+            HashSet<string>? fkColumns = GetEntityFkColumns(entity);
+            PopulateColumnsAndMeasures(queryStructure, entityName, metadataProvider, requestedFields, fkColumns);
 
             string daxQuery = DaxQueryBuilder.Build(queryStructure);
 
@@ -74,11 +82,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName);
 
             // Resolve relationship fields by batch-fetching related entities.
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            Entity entity = runtimeConfig.Entities[entityName];
             if (result is not null && result.Count > 0 && entity.Relationships is not null)
             {
-                await ResolveRelationshipsAsync(result, entity, entityName, metadataProvider, queryExecutor, dataSourceName);
+                await ResolveRelationshipsAsync(result, entity, entityName, metadataProvider, queryExecutor, dataSourceName, context);
             }
 
             // Build a pagination connection object: { "items": "[...]", "hasNextPage": false }
@@ -176,7 +182,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else
                     {
-                        queryStructure.SelectedColumns.Add(field);
+                        string originalName = GetColumnOriginalName(field, metadataProvider);
+                        queryStructure.SelectedColumns[field] = originalName;
                     }
                 }
             }
@@ -334,7 +341,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private static void PopulateColumnsAndMeasures(
             DaxQueryStructure queryStructure,
             string entityName,
-            ISqlMetadataProvider metadataProvider)
+            ISqlMetadataProvider metadataProvider,
+            HashSet<string>? requestedFields = null,
+            HashSet<string>? fkColumns = null)
         {
             SourceDefinition sourceDef = metadataProvider.GetSourceDefinition(entityName);
             HashSet<string> measureNames = GetEntityMeasureNames(entityName, metadataProvider);
@@ -343,13 +352,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 if (measureNames.Contains(fieldName))
                 {
+                    // Only include measures if they're requested (or no filter specified).
+                    if (requestedFields is not null && !requestedFields.Contains(fieldName))
+                    {
+                        continue;
+                    }
+
                     // Measure reference: use original name for DAX (may differ from sanitized GraphQL name).
                     string originalName = GetMeasureOriginalName(fieldName, metadataProvider);
                     queryStructure.IncludedMeasures[fieldName] = $"[{originalName}]";
                 }
                 else
                 {
-                    queryStructure.SelectedColumns.Add(fieldName);
+                    // Always include columns (needed for FK resolution and filtering).
+                    // Column reference: use original name for DAX column reference,
+                    // sanitized name as the alias in the result set.
+                    string originalName = GetColumnOriginalName(fieldName, metadataProvider);
+                    queryStructure.SelectedColumns[fieldName] = originalName;
                 }
             }
         }
@@ -386,6 +405,86 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Returns the original semantic model column name for a sanitized GraphQL field name.
+        /// </summary>
+        private static string GetColumnOriginalName(
+            string graphQLName,
+            ISqlMetadataProvider metadataProvider)
+        {
+            if (metadataProvider is SemanticModelMetadataProvider smProvider)
+            {
+                return smProvider.GetColumnOriginalName(graphQLName);
+            }
+
+            return graphQLName;
+        }
+
+        /// <summary>
+        /// Extracts the set of field names requested in the GraphQL selection set.
+        /// Walks the connection → items → fields AST to find the actual field names.
+        /// Returns null if the fields cannot be determined (fallback to include all).
+        /// </summary>
+        private static HashSet<string>? ExtractRequestedFields(IMiddlewareContext context)
+        {
+            var connectionSelections = context.Selection.SyntaxNode.SelectionSet?.Selections;
+            if (connectionSelections is null)
+            {
+                return null;
+            }
+
+            foreach (var sel in connectionSelections)
+            {
+                if (sel is HotChocolate.Language.FieldNode fieldNode && fieldNode.Name.Value == "items")
+                {
+                    var itemSelections = fieldNode.SelectionSet?.Selections;
+                    if (itemSelections is null)
+                    {
+                        return null;
+                    }
+
+                    HashSet<string> fields = new(StringComparer.OrdinalIgnoreCase);
+                    foreach (var itemSel in itemSelections)
+                    {
+                        if (itemSel is HotChocolate.Language.FieldNode itemField)
+                        {
+                            fields.Add(itemField.Name.Value);
+                        }
+                    }
+
+                    return fields.Count > 0 ? fields : null;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Returns the set of FK column names from the entity's relationships.
+        /// These columns must always be included in the DAX query for relationship resolution.
+        /// </summary>
+        private static HashSet<string>? GetEntityFkColumns(Entity entity)
+        {
+            if (entity.Relationships is null || entity.Relationships.Count == 0)
+            {
+                return null;
+            }
+
+            HashSet<string> fkColumns = new(StringComparer.OrdinalIgnoreCase);
+            foreach ((_, EntityRelationship relationship) in entity.Relationships)
+            {
+                if (relationship.SourceFields is not null)
+                {
+                    foreach (string field in relationship.SourceFields)
+                    {
+                        fkColumns.Add(field);
+                    }
+                }
+            }
+
+            return fkColumns.Count > 0 ? fkColumns : null;
+        }
+
+        /// <summary>
         /// Resolves relationship fields on the result array by batch-fetching related entities.
         /// For each configured relationship:
         /// - Collects FK values from the source results
@@ -398,15 +497,55 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName,
             ISqlMetadataProvider metadataProvider,
             IQueryExecutor queryExecutor,
-            string dataSourceName)
+            string dataSourceName,
+            IMiddlewareContext? context = null)
         {
             if (entity.Relationships is null)
             {
                 return;
             }
 
+            // Determine which relationship fields are actually requested in the GraphQL query
+            // to avoid unnecessary DAX queries for unrequested relationships.
+            HashSet<string> requestedFields = new(StringComparer.OrdinalIgnoreCase);
+            if (context is not null)
+            {
+                // Walk the selection AST: connection → items → fields to find relationship field names.
+                var connectionSelections = context.Selection.SyntaxNode.SelectionSet?.Selections;
+                if (connectionSelections is not null)
+                {
+                    foreach (var sel in connectionSelections)
+                    {
+                        Console.Error.WriteLine($"[SM-REL] Connection sel: {sel.GetType().Name} = {(sel as HotChocolate.Language.FieldNode)?.Name.Value ?? "?"}");
+                        if (sel is HotChocolate.Language.FieldNode fieldNode && fieldNode.Name.Value == "items")
+                        {
+                            var itemSelections = fieldNode.SelectionSet?.Selections;
+                            if (itemSelections is not null)
+                            {
+                                foreach (var itemSel in itemSelections)
+                                {
+                                    if (itemSel is HotChocolate.Language.FieldNode itemField)
+                                    {
+                                        requestedFields.Add(itemField.Name.Value);
+                                    }
+                                }
+                            }
+
+                            break;
+                        }
+                    }
+                }
+            }
+
             foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships)
             {
+                try
+                {
+                // Only resolve relationships that the GraphQL query actually requests.
+                if (requestedFields.Count > 0 && !requestedFields.Contains(relationshipName))
+                {
+                    continue;
+                }
                 string targetEntityName = relationship.TargetEntity;
                 string? sourceField = relationship.SourceFields?.FirstOrDefault();
                 string? targetField = relationship.TargetFields?.FirstOrDefault();
@@ -443,15 +582,46 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 DaxQueryStructure targetQuery = new() { TableName = targetTableName };
                 PopulateColumnsAndMeasures(targetQuery, targetEntityName, metadataProvider);
 
+                // Resolve the original column name for DAX references (SourceFields/TargetFields
+                // use sanitized names matching JSON keys, but DAX needs the original model names).
+                string targetFieldForDax = GetColumnOriginalName(targetField, metadataProvider);
+
+                // Determine the target column's data type to handle Date/DateTime comparisons properly.
+                // DAX cannot compare Date columns with Text values directly.
+                bool isDateColumn = false;
+                SourceDefinition targetSourceDef = metadataProvider.GetSourceDefinition(targetEntityName);
+                if (targetSourceDef.Columns.TryGetValue(targetField, out ColumnDefinition? targetColDef))
+                {
+                    isDateColumn = targetColDef.SystemType == typeof(DateTime);
+                }
+
                 // Build an OR filter for all FK values.
                 List<string> filterParts = new();
                 foreach (string fkVal in fkValues)
                 {
-                    // Determine if the value is numeric or string.
-                    string quotedVal = long.TryParse(fkVal, out _) || double.TryParse(fkVal, out _)
-                        ? fkVal
-                        : $"\"{fkVal}\"";
-                    filterParts.Add($"{DaxQueryBuilder.QuoteTableName(targetTableName)}{DaxQueryBuilder.QuoteColumnName(targetField)} = {quotedVal}");
+                    string quotedVal;
+                    if (isDateColumn)
+                    {
+                        // Parse ISO date string and use DAX DATE() function for proper type comparison.
+                        if (DateTime.TryParse(fkVal, out DateTime dateVal))
+                        {
+                            quotedVal = $"DATE({dateVal.Year}, {dateVal.Month}, {dateVal.Day})";
+                        }
+                        else
+                        {
+                            quotedVal = $"DATEVALUE(\"{fkVal}\")";
+                        }
+                    }
+                    else if (long.TryParse(fkVal, out _) || double.TryParse(fkVal, out _))
+                    {
+                        quotedVal = fkVal;
+                    }
+                    else
+                    {
+                        quotedVal = $"\"{fkVal}\"";
+                    }
+
+                    filterParts.Add($"{DaxQueryBuilder.QuoteTableName(targetTableName)}{DaxQueryBuilder.QuoteColumnName(targetFieldForDax)} = {quotedVal}");
                 }
 
                 if (filterParts.Count == 1)
@@ -552,7 +722,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         }
                     }
                 }
+
+                }
+                catch (Exception)
+                {
+                    // Skip failed relationship resolution (e.g., DAX type mismatch) to avoid
+                    // blocking the main entity query. The error is already logged by the executor.
+                    continue;
+                }
             }
         }
     }
 }
+
+

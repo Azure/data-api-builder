@@ -1188,6 +1188,13 @@ namespace Azure.DataApiBuilder.Service
                     app.ApplicationServices.GetRequiredService<IMetadataProviderFactory>();
                 await sqlMetadataProviderFactory.InitializeAsync();
 
+                // After metadata initialization, auto-discovery may have added new entities
+                // to the RuntimeConfig. Refresh authorization permissions so the resolver
+                // picks up any auto-discovered entities.
+                AuthorizationResolver authorizationResolver =
+                    (AuthorizationResolver)app.ApplicationServices.GetRequiredService<IAuthorizationResolver>();
+                authorizationResolver.RefreshEntityPermissions();
+
                 // Manually trigger DI service instantiation of GraphQLSchemaCreator and RestService
                 // to attempt to reduce chances that the first received client request
                 // triggers instantiation and encounters undesired instantiation latency.

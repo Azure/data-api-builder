@@ -90,9 +90,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             sb.Append("SELECTCOLUMNS(\n    ");
             sb.Append(tableExpr);
 
-            foreach (string column in structure.SelectedColumns)
+            foreach ((string alias, string originalName) in structure.SelectedColumns)
             {
-                sb.Append($",\n    \"{column}\", {QuoteTableName(structure.TableName)}{QuoteColumnName(column)}");
+                sb.Append($",\n    \"{alias}\", {QuoteTableName(structure.TableName)}{QuoteColumnName(originalName)}");
             }
 
             sb.Append("\n)");

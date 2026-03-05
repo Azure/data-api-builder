@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
     public class SemanticModelMetadataProvider : ISqlMetadataProvider
     {
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
-        private readonly RuntimeEntities _runtimeConfigEntities;
+        private RuntimeEntities _runtimeConfigEntities;
         private readonly bool _isDevelopmentMode;
         private readonly DatabaseType _databaseType;
         private readonly string _connectionString;
@@ -58,6 +58,13 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// Only contains entries where the sanitized name differs from the original.
         /// </summary>
         private readonly Dictionary<string, string> _measureGraphQLToOriginal = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Maps sanitized GraphQL column field name → original column name from the semantic model.
+        /// Used when building DAX queries, which require the original column name (e.g., [Customer Name]).
+        /// Only contains entries where the sanitized name differs from the original.
+        /// </summary>
+        private readonly Dictionary<string, string> _columnGraphQLToOriginal = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Discovered relationships from TMSCHEMA_RELATIONSHIPS.
@@ -125,9 +132,15 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
             // Discover column and measure metadata from the semantic model via ADOMD.NET.
             (Dictionary<string, List<(string ColumnName, int DataType, bool IsNullable)>> tableColumns,
-             Dictionary<long, string> tableIdToName) = await DiscoverColumnsAsync();
+             Dictionary<long, string> tableIdToName) = await DiscoverColumnsAsync(IsAutoDiscoverEnabled(runtimeConfig));
             await DiscoverMeasuresAsync(tableIdToName);
             await DiscoverRelationshipsAsync(tableIdToName);
+
+            // Auto-discover: generate Entity objects for all tables not already in the config.
+            if (IsAutoDiscoverEnabled(runtimeConfig))
+            {
+                AutoDiscoverEntities(runtimeConfig, tableColumns);
+            }
 
             // Build table→entity lookup (used for relationship auto-wiring).
             foreach ((string entityName, Entity entity) in _runtimeConfigEntities)
@@ -141,16 +154,43 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 SourceDefinition sourceDefinition = new();
 
                 // Populate columns from discovered metadata.
+                // Column names are sanitized for GraphQL validity (e.g., "Customer Name" → "Customer_Name").
                 if (tableColumns.TryGetValue(sourceName, out var columns))
                 {
                     foreach ((string columnName, int dataType, bool isNullable) in columns)
                     {
-                        sourceDefinition.Columns[columnName] = new ColumnDefinition
+                        string graphQLColumnName = SanitizeMeasureName(columnName);
+                        if (string.IsNullOrEmpty(graphQLColumnName))
+                        {
+                            _logger?.LogWarning(
+                                "Column '{ColumnName}' on table '{Table}' could not be sanitized to a valid GraphQL name. Skipping.",
+                                columnName, sourceName);
+                            continue;
+                        }
+
+                        if (sourceDefinition.Columns.ContainsKey(graphQLColumnName))
+                        {
+                            _logger?.LogWarning(
+                                "Column '{ColumnName}' sanitized to '{GraphQLName}' conflicts with existing field on entity '{Entity}'. Skipping.",
+                                columnName, graphQLColumnName, entityName);
+                            continue;
+                        }
+
+                        sourceDefinition.Columns[graphQLColumnName] = new ColumnDefinition
                         {
                             SystemType = MapTomDataTypeToSystemType(dataType),
                             IsNullable = isNullable,
                             IsReadOnly = true
                         };
+
+                        // Track mapping from sanitized → original for DAX query generation.
+                        if (!string.Equals(graphQLColumnName, columnName, StringComparison.Ordinal))
+                        {
+                            _columnGraphQLToOriginal[graphQLColumnName] = columnName;
+                            _logger?.LogInformation(
+                                "Column '{ColumnName}' exposed as '{GraphQLName}' (sanitized for GraphQL).",
+                                columnName, graphQLColumnName);
+                        }
                     }
                 }
 
@@ -208,11 +248,13 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
                 EntityToDatabaseObject[entityName] = databaseTable;
 
-                // Build identity field mapping (exposed name == backing name for semantic models).
+                // Build field mapping (exposed GraphQL name → original column name for DAX).
+                // For columns that weren't sanitized, these are identical.
                 Dictionary<string, string> fieldMap = new(StringComparer.OrdinalIgnoreCase);
                 foreach (string col in sourceDefinition.Columns.Keys)
                 {
-                    fieldMap[col] = col;
+                    string originalName = _columnGraphQLToOriginal.TryGetValue(col, out string? orig) ? orig : col;
+                    fieldMap[col] = originalName;
                 }
 
                 _entityToFieldMappings[entityName] = fieldMap;
@@ -336,6 +378,240 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         }
 
         /// <summary>
+        /// Checks if auto-discovery is enabled in the SemanticModel data source options.
+        /// </summary>
+        private static bool IsAutoDiscoverEnabled(RuntimeConfig runtimeConfig)
+        {
+            if (runtimeConfig.DataSource.DatabaseType != DatabaseType.SemanticModel)
+            {
+                return false;
+            }
+
+            SemanticModelOptions? options = runtimeConfig.DataSource.GetTypedOptions<SemanticModelOptions>();
+            return options?.AutoDiscover == true;
+        }
+
+        /// <summary>
+        /// Auto-discovers all tables from the semantic model and generates Entity objects for those
+        /// not already configured. Auto-discovered entities get:
+        /// - measures: ["*"] (all non-hidden measures)
+        /// - anonymous read-only permissions
+        /// - auto-wired relationships based on discovered model relationships
+        /// Explicitly configured entities take precedence.
+        /// </summary>
+        private void AutoDiscoverEntities(
+            RuntimeConfig runtimeConfig,
+            Dictionary<string, List<(string ColumnName, int DataType, bool IsNullable)>> tableColumns)
+        {
+            // Collect already-configured table source names.
+            HashSet<string> configuredTables = new(StringComparer.OrdinalIgnoreCase);
+            foreach ((string _, Entity entity) in _runtimeConfigEntities)
+            {
+                configuredTables.Add(entity.Source.Object);
+            }
+
+            // Build a map of new entities to add.
+            Dictionary<string, Entity> newEntities = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string tableName in tableColumns.Keys)
+            {
+                if (configuredTables.Contains(tableName))
+                {
+                    continue;
+                }
+
+                // Use PascalCase entity name derived from table name.
+                string entityName = SanitizeEntityName(tableName);
+                if (_runtimeConfigEntities.ContainsKey(entityName))
+                {
+                    _logger?.LogWarning(
+                        "Auto-discover: table '{TableName}' maps to entity name '{EntityName}' which already exists. Skipping.",
+                        tableName, entityName);
+                    continue;
+                }
+
+                Entity entity = new(
+                    Source: new EntitySource(Object: tableName, Type: EntitySourceType.Table, Parameters: null, KeyFields: null),
+                    GraphQL: new EntityGraphQLOptions(Singular: entityName, Plural: string.Empty),
+                    Fields: null,
+                    Rest: new EntityRestOptions(Enabled: true),
+                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null) }) },
+                    Mappings: null,
+                    Relationships: null,
+                    Measures: new[] { "*" });
+
+                newEntities[entityName] = entity;
+                _logger?.LogInformation("Auto-discovered entity '{EntityName}' from table '{TableName}'.", entityName, tableName);
+            }
+
+            if (newEntities.Count == 0)
+            {
+                return;
+            }
+
+            // Auto-wire relationships between auto-discovered entities.
+            AutoWireDiscoveredRelationships(newEntities);
+
+            // Merge: existing entities + auto-discovered entities.
+            Dictionary<string, Entity> merged = new(StringComparer.OrdinalIgnoreCase);
+            foreach ((string name, Entity entity) in _runtimeConfigEntities)
+            {
+                merged[name] = entity;
+            }
+
+            foreach ((string name, Entity entity) in newEntities)
+            {
+                merged[name] = entity;
+            }
+
+            // Rebuild _runtimeConfigEntities with the merged set.
+            // RuntimeEntities constructor applies GraphQL/REST defaults (plural names, etc.).
+            _runtimeConfigEntities = new RuntimeEntities(merged);
+
+            // Register auto-discovered entities with RuntimeConfig and GraphQL type maps.
+            foreach ((string entityName, Entity _) in newEntities)
+            {
+                // Use the processed entity from _runtimeConfigEntities (has GraphQL defaults applied).
+                Entity processedEntity = _runtimeConfigEntities[entityName];
+
+                runtimeConfig.TryAddEntityNameToDataSourceName(entityName);
+                string path = GetEntityPath(processedEntity, entityName).TrimStart('/');
+                if (!string.IsNullOrEmpty(path))
+                {
+                    runtimeConfig.TryAddEntityPathNameToEntityName(path, entityName);
+                }
+
+                // Register GraphQL type names so resolvers can find the entity.
+                if (processedEntity.GraphQL is not null)
+                {
+                    if (!string.IsNullOrEmpty(processedEntity.GraphQL.Singular))
+                    {
+                        _graphQLTypeToEntityNameMap.TryAdd(processedEntity.GraphQL.Singular, entityName);
+                    }
+
+                    if (!string.IsNullOrEmpty(processedEntity.GraphQL.Plural))
+                    {
+                        _graphQLTypeToEntityNameMap.TryAdd(processedEntity.GraphQL.Plural, entityName);
+                    }
+                }
+
+                _graphQLTypeToEntityNameMap.TryAdd(entityName, entityName);
+            }
+
+            _logger?.LogInformation("Auto-discovery: added {Count} entities from semantic model.", newEntities.Count);
+
+            // Update the RuntimeConfig's Entities so that authorization, GraphQL schema,
+            // and REST routing can see the auto-discovered entities.
+            runtimeConfig.Entities = _runtimeConfigEntities;
+        }
+
+        /// <summary>
+        /// Auto-wires relationships between auto-discovered entities based on discovered model relationships.
+        /// For each discovered relationship where both tables are in the entity set, adds a relationship entry.
+        /// </summary>
+        private void AutoWireDiscoveredRelationships(Dictionary<string, Entity> entities)
+        {
+            // Build table→entity name map for the new entities.
+            Dictionary<string, string> tableToEntity = new(StringComparer.OrdinalIgnoreCase);
+            foreach ((string entityName, Entity entity) in entities)
+            {
+                tableToEntity[entity.Source.Object] = entityName;
+            }
+
+            // Also include already-configured entities for cross-wiring.
+            foreach ((string entityName, Entity entity) in _runtimeConfigEntities)
+            {
+                tableToEntity.TryAdd(entity.Source.Object, entityName);
+            }
+
+            foreach (SemanticModelRelationship rel in _discoveredRelationships)
+            {
+                if (!tableToEntity.TryGetValue(rel.FromTable, out string? fromEntityName) ||
+                    !tableToEntity.TryGetValue(rel.ToTable, out string? toEntityName))
+                {
+                    continue;
+                }
+
+                // Only wire for auto-discovered entities (not already-configured ones with their own relationships).
+                if (!entities.ContainsKey(fromEntityName))
+                {
+                    continue;
+                }
+
+                string relName = toEntityName.ToLowerInvariant();
+                string cardinality = rel.ToCardinality == 1 ? "one" : "many";
+
+                // Use sanitized column names for SourceFields/TargetFields so they match
+                // the JSON property keys produced by SELECTCOLUMNS aliases.
+                // ResolveRelationshipsAsync converts back to original names for DAX filters.
+                string sanitizedFromCol = SanitizeMeasureName(rel.FromColumn);
+                string sanitizedToCol = SanitizeMeasureName(rel.ToColumn);
+
+                EntityRelationship relationship = new(
+                    Cardinality: cardinality == "one" ? Cardinality.One : Cardinality.Many,
+                    TargetEntity: toEntityName,
+                    SourceFields: new[] { sanitizedFromCol },
+                    TargetFields: new[] { sanitizedToCol },
+                    LinkingObject: null,
+                    LinkingSourceFields: Array.Empty<string>(),
+                    LinkingTargetFields: Array.Empty<string>());
+
+                // Build relationships dictionary (Entity is immutable, so we need to create a new one).
+                Dictionary<string, EntityRelationship> rels = entities[fromEntityName].Relationships is not null
+                    ? new(entities[fromEntityName].Relationships!)
+                    : new();
+
+                if (!rels.ContainsKey(relName))
+                {
+                    rels[relName] = relationship;
+                    entities[fromEntityName] = entities[fromEntityName] with { Relationships = rels };
+                }
+            }
+        }
+
+        /// <summary>
+        /// GraphQL built-in scalar type names that cannot be used as entity/object type names.
+        /// </summary>
+        private static readonly HashSet<string> GraphQLReservedTypeNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "String", "Int", "Float", "Boolean", "ID",
+            "Date", "DateTime", "Time", "Decimal", "Long", "Short",
+            "Byte", "ByteArray", "Single", "UUID", "LocalTime",
+            "Query", "Mutation", "Subscription"
+        };
+
+        /// <summary>
+        /// Converts a table name to a valid entity name (and valid GraphQL type name).
+        /// Uses the same sanitization rules as measure names, then capitalizes the first letter.
+        /// If the result conflicts with a GraphQL built-in type, appends "_Entity" suffix.
+        /// Examples: "customer" → "Customer", "GM PVM" → "GM_PVM", "date" → "Date_Entity"
+        /// </summary>
+        private static string SanitizeEntityName(string tableName)
+        {
+            if (string.IsNullOrEmpty(tableName))
+            {
+                return tableName;
+            }
+
+            // Apply the standard sanitization (replace special chars with underscores, etc.)
+            string sanitized = SanitizeMeasureName(tableName);
+            if (string.IsNullOrEmpty(sanitized))
+            {
+                return tableName;
+            }
+
+            string result = char.ToUpperInvariant(sanitized[0]) + sanitized.Substring(1);
+
+            // Avoid conflicts with GraphQL built-in types.
+            if (GraphQLReservedTypeNames.Contains(result))
+            {
+                result += "_Entity";
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// Resolves the set of measure names to expose on a given entity based on its config.
         /// - null/empty: no measures
         /// - ["*"]: all non-hidden measures from the model
@@ -411,6 +687,21 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         }
 
         /// <summary>
+        /// Returns the original column name from the semantic model for a given GraphQL field name.
+        /// If the name was not sanitized (no mapping exists), returns the input unchanged.
+        /// Used by DAX query builders to reference columns with their original names.
+        /// </summary>
+        public string GetColumnOriginalName(string graphQLName)
+        {
+            if (_columnGraphQLToOriginal.TryGetValue(graphQLName, out string? original))
+            {
+                return original;
+            }
+
+            return graphQLName;
+        }
+
+        /// <summary>
         /// Returns the model-wide measure registry.
         /// </summary>
         public IReadOnlyDictionary<string, MeasureDefinition> MeasureRegistry => _measureRegistry;
@@ -424,7 +715,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         ///   - Dictionary mapping table ID → table name (for all tables in the model, used by measure discovery)
         /// </summary>
         private async Task<(Dictionary<string, List<(string ColumnName, int DataType, bool IsNullable)>>,
-                            Dictionary<long, string>)> DiscoverColumnsAsync()
+                            Dictionary<long, string>)> DiscoverColumnsAsync(bool discoverAllTables = false)
         {
             Dictionary<string, List<(string, int, bool)>> result = new(StringComparer.OrdinalIgnoreCase);
             Dictionary<long, string> allTableIdToName = new();
@@ -473,11 +764,13 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     }
                 }
 
-                // Build the set of table IDs for configured entities (for column filtering).
+                // Build the set of table IDs to discover columns for.
+                // When discoverAllTables is true (auto-discover mode), include all tables.
+                // Otherwise only include tables that match configured entities.
                 HashSet<long> configuredTableIds = new();
                 foreach ((long id, string name) in allTableIdToName)
                 {
-                    if (tableNames.Contains(name))
+                    if (discoverAllTables || tableNames.Contains(name))
                     {
                         configuredTableIds.Add(id);
                     }

@@ -16,8 +16,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Columns to include in the query result. If empty, all columns are returned.
+        /// Key: alias (GraphQL field name), Value: original column name from the semantic model.
+        /// The alias is used in the SELECTCOLUMNS expression result, the original name is used
+        /// for the DAX column reference (e.g., 'table'[Original Name]).
         /// </summary>
-        public List<string> SelectedColumns { get; set; } = new();
+        public Dictionary<string, string> SelectedColumns { get; set; } = new();
 
         /// <summary>
         /// Measures to compute and include in the result (via ADDCOLUMNS).

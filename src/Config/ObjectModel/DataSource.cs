@@ -88,7 +88,8 @@ public record DataSource(
             return Options is not null ?
                 (TOptionType)(object)new SemanticModelOptions(
                 Workspace: ReadStringOption(namingPolicy.ConvertName(nameof(SemanticModelOptions.Workspace))),
-                Dataset: ReadStringOption(namingPolicy.ConvertName(nameof(SemanticModelOptions.Dataset))))
+                Dataset: ReadStringOption(namingPolicy.ConvertName(nameof(SemanticModelOptions.Dataset))),
+                AutoDiscover: ReadBoolOption(namingPolicy.ConvertName(nameof(SemanticModelOptions.AutoDiscover))))
                 : default;
         }
 
@@ -140,7 +141,10 @@ public record MsSqlOptions(bool SetSessionContext = true) : IDataSourceOptions;
 /// </summary>
 /// <param name="Workspace">Name of the Power BI workspace (optional, can be embedded in connection string).</param>
 /// <param name="Dataset">Name of the dataset / semantic model (optional, can be embedded in connection string).</param>
-public record SemanticModelOptions(string? Workspace, string? Dataset) : IDataSourceOptions;
+/// <param name="AutoDiscover">When true, DAB automatically discovers and exposes all tables from the semantic model
+/// at startup. Auto-discovered entities get measures:["*"], anonymous read permissions, and auto-wired relationships.
+/// Explicitly configured entities in the config take precedence over auto-discovered ones.</param>
+public record SemanticModelOptions(string? Workspace, string? Dataset, bool AutoDiscover = false) : IDataSourceOptions;
 
 /// <summary>
 /// Options for user-delegated authentication (OBO) for a data source.

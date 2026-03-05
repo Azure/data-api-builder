@@ -73,6 +73,19 @@ public class AuthorizationResolver : IAuthorizationResolver
     }
 
     /// <summary>
+    /// Re-reads the entity permission map from the current runtime config.
+    /// Called after metadata provider initialization when auto-discovery may have
+    /// added new entities to the config at runtime.
+    /// </summary>
+    public void RefreshEntityPermissions()
+    {
+        if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+        {
+            SetEntityPermissionMap(runtimeConfig);
+        }
+    }
+
+    /// <summary>
     /// Whether client role header defined role is present in httpContext.Identity.Claims.Roles
     /// and if the header is present, whether the authenticated user is a member of the role defined
     /// in the header.

@@ -42,16 +42,24 @@ DAB exposes semantic model tables as REST and GraphQL endpoints, translating inc
         │       SemanticModelQueryEngine        │
         │  ┌─────────────────────────────────┐  │
         │  │  1. Resolve entity name         │  │
-        │  │  2. Apply $filter → DAX filter  │  │
-        │  │  3. Apply $orderby → ORDER BY   │  │
-        │  │  4. Apply $select → SELECTCOLS  │  │
-        │  │  5. Apply pagination → TOPN     │  │
+        │  │  2. Split columns vs measures   │  │
+        │  │  3. Apply $filter → DAX filter  │  │
+        │  │  4. Apply $orderby → ORDER BY   │  │
+        │  │  5. Apply $select → SELECTCOLS  │  │
+        │  │  6. Apply measures → ADDCOLUMNS │  │
+        │  │  7. Apply pagination → TOPN     │  │
+        │  │  8. Resolve relationships        │  │
         │  └──────────────┬──────────────────┘  │
         └─────────────────┼─────────────────────┘
                           │
               ┌───────────▼────────────┐
               │    DaxQueryStructure    │
               │  (intermediate repr.)   │
+              │  - SelectedColumns      │
+              │  - IncludedMeasures     │
+              │  - FilterPredicates     │
+              │  - OrderByColumns       │
+              │  - TopCount             │
               └───────────┬────────────┘
                           │
               ┌───────────▼────────────┐
@@ -70,6 +78,19 @@ DAB exposes semantic model tables as REST and GraphQL endpoints, translating inc
               │  (Power BI / Fabric /  │
               │   Analysis Services)   │
               └────────────────────────┘
+
+Startup metadata discovery:
+┌───────────────────────────────────────────┐
+│    SemanticModelMetadataProvider           │
+│    InitializeAsync()                      │
+│                                           │
+│  1. TMSCHEMA_TABLES     → table names/IDs │
+│  2. TMSCHEMA_COLUMNS    → column metadata │
+│  3. TMSCHEMA_MEASURES   → measure registry│
+│  4. TMSCHEMA_RELATIONSHIPS → rel. graph   │
+│  5. Wire config relationships → FK defs   │
+│  6. Build OData EDM model                 │
+└───────────────────────────────────────────┘
 ```
 
 ## Component Reference
@@ -78,14 +99,17 @@ DAB exposes semantic model tables as REST and GraphQL endpoints, translating inc
 
 | File | Purpose |
 |------|---------|
-| `src/Core/Services/MetadataProviders/SemanticModelMetadataProvider.cs` | Schema discovery via ADOMD.NET DMVs; OData model building |
-| `src/Core/Resolvers/SemanticModelQueryEngine.cs` | REST/GraphQL request → DAX query orchestration |
-| `src/Core/Resolvers/DaxQueryBuilder.cs` | `DaxQueryStructure` → DAX text generation |
+| `src/Core/Services/MetadataProviders/SemanticModelMetadataProvider.cs` | Schema discovery via ADOMD.NET DMVs; measures, relationships, OData model building |
+| `src/Core/Resolvers/SemanticModelQueryEngine.cs` | REST/GraphQL request → DAX query orchestration; relationship resolution |
+| `src/Core/Resolvers/DaxQueryBuilder.cs` | `DaxQueryStructure` → DAX text generation (SELECTCOLUMNS + ADDCOLUMNS) |
 | `src/Core/Resolvers/DaxQueryStructure.cs` | Intermediate query representation |
 | `src/Core/Resolvers/SemanticModelQueryExecutor.cs` | ADOMD.NET query execution and result reading |
 | `src/Core/Resolvers/SemanticModelMutationEngine.cs` | Read-only stub; rejects all mutations |
 | `src/Core/Resolvers/SemanticModelDbExceptionParser.cs` | ADOMD exception classification |
 | `src/Core/Parsers/DaxODataASTVisitor.cs` | OData filter AST → DAX filter expression translator |
+| `src/Config/DatabasePrimitives/MeasureDefinition.cs` | Record for discovered measures (Name, Expression, SystemType, HomeTable, IsHidden) |
+| `src/Config/DatabasePrimitives/SemanticModelRelationship.cs` | Record for discovered relationships (FromTable, FromColumn, cardinalities, etc.) |
+| `src/Service.GraphQLBuilder/Directives/MeasureDirectiveType.cs` | `@measure` GraphQL directive for marking measure fields |
 
 ### Modified Files
 
@@ -94,12 +118,16 @@ DAB exposes semantic model tables as REST and GraphQL endpoints, translating inc
 | `src/Config/ObjectModel/DatabaseType.cs` | Added `SemanticModel` enum value |
 | `src/Config/ObjectModel/DataSource.cs` | Added `SemanticModelOptions` record |
 | `src/Config/ObjectModel/RuntimeConfig.cs` | Added `SemanticModelDataSourceUsed` property |
+| `src/Config/ObjectModel/Entity.cs` | Added `Measures` property (`string[]?`) for measure configuration |
+| `src/Config/DatabasePrimitives/DatabaseObject.cs` | Added `IsMeasure` property to `ColumnDefinition` |
 | `src/Core/Resolvers/Factories/QueryEngineFactory.cs` | Registers `SemanticModelQueryEngine` |
 | `src/Core/Resolvers/Factories/MutationEngineFactory.cs` | Registers `SemanticModelMutationEngine` |
 | `src/Core/Resolvers/Factories/QueryManagerFactory.cs` | Registers executor and exception parser |
 | `src/Core/Services/MetadataProviders/MetadataProviderFactory.cs` | Registers `SemanticModelMetadataProvider` |
 | `src/Service.GraphQLBuilder/Queries/QueryBuilder.cs` | Skips by-PK query generation for SemanticModel |
 | `src/Service.GraphQLBuilder/Mutations/MutationBuilder.cs` | Skips mutation generation for SemanticModel |
+| `src/Service.GraphQLBuilder/Sql/SchemaConverter.cs` | Applies `@measure` directive to measure fields |
+| `src/Core/Services/GraphQLSchemaCreator.cs` | Registers `MeasureDirectiveType` |
 | `src/Service/HealthCheck/HealthCheckHelper.cs` | ADOMD.NET health check path |
 | `src/Service/Startup.cs` | Excludes SemanticModel from OpenAPI generation |
 | `src/Core/Configurations/RuntimeConfigValidator.cs` | SemanticModel validation rules |
@@ -109,17 +137,34 @@ DAB exposes semantic model tables as REST and GraphQL endpoints, translating inc
 
 ## Schema Discovery
 
-At startup, `SemanticModelMetadataProvider.InitializeAsync()` connects to the XMLA endpoint and discovers column metadata using Tabular Model (TOM) DMVs:
+At startup, `SemanticModelMetadataProvider.InitializeAsync()` connects to the XMLA endpoint and discovers metadata using Tabular Model (TOM) DMVs:
 
 ```
 Step 1: SELECT * FROM $SYSTEM.TMSCHEMA_TABLES
-        → Maps table Name to internal TableID
+        → Maps table Name to internal TableID (for all tables in the model)
 
 Step 2: SELECT * FROM $SYSTEM.TMSCHEMA_COLUMNS
         → Reads column Name, ExplicitDataType, IsNullable per TableID
         → Skips Type=3 columns (auto-generated RowNumber columns)
 
 Step 3: Correlate by TableID to build table → column metadata
+
+Step 4: SELECT * FROM $SYSTEM.TMSCHEMA_MEASURES
+        → Reads measure Name, Expression, DataType, TableID, IsHidden
+        → Builds model-wide measure registry (measure name → MeasureDefinition)
+
+Step 5: SELECT * FROM $SYSTEM.TMSCHEMA_RELATIONSHIPS
+        → Reads FromTableID, FromColumnID, ToTableID, ToColumnID, cardinalities
+        → Resolves IDs to names using maps from Steps 1-2
+        → Logs all discovered relationships for config reference
+
+Step 6: For each configured entity:
+        → Attach columns from Step 3
+        → Resolve measures from entity config ("measures" property)
+        → Sanitize measure names → add as virtual columns (IsMeasure=true)
+        → Wire configured relationships → populate SourceEntityRelationshipMap
+
+Step 7: Build OData EDM model (via ODataParser.BuildModel) for $filter/$orderby
 ```
 
 **Why TMSCHEMA and not DBSCHEMA?** Power BI Desktop's `DBSCHEMA_COLUMNS` DMV reports all columns as `DBTYPE_WSTR` (string), regardless of actual type. `TMSCHEMA_COLUMNS` provides the real TOM data types.
@@ -136,12 +181,14 @@ Step 3: Correlate by TableID to build table → column metadata
 | 11 | Boolean | `System.Boolean` |
 | 17 | Binary | `System.Byte[]` |
 
-After column discovery, the provider:
+After discovery, the provider:
 
 1. Builds `SourceDefinition` and `DatabaseObject` entries for each configured entity
-2. Registers REST path → entity name mappings for REST routing
-3. Registers entity → data source name mappings
-4. Constructs the OData EDM model (via `ODataParser.BuildModel`) so that `$filter` and `$orderby` query parameters work
+2. Attaches measures as virtual columns (nullable, read-only, `IsMeasure=true`)
+3. Wires configured relationships into `SourceEntityRelationshipMap` and `ForeignKeyDefinition`
+4. Registers REST path → entity name mappings for REST routing
+5. Registers entity → data source name mappings
+6. Constructs the OData EDM model (via `ODataParser.BuildModel`) so that `$filter` and `$orderby` query parameters work
 
 ## DAX Query Generation
 
@@ -254,11 +301,12 @@ The REST flow is:
 3. Builds `FindRequestContext` with parsed OData parameters
 4. Calls `SemanticModelQueryEngine.ExecuteAsync(FindRequestContext)`
 5. Engine builds `DaxQueryStructure` from the context:
-   - `$select` → `SelectedColumns`
+   - `$select` → splits into `SelectedColumns` (columns) and `IncludedMeasures` (measures)
    - `$filter` → `FilterPredicates` (via `DaxODataASTVisitor`)
    - `$orderby` → `OrderByColumns`
    - Pagination limit → `TopCount`
-6. `DaxQueryBuilder.Build()` generates DAX text
+   - Measure field names are mapped to original names for DAX references
+6. `DaxQueryBuilder.Build()` generates DAX text (SELECTCOLUMNS + ADDCOLUMNS if measures present)
 7. `SemanticModelQueryExecutor` executes via ADOMD.NET
 8. Results returned as `JsonDocument` (array); REST pipeline adds `{"value": [...]}` wrapper
 
@@ -275,10 +323,16 @@ GraphQL queries flow through HotChocolate's middleware pipeline:
    ```json
    { "items": "[{...}, {...}]", "hasNextPage": false }
    ```
-4. HotChocolate's `ExecuteListField` resolver processes the `items` field:
+4. **Relationship resolution** (if the entity has configured relationships):
+   - `ResolveRelationshipsAsync()` inspects the GraphQL selection set for relationship fields
+   - For each relationship: collects FK values from results → executes a single batch DAX query
+   - Many-to-One: injects as nested JSON object (`"customer": { "CustomerName": "..." }`)
+   - One-to-Many: injects as connection object (`"sales": { "items": [...], "hasNextPage": false }`)
+   - This is a batch approach (2 queries per relationship, not N+1)
+5. HotChocolate's `ExecuteListField` resolver processes the `items` field:
    - Reads the serialized JSON array string
    - `SemanticModelQueryEngine.ResolveList` deserializes it into `List<JsonElement>`
-5. `ExecuteLeafField` resolvers extract individual scalar values from each item
+6. `ExecuteLeafField` resolvers extract individual scalar values from each item
 
 ### Schema Generation
 
@@ -286,6 +340,8 @@ GraphQL queries flow through HotChocolate's middleware pipeline:
 - **By-PK queries skipped**: semantic models have no primary keys
 - **All mutations skipped**: semantic models are read-only
 - **`@model` directive**: maps GraphQL type names to config entity names
+- **`@measure` directive**: marks measure fields (distinguishes from physical columns)
+- **Relationship fields**: automatically generated from configured relationships via `SchemaConverter`
 
 GraphQL pagination parameters (`first`, `after`) are handled by the query engine:
 - `first` → `DaxQueryStructure.TopCount`
@@ -346,6 +402,30 @@ The health check subsystem has a dedicated ADOMD.NET path because `SemanticModel
       "source": { "object": "customer", "type": "table" },
       "graphql": { "enabled": true, "type": { "singular": "Customer", "plural": "Customers" } },
       "rest": { "enabled": true, "path": "/customers" },
+      "measures": ["*"],
+      "relationships": {
+        "sales": {
+          "cardinality": "many",
+          "target.entity": "Sales",
+          "source.fields": ["CustomerID"],
+          "target.fields": ["CustomerID"]
+        }
+      },
+      "permissions": [{ "role": "anonymous", "actions": [{ "action": "read" }] }]
+    },
+    "Sales": {
+      "source": { "object": "sales", "type": "table" },
+      "graphql": { "enabled": true, "type": { "singular": "Sale", "plural": "Sales" } },
+      "rest": { "enabled": true, "path": "/sales" },
+      "measures": ["Sales", "Units", "Margin %"],
+      "relationships": {
+        "customer": {
+          "cardinality": "one",
+          "target.entity": "Customer",
+          "source.fields": ["CustomerID"],
+          "target.fields": ["CustomerID"]
+        }
+      },
       "permissions": [{ "role": "anonymous", "actions": [{ "action": "read" }] }]
     }
   }
@@ -399,7 +479,10 @@ This follows the same conditional registration pattern used by CosmosDB.
 | No mutations (create/update/delete) | Semantic models are read-only |
 | No stored procedure support | DAX has no stored procedure concept |
 | No OpenAPI spec generation | Excluded alongside CosmosDB |
-| GraphQL field-level selection not pushed down | All columns returned; HotChocolate handles field filtering |
+| REST measures not field-selectable | REST always returns all columns+measures; use `$select` for columns |
+| REST does not support relationship traversal | Nested entity navigation only via GraphQL |
+| Inactive relationship support | `USERELATIONSHIP()` not yet integrated |
+| Applied directives not in standard introspection | GraphQL spec limitation; `@measure` visible in SDL only |
 
 ## Measures
 
@@ -557,18 +640,113 @@ TableID/ColumnID are resolved to names using the ID→name maps from TMSCHEMA_TA
 
 ### DAX Execution Strategy
 
-For Many-to-One relationships (e.g., sale→customer), `RELATED()` within `ADDCOLUMNS` can
-inline parent fields in a single query:
+Relationships are resolved using a **batch query approach** (not N+1):
 
-```dax
-EVALUATE
-ADDCOLUMNS(
-  'sales',
-  "CustomerName", RELATED('customer'[CustomerName])
-)
+1. Execute the main entity query (returns N rows)
+2. For each configured relationship selected in the GraphQL query:
+   - Collect FK values from the result set (e.g., all CustomerID values)
+   - Execute a single DAX query for the target entity with an OR filter:
+     ```dax
+     EVALUATE
+     SELECTCOLUMNS(
+       CALCULATETABLE('customer', 'customer'[CustomerID] = 9695 || 'customer'[CustomerID] = 11542),
+       "CustomerID", 'customer'[CustomerID],
+       "CustomerName", 'customer'[CustomerName]
+     )
+     ```
+   - Build a lookup dictionary: FK value → related entity/entities
+   - Inject related data into each source row
+
+**Many-to-One** (e.g., sale → customer): related entity is injected as a JSON object:
+```json
+{ "Sales": 260193.6, "customer": { "CustomerID": 9695, "CustomerName": "Verdant Sanctuary" } }
 ```
 
-For One-to-Many (e.g., customer→sales), a separate query with filter context is used.
+**One-to-Many** (e.g., customer → sales): related entities are injected as a connection object:
+```json
+{ "CustomerName": "Verdant Sanctuary", "sales": { "items": [...], "hasNextPage": false } }
+```
+
+### Config-Driven Approach
+
+Relationships are **config-driven, not auto-wired**. DAB discovers all model relationships via
+TMSCHEMA_RELATIONSHIPS and logs them for reference, but only relationships explicitly configured
+in the entity's `relationships` property are exposed in the API.
+
+This is because `RuntimeEntities` is immutable (`IReadOnlyDictionary`) at runtime — entity
+configuration cannot be mutated after startup. The discovered relationships serve as a reference
+for users to populate their config.
+
+## Codegen / Introspection
+
+The GraphQL schema exposes everything needed for code generation tools to produce typed clients:
+
+| What codegen needs | Where it comes from |
+|-------------------|---------------------|
+| Entity names | `__schema.queryType.fields[].name` |
+| Field names + types | `__type(name: "Customer").fields[]` |
+| Measures | Same `fields[]` — nullable scalar fields with `@measure` directive |
+| Relationships (M:1) | Object-typed fields (e.g., `customer: Customer`) |
+| Relationships (1:M) | Connection-typed fields (e.g., `sales: SaleConnection`) |
+| Nullability | `NON_NULL` type wrapping (measures always nullable) |
+| Read-only | `__schema.mutationType` is null |
+| Measure detection | `@measure` directive in `__schema.directives` |
+
+The recommended codegen flow is to use DAB's GraphQL introspection endpoint rather than
+direct XMLA introspection. This ensures codegen output stays in sync with the config
+(which tables, measures, and relationships are exposed) and requires no ADOMD.NET dependency.
+
+## Auto-Discovery
+
+When `"auto-discover": true` is set in the semantic model data source options, DAB automatically
+discovers and exposes all tables from the connected Analysis Services model at startup.
+
+### Config
+
+```json
+{
+  "data-source": {
+    "database-type": "semanticmodel",
+    "connection-string": "Data Source=localhost:60488",
+    "options": {
+      "auto-discover": true
+    }
+  },
+  "entities": {}
+}
+```
+
+### Behavior
+
+1. **Discovery**: All tables, columns, measures, and relationships are discovered via TMSCHEMA DMVs
+2. **Entity generation**: For each table not already in `"entities"`, an entity is created with:
+   - `measures: ["*"]` (all non-hidden measures)
+   - Anonymous read-only permissions
+   - Auto-wired relationships based on the model's relationship graph
+3. **Name sanitization**: Table/column names with spaces or special characters are sanitized
+   (same rules as measures: `"GM PVM"` → `GM_PVM`, `"Customer Name"` → `Customer_Name`)
+4. **Reserved name handling**: Entity names that conflict with GraphQL built-in types
+   (e.g., `Date`, `String`) get an `_Entity` suffix (e.g., `Date_Entity`)
+5. **Mixed mode**: Explicitly configured entities in `"entities"` take precedence over
+   auto-discovered ones. Auto-discovery fills in the rest.
+
+### Implementation Flow
+
+```
+Config loaded → DiscoverColumnsAsync(discoverAll=true) → DiscoverMeasures → DiscoverRelationships
+    → AutoDiscoverEntities() → SanitizeEntityName + AutoWireRelationships
+    → Rebuild RuntimeEntities → Update RuntimeConfig.Entities
+    → RefreshEntityPermissions (AuthorizationResolver)
+    → Normal entity processing (columns, measures, relationships)
+```
+
+### Use Case: Codegen Integration
+
+Auto-discovery is designed for the codegen scenario where an integrator needs to:
+1. Point DAB at a semantic model with `"entities": {}`
+2. DAB auto-discovers everything and exposes it
+3. Integrator hits `/graphql` with an introspection query
+4. Codegen tool generates TypeScript entities from the introspection result
 
 ## Dependencies
 

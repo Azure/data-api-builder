@@ -27,7 +27,7 @@ public record RuntimeConfig
 
     public RuntimeAutoentities Autoentities { get; init; }
 
-    public virtual RuntimeEntities Entities { get; init; }
+    public virtual RuntimeEntities Entities { get; set; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }
 

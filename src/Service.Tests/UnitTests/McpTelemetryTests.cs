@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             return new CallToolResult
             {
-                Content = new List<ContentBlock> { new TextContentBlock { Type = "text", Text = text } },
+                Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
                 IsError = isError
             };
         }

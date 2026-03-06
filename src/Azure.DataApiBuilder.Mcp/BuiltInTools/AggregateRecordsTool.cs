@@ -263,24 +263,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     ? BuildPaginatedResponse(resultArray, args.First.Value, args.After, entityName, logger)
                     : BuildSimpleResponse(resultArray, entityName, alias, logger);
             }
-            catch (TimeoutException timeoutException)
+            catch (TimeoutException)
             {
-                logger?.LogError(timeoutException, "Aggregation operation timed out for entity {Entity}.", entityName);
                 return McpResponseBuilder.BuildErrorResult(toolName, "TimeoutError", BuildTimeoutErrorMessage(entityName), logger);
             }
-            catch (TaskCanceledException taskCanceledException)
+            catch (TaskCanceledException)
             {
-                logger?.LogError(taskCanceledException, "Aggregation task was canceled for entity {Entity}.", entityName);
                 return McpResponseBuilder.BuildErrorResult(toolName, "TimeoutError", BuildTaskCanceledErrorMessage(entityName), logger);
             }
             catch (OperationCanceledException)
             {
-                logger?.LogWarning("Aggregation operation was canceled for entity {Entity}.", entityName);
                 return McpResponseBuilder.BuildErrorResult(toolName, "OperationCanceled", BuildOperationCanceledErrorMessage(entityName), logger);
             }
             catch (DbException dbException)
             {
-                logger?.LogError(dbException, "Database error during aggregation for entity {Entity}.", entityName);
                 return McpResponseBuilder.BuildErrorResult(toolName, "DatabaseOperationFailed", dbException.Message, logger);
             }
             catch (ArgumentException argumentException)
@@ -660,7 +656,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     authResolver,
                     entityName,
                     EntityActionOperation.Read,
-                    out string? effectiveRole,
+                    out string? _,
                     out string readAuthError))
             {
                 string finalError = readAuthError.StartsWith("You do not have permission", StringComparison.OrdinalIgnoreCase)

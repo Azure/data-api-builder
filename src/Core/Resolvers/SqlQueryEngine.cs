@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 {
     //<summary>
     // SqlQueryEngine to execute queries against Sql like databases.
-    //<summary>
+    //</summary>
     public class SqlQueryEngine : IQueryEngine
     {
         private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;

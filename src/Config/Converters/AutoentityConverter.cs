@@ -90,6 +90,7 @@ internal class AutoentityConverter : JsonConverter<Autoentity>
         AutoentityTemplate? template = value?.Template;
         if (template?.UserProvidedRestOptions is true
             || template?.UserProvidedGraphQLOptions is true
+            || template?.UserProvidedMcpOptions is true
             || template?.UserProvidedHealthOptions is true
             || template?.UserProvidedCacheOptions is true)
         {
@@ -99,7 +100,7 @@ internal class AutoentityConverter : JsonConverter<Autoentity>
             autoentityTemplateConverter.Write(writer, template, options);
         }
 
-        if (value?.Permissions is not null)
+        if (value?.Permissions is not null && value.Permissions.Length > 0)
         {
             writer.WritePropertyName("permissions");
             JsonSerializer.Serialize(writer, value.Permissions, options);

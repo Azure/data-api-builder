@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
-            
+
             // Read the request body early so it can be used for downstream processing.
             string requestBody = string.Empty;
             using (StreamReader reader = new(GetHttpContext().Request.Body))
@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new StoredProcedurePermissionsRequirement());
             }
-            
+
             RestRequestContext context;
 
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context

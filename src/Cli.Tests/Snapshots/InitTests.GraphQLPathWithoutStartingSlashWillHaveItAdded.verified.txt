@@ -44,6 +44,14 @@
         Provider: AppService
       },
       Mode: Production
+    },
+    Telemetry: {
+      OpenTelemetry: {
+        Enabled: true,
+        Endpoint: @env('OTEL_EXPORTER_OTLP_ENDPOINT'),
+        Headers: @env('OTEL_EXPORTER_OTLP_HEADERS'),
+        ServiceName: @env('OTEL_SERVICE_NAME')
+      }
     }
   },
   Entities: []

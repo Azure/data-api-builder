@@ -170,7 +170,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         {
                             _requestValidator.ValidateUpsertRequestContext(
                                 (UpsertRequestContext)context,
-                                primaryKeyInUrl: !string.IsNullOrEmpty(primaryKeyRoute));
+                                isPrimaryKeyInUrl: !string.IsNullOrEmpty(primaryKeyRoute));
                         }
 
                         break;

@@ -514,7 +514,7 @@ SET IDENTITY_INSERT books ON
 INSERT INTO books(id, title, publisher_id)
 VALUES (1, 'Awesome book', 1234),
 (2, 'Also Awesome book', 1234),
-(3, 'Great wall of china explained]', 2345),
+(3, 'Great wall of china explained', 2345),
 (4, 'US history in a nutshell', 2345),
 (5, 'Chernobyl Diaries', 2323),
 (6, 'The Palace Door', 2324),
@@ -531,7 +531,9 @@ VALUES (1, 'Awesome book', 1234),
 (17, 'CONN%_CONN', 1234),
 (18, '[Special Book]', 1234),
 (19, 'ME\YOU', 1234),
-(20, 'C:\\LIFE', 1234);
+(20, 'C:\\LIFE', 1234),
+(21, '', 1234),
+(22, 'Varchar(30) [Special Test]!!!!', 1234);
 SET IDENTITY_INSERT books OFF
 
 SET IDENTITY_INSERT books_mm ON

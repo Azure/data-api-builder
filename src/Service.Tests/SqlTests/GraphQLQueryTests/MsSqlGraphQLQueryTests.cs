@@ -214,7 +214,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             //using a lookup value that is the length of the title column AND includes special characters
             string graphQLQuery = @"{
-                books( " + Service.GraphQLBuilder.Queries.QueryBuilder.FILTER_FIELD_NAME + @":{ title: {" + op + @":""Great wall of china explained]""}}) {
+                books( " + Service.GraphQLBuilder.Queries.QueryBuilder.FILTER_FIELD_NAME + @":{ title: {" + op + @":""Varchar(30) [Special Test]!!!!""}}) {
                     items {
                         id
                         title
@@ -225,8 +225,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string expected = @"
 [
   {
-    ""id"": 3,
-    ""title"": ""Great wall of china explained]""
+    ""id"": 22,
+    ""title"": ""Varchar(30) [Special Test]!!!!""
   }
 ]";
 
@@ -246,12 +246,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// Thus checking the parameter length is overridden to cater for the extra length i.e. lengthOverride = true codepath.
         /// </remarks>
         [TestMethod]
-        public virtual async Task TestFilterParamForStringFilterWorkWithNotContains(string op)
+        public virtual async Task TestFilterParamForStringFilterWorkWithNotContains()
         {
             string graphQLQueryName = "books";
             //using a lookup value that is the length of the title column AND includes special characters
             string graphQLQuery = @"{
-                books( " + Service.GraphQLBuilder.Queries.QueryBuilder.FILTER_FIELD_NAME + @":{ title: { notContains:""Great wall of china explained]""},id:{eq:3} }) {
+                books( " + Service.GraphQLBuilder.Queries.QueryBuilder.FILTER_FIELD_NAME + @":{ title: { notContains:""Varchar(30) [Special Test]!!!!""},id:{eq:22} }) {
                     items {
                         id
                         title

@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#nullable enable
-
 using System;
 using System.Text;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
@@ -12,7 +10,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     /// <summary>
     /// Unit tests for AggregateRecordsTool helper methods.
-    /// Validates alias computation, cursor decoding, and input validation logic.
+    /// Validates alias computation, cursor decoding, and error message builders.
     /// SQL generation is delegated to the engine's query builder (GroupByMetadata/AggregationColumn).
     /// </summary>
     [TestClass]
@@ -20,128 +18,92 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     {
         #region ComputeAlias tests
 
-        [TestMethod]
-        [DataRow("count", "*", "count", DisplayName = "count(*) alias is 'count'")]
-        [DataRow("count", "userId", "count_userId", DisplayName = "count(field) alias is 'count_field'")]
-        [DataRow("avg", "price", "avg_price", DisplayName = "avg alias")]
-        [DataRow("sum", "amount", "sum_amount", DisplayName = "sum alias")]
-        [DataRow("min", "age", "min_age", DisplayName = "min alias")]
-        [DataRow("max", "score", "max_score", DisplayName = "max alias")]
+        [DataTestMethod]
+        [DataRow("count", "*", "count", DisplayName = "count(*) → 'count'")]
+        [DataRow("count", "userId", "count_userId", DisplayName = "count(userId) → 'count_userId'")]
+        [DataRow("avg", "price", "avg_price", DisplayName = "avg(price) → 'avg_price'")]
+        [DataRow("sum", "amount", "sum_amount", DisplayName = "sum(amount) → 'sum_amount'")]
+        [DataRow("min", "age", "min_age", DisplayName = "min(age) → 'min_age'")]
+        [DataRow("max", "score", "max_score", DisplayName = "max(score) → 'max_score'")]
+        // Blog scenario aliases
+        [DataRow("sum", "totalRevenue", "sum_totalRevenue", DisplayName = "Blog: sum(totalRevenue) → 'sum_totalRevenue'")]
+        [DataRow("avg", "quarterlyRevenue", "avg_quarterlyRevenue", DisplayName = "Blog: avg(quarterlyRevenue) → 'avg_quarterlyRevenue'")]
+        [DataRow("sum", "onHandValue", "sum_onHandValue", DisplayName = "Blog: sum(onHandValue) → 'sum_onHandValue'")]
         public void ComputeAlias_ReturnsExpectedAlias(string function, string field, string expectedAlias)
         {
-            string result = AggregateRecordsTool.ComputeAlias(function, field);
-            Assert.AreEqual(expectedAlias, result);
+            Assert.AreEqual(expectedAlias, AggregateRecordsTool.ComputeAlias(function, field));
         }
 
         #endregion
 
         #region DecodeCursorOffset tests
 
-        [TestMethod]
-        public void DecodeCursorOffset_NullCursor_ReturnsZero()
+        [DataTestMethod]
+        [DataRow(null, 0, DisplayName = "null cursor → 0")]
+        [DataRow("", 0, DisplayName = "empty cursor → 0")]
+        [DataRow("not-valid-base64!!", 0, DisplayName = "invalid base64 → 0")]
+        public void DecodeCursorOffset_InvalidInput_ReturnsZero(string? cursor, int expected)
         {
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(null));
+            Assert.AreEqual(expected, AggregateRecordsTool.DecodeCursorOffset(cursor));
         }
 
-        [TestMethod]
-        public void DecodeCursorOffset_EmptyCursor_ReturnsZero()
+        [DataTestMethod]
+        [DataRow("abc", 0, DisplayName = "non-numeric base64 → 0")]
+        [DataRow("-5", 0, DisplayName = "negative offset → 0")]
+        [DataRow("0", 0, DisplayName = "zero offset → 0")]
+        [DataRow("3", 3, DisplayName = "offset 3 round-trip")]
+        [DataRow("5", 5, DisplayName = "offset 5 round-trip")]
+        [DataRow("1000", 1000, DisplayName = "large offset round-trip")]
+        public void DecodeCursorOffset_Base64EncodedValue_ReturnsExpectedOffset(string rawValue, int expectedOffset)
         {
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(""));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_ValidBase64_ReturnsOffset()
-        {
-            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("5"));
-            Assert.AreEqual(5, AggregateRecordsTool.DecodeCursorOffset(cursor));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_InvalidBase64_ReturnsZero()
-        {
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset("not-valid-base64!!"));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_NonNumericBase64_ReturnsZero()
-        {
-            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("abc"));
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(cursor));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_RoundTrip_FirstPage()
-        {
-            int offset = 3;
-            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes(offset.ToString()));
-            Assert.AreEqual(offset, AggregateRecordsTool.DecodeCursorOffset(cursor));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_NegativeValue_ReturnsZero()
-        {
-            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("-5"));
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(cursor));
+            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes(rawValue));
+            Assert.AreEqual(expectedOffset, AggregateRecordsTool.DecodeCursorOffset(cursor));
         }
 
         #endregion
 
-        #region Blog scenario tests - alias and type validation
+        #region Error message builder tests
 
-        /// <summary>
-        /// Blog Example 1: Strategic customer importance
-        /// "Who is our most important customer based on total revenue?"
-        /// SUM(totalRevenue) grouped by customerId, customerName, ORDER BY DESC, FIRST 1
-        /// </summary>
-        [TestMethod]
-        public void BlogScenario_StrategicCustomerImportance_AliasAndTypeCorrect()
+        [DataTestMethod]
+        [DataRow("Product", DisplayName = "Product entity")]
+        [DataRow("LargeProductCatalog", DisplayName = "LargeProductCatalog entity")]
+        public void BuildTimeoutErrorMessage_ContainsExpectedContent(string entityName)
         {
-            string alias = AggregateRecordsTool.ComputeAlias("sum", "totalRevenue");
-            Assert.AreEqual("sum_totalRevenue", alias);
+            string message = AggregateRecordsTool.BuildTimeoutErrorMessage(entityName);
+            AssertErrorMessageContains(message, entityName, "NOT a tool error", "filter", "groupby", "first");
         }
 
-        /// <summary>
-        /// Blog Example 2: Product discontinuation candidate
-        /// Lowest totalRevenue with orderby=asc, first=1
-        /// </summary>
-        [TestMethod]
-        public void BlogScenario_ProductDiscontinuation_AliasAndTypeCorrect()
+        [DataTestMethod]
+        [DataRow("Product", DisplayName = "Product entity")]
+        public void BuildTaskCanceledErrorMessage_ContainsExpectedContent(string entityName)
         {
-            string alias = AggregateRecordsTool.ComputeAlias("sum", "totalRevenue");
-            Assert.AreEqual("sum_totalRevenue", alias);
+            string message = AggregateRecordsTool.BuildTaskCanceledErrorMessage(entityName);
+            AssertErrorMessageContains(message, entityName, "NOT a tool error", "timeout", "filter", "first");
         }
 
-        /// <summary>
-        /// Blog Example 3: Forward-looking performance expectation
-        /// AVG quarterlyRevenue with HAVING gt 2000000
-        /// </summary>
-        [TestMethod]
-        public void BlogScenario_QuarterlyPerformance_AliasAndTypeCorrect()
+        [DataTestMethod]
+        [DataRow("LargeProductCatalog", DisplayName = "LargeProductCatalog entity")]
+        public void BuildOperationCanceledErrorMessage_ContainsExpectedContent(string entityName)
         {
-            string alias = AggregateRecordsTool.ComputeAlias("avg", "quarterlyRevenue");
-            Assert.AreEqual("avg_quarterlyRevenue", alias);
+            string message = AggregateRecordsTool.BuildOperationCanceledErrorMessage(entityName);
+            AssertErrorMessageContains(message, entityName, "NOT a tool error", "No results were returned");
         }
 
-        /// <summary>
-        /// Blog Example 4: Revenue concentration across regions
-        /// SUM totalRevenue grouped by region and customerTier, HAVING gt 5000000
-        /// </summary>
-        [TestMethod]
-        public void BlogScenario_RevenueConcentration_AliasAndTypeCorrect()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("sum", "totalRevenue");
-            Assert.AreEqual("sum_totalRevenue", alias);
-        }
+        #endregion
+
+        #region Helper Methods
 
         /// <summary>
-        /// Blog Example 5: Risk exposure by product line
-        /// SUM onHandValue grouped by productLine and warehouseRegion, HAVING gt 2500000
+        /// Asserts that the error message contains all expected substrings.
         /// </summary>
-        [TestMethod]
-        public void BlogScenario_RiskExposure_AliasAndTypeCorrect()
+        private static void AssertErrorMessageContains(string message, params string[] expectedSubstrings)
         {
-            string alias = AggregateRecordsTool.ComputeAlias("sum", "onHandValue");
-            Assert.AreEqual("sum_onHandValue", alias);
+            Assert.IsNotNull(message);
+            foreach (string expected in expectedSubstrings)
+            {
+                Assert.IsTrue(message.Contains(expected),
+                    $"Error message must contain '{expected}'. Actual: '{message}'");
+            }
         }
 
         #endregion

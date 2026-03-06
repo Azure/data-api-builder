@@ -23,15 +23,10 @@ using Moq;
 namespace Azure.DataApiBuilder.Service.Tests.Mcp
 {
     /// <summary>
-    /// Tests for the AggregateRecordsTool MCP tool.
-    /// Covers:
-    /// - Tool metadata and schema validation
-    /// - Runtime-level enabled/disabled configuration
-    /// - Entity-level DML tool configuration
-    /// - Input validation (missing/invalid arguments)
-    /// - SQL expression generation (count, avg, sum, min, max, distinct)
-    /// - Table reference quoting, cursor/pagination logic
-    /// - Alias convention
+    /// Integration tests for the AggregateRecordsTool MCP tool.
+    /// Covers tool metadata/schema, configuration, input validation,
+    /// alias conventions, cursor/pagination, timeout/cancellation, spec examples,
+    /// and blog scenario validation.
     /// </summary>
     [TestClass]
     public class AggregateRecordsToolTests
@@ -39,29 +34,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         #region Tool Metadata Tests
 
         [TestMethod]
-        public void GetToolMetadata_ReturnsCorrectName()
+        public void GetToolMetadata_ReturnsCorrectNameAndType()
         {
             AggregateRecordsTool tool = new();
             Tool metadata = tool.GetToolMetadata();
-            Assert.AreEqual("aggregate_records", metadata.Name);
-        }
 
-        [TestMethod]
-        public void GetToolMetadata_ReturnsCorrectToolType()
-        {
-            AggregateRecordsTool tool = new();
+            Assert.AreEqual("aggregate_records", metadata.Name);
             Assert.AreEqual(McpEnums.ToolType.BuiltIn, tool.ToolType);
         }
 
         [TestMethod]
-        public void GetToolMetadata_HasInputSchema()
+        public void GetToolMetadata_HasRequiredSchemaProperties()
         {
             AggregateRecordsTool tool = new();
             Tool metadata = tool.GetToolMetadata();
+
             Assert.AreEqual(JsonValueKind.Object, metadata.InputSchema.ValueKind);
             Assert.IsTrue(metadata.InputSchema.TryGetProperty("properties", out JsonElement properties));
             Assert.IsTrue(metadata.InputSchema.TryGetProperty("required", out JsonElement required));
 
+            // Verify required fields
             List<string> requiredFields = new();
             foreach (JsonElement r in required.EnumerateArray())
             {
@@ -72,828 +64,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             CollectionAssert.Contains(requiredFields, "function");
             CollectionAssert.Contains(requiredFields, "field");
 
-            // Verify first and after properties exist in schema
-            Assert.IsTrue(properties.TryGetProperty("first", out JsonElement firstProp));
-            Assert.AreEqual("integer", firstProp.GetProperty("type").GetString());
-            Assert.IsTrue(properties.TryGetProperty("after", out JsonElement afterProp));
-            Assert.AreEqual("string", afterProp.GetProperty("type").GetString());
-        }
-
-        #endregion
-
-        #region Configuration Tests
-
-        [TestMethod]
-        public async Task AggregateRecords_DisabledAtRuntimeLevel_ReturnsToolDisabledError()
-        {
-            RuntimeConfig config = CreateConfig(aggregateRecordsEnabled: false);
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\"}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            AssertToolDisabledError(content);
+            // Verify all schema properties exist with correct types
+            AssertSchemaProperty(properties, "entity", "string");
+            AssertSchemaProperty(properties, "function", "string");
+            AssertSchemaProperty(properties, "field", "string");
+            AssertSchemaProperty(properties, "distinct", "boolean");
+            AssertSchemaProperty(properties, "filter", "string");
+            AssertSchemaProperty(properties, "groupby", "array");
+            AssertSchemaProperty(properties, "orderby", "string");
+            AssertSchemaProperty(properties, "having", "object");
+            AssertSchemaProperty(properties, "first", "integer");
+            AssertSchemaProperty(properties, "after", "string");
         }
 
         [TestMethod]
-        public async Task AggregateRecords_DisabledAtEntityLevel_ReturnsToolDisabledError()
-        {
-            RuntimeConfig config = CreateConfigWithEntityDmlDisabled();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\"}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            AssertToolDisabledError(content);
-        }
-
-        #endregion
-
-        #region Input Validation Tests
-
-        [TestMethod]
-        public async Task AggregateRecords_NullArguments_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            CallToolResult result = await tool.ExecuteAsync(null, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            Assert.AreEqual("InvalidArguments", error.GetProperty("type").GetString());
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_MissingEntity_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"function\": \"count\", \"field\": \"*\"}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_MissingFunction_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"field\": \"*\"}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_MissingField_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\"}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_InvalidFunction_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"median\", \"field\": \"price\"}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("median"));
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_StarFieldWithAvg_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"avg\", \"field\": \"*\"}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("count"));
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_DistinctCountStar_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"distinct\": true}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("DISTINCT"));
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_HavingWithoutGroupBy_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"having\": {\"gt\": 5}}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("groupby"));
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_OrderByWithoutGroupBy_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"desc\"}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("groupby"));
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_InvalidOrderByValue_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"orderby\": \"ascending\"}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("'asc' or 'desc'"));
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_UnsupportedHavingOperator_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"between\": 5}}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("between"));
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("Supported operators"));
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_NonNumericHavingValue_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"eq\": \"ten\"}}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("numeric"));
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_NonNumericHavingInArray_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"in\": [5, \"abc\"]}}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("numeric"));
-        }
-
-        [TestMethod]
-        public async Task AggregateRecords_HavingInNotArray_ReturnsInvalidArguments()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"in\": 5}}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.AreEqual("InvalidArguments", content.GetProperty("error").GetProperty("type").GetString());
-            Assert.IsTrue(content.GetProperty("error").GetProperty("message").GetString()!.Contains("numeric array"));
-        }
-
-        #endregion
-
-        #region Alias Convention Tests
-
-        [TestMethod]
-        public void ComputeAlias_CountStar_ReturnsCount()
-        {
-            Assert.AreEqual("count", AggregateRecordsTool.ComputeAlias("count", "*"));
-        }
-
-        [TestMethod]
-        public void ComputeAlias_CountField_ReturnsFunctionField()
-        {
-            Assert.AreEqual("count_supplierId", AggregateRecordsTool.ComputeAlias("count", "supplierId"));
-        }
-
-        [TestMethod]
-        public void ComputeAlias_AvgField_ReturnsFunctionField()
-        {
-            Assert.AreEqual("avg_unitPrice", AggregateRecordsTool.ComputeAlias("avg", "unitPrice"));
-        }
-
-        [TestMethod]
-        public void ComputeAlias_SumField_ReturnsFunctionField()
-        {
-            Assert.AreEqual("sum_unitPrice", AggregateRecordsTool.ComputeAlias("sum", "unitPrice"));
-        }
-
-        [TestMethod]
-        public void ComputeAlias_MinField_ReturnsFunctionField()
-        {
-            Assert.AreEqual("min_price", AggregateRecordsTool.ComputeAlias("min", "price"));
-        }
-
-        [TestMethod]
-        public void ComputeAlias_MaxField_ReturnsFunctionField()
-        {
-            Assert.AreEqual("max_price", AggregateRecordsTool.ComputeAlias("max", "price"));
-        }
-
-        #endregion
-
-        #region Cursor and Pagination Tests
-
-        [TestMethod]
-        public void DecodeCursorOffset_NullCursor_ReturnsZero()
-        {
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(null));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_EmptyCursor_ReturnsZero()
-        {
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(""));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_WhitespaceCursor_ReturnsZero()
-        {
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset("   "));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_ValidBase64Cursor_ReturnsDecodedOffset()
-        {
-            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("5"));
-            Assert.AreEqual(5, AggregateRecordsTool.DecodeCursorOffset(cursor));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_InvalidBase64_ReturnsZero()
-        {
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset("not-valid-base64!!!"));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_NonNumericBase64_ReturnsZero()
-        {
-            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("abc"));
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(cursor));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_RoundTrip_PreservesOffset()
-        {
-            int expectedOffset = 15;
-            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes(expectedOffset.ToString()));
-            Assert.AreEqual(expectedOffset, AggregateRecordsTool.DecodeCursorOffset(cursor));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_ZeroOffset_ReturnsZero()
-        {
-            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("0"));
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(cursor));
-        }
-
-        [TestMethod]
-        public void DecodeCursorOffset_LargeOffset_ReturnsCorrectValue()
-        {
-            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("1000"));
-            Assert.AreEqual(1000, AggregateRecordsTool.DecodeCursorOffset(cursor));
-        }
-
-        #endregion
-
-        #region Timeout and Cancellation Tests
-
-        /// <summary>
-        /// Verifies that OperationCanceledException produces a model-explicit error
-        /// that clearly states the operation was canceled, not errored.
-        /// </summary>
-        [TestMethod]
-        public async Task AggregateRecords_OperationCanceled_ReturnsExplicitCanceledMessage()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            // Create a pre-canceled token
-            CancellationTokenSource cts = new();
-            cts.Cancel();
-
-            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\"}");
-            CallToolResult result = await tool.ExecuteAsync(args, sp, cts.Token);
-
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            string errorType = error.GetProperty("type").GetString();
-            string errorMessage = error.GetProperty("message").GetString();
-
-            // Verify the error type identifies it as a cancellation
-            Assert.IsNotNull(errorType);
-            Assert.AreEqual("OperationCanceled", errorType);
-
-            // Verify the message explicitly tells the model this is NOT a tool error
-            Assert.IsNotNull(errorMessage);
-            Assert.IsTrue(errorMessage!.Contains("NOT a tool error"), "Message must explicitly state this is NOT a tool error.");
-
-            // Verify the message tells the model what happened
-            Assert.IsTrue(errorMessage.Contains("canceled"), "Message must mention the operation was canceled.");
-
-            // Verify the message tells the model it can retry
-            Assert.IsTrue(errorMessage.Contains("retry"), "Message must tell the model it can retry.");
-        }
-
-        /// <summary>
-        /// Verifies that the timeout error message provides explicit guidance to the model
-        /// about what happened and what to do next, using the production message builder.
-        /// </summary>
-        [TestMethod]
-        public void TimeoutErrorMessage_ContainsModelGuidance()
-        {
-            string entityName = "Product";
-            string message = AggregateRecordsTool.BuildTimeoutErrorMessage(entityName);
-
-            // Verify message explicitly states it's NOT a tool error
-            Assert.IsTrue(message.Contains("NOT a tool error"), "Timeout message must state this is NOT a tool error.");
-
-            // Verify message explains the cause
-            Assert.IsTrue(message.Contains("database did not respond"), "Timeout message must explain the database didn't respond.");
-
-            // Verify message mentions large datasets
-            Assert.IsTrue(message.Contains("large datasets"), "Timeout message must mention large datasets as a possible cause.");
-
-            // Verify message provides actionable remediation steps
-            Assert.IsTrue(message.Contains("filter"), "Timeout message must suggest using a filter.");
-            Assert.IsTrue(message.Contains("groupby"), "Timeout message must suggest reducing groupby fields.");
-            Assert.IsTrue(message.Contains("first"), "Timeout message must suggest using pagination with first.");
-        }
-
-        /// <summary>
-        /// Verifies that TaskCanceledException (which typically signals HTTP/DB timeout)
-        /// produces a message referencing timeout, using the production message builder.
-        /// </summary>
-        [TestMethod]
-        public void TaskCanceledErrorMessage_ContainsTimeoutGuidance()
-        {
-            string entityName = "Product";
-            string message = AggregateRecordsTool.BuildTaskCanceledErrorMessage(entityName);
-
-            // TaskCanceledException should produce a message referencing timeout
-            Assert.IsTrue(message.Contains("NOT a tool error"), "TaskCanceled message must state this is NOT a tool error.");
-            Assert.IsTrue(message.Contains("timeout"), "TaskCanceled message must reference timeout as the cause.");
-            Assert.IsTrue(message.Contains("filter"), "TaskCanceled message must suggest filter as remediation.");
-            Assert.IsTrue(message.Contains("first"), "TaskCanceled message must suggest first for pagination.");
-        }
-
-        /// <summary>
-        /// Verifies that the OperationCanceled error message for a specific entity
-        /// includes the entity name so the model knows which aggregation failed,
-        /// using the production message builder.
-        /// </summary>
-        [TestMethod]
-        public void CanceledErrorMessage_IncludesEntityName()
-        {
-            string entityName = "LargeProductCatalog";
-            string message = AggregateRecordsTool.BuildOperationCanceledErrorMessage(entityName);
-
-            Assert.IsTrue(message.Contains(entityName), "Canceled message must include the entity name.");
-            Assert.IsTrue(message.Contains("No results were returned"), "Canceled message must state no results were returned.");
-        }
-
-        /// <summary>
-        /// Verifies that the timeout error message for a specific entity
-        /// includes the entity name so the model knows which aggregation timed out,
-        /// using the production message builder.
-        /// </summary>
-        [TestMethod]
-        public void TimeoutErrorMessage_IncludesEntityName()
-        {
-            string entityName = "HugeTransactionLog";
-            string message = AggregateRecordsTool.BuildTimeoutErrorMessage(entityName);
-
-            Assert.IsTrue(message.Contains(entityName), "Timeout message must include the entity name.");
-        }
-
-        #endregion
-
-        #region Spec Example Tests
-
-        /// <summary>
-        /// Spec Example 1: "How many products are there?"
-        /// COUNT(*) - expects alias "count"
-        /// </summary>
-        [TestMethod]
-        public void SpecExample01_CountStar_CorrectAlias()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            Assert.AreEqual("count", alias);
-        }
-
-        /// <summary>
-        /// Spec Example 2: "What is the average price of products under $10?"
-        /// AVG(unitPrice) with filter
-        /// </summary>
-        [TestMethod]
-        public void SpecExample02_AvgWithFilter_CorrectAlias()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
-            Assert.AreEqual("avg_unitPrice", alias);
-        }
-
-        /// <summary>
-        /// Spec Example 3: "Which categories have more than 20 products?"
-        /// COUNT(*) GROUP BY categoryName HAVING gt 20
-        /// </summary>
-        [TestMethod]
-        public void SpecExample03_CountGroupByHavingGt_CorrectAlias()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            Assert.AreEqual("count", alias);
-        }
-
-        /// <summary>
-        /// Spec Example 4: "For discontinued products, which categories have total revenue between $500 and $10,000?"
-        /// SUM(unitPrice) GROUP BY categoryName HAVING gte 500 AND lte 10000
-        /// </summary>
-        [TestMethod]
-        public void SpecExample04_SumFilterGroupByHavingRange_CorrectAlias()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("sum", "unitPrice");
-            Assert.AreEqual("sum_unitPrice", alias);
-        }
-
-        /// <summary>
-        /// Spec Example 5: "How many distinct suppliers do we have?"
-        /// COUNT(DISTINCT supplierId)
-        /// </summary>
-        [TestMethod]
-        public void SpecExample05_CountDistinct_CorrectAlias()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("count", "supplierId");
-            Assert.AreEqual("count_supplierId", alias);
-        }
-
-        /// <summary>
-        /// Spec Example 6: "Which categories have exactly 5 or 10 products?"
-        /// COUNT(*) GROUP BY categoryName HAVING IN (5, 10)
-        /// </summary>
-        [TestMethod]
-        public void SpecExample06_CountGroupByHavingIn_CorrectAlias()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            Assert.AreEqual("count", alias);
-        }
-
-        /// <summary>
-        /// Spec Example 7: "Average distinct unit price per category, for categories averaging over $25"
-        /// AVG(DISTINCT unitPrice) GROUP BY categoryName HAVING gt 25
-        /// </summary>
-        [TestMethod]
-        public void SpecExample07_AvgDistinctGroupByHavingGt_CorrectAlias()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
-            Assert.AreEqual("avg_unitPrice", alias);
-        }
-
-        /// <summary>
-        /// Spec Example 8: "Which categories have the most products?"
-        /// COUNT(*) GROUP BY categoryName ORDER BY DESC
-        /// </summary>
-        [TestMethod]
-        public void SpecExample08_CountGroupByOrderByDesc_CorrectAlias()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            Assert.AreEqual("count", alias);
-        }
-
-        /// <summary>
-        /// Spec Example 9: "What are the cheapest categories by average price?"
-        /// AVG(unitPrice) GROUP BY categoryName ORDER BY ASC
-        /// </summary>
-        [TestMethod]
-        public void SpecExample09_AvgGroupByOrderByAsc_CorrectAlias()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
-            Assert.AreEqual("avg_unitPrice", alias);
-        }
-
-        /// <summary>
-        /// Spec Example 10: "For categories with over $500 revenue, which has the highest total?"
-        /// SUM(unitPrice) GROUP BY categoryName HAVING gt 500 ORDER BY DESC
-        /// </summary>
-        [TestMethod]
-        public void SpecExample10_SumFilterGroupByHavingGtOrderByDesc_CorrectAlias()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("sum", "unitPrice");
-            Assert.AreEqual("sum_unitPrice", alias);
-        }
-
-        /// <summary>
-        /// Spec Example 11: "Show me the first 5 categories by product count"
-        /// COUNT(*) GROUP BY categoryName ORDER BY DESC FIRST 5
-        /// </summary>
-        [TestMethod]
-        public void SpecExample11_CountGroupByOrderByDescFirst5_CorrectAliasAndCursor()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            Assert.AreEqual("count", alias);
-            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(null));
-        }
-
-        /// <summary>
-        /// Spec Example 12: "Show me the next 5 categories" (continuation of Example 11)
-        /// COUNT(*) GROUP BY categoryName ORDER BY DESC FIRST 5 AFTER cursor
-        /// </summary>
-        [TestMethod]
-        public void SpecExample12_CountGroupByOrderByDescFirst5After_CorrectCursorDecode()
-        {
-            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("5"));
-            int offset = AggregateRecordsTool.DecodeCursorOffset(cursor);
-            Assert.AreEqual(5, offset);
-
-            string alias = AggregateRecordsTool.ComputeAlias("count", "*");
-            Assert.AreEqual("count", alias);
-        }
-
-        /// <summary>
-        /// Spec Example 13: "Show me the top 3 most expensive categories by average price"
-        /// AVG(unitPrice) GROUP BY categoryName ORDER BY DESC FIRST 3
-        /// </summary>
-        [TestMethod]
-        public void SpecExample13_AvgGroupByOrderByDescFirst3_CorrectAlias()
-        {
-            string alias = AggregateRecordsTool.ComputeAlias("avg", "unitPrice");
-            Assert.AreEqual("avg_unitPrice", alias);
-        }
-
-        #endregion
-
-        #region Blog Scenario Tests (devblogs.microsoft.com/azure-sql/data-api-builder-mcp-questions)
-
-        // These tests verify that the exact JSON payloads from the DAB MCP blog
-        // pass input validation. The tool will fail at metadata resolution (no real DB)
-        // but must NOT return "InvalidArguments", proving the input shape is valid.
-
-        /// <summary>
-        /// Blog Scenario 1: Strategic customer importance
-        /// "Who is our most important customer based on total revenue?"
-        /// Uses: sum, totalRevenue, filter, groupby [customerId, customerName], orderby desc, first 1
-        /// </summary>
-        [TestMethod]
-        public async Task BlogScenario1_StrategicCustomerImportance_PassesInputValidation()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            string json = @"{
-                ""entity"": ""Book"",
-                ""function"": ""sum"",
-                ""field"": ""totalRevenue"",
-                ""filter"": ""isActive eq true and orderDate ge 2025-01-01"",
-                ""groupby"": [""customerId"", ""customerName""],
-                ""orderby"": ""desc"",
-                ""first"": 1
-            }";
-
-            JsonDocument args = JsonDocument.Parse(json);
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
-            Assert.AreNotEqual("InvalidArguments", errorType,
-                "Blog scenario 1 JSON must pass input validation (sum/totalRevenue/groupby/orderby/first).");
-            Assert.AreEqual("sum_totalRevenue", AggregateRecordsTool.ComputeAlias("sum", "totalRevenue"));
-        }
-
-        /// <summary>
-        /// Blog Scenario 2: Product discontinuation candidate
-        /// "Which product should we consider discontinuing based on lowest totalRevenue?"
-        /// Uses: sum, totalRevenue, filter, groupby [productId, productName], orderby asc, first 1
-        /// </summary>
-        [TestMethod]
-        public async Task BlogScenario2_ProductDiscontinuation_PassesInputValidation()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            string json = @"{
-                ""entity"": ""Book"",
-                ""function"": ""sum"",
-                ""field"": ""totalRevenue"",
-                ""filter"": ""isActive eq true and inStock gt 0 and orderDate ge 2025-01-01"",
-                ""groupby"": [""productId"", ""productName""],
-                ""orderby"": ""asc"",
-                ""first"": 1
-            }";
-
-            JsonDocument args = JsonDocument.Parse(json);
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
-            Assert.AreNotEqual("InvalidArguments", errorType,
-                "Blog scenario 2 JSON must pass input validation (sum/totalRevenue/groupby/orderby asc/first).");
-            Assert.AreEqual("sum_totalRevenue", AggregateRecordsTool.ComputeAlias("sum", "totalRevenue"));
-        }
-
-        /// <summary>
-        /// Blog Scenario 3: Forward-looking performance expectation
-        /// "Average quarterlyRevenue per region, regions averaging > $2,000,000?"
-        /// Uses: avg, quarterlyRevenue, filter, groupby [region], having {gt: 2000000}, orderby desc
-        /// </summary>
-        [TestMethod]
-        public async Task BlogScenario3_QuarterlyPerformance_PassesInputValidation()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            string json = @"{
-                ""entity"": ""Book"",
-                ""function"": ""avg"",
-                ""field"": ""quarterlyRevenue"",
-                ""filter"": ""fiscalYear eq 2025"",
-                ""groupby"": [""region""],
-                ""having"": { ""gt"": 2000000 },
-                ""orderby"": ""desc""
-            }";
-
-            JsonDocument args = JsonDocument.Parse(json);
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
-            Assert.AreNotEqual("InvalidArguments", errorType,
-                "Blog scenario 3 JSON must pass input validation (avg/quarterlyRevenue/groupby/having gt).");
-            Assert.AreEqual("avg_quarterlyRevenue", AggregateRecordsTool.ComputeAlias("avg", "quarterlyRevenue"));
-        }
-
-        /// <summary>
-        /// Blog Scenario 4: Revenue concentration across regions
-        /// "Total revenue of active retail customers in Midwest/Southwest, >$5M, by region and customerTier"
-        /// Uses: sum, totalRevenue, complex filter with OR, groupby [region, customerTier], having {gt: 5000000}, orderby desc
-        /// </summary>
-        [TestMethod]
-        public async Task BlogScenario4_RevenueConcentration_PassesInputValidation()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            string json = @"{
-                ""entity"": ""Book"",
-                ""function"": ""sum"",
-                ""field"": ""totalRevenue"",
-                ""filter"": ""isActive eq true and customerType eq 'Retail' and (region eq 'Midwest' or region eq 'Southwest')"",
-                ""groupby"": [""region"", ""customerTier""],
-                ""having"": { ""gt"": 5000000 },
-                ""orderby"": ""desc""
-            }";
-
-            JsonDocument args = JsonDocument.Parse(json);
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
-            Assert.AreNotEqual("InvalidArguments", errorType,
-                "Blog scenario 4 JSON must pass input validation (sum/totalRevenue/complex filter/multi-groupby/having).");
-            Assert.AreEqual("sum_totalRevenue", AggregateRecordsTool.ComputeAlias("sum", "totalRevenue"));
-        }
-
-        /// <summary>
-        /// Blog Scenario 5: Risk exposure by product line
-        /// "For discontinued products, total onHandValue by productLine and warehouseRegion, >$2.5M"
-        /// Uses: sum, onHandValue, filter, groupby [productLine, warehouseRegion], having {gt: 2500000}, orderby desc
-        /// </summary>
-        [TestMethod]
-        public async Task BlogScenario5_RiskExposure_PassesInputValidation()
-        {
-            RuntimeConfig config = CreateConfig();
-            IServiceProvider sp = CreateServiceProvider(config);
-            AggregateRecordsTool tool = new();
-
-            string json = @"{
-                ""entity"": ""Book"",
-                ""function"": ""sum"",
-                ""field"": ""onHandValue"",
-                ""filter"": ""discontinued eq true and onHandValue gt 0"",
-                ""groupby"": [""productLine"", ""warehouseRegion""],
-                ""having"": { ""gt"": 2500000 },
-                ""orderby"": ""desc""
-            }";
-
-            JsonDocument args = JsonDocument.Parse(json);
-            CallToolResult result = await tool.ExecuteAsync(args, sp, CancellationToken.None);
-
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
-            Assert.AreNotEqual("InvalidArguments", errorType,
-                "Blog scenario 5 JSON must pass input validation (sum/onHandValue/filter/multi-groupby/having).");
-            Assert.AreEqual("sum_onHandValue", AggregateRecordsTool.ComputeAlias("sum", "onHandValue"));
-        }
-
-        /// <summary>
-        /// Verifies that the tool schema supports all properties used across the 5 blog scenarios.
-        /// </summary>
-        [TestMethod]
-        public void BlogScenarios_ToolSchema_SupportsAllRequiredProperties()
-        {
-            AggregateRecordsTool tool = new();
-            Tool metadata = tool.GetToolMetadata();
-            JsonElement properties = metadata.InputSchema.GetProperty("properties");
-
-            string[] blogProperties = { "entity", "function", "field", "filter", "groupby", "orderby", "having", "first" };
-            foreach (string prop in blogProperties)
-            {
-                Assert.IsTrue(properties.TryGetProperty(prop, out _),
-                    $"Tool schema must include '{prop}' property used in blog scenarios.");
-            }
-
-            // Additional schema properties used in spec but not blog
-            Assert.IsTrue(properties.TryGetProperty("distinct", out _), "Tool schema must include 'distinct'.");
-            Assert.IsTrue(properties.TryGetProperty("after", out _), "Tool schema must include 'after'.");
-        }
-
-        /// <summary>
-        /// Verifies that the tool description instructs models to call describe_entities first.
-        /// </summary>
-        [TestMethod]
-        public void BlogScenarios_ToolDescription_ForcesDescribeEntitiesFirst()
+        public void GetToolMetadata_DescriptionDocumentsWorkflowAndAlias()
         {
             AggregateRecordsTool tool = new();
             Tool metadata = tool.GetToolMetadata();
@@ -902,18 +87,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 "Tool description must instruct models to call describe_entities first.");
             Assert.IsTrue(metadata.Description.Contains("1)"),
                 "Tool description must use numbered workflow steps.");
-        }
-
-        /// <summary>
-        /// Verifies that the tool description documents the alias convention used in blog examples.
-        /// </summary>
-        [TestMethod]
-        public void BlogScenarios_ToolDescription_DocumentsAliasConvention()
-        {
-            AggregateRecordsTool tool = new();
-            Tool metadata = tool.GetToolMetadata();
-
-            Assert.IsTrue(metadata.Description!.Contains("{function}_{field}"),
+            Assert.IsTrue(metadata.Description.Contains("{function}_{field}"),
                 "Tool description must document the alias pattern '{function}_{field}'.");
             Assert.IsTrue(metadata.Description.Contains("'count'"),
                 "Tool description must mention the special 'count' alias for count(*).");
@@ -921,16 +95,333 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         #endregion
 
-        #region FieldNotFound Error Helper Tests
+        #region Configuration Tests
+
+        [DataTestMethod]
+        [DataRow(false, true, DisplayName = "Runtime-level disabled")]
+        [DataRow(true, false, DisplayName = "Entity-level DML disabled")]
+        public async Task AggregateRecords_Disabled_ReturnsToolDisabledError(bool runtimeEnabled, bool entityDmlEnabled)
+        {
+            RuntimeConfig config = entityDmlEnabled
+                ? CreateConfig(aggregateRecordsEnabled: runtimeEnabled)
+                : CreateConfigWithEntityDmlDisabled();
+            IServiceProvider sp = CreateServiceProvider(config);
+
+            CallToolResult result = await ExecuteToolAsync(sp, "{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\"}");
+
+            AssertErrorResult(result, "ToolDisabled");
+        }
+
+        #endregion
+
+        #region Input Validation Tests - Missing/Invalid Arguments
+
+        [DataTestMethod]
+        [DataRow("{\"function\": \"count\", \"field\": \"*\"}", null, DisplayName = "Missing entity")]
+        [DataRow("{\"entity\": \"Book\", \"field\": \"*\"}", null, DisplayName = "Missing function")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\"}", null, DisplayName = "Missing field")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"median\", \"field\": \"price\"}", "median", DisplayName = "Invalid function 'median'")]
+        public async Task AggregateRecords_MissingOrInvalidRequiredArgs_ReturnsInvalidArguments(string json, string? expectedInMessage)
+        {
+            IServiceProvider sp = CreateDefaultServiceProvider();
+
+            CallToolResult result = await ExecuteToolAsync(sp, json);
+
+            string message = AssertErrorResult(result, "InvalidArguments");
+            if (!string.IsNullOrEmpty(expectedInMessage))
+            {
+                Assert.IsTrue(message.Contains(expectedInMessage),
+                    $"Error message must contain '{expectedInMessage}'. Actual: '{message}'");
+            }
+        }
+
+        [TestMethod]
+        public async Task AggregateRecords_NullArguments_ReturnsInvalidArguments()
+        {
+            IServiceProvider sp = CreateDefaultServiceProvider();
+            AggregateRecordsTool tool = new();
+
+            CallToolResult result = await tool.ExecuteAsync(null, sp, CancellationToken.None);
+
+            AssertErrorResult(result, "InvalidArguments");
+        }
+
+        #endregion
+
+        #region Input Validation Tests - Field/Function Compatibility
+
+        [DataTestMethod]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"avg\", \"field\": \"*\"}", "count",
+            DisplayName = "Star field with avg (must mention count)")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"distinct\": true}", "DISTINCT",
+            DisplayName = "Distinct with count(*)")]
+        public async Task AggregateRecords_InvalidFieldFunctionCombination_ReturnsInvalidArguments(string json, string expectedInMessage)
+        {
+            IServiceProvider sp = CreateDefaultServiceProvider();
+
+            CallToolResult result = await ExecuteToolAsync(sp, json);
+
+            string message = AssertErrorResult(result, "InvalidArguments");
+            Assert.IsTrue(message.Contains(expectedInMessage),
+                $"Error message must contain '{expectedInMessage}'. Actual: '{message}'");
+        }
+
+        #endregion
+
+        #region Input Validation Tests - GroupBy Dependencies
+
+        [DataTestMethod]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"desc\"}", "groupby",
+            DisplayName = "Orderby without groupby")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"having\": {\"gt\": 5}}", "groupby",
+            DisplayName = "Having without groupby")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"orderby\": \"ascending\"}", "'asc' or 'desc'",
+            DisplayName = "Invalid orderby value")]
+        public async Task AggregateRecords_GroupByDependencyViolation_ReturnsInvalidArguments(string json, string expectedInMessage)
+        {
+            IServiceProvider sp = CreateDefaultServiceProvider();
+
+            CallToolResult result = await ExecuteToolAsync(sp, json);
+
+            string message = AssertErrorResult(result, "InvalidArguments");
+            Assert.IsTrue(message.Contains(expectedInMessage),
+                $"Error message must contain '{expectedInMessage}'. Actual: '{message}'");
+        }
+
+        #endregion
+
+        #region Input Validation Tests - Having Clause
+
+        [DataTestMethod]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"between\": 5}}",
+            "between", DisplayName = "Unsupported having operator")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"eq\": \"ten\"}}",
+            "numeric", DisplayName = "Non-numeric having scalar")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"in\": [5, \"abc\"]}}",
+            "numeric", DisplayName = "Non-numeric value in having.in array")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"having\": {\"in\": 5}}",
+            "numeric array", DisplayName = "Having.in not an array")]
+        public async Task AggregateRecords_InvalidHaving_ReturnsInvalidArguments(string json, string expectedInMessage)
+        {
+            IServiceProvider sp = CreateDefaultServiceProvider();
+
+            CallToolResult result = await ExecuteToolAsync(sp, json);
+
+            string message = AssertErrorResult(result, "InvalidArguments");
+            Assert.IsTrue(message.Contains(expectedInMessage),
+                $"Error message must contain '{expectedInMessage}'. Actual: '{message}'");
+        }
+
+        #endregion
+
+        #region Alias Convention Tests
+
+        [DataTestMethod]
+        [DataRow("count", "*", "count", DisplayName = "count(*) → 'count'")]
+        [DataRow("count", "supplierId", "count_supplierId", DisplayName = "count(supplierId)")]
+        [DataRow("avg", "unitPrice", "avg_unitPrice", DisplayName = "avg(unitPrice)")]
+        [DataRow("sum", "unitPrice", "sum_unitPrice", DisplayName = "sum(unitPrice)")]
+        [DataRow("min", "price", "min_price", DisplayName = "min(price)")]
+        [DataRow("max", "price", "max_price", DisplayName = "max(price)")]
+        public void ComputeAlias_ReturnsExpectedAlias(string function, string field, string expectedAlias)
+        {
+            Assert.AreEqual(expectedAlias, AggregateRecordsTool.ComputeAlias(function, field));
+        }
+
+        #endregion
+
+        #region Cursor and Pagination Tests
+
+        [DataTestMethod]
+        [DataRow(null, 0, DisplayName = "null → 0")]
+        [DataRow("", 0, DisplayName = "empty → 0")]
+        [DataRow("   ", 0, DisplayName = "whitespace → 0")]
+        public void DecodeCursorOffset_InvalidCursor_ReturnsZero(string? cursor, int expected)
+        {
+            Assert.AreEqual(expected, AggregateRecordsTool.DecodeCursorOffset(cursor));
+        }
+
+        [TestMethod]
+        public void DecodeCursorOffset_InvalidBase64_ReturnsZero()
+        {
+            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset("not-valid-base64!!!"));
+        }
+
+        [DataTestMethod]
+        [DataRow("abc", 0, DisplayName = "non-numeric → 0")]
+        [DataRow("0", 0, DisplayName = "zero → 0")]
+        [DataRow("5", 5, DisplayName = "5 round-trip")]
+        [DataRow("15", 15, DisplayName = "15 round-trip")]
+        [DataRow("1000", 1000, DisplayName = "1000 round-trip")]
+        public void DecodeCursorOffset_Base64Encoded_ReturnsExpectedOffset(string rawValue, int expectedOffset)
+        {
+            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes(rawValue));
+            Assert.AreEqual(expectedOffset, AggregateRecordsTool.DecodeCursorOffset(cursor));
+        }
+
+        #endregion
+
+        #region Timeout and Cancellation Tests
+
+        [TestMethod]
+        public async Task AggregateRecords_OperationCanceled_ReturnsExplicitCanceledMessage()
+        {
+            IServiceProvider sp = CreateDefaultServiceProvider();
+            AggregateRecordsTool tool = new();
+
+            CancellationTokenSource cts = new();
+            cts.Cancel();
+
+            JsonDocument args = JsonDocument.Parse("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\"}");
+            CallToolResult result = await tool.ExecuteAsync(args, sp, cts.Token);
+
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            JsonElement error = content.GetProperty("error");
+
+            Assert.AreEqual("OperationCanceled", error.GetProperty("type").GetString());
+            string message = error.GetProperty("message").GetString()!;
+
+            AssertContainsAll(message,
+                ("NOT a tool error", "Message must state this is NOT a tool error."),
+                ("canceled", "Message must mention the operation was canceled."),
+                ("retry", "Message must tell the model it can retry."));
+        }
+
+        [DataTestMethod]
+        [DataRow("Product", DisplayName = "Product entity")]
+        [DataRow("HugeTransactionLog", DisplayName = "HugeTransactionLog entity")]
+        public void BuildTimeoutErrorMessage_ContainsGuidance(string entityName)
+        {
+            string message = AggregateRecordsTool.BuildTimeoutErrorMessage(entityName);
+
+            AssertContainsAll(message,
+                (entityName, "Must include entity name."),
+                ("NOT a tool error", "Must state this is NOT a tool error."),
+                ("database did not respond", "Must explain the cause."),
+                ("large datasets", "Must mention large datasets."),
+                ("filter", "Must suggest filter."),
+                ("groupby", "Must suggest reducing groupby."),
+                ("first", "Must suggest pagination."));
+        }
+
+        [DataTestMethod]
+        [DataRow("Product", DisplayName = "Product entity")]
+        public void BuildTaskCanceledErrorMessage_ContainsGuidance(string entityName)
+        {
+            string message = AggregateRecordsTool.BuildTaskCanceledErrorMessage(entityName);
+
+            AssertContainsAll(message,
+                (entityName, "Must include entity name."),
+                ("NOT a tool error", "Must state this is NOT a tool error."),
+                ("timeout", "Must reference timeout."),
+                ("filter", "Must suggest filter."),
+                ("first", "Must suggest pagination."));
+        }
+
+        [DataTestMethod]
+        [DataRow("LargeProductCatalog", DisplayName = "LargeProductCatalog entity")]
+        public void BuildOperationCanceledErrorMessage_ContainsGuidance(string entityName)
+        {
+            string message = AggregateRecordsTool.BuildOperationCanceledErrorMessage(entityName);
+
+            AssertContainsAll(message,
+                (entityName, "Must include entity name."),
+                ("No results were returned", "Must state no results."));
+        }
+
+        #endregion
+
+        #region Spec Example Tests - Alias Validation
 
         /// <summary>
-        /// Verifies the FieldNotFound error helper produces the correct error type
-        /// and a model-friendly message that includes the field name, entity, and guidance.
+        /// Validates the alias convention for all 13 spec examples.
+        /// Examples that compute count(*) expect "count"; all others expect "function_field".
+        /// </summary>
+        [DataTestMethod]
+        // Ex 1, 3, 6, 8, 11, 12: COUNT(*) → "count"
+        [DataRow("count", "*", "count", DisplayName = "Spec 01/03/06/08/11/12: count(*) → 'count'")]
+        // Ex 2, 7, 9, 13: AVG(unitPrice) → "avg_unitPrice"
+        [DataRow("avg", "unitPrice", "avg_unitPrice", DisplayName = "Spec 02/07/09/13: avg(unitPrice)")]
+        // Ex 4, 10: SUM(unitPrice) → "sum_unitPrice"
+        [DataRow("sum", "unitPrice", "sum_unitPrice", DisplayName = "Spec 04/10: sum(unitPrice)")]
+        // Ex 5: COUNT(supplierId) → "count_supplierId"
+        [DataRow("count", "supplierId", "count_supplierId", DisplayName = "Spec 05: count(supplierId)")]
+        public void SpecExamples_AliasConvention_IsCorrect(string function, string field, string expectedAlias)
+        {
+            Assert.AreEqual(expectedAlias, AggregateRecordsTool.ComputeAlias(function, field));
+        }
+
+        /// <summary>
+        /// Spec Example 11-12: Cursor offset for first-page starts at 0, continuation decodes correctly.
         /// </summary>
         [TestMethod]
-        public void FieldNotFound_ReturnsCorrectErrorTypeAndMessage()
+        public void SpecExample_PaginationCursor_DecodesCorrectly()
         {
-            CallToolResult result = McpErrorHelpers.FieldNotFound("aggregate_records", "Product", "badField", "field", null);
+            // First page: null cursor → offset 0
+            Assert.AreEqual(0, AggregateRecordsTool.DecodeCursorOffset(null));
+
+            // Continuation: cursor encoding "5" → offset 5
+            string cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes("5"));
+            Assert.AreEqual(5, AggregateRecordsTool.DecodeCursorOffset(cursor));
+        }
+
+        #endregion
+
+        #region Blog Scenario Tests
+
+        /// <summary>
+        /// Validates that exact JSON payloads from the DAB MCP blog pass input validation.
+        /// The tool will fail at metadata resolution (no real DB) but must NOT return "InvalidArguments".
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(
+            @"{""entity"":""Book"",""function"":""sum"",""field"":""totalRevenue"",""filter"":""isActive eq true and orderDate ge 2025-01-01"",""groupby"":[""customerId"",""customerName""],""orderby"":""desc"",""first"":1}",
+            "sum", "totalRevenue",
+            DisplayName = "Blog 1: Strategic customer importance")]
+        [DataRow(
+            @"{""entity"":""Book"",""function"":""sum"",""field"":""totalRevenue"",""filter"":""isActive eq true and inStock gt 0 and orderDate ge 2025-01-01"",""groupby"":[""productId"",""productName""],""orderby"":""asc"",""first"":1}",
+            "sum", "totalRevenue",
+            DisplayName = "Blog 2: Product discontinuation")]
+        [DataRow(
+            @"{""entity"":""Book"",""function"":""avg"",""field"":""quarterlyRevenue"",""filter"":""fiscalYear eq 2025"",""groupby"":[""region""],""having"":{""gt"":2000000},""orderby"":""desc""}",
+            "avg", "quarterlyRevenue",
+            DisplayName = "Blog 3: Quarterly performance")]
+        [DataRow(
+            @"{""entity"":""Book"",""function"":""sum"",""field"":""totalRevenue"",""filter"":""isActive eq true and customerType eq 'Retail' and (region eq 'Midwest' or region eq 'Southwest')"",""groupby"":[""region"",""customerTier""],""having"":{""gt"":5000000},""orderby"":""desc""}",
+            "sum", "totalRevenue",
+            DisplayName = "Blog 4: Revenue concentration")]
+        [DataRow(
+            @"{""entity"":""Book"",""function"":""sum"",""field"":""onHandValue"",""filter"":""discontinued eq true and onHandValue gt 0"",""groupby"":[""productLine"",""warehouseRegion""],""having"":{""gt"":2500000},""orderby"":""desc""}",
+            "sum", "onHandValue",
+            DisplayName = "Blog 5: Risk exposure")]
+        public async Task BlogScenario_PassesInputValidation(string json, string function, string field)
+        {
+            IServiceProvider sp = CreateDefaultServiceProvider();
+
+            CallToolResult result = await ExecuteToolAsync(sp, json);
+
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = ParseContent(result);
+            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
+            Assert.AreNotEqual("InvalidArguments", errorType,
+                $"Blog scenario JSON must pass input validation. Got error: {errorType}");
+
+            // Verify alias convention
+            string expectedAlias = $"{function}_{field}";
+            Assert.AreEqual(expectedAlias, AggregateRecordsTool.ComputeAlias(function, field));
+        }
+
+        #endregion
+
+        #region FieldNotFound Error Helper Tests
+
+        [DataTestMethod]
+        [DataRow("Product", "badField", "field", DisplayName = "field parameter")]
+        [DataRow("Product", "invalidCol", "groupby", DisplayName = "groupby parameter")]
+        public void FieldNotFound_ReturnsCorrectErrorWithGuidance(string entity, string fieldName, string paramName)
+        {
+            CallToolResult result = McpErrorHelpers.FieldNotFound("aggregate_records", entity, fieldName, paramName, null);
 
             Assert.IsTrue(result.IsError == true);
             JsonElement content = ParseContent(result);
@@ -938,45 +429,89 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             Assert.AreEqual("FieldNotFound", error.GetProperty("type").GetString());
             string message = error.GetProperty("message").GetString()!;
-            Assert.IsTrue(message.Contains("badField"), "Message must include the invalid field name.");
-            Assert.IsTrue(message.Contains("Product"), "Message must include the entity name.");
-            Assert.IsTrue(message.Contains("field"), "Message must identify which parameter was invalid.");
-            Assert.IsTrue(message.Contains("describe_entities"), "Message must guide the model to call describe_entities.");
-        }
 
-        /// <summary>
-        /// Verifies the FieldNotFound error helper identifies the groupby parameter.
-        /// </summary>
-        [TestMethod]
-        public void FieldNotFound_GroupBy_IdentifiesParameter()
-        {
-            CallToolResult result = McpErrorHelpers.FieldNotFound("aggregate_records", "Product", "invalidCol", "groupby", null);
-
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = ParseContent(result);
-            string message = content.GetProperty("error").GetProperty("message").GetString()!;
-
-            Assert.IsTrue(message.Contains("invalidCol"), "Message must include the invalid field name.");
-            Assert.IsTrue(message.Contains("groupby"), "Message must identify 'groupby' as the parameter.");
-            Assert.IsTrue(message.Contains("describe_entities"), "Message must guide the model to call describe_entities.");
+            AssertContainsAll(message,
+                (fieldName, "Must include the invalid field name."),
+                (entity, "Must include the entity name."),
+                (paramName, "Must identify which parameter was invalid."),
+                ("describe_entities", "Must guide the model to call describe_entities."));
         }
 
         #endregion
 
-        #region Helper Methods
+        #region Reusable Assertion Helpers
 
+        /// <summary>
+        /// Parses the JSON content from a <see cref="CallToolResult"/>.
+        /// </summary>
         private static JsonElement ParseContent(CallToolResult result)
         {
             TextContentBlock firstContent = (TextContentBlock)result.Content[0];
             return JsonDocument.Parse(firstContent.Text).RootElement;
         }
 
-        private static void AssertToolDisabledError(JsonElement content)
+        /// <summary>
+        /// Asserts that the result is an error with the expected error type.
+        /// Returns the error message for further assertions.
+        /// </summary>
+        private static string AssertErrorResult(CallToolResult result, string expectedErrorType)
         {
-            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
-            Assert.AreEqual("ToolDisabled", errorType.GetString());
+            Assert.IsTrue(result.IsError == true, "Result should be an error.");
+            JsonElement content = ParseContent(result);
+            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error), "Content must have an 'error' property.");
+            Assert.AreEqual(expectedErrorType, error.GetProperty("type").GetString(),
+                $"Expected error type '{expectedErrorType}'.");
+            return error.TryGetProperty("message", out JsonElement msg) ? msg.GetString() ?? string.Empty : string.Empty;
         }
+
+        /// <summary>
+        /// Asserts the schema property exists with the given type.
+        /// </summary>
+        private static void AssertSchemaProperty(JsonElement properties, string propertyName, string expectedType)
+        {
+            Assert.IsTrue(properties.TryGetProperty(propertyName, out JsonElement prop),
+                $"Schema must include '{propertyName}' property.");
+            Assert.AreEqual(expectedType, prop.GetProperty("type").GetString(),
+                $"Schema property '{propertyName}' must have type '{expectedType}'.");
+        }
+
+        /// <summary>
+        /// Asserts that the given text contains all expected substrings, with per-assertion failure messages.
+        /// </summary>
+        private static void AssertContainsAll(string text, params (string expected, string failMessage)[] checks)
+        {
+            Assert.IsNotNull(text);
+            foreach (var (expected, failMessage) in checks)
+            {
+                Assert.IsTrue(text.Contains(expected), failMessage);
+            }
+        }
+
+        #endregion
+
+        #region Reusable Execution Helpers
+
+        /// <summary>
+        /// Executes the AggregateRecordsTool with the given JSON arguments.
+        /// </summary>
+        private static async Task<CallToolResult> ExecuteToolAsync(IServiceProvider sp, string json)
+        {
+            AggregateRecordsTool tool = new();
+            JsonDocument args = JsonDocument.Parse(json);
+            return await tool.ExecuteAsync(args, sp, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Creates a default service provider with aggregate_records enabled.
+        /// </summary>
+        private static IServiceProvider CreateDefaultServiceProvider()
+        {
+            return CreateServiceProvider(CreateConfig());
+        }
+
+        #endregion
+
+        #region Test Infrastructure
 
         private static RuntimeConfig CreateConfig(bool aggregateRecordsEnabled = true)
         {

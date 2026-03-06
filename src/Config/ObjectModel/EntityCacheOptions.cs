@@ -110,11 +110,13 @@ public record EntityCacheOptions
 
     /// <summary>
     /// Flag which informs the JSON serializer whether the user originally provided
-    /// a cache object in the config file. When false, the cache object was synthesized
-    /// by ResolveEntityCacheInheritance to support runtime inheritance and should NOT
-    /// be written back to the serialized config file.
-    /// This follows the same pattern as UserProvidedTtlOptions and UserProvidedLevelOptions.
+    /// a cache object in the config file or through the CLI. When false, the cache object
+    /// was synthesized by ResolveEntityCacheInheritance to support runtime inheritance
+    /// and should NOT be written back to the serialized config file.
+    /// Defaults to true because EntityCacheOptions created via constructor (JSON deserialization
+    /// or CLI) represent user intent. Only ResolveEntityCacheInheritance sets this to false
+    /// for cache objects synthesized to support inheritance.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    public bool UserProvidedCacheOptions { get; init; } = false;
+    public bool UserProvidedCacheOptions { get; init; } = true;
 }

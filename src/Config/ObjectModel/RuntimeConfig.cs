@@ -665,7 +665,7 @@ public record RuntimeConfig
             // If entity has cache config but Enabled is null, inherit the global value.
             if (entity.Cache is null && globalCacheEnabled)
             {
-                entity = entity with { Cache = new EntityCacheOptions(Enabled: true) };
+                entity = entity with { Cache = new EntityCacheOptions(Enabled: true) { UserProvidedCacheOptions = false } };
                 anyResolved = true;
             }
             else if (entity.Cache is not null && !entity.Cache.Enabled.HasValue)

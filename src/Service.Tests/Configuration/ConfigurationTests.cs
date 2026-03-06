@@ -5893,18 +5893,26 @@ type Planet @model(name:""PlanetAlias"") {
             HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
             while (retryCount < RETRY_COUNT)
             {
-                // Minimal MCP request (list tools) – valid JSON-RPC request
+                // Minimal MCP request (initialize) - valid JSON-RPC request.
+                // Using 'initialize' because 'tools/list' requires an active session
+                // in the MCP Streamable HTTP transport (ModelContextProtocol 1.0.0).
                 object payload = new
                 {
                     jsonrpc = "2.0",
                     id = 1,
-                    method = "tools/list"
+                    method = "initialize",
+                    @params = new
+                    {
+                        protocolVersion = "2025-03-26",
+                        capabilities = new { },
+                        clientInfo = new { name = "dab-test", version = "1.0.0" }
+                    }
                 };
                 HttpRequestMessage mcpRequest = new(HttpMethod.Post, mcp.Path)
                 {
                     Content = JsonContent.Create(payload)
                 };
-                mcpRequest.Headers.Add("Accept", "*/*");
+                mcpRequest.Headers.Add("Accept", "application/json, text/event-stream");
 
                 HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
                 responseCode = mcpResponse.StatusCode;

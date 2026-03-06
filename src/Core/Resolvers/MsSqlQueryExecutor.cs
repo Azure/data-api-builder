@@ -628,10 +628,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     PopulateDbTypeForParameter(parameterEntry, parameter);
 
-                    // If sqldbtype is varchar, nvarchar, char, or nchar then set the length
-                    if (parameter.SqlDbType is SqlDbType.VarChar or SqlDbType.NVarChar or SqlDbType.Char or SqlDbType.NChar)
+                    // If a length is explicitly provided, apply it for sized types.
+                    // When length is not provided, rely on SqlClient's default inference.
+                    if (parameterEntry.Value?.Length is int length &&
+                        parameter.SqlDbType is SqlDbType.VarChar or SqlDbType.NVarChar
+                            or SqlDbType.Char or SqlDbType.NChar
+                            or SqlDbType.VarBinary or SqlDbType.Binary)
                     {
-                        parameter.Size = parameterEntry.Value?.Length ?? -1;
+                        parameter.Size = length;
                     }
 
                     cmd.Parameters.Add(parameter);

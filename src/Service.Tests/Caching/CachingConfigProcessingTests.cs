@@ -547,4 +547,36 @@ public class CachingConfigProcessingTests
 
         return expectedRuntimeConfigJson.ToString();
     }
+
+    /// <summary>
+    /// Validates that when an entity has no cache config but inherits caching enabled from the
+    /// global runtime setting, the inherited cache object is NOT serialized back to the JSON
+    /// config file. This prevents config pollution where a "cache" property appears on entities
+    /// that never had one in the user's original config.
+    /// </summary>
+    [DataRow(@",""cache"": { ""enabled"": true }", @"", DisplayName = "Global cache enabled, entity cache omitted: inherited cache should not be serialized.")]
+    [DataRow(@",""cache"": { ""enabled"": false }", @"", DisplayName = "Global cache disabled, entity cache omitted: inherited cache should not be serialized.")]
+    [DataTestMethod]
+    public void InheritedEntityCacheNotWrittenToSerializedJsonConfigFile(string globalCacheConfig, string entityCacheConfig)
+    {
+        // Arrange
+        string fullConfig = GetRawConfigJson(globalCacheConfig: globalCacheConfig, entityCacheConfig: entityCacheConfig);
+        RuntimeConfigLoader.TryParseConfig(
+            json: fullConfig,
+            out RuntimeConfig? config,
+            replacementSettings: null);
+        Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
+
+        // Act
+        string serializedConfig = config.ToJson();
+
+        // Assert: entity should NOT have a "cache" property since user never defined one.
+        using JsonDocument parsedConfig = JsonDocument.Parse(serializedConfig);
+        JsonElement entityElement = parsedConfig.RootElement
+            .GetProperty("entities")
+            .EnumerateObject().First().Value;
+        bool cachePropertyExists = entityElement.TryGetProperty("cache", out _);
+        Assert.IsFalse(cachePropertyExists,
+            message: "Entity cache property should not be serialized when it was inherited from the runtime setting, not user-defined.");
+    }
 }

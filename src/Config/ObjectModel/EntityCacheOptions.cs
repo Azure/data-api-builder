@@ -22,7 +22,7 @@ public record EntityCacheOptions
     /// Default cache level for an entity.
     /// Placeholder cache level value used when the entity does not explicitly set a level.
     /// This value is stored on the EntityCacheOptions object but is NOT used at runtime
-    /// for resolution — GetEntityCacheEntryLevel() falls through to GlobalCacheEntryLevel()
+    /// for resolution â€” GetEntityCacheEntryLevel() falls through to GlobalCacheEntryLevel()
     /// (which infers the level from the runtime Level2 configuration) when UserProvidedLevelOptions is false.
     /// </summary>
     public const EntityCacheLevel DEFAULT_LEVEL = EntityCacheLevel.L1L2;
@@ -107,4 +107,14 @@ public record EntityCacheOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(Level))]
     public bool UserProvidedLevelOptions { get; init; } = false;
+
+    /// <summary>
+    /// Flag which informs the JSON serializer whether the user originally provided
+    /// a cache object in the config file. When false, the cache object was synthesized
+    /// by ResolveEntityCacheInheritance to support runtime inheritance and should NOT
+    /// be written back to the serialized config file.
+    /// This follows the same pattern as UserProvidedTtlOptions and UserProvidedLevelOptions.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public bool UserProvidedCacheOptions { get; init; } = false;
 }

@@ -68,7 +68,7 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new EntityCacheOptions(enabled, ttlSeconds, level);
+                        return new EntityCacheOptions(enabled, ttlSeconds, level) { UserProvidedCacheOptions = true };
                     }
 
                     string? property = reader.GetString();
@@ -129,16 +129,25 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
         /// </summary>
         public override void Write(Utf8JsonWriter writer, EntityCacheOptions value, JsonSerializerOptions options)
         {
-            writer.WriteStartObject();
-            writer.WriteBoolean("enabled", value?.Enabled ?? false);
+            // If the cache object was not provided by the user (e.g., synthesized by
+            // ResolveEntityCacheInheritance), write null so the serializer's
+            // DefaultIgnoreCondition.WhenWritingNull suppresses the "cache" property entirely.
+            if (value is null || !value.UserProvidedCacheOptions)
+            {
+                writer.WriteNullValue();
+                return;
+            }
 
-            if (value?.UserProvidedTtlOptions is true)
+            writer.WriteStartObject();
+            writer.WriteBoolean("enabled", value.Enabled ?? false);
+
+            if (value.UserProvidedTtlOptions is true)
             {
                 writer.WritePropertyName("ttl-seconds");
                 JsonSerializer.Serialize(writer, value.TtlSeconds, options);
             }
 
-            if (value?.UserProvidedLevelOptions is true)
+            if (value.UserProvidedLevelOptions is true)
             {
                 writer.WritePropertyName("level");
                 JsonSerializer.Serialize(writer, value.Level, options);

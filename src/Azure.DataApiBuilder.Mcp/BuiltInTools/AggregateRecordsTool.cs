@@ -209,7 +209,21 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 string? filter = root.TryGetProperty("filter", out JsonElement filterElement) ? filterElement.GetString() : null;
                 bool userProvidedOrderby = root.TryGetProperty("orderby", out JsonElement orderbyElement) && !string.IsNullOrWhiteSpace(orderbyElement.GetString());
-                string orderby = userProvidedOrderby ? (orderbyElement.GetString() ?? "desc") : "desc";
+                string orderby = "desc";
+                if (userProvidedOrderby)
+                {
+                    string normalizedOrderby = (orderbyElement.GetString() ?? string.Empty).Trim().ToLowerInvariant();
+                    if (normalizedOrderby != "asc" && normalizedOrderby != "desc")
+                    {
+                        return McpResponseBuilder.BuildErrorResult(
+                            toolName,
+                            "InvalidArguments",
+                            $"Argument 'orderby' must be either 'asc' or 'desc' when provided. Got: '{orderbyElement.GetString()}'.",
+                            logger);
+                    }
+
+                    orderby = normalizedOrderby;
+                }
 
                 int? first = null;
                 if (root.TryGetProperty("first", out JsonElement firstElement) && firstElement.ValueKind == JsonValueKind.Number)
@@ -418,6 +432,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // Get database-specific components
                 DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
 
+                // Aggregation is only supported for tables and views, not stored procedures.
+                if (dbObject.SourceType != EntitySourceType.Table && dbObject.SourceType != EntitySourceType.View)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity",
+                        $"Entity '{entityName}' is not a table or view. Aggregation is not supported for stored procedures. Use 'execute_entity' for stored procedures.", logger);
+                }
+
                 // Aggregation is only supported for MsSql/DWSQL (matching engine's GraphQL aggregation support)
                 if (databaseType != DatabaseType.MSSQL && databaseType != DatabaseType.DWSQL)
                 {
@@ -441,10 +462,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     // making COUNT(pk) equivalent to COUNT(*). The engine's Build(AggregationColumn)
                     // does not support "*" as a column name (it would produce invalid SQL like count([].[*])).
                     SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
-                    if (sourceDefinition.PrimaryKey.Count > 0)
+                    if (sourceDefinition.PrimaryKey.Count == 0)
                     {
-                        backingField = sourceDefinition.PrimaryKey[0];
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity",
+                            $"Entity '{entityName}' has no primary key defined. COUNT(*) requires at least one primary key column.", logger);
                     }
+
+                    backingField = sourceDefinition.PrimaryKey[0];
                 }
 
                 // Resolve backing column names for groupby fields (already validated early)
@@ -623,10 +647,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 return McpResponseBuilder.BuildErrorResult(
                     toolName,
                     "TimeoutError",
-                    $"The aggregation query for entity '{entityName}' timed out. "
-                    + "This is NOT a tool error. The database did not respond in time. "
-                    + "This may occur with large datasets or complex aggregations. "
-                    + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.",
+                    BuildTimeoutErrorMessage(entityName),
                     logger);
             }
             catch (TaskCanceledException taskCanceledException)
@@ -635,9 +656,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 return McpResponseBuilder.BuildErrorResult(
                     toolName,
                     "TimeoutError",
-                    $"The aggregation query for entity '{entityName}' was canceled, likely due to a timeout. "
-                    + "This is NOT a tool error. The database did not respond in time. "
-                    + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.",
+                    BuildTaskCanceledErrorMessage(entityName),
                     logger);
             }
             catch (OperationCanceledException)
@@ -646,9 +665,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 return McpResponseBuilder.BuildErrorResult(
                     toolName,
                     "OperationCanceled",
-                    $"The aggregation query for entity '{entityName}' was canceled before completion. "
-                    + "This is NOT a tool error. The operation was interrupted, possibly due to a timeout or client disconnect. "
-                    + "No results were returned. You may retry the same request.",
+                    BuildOperationCanceledErrorMessage(entityName),
                     logger);
             }
             catch (DbException dbException)
@@ -778,6 +795,37 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 },
                 logger,
                 $"AggregateRecordsTool success for entity {entityName}.");
+        }
+
+        /// <summary>
+        /// Builds the error message for a TimeoutException during aggregation.
+        /// </summary>
+        internal static string BuildTimeoutErrorMessage(string entityName)
+        {
+            return $"The aggregation query for entity '{entityName}' timed out. "
+                + "This is NOT a tool error. The database did not respond in time. "
+                + "This may occur with large datasets or complex aggregations. "
+                + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.";
+        }
+
+        /// <summary>
+        /// Builds the error message for a TaskCanceledException during aggregation (typically a timeout).
+        /// </summary>
+        internal static string BuildTaskCanceledErrorMessage(string entityName)
+        {
+            return $"The aggregation query for entity '{entityName}' was canceled, likely due to a timeout. "
+                + "This is NOT a tool error. The database did not respond in time. "
+                + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.";
+        }
+
+        /// <summary>
+        /// Builds the error message for an OperationCanceledException during aggregation.
+        /// </summary>
+        internal static string BuildOperationCanceledErrorMessage(string entityName)
+        {
+            return $"The aggregation query for entity '{entityName}' was canceled before completion. "
+                + "This is NOT a tool error. The operation was interrupted, possibly due to a timeout or client disconnect. "
+                + "No results were returned. You may retry the same request.";
         }
     }
 }

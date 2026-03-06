@@ -1167,7 +1167,7 @@ namespace Cli
                 updatedValue = options?.RuntimeMcpQueryTimeout;
                 if (updatedValue != null)
                 {
-                    updatedMcpOptions = updatedMcpOptions! with { QueryTimeout = (int)updatedValue };
+                    updatedMcpOptions = updatedMcpOptions! with { QueryTimeout = (int)updatedValue, UserProvidedQueryTimeout = true };
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.QueryTimeout as '{updatedValue}'", updatedValue);
                 }
 
@@ -1253,17 +1253,14 @@ namespace Cli
                 {
                     updatedMcpOptions = updatedMcpOptions! with
                     {
-                        DmlTools = new DmlToolsConfig
-                        {
-                            AllToolsEnabled = false,
-                            DescribeEntities = describeEntities,
-                            CreateRecord = createRecord,
-                            ReadRecords = readRecord,
-                            UpdateRecord = updateRecord,
-                            DeleteRecord = deleteRecord,
-                            ExecuteEntity = executeEntity,
-                            AggregateRecords = aggregateRecords
-                        }
+                        DmlTools = new DmlToolsConfig(
+                            describeEntities: describeEntities,
+                            createRecord: createRecord,
+                            readRecords: readRecord,
+                            updateRecord: updateRecord,
+                            deleteRecord: deleteRecord,
+                            executeEntity: executeEntity,
+                            aggregateRecords: aggregateRecords)
                     };
                 }
 

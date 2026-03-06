@@ -159,8 +159,9 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                 JsonSerializer.Serialize(writer, value.Description, options);
             }
 
-            // Write query-timeout if it's user provided
-            if (value?.UserProvidedQueryTimeout is true && value.QueryTimeout.HasValue)
+            // Write query-timeout whenever a value is present (null = not specified = use default).
+            // This covers both constructor-set (deserialization) and 'with' expression (CLI update) paths.
+            if (value?.QueryTimeout.HasValue is true)
             {
                 writer.WriteNumber("query-timeout", value.QueryTimeout.Value);
             }

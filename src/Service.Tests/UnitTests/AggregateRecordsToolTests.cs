@@ -86,51 +86,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         #endregion
 
-        #region Validation logic tests
-
-        [TestMethod]
-        [DataRow("avg", "Validation: avg with star field should be rejected")]
-        [DataRow("sum", "Validation: sum with star field should be rejected")]
-        [DataRow("min", "Validation: min with star field should be rejected")]
-        [DataRow("max", "Validation: max with star field should be rejected")]
-        public void ValidateFieldFunctionCompat_StarWithNumericFunction_IsInvalid(string function, string description)
-        {
-            bool isCountStar = function == "count" && "*" == "*";
-            bool isInvalidStarUsage = "*" == "*" && function != "count";
-
-            Assert.IsFalse(isCountStar, $"{description}: should not be count-star");
-            Assert.IsTrue(isInvalidStarUsage, $"{description}: should be identified as invalid star usage");
-        }
-
-        [TestMethod]
-        public void ValidateFieldFunctionCompat_CountStar_IsValid()
-        {
-            bool isCountStar = "count" == "count" && "*" == "*";
-            Assert.IsTrue(isCountStar, "count(*) should be valid");
-        }
-
-        [TestMethod]
-        public void ValidateDistinctCountStar_IsInvalid()
-        {
-            bool isCountStar = "count" == "count" && "*" == "*";
-            bool distinct = true;
-
-            bool shouldReject = isCountStar && distinct;
-            Assert.IsTrue(shouldReject, "count(*) with distinct=true should be rejected");
-        }
-
-        [TestMethod]
-        public void ValidateDistinctCountField_IsValid()
-        {
-            bool isCountStar = "count" == "count" && "userId" == "*";
-            bool distinct = true;
-
-            bool shouldReject = isCountStar && distinct;
-            Assert.IsFalse(shouldReject, "count(field) with distinct=true should be valid");
-        }
-
-        #endregion
-
         #region Blog scenario tests - alias and type validation
 
         /// <summary>

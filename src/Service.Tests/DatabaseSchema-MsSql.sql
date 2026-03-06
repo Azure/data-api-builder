@@ -229,7 +229,8 @@ CREATE TABLE type_table(
     smalldatetime_types smalldatetime,
     time_types time,
     bytearray_types varbinary(max),
-    uuid_types uniqueidentifier DEFAULT newid()
+    uuid_types uniqueidentifier DEFAULT newid(),
+    xml_types xml
 );
 
 CREATE TABLE trees (
@@ -590,21 +591,21 @@ string_types, nvarchar_string_types,
 single_types, float_types, decimal_types,
 boolean_types,
 date_types, datetime_types, datetime2_types, datetimeoffset_types, smalldatetime_types, time_types,
-bytearray_types)
+bytearray_types, xml_types)
 VALUES
     (1, 1, 1, 1, 1, '', '', 0.33, 0.33, 0.333333, 1,
     '1999-01-08', '1999-01-08 10:23:54', '1999-01-08 10:23:54.9999999', '1999-01-08 10:23:54.9999999-14:00', '1999-01-08 10:23:54', '10:23:54.9999999',
-    0xABCDEF0123),
+    0xABCDEF0123, '<doc><type>report</type></doc>'),
     (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0,
     '1999-01-08', '1999-01-08 10:23:00', '1999-01-08 10:23:00.9999999', '1999-01-08 10:23:00.9999999+13:00', '1999-01-08 10:23:00', '10:23:00.9999999',
-    0x98AB7511AABB1234),
+    0x98AB7511AABB1234, '<author>admin</author>'),
     (3, 0, -32768, -2147483648, -9223372036854775808, 'null', 'null', -3.4E38, -1.7E308, 2.929292E-19, 1,
     '0001-01-01', '1753-01-01 00:00:00.000', '0001-01-01 00:00:00.0000000', '0001-01-01 00:00:00.0000000+0:00', '1900-01-01 00:00:00', '00:00:00.0000000',
-    0x00000000),
+    0x00000000, '<metadata><key>value</key></metadata>'),
     (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 'null', 3.4E38, 1.7E308, 2.929292E-14, 1,
     '9999-12-31', '9999-12-31 23:59:59', '9999-12-31 23:59:59.9999999', '9999-12-31 23:59:59.9999999+14:00', '2079-06-06', '23:59:59.9999999',
-    0xFFFFFFFF),
-    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    0xFFFFFFFF, '<config><setting enabled="true"/></config>'),
+    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO type_table(id, uuid_types) values(10, 'D1D021A8-47B4-4AE4-B718-98E89C41A161');
 SET IDENTITY_INSERT type_table OFF
 

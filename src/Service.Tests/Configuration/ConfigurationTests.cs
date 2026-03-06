@@ -5567,6 +5567,73 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// Validates the autoentity configuration inside the configuration file and also
+        /// validates that entities created from the autoentity configuration do not generate
+        /// duplicate entities and paths for REST and GraphQL.
+        /// </summary>
+        /// <returns></returns>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod]
+        public async Task ValidateAutoentitiesConfiguration()
+        {
+            EntityAction entityAction = new(EntityActionOperation.Read, null, null);
+
+            Dictionary<string, Autoentity> autoentityMap = new();
+            string autoentityName = "AutoentityA";
+
+            Autoentity autoentity = new(
+                Patterns: new AutoentityPatterns(
+                    Include: new[] { "%patterns%" },
+                    Exclude: new[] { "%books%" },
+                    Name: "{object}"),
+                Template: new AutoentityTemplate(
+                    Rest: new(Enabled: false),
+                    GraphQL: new(Enabled: true, Singular: "", Plural: ""),
+                    Health: new(enabled: true),
+                    Cache: new(Enabled: true, TtlSeconds: 50)),
+                Permissions: new EntityPermission[] { new("anonymous", new EntityAction[] { entityAction }) });
+
+            autoentityMap.Add(autoentityName, autoentity);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK,
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null)),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new(autoentityMap));
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            File.WriteAllText(CUSTOM_CONFIG, runtimeConfig.ToJson());
+            IFileSystem fileSystem = new FileSystem();
+
+            FileSystemRuntimeConfigLoader loader = new(fileSystem)
+            {
+                RuntimeConfig = runtimeConfig
+            };
+
+            RuntimeConfigProvider provider = new(loader);
+            Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+
+            try
+            {
+                Assert.IsTrue(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Tests the behavior of GraphQL queries in non-hosted mode when the depth limit is explicitly set to -1 or null.
         /// Setting the depth limit to -1 is intended to disable the depth limit check, allowing queries of any depth.
         /// Using null as default value of dab which also disables the depth limit check.

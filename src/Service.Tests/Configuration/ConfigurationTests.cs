@@ -5588,7 +5588,7 @@ type Planet @model(name:""PlanetAlias"") {
                     Name: "{object}"),
                 Template: new AutoentityTemplate(
                     Rest: new(Enabled: false),
-                    GraphQL: new(Enabled: true, Singular: "", Plural: ""),
+                    GraphQL: new(Enabled: true, Singular: string.Empty, Plural: string.Empty),
                     Health: new(enabled: true),
                     Cache: new(Enabled: true, TtlSeconds: 50)),
                 Permissions: new EntityPermission[] { new("anonymous", new EntityAction[] { entityAction }) });
@@ -5599,13 +5599,13 @@ type Planet @model(name:""PlanetAlias"") {
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             RuntimeConfig runtimeConfig = new(
-                Schema: RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK,
+                Schema: "TestAutoentitiesSchema",
                 DataSource: dataSource,
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
                     Mcp: new(),
-                    Host: new(null, null)),
+                    Host: new(null, null, HostMode.Development)),
                 Entities: new(new Dictionary<string, Entity>()),
                 Autoentities: new(autoentityMap));
 

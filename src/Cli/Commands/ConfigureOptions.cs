@@ -42,6 +42,7 @@ namespace Cli.Commands
             bool? runtimeMcpEnabled = null,
             string? runtimeMcpPath = null,
             string? runtimeMcpDescription = null,
+            int? runtimeMcpQueryTimeout = null,
             bool? runtimeMcpDmlToolsEnabled = null,
             bool? runtimeMcpDmlToolsDescribeEntitiesEnabled = null,
             bool? runtimeMcpDmlToolsCreateRecordEnabled = null,
@@ -49,6 +50,7 @@ namespace Cli.Commands
             bool? runtimeMcpDmlToolsUpdateRecordEnabled = null,
             bool? runtimeMcpDmlToolsDeleteRecordEnabled = null,
             bool? runtimeMcpDmlToolsExecuteEntityEnabled = null,
+            bool? runtimeMcpDmlToolsAggregateRecordsEnabled = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
             CompressionLevel? runtimeCompressionLevel = null,
@@ -102,6 +104,7 @@ namespace Cli.Commands
             RuntimeMcpEnabled = runtimeMcpEnabled;
             RuntimeMcpPath = runtimeMcpPath;
             RuntimeMcpDescription = runtimeMcpDescription;
+            RuntimeMcpQueryTimeout = runtimeMcpQueryTimeout;
             RuntimeMcpDmlToolsEnabled = runtimeMcpDmlToolsEnabled;
             RuntimeMcpDmlToolsDescribeEntitiesEnabled = runtimeMcpDmlToolsDescribeEntitiesEnabled;
             RuntimeMcpDmlToolsCreateRecordEnabled = runtimeMcpDmlToolsCreateRecordEnabled;
@@ -109,6 +112,7 @@ namespace Cli.Commands
             RuntimeMcpDmlToolsUpdateRecordEnabled = runtimeMcpDmlToolsUpdateRecordEnabled;
             RuntimeMcpDmlToolsDeleteRecordEnabled = runtimeMcpDmlToolsDeleteRecordEnabled;
             RuntimeMcpDmlToolsExecuteEntityEnabled = runtimeMcpDmlToolsExecuteEntityEnabled;
+            RuntimeMcpDmlToolsAggregateRecordsEnabled = runtimeMcpDmlToolsAggregateRecordsEnabled;
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
@@ -203,6 +207,9 @@ namespace Cli.Commands
         [Option("runtime.mcp.description", Required = false, HelpText = "Set the MCP server description to be exposed in the initialize response.")]
         public string? RuntimeMcpDescription { get; }
 
+        [Option("runtime.mcp.query-timeout", Required = false, HelpText = "Set the execution timeout in seconds for MCP tool operations. Applies to all MCP tools. Default: 30 (integer). Must be >= 1.")]
+        public int? RuntimeMcpQueryTimeout { get; }
+
         [Option("runtime.mcp.dml-tools.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools endpoint. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsEnabled { get; }
 
@@ -223,6 +230,9 @@ namespace Cli.Commands
 
         [Option("runtime.mcp.dml-tools.execute-entity.enabled", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsExecuteEntityEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.aggregate-records.enabled", Required = false, HelpText = "Enable DAB's MCP aggregate records tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsAggregateRecordsEnabled { get; }
 
         [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's cache globally. (You must also enable each entity's cache separately.). Default: false (boolean).")]
         public bool? RuntimeCacheEnabled { get; }

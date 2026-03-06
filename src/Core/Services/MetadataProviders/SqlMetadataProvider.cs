@@ -2108,10 +2108,10 @@ namespace Azure.DataApiBuilder.Core.Services
                     // 1. Book->Publisher [Referencing: Book, Referenced: Publisher] ** this is the correct foreign key definition
                     // 2. Publisher->Book [Referencing: Publisher, Referenced: Book]
                     // This is because DAB pre-processes runtime config relationships prior to processing database FK definitions.
-                    // Consequently, because Book->Publisher is an N:1 relationship, DAB optimistically generated ForeignKey
-                    // objects for both source->target and target->source entities because DAB doesn't yet have db metadata
-                    // to confirm which combination of optimistically generated ForeignKeyDefinition objects matched
-                    // the database FK relationship metadata.
+                    // Consequently, because Book->Publisher is an N:1 relationship, DAB optimistically generated
+                    // ForeignKeyDefinition objects for both source->target and target->source entities because DAB
+                    // doesn't yet have db metadata to confirm which combination of optimistically generated
+                    // ForeignKeyDefinition objects matched the database FK relationship metadata.
                     //
                     // At this point in the code, DAB now has the database resolved FK metadata and can determine whether
                     // 1. configResolvedFkDefinition matches a database fk definition -> isn't added to the list of

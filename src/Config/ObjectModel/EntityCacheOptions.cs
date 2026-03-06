@@ -34,10 +34,11 @@ public record EntityCacheOptions
 
     /// <summary>
     /// Whether the cache should be used for the entity.
-    /// When null, indicates the user did not explicitly set this property, and the entity
-    /// should inherit the runtime-level cache enabled setting.
-    /// Using Enabled.HasValue (rather than a separate UserProvided flag) ensures correct
-    /// behavior regardless of whether the object was created via JsonConstructor or with-expression.
+    /// When null after deserialization, indicates the user did not explicitly set this property,
+    /// and the entity should inherit the runtime-level cache enabled setting.
+    /// After ResolveEntityCacheInheritance runs, this will hold the resolved value
+    /// (inherited from runtime or explicitly set by user). Use UserProvidedEnabledOptions
+    /// to distinguish whether the value was user-provided or inherited.
     /// </summary>
     [JsonPropertyName("enabled")]
     public bool? Enabled { get; init; }
@@ -57,7 +58,15 @@ public record EntityCacheOptions
     [JsonConstructor]
     public EntityCacheOptions(bool? Enabled = null, int? TtlSeconds = null, EntityCacheLevel? Level = null)
     {
-        this.Enabled = Enabled;
+        if (Enabled is not null)
+        {
+            this.Enabled = Enabled;
+            UserProvidedEnabledOptions = true;
+        }
+        else
+        {
+            this.Enabled = null;
+        }
 
         if (TtlSeconds is not null)
         {
@@ -79,6 +88,18 @@ public record EntityCacheOptions
             this.Level = DEFAULT_LEVEL;
         }
     }
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write the enabled
+    /// property and value to the runtime config file.
+    /// When the user doesn't provide the enabled property/value, which signals DAB
+    /// to inherit from the runtime cache setting, the DAB CLI should not write the
+    /// inherited value to a serialized config. This preserves the user's intent to
+    /// inherit rather than explicitly set the value.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(Enabled))]
+    public bool UserProvidedEnabledOptions { get; init; } = false;
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write ttl-seconds
@@ -107,16 +128,4 @@ public record EntityCacheOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(Level))]
     public bool UserProvidedLevelOptions { get; init; } = false;
-
-    /// <summary>
-    /// Flag which informs the JSON serializer whether the user originally provided
-    /// a cache object in the config file or through the CLI. When false, the cache object
-    /// was synthesized by ResolveEntityCacheInheritance to support runtime inheritance
-    /// and should NOT be written back to the serialized config file.
-    /// Defaults to true because EntityCacheOptions created via constructor (JSON deserialization
-    /// or CLI) represent user intent. Only ResolveEntityCacheInheritance sets this to false
-    /// for cache objects synthesized to support inheritance.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    public bool UserProvidedCacheOptions { get; init; } = true;
 }

@@ -45,10 +45,9 @@
           Enabled: true,
           TtlSeconds: 1,
           Level: L1L2,
-          UserProvidedLevelOptions: false,
-          UserProvidedCacheOptions: true
+          UserProvidedLevelOptions: false
         }
       }
     }
   ]
-}
+}}

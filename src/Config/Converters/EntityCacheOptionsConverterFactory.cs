@@ -68,7 +68,7 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new EntityCacheOptions(enabled, ttlSeconds, level) { UserProvidedCacheOptions = true };
+                        return new EntityCacheOptions(enabled, ttlSeconds, level);
                     }
 
                     string? property = reader.GetString();
@@ -121,33 +121,30 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
         }
 
         /// <summary>
-        /// When writing the EntityCacheOptions back to a JSON file, only write the ttl-seconds
-        /// and level properties and values when EntityCacheOptions.Enabled is true.
-        /// This avoids polluting the written JSON file with a property the user most likely
-        /// omitted when writing the original DAB runtime config file.
-        /// This Write operation is only used when a RuntimeConfig object is serialized to JSON.
+        /// When writing the EntityCacheOptions back to a JSON file, only write each sub-property
+        /// when its corresponding UserProvided* flag is true. This avoids polluting the written
+        /// JSON file with properties the user omitted (defaults or inherited values).
+        /// If the user provided a cache object (Entity.Cache is non-null), we always write the
+        /// object — even if it ends up empty ("cache": {}) — because the user explicitly included it.
+        /// Entity.Cache being null means the user never wrote a cache property, and the serializer's
+        /// DefaultIgnoreCondition.WhenWritingNull suppresses the "cache" key entirely.
         /// </summary>
         public override void Write(Utf8JsonWriter writer, EntityCacheOptions value, JsonSerializerOptions options)
         {
-            // If the cache object was not provided by the user (e.g., synthesized by
-            // ResolveEntityCacheInheritance), write null so the serializer's
-            // DefaultIgnoreCondition.WhenWritingNull suppresses the "cache" property entirely.
-            if (value is null || !value.UserProvidedCacheOptions)
+            writer.WriteStartObject();
+
+            if (value?.UserProvidedEnabledOptions is true)
             {
-                writer.WriteNullValue();
-                return;
+                writer.WriteBoolean("enabled", value.Enabled!.Value);
             }
 
-            writer.WriteStartObject();
-            writer.WriteBoolean("enabled", value.Enabled ?? false);
-
-            if (value.UserProvidedTtlOptions is true)
+            if (value?.UserProvidedTtlOptions is true)
             {
                 writer.WritePropertyName("ttl-seconds");
                 JsonSerializer.Serialize(writer, value.TtlSeconds, options);
             }
 
-            if (value.UserProvidedLevelOptions is true)
+            if (value?.UserProvidedLevelOptions is true)
             {
                 writer.WritePropertyName("level");
                 JsonSerializer.Serialize(writer, value.Level, options);

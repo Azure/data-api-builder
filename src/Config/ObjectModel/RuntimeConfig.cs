@@ -559,7 +559,9 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
         }
 
-        if (entityConfig.Cache.UserProvidedTtlOptions)
+        // If entity has explicit cache config with user-provided TTL, use it.
+        // Otherwise fall through to the global default.
+        if (entityConfig.Cache is not null && entityConfig.Cache.UserProvidedTtlOptions)
         {
             return entityConfig.Cache.TtlSeconds.Value;
         }
@@ -595,7 +597,9 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
         }
 
-        if (entityConfig.Cache.UserProvidedLevelOptions)
+        // If entity has explicit cache config with user-provided level, use it.
+        // Otherwise fall through to the global default.
+        if (entityConfig.Cache is not null && entityConfig.Cache.UserProvidedLevelOptions)
         {
             return entityConfig.Cache.Level.Value;
         }
@@ -648,6 +652,8 @@ public record RuntimeConfig
     /// inherits the global runtime cache enabled setting (Runtime.Cache.Enabled).
     /// This ensures Entity.IsCachingEnabled is the single source of truth for whether
     /// an entity has caching enabled, without callers needing to check the global setting.
+    /// The UserProvidedEnabledOptions flag is NOT set on inherited values, so the
+    /// serializer will not write the inherited enabled value back to the config file.
     /// </summary>
     /// <returns>A new RuntimeEntities with inheritance resolved, or the original if no changes needed.</returns>
     private static RuntimeEntities ResolveEntityCacheInheritance(RuntimeEntities entities, RuntimeOptions? runtime)
@@ -661,16 +667,28 @@ public record RuntimeConfig
         {
             Entity entity = kvp.Value;
 
-            // If entity has no cache config at all, and global is enabled, create one inheriting enabled.
-            // If entity has cache config but Enabled is null, inherit the global value.
+            // If entity has no cache config at all, and global is enabled,
+            // set InheritedCachingEnabled so IsCachingEnabled returns true
+            // without synthesizing a fake EntityCacheOptions that would pollute serialized config.
             if (entity.Cache is null && globalCacheEnabled)
             {
-                entity = entity with { Cache = new EntityCacheOptions(Enabled: true) { UserProvidedCacheOptions = false } };
+                entity = entity with { InheritedCachingEnabled = true };
                 anyResolved = true;
             }
-            else if (entity.Cache is not null && !entity.Cache.Enabled.HasValue)
+            else if (entity.Cache is not null && !entity.Cache.UserProvidedEnabledOptions)
             {
-                entity = entity with { Cache = entity.Cache with { Enabled = globalCacheEnabled } };
+                // Entity has a cache object but Enabled was not explicitly set by the user
+                // (e.g., "cache": {} or "cache": { "ttl-seconds": 1 }").
+                // Inherit the global value for runtime use but preserve the flag as false
+                // so the serializer won't write the inherited enabled value back.
+                entity = entity with
+                {
+                    Cache = entity.Cache with
+                    {
+                        Enabled = globalCacheEnabled,
+                        UserProvidedEnabledOptions = false
+                    }
+                };
                 anyResolved = true;
             }
 

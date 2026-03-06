@@ -606,11 +606,38 @@ namespace Azure.DataApiBuilder.Core.Services
                 return new DocumentNode(new List<IDefinitionNode>());
             }
 
+            HashSet<string> seenTypeNames = new();
+
             foreach (string dataSourceName in dataSourceNames)
             {
                 ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 DocumentNode currentNode = ((CosmosSqlMetadataProvider)metadataProvider).GraphQLSchemaRoot;
-                root = root is null ? currentNode : root.WithDefinitions(root.Definitions.Concat(currentNode.Definitions).ToImmutableList());
+                
+                if (root is null)
+                {
+                    root = currentNode;
+                    foreach (IDefinitionNode definition in currentNode.Definitions)
+                    {
+                        if (definition is INamedSyntaxNode namedNode)
+                        {
+                            seenTypeNames.Add(namedNode.Name.Value);
+                        }
+                    }
+                }
+                else
+                {
+                    var newDefinitions = currentNode.Definitions.Where(d =>
+                    {
+                        if (d is INamedSyntaxNode namedNode)
+                        {
+                            return seenTypeNames.Add(namedNode.Name.Value);
+                        }
+
+                        return true;
+                    }).ToList();
+                    
+                    root = root.WithDefinitions(root.Definitions.Concat(newDefinitions).ToImmutableList());
+                }
             }
 
             IEnumerable<ObjectTypeDefinitionNode> objectNodes = root!.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
@@ -647,11 +674,12 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 DataSource ds = runtimeConfig.GetDataSourceFromEntityName(entityName);
+                string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
 
                 switch (ds.DatabaseType)
                 {
                     case DatabaseType.CosmosDB_NoSQL:
-                        cosmosDataSourceNames.Add(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName));
+                        cosmosDataSourceNames.Add(dataSourceName);
                         break;
                     case DatabaseType.MSSQL or DatabaseType.MySQL or DatabaseType.PostgreSQL or DatabaseType.DWSQL:
                         sqlEntities.TryAdd(entityName, entity);

@@ -114,6 +114,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return "ARRAY_CONTAINS";
                 case PredicateOperation.NOT_ARRAY_CONTAINS:
                     return "NOT ARRAY_CONTAINS";
+                case PredicateOperation.ARRAY_SOME:
+                    return "ARRAY_SOME";
+                case PredicateOperation.ARRAY_NONE:
+                    return "ARRAY_NONE";
+                case PredicateOperation.ARRAY_ALL:
+                    return "ARRAY_ALL";
+                case PredicateOperation.ARRAY_ANY:
+                    return "ARRAY_ANY";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }
@@ -136,6 +144,46 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (predicate.Op == PredicateOperation.ARRAY_CONTAINS || predicate.Op == PredicateOperation.NOT_ARRAY_CONTAINS)
                 {
                     predicateString = $" {Build(predicate.Op)} ( {ResolveOperand(predicate.Left)}, {ResolveOperand(predicate.Right)})";
+                }
+                else if (predicate.Op == PredicateOperation.ARRAY_SOME || 
+                         predicate.Op == PredicateOperation.ARRAY_NONE || 
+                         predicate.Op == PredicateOperation.ARRAY_ALL)
+                {
+                    string arrayField = ResolveOperand(predicate.Left);
+                    string elementAlias = $"element_{arrayField.Replace(".", "_").Replace("\"", "")}";
+                    
+                    string nestedPredicateStr;
+                    Predicate? nestedPredicate = predicate.Right?.AsPredicate();
+                    if (nestedPredicate is not null)
+                    {
+                        nestedPredicateStr = Build(nestedPredicate);
+                        nestedPredicateStr = nestedPredicateStr.Replace(arrayField, elementAlias);
+                    }
+                    else
+                    {
+                        nestedPredicateStr = ResolveOperand(predicate.Right).Replace(arrayField, elementAlias);
+                    }
+                    
+                    string query;
+                    if (predicate.Op == PredicateOperation.ARRAY_SOME)
+                    {
+                        query = $"EXISTS(SELECT VALUE 1 FROM {elementAlias} IN {arrayField} WHERE {nestedPredicateStr})";
+                    }
+                    else if (predicate.Op == PredicateOperation.ARRAY_NONE)
+                    {
+                        query = $"NOT EXISTS(SELECT VALUE 1 FROM {elementAlias} IN {arrayField} WHERE {nestedPredicateStr})";
+                    }
+                    else // ARRAY_ALL
+                    {
+                        // All elements match (no element exists that doesn't match)
+                        query = $"NOT EXISTS(SELECT VALUE 1 FROM {elementAlias} IN {arrayField} WHERE NOT ({nestedPredicateStr}))";
+                    }
+
+                    predicateString = $" {query} ";
+                }
+                else if (predicate.Op == PredicateOperation.ARRAY_ANY)
+                {
+                    predicateString = $" ARRAY_LENGTH({ResolveOperand(predicate.Left)}) > 0 ";
                 }
                 else if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
                 {

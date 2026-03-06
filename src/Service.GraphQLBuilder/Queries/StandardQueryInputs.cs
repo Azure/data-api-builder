@@ -47,6 +47,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         private static readonly StringValueNode _endsWithDescription = new("Ends With");
         private static readonly NameNode _in = new("in");
         private static readonly StringValueNode _inDescription = new("In");
+        
+        // List filter operations
+        private static readonly NameNode _some = new("some");
+        private static readonly StringValueNode _someDescription = new("At least one element matches the filter");
+        private static readonly NameNode _none = new("none");
+        private static readonly StringValueNode _noneDescription = new("No elements match the filter");
+        private static readonly NameNode _all = new("all");
+        private static readonly StringValueNode _allDescription = new("All elements match the filter");
+        private static readonly NameNode _any = new("any");
+        private static readonly StringValueNode _anyDescription = new("List is not empty");
 
         private static InputObjectTypeDefinitionNode IdInputType() =>
             CreateSimpleEqualsFilter("IdFilterInput", "Input type for adding ID filters", _id);
@@ -157,6 +167,72 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 ]
             );
 
+        private static InputObjectTypeDefinitionNode CreateListFilter(
+            string name,
+            string description,
+            string elementFilterTypeName,
+            ITypeNode elementScalarType) =>
+            new(
+                location: null,
+                new NameNode(name),
+                new StringValueNode(description),
+                [],
+                [
+                    new(null, _some, _someDescription, new NamedTypeNode(elementFilterTypeName), null, []),
+                    new(null, _none, _noneDescription, new NamedTypeNode(elementFilterTypeName), null, []),
+                    new(null, _all, _allDescription, new NamedTypeNode(elementFilterTypeName), null, []),
+                    new(null, _any, _anyDescription, _boolean, null, []),
+                    new(null, _isNull, _isNullDescription, _boolean, null, []),
+                    // Legacy support - these operations work directly on scalar values
+                    new(null, _eq, _eqDescription, elementScalarType, null, []),
+                    new(null, _contains, _containsDescription, elementScalarType, null, []),
+                    new(null, _notContains, _notContainsDescription, elementScalarType, null, []),
+                    new(null, _startsWith, _startsWithDescription, elementScalarType, null, []),
+                    new(null, _endsWith, _endsWithDescription, elementScalarType, null, []),
+                    new(null, _neq, _neqDescription, elementScalarType, null, []),
+                    new(null, _in, _inDescription, new ListTypeNode(elementScalarType), null, [])
+                ]
+            );
+
+        private static InputObjectTypeDefinitionNode IdListInputType() =>
+            CreateListFilter("IdListFilterInput", "Input type for adding list of ID filters", "IdFilterInput", _id);
+
+        private static InputObjectTypeDefinitionNode BooleanListInputType() =>
+            CreateListFilter("BooleanListFilterInput", "Input type for adding list of Boolean filters", "BooleanFilterInput", _boolean);
+
+        private static InputObjectTypeDefinitionNode ByteListInputType() =>
+            CreateListFilter("ByteListFilterInput", "Input type for adding list of Byte filters", "ByteFilterInput", _byte);
+
+        private static InputObjectTypeDefinitionNode ShortListInputType() =>
+            CreateListFilter("ShortListFilterInput", "Input type for adding list of Short filters", "ShortFilterInput", _short);
+
+        private static InputObjectTypeDefinitionNode IntListInputType() =>
+            CreateListFilter("IntListFilterInput", "Input type for adding list of Int filters", "IntFilterInput", _int);
+
+        private static InputObjectTypeDefinitionNode LongListInputType() =>
+            CreateListFilter("LongListFilterInput", "Input type for adding list of Long filters", "LongFilterInput", _long);
+
+        private static InputObjectTypeDefinitionNode SingleListInputType() =>
+            CreateListFilter("SingleListFilterInput", "Input type for adding list of Single filters", "SingleFilterInput", _single);
+
+        private static InputObjectTypeDefinitionNode FloatListInputType() =>
+            CreateListFilter("FloatListFilterInput", "Input type for adding list of Float filters", "FloatFilterInput", _float);
+
+        private static InputObjectTypeDefinitionNode DecimalListInputType() =>
+            CreateListFilter("DecimalListFilterInput", "Input type for adding list of Decimal filters", "DecimalFilterInput", _decimal);
+
+        private static InputObjectTypeDefinitionNode StringListInputType() =>
+            CreateListFilter("StringListFilterInput", "Input type for adding list of String filters", "StringFilterInput", _string);
+
+        private static InputObjectTypeDefinitionNode DateTimeListInputType() =>
+            CreateListFilter("DateTimeListFilterInput", "Input type for adding list of DateTime filters", "DateTimeFilterInput", _dateTime);
+
+        private static InputObjectTypeDefinitionNode LocalTimeListInputType() =>
+            CreateListFilter("LocalTimeListFilterInput", "Input type for adding list of LocalTime filters", "LocalTimeFilterInput", _localTime);
+
+        private static InputObjectTypeDefinitionNode UuidListInputType() =>
+            CreateListFilter("UuidListFilterInput", "Input type for adding list of Uuid filters", "UuidFilterInput", _uuid);
+
         /// <summary>
         /// Gets a filter input object type by the corresponding scalar type name.
         /// </summary>
@@ -168,6 +244,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         /// </returns>
         public static InputObjectTypeDefinitionNode GetFilterTypeByScalar(string scalarTypeName)
             => _instance._inputMap[scalarTypeName];
+
+        /// <summary>
+        /// Gets a list filter input object type by the corresponding scalar type name.
+        /// </summary>
+        /// <param name="scalarTypeName">
+        /// The scalar type name (of the list element).
+        /// </param>
+        /// <returns>
+        /// The list filter input object type.
+        /// </returns>
+        public static InputObjectTypeDefinitionNode GetListFilterTypeByScalar(string scalarTypeName)
+            => _instance._listInputMap[scalarTypeName];
 
         /// <summary>
         /// Specifies if the given type name is a standard filter input object type.
@@ -183,6 +271,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
         private static readonly StandardQueryInputs _instance = new();
         private readonly Dictionary<string, InputObjectTypeDefinitionNode> _inputMap = [];
+        private readonly Dictionary<string, InputObjectTypeDefinitionNode> _listInputMap = [];
         private readonly HashSet<string> _standardQueryInputNames = [];
 
         private StandardQueryInputs()
@@ -201,10 +290,31 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             AddInputType(ScalarNames.DateTime, DateTimeInputType());
             AddInputType(ScalarNames.ByteArray, ByteArrayInputType());
             AddInputType(ScalarNames.LocalTime, LocalTimeInputType());
+            
+            // Add list filter types
+            AddListInputType(ScalarNames.ID, IdListInputType());
+            AddListInputType(ScalarNames.UUID, UuidListInputType());
+            AddListInputType(ScalarNames.Byte, ByteListInputType());
+            AddListInputType(ScalarNames.Short, ShortListInputType());
+            AddListInputType(ScalarNames.Int, IntListInputType());
+            AddListInputType(ScalarNames.Long, LongListInputType());
+            AddListInputType(SINGLE_TYPE, SingleListInputType());
+            AddListInputType(ScalarNames.Float, FloatListInputType());
+            AddListInputType(ScalarNames.Decimal, DecimalListInputType());
+            AddListInputType(ScalarNames.Boolean, BooleanListInputType());
+            AddListInputType(ScalarNames.String, StringListInputType());
+            AddListInputType(ScalarNames.DateTime, DateTimeListInputType());
+            AddListInputType(ScalarNames.LocalTime, LocalTimeListInputType());
 
             void AddInputType(string inputTypeName, InputObjectTypeDefinitionNode inputType)
             {
                 _inputMap.Add(inputTypeName, inputType);
+                _standardQueryInputNames.Add(inputType.Name.Value);
+            }
+            
+            void AddListInputType(string inputTypeName, InputObjectTypeDefinitionNode inputType)
+            {
+                _listInputMap.Add(inputTypeName, inputType);
                 _standardQueryInputNames.Add(inputType.Name.Value);
             }
         }

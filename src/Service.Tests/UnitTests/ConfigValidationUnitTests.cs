@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
@@ -2131,12 +2132,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             autoentityMap.Add(autoentityName, autoentity);
 
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
             RuntimeConfig runtimeConfig = new(
                 Schema: RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK,
-                DataSource: new(
-                    DatabaseType: DatabaseType.MSSQL,
-                    ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\"),
-                    Options: null),
+                DataSource: dataSource,
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -2147,10 +2148,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             const string CUSTOM_CONFIG = "custom-config.json";
 
-            MockFileSystem fileSystem = new();
-            fileSystem.AddFile(CUSTOM_CONFIG, new MockFileData(runtimeConfig.ToJson()));
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            loader.UpdateConfigFilePath(CUSTOM_CONFIG);
+            File.WriteAllText(CUSTOM_CONFIG, runtimeConfig.ToJson());
+            IFileSystem fileSystem = new FileSystem();
+
+            FileSystemRuntimeConfigLoader loader = new(fileSystem)
+            {
+                RuntimeConfig = runtimeConfig
+            };
 
             RuntimeConfigProvider provider = new(loader);
             Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();

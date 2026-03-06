@@ -2129,7 +2129,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Cache: new(Enabled: true, TtlSeconds: 50)),
                 Permissions: new EntityPermission[] { new("anonymous", new EntityAction[] { entityAction }) });
 
-                autoentityMap.Add(autoentityName, autoentity);
+            autoentityMap.Add(autoentityName, autoentity);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",

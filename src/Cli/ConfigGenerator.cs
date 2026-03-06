@@ -262,7 +262,7 @@ namespace Cli
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
-                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
+                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.True ? true : false),
                     GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
                     Mcp: new(mcpEnabled, mcpPath ?? McpRuntimeOptions.DEFAULT_PATH),
                     Host: new(

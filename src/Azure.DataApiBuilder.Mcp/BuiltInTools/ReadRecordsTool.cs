@@ -151,6 +151,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
                 }
 
+                // Validate it's a table or view
+                if (dbObject.SourceType != EntitySourceType.Table && dbObject.SourceType != EntitySourceType.View)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity '{entityName}' is not a table or view. For stored procedures, use the execute_entity tool instead.", logger);
+                }
+
                 // Authorization check in the existing entity
                 IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
                 IAuthorizationService authorizationService = serviceProvider.GetRequiredService<IAuthorizationService>();

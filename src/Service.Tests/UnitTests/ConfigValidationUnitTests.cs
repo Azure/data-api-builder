@@ -2110,6 +2110,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <returns></returns>
         [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
         public async Task ValidateAutoentitiesConfiguration()
         {
             EntityAction entityAction = new(EntityActionOperation.Read, null, null);

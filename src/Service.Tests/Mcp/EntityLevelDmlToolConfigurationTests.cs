@@ -7,9 +7,12 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.AspNetCore.Http;
@@ -223,20 +226,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // Act
             CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
 
-            // Assert - Should NOT be a source type blocking error (InvalidCreateTarget or InvalidEntity)
+            // Assert - Should NOT be a source type blocking error (InvalidEntity)
             // Other errors like missing metadata are acceptable since we're testing source type validation
             if (result.IsError == true)
             {
-                JsonElement content = await RunToolAsync(tool, arguments, serviceProvider);
+                JsonElement content = ParseResultContent(result);
 
                 if (content.TryGetProperty("error", out JsonElement error) &&
                     error.TryGetProperty("type", out JsonElement errorType))
                 {
                     string errorTypeValue = errorType.GetString() ?? string.Empty;
 
-                    // These error types indicate the tool is blocking based on source type
-                    Assert.AreNotEqual("InvalidCreateTarget", errorTypeValue,
-                        $"{sourceType} entities should not be blocked with InvalidCreateTarget");
+                    // This error type indicates the tool is blocking based on source type
+                    Assert.AreNotEqual("InvalidEntity", errorTypeValue,
+                        $"{sourceType} entities should not be blocked with InvalidEntity");
                 }
             }
         }
@@ -244,6 +247,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         #endregion
 
         #region Helper Methods
+
+        /// <summary>
+        /// Helper method to parse the JSON content from a CallToolResult without re-executing the tool.
+        /// </summary>
+        /// <param name="result">The result from executing an MCP tool.</param>
+        /// <returns>The parsed JsonElement from the result's content.</returns>
+        private static JsonElement ParseResultContent(CallToolResult result)
+        {
+            TextContentBlock firstContent = (TextContentBlock)result.Content[0];
+            return JsonDocument.Parse(firstContent.Text).RootElement;
+        }
 
         /// <summary>
         /// Helper method to execute an MCP tool and return the parsed JsonElement from the result.
@@ -255,8 +269,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         private static async Task<JsonElement> RunToolAsync(IMcpTool tool, JsonDocument arguments, IServiceProvider serviceProvider)
         {
             CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
-            TextContentBlock firstContent = (TextContentBlock)result.Content[0];
-            return JsonDocument.Parse(firstContent.Text).RootElement;
+            return ParseResultContent(result);
         }
 
         /// <summary>
@@ -628,6 +641,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         /// <summary>
         /// Creates a service provider with mocked dependencies for testing MCP tools.
+        /// Includes metadata provider mocks so tests can reach source type validation.
         /// </summary>
         private static IServiceProvider CreateServiceProvider(RuntimeConfig config)
         {
@@ -648,6 +662,54 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Mock<IHttpContextAccessor> mockHttpContextAccessor = new();
             mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
             services.AddSingleton(mockHttpContextAccessor.Object);
+
+            // Add metadata provider mocks so tests can reach source type validation.
+            // This is required for DmlTool_AllowsTablesAndViews to actually test the source type behavior.
+            Mock<ISqlMetadataProvider> mockSqlMetadataProvider = new();
+            Dictionary<string, DatabaseObject> entityToDatabaseObject = new();
+
+            // Add database objects for each entity in the config
+            if (config.Entities != null)
+            {
+                foreach (KeyValuePair<string, Entity> kvp in config.Entities)
+                {
+                    string entityName = kvp.Key;
+                    Entity entity = kvp.Value;
+                    EntitySourceType sourceType = entity.Source.Type ?? EntitySourceType.Table;
+
+                    DatabaseObject dbObject;
+                    if (sourceType == EntitySourceType.View)
+                    {
+                        dbObject = new DatabaseView("dbo", entity.Source.Object)
+                        {
+                            SourceType = EntitySourceType.View
+                        };
+                    }
+                    else if (sourceType == EntitySourceType.StoredProcedure)
+                    {
+                        dbObject = new DatabaseStoredProcedure("dbo", entity.Source.Object)
+                        {
+                            SourceType = EntitySourceType.StoredProcedure
+                        };
+                    }
+                    else
+                    {
+                        dbObject = new DatabaseTable("dbo", entity.Source.Object)
+                        {
+                            SourceType = EntitySourceType.Table
+                        };
+                    }
+
+                    entityToDatabaseObject[entityName] = dbObject;
+                }
+            }
+
+            mockSqlMetadataProvider.Setup(x => x.EntityToDatabaseObject).Returns(entityToDatabaseObject);
+            mockSqlMetadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.MSSQL);
+
+            Mock<IMetadataProviderFactory> mockMetadataProviderFactory = new();
+            mockMetadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(mockSqlMetadataProvider.Object);
+            services.AddSingleton(mockMetadataProviderFactory.Object);
 
             services.AddLogging();
 

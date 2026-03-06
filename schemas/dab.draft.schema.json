@@ -710,11 +710,6 @@
                   "description": "Whether the /embed REST endpoint is enabled. Defaults to false.",
                   "default": false
                 },
-                "path": {
-                  "type": "string",
-                  "description": "The endpoint path. Defaults to '/embed'.",
-                  "default": "/embed"
-                },
                 "roles": {
                   "type": "array",
                   "description": "The roles allowed to access the embedding endpoint. In development mode, defaults to ['anonymous'].",

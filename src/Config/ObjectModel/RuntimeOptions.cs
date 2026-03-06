@@ -32,7 +32,7 @@ public record RuntimeOptions
         RuntimeCacheOptions? Cache = null,
         PaginationOptions? Pagination = null,
         RuntimeHealthCheckConfig? Health = null,
-        EmbeddingsOptions? Embeddings = null)
+        EmbeddingsOptions? Embeddings = null,
         CompressionOptions? Compression = null)
     {
         this.Rest = Rest;

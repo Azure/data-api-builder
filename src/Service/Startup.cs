@@ -420,7 +420,7 @@ namespace Azure.DataApiBuilder.Service
                     {
                         _logger.LogInformation(
                             "Embeddings endpoint enabled at path: {Path}",
-                            embeddingsOptions.EffectiveEndpointPath);
+                            EmbeddingsEndpointOptions.DEFAULT_PATH);
                     }
 
                     if (embeddingsOptions.IsHealthCheckEnabled)

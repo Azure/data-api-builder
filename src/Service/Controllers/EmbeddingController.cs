@@ -22,10 +22,10 @@ using Microsoft.Extensions.Primitives;
 namespace Azure.DataApiBuilder.Service.Controllers;
 
 /// <summary>
-/// Controller to serve embedding requests at the configured endpoint path (default: /embed).
+/// Controller to serve embedding requests at the fixed endpoint path: /embed.
 /// Accepts plain text or JSON input and returns embedding vector as JSON by default,
 /// or as plain text (comma-separated floats) when the client sends Accept: text/plain.
-/// Uses a "embed" route prefix to avoid ambiguous catch-all route conflicts with RestController.
+/// Uses a dedicated "embed" route to avoid conflicts with other API routes.
 /// </summary>
 [ApiController]
 public class EmbeddingController : ControllerBase
@@ -53,13 +53,12 @@ public class EmbeddingController : ControllerBase
     /// Default response is JSON: { "embedding": [...], "dimensions": N }.
     /// Clients may request text/plain via Accept header for comma-separated floats.
     /// </summary>
-    /// <param name="route">The route path after the "embed" prefix.</param>
     /// <returns>Embedding vector as JSON (default) or plain text, or an error response.</returns>
     [HttpPost]
-    [Route("embed/{*route}")]
+    [Route("embed")]
     [Consumes("text/plain", "application/json")]
     [Produces("application/json", "text/plain")]
-    public async Task<IActionResult> PostAsync(string? route)
+    public async Task<IActionResult> PostAsync()
     {
         // Get embeddings configuration
         EmbeddingsOptions? embeddingsOptions = _runtimeConfigProvider.GetConfig()?.Runtime?.Embeddings;
@@ -72,20 +71,6 @@ public class EmbeddingController : ControllerBase
         }
 
         if (endpointOptions is null || !endpointOptions.Enabled)
-        {
-            return NotFound();
-        }
-
-        // Check if the full request path matches the configured endpoint path.
-        // Use Request.Path for comparison since the route prefix "embed" is already
-        // consumed by the route template and not included in the route parameter.
-        string expectedPath = endpointOptions.EffectivePath;
-        if (!expectedPath.StartsWith('/'))
-        {
-            expectedPath = "/" + expectedPath;
-        }
-
-        if (!string.Equals(Request.Path.Value, expectedPath, StringComparison.OrdinalIgnoreCase))
         {
             return NotFound();
         }

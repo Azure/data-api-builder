@@ -159,12 +159,6 @@ public record EmbeddingsOptions
     [JsonIgnore]
     public bool IsEndpointEnabled => Endpoint?.Enabled ?? false;
 
-    /// <summary>
-    /// Gets the effective endpoint path.
-    /// </summary>
-    [JsonIgnore]
-    public string EffectiveEndpointPath => Endpoint?.EffectivePath ?? EmbeddingsEndpointOptions.DEFAULT_PATH;
-
     [JsonConstructor]
     public EmbeddingsOptions(
         EmbeddingProviderType Provider,

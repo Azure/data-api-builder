@@ -1122,7 +1122,6 @@ namespace Cli.Tests
             // Act: Configure embeddings endpoint options
             ConfigureOptions options = new(
                 runtimeEmbeddingsEndpointEnabled: CliBool.True,
-                runtimeEmbeddingsEndpointPath: "/vectorize",
                 runtimeEmbeddingsEndpointRoles: new List<string> { "admin", "reader" },
                 config: TEST_RUNTIME_CONFIG_FILE
             );
@@ -1135,7 +1134,6 @@ namespace Cli.Tests
             Assert.IsNotNull(updatedRuntimeConfig.Runtime?.Embeddings);
             Assert.IsNotNull(updatedRuntimeConfig.Runtime.Embeddings.Endpoint);
             Assert.IsTrue(updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Enabled);
-            Assert.AreEqual("/vectorize", updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Path);
             Assert.IsNotNull(updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Roles);
             CollectionAssert.AreEqual(new[] { "admin", "reader" }, updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Roles);
             // Verify base embeddings settings are preserved
@@ -1216,7 +1214,6 @@ namespace Cli.Tests
             // Act: Configure both endpoint and health options at once
             ConfigureOptions options = new(
                 runtimeEmbeddingsEndpointEnabled: CliBool.True,
-                runtimeEmbeddingsEndpointPath: "/embed-api",
                 runtimeEmbeddingsEndpointRoles: new List<string> { "authenticated" },
                 runtimeEmbeddingsHealthEnabled: CliBool.True,
                 runtimeEmbeddingsHealthThresholdMs: 5000,
@@ -1234,7 +1231,6 @@ namespace Cli.Tests
             Assert.IsNotNull(updatedRuntimeConfig.Runtime?.Embeddings?.Health);
             // Endpoint assertions
             Assert.IsTrue(updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Enabled);
-            Assert.AreEqual("/embed-api", updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Path);
             CollectionAssert.AreEqual(new[] { "authenticated" }, updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Roles);
             // Health assertions
             Assert.IsTrue(updatedRuntimeConfig.Runtime.Embeddings.Health.Enabled);
@@ -1244,11 +1240,11 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Tests that updating endpoint options on a config that already has endpoint and health settings
-        /// preserves the existing health settings and updates only the endpoint.
+        /// Tests that updating endpoint roles on a config that already has endpoint and health settings
+        /// preserves the existing health settings.
         /// </summary>
         [TestMethod]
-        public void TestUpdateExistingEmbeddingsEndpointPreservesHealth()
+        public void TestUpdateExistingEmbeddingsEndpointRolesPreservesHealth()
         {
             // Arrange: Create a config with embeddings that already has endpoint and health
             RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config);
@@ -1262,15 +1258,15 @@ namespace Cli.Tests
                         BaseUrl: "https://myservice.openai.azure.com",
                         ApiKey: "test-api-key",
                         Model: "text-embedding-ada-002",
-                        Endpoint: new EmbeddingsEndpointOptions(enabled: true, path: "/old-path", roles: new[] { "old-role" }),
+                        Endpoint: new EmbeddingsEndpointOptions(enabled: true, roles: new[] { "old-role" }),
                         Health: new EmbeddingsHealthCheckConfig(enabled: true, thresholdMs: 2000, testText: "existing text", expectedDimensions: 512))
                 }
             };
             _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
 
-            // Act: Update only the endpoint path
+            // Act: Update only endpoint roles
             ConfigureOptions options = new(
-                runtimeEmbeddingsEndpointPath: "/new-path",
+                runtimeEmbeddingsEndpointRoles: new List<string> { "new-role" },
                 config: TEST_RUNTIME_CONFIG_FILE
             );
             bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
@@ -1279,11 +1275,10 @@ namespace Cli.Tests
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? updatedRuntimeConfig));
-            // Endpoint: path updated, enabled and roles preserved
+            // Endpoint: enabled preserved, roles updated
             Assert.IsNotNull(updatedRuntimeConfig.Runtime?.Embeddings?.Endpoint);
             Assert.IsTrue(updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Enabled);
-            Assert.AreEqual("/new-path", updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Path);
-            CollectionAssert.AreEqual(new[] { "old-role" }, updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Roles);
+            CollectionAssert.AreEqual(new[] { "new-role" }, updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Roles);
             // Health: fully preserved
             Assert.IsNotNull(updatedRuntimeConfig.Runtime.Embeddings.Health);
             Assert.IsTrue(updatedRuntimeConfig.Runtime.Embeddings.Health.Enabled);
@@ -1358,37 +1353,6 @@ namespace Cli.Tests
             Assert.IsFalse(isSuccess);
         }
 
-        /// <summary>
-        /// Tests that configuring embeddings endpoint with a path containing reserved characters fails validation.
-        /// </summary>
-        [TestMethod]
-        public void TestConfigureEmbeddingsEndpointWithInvalidPathFails()
-        {
-            // Arrange
-            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config);
-            Assert.IsNotNull(config);
-            config = config with
-            {
-                Runtime = config.Runtime! with
-                {
-                    Embeddings = new EmbeddingsOptions(
-                        Provider: EmbeddingProviderType.OpenAI,
-                        BaseUrl: "https://api.openai.com",
-                        ApiKey: "test-api-key")
-                }
-            };
-            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
-
-            // Act: Configure with invalid endpoint path (contains spaces)
-            ConfigureOptions options = new(
-                runtimeEmbeddingsEndpointEnabled: CliBool.True,
-                runtimeEmbeddingsEndpointPath: "/invalid path with spaces",
-                config: TEST_RUNTIME_CONFIG_FILE
-            );
-            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
-
-            // Assert: Should fail
-            Assert.IsFalse(isSuccess);
-        }
+        // Endpoint path is fixed to /embed and no longer configurable via dab configure.
     }
 }

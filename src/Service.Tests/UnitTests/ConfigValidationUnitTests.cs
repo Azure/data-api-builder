@@ -2711,73 +2711,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates that embeddings endpoint path conflicts with REST, GraphQL, or MCP endpoints are detected.
-        /// </summary>
-        [DataTestMethod]
-        [DataRow("/api", "/graphql", "/mcp", "/api", true,
-            "Embeddings endpoint path '/api' conflicts with the REST endpoint path.",
-            DisplayName = "Embeddings endpoint path conflicts with REST path.")]
-        [DataRow("/api", "/graphql", "/mcp", "/graphql", true,
-            "Embeddings endpoint path '/graphql' conflicts with the GraphQL endpoint path.",
-            DisplayName = "Embeddings endpoint path conflicts with GraphQL path.")]
-        [DataRow("/api", "/graphql", "/mcp", "/mcp", true,
-            "Embeddings endpoint path '/mcp' conflicts with the MCP endpoint path.",
-            DisplayName = "Embeddings endpoint path conflicts with MCP path.")]
-        [DataRow("/api", "/graphql", "/mcp", "/embed", false, null,
-            DisplayName = "Embeddings endpoint path does not conflict with any other endpoint.")]
-        [DataRow("/api", "/graphql", "/mcp", "/API", true,
-            "Embeddings endpoint path '/API' conflicts with the REST endpoint path.",
-            DisplayName = "Embeddings endpoint path conflicts with REST path (case insensitive).")]
-        public void ValidateEmbeddingsOptions_EndpointPathConflicts(
-            string restPath,
-            string graphQLPath,
-            string mcpPath,
-            string embeddingsEndpointPath,
-            bool exceptionExpected,
-            string expectedErrorMessage)
-        {
-            EmbeddingsEndpointOptions endpointOptions = new(
-                enabled: true,
-                path: embeddingsEndpointPath,
-                roles: new[] { "anonymous" });
-
-            EmbeddingsOptions embeddingsOptions = new(
-                Provider: EmbeddingProviderType.OpenAI,
-                BaseUrl: "https://api.openai.com",
-                ApiKey: "test-api-key",
-                Enabled: true,
-                Endpoint: endpointOptions);
-
-            RuntimeConfig runtimeConfig = new(
-                Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
-                Runtime: new(
-                    Rest: new(Path: restPath),
-                    GraphQL: new(Path: graphQLPath),
-                    Mcp: new(Path: mcpPath),
-                    Host: new(null, null),
-                    Embeddings: embeddingsOptions
-                ),
-                Entities: new(new Dictionary<string, Entity>())
-            );
-
-            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-
-            if (exceptionExpected)
-            {
-                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
-                    () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
-                Assert.AreEqual(expectedErrorMessage, ex.Message);
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            }
-            else
-            {
-                configValidator.ValidateEmbeddingsOptions(runtimeConfig);
-            }
-        }
-
-        /// <summary>
         /// Validates that in production mode, roles must be explicitly configured for the embeddings endpoint.
         /// In development mode, roles default to ["anonymous"] and are not required.
         /// </summary>
@@ -2799,7 +2732,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             EmbeddingsEndpointOptions endpointOptions = new(
                 enabled: true,
-                path: "/embed",
                 roles: roles);
 
             EmbeddingsOptions embeddingsOptions = new(
@@ -3003,7 +2935,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             EmbeddingsEndpointOptions endpointOptions = new(
                 enabled: true,
-                path: "/embed",
                 roles: new[] { "authenticated" });
 
             EmbeddingsHealthCheckConfig healthConfig = new(
@@ -3040,50 +2971,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Should not throw any exception.
             configValidator.ValidateEmbeddingsOptions(runtimeConfig);
-        }
-
-        /// <summary>
-        /// Validates that when the embeddings endpoint path contains reserved characters,
-        /// an appropriate validation error is thrown.
-        /// </summary>
-        [DataTestMethod]
-        [DataRow("/embed?query", DisplayName = "Embeddings endpoint path with reserved character ?.")]
-        [DataRow("/embed#section", DisplayName = "Embeddings endpoint path with reserved character #.")]
-        [DataRow("/embed[0]", DisplayName = "Embeddings endpoint path with reserved character [.")]
-        public void ValidateEmbeddingsOptions_EndpointPathWithReservedCharacters(string endpointPath)
-        {
-            EmbeddingsEndpointOptions endpointOptions = new(
-                enabled: true,
-                path: endpointPath,
-                roles: new[] { "anonymous" });
-
-            EmbeddingsOptions embeddingsOptions = new(
-                Provider: EmbeddingProviderType.OpenAI,
-                BaseUrl: "https://api.openai.com",
-                ApiKey: "test-api-key",
-                Enabled: true,
-                Endpoint: endpointOptions);
-
-            RuntimeConfig runtimeConfig = new(
-                Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(),
-                    Host: new(null, null),
-                    Embeddings: embeddingsOptions
-                ),
-                Entities: new(new Dictionary<string, Entity>())
-            );
-
-            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
-                () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
-            Assert.IsTrue(ex.Message.StartsWith("Embeddings endpoint path"));
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
         /// <summary>
@@ -3134,7 +3021,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             EmbeddingsEndpointOptions endpointOptions = new(
                 enabled: false,
-                path: "/api",
                 roles: null);
 
             EmbeddingsOptions embeddingsOptions = new(

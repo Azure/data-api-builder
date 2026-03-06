@@ -33,18 +33,6 @@ public record EmbeddingsEndpointOptions
     public bool UserProvidedEnabled { get; init; }
 
     /// <summary>
-    /// The endpoint path. Defaults to "/embed".
-    /// </summary>
-    [JsonPropertyName("path")]
-    public string? Path { get; init; }
-
-    /// <summary>
-    /// Flag indicating whether the user provided a custom path.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    public bool UserProvidedPath { get; init; }
-
-    /// <summary>
     /// The roles allowed to access the embedding endpoint.
     /// In development mode, defaults to ["anonymous"].
     /// In production mode, must be explicitly configured.
@@ -57,12 +45,6 @@ public record EmbeddingsEndpointOptions
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public bool UserProvidedRoles { get; init; }
-
-    /// <summary>
-    /// Gets the effective path, using default if not specified.
-    /// </summary>
-    [JsonIgnore]
-    public string EffectivePath => Path ?? DEFAULT_PATH;
 
     /// <summary>
     /// Gets the effective roles based on host mode.
@@ -114,7 +96,6 @@ public record EmbeddingsEndpointOptions
     [JsonConstructor]
     public EmbeddingsEndpointOptions(
         bool? enabled = null,
-        string? path = null,
         string[]? roles = null)
     {
         if (enabled.HasValue)
@@ -125,12 +106,6 @@ public record EmbeddingsEndpointOptions
         else
         {
             Enabled = false;
-        }
-
-        if (path is not null)
-        {
-            Path = path;
-            UserProvidedPath = true;
         }
 
         if (roles is not null)

@@ -154,14 +154,13 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
             }
 
             bool? enabled = null;
-            string? path = null;
             string[]? roles = null;
 
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
                 {
-                    return new EmbeddingsEndpointOptions(enabled: enabled, path: path, roles: roles);
+                    return new EmbeddingsEndpointOptions(enabled: enabled, roles: roles);
                 }
 
                 if (reader.TokenType != JsonTokenType.PropertyName)
@@ -176,9 +175,6 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                 {
                     case "enabled":
                         enabled = JsonSerializer.Deserialize<bool?>(ref reader, options);
-                        break;
-                    case "path":
-                        path = JsonSerializer.Deserialize<string>(ref reader, options);
                         break;
                     case "roles":
                         roles = JsonSerializer.Deserialize<string[]>(ref reader, options);

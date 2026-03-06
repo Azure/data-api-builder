@@ -83,7 +83,6 @@ namespace Cli.Commands
             int? runtimeEmbeddingsDimensions = null,
             int? runtimeEmbeddingsTimeoutMs = null,
             CliBool? runtimeEmbeddingsEndpointEnabled = null,
-            string? runtimeEmbeddingsEndpointPath = null,
             IEnumerable<string>? runtimeEmbeddingsEndpointRoles = null,
             CliBool? runtimeEmbeddingsHealthEnabled = null,
             int? runtimeEmbeddingsHealthThresholdMs = null,
@@ -164,7 +163,6 @@ namespace Cli.Commands
             RuntimeEmbeddingsTimeoutMs = runtimeEmbeddingsTimeoutMs;
             // Embeddings Endpoint
             RuntimeEmbeddingsEndpointEnabled = runtimeEmbeddingsEndpointEnabled;
-            RuntimeEmbeddingsEndpointPath = runtimeEmbeddingsEndpointPath;
             RuntimeEmbeddingsEndpointRoles = runtimeEmbeddingsEndpointRoles;
             // Embeddings Health
             RuntimeEmbeddingsHealthEnabled = runtimeEmbeddingsHealthEnabled;
@@ -352,9 +350,6 @@ namespace Cli.Commands
 
         [Option("runtime.embeddings.endpoint.enabled", Required = false, HelpText = "Enable/disable the endpoint for embeddings. Default: false")]
         public CliBool? RuntimeEmbeddingsEndpointEnabled { get; }
-
-        [Option("runtime.embeddings.endpoint.path", Required = false, HelpText = "Configure the endpoint path for embeddings. Default: /embed")]
-        public string? RuntimeEmbeddingsEndpointPath { get; }
 
         [Option("runtime.embeddings.endpoint.roles", Required = false, Separator = ',', HelpText = "Configure the roles allowed to access the embedding endpoint. Comma-separated list. In development mode defaults to 'anonymous'.")]
         public IEnumerable<string>? RuntimeEmbeddingsEndpointRoles { get; }

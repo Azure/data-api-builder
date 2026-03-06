@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
 
 /// <summary>
 /// Unit tests for EmbeddingController.
-/// Covers route matching, authorization, request body parsing,
+/// Covers fixed route metadata, authorization, request body parsing,
 /// service availability, error handling, and integration with IEmbeddingService.
 /// </summary>
 [TestClass]
@@ -45,115 +45,44 @@ public class EmbeddingControllerTests
         _mockEmbeddingService.Setup(s => s.IsEnabled).Returns(true);
     }
 
-    #region Route Matching and Path Validation Tests
+    #region Fixed Endpoint Route Tests
 
     /// <summary>
-    /// Tests that the controller returns NotFound when the request path does not match
-    /// the configured endpoint path.
+    /// Tests that the controller action is bound to the fixed "embed" route.
     /// </summary>
     [TestMethod]
-    public async Task PostAsync_ReturnsNotFound_WhenPathDoesNotMatch()
+    public void PostAsync_UsesFixedEmbedRoute()
     {
-        // Arrange
-        EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
-            requestPath: "/wrong-path",
-            hostMode: HostMode.Development);
+        RouteAttribute? routeAttribute = typeof(EmbeddingController)
+            .GetMethod(nameof(EmbeddingController.PostAsync))?
+            .GetCustomAttributes(typeof(RouteAttribute), inherit: false)
+            .Cast<RouteAttribute>()
+            .SingleOrDefault();
 
-        // Act
-        IActionResult result = await controller.PostAsync(route: null);
-
-        // Assert
-        Assert.IsInstanceOfType(result, typeof(NotFoundResult));
+        Assert.IsNotNull(routeAttribute);
+        Assert.AreEqual("embed", routeAttribute.Template);
     }
 
     /// <summary>
-    /// Tests that the controller returns success when the request path matches
-    /// the configured endpoint path exactly.
+    /// Tests that embedding requests succeed at the fixed endpoint route.
     /// </summary>
     [TestMethod]
-    public async Task PostAsync_MatchesConfiguredPath()
+    public async Task PostAsync_SucceedsAtFixedEndpointRoute()
     {
         // Arrange
         float[] embedding = new[] { 0.1f, 0.2f, 0.3f };
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/vectorize",
-            requestPath: "/vectorize",
-            requestBody: "test text",
-            hostMode: HostMode.Development);
-
-        // Act
-        IActionResult result = await controller.PostAsync(route: null);
-
-        // Assert
-        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
-    }
-
-    /// <summary>
-    /// Tests that the controller uses the default path "/embed" when no custom path is configured.
-    /// </summary>
-    [TestMethod]
-    public async Task PostAsync_UsesDefaultPath_WhenNotConfigured()
-    {
-        // Arrange
-        float[] embedding = new[] { 0.1f, 0.2f };
-        SetupSuccessfulEmbedding(embedding);
-
-        EmbeddingController controller = CreateController(
-            endpointPath: null, // will use default "/embed"
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
-    }
-
-    /// <summary>
-    /// Tests that path matching is case-insensitive.
-    /// </summary>
-    [TestMethod]
-    public async Task PostAsync_PathMatchingIsCaseInsensitive()
-    {
-        // Arrange
-        float[] embedding = new[] { 0.1f, 0.2f };
-        SetupSuccessfulEmbedding(embedding);
-
-        EmbeddingController controller = CreateController(
-            endpointPath: "/Embed",
-            requestPath: "/embed",
-            requestBody: "test text",
-            hostMode: HostMode.Development);
-
-        // Act
-        IActionResult result = await controller.PostAsync(route: null);
-
-        // Assert
-        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
-    }
-
-    /// <summary>
-    /// Tests that path matching with a custom multi-segment path works correctly.
-    /// </summary>
-    [TestMethod]
-    public async Task PostAsync_ReturnsNotFound_WhenCustomPathDoesNotMatch()
-    {
-        // Arrange
-        EmbeddingController controller = CreateController(
-            endpointPath: "/api/embed",
-            requestPath: "/embed",
-            hostMode: HostMode.Development);
-
-        // Act
-        IActionResult result = await controller.PostAsync(route: null);
-
-        // Assert
-        Assert.IsInstanceOfType(result, typeof(NotFoundResult));
     }
 
     #endregion
@@ -172,7 +101,7 @@ public class EmbeddingControllerTests
         controller.ControllerContext = CreateControllerContext("/embed");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(NotFoundResult));
@@ -198,7 +127,7 @@ public class EmbeddingControllerTests
         controller.ControllerContext = CreateControllerContext("/embed");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(NotFoundResult));
@@ -223,7 +152,7 @@ public class EmbeddingControllerTests
         controller.ControllerContext = CreateControllerContext("/embed");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(NotFoundResult));
@@ -248,7 +177,7 @@ public class EmbeddingControllerTests
         controller.ControllerContext = CreateControllerContext("/embed");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(NotFoundResult));
@@ -266,14 +195,13 @@ public class EmbeddingControllerTests
     {
         // Arrange
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             hostMode: HostMode.Development,
             embeddingService: null,
             useClassMockService: false);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ObjectResult));
@@ -292,14 +220,13 @@ public class EmbeddingControllerTests
         disabledService.Setup(s => s.IsEnabled).Returns(false);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             hostMode: HostMode.Development,
             embeddingService: disabledService.Object,
             useClassMockService: false);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ObjectResult));
@@ -323,7 +250,6 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development,
@@ -331,7 +257,7 @@ public class EmbeddingControllerTests
             clientRole: null);    // no role header — defaults to anonymous
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
@@ -345,7 +271,6 @@ public class EmbeddingControllerTests
     {
         // Arrange
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Production,
@@ -353,7 +278,7 @@ public class EmbeddingControllerTests
             clientRole: null);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ObjectResult));
@@ -369,7 +294,6 @@ public class EmbeddingControllerTests
     {
         // Arrange
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Production,
@@ -377,7 +301,7 @@ public class EmbeddingControllerTests
             clientRole: "reader");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ObjectResult));
@@ -396,7 +320,6 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Production,
@@ -404,7 +327,7 @@ public class EmbeddingControllerTests
             clientRole: "admin");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
@@ -421,7 +344,6 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Production,
@@ -429,7 +351,7 @@ public class EmbeddingControllerTests
             clientRole: "ADMIN");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
@@ -446,7 +368,6 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Production,
@@ -454,7 +375,7 @@ public class EmbeddingControllerTests
             clientRole: null); // no role header
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
@@ -475,7 +396,6 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "Hello, world!",
             contentType: "text/plain",
@@ -483,7 +403,7 @@ public class EmbeddingControllerTests
             acceptHeader: "text/plain");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ContentResult));
@@ -506,7 +426,6 @@ public class EmbeddingControllerTests
             .ReturnsAsync(new EmbeddingResult(true, embedding));
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "\"Hello, world!\"", // JSON-wrapped string
             contentType: "application/json",
@@ -514,7 +433,7 @@ public class EmbeddingControllerTests
             acceptHeader: "text/plain");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ContentResult));
@@ -541,7 +460,6 @@ public class EmbeddingControllerTests
             .ReturnsAsync(new EmbeddingResult(true, embedding));
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: rawBody,
             contentType: "application/json",
@@ -549,7 +467,7 @@ public class EmbeddingControllerTests
             acceptHeader: "text/plain");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ContentResult));
@@ -574,13 +492,12 @@ public class EmbeddingControllerTests
     {
         // Arrange
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "",
             hostMode: HostMode.Development);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
@@ -594,13 +511,12 @@ public class EmbeddingControllerTests
     {
         // Arrange
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "   \n\t  ",
             hostMode: HostMode.Development);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
@@ -622,13 +538,12 @@ public class EmbeddingControllerTests
             .ReturnsAsync(new EmbeddingResult(false, null, "Provider returned an error."));
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ObjectResult));
@@ -649,13 +564,12 @@ public class EmbeddingControllerTests
             .ReturnsAsync(new EmbeddingResult(true, null));
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ObjectResult));
@@ -675,13 +589,12 @@ public class EmbeddingControllerTests
             .ReturnsAsync(new EmbeddingResult(true, Array.Empty<float>()));
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ObjectResult));
@@ -701,13 +614,12 @@ public class EmbeddingControllerTests
             .ReturnsAsync(new EmbeddingResult(false, null, null));
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ObjectResult));
@@ -734,13 +646,12 @@ public class EmbeddingControllerTests
             .ReturnsAsync(new EmbeddingResult(true, embedding));
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: inputText,
             hostMode: HostMode.Development);
 
         // Act
-        await controller.PostAsync(route: null);
+        await controller.PostAsync();
 
         // Assert
         _mockEmbeddingService.Verify(
@@ -760,14 +671,13 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test",
             hostMode: HostMode.Development,
             acceptHeader: "text/plain");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ContentResult));
@@ -783,7 +693,6 @@ public class EmbeddingControllerTests
     {
         // Arrange
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development,
@@ -791,7 +700,7 @@ public class EmbeddingControllerTests
             useClassMockService: false);
 
         // Act
-        await controller.PostAsync(route: null);
+        await controller.PostAsync();
 
         // Assert
         _mockEmbeddingService.Verify(
@@ -807,13 +716,12 @@ public class EmbeddingControllerTests
     {
         // Arrange
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "",
             hostMode: HostMode.Development);
 
         // Act
-        await controller.PostAsync(route: null);
+        await controller.PostAsync();
 
         // Assert
         _mockEmbeddingService.Verify(
@@ -829,7 +737,6 @@ public class EmbeddingControllerTests
     {
         // Arrange
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Production,
@@ -837,7 +744,7 @@ public class EmbeddingControllerTests
             clientRole: "unauthorized-role");
 
         // Act
-        await controller.PostAsync(route: null);
+        await controller.PostAsync();
 
         // Assert
         _mockEmbeddingService.Verify(
@@ -860,7 +767,6 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test",
             hostMode: HostMode.Development,
@@ -868,7 +774,7 @@ public class EmbeddingControllerTests
             clientRole: null);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert - should succeed because dev mode defaults to anonymous access
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
@@ -882,7 +788,6 @@ public class EmbeddingControllerTests
     {
         // Arrange
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test",
             hostMode: HostMode.Production,
@@ -890,7 +795,7 @@ public class EmbeddingControllerTests
             clientRole: null);
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ObjectResult));
@@ -909,7 +814,6 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test",
             hostMode: HostMode.Production,
@@ -917,7 +821,7 @@ public class EmbeddingControllerTests
             clientRole: "authenticated");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
@@ -938,14 +842,13 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development,
             acceptHeader: null); // no Accept header
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
@@ -967,14 +870,13 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development,
             acceptHeader: "application/json");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
@@ -996,14 +898,13 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development,
             acceptHeader: "text/plain");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(ContentResult));
@@ -1023,14 +924,13 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development,
             acceptHeader: "text/plain, application/json");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert - JSON wins when both are present
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
@@ -1049,14 +949,13 @@ public class EmbeddingControllerTests
         SetupSuccessfulEmbedding(embedding);
 
         EmbeddingController controller = CreateController(
-            endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Development,
             acceptHeader: "*/*");
 
         // Act
-        IActionResult result = await controller.PostAsync(route: null);
+        IActionResult result = await controller.PostAsync();
 
         // Assert - wildcard does not trigger text/plain
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
@@ -1080,7 +979,6 @@ public class EmbeddingControllerTests
     /// Creates an EmbeddingController with all the necessary mocks wired up.
     /// </summary>
     private EmbeddingController CreateController(
-        string? endpointPath,
         string requestPath,
         string? requestBody = null,
         string? contentType = "text/plain",
@@ -1093,7 +991,6 @@ public class EmbeddingControllerTests
     {
         EmbeddingsEndpointOptions endpointOptions = new(
             enabled: true,
-            path: endpointPath,
             roles: endpointRoles);
 
         EmbeddingsOptions embeddingsOptions = new(

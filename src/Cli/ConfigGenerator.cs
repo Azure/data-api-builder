@@ -954,7 +954,7 @@ namespace Cli
                 }
             }
 
-            // Embeddings: Provider, Endpoint, ApiKey, Model, ApiVersion, Dimensions, TimeoutMs, Enabled, Endpoint.*, Health.*
+            // Embeddings: Provider, Endpoint, ApiKey, Model, ApiVersion, Dimensions, TimeoutMs, Enabled, Endpoint.Enabled/Roles, Health.*
             if (options.RuntimeEmbeddingsProvider is not null ||
                 options.RuntimeEmbeddingsBaseUrl is not null ||
                 options.RuntimeEmbeddingsApiKey is not null ||
@@ -964,7 +964,6 @@ namespace Cli
                 options.RuntimeEmbeddingsTimeoutMs is not null ||
                 options.RuntimeEmbeddingsEnabled is not null ||
                 options.RuntimeEmbeddingsEndpointEnabled is not null ||
-                options.RuntimeEmbeddingsEndpointPath is not null ||
                 options.RuntimeEmbeddingsEndpointRoles is not null ||
                 options.RuntimeEmbeddingsHealthEnabled is not null ||
                 options.RuntimeEmbeddingsHealthThresholdMs is not null ||
@@ -1702,7 +1701,6 @@ namespace Cli
                 EmbeddingsEndpointOptions? endpointOptions = null;
 
                 if (options.RuntimeEmbeddingsEndpointEnabled is not null ||
-                    options.RuntimeEmbeddingsEndpointPath is not null ||
                     options.RuntimeEmbeddingsEndpointRoles is not null ||
                     existingEndpoint is not null)
                 {
@@ -1710,26 +1708,12 @@ namespace Cli
                         ? options.RuntimeEmbeddingsEndpointEnabled.Value == CliBool.True
                         : existingEndpoint?.Enabled;
 
-                    string? endpointPath = options.RuntimeEmbeddingsEndpointPath ?? existingEndpoint?.Path;
-
                     string[]? endpointRoles = options.RuntimeEmbeddingsEndpointRoles is not null && options.RuntimeEmbeddingsEndpointRoles.Any()
                         ? options.RuntimeEmbeddingsEndpointRoles.ToArray()
                         : existingEndpoint?.Roles;
 
-                    // Validate endpoint path if provided
-                    if (endpointPath is not null)
-                    {
-                        bool pathValid = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: endpointPath, out string pathExceptionMessage);
-                        if (!pathValid)
-                        {
-                            _logger.LogError("Failed to configure embeddings endpoint path as '{endpointPath}'. Error details: {exceptionMessage}", endpointPath, pathExceptionMessage);
-                            return false;
-                        }
-                    }
-
                     endpointOptions = new EmbeddingsEndpointOptions(
                         enabled: endpointEnabled,
-                        path: endpointPath,
                         roles: endpointRoles);
 
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Endpoint configuration.");

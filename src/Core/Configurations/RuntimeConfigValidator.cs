@@ -237,7 +237,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
     /// <summary>
     /// Validates the embeddings configuration options when embeddings are configured.
-    /// Checks required fields, URL format, numeric constraints, and endpoint path conflicts.
+    /// Checks required fields, URL format, numeric constraints, and endpoint constraints.
     /// </summary>
     public void ValidateEmbeddingsOptions(RuntimeConfig runtimeConfig)
     {
@@ -311,41 +311,6 @@ public class RuntimeConfigValidator : IConfigValidator
         // Validate endpoint configuration.
         if (embeddingsOptions.Endpoint is not null && embeddingsOptions.Endpoint.Enabled)
         {
-            string endpointPath = embeddingsOptions.Endpoint.EffectivePath;
-
-            if (!RuntimeConfigValidatorUtil.TryValidateUriComponent(endpointPath, out string exceptionMsgSuffix))
-            {
-                HandleOrRecordException(new DataApiBuilderException(
-                    message: $"Embeddings endpoint path {exceptionMsgSuffix}",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-            }
-
-            // Check for path conflicts with REST, GraphQL, and MCP endpoints.
-            if (runtimeConfig.IsRestEnabled && string.Equals(endpointPath, runtimeConfig.RestPath, StringComparison.OrdinalIgnoreCase))
-            {
-                HandleOrRecordException(new DataApiBuilderException(
-                    message: $"Embeddings endpoint path '{endpointPath}' conflicts with the REST endpoint path.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-            }
-
-            if (runtimeConfig.IsGraphQLEnabled && string.Equals(endpointPath, runtimeConfig.GraphQLPath, StringComparison.OrdinalIgnoreCase))
-            {
-                HandleOrRecordException(new DataApiBuilderException(
-                    message: $"Embeddings endpoint path '{endpointPath}' conflicts with the GraphQL endpoint path.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-            }
-
-            if (runtimeConfig.IsMcpEnabled && string.Equals(endpointPath, runtimeConfig.McpPath, StringComparison.OrdinalIgnoreCase))
-            {
-                HandleOrRecordException(new DataApiBuilderException(
-                    message: $"Embeddings endpoint path '{endpointPath}' conflicts with the MCP endpoint path.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-            }
-
             // In production mode, roles must be explicitly configured.
             if (!runtimeConfig.IsDevelopmentMode() &&
                 (embeddingsOptions.Endpoint.Roles is null || embeddingsOptions.Endpoint.Roles.Length == 0))

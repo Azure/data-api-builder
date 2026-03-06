@@ -658,7 +658,7 @@ public record RuntimeConfig
     /// <returns>A new RuntimeEntities with inheritance resolved, or the original if no changes needed.</returns>
     private static RuntimeEntities ResolveEntityCacheInheritance(RuntimeEntities entities, RuntimeOptions? runtime)
     {
-        bool globalCacheEnabled = runtime?.Cache?.Enabled is true;
+        bool isGlobalCacheEnabled = runtime?.Cache?.Enabled is true;
 
         Dictionary<string, Entity> resolvedEntities = new();
         bool anyResolved = false;
@@ -670,7 +670,7 @@ public record RuntimeConfig
             // If entity has no cache config at all, and global is enabled,
             // set InheritedCachingEnabled so IsCachingEnabled returns true
             // without synthesizing a fake EntityCacheOptions that would pollute serialized config.
-            if (entity.Cache is null && globalCacheEnabled)
+            if (entity.Cache is null && isGlobalCacheEnabled)
             {
                 entity = entity with { InheritedCachingEnabled = true };
                 anyResolved = true;
@@ -685,7 +685,7 @@ public record RuntimeConfig
                 {
                     Cache = entity.Cache with
                     {
-                        Enabled = globalCacheEnabled,
+                        Enabled = isGlobalCacheEnabled,
                         UserProvidedEnabledOptions = false
                     }
                 };

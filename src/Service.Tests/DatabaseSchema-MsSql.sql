@@ -82,7 +82,7 @@ CREATE TABLE publishers_mm(
 
 CREATE TABLE books(
     id int IDENTITY(5001, 1) PRIMARY KEY,
-    title varchar(max) NOT NULL,
+    title varchar(30) NOT NULL,
     publisher_id int NOT NULL
 );
 
@@ -514,7 +514,7 @@ SET IDENTITY_INSERT books ON
 INSERT INTO books(id, title, publisher_id)
 VALUES (1, 'Awesome book', 1234),
 (2, 'Also Awesome book', 1234),
-(3, 'Great wall of china explained', 2345),
+(3, 'Great wall of china explained]', 2345),
 (4, 'US history in a nutshell', 2345),
 (5, 'Chernobyl Diaries', 2323),
 (6, 'The Palace Door', 2324),

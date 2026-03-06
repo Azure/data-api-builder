@@ -10,11 +10,12 @@ namespace Azure.DataApiBuilder.Core.Models;
 /// </summary>
 public class DbConnectionParam
 {
-    public DbConnectionParam(object? value, DbType? dbType = null, SqlDbType? sqlDbType = null)
+    public DbConnectionParam(object? value, DbType? dbType = null, SqlDbType? sqlDbType = null, int? length = null)
     {
         Value = value;
         DbType = dbType;
         SqlDbType = sqlDbType;
+        Length = length;
     }
 
     /// <summary>
@@ -31,4 +32,6 @@ public class DbConnectionParam
     // This is being made nullable
     // because it's not populated for DB's other than MSSQL.
     public SqlDbType? SqlDbType { get; set; }
+
+    public int? Length { get; set; }
 }

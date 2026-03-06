@@ -362,7 +362,17 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
 
             // Parse distinct
-            bool distinct = root.TryGetProperty("distinct", out JsonElement distinctElement) && distinctElement.GetBoolean();
+            bool distinct = false;
+            if (root.TryGetProperty("distinct", out JsonElement distinctElement))
+            {
+                if (distinctElement.ValueKind != JsonValueKind.True && distinctElement.ValueKind != JsonValueKind.False)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                        $"Argument 'distinct' must be a boolean (true or false). Got: '{distinctElement}'.", logger);
+                }
+
+                distinct = distinctElement.GetBoolean();
+            }
 
             if (isCountStar && distinct)
             {
@@ -405,14 +415,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             // Parse after
             string? after = root.TryGetProperty("after", out JsonElement afterElement) ? afterElement.GetString() : null;
 
-            // Parse groupby
+            // Parse groupby (deduplicate to avoid redundant GROUP BY columns)
             List<string> groupby = new();
+            HashSet<string> seenGroupby = new(StringComparer.OrdinalIgnoreCase);
             if (root.TryGetProperty("groupby", out JsonElement groupbyElement) && groupbyElement.ValueKind == JsonValueKind.Array)
             {
                 foreach (JsonElement groupbyItem in groupbyElement.EnumerateArray())
                 {
                     string? groupbyFieldName = groupbyItem.GetString();
-                    if (!string.IsNullOrWhiteSpace(groupbyFieldName))
+                    if (!string.IsNullOrWhiteSpace(groupbyFieldName) && seenGroupby.Add(groupbyFieldName))
                     {
                         groupby.Add(groupbyFieldName);
                     }
@@ -547,6 +558,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         }
 
                         havingInValues.Add(item.GetDouble());
+                    }
+
+                    if (havingInValues.Count == 0)
+                    {
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                            "The 'having.in' array must contain at least one numeric value.", logger);
                     }
                 }
                 else
@@ -712,7 +729,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (!args.IsCountStar)
             {
-                sqlMetadataProvider.TryGetBackingColumn(entityName, args.Field, out string? backingField);
+                if (!sqlMetadataProvider.TryGetBackingColumn(entityName, args.Field, out string? backingField))
+                {
+                    error = McpErrorHelpers.FieldNotFound(toolName, entityName, args.Field, "field", logger);
+                    return null;
+                }
+
                 return backingField;
             }
 

@@ -2110,7 +2110,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        [TestCategory(TestCategory.MSSQL)]
         public async Task ValidateAutoentitiesConfiguration()
         {
             EntityAction entityAction = new(EntityActionOperation.Read, null, null);
@@ -2133,7 +2132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             autoentityMap.Add(autoentityName, autoentity);
 
             RuntimeConfig runtimeConfig = new(
-                Schema: "UnitTestSchema",
+                Schema: RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK,
                 DataSource: new(
                     DatabaseType: DatabaseType.MSSQL,
                     ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\"),

@@ -2903,7 +2903,7 @@ type Moon {
                         }";
                     string queryName = "stock_by_pk";
 
-                    ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken, AuthorizationResolver.ROLE_AUTHENTICATED);
+                    await ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken, AuthorizationResolver.ROLE_AUTHENTICATED);
                 }
                 finally
                 {
@@ -3225,7 +3225,7 @@ type Moon {
         /// <param name="query">GraphQL query/mutation text</param>
         /// <param name="queryName">GraphQL query/mutation name</param>
         /// <param name="authToken">Auth token for the graphQL request</param>
-        private static async void ValidateMutationSucceededAtDbLayer(TestServer server, HttpClient client, string query, string queryName, string authToken, string clientRoleHeader)
+        private static async Task ValidateMutationSucceededAtDbLayer(TestServer server, HttpClient client, string query, string queryName, string authToken, string clientRoleHeader)
         {
             JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                                                 client,
@@ -3237,6 +3237,7 @@ type Moon {
                                                 clientRoleHeader: clientRoleHeader);
 
             Assert.IsNotNull(queryResponse);
+            Assert.AreNotEqual(JsonValueKind.Null, queryResponse.ValueKind, "Expected a JSON object response but received null.");
             Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
         }
 
@@ -3681,8 +3682,11 @@ type Moon {
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
 
+            Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
+            RuntimeConfigValidator validator = new(provider, fileSystem, loggerValidator.Object);
+
             DataApiBuilderException exception =
-                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
+                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, validator, fileSystem));
             Assert.AreEqual("Circular reference detected in the provided GraphQL schema for entity 'Character'.", exception.Message);
             Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
@@ -3732,9 +3736,11 @@ type Planet @model(name:""PlanetAlias"") {
             });
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
+            Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
+            RuntimeConfigValidator validator = new(provider, fileSystem, loggerValidator.Object);
 
             DataApiBuilderException exception =
-                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
+                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, validator, fileSystem));
             Assert.AreEqual("The entity 'Character' was not found in the runtime config.", exception.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, exception.SubStatusCode);
@@ -5288,6 +5294,12 @@ type Planet @model(name:""PlanetAlias"") {
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="useEntities"></param>
+        /// <param name="expectedEntityCount"></param>
+        /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
         [DataRow(true, 4, DisplayName = "Test Autoentities with additional entities")]
@@ -5431,6 +5443,194 @@ type Planet @model(name:""PlanetAlias"") {
                 Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");
                 Assert.IsFalse(graphqlResponseBody.Contains("errors"), "GraphQL response should not contain errors");
                 Assert.IsTrue(graphqlResponseBody.Contains(expectedResponseFragment));
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="singular"></param>
+        /// <param name="plural"></param>
+        /// <param name="path"></param>
+        /// <param name="exceptionMessage"></param>
+        /// <returns></returns>
+        [TestCategory(TestCategory.MSSQL)]
+        [DataTestMethod]
+        [DataRow("publishers", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", "Entity with name 'publishers' already exists. Cannot create new entity from autoentity pattern with definition-name 'PublisherAutoEntity'.", DisplayName = "Autoentities fail due to entity name")]
+        [DataRow("UniquePublisher", "publishers", "uniquePluralPublishers", "/unique/publisher", "Entity publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql singular type")]
+        [DataRow("UniquePublisher", "uniqueSingularPublisher", "publishers", "/unique/publisher", "Entity publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql plural type")]
+        [DataRow("UniquePublisher", "uniqueSingularPublisher", "uniquePluralPublishers", "/publishers", "The rest path: publishers specified for entity: publishers is already used by another entity.", DisplayName = "Autoentities fail due to rest path")]
+        public async Task ValidateAutoentityGenerationConflicts(string entityName, string singular, string plural, string path, string exceptionMessage)
+        {
+            // Arrange
+            Entity publisherEntity = new(
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Fields: null,
+                Rest: new(Path: path),
+                GraphQL: new(Singular: singular, Plural: plural),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { entityName, publisherEntity }
+            };
+
+            Dictionary<string, Autoentity> autoentityMap = new()
+            {
+                {
+                    "PublisherAutoEntity", new Autoentity(
+                        Patterns: new AutoentityPatterns(
+                            Include: new[] { "%publishers%" },
+                            Exclude: null,
+                            Name: null
+                        ),
+                        Template: new AutoentityTemplate(
+                            Rest: new EntityRestOptions(
+                                Enabled: true),
+                            GraphQL: new EntityGraphQLOptions(
+                                Singular: string.Empty,
+                                Plural: string.Empty,
+                                Enabled: true
+                            ),
+                            Health: null,
+                            Cache: null
+                        ),
+                        Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) }
+                    )
+                }
+            };
+
+            // Create DataSource for MSSQL connection
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            // Build complete runtime configuration with autoentities
+            RuntimeConfig configuration = new(
+                Schema: "TestAutoentitiesSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: false),
+                    Host: new(
+                        Mode: HostMode.Development,
+                        Cors: null,
+                        Authentication: new Config.ObjectModel.AuthenticationOptions(
+                            Provider: nameof(EasyAuthType.StaticWebApps),
+                            Jwt: null
+                        )
+                    )
+                ),
+                Entities: new(entityMap),
+                Autoentities: new RuntimeAutoentities(autoentityMap)
+            );
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            IFileSystem fileSystem = new FileSystem();
+
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem)
+            {
+                RuntimeConfig = configuration
+            };
+
+            RuntimeConfigProvider configProvider = new(configLoader);
+
+            RuntimeConfigValidator configValidator = new(configProvider, fileSystem, loggerFactory.CreateLogger<RuntimeConfigValidator>());
+
+            QueryManagerFactory queryManagerFactory = new(
+                runtimeConfigProvider: configProvider,
+                logger: loggerFactory.CreateLogger<IQueryExecutor>(),
+                contextAccessor: null!,
+                handler: null);
+
+            MsSqlMetadataProvider provider = new(
+                configProvider,
+                configValidator,
+                queryManagerFactory,
+                loggerFactory.CreateLogger<MsSqlMetadataProvider>(),
+                configLoader.RuntimeConfig.DefaultDataSourceName,
+                false);
+
+            try
+            {
+                await provider.InitializeAsync();
+                Assert.Fail("It is expected for DAB to fail due to entities not containing unique parameters.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(exceptionMessage, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Validates the autoentity configuration inside the configuration file and also
+        /// validates that entities created from the autoentity configuration do not generate
+        /// duplicate entities and paths for REST and GraphQL.
+        /// </summary>
+        /// <returns></returns>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod]
+        public async Task ValidateAutoentitiesConfiguration()
+        {
+            EntityAction entityAction = new(EntityActionOperation.Read, null, null);
+
+            Dictionary<string, Autoentity> autoentityMap = new();
+            string autoentityName = "AutoentityA";
+
+            Autoentity autoentity = new(
+                Patterns: new AutoentityPatterns(
+                    Include: new[] { "%patterns%" },
+                    Exclude: new[] { "%books%" },
+                    Name: "{object}"),
+                Template: new AutoentityTemplate(
+                    Rest: new(Enabled: false),
+                    GraphQL: new(Enabled: true, Singular: string.Empty, Plural: string.Empty),
+                    Health: new(enabled: true),
+                    Cache: new(Enabled: true, TtlSeconds: 50)),
+                Permissions: new EntityPermission[] { new("anonymous", new EntityAction[] { entityAction }) });
+
+            autoentityMap.Add(autoentityName, autoentity);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "TestAutoentitiesSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null, HostMode.Development)),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new(autoentityMap));
+
+            const string CUSTOM_CONFIG = "autoentities-validation-config.json";
+
+            File.WriteAllText(CUSTOM_CONFIG, runtimeConfig.ToJson());
+            IFileSystem fileSystem = new FileSystem();
+
+            FileSystemRuntimeConfigLoader loader = new(fileSystem)
+            {
+                RuntimeConfig = runtimeConfig
+            };
+
+            RuntimeConfigProvider provider = new(loader);
+            Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+
+            try
+            {
+                await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail(ex.Message);
             }
         }
 

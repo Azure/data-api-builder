@@ -380,7 +380,6 @@ public record RuntimeConfig
         }
 
         SetupDataSourcesUsed();
-
     }
 
     /// <summary>
@@ -536,12 +535,13 @@ public record RuntimeConfig
 
     /// <summary>
     /// Returns the ttl-seconds value for a given entity.
-    /// If the property is not set, returns the global default value set in the runtime config.
-    /// If the global default value is not set, the default value is used (5 seconds).
+    /// If the entity explicitly sets ttl-seconds, that value is used.
+    /// Otherwise, falls back to the global cache TTL setting.
+    /// Callers are responsible for checking whether caching is enabled before using the result.
     /// </summary>
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Number of seconds (ttl) that a cache entry should be valid before cache eviction.</returns>
-    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided.</exception>
     public virtual int GetEntityCacheEntryTtl(string entityName)
     {
         if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
@@ -552,31 +552,23 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
 
-        if (!entityConfig.IsCachingEnabled)
-        {
-            throw new DataApiBuilderException(
-                message: $"{entityName} does not have caching enabled.",
-                statusCode: HttpStatusCode.BadRequest,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
-        }
-
-        if (entityConfig.Cache.UserProvidedTtlOptions)
+        if (entityConfig.Cache is not null && entityConfig.Cache.UserProvidedTtlOptions)
         {
             return entityConfig.Cache.TtlSeconds.Value;
         }
-        else
-        {
-            return GlobalCacheEntryTtl();
-        }
+
+        return GlobalCacheEntryTtl();
     }
 
     /// <summary>
     /// Returns the cache level value for a given entity.
-    /// If the property is not set, returns the default (L1L2) for a given entity.
+    /// If the entity explicitly sets level, that value is used.
+    /// Otherwise, falls back to the global cache level or the default.
+    /// Callers are responsible for checking whether caching is enabled before using the result.
     /// </summary>
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Cache level that a cache entry should be stored in.</returns>
-    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided.</exception>
     public virtual EntityCacheLevel GetEntityCacheEntryLevel(string entityName)
     {
         if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
@@ -587,22 +579,12 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
 
-        if (!entityConfig.IsCachingEnabled)
-        {
-            throw new DataApiBuilderException(
-                message: $"{entityName} does not have caching enabled.",
-                statusCode: HttpStatusCode.BadRequest,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
-        }
-
-        if (entityConfig.Cache.UserProvidedLevelOptions)
+        if (entityConfig.Cache is not null && entityConfig.Cache.UserProvidedLevelOptions)
         {
             return entityConfig.Cache.Level.Value;
         }
-        else
-        {
-            return EntityCacheLevel.L1L2;
-        }
+
+        return EntityCacheOptions.DEFAULT_LEVEL;
     }
 
     /// <summary>

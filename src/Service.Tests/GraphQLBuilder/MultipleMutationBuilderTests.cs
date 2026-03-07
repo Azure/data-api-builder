@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
@@ -392,6 +393,16 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             Mock<IFusionCache> cache = new();
             DabCacheService cacheService = new(cache: cache.Object, logger: null, httpContextAccessor: httpContextAccessor.Object);
 
+            // Setup runtime config validator
+            IFileSystem fileSystem = new FileSystem();
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem)
+            {
+                RuntimeConfig = _runtimeConfig
+            };
+            RuntimeConfigProvider configProvider = new(configLoader);
+            Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
+            RuntimeConfigValidator configValidator = new(configProvider, fileSystem, loggerValidator.Object);
+
             // Setup query manager factory.
             IAbstractQueryManagerFactory queryManagerfactory = new QueryManagerFactory(
                 runtimeConfigProvider: runtimeConfigProvider,
@@ -402,6 +413,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             // Setup metadata provider factory.
             IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(
                 runtimeConfigProvider: runtimeConfigProvider,
+                runtimeConfigValidator: configValidator,
                 queryManagerFactory: queryManagerfactory,
                 logger: metadatProviderLogger.Object,
                 fileSystem: null,

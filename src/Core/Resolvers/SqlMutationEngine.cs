@@ -541,6 +541,84 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
                     {
+                        // When no primary key values are provided (empty PrimaryKeyValuePairs),
+                        // there is no row to look up for update. The upsert degenerates to a
+                        // pure INSERT - execute it via the insert path so the mutation engine
+                        // generates a correct INSERT statement instead of an UPDATE with an
+                        // empty WHERE clause (WHERE 1 = 1) that would match every row.
+                        if (context.PrimaryKeyValuePairs.Count == 0)
+                        {
+                            DbResultSetRow? insertResultRow = null;
+
+                            try
+                            {
+                                using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
+                                {
+                                    insertResultRow =
+                                        await PerformMutationOperation(
+                                            entityName: context.EntityName,
+                                            operationType: EntityActionOperation.Insert,
+                                            parameters: parameters,
+                                            sqlMetadataProvider: sqlMetadataProvider);
+
+                                    if (insertResultRow is null)
+                                    {
+                                        throw new DataApiBuilderException(
+                                            message: "An unexpected error occurred while trying to execute the query.",
+                                            statusCode: HttpStatusCode.InternalServerError,
+                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                                    }
+
+                                    if (insertResultRow.Columns.Count == 0)
+                                    {
+                                        throw new DataApiBuilderException(
+                                            message: "Could not insert row with given values.",
+                                            statusCode: HttpStatusCode.Forbidden,
+                                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+                                    }
+
+                                    if (isDatabasePolicyDefinedForReadAction)
+                                    {
+                                        FindRequestContext findRequestContext = ConstructFindRequestContext(context, insertResultRow, roleName, sqlMetadataProvider);
+                                        IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
+                                        selectOperationResponse = await queryEngine.ExecuteAsync(findRequestContext);
+                                    }
+
+                                    transactionScope.Complete();
+                                }
+                            }
+                            catch (TransactionException)
+                            {
+                                throw _dabExceptionWithTransactionErrorMessage;
+                            }
+
+                            if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
+                            {
+                                IEnumerable<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
+                                foreach (string columnInResponse in insertResultRow.Columns.Keys)
+                                {
+                                    if (!allowedExposedColumns.Contains(columnInResponse))
+                                    {
+                                        insertResultRow.Columns.Remove(columnInResponse);
+                                    }
+                                }
+                            }
+
+                            string pkRouteForLocationHeader = isReadPermissionConfiguredForRole
+                                ? SqlResponseHelpers.ConstructPrimaryKeyRoute(context, insertResultRow.Columns, sqlMetadataProvider)
+                                : string.Empty;
+
+                            return SqlResponseHelpers.ConstructCreatedResultResponse(
+                                insertResultRow.Columns,
+                                selectOperationResponse,
+                                pkRouteForLocationHeader,
+                                isReadPermissionConfiguredForRole,
+                                isDatabasePolicyDefinedForReadAction,
+                                context.OperationType,
+                                GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()),
+                                GetHttpContext());
+                        }
+
                         DbResultSet? upsertOperationResult;
                         DbResultSetRow upsertOperationResultSetRow;
 

@@ -3177,7 +3177,7 @@ namespace Cli
             string connectionString = runtimeConfig.DataSource.ConnectionString;
             if (string.IsNullOrWhiteSpace(connectionString))
             {
-                _logger.LogError("Connection string is missing or empty.");
+                _logger.LogError("Connection string is missing or empty in config file.");
                 return false;
             }
 

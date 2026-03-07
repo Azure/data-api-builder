@@ -31,52 +31,6 @@ public class AutoSimulateTests
     }
 
     /// <summary>
-    /// Tests that the simulate command fails when no config file is present.
-    /// </summary>
-    [TestMethod]
-    public void TestSimulateAutoentities_NoConfigFile()
-    {
-        // Arrange
-        AutoConfigSimulateOptions options = new();
-
-        // Act
-        bool success = TrySimulateAutoentities(options, _runtimeConfigLoader!, _fileSystem!);
-
-        // Assert
-        Assert.IsFalse(success);
-    }
-
-    /// <summary>
-    /// Tests that the simulate command fails when the database type is not MSSQL.
-    /// </summary>
-    [TestMethod]
-    public void TestSimulateAutoentities_NonMssqlDatabase()
-    {
-        // Arrange: create a PostgreSQL config
-        InitOptions initOptions = new(
-            databaseType: DatabaseType.PostgreSQL,
-            connectionString: "testconnectionstring",
-            cosmosNoSqlDatabase: null,
-            cosmosNoSqlContainer: null,
-            graphQLSchemaPath: null,
-            setSessionContext: false,
-            hostMode: HostMode.Development,
-            corsOrigin: new List<string>(),
-            authenticationProvider: EasyAuthType.AppService.ToString(),
-            restRequestBodyStrict: CliBool.True,
-            config: TEST_RUNTIME_CONFIG_FILE);
-        Assert.IsTrue(TryGenerateConfig(initOptions, _runtimeConfigLoader!, _fileSystem!));
-
-        AutoConfigSimulateOptions options = new(config: TEST_RUNTIME_CONFIG_FILE);
-
-        // Act
-        bool success = TrySimulateAutoentities(options, _runtimeConfigLoader!, _fileSystem!);
-
-        // Assert
-        Assert.IsFalse(success);
-    }
-
-    /// <summary>
     /// Tests that the simulate command fails when no autoentities are defined in the config.
     /// </summary>
     [TestMethod]

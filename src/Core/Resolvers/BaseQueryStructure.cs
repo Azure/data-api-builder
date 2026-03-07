@@ -115,8 +115,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
         /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
-        /// <param name="paramName"> The name of the parameter - backing column name for table/views or parameter name for stored procedures.</param>
-        public virtual string MakeDbConnectionParam(object? value, string? paramName = null)
+        /// <param name="paramName">The name of the parameter - backing column name for tables/views or parameter name for stored procedures.</param>
+        /// <param name="lengthOverride">
+        /// When true, overrides the configured length for the parameter (for example, when callers
+        /// construct LIKE predicates that append wildcard or escape characters to the value and need
+        /// to avoid truncation by using an unbounded length).
+        /// </param>
+        public virtual string MakeDbConnectionParam(object? value, string? paramName = null, bool lengthOverride = false)
         {
             string encodedParamName = GetEncodedParamName(Counter.Next());
             if (!string.IsNullOrEmpty(paramName))
@@ -124,7 +129,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 Parameters.Add(encodedParamName,
                     new(value,
                         dbType: GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName),
-                        sqlDbType: GetUnderlyingSourceDefinition().GetSqlDbTypeForParam(paramName)));
+                        sqlDbType: GetUnderlyingSourceDefinition().GetSqlDbTypeForParam(paramName),
+                        length: lengthOverride ? -1 : GetUnderlyingSourceDefinition().GetLengthForParam(paramName)));
             }
             else
             {

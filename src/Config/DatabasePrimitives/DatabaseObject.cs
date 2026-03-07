@@ -235,6 +235,24 @@ public class SourceDefinition
 
         return null;
     }
+
+    /// <summary>
+    /// Method to get the Length for:
+    /// 1. column for table/view,
+    /// 2. parameter for stored procedure.
+    /// </summary>
+    /// <param name="paramName">The parameter whose Length is to be determined.
+    /// For table/view paramName refers to the backingColumnName if aliases are used.</param>
+    /// <returns>Length for the parameter.</returns>
+    public virtual int? GetLengthForParam(string paramName)
+    {
+        if (Columns.TryGetValue(paramName, out ColumnDefinition? columnDefinition))
+        {
+            return columnDefinition.Length;
+        }
+
+        return null;
+    }
 }
 
 /// <summary>
@@ -270,6 +288,7 @@ public class ColumnDefinition
     public bool IsNullable { get; set; }
     public bool IsReadOnly { get; set; }
     public object? DefaultValue { get; set; }
+    public int? Length { get; set; }
 
     public ColumnDefinition() { }
 

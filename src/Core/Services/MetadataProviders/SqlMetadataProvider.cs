@@ -1471,7 +1471,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     SystemType = (Type)columnInfoFromAdapter["DataType"],
                     // An auto-increment column is also considered as a read-only column. For other types of read-only columns,
                     // the flag is populated later via PopulateColumnDefinitionsWithReadOnlyFlag() method.
-                    IsReadOnly = (bool)columnInfoFromAdapter["IsAutoIncrement"]
+                    IsReadOnly = (bool)columnInfoFromAdapter["IsAutoIncrement"],
+                    Length = GetDatabaseType() is DatabaseType.MSSQL ? (int)columnInfoFromAdapter["ColumnSize"] : null
                 };
 
                 // Tests may try to add the same column simultaneously
@@ -2118,10 +2119,10 @@ namespace Azure.DataApiBuilder.Core.Services
                     // 1. Book->Publisher [Referencing: Book, Referenced: Publisher] ** this is the correct foreign key definition
                     // 2. Publisher->Book [Referencing: Publisher, Referenced: Book]
                     // This is because DAB pre-processes runtime config relationships prior to processing database FK definitions.
-                    // Consequently, because Book->Publisher is an N:1 relationship, DAB optimistically generated ForeignKeyDefinition
-                    // objects for both source->target and target->source entities because DAB doesn't yet have db metadata
-                    // to confirm which combination of optimistically generated ForeignKeyDefinition objects matched
-                    // the database FK relationship metadata.
+                    // Consequently, because Book->Publisher is an N:1 relationship, DAB optimistically generated
+                    // ForeignKeyDefinition objects for both source->target and target->source entities because DAB
+                    // doesn't yet have db metadata to confirm which combination of optimistically generated
+                    // ForeignKeyDefinition objects matched the database FK relationship metadata.
                     //
                     // At this point in the code, DAB now has the database resolved FK metadata and can determine whether
                     // 1. configResolvedFkDefinition matches a database fk definition -> isn't added to the list of

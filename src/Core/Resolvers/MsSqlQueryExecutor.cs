@@ -624,8 +624,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     SqlParameter parameter = cmd.CreateParameter();
                     parameter.ParameterName = parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
+                    parameter.Value = parameterEntry.Value?.Value ?? DBNull.Value;
+
                     PopulateDbTypeForParameter(parameterEntry, parameter);
+
+                    // If a length is explicitly provided, apply it for sized types.
+                    // When length is not provided, rely on SqlClient's default inference.
+                    if (parameterEntry.Value?.Length is int length &&
+                        parameter.SqlDbType is SqlDbType.VarChar or SqlDbType.NVarChar
+                            or SqlDbType.Char or SqlDbType.NChar
+                            or SqlDbType.VarBinary or SqlDbType.Binary)
+                    {
+                        parameter.Size = length;
+                    }
+
                     cmd.Parameters.Add(parameter);
                 }
             }

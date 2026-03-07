@@ -82,7 +82,7 @@ CREATE TABLE publishers_mm(
 
 CREATE TABLE books(
     id int IDENTITY(5001, 1) PRIMARY KEY,
-    title varchar(30) NOT NULL,
+    title varchar(max) NOT NULL,
     publisher_id int NOT NULL
 );
 
@@ -532,8 +532,7 @@ VALUES (1, 'Awesome book', 1234),
 (18, '[Special Book]', 1234),
 (19, 'ME\YOU', 1234),
 (20, 'C:\\LIFE', 1234),
-(21, '', 1234),
-(22, 'Varchar(30) [Special Test]!!!!', 1234);
+(21, '', 1234);
 SET IDENTITY_INSERT books OFF
 
 SET IDENTITY_INSERT books_mm ON

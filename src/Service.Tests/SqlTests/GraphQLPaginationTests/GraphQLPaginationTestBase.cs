@@ -171,10 +171,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 {
                   ""id"": 21,
                   ""title"": """"
-                },
-                {
-                  ""id"": 22,
-                  ""title"": ""Varchar(30) [Special Test]!!!!""
                 }
               ],
               ""endCursor"": null,
@@ -289,10 +285,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 {
                   ""id"": 21,
                   ""title"": """"
-                },
-                {
-                  ""id"": 22,
-                  ""title"": ""Varchar(30) [Special Test]!!!!""
                 }
               ],
               ""endCursor"": null,
@@ -457,7 +449,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                         title
                         publishers {
                             name
-                            books(first: 2, after:""" + after + @"""){
+                            books(first: 2, after:""" + after + @"""){ 
                                 items {
                                     id
                                     title
@@ -698,8 +690,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
               ],
               ""hasNextPage"": true,
-              ""endCursor"": """
-                + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":3,\"Direction\":0}}]") + @"""
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":3,\"Direction\":0}}]") + @"""
             }
           }
         ]

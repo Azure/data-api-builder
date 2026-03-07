@@ -792,7 +792,8 @@ public record RuntimeConfig
                 return (LogLevel)value;
             }
 
-            Runtime!.Telemetry!.LoggerLevel!.TryGetValue("default", out value);
+            value = Runtime!.Telemetry!.LoggerLevel!
+                .FirstOrDefault(kvp => kvp.Key.Equals("default", StringComparison.OrdinalIgnoreCase)).Value;
             if (value is not null)
             {
                 return (LogLevel)value;

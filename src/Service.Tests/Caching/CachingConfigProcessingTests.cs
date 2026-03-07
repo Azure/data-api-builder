@@ -416,4 +416,48 @@ public class CachingConfigProcessingTests
 
         return expectedRuntimeConfigJson.ToString();
     }
+
+    /// <summary>
+    /// Regression test: Validates that when global runtime cache is enabled but entity cache is disabled,
+    /// GetEntityCacheEntryTtl and GetEntityCacheEntryLevel do not throw and return sensible defaults.
+    /// Previously, these methods threw a DataApiBuilderException (BadRequest/NotSupported) when the entity
+    /// had caching disabled, which caused 400 errors for valid requests when the global cache was enabled.
+    /// These methods are now pure accessors that always return a value regardless of cache enablement.
+    /// </summary>
+    /// <param name="globalCacheConfig">Global cache configuration JSON fragment.</param>
+    /// <param name="entityCacheConfig">Entity cache configuration JSON fragment.</param>
+    /// <param name="expectedTtl">Expected TTL returned by GetEntityCacheEntryTtl.</param>
+    /// <param name="expectedLevel">Expected cache level returned by GetEntityCacheEntryLevel.</param>
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", @",""cache"": { ""enabled"": false }", 10, EntityCacheLevel.L1L2, DisplayName = "Global cache enabled with custom TTL, entity cache disabled: entity returns global TTL and default level.")]
+    [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": { ""enabled"": false }", 5, EntityCacheLevel.L1L2, DisplayName = "Global cache enabled with default TTL, entity cache disabled: entity returns default TTL and default level.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", @"", 10, EntityCacheLevel.L1L2, DisplayName = "Global cache enabled with custom TTL, entity cache omitted: entity returns global TTL and default level.")]
+    [DataTestMethod]
+    public void GetEntityCacheEntryTtlAndLevel_DoesNotThrow_WhenRuntimeCacheEnabledAndEntityCacheDisabled(
+        string globalCacheConfig,
+        string entityCacheConfig,
+        int expectedTtl,
+        EntityCacheLevel expectedLevel)
+    {
+        // Arrange
+        string fullConfig = GetRawConfigJson(globalCacheConfig: globalCacheConfig, entityCacheConfig: entityCacheConfig);
+        RuntimeConfigLoader.TryParseConfig(
+            json: fullConfig,
+            out RuntimeConfig? config,
+            replacementSettings: null);
+
+        Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
+        Assert.IsTrue(config.IsCachingEnabled, message: "Global caching should be enabled for this test scenario.");
+
+        Entity entity = config.Entities.First().Value;
+        Assert.IsFalse(entity.IsCachingEnabled, message: "Entity caching should be disabled for this test scenario.");
+
+        string entityName = config.Entities.First().Key;
+
+        // Act & Assert - These calls must not throw.
+        int actualTtl = config.GetEntityCacheEntryTtl(entityName);
+        EntityCacheLevel actualLevel = config.GetEntityCacheEntryLevel(entityName);
+
+        Assert.AreEqual(expected: expectedTtl, actual: actualTtl, message: "GetEntityCacheEntryTtl should return the global/default TTL when entity cache is disabled.");
+        Assert.AreEqual(expected: expectedLevel, actual: actualLevel, message: "GetEntityCacheEntryLevel should return the default level when entity cache is disabled.");
+    }
 }

@@ -26,6 +26,11 @@ namespace Cli
             // Load environment variables from .env file if present.
             DotNetEnv.Env.Load();
 
+            // Pre-parse the --LogLevel option so the CLI logger respects the
+            // requested log level before the engine starts.
+            LogLevel cliLogLevel = PreParseLogLevel(args);
+            Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli(cliLogLevel);
+
             // Logger setup and configuration
             ILoggerFactory loggerFactory = Utils.LoggerFactoryForCli;
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
@@ -39,6 +44,39 @@ namespace Cli
             FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null, isCliLoader: true);
 
             return Execute(args, cliLogger, fileSystem, loader);
+        }
+
+        /// <summary>
+        /// Pre-parses the --LogLevel option from the command-line arguments before full
+        /// argument parsing, so the CLI logger can be configured at the right minimum
+        /// level for CLI phase messages (version info, config loading, etc.).
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        /// <returns>The parsed LogLevel, or Information if not specified or invalid.</returns>
+        internal static LogLevel PreParseLogLevel(string[] args)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                // Handle --LogLevel None (two separate tokens)
+                if (args[i].Equals("--LogLevel", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    if (Enum.TryParse(args[i + 1], ignoreCase: true, out LogLevel level))
+                    {
+                        return level;
+                    }
+                }
+                // Handle --LogLevel=None (single token with equals sign)
+                else if (args[i].StartsWith("--LogLevel=", StringComparison.OrdinalIgnoreCase))
+                {
+                    string value = args[i]["--LogLevel=".Length..];
+                    if (Enum.TryParse(value, ignoreCase: true, out LogLevel level))
+                    {
+                        return level;
+                    }
+                }
+            }
+
+            return LogLevel.Information;
         }
 
         /// <summary>

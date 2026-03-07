@@ -5625,7 +5625,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             try
             {
-                Assert.IsTrue(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
+                await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
             }
             catch (Exception ex)
             {

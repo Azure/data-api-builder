@@ -5610,7 +5610,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Entities: new(new Dictionary<string, Entity>()),
                 Autoentities: new(autoentityMap));
 
-            const string CUSTOM_CONFIG = "custom-config.json";
+            const string CUSTOM_CONFIG = "autoentities-validation-config.json";
 
             File.WriteAllText(CUSTOM_CONFIG, runtimeConfig.ToJson());
             IFileSystem fileSystem = new FileSystem();

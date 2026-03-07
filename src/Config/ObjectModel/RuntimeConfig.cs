@@ -373,7 +373,9 @@ public record RuntimeConfig
         }
 
         SetupDataSourcesUsed();
-
+        // Resolve entity cache inheritance: if an entity's Cache.Enabled is null,
+        // inherit the global runtime cache enabled setting.
+        this.Entities = ResolveEntityCacheInheritance(this.Entities, this.Runtime);
     }
 
     /// <summary>
@@ -404,6 +406,10 @@ public record RuntimeConfig
         this.AzureKeyVault = AzureKeyVault;
 
         SetupDataSourcesUsed();
+
+        // Resolve entity cache inheritance: if an entity's Cache.Enabled is null,
+        // inherit the global runtime cache enabled setting.
+        this.Entities = ResolveEntityCacheInheritance(this.Entities, this.Runtime);
     }
 
     /// <summary>
@@ -553,7 +559,9 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
         }
 
-        if (entityConfig.Cache.UserProvidedTtlOptions)
+        // If entity has explicit cache config with user-provided TTL, use it.
+        // Otherwise fall through to the global default.
+        if (entityConfig.Cache is not null && entityConfig.Cache.UserProvidedTtlOptions)
         {
             return entityConfig.Cache.TtlSeconds.Value;
         }
@@ -565,7 +573,8 @@ public record RuntimeConfig
 
     /// <summary>
     /// Returns the cache level value for a given entity.
-    /// If the property is not set, returns the default (L1L2) for a given entity.
+    /// If the entity explicitly sets level, that value is used.
+    /// Otherwise, the level is inferred from the runtime cache Level2 configuration.
     /// </summary>
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Cache level that a cache entry should be stored in.</returns>
@@ -588,14 +597,41 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
         }
 
-        if (entityConfig.Cache.UserProvidedLevelOptions)
+        // If entity has explicit cache config with user-provided level, use it.
+        // Otherwise fall through to the global default.
+        if (entityConfig.Cache is not null && entityConfig.Cache.UserProvidedLevelOptions)
         {
             return entityConfig.Cache.Level.Value;
         }
-        else
-        {
-            return EntityCacheLevel.L1L2;
-        }
+
+        // GlobalCacheEntryLevel() returns null when runtime cache is not configured.
+        // Callers guard with IsCachingEnabled, so null is not expected here,
+        // but we default to L1 defensively.
+        return GlobalCacheEntryLevel() ?? EntityCacheLevel.L1;
+    }
+
+    /// <summary>
+    /// Returns the ttl-seconds value for the global cache entry.
+    /// If no value is explicitly set, returns the global default value.
+    /// </summary>
+    /// <returns>Number of seconds a cache entry should be valid before cache eviction.</returns>
+    public virtual int GlobalCacheEntryTtl()
+    {
+        return Runtime is not null && Runtime.IsCachingEnabled && Runtime.Cache.UserProvidedTtlOptions
+            ? Runtime.Cache.TtlSeconds.Value
+            : EntityCacheOptions.DEFAULT_TTL_SECONDS;
+    }
+
+    /// <summary>
+    /// Returns the cache level value for the global cache entry.
+    /// The level is inferred from the runtime cache Level2 configuration:
+    /// if Level2 is enabled, the level is L1L2; otherwise L1.
+    /// Returns null when runtime cache is not configured.
+    /// </summary>
+    /// <returns>Cache level for a cache entry, or null if runtime cache is not configured.</returns>
+    public virtual EntityCacheLevel? GlobalCacheEntryLevel()
+    {
+        return Runtime?.Cache?.InferredLevel;
     }
 
     /// <summary>
@@ -611,15 +647,55 @@ public record RuntimeConfig
     }
 
     /// <summary>
-    /// Returns the ttl-seconds value for the global cache entry.
-    /// If no value is explicitly set, returns the global default value.
+    /// Resolves entity cache inheritance at construction time.
+    /// For each entity whose Cache.Enabled is null (not explicitly set by the user),
+    /// inherits the global runtime cache enabled setting (Runtime.Cache.Enabled).
+    /// This ensures Entity.IsCachingEnabled is the single source of truth for whether
+    /// an entity has caching enabled, without callers needing to check the global setting.
+    /// The UserProvidedEnabledOptions flag is NOT set on inherited values, so the
+    /// serializer will not write the inherited enabled value back to the config file.
     /// </summary>
-    /// <returns>Number of seconds a cache entry should be valid before cache eviction.</returns>
-    public int GlobalCacheEntryTtl()
+    /// <returns>A new RuntimeEntities with inheritance resolved, or the original if no changes needed.</returns>
+    private static RuntimeEntities ResolveEntityCacheInheritance(RuntimeEntities entities, RuntimeOptions? runtime)
     {
-        return Runtime is not null && Runtime.IsCachingEnabled && Runtime.Cache.UserProvidedTtlOptions
-            ? Runtime.Cache.TtlSeconds.Value
-            : EntityCacheOptions.DEFAULT_TTL_SECONDS;
+        bool isGlobalCacheEnabled = runtime?.Cache?.Enabled is true;
+
+        Dictionary<string, Entity> resolvedEntities = new();
+        bool anyResolved = false;
+
+        foreach (KeyValuePair<string, Entity> kvp in entities)
+        {
+            Entity entity = kvp.Value;
+
+            // If entity has no cache config at all, and global is enabled,
+            // set InheritedCachingEnabled so IsCachingEnabled returns true
+            // without synthesizing a fake EntityCacheOptions that would pollute serialized config.
+            if (entity.Cache is null && isGlobalCacheEnabled)
+            {
+                entity = entity with { InheritedCachingEnabled = true };
+                anyResolved = true;
+            }
+            else if (entity.Cache is not null && !entity.Cache.UserProvidedEnabledOptions)
+            {
+                // Entity has a cache object but Enabled was not explicitly set by the user
+                // (e.g., "cache": {} or "cache": { "ttl-seconds": 1 }").
+                // Inherit the global value for runtime use but preserve the flag as false
+                // so the serializer won't write the inherited enabled value back.
+                entity = entity with
+                {
+                    Cache = entity.Cache with
+                    {
+                        Enabled = isGlobalCacheEnabled,
+                        UserProvidedEnabledOptions = false
+                    }
+                };
+                anyResolved = true;
+            }
+
+            resolvedEntities.Add(kvp.Key, entity);
+        }
+
+        return anyResolved ? new RuntimeEntities(resolvedEntities) : entities;
     }
 
     private void CheckDataSourceNamePresent(string dataSourceName)

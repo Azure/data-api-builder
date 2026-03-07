@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.HealthCheck;
@@ -46,6 +45,16 @@ public record Entity
     [JsonIgnore]
     public bool IsLinkingEntity { get; init; }
 
+    /// <summary>
+    /// Tracks whether caching was inherited from the global runtime cache setting
+    /// for entities that did not explicitly define a cache configuration.
+    /// Set by ResolveEntityCacheInheritance at RuntimeConfig construction time.
+    /// This avoids synthesizing a fake EntityCacheOptions object that would
+    /// pollute the serialized config file.
+    /// </summary>
+    [JsonIgnore]
+    public bool InheritedCachingEnabled { get; init; }
+
     [JsonConstructor]
     public Entity(
         EntitySource Source,
@@ -77,12 +86,12 @@ public record Entity
 
     /// <summary>
     /// Resolves the value of Entity.Cache property if present, default is false.
-    /// Caching is enabled only when explicitly set to true.
+    /// Caching is enabled only when explicitly set to true, or inherited from the
+    /// global runtime cache setting via InheritedCachingEnabled.
     /// </summary>
     /// <returns>Whether caching is enabled for the entity.</returns>
     [JsonIgnore]
-    [MemberNotNullWhen(true, nameof(Cache))]
-    public bool IsCachingEnabled => Cache?.Enabled is true;
+    public bool IsCachingEnabled => Cache?.Enabled is true || InheritedCachingEnabled;
 
     [JsonIgnore]
     public bool IsEntityHealthEnabled =>

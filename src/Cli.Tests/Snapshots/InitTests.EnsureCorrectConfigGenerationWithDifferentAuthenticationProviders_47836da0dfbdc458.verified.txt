@@ -1,14 +1,13 @@
-﻿{
+{
   DataSource: {
+    DatabaseType: MSSQL,
     Options: {
-      container: testcontainer,
-      database: testdb,
-      schema: test-schema.gql
+      set-session-context: false
     }
   },
   Runtime: {
     Rest: {
-      Enabled: false,
+      Enabled: true,
       Path: /api,
       RequestBodyStrict: true
     },
@@ -39,15 +38,12 @@
     },
     Host: {
       Cors: {
-        Origins: [
-          http://localhost:3000,
-          http://nolocalhost:80
-        ],
         AllowCredentials: false
       },
       Authentication: {
         Provider: Unauthenticated
-      }
+      },
+      Mode: Production
     }
   },
   Entities: []

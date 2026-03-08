@@ -228,6 +228,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// without a primary key route on an entity with an auto-generated primary key.
+        /// With keyless PUT support, ValidateUpsertRequestContext allows this because
+        /// all PK columns are auto-generated. The mutation engine then performs an insert
+        /// and succeeds with 201 Created.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Insert_KeylessWithAutoGenPK_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PutOne_Insert_KeylessWithAutoGenPK_Test)),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
         /// Tests the PutOne functionality with a REST PUT request using
         /// headers that include as a key "If-Match" with an item that does exist,
         /// resulting in an update occuring. We then verify that the update occurred.
@@ -998,8 +1026,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         /// <summary>
         /// Tests the Put functionality with a REST PUT request
-        /// without a primary key route. We expect a failure and so
-        /// no sql query is provided.
+        /// without a primary key route. For non-auto-generated PK entities,
+        /// ValidateUpsertRequestContext detects the missing required
+        /// non-auto-generated PK field in the body and returns a BadRequest.
         /// </summary>
         [TestMethod]
         public virtual async Task PutWithNoPrimaryKeyRouteTest()
@@ -1018,8 +1047,72 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     exceptionExpected: true,
+                    expectedErrorMessage: "Invalid request body. Missing field in body: id.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
+        /// Tests that a PUT request with If-Match header (strict update semantics)
+        /// still requires a primary key route. When If-Match is present, the operation
+        /// becomes Update (not Upsert), so it cannot be converted to Insert.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutWithNoPrimaryKeyRouteAndIfMatchHeaderTest()
+        {
+            Dictionary<string, StringValues> headerDictionary = new();
+            headerDictionary.Add("If-Match", "*");
+            string requestBody = @"
+            {
+                ""title"": ""Batman Returns"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: string.Empty,
+                    operationType: EntityActionOperation.Upsert,
+                    headers: new HeaderDictionary(headerDictionary),
+                    requestBody: requestBody,
+                    exceptionExpected: true,
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
                     expectedStatusCode: HttpStatusCode.BadRequest
+                );
+        }
+
+        /// <summary>
+        /// Tests the Put functionality with a REST PUT request
+        /// without a primary key route on an entity with a composite non-auto-generated primary key,
+        /// where the body only contains a partial key. ValidateUpsertRequestContext detects the
+        /// missing non-auto-generated PK field and returns a BadRequest.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutWithNoPrimaryKeyRouteAndPartialCompositeKeyInBodyTest()
+        {
+            // Body only contains categoryid but not pieceid — both are required
+            // since neither is auto-generated.
+            string requestBody = @"
+            {
+                ""categoryid"": 100,
+                ""categoryName"": ""SciFi"",
+                ""piecesAvailable"": 5,
+                ""piecesRequired"": 3
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: string.Empty,
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    exceptionExpected: true,
+                    expectedErrorMessage: "Invalid request body. Missing field in body: pieceid.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
 

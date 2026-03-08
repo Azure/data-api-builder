@@ -626,6 +626,37 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
+        /// Tests for IsRoleAllowedByDirective covering the full role inheritance chain at the
+        /// GraphQL @authorize directive gate.
+        /// Inheritance chain: named-role inherits from 'authenticated'; 'authenticated' inherits
+        /// from 'anonymous'. So any non-anonymous role is allowed when 'authenticated' OR 'anonymous'
+        /// is listed in the directive roles.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, "admin", false, DisplayName = "Null directive roles — deny all")]
+        [DataRow(new string[0], "admin", false, DisplayName = "Empty directive roles — deny all")]
+        [DataRow(new[] { "admin" }, "admin", true, DisplayName = "Explicit match — allowed")]
+        [DataRow(new[] { "admin" }, "other", false, DisplayName = "No match, no system roles — denied")]
+        [DataRow(new[] { "authenticated" }, "Writer", true, DisplayName = "Named role inherits from authenticated")]
+        [DataRow(new[] { "authenticated" }, "anonymous", false, DisplayName = "anonymous does NOT inherit from authenticated")]
+        [DataRow(new[] { "anonymous" }, "authenticated", true, DisplayName = "authenticated inherits from anonymous")]
+        [DataRow(new[] { "anonymous" }, "Writer", true, DisplayName = "Named role inherits from anonymous via authenticated")]
+        [DataRow(new[] { "anonymous" }, "anonymous", true, DisplayName = "anonymous explicit match when anonymous listed")]
+        [DataRow(new[] { "ANONYMOUS" }, "authenticated", true, DisplayName = "Case-insensitive: ANONYMOUS directive allows authenticated")]
+        [DataRow(new[] { "AUTHENTICATED" }, "Writer", true, DisplayName = "Case-insensitive: AUTHENTICATED directive allows named role")]
+        public void TestIsRoleAllowedByDirective(string[]? directiveRoles, string clientRole, bool expected)
+        {
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(
+                AuthorizationHelpers.InitRuntimeConfig(
+                    entityName: AuthorizationHelpers.TEST_ENTITY,
+                    roleName: AuthorizationResolver.ROLE_ANONYMOUS,
+                    operation: EntityActionOperation.Read));
+
+            bool actual = authZResolver.IsRoleAllowedByDirective(clientRole, directiveRoles);
+            Assert.AreEqual(expected, actual);
+        }
+
+        /// <summary>
         /// Test to validate the AreRoleAndOperationDefinedForEntity method for the case insensitivity of roleName.
         /// For eg. The role Writer is equivalent to wrIter, wRITer, WRITER etc.
         /// </summary>

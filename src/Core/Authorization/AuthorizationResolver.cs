@@ -449,9 +449,12 @@ public class AuthorizationResolver : IAuthorizationResolver
             return true;
         }
 
-        // Role inheritance: any non-anonymous role inherits from 'authenticated'.
+        // Role inheritance: 'authenticated' inherits from 'anonymous', and named roles inherit from
+        // 'authenticated' (which itself may inherit from 'anonymous'). Any non-anonymous role is
+        // therefore allowed when either 'authenticated' or 'anonymous' is listed in the directive.
         if (!clientRole.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase) &&
-            directiveRoles.Any(role => role.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase)))
+            (directiveRoles.Any(role => role.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase)) ||
+             directiveRoles.Any(role => role.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase))))
         {
             return true;
         }

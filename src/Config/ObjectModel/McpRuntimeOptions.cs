@@ -10,6 +10,8 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record McpRuntimeOptions
 {
     public const string DEFAULT_PATH = "/mcp";
+    public const int DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
+    public const int MAX_QUERY_TIMEOUT_SECONDS = 600;
 
     /// <summary>
     /// Whether MCP endpoints are enabled
@@ -36,12 +38,22 @@ public record McpRuntimeOptions
     [JsonPropertyName("description")]
     public string? Description { get; init; }
 
+    /// <summary>
+    /// Execution timeout in seconds for MCP tool operations.
+    /// This timeout wraps the entire tool execution including database queries.
+    /// It applies to all MCP tools, not just aggregation.
+    /// Default: 30 seconds.
+    /// </summary>
+    [JsonPropertyName("query-timeout")]
+    public int? QueryTimeout { get; init; }
+
     [JsonConstructor]
     public McpRuntimeOptions(
         bool? Enabled = null,
         string? Path = null,
         DmlToolsConfig? DmlTools = null,
-        string? Description = null)
+        string? Description = null,
+        int? QueryTimeout = null)
     {
         this.Enabled = Enabled ?? true;
 
@@ -67,6 +79,12 @@ public record McpRuntimeOptions
         }
 
         this.Description = Description;
+
+        if (QueryTimeout is not null)
+        {
+            this.QueryTimeout = QueryTimeout;
+            UserProvidedQueryTimeout = true;
+        }
     }
 
     /// <summary>
@@ -78,4 +96,17 @@ public record McpRuntimeOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(Enabled))]
     public bool UserProvidedPath { get; init; } = false;
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write query-timeout
+    /// property and value to the runtime config file.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public bool UserProvidedQueryTimeout { get; init; } = false;
+
+    /// <summary>
+    /// Gets the effective query timeout in seconds, using the default if not specified.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public int EffectiveQueryTimeoutSeconds => QueryTimeout ?? DEFAULT_QUERY_TIMEOUT_SECONDS;
 }

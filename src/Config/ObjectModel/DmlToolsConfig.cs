@@ -51,6 +51,11 @@ public record DmlToolsConfig
     /// </summary>
     public bool? ExecuteEntity { get; init; }
 
+    /// <summary>
+    /// Whether aggregate-records tool is enabled
+    /// </summary>
+    public bool? AggregateRecords { get; init; }
+
     [JsonConstructor]
     public DmlToolsConfig(
         bool? allToolsEnabled = null,
@@ -59,7 +64,8 @@ public record DmlToolsConfig
         bool? readRecords = null,
         bool? updateRecord = null,
         bool? deleteRecord = null,
-        bool? executeEntity = null)
+        bool? executeEntity = null,
+        bool? aggregateRecords = null)
     {
         if (allToolsEnabled is not null)
         {
@@ -75,6 +81,7 @@ public record DmlToolsConfig
             UpdateRecord = updateRecord ?? toolDefault;
             DeleteRecord = deleteRecord ?? toolDefault;
             ExecuteEntity = executeEntity ?? toolDefault;
+            AggregateRecords = aggregateRecords ?? toolDefault;
         }
         else
         {
@@ -87,6 +94,7 @@ public record DmlToolsConfig
             UpdateRecord = updateRecord ?? DEFAULT_ENABLED;
             DeleteRecord = deleteRecord ?? DEFAULT_ENABLED;
             ExecuteEntity = executeEntity ?? DEFAULT_ENABLED;
+            AggregateRecords = aggregateRecords ?? DEFAULT_ENABLED;
         }
 
         // Track user-provided status - only true if the parameter was not null
@@ -96,6 +104,7 @@ public record DmlToolsConfig
         UserProvidedUpdateRecord = updateRecord is not null;
         UserProvidedDeleteRecord = deleteRecord is not null;
         UserProvidedExecuteEntity = executeEntity is not null;
+        UserProvidedAggregateRecords = aggregateRecords is not null;
     }
 
     /// <summary>
@@ -112,7 +121,8 @@ public record DmlToolsConfig
             readRecords: null,
             updateRecord: null,
             deleteRecord: null,
-            executeEntity: null
+            executeEntity: null,
+            aggregateRecords: null
         );
     }
 
@@ -127,7 +137,8 @@ public record DmlToolsConfig
         readRecords: null,
         updateRecord: null,
         deleteRecord: null,
-        executeEntity: null
+        executeEntity: null,
+        aggregateRecords: null
     );
 
     /// <summary>
@@ -185,4 +196,12 @@ public record DmlToolsConfig
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(ExecuteEntity))]
     public bool UserProvidedExecuteEntity { get; init; } = false;
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write aggregate-records
+    /// property/value to the runtime config file.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(AggregateRecords))]
+    public bool UserProvidedAggregateRecords { get; init; } = false;
 }

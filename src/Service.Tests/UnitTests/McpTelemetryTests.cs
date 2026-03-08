@@ -17,7 +17,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
-
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     /// <summary>
@@ -337,6 +336,98 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsNotNull(exceptionEvent, "Exception event should be recorded");
         }
 
+        /// <summary>
+        /// Test that ExecuteWithTelemetryAsync applies the configured query-timeout and throws TimeoutException
+        /// when a tool exceeds the configured timeout.
+        /// </summary>
+        [TestMethod]
+        public async Task ExecuteWithTelemetryAsync_ThrowsTimeoutException_WhenToolExceedsTimeout()
+        {
+            // Use a 1-second timeout with a tool that takes 10 seconds
+            IServiceProvider serviceProvider = CreateServiceProviderWithTimeout(queryTimeoutSeconds: 1);
+            IMcpTool tool = new SlowTool(delaySeconds: 10);
+
+            TimeoutException thrownEx = await Assert.ThrowsExceptionAsync<TimeoutException>(
+                () => McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                    tool, "aggregate_records", arguments: null, serviceProvider, CancellationToken.None));
+
+            Assert.IsTrue(thrownEx.Message.Contains("aggregate_records"), "Exception message should contain tool name");
+            Assert.IsTrue(thrownEx.Message.Contains("1 second"), "Exception message should contain timeout duration");
+        }
+
+        /// <summary>
+        /// Test that ExecuteWithTelemetryAsync succeeds when tool completes before the timeout.
+        /// </summary>
+        [TestMethod]
+        public async Task ExecuteWithTelemetryAsync_Succeeds_WhenToolCompletesBeforeTimeout()
+        {
+            // Use a 30-second timeout with a tool that completes immediately
+            IServiceProvider serviceProvider = CreateServiceProviderWithTimeout(queryTimeoutSeconds: 30);
+            IMcpTool tool = new ImmediateCompletionTool();
+
+            CallToolResult result = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                tool, "aggregate_records", arguments: null, serviceProvider, CancellationToken.None);
+
+            Assert.IsNotNull(result);
+            Assert.IsFalse(result.IsError == true);
+        }
+
+        /// <summary>
+        /// Test that aggregate_records tool name maps to "aggregate" operation.
+        /// </summary>
+        [TestMethod]
+        public void InferOperationFromTool_AggregateRecords_ReturnsAggregate()
+        {
+            CallToolResult dummyResult = CreateToolResult("ok");
+            IMcpTool tool = new MockMcpTool(dummyResult, ToolType.BuiltIn);
+
+            string operation = McpTelemetryHelper.InferOperationFromTool(tool, "aggregate_records");
+
+            Assert.AreEqual("aggregate", operation);
+        }
+
+        #endregion
+
+        #region Helpers for timeout tests
+
+        /// <summary>
+        /// Creates a service provider with a RuntimeConfigProvider configured with the given timeout.
+        /// </summary>
+        private static IServiceProvider CreateServiceProviderWithTimeout(int queryTimeoutSeconds)
+        {
+            Azure.DataApiBuilder.Config.ObjectModel.RuntimeConfig config = CreateConfigWithQueryTimeout(queryTimeoutSeconds);
+            ServiceCollection services = new();
+            Azure.DataApiBuilder.Core.Configurations.RuntimeConfigProvider configProvider =
+                TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
+            services.AddSingleton(configProvider);
+            services.AddLogging();
+            return services.BuildServiceProvider();
+        }
+
+        private static Azure.DataApiBuilder.Config.ObjectModel.RuntimeConfig CreateConfigWithQueryTimeout(int queryTimeoutSeconds)
+        {
+            return new Azure.DataApiBuilder.Config.ObjectModel.RuntimeConfig(
+                Schema: "test-schema",
+                DataSource: new Azure.DataApiBuilder.Config.ObjectModel.DataSource(
+                    DatabaseType: Azure.DataApiBuilder.Config.ObjectModel.DatabaseType.MSSQL,
+                    ConnectionString: "",
+                    Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(
+                        Enabled: true,
+                        Path: "/mcp",
+                        DmlTools: null,
+                        Description: null,
+                        QueryTimeout: queryTimeoutSeconds
+                    ),
+                    Host: new(Cors: null, Authentication: null, Mode: Azure.DataApiBuilder.Config.ObjectModel.HostMode.Development)
+                ),
+                Entities: new(new System.Collections.Generic.Dictionary<string, Azure.DataApiBuilder.Config.ObjectModel.Entity>())
+            );
+        }
+
         #endregion
 
         #region Test Mocks
@@ -374,6 +465,81 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
 
                 return Task.FromResult(_result!);
+            }
+        }
+
+        /// <summary>
+        /// A mock tool that completes immediately with a success result.
+        /// </summary>
+        private class ImmediateCompletionTool : IMcpTool
+        {
+            public ToolType ToolType { get; } = ToolType.BuiltIn;
+
+            public Tool GetToolMetadata()
+            {
+                using JsonDocument doc = JsonDocument.Parse("{\"type\": \"object\"}");
+                return new Tool
+                {
+                    Name = "test_tool",
+                    Description = "A test tool that completes immediately",
+                    InputSchema = doc.RootElement.Clone()
+                };
+            }
+
+            public Task<CallToolResult> ExecuteAsync(
+                JsonDocument? arguments,
+                IServiceProvider serviceProvider,
+                CancellationToken cancellationToken = default)
+            {
+                return Task.FromResult(new CallToolResult
+                {
+                    Content = new List<ContentBlock>
+                    {
+                        new TextContentBlock { Text = "{\"result\": \"success\"}" }
+                    }
+                });
+            }
+        }
+
+        /// <summary>
+        /// A mock tool that delays for a specified duration, respecting cancellation.
+        /// Used to test timeout behavior.
+        /// </summary>
+        private class SlowTool : IMcpTool
+        {
+            private readonly int _delaySeconds;
+
+            public SlowTool(int delaySeconds)
+            {
+                _delaySeconds = delaySeconds;
+            }
+
+            public ToolType ToolType { get; } = ToolType.BuiltIn;
+
+            public Tool GetToolMetadata()
+            {
+                using JsonDocument doc = JsonDocument.Parse("{\"type\": \"object\"}");
+                return new Tool
+                {
+                    Name = "slow_tool",
+                    Description = "A test tool that takes a long time",
+                    InputSchema = doc.RootElement.Clone()
+                };
+            }
+
+            public async Task<CallToolResult> ExecuteAsync(
+                JsonDocument? arguments,
+                IServiceProvider serviceProvider,
+                CancellationToken cancellationToken = default)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(_delaySeconds), cancellationToken);
+                return new CallToolResult
+                {
+                    Content = new List<ContentBlock>
+                    {
+                        new TextContentBlock { Text = "{\"result\": \"completed\"}" }
+                    }
+                };
             }
         }
 

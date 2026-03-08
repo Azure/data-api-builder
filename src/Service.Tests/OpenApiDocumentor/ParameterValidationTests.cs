@@ -117,8 +117,13 @@ public class ParameterValidationTests
         OpenApiPathItem pathWithouId = openApiDocument.Paths[$"/{entityName}"];
         Assert.IsTrue(pathWithouId.Operations.ContainsKey(OperationType.Post));
         Assert.IsFalse(pathWithouId.Operations[OperationType.Post].Parameters.Any(param => param.In is ParameterLocation.Query));
-        Assert.IsFalse(pathWithouId.Operations.ContainsKey(OperationType.Put));
-        Assert.IsFalse(pathWithouId.Operations.ContainsKey(OperationType.Patch));
+
+        // With keyless PUT/PATCH support, PUT and PATCH operations are present on the base path
+        // for entities with auto-generated primary keys. Validate they don't have query parameters.
+        Assert.IsTrue(pathWithouId.Operations.ContainsKey(OperationType.Put));
+        Assert.IsFalse(pathWithouId.Operations[OperationType.Put].Parameters.Any(param => param.In is ParameterLocation.Query));
+        Assert.IsTrue(pathWithouId.Operations.ContainsKey(OperationType.Patch));
+        Assert.IsFalse(pathWithouId.Operations[OperationType.Patch].Parameters.Any(param => param.In is ParameterLocation.Query));
         Assert.IsFalse(pathWithouId.Operations.ContainsKey(OperationType.Delete));
 
         // Assert that Query Parameters Excluded From NonReadOperations for path with id.

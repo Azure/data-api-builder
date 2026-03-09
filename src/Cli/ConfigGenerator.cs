@@ -3200,10 +3200,22 @@ namespace Cli
                     List<(string, string, string)> filterResults = new();
 
                     using SqlCommand command = new(query, connection);
-                    command.Parameters.AddWithValue("@include_pattern", include);
-                    command.Parameters.AddWithValue("@exclude_pattern", exclude);
-                    command.Parameters.AddWithValue("@name_pattern", namePattern);
+                    SqlParameter includeParameter = new("@include_pattern", SqlDbType.NVarChar)
+                    {
+                        Value = include
+                    };
+                    SqlParameter excludeParameter = new("@exclude_pattern", SqlDbType.NVarChar)
+                    {
+                        Value = exclude
+                    };
+                    SqlParameter namePatternParameter = new("@name_pattern", SqlDbType.NVarChar)
+                    {
+                        Value = namePattern
+                    };
 
+                    command.Parameters.Add(includeParameter);
+                    command.Parameters.Add(excludeParameter);
+                    command.Parameters.Add(namePatternParameter);
                     using SqlDataReader reader = command.ExecuteReader();
                     while (reader.Read())
                     {

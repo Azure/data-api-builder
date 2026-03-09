@@ -7,7 +7,7 @@ namespace Cli.Tests;
 /// Tests for the auto-config-simulate CLI command.
 /// </summary>
 [TestClass]
-public class AutoSimulateTests
+public class AutoConfigSimulateTests
 {
     private IFileSystem? _fileSystem;
     private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;

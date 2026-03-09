@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Text;
@@ -3197,7 +3198,7 @@ namespace Cli
                     string exclude = string.Join(",", autoentity.Patterns.Exclude);
                     string namePattern = autoentity.Patterns.Name;
 
-                    List<(string, string, string)> filterResults = new();
+                    List<(string EntityName, string SchemaName, string ObjectName)> filterResults = new();
 
                     using SqlCommand command = new(query, connection);
                     SqlParameter includeParameter = new("@include_pattern", SqlDbType.NVarChar)

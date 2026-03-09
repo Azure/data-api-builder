@@ -217,7 +217,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             string json = @"{""enabled"": true, ""query-timeout"": 60}";
             JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions();
-            McpRuntimeOptions? options = JsonSerializer.Deserialize<McpRuntimeOptions>(json, serializerOptions);
+            McpRuntimeOptions options = JsonSerializer.Deserialize<McpRuntimeOptions>(json, serializerOptions);
             Assert.IsNotNull(options);
             Assert.AreEqual(60, options.QueryTimeout);
             Assert.AreEqual(60, options.EffectiveQueryTimeoutSeconds);
@@ -228,7 +228,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             string json = @"{""enabled"": true}";
             JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions();
-            McpRuntimeOptions? options = JsonSerializer.Deserialize<McpRuntimeOptions>(json, serializerOptions);
+            McpRuntimeOptions options = JsonSerializer.Deserialize<McpRuntimeOptions>(json, serializerOptions);
             Assert.IsNotNull(options);
             Assert.IsNull(options.QueryTimeout);
             Assert.AreEqual(30, options.EffectiveQueryTimeoutSeconds);
@@ -294,7 +294,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             }
 
             public Task<CallToolResult> ExecuteAsync(
-                JsonDocument? arguments,
+                JsonDocument arguments,
                 IServiceProvider serviceProvider,
                 CancellationToken cancellationToken = default)
             {
@@ -336,7 +336,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             }
 
             public async Task<CallToolResult> ExecuteAsync(
-                JsonDocument? arguments,
+                JsonDocument arguments,
                 IServiceProvider serviceProvider,
                 CancellationToken cancellationToken = default)
             {

@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow("{\"entity\": \"Book\", \"field\": \"*\"}", null, DisplayName = "Missing function")]
         [DataRow("{\"entity\": \"Book\", \"function\": \"count\"}", null, DisplayName = "Missing field")]
         [DataRow("{\"entity\": \"Book\", \"function\": \"median\", \"field\": \"price\"}", "median", DisplayName = "Invalid function 'median'")]
-        public async Task AggregateRecords_MissingOrInvalidRequiredArgs_ReturnsInvalidArguments(string json, string? expectedInMessage)
+        public async Task AggregateRecords_MissingOrInvalidRequiredArgs_ReturnsInvalidArguments(string json, string expectedInMessage)
         {
             IServiceProvider sp = CreateDefaultServiceProvider();
 
@@ -236,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow(null, 0, DisplayName = "null → 0")]
         [DataRow("", 0, DisplayName = "empty → 0")]
         [DataRow("   ", 0, DisplayName = "whitespace → 0")]
-        public void DecodeCursorOffset_InvalidCursor_ReturnsZero(string? cursor, int expected)
+        public void DecodeCursorOffset_InvalidCursor_ReturnsZero(string cursor, int expected)
         {
             Assert.AreEqual(expected, AggregateRecordsTool.DecodeCursorOffset(cursor));
         }

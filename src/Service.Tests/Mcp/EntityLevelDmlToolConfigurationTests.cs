@@ -231,7 +231,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // Arrange
             RuntimeConfig config = sourceType == "View"
                 ? CreateConfigWithViewEntity()
-                : CreateConfigWithDmlToolEnabledEntity();
+                : CreateConfig();
             IServiceProvider serviceProvider = CreateServiceProvider(config);
             IMcpTool tool = CreateTool(toolType);
 

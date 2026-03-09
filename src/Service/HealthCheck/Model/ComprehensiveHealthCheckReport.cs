@@ -44,6 +44,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         public DateTime TimeStamp { get; set; }
 
         /// <summary>
+        /// The current role of the user making the request (e.g., "anonymous", "authenticated").
+        /// </summary>
+        [JsonPropertyName("currentRole")]
+        public string? CurrentRole { get; set; }
+
+        /// <summary>
         /// The configuration details of the dab service.
         /// </summary>
         [JsonPropertyName("configuration")]

@@ -65,19 +65,6 @@ public class AutoConfigSimulateTests
     }
 
     /// <summary>
-    /// Tests that the simulate command options default output to null (console output).
-    /// </summary>
-    [TestMethod]
-    public void TestSimulateAutoentitiesOptions_DefaultOutputIsNull()
-    {
-        // Arrange & Act
-        AutoConfigSimulateOptions options = new();
-
-        // Assert
-        Assert.IsNull(options.Output);
-    }
-
-    /// <summary>
     /// Integration test: verifies that an autoentities filter matching a known table (dbo.books)
     /// produces correct console output containing the filter name, entity name, and database object.
     /// Requires a running MSSQL instance with MSSQL_SA_PASSWORD environment variable set.

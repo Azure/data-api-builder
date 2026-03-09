@@ -6,7 +6,6 @@ using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Caching;
@@ -656,30 +655,49 @@ public class CachingConfigProcessingTests
     }
 
     /// <summary>
-    /// Validates that GetEntityCacheEntryLevel throws a DataApiBuilderException
-    /// when caching is not enabled for the entity.
+    /// Regression test: Validates that when global runtime cache is enabled but entity cache is disabled,
+    /// GetEntityCacheEntryTtl and GetEntityCacheEntryLevel do not throw and return sensible defaults.
+    /// Previously, these methods threw a DataApiBuilderException (BadRequest/NotSupported) when the entity
+    /// had caching disabled, which caused 400 errors for valid requests when the global cache was enabled.
+    /// These methods are now pure accessors that always return a value regardless of cache enablement.
+    /// The level falls back to GlobalCacheEntryLevel() which infers from Level2 configuration;
+    /// when Level2 is absent, the inferred level is L1.
     /// </summary>
-    [TestMethod]
-    public void GetEntityCacheEntryLevel_ThrowsWhenCachingDisabled()
+    /// <param name="globalCacheConfig">Global cache configuration JSON fragment.</param>
+    /// <param name="entityCacheConfig">Entity cache configuration JSON fragment.</param>
+    /// <param name="expectedTtl">Expected TTL returned by GetEntityCacheEntryTtl.</param>
+    /// <param name="expectedLevel">Expected cache level returned by GetEntityCacheEntryLevel.</param>
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", @",""cache"": { ""enabled"": false }", 10, EntityCacheLevel.L1, DisplayName = "Global cache enabled with custom TTL, entity cache disabled: entity returns global TTL and global inferred level.")]
+    [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": { ""enabled"": false }", 5, EntityCacheLevel.L1, DisplayName = "Global cache enabled with default TTL, entity cache disabled: entity returns default TTL and global inferred level.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", @"", 10, EntityCacheLevel.L1, DisplayName = "Global cache enabled with custom TTL, entity cache omitted: entity returns global TTL and global inferred level.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""level-2"": { ""enabled"": true }, ""ttl-seconds"": 10 }", @",""cache"": { ""enabled"": false }", 10, EntityCacheLevel.L1L2, DisplayName = "Global cache enabled with Level2 and custom TTL, entity cache disabled: entity returns global TTL and L1L2.")]
+    [DataTestMethod]
+    public void GetEntityCacheEntryTtlAndLevel_DoesNotThrow_WhenRuntimeCacheEnabledAndEntityCacheDisabled(
+        string globalCacheConfig,
+        string entityCacheConfig,
+        int expectedTtl,
+        EntityCacheLevel expectedLevel)
     {
-        // Arrange: global cache disabled, entity cache omitted -> caching is disabled for entity.
-        string fullConfig = GetRawConfigJson(
-            globalCacheConfig: @",""cache"": { ""enabled"": false }",
-            entityCacheConfig: string.Empty);
+        // Arrange
+        string fullConfig = GetRawConfigJson(globalCacheConfig: globalCacheConfig, entityCacheConfig: entityCacheConfig);
         RuntimeConfigLoader.TryParseConfig(
             json: fullConfig,
             out RuntimeConfig? config,
             replacementSettings: null);
 
         Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
+        Assert.IsTrue(config.IsCachingEnabled, message: "Global caching should be enabled for this test scenario.");
+
+        Entity entity = config.Entities.First().Value;
+        Assert.IsFalse(entity.IsCachingEnabled, message: "Entity caching should be disabled for this test scenario.");
 
         string entityName = config.Entities.First().Key;
-        Assert.IsFalse(config.IsEntityCachingEnabled(entityName),
-            message: "Test precondition: entity caching should be disabled.");
 
-        // Act & Assert
-        Assert.ThrowsException<DataApiBuilderException>(
-            () => config.GetEntityCacheEntryLevel(entityName),
-            message: "GetEntityCacheEntryLevel should throw when caching is disabled for the entity.");
+        // Act & Assert - These calls must not throw.
+        int actualTtl = config.GetEntityCacheEntryTtl(entityName);
+        EntityCacheLevel actualLevel = config.GetEntityCacheEntryLevel(entityName);
+
+        Assert.AreEqual(expected: expectedTtl, actual: actualTtl, message: "GetEntityCacheEntryTtl should return the global/default TTL when entity cache is disabled.");
+        Assert.AreEqual(expected: expectedLevel, actual: actualLevel, message: "GetEntityCacheEntryLevel should return the global inferred level when entity cache is disabled.");
     }
 }

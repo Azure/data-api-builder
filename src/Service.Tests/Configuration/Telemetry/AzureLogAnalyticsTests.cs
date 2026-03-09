@@ -120,9 +120,18 @@ public class AzureLogAnalyticsTests
 
         _ = Task.Run(() => flusherService.StartAsync(tokenSource.Token));
 
-        await Task.Delay(2000);
+        // Poll until the log appears (the flusher service needs time to dequeue and upload)
+        int maxWaitMs = 10000;
+        int pollIntervalMs = 100;
+        int elapsed = 0;
+        while (customClient.LogAnalyticsLogs.Count == 0 && elapsed < maxWaitMs)
+        {
+            await Task.Delay(pollIntervalMs);
+            elapsed += pollIntervalMs;
+        }
 
         // Assert
+        Assert.IsTrue(customClient.LogAnalyticsLogs.Count > 0, $"Expected at least one log entry after waiting {elapsed}ms, but found none.");
         AzureLogAnalyticsLogs actualLog = customClient.LogAnalyticsLogs[0];
         Assert.AreEqual(logLevel.ToString(), actualLog.LogLevel);
         Assert.AreEqual(message, actualLog.Message);

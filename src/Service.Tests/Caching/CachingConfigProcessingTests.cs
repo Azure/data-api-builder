@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Caching;
@@ -347,17 +348,17 @@ public class CachingConfigProcessingTests
     }
 
     /// <summary>
-    /// Validates that Entity.IsCachingEnabled correctly reflects inheritance from the runtime cache enabled
+    /// Validates that RuntimeConfig.IsEntityCachingEnabled correctly reflects inheritance from the runtime cache enabled
     /// setting when the entity does not explicitly set cache enabled.
-    /// Inheritance is resolved at RuntimeConfig construction time via ResolveEntityCacheInheritance().
+    /// Inheritance is resolved lazily via RuntimeConfig.IsEntityCachingEnabled().
     /// Also validates that entity-level explicit enabled overrides the runtime setting.
     /// </summary>
     /// <param name="globalCacheConfig">Global cache configuration JSON fragment.</param>
     /// <param name="entityCacheConfig">Entity cache configuration JSON fragment.</param>
-    /// <param name="expectedIsEntityCachingEnabled">Whether Entity.IsCachingEnabled should return true.</param>
+    /// <param name="expectedIsEntityCachingEnabled">Whether IsEntityCachingEnabled should return true.</param>
     [DataRow(@",""cache"": { ""enabled"": true }", @"", true, DisplayName = "Global cache enabled, entity cache omitted: entity inherits enabled from runtime.")]
-    [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": {}", true, DisplayName = "Global cache enabled, entity cache empty: entity inherits enabled from runtime.")]
-    [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": { ""enabled"": false }", false, DisplayName = "Global cache enabled, entity cache explicitly disabled: entity explicit value wins.")]
+    [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": {""enabled"": true, ""level"": ""L1"" }", true, DisplayName = "Global cache enabled, entity cache with level L1: entity inherits enabled from runtime.")]
+    [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": {""enabled"": false }", false, DisplayName = "Global cache enabled, entity cache explicitly disabled: entity explicit value wins.")]
     [DataRow(@",""cache"": { ""enabled"": false }", @"", false, DisplayName = "Global cache disabled, entity cache omitted: entity inherits disabled from runtime.")]
     [DataRow(@",""cache"": { ""enabled"": false }", @",""cache"": { ""enabled"": true }", true, DisplayName = "Global cache disabled, entity cache explicitly enabled: entity explicit value wins.")]
     [DataRow(@"", @"", false, DisplayName = "No global cache, no entity cache: defaults to disabled.")]
@@ -377,14 +378,15 @@ public class CachingConfigProcessingTests
 
         Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
 
-        Entity entity = config.Entities.First().Value;
+        string entityName = config.Entities.First().Key;
 
-        // Act - Entity.IsCachingEnabled should reflect the inherited value resolved at construction time.
-        bool actualIsEntityCachingEnabled = entity.IsCachingEnabled;
+        // Act - RuntimeConfig.IsEntityCachingEnabled resolves inheritance lazily by
+        // checking the entity's explicit setting first, then falling back to the global setting.
+        bool actualIsEntityCachingEnabled = config.IsEntityCachingEnabled(entityName);
 
         // Assert
         Assert.AreEqual(expected: expectedIsEntityCachingEnabled, actual: actualIsEntityCachingEnabled,
-            message: $"Entity.IsCachingEnabled should be {expectedIsEntityCachingEnabled}.");
+            message: $"IsEntityCachingEnabled should be {expectedIsEntityCachingEnabled}.");
     }
 
     /// <summary>
@@ -578,5 +580,106 @@ public class CachingConfigProcessingTests
         bool cachePropertyExists = entityElement.TryGetProperty("cache", out _);
         Assert.IsFalse(cachePropertyExists,
             message: "Entity cache property should not be serialized when it was inherited from the runtime setting, not user-defined.");
+    }
+
+    /// <summary>
+    /// Validates that GetEntityCacheEntryLevel returns the correct inherited cache level
+    /// when the entity does not explicitly set a level. The entity should fall back to the
+    /// global inferred level (determined by Level2 configuration).
+    /// Also validates that an explicit entity-level setting overrides the global inferred level.
+    /// </summary>
+    /// <param name="globalCacheConfig">Global cache configuration JSON fragment.</param>
+    /// <param name="entityCacheConfig">Entity cache configuration JSON fragment.</param>
+    /// <param name="expectedEntityLevel">Expected cache level returned by GetEntityCacheEntryLevel.</param>
+    [DataRow(
+        @",""cache"": { ""enabled"": true }",
+        @",""cache"": { ""enabled"": true }",
+        EntityCacheLevel.L1,
+        DisplayName = "Global L1 (no Level2), entity has no level: entity inherits L1 from global.")]
+    [DataRow(
+        @",""cache"": { ""enabled"": true, ""level-2"": { ""enabled"": true } }",
+        @",""cache"": { ""enabled"": true }",
+        EntityCacheLevel.L1L2,
+        DisplayName = "Global L1L2 (Level2 enabled), entity has no level: entity inherits L1L2 from global.")]
+    [DataRow(
+        @",""cache"": { ""enabled"": true, ""level-2"": { ""enabled"": false } }",
+        @",""cache"": { ""enabled"": true }",
+        EntityCacheLevel.L1,
+        DisplayName = "Global L1 (Level2 disabled), entity has no level: entity inherits L1 from global.")]
+    [DataRow(
+        @",""cache"": { ""enabled"": true, ""level-2"": { ""enabled"": true } }",
+        @",""cache"": { ""enabled"": true, ""level"": ""L1"" }",
+        EntityCacheLevel.L1,
+        DisplayName = "Global L1L2, entity explicitly sets L1: entity explicit value wins.")]
+    [DataRow(
+        @",""cache"": { ""enabled"": true }",
+        @",""cache"": { ""enabled"": true, ""level"": ""L1L2"" }",
+        EntityCacheLevel.L1L2,
+        DisplayName = "Global L1 (no Level2), entity explicitly sets L1L2: entity explicit value wins.")]
+    [DataRow(
+        @",""cache"": { ""enabled"": true, ""level-2"": { ""enabled"": true } }",
+        @"",
+        EntityCacheLevel.L1L2,
+        DisplayName = "Global L1L2, entity cache omitted (inherits enabled): entity inherits L1L2 from global.")]
+    [DataRow(
+        @",""cache"": { ""enabled"": true }",
+        @"",
+        EntityCacheLevel.L1,
+        DisplayName = "Global L1 (no Level2), entity cache omitted (inherits enabled): entity inherits L1 from global.")]
+    [DataTestMethod]
+    public void GetEntityCacheEntryLevel_InheritsFromGlobalLevel(
+        string globalCacheConfig,
+        string entityCacheConfig,
+        EntityCacheLevel expectedEntityLevel)
+    {
+        // Arrange
+        string fullConfig = GetRawConfigJson(globalCacheConfig: globalCacheConfig, entityCacheConfig: entityCacheConfig);
+        RuntimeConfigLoader.TryParseConfig(
+            json: fullConfig,
+            out RuntimeConfig? config,
+            replacementSettings: null);
+
+        Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
+
+        string entityName = config.Entities.First().Key;
+
+        // Precondition: entity must have caching enabled (explicitly or inherited) for GetEntityCacheEntryLevel to succeed.
+        Assert.IsTrue(config.IsEntityCachingEnabled(entityName),
+            message: "Test precondition failed: entity must have caching enabled.");
+
+        // Act
+        EntityCacheLevel actualLevel = config.GetEntityCacheEntryLevel(entityName);
+
+        // Assert
+        Assert.AreEqual(expected: expectedEntityLevel, actual: actualLevel,
+            message: $"GetEntityCacheEntryLevel should return {expectedEntityLevel}.");
+    }
+
+    /// <summary>
+    /// Validates that GetEntityCacheEntryLevel throws a DataApiBuilderException
+    /// when caching is not enabled for the entity.
+    /// </summary>
+    [TestMethod]
+    public void GetEntityCacheEntryLevel_ThrowsWhenCachingDisabled()
+    {
+        // Arrange: global cache disabled, entity cache omitted -> caching is disabled for entity.
+        string fullConfig = GetRawConfigJson(
+            globalCacheConfig: @",""cache"": { ""enabled"": false }",
+            entityCacheConfig: string.Empty);
+        RuntimeConfigLoader.TryParseConfig(
+            json: fullConfig,
+            out RuntimeConfig? config,
+            replacementSettings: null);
+
+        Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
+
+        string entityName = config.Entities.First().Key;
+        Assert.IsFalse(config.IsEntityCachingEnabled(entityName),
+            message: "Test precondition: entity caching should be disabled.");
+
+        // Act & Assert
+        Assert.ThrowsException<DataApiBuilderException>(
+            () => config.GetEntityCacheEntryLevel(entityName),
+            message: "GetEntityCacheEntryLevel should throw when caching is disabled for the entity.");
     }
 }

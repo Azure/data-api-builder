@@ -45,16 +45,6 @@ public record Entity
     [JsonIgnore]
     public bool IsLinkingEntity { get; init; }
 
-    /// <summary>
-    /// Tracks whether caching was inherited from the global runtime cache setting
-    /// for entities that did not explicitly define a cache configuration.
-    /// Set by ResolveEntityCacheInheritance at RuntimeConfig construction time.
-    /// This avoids synthesizing a fake EntityCacheOptions object that would
-    /// pollute the serialized config file.
-    /// </summary>
-    [JsonIgnore]
-    public bool InheritedCachingEnabled { get; init; }
-
     [JsonConstructor]
     public Entity(
         EntitySource Source,
@@ -85,13 +75,14 @@ public record Entity
     }
 
     /// <summary>
-    /// Resolves the value of Entity.Cache property if present, default is false.
-    /// Caching is enabled only when explicitly set to true, or inherited from the
-    /// global runtime cache setting via InheritedCachingEnabled.
+    /// Resolves the value of Entity.Cache.Enabled property if present, default is false.
+    /// Caching is enabled only when explicitly set to true on the entity.
+    /// To resolve inheritance from the global runtime cache setting, use
+    /// RuntimeConfig.IsEntityCachingEnabled(entityName) instead.
     /// </summary>
-    /// <returns>Whether caching is enabled for the entity.</returns>
+    /// <returns>Whether caching is explicitly enabled for the entity.</returns>
     [JsonIgnore]
-    public bool IsCachingEnabled => Cache?.Enabled is true || InheritedCachingEnabled;
+    public bool IsCachingEnabled => Cache?.Enabled is true;
 
     [JsonIgnore]
     public bool IsEntityHealthEnabled =>

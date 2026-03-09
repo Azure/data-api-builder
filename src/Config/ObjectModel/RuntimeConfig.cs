@@ -373,9 +373,6 @@ public record RuntimeConfig
         }
 
         SetupDataSourcesUsed();
-        // Resolve entity cache inheritance: if an entity's Cache.Enabled is null,
-        // inherit the global runtime cache enabled setting.
-        this.Entities = ResolveEntityCacheInheritance(this.Entities, this.Runtime);
     }
 
     /// <summary>
@@ -406,10 +403,6 @@ public record RuntimeConfig
         this.AzureKeyVault = AzureKeyVault;
 
         SetupDataSourcesUsed();
-
-        // Resolve entity cache inheritance: if an entity's Cache.Enabled is null,
-        // inherit the global runtime cache enabled setting.
-        this.Entities = ResolveEntityCacheInheritance(this.Entities, this.Runtime);
     }
 
     /// <summary>
@@ -551,7 +544,7 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
 
-        if (!entityConfig.IsCachingEnabled)
+        if (!IsEntityCachingEnabled(entityConfig))
         {
             throw new DataApiBuilderException(
                 message: $"{entityName} does not have caching enabled.",
@@ -589,7 +582,7 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
 
-        if (!entityConfig.IsCachingEnabled)
+        if (!IsEntityCachingEnabled(entityConfig))
         {
             throw new DataApiBuilderException(
                 message: $"{entityName} does not have caching enabled.",
@@ -606,8 +599,8 @@ public record RuntimeConfig
 
         // GlobalCacheEntryLevel() returns null when runtime cache is not configured.
         // Callers guard with IsCachingEnabled, so null is not expected here,
-        // but we default to L1 defensively.
-        return GlobalCacheEntryLevel() ?? EntityCacheLevel.L1;
+        // but we default to L1L2 defensively to match EntityCacheOptions.DEFAULT_LEVEL.
+        return GlobalCacheEntryLevel() ?? EntityCacheLevel.L1L2;
     }
 
     /// <summary>
@@ -644,58 +637,6 @@ public record RuntimeConfig
     {
         bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
         return IsCachingEnabled && !setSessionContextEnabled;
-    }
-
-    /// <summary>
-    /// Resolves entity cache inheritance at construction time.
-    /// For each entity whose Cache.Enabled is null (not explicitly set by the user),
-    /// inherits the global runtime cache enabled setting (Runtime.Cache.Enabled).
-    /// This ensures Entity.IsCachingEnabled is the single source of truth for whether
-    /// an entity has caching enabled, without callers needing to check the global setting.
-    /// The UserProvidedEnabledOptions flag is NOT set on inherited values, so the
-    /// serializer will not write the inherited enabled value back to the config file.
-    /// </summary>
-    /// <returns>A new RuntimeEntities with inheritance resolved, or the original if no changes needed.</returns>
-    private static RuntimeEntities ResolveEntityCacheInheritance(RuntimeEntities entities, RuntimeOptions? runtime)
-    {
-        bool isGlobalCacheEnabled = runtime?.Cache?.Enabled is true;
-
-        Dictionary<string, Entity> resolvedEntities = new();
-        bool anyResolved = false;
-
-        foreach (KeyValuePair<string, Entity> kvp in entities)
-        {
-            Entity entity = kvp.Value;
-
-            // If entity has no cache config at all, and global is enabled,
-            // set InheritedCachingEnabled so IsCachingEnabled returns true
-            // without synthesizing a fake EntityCacheOptions that would pollute serialized config.
-            if (entity.Cache is null && isGlobalCacheEnabled)
-            {
-                entity = entity with { InheritedCachingEnabled = true };
-                anyResolved = true;
-            }
-            else if (entity.Cache is not null && !entity.Cache.UserProvidedEnabledOptions)
-            {
-                // Entity has a cache object but Enabled was not explicitly set by the user
-                // (e.g., "cache": {} or "cache": { "ttl-seconds": 1 }").
-                // Inherit the global value for runtime use but preserve the flag as false
-                // so the serializer won't write the inherited enabled value back.
-                entity = entity with
-                {
-                    Cache = entity.Cache with
-                    {
-                        Enabled = isGlobalCacheEnabled,
-                        UserProvidedEnabledOptions = false
-                    }
-                };
-                anyResolved = true;
-            }
-
-            resolvedEntities.Add(kvp.Key, entity);
-        }
-
-        return anyResolved ? new RuntimeEntities(resolvedEntities) : entities;
     }
 
     private void CheckDataSourceNamePresent(string dataSourceName)
@@ -888,4 +829,46 @@ public record RuntimeConfig
     /// </summary>
     [JsonIgnore]
     public DmlToolsConfig? McpDmlTools => Runtime?.Mcp?.DmlTools;
+
+    /// <summary>
+    /// Determines whether caching is enabled for a given entity, resolving inheritance lazily.
+    /// If the entity explicitly sets cache enabled/disabled, that value wins.
+    /// If the entity has a cache object but did not explicitly set enabled (UserProvidedEnabledOptions is false),
+    /// the global runtime cache enabled setting is inherited.
+    /// If the entity has no cache config at all, the global runtime cache enabled setting is inherited.
+    /// </summary>
+    /// <param name="entityName">Name of the entity to check cache configuration.</param>
+    /// <returns>Whether caching is enabled for the entity.</returns>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided.</exception>
+    public virtual bool IsEntityCachingEnabled(string entityName)
+    {
+        if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} is not a valid entity.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+        }
+
+        return IsEntityCachingEnabled(entityConfig);
+    }
+
+    /// <summary>
+    /// Determines whether caching is enabled for a given entity, resolving inheritance lazily.
+    /// If the entity explicitly sets cache enabled/disabled (UserProvidedEnabledOptions is true), that value wins.
+    /// Otherwise, inherits the global runtime cache enabled setting.
+    /// </summary>
+    /// <param name="entity">The entity to check cache configuration.</param>
+    /// <returns>Whether caching is enabled for the entity.</returns>
+    private bool IsEntityCachingEnabled(Entity entity)
+    {
+        // If entity has an explicit cache config with user-provided enabled value, use it.
+        if (entity.Cache is not null && entity.Cache.UserProvidedEnabledOptions)
+        {
+            return entity.Cache.Enabled!.Value;
+        }
+
+        // Otherwise, inherit from the global runtime cache setting.
+        return IsCachingEnabled;
+    }
 }

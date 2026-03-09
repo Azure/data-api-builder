@@ -78,8 +78,15 @@ namespace Azure.DataApiBuilder.Service.Utilities
         {
             host.Start();
 
-            // Tools are already registered by McpToolRegistryInitializer (IHostedService)
-            // during host.Start(). No need to register them again here.
+            Mcp.Core.McpToolRegistry registry =
+                host.Services.GetRequiredService<Mcp.Core.McpToolRegistry>();
+            IEnumerable<Mcp.Model.IMcpTool> tools =
+                host.Services.GetServices<Mcp.Model.IMcpTool>();
+
+            foreach (Mcp.Model.IMcpTool tool in tools)
+            {
+                registry.RegisterTool(tool);
+            }
 
             IHostApplicationLifetime lifetime =
                 host.Services.GetRequiredService<IHostApplicationLifetime>();

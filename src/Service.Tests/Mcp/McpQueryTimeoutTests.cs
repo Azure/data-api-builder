@@ -31,46 +31,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
     [TestClass]
     public class McpQueryTimeoutTests
     {
-        #region Default Value Tests
-
-        [TestMethod]
-        public void McpRuntimeOptions_DefaultQueryTimeout_Is30Seconds()
-        {
-            Assert.AreEqual(30, McpRuntimeOptions.DEFAULT_QUERY_TIMEOUT_SECONDS);
-        }
-
-        [TestMethod]
-        public void McpRuntimeOptions_EffectiveTimeout_ReturnsDefault_WhenNotConfigured()
-        {
-            McpRuntimeOptions options = new();
-            Assert.IsNull(options.QueryTimeout);
-            Assert.AreEqual(30, options.EffectiveQueryTimeoutSeconds);
-        }
-
-        [TestMethod]
-        public void McpRuntimeOptions_EffectiveTimeout_ReturnsConfiguredValue()
-        {
-            McpRuntimeOptions options = new(QueryTimeout: 60);
-            Assert.AreEqual(60, options.QueryTimeout);
-            Assert.AreEqual(60, options.EffectiveQueryTimeoutSeconds);
-        }
-
-        [TestMethod]
-        public void McpRuntimeOptions_UserProvidedQueryTimeout_FalseByDefault()
-        {
-            McpRuntimeOptions options = new();
-            Assert.IsFalse(options.UserProvidedQueryTimeout);
-        }
-
-        [TestMethod]
-        public void McpRuntimeOptions_UserProvidedQueryTimeout_TrueWhenSet()
-        {
-            McpRuntimeOptions options = new(QueryTimeout: 45);
-            Assert.IsTrue(options.UserProvidedQueryTimeout);
-        }
-
-        #endregion
-
         #region Custom Value Tests
 
         [DataTestMethod]

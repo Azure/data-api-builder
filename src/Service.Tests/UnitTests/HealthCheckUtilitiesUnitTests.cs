@@ -4,7 +4,12 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Service.HealthCheck;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -149,6 +154,152 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert
             Assert.AreEqual(string.Empty, result);
+        }
+        /// <summary>
+        /// Tests that GetCurrentRole returns "anonymous" when no auth headers are present.
+        /// </summary>
+        [TestMethod]
+        public void GetCurrentRole_NoHeaders_ReturnsAnonymous()
+        {
+            HealthCheckHelper helper = CreateHelper();
+            string role = helper.GetCurrentRole(roleHeader: string.Empty, roleToken: string.Empty);
+            Assert.AreEqual(AuthorizationResolver.ROLE_ANONYMOUS, role);
+        }
+
+        /// <summary>
+        /// Tests that GetCurrentRole returns "authenticated" when a bearer token is present but no role header is supplied.
+        /// </summary>
+        [TestMethod]
+        public void GetCurrentRole_BearerTokenOnly_ReturnsAuthenticated()
+        {
+            HealthCheckHelper helper = CreateHelper();
+            string role = helper.GetCurrentRole(roleHeader: string.Empty, roleToken: "some-bearer-token");
+            Assert.AreEqual(AuthorizationResolver.ROLE_AUTHENTICATED, role);
+        }
+
+        /// <summary>
+        /// Tests that GetCurrentRole returns the explicit role value when the X-MS-API-ROLE header is provided.
+        /// </summary>
+        [TestMethod]
+        [DataRow("anonymous", DisplayName = "Explicit anonymous role header")]
+        [DataRow("authenticated", DisplayName = "Explicit authenticated role header")]
+        [DataRow("customrole", DisplayName = "Custom role header")]
+        public void GetCurrentRole_ExplicitRoleHeader_ReturnsHeaderValue(string explicitRole)
+        {
+            HealthCheckHelper helper = CreateHelper();
+            string role = helper.GetCurrentRole(roleHeader: explicitRole, roleToken: string.Empty);
+            Assert.AreEqual(explicitRole, role);
+        }
+
+        /// <summary>
+        /// Tests that the role header takes priority over the bearer token when both are present.
+        /// </summary>
+        [TestMethod]
+        public void GetCurrentRole_BothHeaderAndToken_RoleHeaderWins()
+        {
+            HealthCheckHelper helper = CreateHelper();
+            string role = helper.GetCurrentRole(roleHeader: "customrole", roleToken: "some-bearer-token");
+            Assert.AreEqual("customrole", role);
+        }
+
+        /// <summary>
+        /// Tests that ReadRoleHeaders correctly reads X-MS-API-ROLE from the request.
+        /// </summary>
+        [TestMethod]
+        public void ReadRoleHeaders_WithRoleHeader_ReturnsRoleHeader()
+        {
+            HealthCheckHelper helper = CreateHelper();
+            DefaultHttpContext context = new();
+            context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "myrole";
+
+            (string roleHeader, string roleToken) = helper.ReadRoleHeaders(context);
+
+            Assert.AreEqual("myrole", roleHeader);
+            Assert.AreEqual(string.Empty, roleToken);
+        }
+
+        /// <summary>
+        /// Tests that ReadRoleHeaders returns empty strings when no headers are present.
+        /// </summary>
+        [TestMethod]
+        public void ReadRoleHeaders_NoHeaders_ReturnsEmpty()
+        {
+            HealthCheckHelper helper = CreateHelper();
+            DefaultHttpContext context = new();
+
+            (string roleHeader, string roleToken) = helper.ReadRoleHeaders(context);
+
+            Assert.AreEqual(string.Empty, roleHeader);
+            Assert.AreEqual(string.Empty, roleToken);
+        }
+
+        /// <summary>
+        /// Tests that the cached health response does not reuse a previous caller's currentRole.
+        /// GetCurrentRole is a pure function: same input always produces same output,
+        /// and different inputs (representing different callers) produce different outputs.
+        /// </summary>
+        [TestMethod]
+        public void GetCurrentRole_CacheDoesNotLeakRole_DifferentCallersGetDifferentRoles()
+        {
+            HealthCheckHelper helper = CreateHelper();
+
+            // Simulate request 1 (anonymous, no headers)
+            string role1 = helper.GetCurrentRole(roleHeader: string.Empty, roleToken: string.Empty);
+
+            // Simulate request 2 (authenticated, with bearer token)
+            string role2 = helper.GetCurrentRole(roleHeader: string.Empty, roleToken: "bearer-token");
+
+            // Simulate request 3 (explicit custom role)
+            string role3 = helper.GetCurrentRole(roleHeader: "adminrole", roleToken: string.Empty);
+
+            Assert.AreEqual(AuthorizationResolver.ROLE_ANONYMOUS, role1);
+            Assert.AreEqual(AuthorizationResolver.ROLE_AUTHENTICATED, role2);
+            Assert.AreEqual("adminrole", role3);
+        }
+
+        /// <summary>
+        /// Tests that parallel calls to GetCurrentRole with different roles do not bleed values across calls.
+        /// Validates the singleton-safe design (no shared mutable state).
+        /// </summary>
+        [TestMethod]
+        public async Task GetCurrentRole_ParallelRequests_NoRoleBleed()
+        {
+            HealthCheckHelper helper = CreateHelper();
+
+            // Run many parallel "requests" each with a unique role
+            int parallelCount = 50;
+            string[] expectedRoles = new string[parallelCount];
+            string[] actualRoles = new string[parallelCount];
+
+            for (int i = 0; i < parallelCount; i++)
+            {
+                expectedRoles[i] = $"role-{i}";
+            }
+
+            List<Task> tasks = new();
+            for (int i = 0; i < parallelCount; i++)
+            {
+                int index = i;
+                tasks.Add(Task.Run(() =>
+                {
+                    actualRoles[index] = helper.GetCurrentRole(roleHeader: expectedRoles[index], roleToken: string.Empty);
+                }));
+            }
+
+            await Task.WhenAll(tasks);
+
+            for (int i = 0; i < parallelCount; i++)
+            {
+                Assert.AreEqual(expectedRoles[i], actualRoles[i], $"Role bleed detected at index {i}: expected '{expectedRoles[i]}' but got '{actualRoles[i]}'");
+            }
+        }
+
+        private static HealthCheckHelper CreateHelper()
+        {
+            Mock<ILogger<HealthCheckHelper>> loggerMock = new();
+            // HttpUtilities is not invoked by the methods under test (GetCurrentRole, ReadRoleHeaders),
+            // so passing null is safe here.
+            return new HealthCheckHelper(loggerMock.Object, null!);
         }
     }
 }

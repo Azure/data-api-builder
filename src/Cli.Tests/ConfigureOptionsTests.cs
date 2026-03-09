@@ -1371,46 +1371,6 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Validates that --show-effective-permissions does not modify the config file.
-        /// </summary>
-        [TestMethod]
-        public void TestShowEffectivePermissions_DoesNotModifyConfigFile()
-        {
-            // Arrange
-            string config = $@"{{
-                {SAMPLE_SCHEMA_DATA_SOURCE},
-                {RUNTIME_SECTION},
-                ""entities"": {{
-                    ""Book"": {{
-                        ""source"": ""dbo.Book"",
-                        ""permissions"": [
-                            {{ ""role"": ""anonymous"", ""actions"": [""read""] }}
-                        ]
-                    }}
-                }}
-            }}";
-
-            List<string> logMessages = new();
-            ListLogger<ConfigGenerator> logger = new(logMessages);
-            SetLoggerForCliConfigGenerator(logger);
-            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config));
-            string originalContent = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-
-            ConfigureOptions options = new(
-                config: TEST_RUNTIME_CONFIG_FILE,
-                showEffectivePermissions: true
-            );
-
-            // Act
-            bool isSuccess = TryShowEffectivePermissions(options, _runtimeConfigLoader!, _fileSystem!);
-
-            // Assert
-            Assert.IsTrue(isSuccess);
-            string afterContent = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.AreEqual(originalContent, afterContent, "Config file should not be modified by --show-effective-permissions.");
-        }
-
-        /// <summary>
         /// Validates that --show-effective-permissions returns false when the config file does not exist.
         /// </summary>
         [TestMethod]

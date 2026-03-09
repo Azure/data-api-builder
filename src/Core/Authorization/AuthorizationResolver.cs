@@ -38,6 +38,13 @@ public class AuthorizationResolver : IAuthorizationResolver
 
     public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
+    /// <summary>
+    /// Cached set of named roles that are explicitly configured in at least one entity's permissions.
+    /// Used by <see cref="IsNamedRoleExplicitlyConfigured"/> to determine whether a named role
+    /// should use strict directive matching vs. inheritance at the GraphQL @authorize gate.
+    /// </summary>
+    private HashSet<string> _explicitlyConfiguredNamedRoles = new(StringComparer.OrdinalIgnoreCase);
+
     public AuthorizationResolver(
         RuntimeConfigProvider runtimeConfigProvider,
         IMetadataProviderFactory metadataProviderFactory,
@@ -263,6 +270,9 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <param name="runtimeConfig"></param>
     private void SetEntityPermissionMap(RuntimeConfig runtimeConfig)
     {
+        Dictionary<string, EntityMetadata> newEntityPermissionsMap = new();
+        HashSet<string> newExplicitlyConfiguredNamedRoles = new(StringComparer.OrdinalIgnoreCase);
+
         foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
         {
             EntityMetadata entityToRoleMap = new();
@@ -390,8 +400,21 @@ public class AuthorizationResolver : IAuthorizationResolver
                 CopyOverPermissionsFromAnonymousToAuthenticatedRole(entityToRoleMap, allowedColumnsForAnonymousRole);
             }
 
-            EntityPermissionsMap[entityName] = entityToRoleMap;
+            newEntityPermissionsMap[entityName] = entityToRoleMap;
+
+            // Collect all named roles (non-system) that are explicitly configured for this entity.
+            foreach (string roleName in entityToRoleMap.RoleToOperationMap.Keys)
+            {
+                if (!roleName.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase) &&
+                    !roleName.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase))
+                {
+                    newExplicitlyConfiguredNamedRoles.Add(roleName);
+                }
+            }
         }
+
+        EntityPermissionsMap = newEntityPermissionsMap;
+        _explicitlyConfiguredNamedRoles = newExplicitlyConfiguredNamedRoles;
     }
 
     /// <summary>
@@ -449,10 +472,20 @@ public class AuthorizationResolver : IAuthorizationResolver
             return true;
         }
 
-        // Role inheritance: 'authenticated' inherits from 'anonymous', and named roles inherit from
-        // 'authenticated' (which itself may inherit from 'anonymous'). Any non-anonymous role is
-        // therefore allowed when either 'authenticated' or 'anonymous' is listed in the directive.
+        // 'authenticated' inherits from 'anonymous': allow authenticated when anonymous is in the directive.
+        if (clientRole.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase) &&
+            directiveRoles.Any(role => role.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // For named roles (non-system), only apply inheritance if the role is not explicitly
+        // configured in any entity. Explicitly configured roles have their own permission scopes
+        // and should only pass directives that list them (or a system role they'd inherit from)
+        // explicitly, preventing unintended access to operations outside their configured scope.
         if (!clientRole.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase) &&
+            !clientRole.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase) &&
+            !IsNamedRoleExplicitlyConfigured(clientRole) &&
             (directiveRoles.Any(role => role.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase)) ||
              directiveRoles.Any(role => role.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase))))
         {
@@ -460,6 +493,16 @@ public class AuthorizationResolver : IAuthorizationResolver
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Returns true if the given named role appears in the explicit permissions configuration of
+    /// any entity. Roles that are explicitly configured have their own permission scopes and
+    /// should not inherit permissions from system roles at the GraphQL directive level.
+    /// </summary>
+    private bool IsNamedRoleExplicitlyConfigured(string roleName)
+    {
+        return _explicitlyConfiguredNamedRoles.Contains(roleName);
     }
 
     /// <summary>

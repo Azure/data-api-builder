@@ -146,8 +146,11 @@ public interface IAuthorizationResolver
     ///
     /// Inheritance chain: named-role → authenticated → anonymous → none.
     /// - If the role is explicitly listed in the directive roles, return true.
-    /// - If the role is not 'anonymous' and 'authenticated' is listed, return true (inheritance).
-    /// - Otherwise, return false.
+    /// - If the role is 'authenticated' and 'anonymous' is listed, return true (inheritance).
+    /// - If the role is an unconfigured named role (not in any entity's explicit permissions)
+    ///   and either 'authenticated' or 'anonymous' is listed, return true (inheritance).
+    /// - Explicitly configured named roles use strict matching only, to prevent unintended
+    ///   access to operations outside their explicitly scoped permissions.
     /// </summary>
     /// <param name="clientRole">The role from the X-MS-API-ROLE header.</param>
     /// <param name="directiveRoles">The roles listed on the @authorize directive.</param>

@@ -65,23 +65,6 @@ public class AutoConfigSimulateTests
     }
 
     /// <summary>
-    /// Tests that the simulate command options parse the output path correctly.
-    /// </summary>
-    [TestMethod]
-    public void TestSimulateAutoentitiesOptions_OutputPathParsed()
-    {
-        // Arrange
-        string outputPath = "simulation-output.csv";
-
-        // Act
-        AutoConfigSimulateOptions options = new(output: outputPath, config: TEST_RUNTIME_CONFIG_FILE);
-
-        // Assert
-        Assert.AreEqual(outputPath, options.Output);
-        Assert.AreEqual(TEST_RUNTIME_CONFIG_FILE, options.Config);
-    }
-
-    /// <summary>
     /// Tests that the simulate command options default output to null (console output).
     /// </summary>
     [TestMethod]

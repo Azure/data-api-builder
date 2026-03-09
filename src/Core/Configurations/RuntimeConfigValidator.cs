@@ -349,6 +349,16 @@ public class RuntimeConfigValidator : IConfigValidator
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
         }
+
+        // Embeddings require L2 (distributed) cache to be enabled for storing embedding vectors.
+        bool isL2CacheEnabled = runtimeConfig.Runtime?.Cache?.Level2?.Enabled ?? false;
+        if (!isL2CacheEnabled)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "Embeddings require L2 (distributed) cache to be enabled. Please configure 'runtime.cache.level2' with a Redis connection.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
     }
 
     /// <summary>

@@ -16,7 +16,8 @@ namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 /// <summary>
 /// Service implementation for text embedding/vectorization.
 /// Supports both OpenAI and Azure OpenAI providers.
-/// Includes L1 memory cache using FusionCache to prevent duplicate embedding API calls.
+/// Caches embeddings using FusionCache when global cache/L2 are configured.
+/// Embeddings require L2 cache to be enabled - validated at startup.
 /// </summary>
 public class EmbeddingService : IEmbeddingService
 {
@@ -50,7 +51,7 @@ public class EmbeddingService : IEmbeddingService
     /// <param name="httpClient">The HTTP client for making API requests.</param>
     /// <param name="options">The embedding configuration options.</param>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="cache">The FusionCache instance for L1 memory caching.</param>
+    /// <param name="cache">The FusionCache instance used for caching embedding vectors.</param>
     public EmbeddingService(
         HttpClient httpClient,
         EmbeddingsOptions options,
@@ -233,6 +234,7 @@ public class EmbeddingService : IEmbeddingService
         {
             throw new InvalidOperationException("Embedding service is disabled.");
         }
+
         if (texts is null || texts.Length == 0)
         {
             throw new ArgumentException("Texts cannot be null or empty.", nameof(texts));
@@ -288,13 +290,12 @@ public class EmbeddingService : IEmbeddingService
             int originalIndex = uncachedIndices[i];
             results[originalIndex] = apiResults[i];
 
-            // Store in L1 cache only
+            // Store embeddings using the configured FusionCache stack.
             _cache.Set(
                 key: cacheKeys[originalIndex],
                 value: apiResults[i],
                 options =>
                 {
-                    options.SetSkipDistributedCache(true, true);
                     options.SetDuration(TimeSpan.FromHours(DEFAULT_CACHE_TTL_HOURS));
                 });
         }
@@ -326,8 +327,7 @@ public class EmbeddingService : IEmbeddingService
                     throw new InvalidOperationException("API returned empty embedding array.");
                 }
 
-                // L1 only - skip distributed cache
-                ctx.Options.SetSkipDistributedCache(true, true);
+                // Cache embeddings using the configured FusionCache stack.
                 ctx.Options.SetDuration(TimeSpan.FromHours(DEFAULT_CACHE_TTL_HOURS));
 
                 return result;
@@ -357,9 +357,14 @@ public class EmbeddingService : IEmbeddingService
         byte[] textBytes = Encoding.UTF8.GetBytes(keyInput);
         byte[] hashBytes = SHA256.HashData(textBytes);
         string hashHex = Convert.ToHexString(hashBytes);
+        string model = _options.EffectiveModel ?? "unknown";
 
         StringBuilder cacheKeyBuilder = new();
         cacheKeyBuilder.Append(CACHE_KEY_PREFIX);
+        cacheKeyBuilder.Append(KEY_DELIMITER);
+        cacheKeyBuilder.Append(_providerName);
+        cacheKeyBuilder.Append(KEY_DELIMITER);
+        cacheKeyBuilder.Append(model);
         cacheKeyBuilder.Append(KEY_DELIMITER);
         cacheKeyBuilder.Append(hashHex);
 

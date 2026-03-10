@@ -707,7 +707,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                    Mcp: new(),
                    Host: new(null, null)
                ),
-               Entities: new(new Dictionary<string, Entity>()));
+               Entities: new(new Dictionary<string, Entity>())
+           );
 
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
@@ -948,6 +949,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Authenticated user with oid but missing iss throws OboAuthenticationFailure")]
         [DataRow(null, null, "iss and oid/sub",
             DisplayName = "Authenticated user with no claims throws OboAuthenticationFailure")]
+#nullable enable
         public void TestOboEnabled_AuthenticatedUserMissingClaims_ThrowsException(
             string? issuer,
             string? objectId,
@@ -1010,6 +1012,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             return httpContextAccessor;
         }
+#nullable restore
 
         #endregion
 

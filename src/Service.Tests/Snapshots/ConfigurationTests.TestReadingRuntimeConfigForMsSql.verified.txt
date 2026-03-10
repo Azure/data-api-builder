@@ -33,7 +33,7 @@
         DeleteRecord: true,
         ExecuteEntity: true,
         AggregateRecords: true,
-        UserProvidedAllTools: true,
+        UserProvidedAllTools: false,
         UserProvidedDescribeEntities: false,
         UserProvidedCreateRecord: false,
         UserProvidedReadRecords: false,

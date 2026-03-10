@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#nullable enable
-
 using Azure.DataApiBuilder.Core.Parsers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

@@ -45,6 +45,7 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
             bool? deleteRecord = null;
             bool? executeEntity = null;
             bool? aggregateRecords = null;
+            int? aggregateRecordsQueryTimeout = null;
 
             while (reader.Read())
             {
@@ -58,8 +59,54 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                     string? property = reader.GetString();
                     reader.Read();
 
-                    // Handle the property value
-                    if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                    // aggregate-records supports both boolean and object formats
+                    if (property?.ToLowerInvariant() == "aggregate-records")
+                    {
+                        if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                        {
+                            aggregateRecords = reader.GetBoolean();
+                        }
+                        else if (reader.TokenType is JsonTokenType.StartObject)
+                        {
+                            // Handle object format: { "enabled": true, "query-timeout": 60 }
+                            while (reader.Read())
+                            {
+                                if (reader.TokenType is JsonTokenType.EndObject)
+                                {
+                                    break;
+                                }
+
+                                if (reader.TokenType is JsonTokenType.PropertyName)
+                                {
+                                    string? subProperty = reader.GetString();
+                                    reader.Read();
+
+                                    switch (subProperty?.ToLowerInvariant())
+                                    {
+                                        case "enabled":
+                                            aggregateRecords = reader.GetBoolean();
+                                            break;
+                                        case "query-timeout":
+                                            if (reader.TokenType is not JsonTokenType.Null)
+                                            {
+                                                aggregateRecordsQueryTimeout = reader.GetInt32();
+                                            }
+
+                                            break;
+                                        default:
+                                            reader.Skip();
+                                            break;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            throw new JsonException("Property 'aggregate-records' must be a boolean or object value.");
+                        }
+                    }
+                    // Handle other properties (must be boolean)
+                    else if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
                     {
                         bool value = reader.GetBoolean();
 
@@ -83,9 +130,6 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                             case "execute-entity":
                                 executeEntity = value;
                                 break;
-                            case "aggregate-records":
-                                aggregateRecords = value;
-                                break;
                             default:
                                 // Skip unknown properties
                                 break;
@@ -95,8 +139,7 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                     {
                         // Error on non-boolean values for known properties
                         if (property?.ToLowerInvariant() is "describe-entities" or "create-record"
-                            or "read-records" or "update-record" or "delete-record" or "execute-entity"
-                            or "aggregate-records")
+                            or "read-records" or "update-record" or "delete-record" or "execute-entity")
                         {
                             throw new JsonException($"Property '{property}' must be a boolean value.");
                         }
@@ -116,7 +159,8 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                 updateRecord: updateRecord,
                 deleteRecord: deleteRecord,
                 executeEntity: executeEntity,
-                aggregateRecords: aggregateRecords);
+                aggregateRecords: aggregateRecords,
+                aggregateRecordsQueryTimeout: aggregateRecordsQueryTimeout);
         }
 
         // For any other unexpected token type, return default (all enabled)
@@ -142,7 +186,8 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                                     value.UserProvidedUpdateRecord ||
                                     value.UserProvidedDeleteRecord ||
                                     value.UserProvidedExecuteEntity ||
-                                    value.UserProvidedAggregateRecords;
+                                    value.UserProvidedAggregateRecords ||
+                                    value.UserProvidedAggregateRecordsQueryTimeout;
 
         // Only write the boolean value if it's provided by user
         // This prevents writing "dml-tools": true when it's the default
@@ -188,9 +233,30 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                 writer.WriteBoolean("execute-entity", value.ExecuteEntity.Value);
             }
 
-            if (value.UserProvidedAggregateRecords && value.AggregateRecords.HasValue)
+            if (value.UserProvidedAggregateRecords || value.UserProvidedAggregateRecordsQueryTimeout)
             {
-                writer.WriteBoolean("aggregate-records", value.AggregateRecords.Value);
+                if (value.UserProvidedAggregateRecordsQueryTimeout)
+                {
+                    // Write as object format: { "enabled": true, "query-timeout": 60 }
+                    writer.WritePropertyName("aggregate-records");
+                    writer.WriteStartObject();
+
+                    if (value.AggregateRecords.HasValue)
+                    {
+                        writer.WriteBoolean("enabled", value.AggregateRecords.Value);
+                    }
+
+                    if (value.AggregateRecordsQueryTimeout.HasValue)
+                    {
+                        writer.WriteNumber("query-timeout", value.AggregateRecordsQueryTimeout.Value);
+                    }
+
+                    writer.WriteEndObject();
+                }
+                else if (value.AggregateRecords.HasValue)
+                {
+                    writer.WriteBoolean("aggregate-records", value.AggregateRecords.Value);
+                }
             }
 
             writer.WriteEndObject();

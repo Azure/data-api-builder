@@ -66,13 +66,12 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                 string? path = null;
                 DmlToolsConfig? dmlTools = null;
                 string? description = null;
-                int? queryTimeout = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType == JsonTokenType.EndObject)
                     {
-                        return new McpRuntimeOptions(enabled, path, dmlTools, description, queryTimeout);
+                        return new McpRuntimeOptions(enabled, path, dmlTools, description);
                     }
 
                     string? propertyName = reader.GetString();
@@ -104,14 +103,6 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                             if (reader.TokenType is not JsonTokenType.Null)
                             {
                                 description = reader.DeserializeString(_replacementSettings);
-                            }
-
-                            break;
-
-                        case "query-timeout":
-                            if (reader.TokenType is not JsonTokenType.Null)
-                            {
-                                queryTimeout = reader.GetInt32();
                             }
 
                             break;
@@ -157,13 +148,6 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
             {
                 writer.WritePropertyName("description");
                 JsonSerializer.Serialize(writer, value.Description, options);
-            }
-
-            // Write query-timeout whenever a value is present (null = not specified = use default).
-            // This covers both constructor-set (deserialization) and 'with' expression (CLI update) paths.
-            if (value?.QueryTimeout.HasValue is true)
-            {
-                writer.WriteNumber("query-timeout", value.QueryTimeout.Value);
             }
 
             writer.WriteEndObject();

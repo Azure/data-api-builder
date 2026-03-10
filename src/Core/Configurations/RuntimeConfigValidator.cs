@@ -911,13 +911,13 @@ public class RuntimeConfigValidator : IConfigValidator
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
 
-        // Validate query-timeout if provided
-        if (runtimeConfig.Runtime.Mcp.QueryTimeout is not null &&
-            (runtimeConfig.Runtime.Mcp.QueryTimeout < 1 || runtimeConfig.Runtime.Mcp.QueryTimeout > McpRuntimeOptions.MAX_QUERY_TIMEOUT_SECONDS))
+        // Validate aggregate-records query-timeout if provided
+        if (runtimeConfig.Runtime.Mcp.DmlTools?.AggregateRecordsQueryTimeout is not null &&
+            (runtimeConfig.Runtime.Mcp.DmlTools.AggregateRecordsQueryTimeout < 1 || runtimeConfig.Runtime.Mcp.DmlTools.AggregateRecordsQueryTimeout > DmlToolsConfig.MAX_QUERY_TIMEOUT_SECONDS))
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"MCP query-timeout must be between 1 and {McpRuntimeOptions.MAX_QUERY_TIMEOUT_SECONDS} seconds. " +
-                         $"Provided value: {runtimeConfig.Runtime.Mcp.QueryTimeout}.",
+                message: $"Aggregate-records query-timeout must be between 1 and {DmlToolsConfig.MAX_QUERY_TIMEOUT_SECONDS} seconds. " +
+                         $"Provided value: {runtimeConfig.Runtime.Mcp.DmlTools.AggregateRecordsQueryTimeout}.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }

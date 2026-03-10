@@ -268,7 +268,12 @@ namespace Cli
                 Runtime: new(
                     Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
                     GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
-                    Mcp: new(mcpEnabled, mcpPath ?? McpRuntimeOptions.DEFAULT_PATH),
+                    Mcp: new(
+                        Enabled: mcpEnabled,
+                        Path: mcpPath ?? McpRuntimeOptions.DEFAULT_PATH,
+                        DmlTools: options.McpAggregateRecordsQueryTimeout is not null
+                            ? new DmlToolsConfig(aggregateRecordsQueryTimeout: options.McpAggregateRecordsQueryTimeout)
+                            : null),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
@@ -880,7 +885,6 @@ namespace Cli
             if (options.RuntimeMcpEnabled != null ||
                 options.RuntimeMcpPath != null ||
                 options.RuntimeMcpDescription != null ||
-                options.RuntimeMcpQueryTimeout != null ||
                 options.RuntimeMcpDmlToolsEnabled != null ||
                 options.RuntimeMcpDmlToolsDescribeEntitiesEnabled != null ||
                 options.RuntimeMcpDmlToolsCreateRecordEnabled != null ||
@@ -888,7 +892,8 @@ namespace Cli
                 options.RuntimeMcpDmlToolsUpdateRecordEnabled != null ||
                 options.RuntimeMcpDmlToolsDeleteRecordEnabled != null ||
                 options.RuntimeMcpDmlToolsExecuteEntityEnabled != null ||
-                options.RuntimeMcpDmlToolsAggregateRecordsEnabled != null)
+                options.RuntimeMcpDmlToolsAggregateRecordsEnabled != null ||
+                options.RuntimeMcpDmlToolsAggregateRecordsQueryTimeout != null)
             {
                 McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
                 bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
@@ -1167,14 +1172,6 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Description as '{updatedValue}'", updatedValue);
                 }
 
-                // Runtime.Mcp.QueryTimeout
-                updatedValue = options?.RuntimeMcpQueryTimeout;
-                if (updatedValue != null)
-                {
-                    updatedMcpOptions = updatedMcpOptions! with { QueryTimeout = (int)updatedValue, UserProvidedQueryTimeout = true };
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.QueryTimeout as '{updatedValue}'", updatedValue);
-                }
-
                 // Handle DML tools configuration
                 bool hasToolUpdates = false;
                 DmlToolsConfig? currentDmlTools = updatedMcpOptions?.DmlTools;
@@ -1196,6 +1193,7 @@ namespace Cli
                 bool? deleteRecord = currentDmlTools?.DeleteRecord;
                 bool? executeEntity = currentDmlTools?.ExecuteEntity;
                 bool? aggregateRecords = currentDmlTools?.AggregateRecords;
+                int? aggregateRecordsQueryTimeout = currentDmlTools?.AggregateRecordsQueryTimeout;
 
                 updatedValue = options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
                 if (updatedValue != null)
@@ -1253,6 +1251,14 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.aggregate-records as '{updatedValue}'", updatedValue);
                 }
 
+                updatedValue = options?.RuntimeMcpDmlToolsAggregateRecordsQueryTimeout;
+                if (updatedValue != null)
+                {
+                    aggregateRecordsQueryTimeout = (int)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.aggregate-records.query-timeout as '{updatedValue}'", updatedValue);
+                }
+
                 if (hasToolUpdates)
                 {
                     updatedMcpOptions = updatedMcpOptions! with
@@ -1264,7 +1270,8 @@ namespace Cli
                             updateRecord: updateRecord,
                             deleteRecord: deleteRecord,
                             executeEntity: executeEntity,
-                            aggregateRecords: aggregateRecords)
+                            aggregateRecords: aggregateRecords,
+                            aggregateRecordsQueryTimeout: aggregateRecordsQueryTimeout)
                     };
                 }
 

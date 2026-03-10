@@ -33,17 +33,17 @@
         DeleteRecord: true,
         ExecuteEntity: true,
         AggregateRecords: true,
-        UserProvidedAllTools: false,
+        UserProvidedAllTools: true,
         UserProvidedDescribeEntities: false,
         UserProvidedCreateRecord: false,
         UserProvidedReadRecords: false,
         UserProvidedUpdateRecord: false,
         UserProvidedDeleteRecord: false,
         UserProvidedExecuteEntity: false,
-        UserProvidedAggregateRecords: false
-      },
-      UserProvidedQueryTimeout: false,
-      EffectiveQueryTimeoutSeconds: 30
+        UserProvidedAggregateRecords: false,
+        UserProvidedAggregateRecordsQueryTimeout: false,
+        EffectiveAggregateRecordsQueryTimeoutSeconds: 30
+      }
     },
     Host: {
       Cors: {

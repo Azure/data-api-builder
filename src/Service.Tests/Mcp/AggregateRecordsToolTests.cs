@@ -306,20 +306,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [DataTestMethod]
-        [DataRow("Product", DisplayName = "Product entity")]
-        public void BuildTaskCanceledErrorMessage_ContainsGuidance(string entityName)
-        {
-            string message = AggregateRecordsTool.BuildTaskCanceledErrorMessage(entityName);
-
-            AssertContainsAll(message,
-                (entityName, "Must include entity name."),
-                ("NOT a tool error", "Must state this is NOT a tool error."),
-                ("timeout", "Must reference timeout."),
-                ("filter", "Must suggest filter."),
-                ("first", "Must suggest pagination."));
-        }
-
-        [DataTestMethod]
         [DataRow("LargeProductCatalog", DisplayName = "LargeProductCatalog entity")]
         public void BuildOperationCanceledErrorMessage_ContainsGuidance(string entityName)
         {

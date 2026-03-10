@@ -1,4 +1,4 @@
-{
+﻿{
   DataSource: {
     DatabaseType: PostgreSQL
   },
@@ -32,10 +32,10 @@
         UserProvidedUpdateRecord: false,
         UserProvidedDeleteRecord: false,
         UserProvidedExecuteEntity: false,
-        UserProvidedAggregateRecords: false
-      },
-      UserProvidedQueryTimeout: false,
-      EffectiveQueryTimeoutSeconds: 30
+        UserProvidedAggregateRecords: false,
+        UserProvidedAggregateRecordsQueryTimeout: false,
+        EffectiveAggregateRecordsQueryTimeoutSeconds: 30
+      }
     },
     Host: {
       Cors: {

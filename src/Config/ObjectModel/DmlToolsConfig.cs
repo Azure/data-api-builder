@@ -17,6 +17,16 @@ public record DmlToolsConfig
     public const bool DEFAULT_ENABLED = true;
 
     /// <summary>
+    /// Default query timeout in seconds for the aggregate-records tool.
+    /// </summary>
+    public const int DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
+
+    /// <summary>
+    /// Maximum allowed query timeout in seconds for the aggregate-records tool.
+    /// </summary>
+    public const int MAX_QUERY_TIMEOUT_SECONDS = 600;
+
+    /// <summary>
     /// Indicates if all tools are enabled/disabled uniformly
     /// </summary>
     public bool AllToolsEnabled { get; init; }
@@ -56,6 +66,12 @@ public record DmlToolsConfig
     /// </summary>
     public bool? AggregateRecords { get; init; }
 
+    /// <summary>
+    /// Execution timeout in seconds for aggregate-records tool operations.
+    /// Default: 30 seconds.
+    /// </summary>
+    public int? AggregateRecordsQueryTimeout { get; init; }
+
     [JsonConstructor]
     public DmlToolsConfig(
         bool? allToolsEnabled = null,
@@ -65,7 +81,8 @@ public record DmlToolsConfig
         bool? updateRecord = null,
         bool? deleteRecord = null,
         bool? executeEntity = null,
-        bool? aggregateRecords = null)
+        bool? aggregateRecords = null,
+        int? aggregateRecordsQueryTimeout = null)
     {
         if (allToolsEnabled is not null)
         {
@@ -105,6 +122,12 @@ public record DmlToolsConfig
         UserProvidedDeleteRecord = deleteRecord is not null;
         UserProvidedExecuteEntity = executeEntity is not null;
         UserProvidedAggregateRecords = aggregateRecords is not null;
+
+        if (aggregateRecordsQueryTimeout is not null)
+        {
+            AggregateRecordsQueryTimeout = aggregateRecordsQueryTimeout;
+            UserProvidedAggregateRecordsQueryTimeout = true;
+        }
     }
 
     /// <summary>
@@ -122,7 +145,8 @@ public record DmlToolsConfig
             updateRecord: null,
             deleteRecord: null,
             executeEntity: null,
-            aggregateRecords: null
+            aggregateRecords: null,
+            aggregateRecordsQueryTimeout: null
         );
     }
 
@@ -138,7 +162,8 @@ public record DmlToolsConfig
         updateRecord: null,
         deleteRecord: null,
         executeEntity: null,
-        aggregateRecords: null
+        aggregateRecords: null,
+        aggregateRecordsQueryTimeout: null
     );
 
     /// <summary>
@@ -204,4 +229,18 @@ public record DmlToolsConfig
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(AggregateRecords))]
     public bool UserProvidedAggregateRecords { get; init; } = false;
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write aggregate-records.query-timeout
+    /// property/value to the runtime config file.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public bool UserProvidedAggregateRecordsQueryTimeout { get; init; } = false;
+
+    /// <summary>
+    /// Gets the effective query timeout in seconds for the aggregate-records tool,
+    /// using the default if not specified.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public int EffectiveAggregateRecordsQueryTimeoutSeconds => AggregateRecordsQueryTimeout ?? DEFAULT_QUERY_TIMEOUT_SECONDS;
 }

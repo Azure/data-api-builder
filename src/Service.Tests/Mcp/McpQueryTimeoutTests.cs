@@ -19,14 +19,12 @@ using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 namespace Azure.DataApiBuilder.Service.Tests.Mcp
 {
     /// <summary>
-    /// Tests for the MCP query-timeout configuration property.
+    /// Tests for the aggregate-records query-timeout configuration property.
     /// Verifies:
     /// - Default value of 30 seconds when not configured
     /// - Custom value overrides default
-    /// - Timeout wrapping applies to all MCP tools via ExecuteWithTelemetryAsync
-    /// - Hot reload: changing config value updates behavior without restart
-    /// - Timeout surfaces as TimeoutException, not generic cancellation
-    /// - Telemetry maps timeout to TIMEOUT error code
+    /// - DmlToolsConfig properties reflect configured timeout
+    /// - JSON serialization/deserialization of aggregate-records with query-timeout
     /// </summary>
     [TestClass]
     public class McpQueryTimeoutTests
@@ -37,89 +35,73 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow(1, DisplayName = "1 second")]
         [DataRow(60, DisplayName = "60 seconds")]
         [DataRow(120, DisplayName = "120 seconds")]
-        public void McpRuntimeOptions_CustomTimeout_ReturnsConfiguredValue(int timeoutSeconds)
+        public void DmlToolsConfig_CustomTimeout_ReturnsConfiguredValue(int timeoutSeconds)
         {
-            McpRuntimeOptions options = new(QueryTimeout: timeoutSeconds);
-            Assert.AreEqual(timeoutSeconds, options.EffectiveQueryTimeoutSeconds);
+            DmlToolsConfig config = new(aggregateRecordsQueryTimeout: timeoutSeconds);
+            Assert.AreEqual(timeoutSeconds, config.EffectiveAggregateRecordsQueryTimeoutSeconds);
+            Assert.IsTrue(config.UserProvidedAggregateRecordsQueryTimeout);
         }
 
         [TestMethod]
-        public void RuntimeConfig_McpQueryTimeout_ExposedInConfig()
+        public void RuntimeConfig_AggregateRecordsQueryTimeout_ExposedInConfig()
         {
             RuntimeConfig config = CreateConfig(queryTimeout: 45);
-            Assert.AreEqual(45, config.Runtime?.Mcp?.QueryTimeout);
-            Assert.AreEqual(45, config.Runtime?.Mcp?.EffectiveQueryTimeoutSeconds);
+            Assert.AreEqual(45, config.Runtime?.Mcp?.DmlTools?.AggregateRecordsQueryTimeout);
+            Assert.AreEqual(45, config.Runtime?.Mcp?.DmlTools?.EffectiveAggregateRecordsQueryTimeoutSeconds);
         }
 
         [TestMethod]
-        public void RuntimeConfig_McpQueryTimeout_DefaultWhenNotSet()
+        public void RuntimeConfig_AggregateRecordsQueryTimeout_DefaultWhenNotSet()
         {
             RuntimeConfig config = CreateConfig();
-            Assert.IsNull(config.Runtime?.Mcp?.QueryTimeout);
-            Assert.AreEqual(30, config.Runtime?.Mcp?.EffectiveQueryTimeoutSeconds);
+            Assert.IsNull(config.Runtime?.Mcp?.DmlTools?.AggregateRecordsQueryTimeout);
+            Assert.AreEqual(DmlToolsConfig.DEFAULT_QUERY_TIMEOUT_SECONDS, config.Runtime?.Mcp?.DmlTools?.EffectiveAggregateRecordsQueryTimeoutSeconds);
         }
 
         #endregion
 
-        #region Timeout Wrapping Tests
+        #region Telemetry No-Timeout Tests
 
         [TestMethod]
-        public async Task ExecuteWithTelemetry_CompletesSuccessfully_WithinTimeout()
+        public async Task ExecuteWithTelemetry_CompletesSuccessfully_NoTimeout()
         {
-            // A tool that completes immediately should succeed
-            RuntimeConfig config = CreateConfig(queryTimeout: 30);
+            // After moving timeout to AggregateRecordsTool, ExecuteWithTelemetryAsync should
+            // no longer apply any timeout wrapping. A fast tool should complete regardless of config.
+            RuntimeConfig config = CreateConfig(queryTimeout: 1);
             IServiceProvider sp = CreateServiceProviderWithConfig(config);
             IMcpTool tool = new ImmediateCompletionTool();
 
             CallToolResult result = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
                 tool, "test_tool", null, sp, CancellationToken.None);
 
-            // Tool should complete without throwing TimeoutException
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsError != true, "Tool result should not be an error");
         }
 
         [TestMethod]
-        public async Task ExecuteWithTelemetry_ThrowsTimeoutException_WhenToolExceedsTimeout()
+        public async Task ExecuteWithTelemetry_DoesNotApplyTimeout_AfterRefactor()
         {
-            // Configure a very short timeout (1 second) and a tool that takes longer
+            // Verify that McpTelemetryHelper no longer applies timeout wrapping.
+            // A slow tool should NOT timeout in the telemetry layer (timeout is now tool-specific).
             RuntimeConfig config = CreateConfig(queryTimeout: 1);
             IServiceProvider sp = CreateServiceProviderWithConfig(config);
-            IMcpTool tool = new SlowTool(delaySeconds: 30);
 
-            await Assert.ThrowsExceptionAsync<TimeoutException>(async () =>
-            {
-                await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                    tool, "slow_tool", null, sp, CancellationToken.None);
-            });
-        }
+            // Use a short-delay tool (2 seconds) with 1-second query-timeout.
+            // If McpTelemetryHelper still applied timeout, this would throw TimeoutException.
+            IMcpTool tool = new SlowTool(delaySeconds: 2);
 
-        [TestMethod]
-        public async Task ExecuteWithTelemetry_TimeoutMessage_ContainsToolName()
-        {
-            RuntimeConfig config = CreateConfig(queryTimeout: 1);
-            IServiceProvider sp = CreateServiceProviderWithConfig(config);
-            IMcpTool tool = new SlowTool(delaySeconds: 30);
+            // Should complete without timeout since McpTelemetryHelper no longer wraps with timeout
+            CallToolResult result = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                tool, "test_tool", null, sp, CancellationToken.None);
 
-            try
-            {
-                await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                    tool, "aggregate_records", null, sp, CancellationToken.None);
-                Assert.Fail("Expected TimeoutException");
-            }
-            catch (TimeoutException ex)
-            {
-                Assert.IsTrue(ex.Message.Contains("aggregate_records"), "Message should contain tool name");
-                Assert.IsTrue(ex.Message.Contains("1 second"), "Message should contain timeout value");
-                Assert.IsTrue(ex.Message.Contains("NOT a tool error"), "Message should clarify it is not a tool error");
-            }
+            Assert.IsNotNull(result);
+            Assert.IsTrue(result.IsError != true, "Tool should complete without timeout in telemetry layer");
         }
 
         [TestMethod]
         public async Task ExecuteWithTelemetry_ClientCancellation_PropagatesAsCancellation()
         {
-            // Client cancellation (not timeout) should propagate as OperationCanceledException
-            // rather than being converted to TimeoutException.
+            // Client cancellation should still propagate as OperationCanceledException.
             RuntimeConfig config = CreateConfig(queryTimeout: 30);
             IServiceProvider sp = CreateServiceProviderWithConfig(config);
             IMcpTool tool = new SlowTool(delaySeconds: 30);
@@ -140,98 +122,60 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             catch (OperationCanceledException)
             {
                 // Expected: client-initiated cancellation propagates as OperationCanceledException
-                // (or subclass TaskCanceledException)
             }
         }
 
-        [TestMethod]
-        public async Task ExecuteWithTelemetry_AppliesTimeout_ToAllToolTypes()
-        {
-            // Verify timeout applies to both built-in and custom tool types
-            RuntimeConfig config = CreateConfig(queryTimeout: 1);
-            IServiceProvider sp = CreateServiceProviderWithConfig(config);
-
-            // Test with built-in tool type
-            IMcpTool builtInTool = new SlowTool(delaySeconds: 30, toolType: ToolType.BuiltIn);
-            await Assert.ThrowsExceptionAsync<TimeoutException>(async () =>
-            {
-                await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                    builtInTool, "builtin_slow", null, sp, CancellationToken.None);
-            });
-
-            // Test with custom tool type
-            IMcpTool customTool = new SlowTool(delaySeconds: 30, toolType: ToolType.Custom);
-            await Assert.ThrowsExceptionAsync<TimeoutException>(async () =>
-            {
-                await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                    customTool, "custom_slow", null, sp, CancellationToken.None);
-            });
-        }
-
         #endregion
-
-        #region Hot Reload Tests
-
-        [TestMethod]
-        public async Task ExecuteWithTelemetry_ReadsConfigPerInvocation_HotReload()
-        {
-            // First invocation with long timeout should succeed
-            RuntimeConfig config1 = CreateConfig(queryTimeout: 30);
-            IServiceProvider sp1 = CreateServiceProviderWithConfig(config1);
-
-            IMcpTool fastTool = new ImmediateCompletionTool();
-            CallToolResult result1 = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                fastTool, "test_tool", null, sp1, CancellationToken.None);
-            Assert.IsNotNull(result1);
-
-            // Second invocation with very short timeout and a slow tool should timeout.
-            // This demonstrates that each invocation reads the current config value.
-            RuntimeConfig config2 = CreateConfig(queryTimeout: 1);
-            IServiceProvider sp2 = CreateServiceProviderWithConfig(config2);
-
-            IMcpTool slowTool = new SlowTool(delaySeconds: 30);
-            await Assert.ThrowsExceptionAsync<TimeoutException>(async () =>
-            {
-                await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                    slowTool, "test_tool", null, sp2, CancellationToken.None);
-            });
-        }
-
-        #endregion
-
-        // Note: MapExceptionToErrorCode tests are in McpTelemetryTests (covers all exception types via DataRow).
 
         #region JSON Serialization Tests
 
         [TestMethod]
-        public void McpRuntimeOptions_Serialization_IncludesQueryTimeout_WhenUserProvided()
+        public void DmlToolsConfig_Serialization_IncludesQueryTimeout_WhenUserProvided()
         {
-            McpRuntimeOptions options = new(QueryTimeout: 45);
+            // When aggregate-records has a query-timeout, it should serialize as object format
+            DmlToolsConfig dmlTools = new(aggregateRecords: true, aggregateRecordsQueryTimeout: 45);
+            McpRuntimeOptions options = new(Enabled: true, DmlTools: dmlTools);
             JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions();
             string json = JsonSerializer.Serialize(options, serializerOptions);
-            Assert.IsTrue(json.Contains("\"query-timeout\": 45") || json.Contains("\"query-timeout\":45"));
+            Assert.IsTrue(json.Contains("\"query-timeout\""), $"Expected 'query-timeout' in JSON. Got: {json}");
+            Assert.IsTrue(json.Contains("45"), $"Expected timeout value 45 in JSON. Got: {json}");
         }
 
         [TestMethod]
-        public void McpRuntimeOptions_Deserialization_ReadsQueryTimeout()
+        public void DmlToolsConfig_Deserialization_ReadsQueryTimeout_ObjectFormat()
         {
-            string json = @"{""enabled"": true, ""query-timeout"": 60}";
+            string json = @"{""enabled"": true, ""dml-tools"": { ""aggregate-records"": { ""enabled"": true, ""query-timeout"": 60 } }}";
             JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions();
             McpRuntimeOptions options = JsonSerializer.Deserialize<McpRuntimeOptions>(json, serializerOptions);
             Assert.IsNotNull(options);
-            Assert.AreEqual(60, options.QueryTimeout);
-            Assert.AreEqual(60, options.EffectiveQueryTimeoutSeconds);
+            Assert.IsNotNull(options.DmlTools);
+            Assert.AreEqual(true, options.DmlTools.AggregateRecords);
+            Assert.AreEqual(60, options.DmlTools.AggregateRecordsQueryTimeout);
+            Assert.AreEqual(60, options.DmlTools.EffectiveAggregateRecordsQueryTimeoutSeconds);
         }
 
         [TestMethod]
-        public void McpRuntimeOptions_Deserialization_DefaultsWhenOmitted()
+        public void DmlToolsConfig_Deserialization_AggregateRecordsBoolean_NoQueryTimeout()
+        {
+            string json = @"{""enabled"": true, ""dml-tools"": { ""aggregate-records"": true }}";
+            JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions();
+            McpRuntimeOptions options = JsonSerializer.Deserialize<McpRuntimeOptions>(json, serializerOptions);
+            Assert.IsNotNull(options);
+            Assert.IsNotNull(options.DmlTools);
+            Assert.AreEqual(true, options.DmlTools.AggregateRecords);
+            Assert.IsNull(options.DmlTools.AggregateRecordsQueryTimeout);
+            Assert.AreEqual(DmlToolsConfig.DEFAULT_QUERY_TIMEOUT_SECONDS, options.DmlTools.EffectiveAggregateRecordsQueryTimeoutSeconds);
+        }
+
+        [TestMethod]
+        public void DmlToolsConfig_Deserialization_DefaultsWhenOmitted()
         {
             string json = @"{""enabled"": true}";
             JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions();
             McpRuntimeOptions options = JsonSerializer.Deserialize<McpRuntimeOptions>(json, serializerOptions);
             Assert.IsNotNull(options);
-            Assert.IsNull(options.QueryTimeout);
-            Assert.AreEqual(30, options.EffectiveQueryTimeoutSeconds);
+            Assert.IsNull(options.DmlTools?.AggregateRecordsQueryTimeout);
+            Assert.AreEqual(DmlToolsConfig.DEFAULT_QUERY_TIMEOUT_SECONDS, options.DmlTools?.EffectiveAggregateRecordsQueryTimeoutSeconds ?? DmlToolsConfig.DEFAULT_QUERY_TIMEOUT_SECONDS);
         }
 
         #endregion
@@ -249,7 +193,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     Mcp: new(
                         Enabled: true,
                         Path: "/mcp",
-                        QueryTimeout: queryTimeout,
                         DmlTools: new(
                             describeEntities: true,
                             readRecords: true,
@@ -257,7 +200,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                             updateRecord: true,
                             deleteRecord: true,
                             executeEntity: true,
-                            aggregateRecords: true
+                            aggregateRecords: true,
+                            aggregateRecordsQueryTimeout: queryTimeout
                         )
                     ),
                     Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
@@ -310,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         /// <summary>
         /// A mock tool that delays for a specified duration, respecting cancellation.
-        /// Used to test timeout behavior.
+        /// Used to test cancellation behavior.
         /// </summary>
         private class SlowTool : IMcpTool
         {

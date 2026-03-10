@@ -174,6 +174,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                // Read aggregate-records query-timeout from current config per invocation (hot-reload safe).
+                int timeoutSeconds = runtimeConfig.McpDmlTools?.EffectiveAggregateRecordsQueryTimeoutSeconds
+                    ?? DmlToolsConfig.DEFAULT_QUERY_TIMEOUT_SECONDS;
+
+                // Defensive runtime guard: clamp timeout to valid range [1, MAX_QUERY_TIMEOUT_SECONDS].
+                if (timeoutSeconds < 1 || timeoutSeconds > DmlToolsConfig.MAX_QUERY_TIMEOUT_SECONDS)
+                {
+                    timeoutSeconds = DmlToolsConfig.DEFAULT_QUERY_TIMEOUT_SECONDS;
+                }
+
+                // Wrap tool execution with the configured timeout using a linked CancellationTokenSource.
+                using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+
                 // 1. Parse and validate all input arguments
                 CallToolResult? parseError = TryParseAndValidateArguments(arguments, runtimeConfig, toolName, out AggregateArguments args, logger);
                 if (parseError != null)
@@ -250,7 +264,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 // 8. Execute query and return results
-                cancellationToken.ThrowIfCancellationRequested();
+                timeoutCts.Token.ThrowIfCancellationRequested();
                 JsonDocument? queryResult = await queryExecutor.ExecuteQueryAsync(
                     sql, structure.Parameters, queryExecutor.GetJsonResultAsync<JsonDocument>,
                     dataSourceName, authCtx.HttpContext);
@@ -267,9 +281,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 return McpResponseBuilder.BuildErrorResult(toolName, "TimeoutError", BuildTimeoutErrorMessage(entityName), logger);
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                return McpResponseBuilder.BuildErrorResult(toolName, "TimeoutError", BuildTaskCanceledErrorMessage(entityName), logger);
+                // The timeout CTS fired, not the caller's token. Treat as timeout error.
+                return McpResponseBuilder.BuildErrorResult(toolName, "TimeoutError", BuildTimeoutErrorMessage(entityName), logger);
             }
             catch (OperationCanceledException)
             {
@@ -1042,16 +1057,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return $"The aggregation query for entity '{entityName}' timed out. "
                 + "This is NOT a tool error. The database did not respond in time. "
                 + "This may occur with large datasets or complex aggregations. "
-                + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.";
-        }
-
-        /// <summary>
-        /// Builds the error message for a TaskCanceledException during aggregation (typically a timeout).
-        /// </summary>
-        internal static string BuildTaskCanceledErrorMessage(string entityName)
-        {
-            return $"The aggregation query for entity '{entityName}' was canceled, likely due to a timeout. "
-                + "This is NOT a tool error. The database did not respond in time. "
                 + "Try narrowing results with a 'filter', reducing 'groupby' fields, or adding 'first' for pagination.";
         }
 

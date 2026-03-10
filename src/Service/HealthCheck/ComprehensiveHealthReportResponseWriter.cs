@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -76,8 +75,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // Global comprehensive Health Check Enabled
             if (config.IsHealthEnabled)
             {
-                _healthCheckHelper.StoreIncomingRoleHeader(context);
-                if (!_healthCheckHelper.IsUserAllowedToAccessHealthCheck(context, config.IsDevelopmentMode(), config.AllowedRolesForHealth))
+                (string roleHeader, string roleToken) = _healthCheckHelper.ReadRoleHeaders(context);
+                if (!_healthCheckHelper.IsUserAllowedToAccessHealthCheck(config.IsDevelopmentMode(), config.AllowedRolesForHealth, roleHeader))
                 {
                     _logger.LogError("Comprehensive Health Check Report is not allowed: 403 Forbidden due to insufficient permissions.");
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
@@ -85,34 +84,33 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     return;
                 }
 
-                string? response;
                 // Check if the cache is enabled 
                 if (config.CacheTtlSecondsForHealthReport > 0)
                 {
+                    ComprehensiveHealthCheckReport? report = null;
                     try
                     {
-                        response = await _cache.GetOrSetAsync<string?>(
+                        report = await _cache.GetOrSetAsync<ComprehensiveHealthCheckReport?>(
                             key: CACHE_KEY,
-                            async (FusionCacheFactoryExecutionContext<string?> ctx, CancellationToken ct) =>
+                            async (FusionCacheFactoryExecutionContext<ComprehensiveHealthCheckReport?> ctx, CancellationToken ct) =>
                             {
-                                string? response = await ExecuteHealthCheckAsync(config).ConfigureAwait(false);
+                                ComprehensiveHealthCheckReport? r = await _healthCheckHelper.GetHealthCheckResponseAsync(config, roleHeader, roleToken).ConfigureAwait(false);
                                 ctx.Options.SetDuration(TimeSpan.FromSeconds(config.CacheTtlSecondsForHealthReport));
-                                return response;
+                                return r;
                             });
 
                         _logger.LogTrace($"Health check response is fetched from cache with key: {CACHE_KEY} and TTL: {config.CacheTtlSecondsForHealthReport} seconds.");
                     }
                     catch (Exception ex)
                     {
-                        response = null; // Set response to null in case of an error
                         _logger.LogError($"Error in caching health check response: {ex.Message}");
                     }
 
                     // Ensure cachedResponse is not null before calling WriteAsync
-                    if (response != null)
+                    if (report != null)
                     {
-                        // Return the cached or newly generated response
-                        await context.Response.WriteAsync(response);
+                        // Set currentRole per-request (not cached) so each caller sees their own role
+                        await context.Response.WriteAsync(SerializeReport(report with { CurrentRole = _healthCheckHelper.GetCurrentRole(roleHeader, roleToken) }));
                     }
                     else
                     {
@@ -124,9 +122,9 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 }
                 else
                 {
-                    response = await ExecuteHealthCheckAsync(config).ConfigureAwait(false);
+                    ComprehensiveHealthCheckReport report = await _healthCheckHelper.GetHealthCheckResponseAsync(config, roleHeader, roleToken).ConfigureAwait(false);
                     // Return the newly generated response
-                    await context.Response.WriteAsync(response);
+                    await context.Response.WriteAsync(SerializeReport(report with { CurrentRole = _healthCheckHelper.GetCurrentRole(roleHeader, roleToken) }));
                 }
             }
             else
@@ -139,13 +137,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return;
         }
 
-        private async Task<string> ExecuteHealthCheckAsync(RuntimeConfig config)
+        private string SerializeReport(ComprehensiveHealthCheckReport report)
         {
-            ComprehensiveHealthCheckReport dabHealthCheckReport = await _healthCheckHelper.GetHealthCheckResponseAsync(config);
-            string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
-            _logger.LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
-
-            return response;
+            _logger.LogTrace($"Health check response writer writing status as: {report.Status}");
+            return JsonSerializer.Serialize(report, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
         }
     }
 }

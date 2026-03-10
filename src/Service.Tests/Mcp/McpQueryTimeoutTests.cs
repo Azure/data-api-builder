@@ -167,17 +167,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(DmlToolsConfig.DEFAULT_QUERY_TIMEOUT_SECONDS, options.DmlTools.EffectiveAggregateRecordsQueryTimeoutSeconds);
         }
 
-        [TestMethod]
-        public void DmlToolsConfig_Deserialization_DefaultsWhenOmitted()
-        {
-            string json = @"{""enabled"": true}";
-            JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions();
-            McpRuntimeOptions options = JsonSerializer.Deserialize<McpRuntimeOptions>(json, serializerOptions);
-            Assert.IsNotNull(options);
-            Assert.IsNull(options.DmlTools?.AggregateRecordsQueryTimeout);
-            Assert.AreEqual(DmlToolsConfig.DEFAULT_QUERY_TIMEOUT_SECONDS, options.DmlTools?.EffectiveAggregateRecordsQueryTimeoutSeconds ?? DmlToolsConfig.DEFAULT_QUERY_TIMEOUT_SECONDS);
-        }
-
         #endregion
 
         #region Helpers

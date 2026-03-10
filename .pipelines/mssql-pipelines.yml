@@ -23,10 +23,10 @@ pr:
     - release/*
   paths:
     exclude:
-    - samples/**
-    - docs/**
+    - samples**
+    - docs**
     - '*.md'
-    - templates/**
+    - templates**
 
 jobs:
 - job: linux
@@ -186,10 +186,11 @@ jobs:
 
   - task: NuGetToolInstaller@1
 
-  - task: NuGetCommand@2
+  - task: DotNetCoreCLI@2
     displayName: Restore NuGet packages
     inputs:
-      restoreSolution: '$(solution)'
+      command: restore
+      projects: '$(solution)'
       feedsToUse: config
       nugetConfigPath: Nuget.config
 
@@ -205,8 +206,8 @@ jobs:
         Start-BitsTransfer -Source $(InstallerUrl) -Destination SqlLocalDB.msi
         Write-Host "Installing"
         Start-Process -FilePath "SqlLocalDB.msi" -Wait -ArgumentList "/qn", "/norestart", "/l*v SqlLocalDBInstall.log", "IACCEPTSQLLOCALDBLICENSETERMS=YES";
-        SqlLocalDB.exe stop MSSQLLocalDB -k
-        SqlLocalDB.exe delete MSSQLLocalDB
+        SqlLocalDb.exe stop MSSQLLocalDB -k
+        SqlLocalDb.exe delete MSSQLLocalDB
 
   - task: PowerShell@2
     displayName: 'Start MSSQLLocalDB'

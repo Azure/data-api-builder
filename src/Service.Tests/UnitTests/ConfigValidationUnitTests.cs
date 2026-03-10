@@ -3061,62 +3061,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             configValidator.ValidateEmbeddingsOptions(runtimeConfig);
         }
 
-        /// <summary>
-        /// Validates that embeddings require L2 (distributed) cache to be enabled.
-        /// </summary>
-        [DataTestMethod]
-        [DataRow(true, false, DisplayName = "L2 cache enabled - validation passes")]
-        [DataRow(false, true, DisplayName = "L2 cache disabled - validation fails")]
-        [DataRow(null, true, DisplayName = "L2 cache not configured - validation fails")]
-        public void ValidateEmbeddingsOptions_RequiresL2Cache(bool? l2CacheEnabled, bool exceptionExpected)
-        {
-            EmbeddingsOptions embeddingsOptions = new(
-                Provider: EmbeddingProviderType.OpenAI,
-                BaseUrl: "https://api.openai.com",
-                ApiKey: "test-api-key",
-                Enabled: true);
-
-            RuntimeCacheLevel2Options? level2Options = l2CacheEnabled.HasValue
-                ? new RuntimeCacheLevel2Options(
-                    Enabled: l2CacheEnabled.Value,
-                    Provider: "redis",
-                    ConnectionString: "localhost:6379")
-                : null;
-
-            RuntimeCacheOptions cacheOptions = new(Enabled: true, TtlSeconds: 5)
-            {
-                Level2 = level2Options
-            };
-
-            RuntimeConfig runtimeConfig = new(
-                Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(),
-                    Host: new(Cors: null, Authentication: null),
-                    Cache: cacheOptions,
-                    Embeddings: embeddingsOptions
-                ),
-                Entities: new(new Dictionary<string, Entity>())
-            );
-
-            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-
-            if (exceptionExpected)
-            {
-                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
-                    () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
-                Assert.AreEqual("Embeddings require L2 (distributed) cache to be enabled. Please configure 'runtime.cache.level2' with a Redis connection.", ex.Message);
-            }
-            else
-            {
-                // Should not throw any exception.
-                configValidator.ValidateEmbeddingsOptions(runtimeConfig);
-            }
-        }
-
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
         {
             MockFileSystem fileSystem = new();

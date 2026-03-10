@@ -16,8 +16,8 @@ namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 /// <summary>
 /// Service implementation for text embedding/vectorization.
 /// Supports both OpenAI and Azure OpenAI providers.
-/// Caches embeddings using FusionCache when global cache/L2 are configured.
-/// Embeddings require L2 cache to be enabled - validated at startup.
+/// Caches embeddings using FusionCache L1 memory cache.
+// L2/distributed cache is optional globally and is used by this service when configured.
 /// </summary>
 public class EmbeddingService : IEmbeddingService
 {
@@ -327,7 +327,7 @@ public class EmbeddingService : IEmbeddingService
                     throw new InvalidOperationException("API returned empty embedding array.");
                 }
 
-                // Cache embeddings using the configured FusionCache stack.
+                // Respect configured cache layers (L1 and optional L2).
                 ctx.Options.SetDuration(TimeSpan.FromHours(DEFAULT_CACHE_TTL_HOURS));
 
                 return result;

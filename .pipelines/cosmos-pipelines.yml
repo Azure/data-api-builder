@@ -69,6 +69,7 @@ steps:
     projects: '$(solution)'
     feedsToUse: config
     nugetConfigPath: Nuget.config
+    restoreArguments: '/p:RuntimeIdentifiers=""'
 
 - task: DotNetCoreCLI@2
   displayName: Build

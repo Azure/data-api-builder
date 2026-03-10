@@ -61,6 +61,7 @@ jobs:
       projects: '$(solution)'
       feedsToUse: config
       nugetConfigPath: Nuget.config
+      restoreArguments: '/p:RuntimeIdentifiers=""'
 
   - task: Bash@3
     displayName: 'Generate password'
@@ -189,6 +190,7 @@ jobs:
       projects: '$(solution)'
       feedsToUse: config
       nugetConfigPath: Nuget.config
+      restoreArguments: '/p:RuntimeIdentifiers=""'
 
   - task: PowerShell@2
     displayName: Install SQL LocalDB # Update when clarity on how to setup 

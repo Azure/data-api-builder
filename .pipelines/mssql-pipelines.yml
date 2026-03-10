@@ -23,10 +23,10 @@ pr:
     - release/*
   paths:
     exclude:
-    - samples**
-    - docs**
+    - samples/**
+    - docs/**
     - '*.md'
-    - templates**
+    - templates/**
 
 jobs:
 - job: linux
@@ -206,8 +206,8 @@ jobs:
         Start-BitsTransfer -Source $(InstallerUrl) -Destination SqlLocalDB.msi
         Write-Host "Installing"
         Start-Process -FilePath "SqlLocalDB.msi" -Wait -ArgumentList "/qn", "/norestart", "/l*v SqlLocalDBInstall.log", "IACCEPTSQLLOCALDBLICENSETERMS=YES";
-        SqlLocalDb.exe stop MSSQLLocalDB -k
-        SqlLocalDb.exe delete MSSQLLocalDB
+        SqlLocalDB.exe stop MSSQLLocalDB -k
+        SqlLocalDB.exe delete MSSQLLocalDB
 
   - task: PowerShell@2
     displayName: 'Start MSSQLLocalDB'

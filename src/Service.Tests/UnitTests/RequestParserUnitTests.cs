@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ExtractRawQueryParameter_ReturnsNull_WhenParameterNotFound(string? queryString, string parameterName)
         {
             // Call the internal method directly (no reflection needed)
-            string? result = RequestParser.ExtractRawQueryParameter(queryString!, parameterName);
+            string? result = RequestParser.ExtractRawQueryParameter(queryString, parameterName);
 
             Assert.IsNull(result,
                 $"Expected null but got '{result}' for parameter '{parameterName}' in query '{queryString}'");

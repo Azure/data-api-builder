@@ -1,0 +1,10 @@
+﻿- task: NuGetToolInstaller@1
+
+  - task: NuGetCommand@2
+    displayName: Restore NuGet packages
+    inputs:
+      restoreSolution: '$(solution)'
+      feedsToUse: config
+      nugetConfigPath: Nuget.config
+
+

@@ -1053,6 +1053,34 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running "dab configure --runtime.mcp.description {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for mcp.description and 
+        /// validates whether the runtime config reflects those updated values
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("This MCP provides access to the Products database and should be used to answer product-related or inventory-related questions from the user.", DisplayName = "Set MCP description.")]
+        [DataRow("Use this server for customer data queries.", DisplayName = "Set MCP description with short text.")]
+        public void TestConfigureDescriptionForMcpSettings(string descriptionValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update mcp.description value
+            ConfigureOptions options = new(
+                runtimeMcpDescription: descriptionValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Description is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Mcp?.Description);
+            Assert.AreEqual(descriptionValue, runtimeConfig.Runtime.Mcp.Description);
+        }
+
+        /// <summary>
         /// Validates that `dab configure --show-effective-permissions` correctly displays
         /// effective permissions without modifying the config file.
         /// Covers:

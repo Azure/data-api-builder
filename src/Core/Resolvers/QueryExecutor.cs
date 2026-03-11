@@ -20,8 +20,73 @@ using Polly.Retry;
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
     /// <summary>
-    /// Encapsulates query execution apis.
+    /// Encapsulates query execution APIs for a specific database connection type.
     /// </summary>
+    /// <typeparam name="TConnection">
+    /// The <see cref="DbConnection"/> subtype for the target database (for example,
+    /// <c>SqlConnection</c> for SQL Server, <c>NpgsqlConnection</c> for PostgreSQL,
+    /// or <c>OracleConnection</c> for Oracle).  The type must be a concrete class with
+    /// a public parameterless constructor.
+    /// </typeparam>
+    /// <remarks>
+    /// <para>
+    /// To add support for a new database type, create a class that inherits from
+    /// <c>QueryExecutor&lt;TConnection&gt;</c>, substituting the concrete connection type
+    /// for <c>TConnection</c>.  For example:
+    /// </para>
+    /// <code language="csharp">
+    /// // The project file must enable nullable reference types:
+    /// //   &lt;Nullable&gt;enable&lt;/Nullable&gt;
+    ///
+    /// public class OracleQueryExecutor : QueryExecutor&lt;OracleConnection&gt;
+    /// {
+    ///     public OracleQueryExecutor(
+    ///         DbExceptionParser dbExceptionParser,
+    ///         ILogger&lt;IQueryExecutor&gt; logger,
+    ///         RuntimeConfigProvider configProvider,
+    ///         IHttpContextAccessor httpContextAccessor,
+    ///         HotReloadEventHandler&lt;HotReloadEventArgs&gt;? handler)
+    ///         : base(dbExceptionParser, logger, configProvider, httpContextAccessor, handler)
+    ///     {
+    ///     }
+    ///
+    ///     // Override only the methods that require Oracle-specific behavior.
+    ///     // Note: the method name must include the generic type parameter &lt;TResult&gt;,
+    ///     // and the project must have &lt;Nullable&gt;enable&lt;/Nullable&gt; for TResult? to compile.
+    ///     public override async Task&lt;TResult?&gt; ExecuteQueryAsync&lt;TResult&gt;(
+    ///         string sqltext,
+    ///         IDictionary&lt;string, DbConnectionParam&gt; parameters,
+    ///         Func&lt;DbDataReader, List&lt;string&gt;?, Task&lt;TResult&gt;&gt;? dataReaderHandler,
+    ///         string dataSourceName,
+    ///         HttpContext? httpContext = null,
+    ///         List&lt;string&gt;? args = null)
+    ///     {
+    ///         // Add Oracle-specific logic here, then delegate to the base implementation.
+    ///         return await base.ExecuteQueryAsync(
+    ///             sqltext, parameters, dataReaderHandler, dataSourceName, httpContext, args);
+    ///     }
+    /// }
+    /// </code>
+    /// <para>
+    /// <strong>Common pitfalls:</strong>
+    /// <list type="bullet">
+    ///   <item><description>
+    ///     Omitting the generic type argument — <c>: QueryExecutor</c> is invalid;
+    ///     the correct form is <c>: QueryExecutor&lt;OracleConnection&gt;</c>.
+    ///   </description></item>
+    ///   <item><description>
+    ///     Omitting <c>&lt;TResult&gt;</c> on the override method name —
+    ///     <c>ExecuteQueryAsync(</c> will not be recognized as an override of the
+    ///     base generic method; use <c>ExecuteQueryAsync&lt;TResult&gt;(</c>.
+    ///   </description></item>
+    ///   <item><description>
+    ///     Missing <c>&lt;Nullable&gt;enable&lt;/Nullable&gt;</c> in the project file —
+    ///     without this setting, <c>TResult?</c> on an unconstrained type parameter
+    ///     produces a compile error.
+    ///   </description></item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public class QueryExecutor<TConnection> : IQueryExecutor
         where TConnection : DbConnection, new()
     {
@@ -163,6 +228,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc/>
+        /// <remarks>
+        /// When overriding this method in a derived class, ensure that:
+        /// <list type="bullet">
+        ///   <item><description>The method name includes the generic type parameter: <c>ExecuteQueryAsync&lt;TResult&gt;</c>.</description></item>
+        ///   <item><description>The return type is <c>Task&lt;TResult?&gt;</c> (nullable).</description></item>
+        ///   <item><description>The containing project has <c>&lt;Nullable&gt;enable&lt;/Nullable&gt;</c> in its .csproj file.</description></item>
+        /// </list>
+        /// </remarks>
         public virtual async Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,

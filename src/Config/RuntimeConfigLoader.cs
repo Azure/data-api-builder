@@ -320,6 +320,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityMcpOptionsConverterFactory());
         options.Converters.Add(new RuntimeCacheOptionsConverterFactory());
         options.Converters.Add(new RuntimeCacheLevel2OptionsConverterFactory());
+        options.Converters.Add(new CompressionOptionsConverterFactory());
         options.Converters.Add(new MultipleCreateOptionsConverter());
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
         options.Converters.Add(new DataSourceConverterFactory(replacementSettings));
@@ -497,5 +498,10 @@ public abstract class RuntimeConfigLoader
 
             RuntimeConfig = runtimeConfigCopy;
         }
+    }
+
+    public void EditRuntimeConfig(RuntimeConfig newRuntimeConfig)
+    {
+        RuntimeConfig = newRuntimeConfig;
     }
 }

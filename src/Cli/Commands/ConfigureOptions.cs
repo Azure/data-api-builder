@@ -28,6 +28,9 @@ namespace Cli.Commands
             string? dataSourceOptionsContainer = null,
             string? dataSourceOptionsSchema = null,
             bool? dataSourceOptionsSetSessionContext = null,
+            string? dataSourceHealthName = null,
+            bool? dataSourceUserDelegatedAuthEnabled = null,
+            string? dataSourceUserDelegatedAuthDatabaseAudience = null,
             int? depthLimit = null,
             bool? runtimeGraphQLEnabled = null,
             string? runtimeGraphQLPath = null,
@@ -46,8 +49,11 @@ namespace Cli.Commands
             bool? runtimeMcpDmlToolsUpdateRecordEnabled = null,
             bool? runtimeMcpDmlToolsDeleteRecordEnabled = null,
             bool? runtimeMcpDmlToolsExecuteEntityEnabled = null,
+            bool? runtimeMcpDmlToolsAggregateRecordsEnabled = null,
+            int? runtimeMcpDmlToolsAggregateRecordsQueryTimeout = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
+            CompressionLevel? runtimeCompressionLevel = null,
             HostMode? runtimeHostMode = null,
             IEnumerable<string>? runtimeHostCorsOrigins = null,
             bool? runtimeHostCorsAllowCredentials = null,
@@ -81,6 +87,9 @@ namespace Cli.Commands
             DataSourceOptionsContainer = dataSourceOptionsContainer;
             DataSourceOptionsSchema = dataSourceOptionsSchema;
             DataSourceOptionsSetSessionContext = dataSourceOptionsSetSessionContext;
+            DataSourceHealthName = dataSourceHealthName;
+            DataSourceUserDelegatedAuthEnabled = dataSourceUserDelegatedAuthEnabled;
+            DataSourceUserDelegatedAuthDatabaseAudience = dataSourceUserDelegatedAuthDatabaseAudience;
             // GraphQL
             DepthLimit = depthLimit;
             RuntimeGraphQLEnabled = runtimeGraphQLEnabled;
@@ -102,9 +111,13 @@ namespace Cli.Commands
             RuntimeMcpDmlToolsUpdateRecordEnabled = runtimeMcpDmlToolsUpdateRecordEnabled;
             RuntimeMcpDmlToolsDeleteRecordEnabled = runtimeMcpDmlToolsDeleteRecordEnabled;
             RuntimeMcpDmlToolsExecuteEntityEnabled = runtimeMcpDmlToolsExecuteEntityEnabled;
+            RuntimeMcpDmlToolsAggregateRecordsEnabled = runtimeMcpDmlToolsAggregateRecordsEnabled;
+            RuntimeMcpDmlToolsAggregateRecordsQueryTimeout = runtimeMcpDmlToolsAggregateRecordsQueryTimeout;
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
+            // Compression
+            RuntimeCompressionLevel = runtimeCompressionLevel;
             // Host
             RuntimeHostMode = runtimeHostMode;
             RuntimeHostCorsOrigins = runtimeHostCorsOrigins;
@@ -151,6 +164,15 @@ namespace Cli.Commands
 
         [Option("data-source.options.set-session-context", Required = false, HelpText = "Enable session context. Allowed values: true (default), false.")]
         public bool? DataSourceOptionsSetSessionContext { get; }
+
+        [Option("data-source.health.name", Required = false, HelpText = "Identifier for data source in health check report.")]
+        public string? DataSourceHealthName { get; }
+
+        [Option("data-source.user-delegated-auth.enabled", Required = false, HelpText = "Enable user-delegated authentication (OBO) for Azure SQL and SQL Server. Default: false (boolean).")]
+        public bool? DataSourceUserDelegatedAuthEnabled { get; }
+
+        [Option("data-source.user-delegated-auth.database-audience", Required = false, HelpText = "Database resource identifier for token acquisition (e.g., https://database.windows.net for Azure SQL).")]
+        public string? DataSourceUserDelegatedAuthDatabaseAudience { get; }
 
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]
         public int? DepthLimit { get; }
@@ -206,11 +228,20 @@ namespace Cli.Commands
         [Option("runtime.mcp.dml-tools.execute-entity.enabled", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsExecuteEntityEnabled { get; }
 
+        [Option("runtime.mcp.dml-tools.aggregate-records.enabled", Required = false, HelpText = "Enable DAB's MCP aggregate records tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsAggregateRecordsEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.aggregate-records.query-timeout", Required = false, HelpText = "Set the execution timeout in seconds for the aggregate-records MCP tool. Default: 30 (integer). Range: 1-600.")]
+        public int? RuntimeMcpDmlToolsAggregateRecordsQueryTimeout { get; }
+
         [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's cache globally. (You must also enable each entity's cache separately.). Default: false (boolean).")]
         public bool? RuntimeCacheEnabled { get; }
 
         [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize the DAB cache's global default time to live in seconds. Default: 5 seconds (Integer).")]
         public int? RuntimeCacheTTL { get; }
+
+        [Option("runtime.compression.level", Required = false, HelpText = "Set the response compression level. Allowed values: optimal (default), fastest, none.")]
+        public CompressionLevel? RuntimeCompressionLevel { get; }
 
         [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: Development.")]
         public HostMode? RuntimeHostMode { get; }

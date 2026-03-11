@@ -65,4 +65,12 @@ public record RuntimeCacheOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(TtlSeconds))]
     public bool UserProvidedTtlOptions { get; init; } = false;
+
+    /// <summary>
+    /// Infers the cache level from the Level2 configuration.
+    /// If Level2 is enabled, the cache level is L1L2, otherwise L1.
+    /// </summary>
+    [JsonIgnore]
+    public EntityCacheLevel InferredLevel =>
+        Level2?.Enabled is true ? EntityCacheLevel.L1L2 : EntityCacheLevel.L1;
 }

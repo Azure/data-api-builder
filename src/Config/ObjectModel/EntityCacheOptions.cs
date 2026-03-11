@@ -25,7 +25,7 @@ public record EntityCacheOptions
     /// for resolution — GetEntityCacheEntryLevel() falls through to GlobalCacheEntryLevel()
     /// (which infers the level from the runtime Level2 configuration) when UserProvidedLevelOptions is false.
     /// </summary>
-    public const EntityCacheLevel DEFAULT_LEVEL = EntityCacheLevel.L1L2;
+    public const EntityCacheLevel DEFAULT_LEVEL = EntityCacheLevel.L1;
 
     /// <summary>
     /// The L2 cache provider we support.

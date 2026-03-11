@@ -49,6 +49,8 @@ namespace Cli.Commands
             bool? runtimeMcpDmlToolsUpdateRecordEnabled = null,
             bool? runtimeMcpDmlToolsDeleteRecordEnabled = null,
             bool? runtimeMcpDmlToolsExecuteEntityEnabled = null,
+            bool? runtimeMcpDmlToolsAggregateRecordsEnabled = null,
+            int? runtimeMcpDmlToolsAggregateRecordsQueryTimeout = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
             CompressionLevel? runtimeCompressionLevel = null,
@@ -110,6 +112,8 @@ namespace Cli.Commands
             RuntimeMcpDmlToolsUpdateRecordEnabled = runtimeMcpDmlToolsUpdateRecordEnabled;
             RuntimeMcpDmlToolsDeleteRecordEnabled = runtimeMcpDmlToolsDeleteRecordEnabled;
             RuntimeMcpDmlToolsExecuteEntityEnabled = runtimeMcpDmlToolsExecuteEntityEnabled;
+            RuntimeMcpDmlToolsAggregateRecordsEnabled = runtimeMcpDmlToolsAggregateRecordsEnabled;
+            RuntimeMcpDmlToolsAggregateRecordsQueryTimeout = runtimeMcpDmlToolsAggregateRecordsQueryTimeout;
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
@@ -225,6 +229,12 @@ namespace Cli.Commands
 
         [Option("runtime.mcp.dml-tools.execute-entity.enabled", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsExecuteEntityEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.aggregate-records.enabled", Required = false, HelpText = "Enable DAB's MCP aggregate records tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsAggregateRecordsEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.aggregate-records.query-timeout", Required = false, HelpText = "Set the execution timeout in seconds for the aggregate-records MCP tool. Default: 30 (integer). Range: 1-600.")]
+        public int? RuntimeMcpDmlToolsAggregateRecordsQueryTimeout { get; }
 
         [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's cache globally. (You must also enable each entity's cache separately.). Default: false (boolean).")]
         public bool? RuntimeCacheEnabled { get; }

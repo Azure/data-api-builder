@@ -268,7 +268,12 @@ namespace Cli
                 Runtime: new(
                     Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
                     GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
-                    Mcp: new(mcpEnabled, mcpPath ?? McpRuntimeOptions.DEFAULT_PATH),
+                    Mcp: new(
+                        Enabled: mcpEnabled,
+                        Path: mcpPath ?? McpRuntimeOptions.DEFAULT_PATH,
+                        DmlTools: options.McpAggregateRecordsQueryTimeout is not null
+                            ? new DmlToolsConfig(aggregateRecordsQueryTimeout: options.McpAggregateRecordsQueryTimeout)
+                            : null),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
@@ -943,7 +948,9 @@ namespace Cli
                 options.RuntimeMcpDmlToolsReadRecordsEnabled != null ||
                 options.RuntimeMcpDmlToolsUpdateRecordEnabled != null ||
                 options.RuntimeMcpDmlToolsDeleteRecordEnabled != null ||
-                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null)
+                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null ||
+                options.RuntimeMcpDmlToolsAggregateRecordsEnabled != null ||
+                options.RuntimeMcpDmlToolsAggregateRecordsQueryTimeout != null)
             {
                 McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
                 bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
@@ -1242,6 +1249,8 @@ namespace Cli
                 bool? updateRecord = currentDmlTools?.UpdateRecord;
                 bool? deleteRecord = currentDmlTools?.DeleteRecord;
                 bool? executeEntity = currentDmlTools?.ExecuteEntity;
+                bool? aggregateRecords = currentDmlTools?.AggregateRecords;
+                int? aggregateRecordsQueryTimeout = currentDmlTools?.AggregateRecordsQueryTimeout;
 
                 updatedValue = options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
                 if (updatedValue != null)
@@ -1291,20 +1300,35 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.execute-entity as '{updatedValue}'", updatedValue);
                 }
 
+                updatedValue = options?.RuntimeMcpDmlToolsAggregateRecordsEnabled;
+                if (updatedValue != null)
+                {
+                    aggregateRecords = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.aggregate-records as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsAggregateRecordsQueryTimeout;
+                if (updatedValue != null)
+                {
+                    aggregateRecordsQueryTimeout = (int)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.aggregate-records.query-timeout as '{updatedValue}'", updatedValue);
+                }
+
                 if (hasToolUpdates)
                 {
                     updatedMcpOptions = updatedMcpOptions! with
                     {
-                        DmlTools = new DmlToolsConfig
-                        {
-                            AllToolsEnabled = false,
-                            DescribeEntities = describeEntities,
-                            CreateRecord = createRecord,
-                            ReadRecords = readRecord,
-                            UpdateRecord = updateRecord,
-                            DeleteRecord = deleteRecord,
-                            ExecuteEntity = executeEntity
-                        }
+                        DmlTools = new DmlToolsConfig(
+                            describeEntities: describeEntities,
+                            createRecord: createRecord,
+                            readRecords: readRecord,
+                            updateRecord: updateRecord,
+                            deleteRecord: deleteRecord,
+                            executeEntity: executeEntity,
+                            aggregateRecords: aggregateRecords,
+                            aggregateRecordsQueryTimeout: aggregateRecordsQueryTimeout)
                     };
                 }
 

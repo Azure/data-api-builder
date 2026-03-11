@@ -60,7 +60,6 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                     operation: operation,
                     dbProcedure: dbProcedure);
 
-                // Execute the tool
                 CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, cancellationToken);
 
                 // Check if the tool returned an error result (tools catch exceptions internally
@@ -124,6 +123,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 "delete_record" => "delete",
                 "describe_entities" => "describe",
                 "execute_entity" => "execute",
+                "aggregate_records" => "aggregate",
                 _ => "execute" // Fallback for any unknown built-in tools
             };
         }
@@ -188,6 +188,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             return ex switch
             {
                 OperationCanceledException => McpTelemetryErrorCodes.OPERATION_CANCELLED,
+                TimeoutException => McpTelemetryErrorCodes.OPERATION_TIMEOUT,
                 DataApiBuilderException dabEx when dabEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.AuthenticationChallenge
                     => McpTelemetryErrorCodes.AUTHENTICATION_FAILED,
                 DataApiBuilderException dabEx when dabEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed

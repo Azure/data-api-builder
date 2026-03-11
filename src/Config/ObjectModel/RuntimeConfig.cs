@@ -578,7 +578,7 @@ public record RuntimeConfig
         }
 
         // GlobalCacheEntryLevel() returns null when runtime cache is not configured.
-        // Default to L1L2 to match EntityCacheOptions.DEFAULT_LEVEL.
+        // Default to L1 to match EntityCacheOptions.DEFAULT_LEVEL.
         return GlobalCacheEntryLevel() ?? EntityCacheOptions.DEFAULT_LEVEL;
     }
 

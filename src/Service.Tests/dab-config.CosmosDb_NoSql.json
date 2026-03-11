@@ -28,7 +28,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "Unauthenticated"
+        "provider": "AppService"
       },
       "mode": "development"
     },

@@ -6075,12 +6075,12 @@ type Planet @model(name:""PlanetAlias"") {
             return responseCode;
         }
 
-        /// <summary>	
-        /// Executing MCP POST requests against the engine until a non-503 error is received.	
-        /// </summary>	
-        /// <param name="httpClient">Client used for request execution.</param>	
-        /// <returns>ServiceUnavailable if service is not successfully hydrated with config,	
-        /// else the response code from the MCP request</returns>	
+        /// <summary>
+        /// Executing MCP POST requests against the engine until a non-503 error is received.
+        /// </summary>
+        /// <param name="httpClient">Client used for request execution.</param>
+        /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
+        /// else the response code from the MCP request</returns>
         public static async Task<HttpStatusCode> GetMcpResponse(HttpClient httpClient, McpRuntimeOptions mcp)
         {
             // Retry request RETRY_COUNT times in exponential increments to allow

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Product;
 using Cli.Constants;
 using Microsoft.Data.SqlClient;
@@ -116,7 +117,7 @@ public class EndToEndTests
         string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.enabled", "false", "--graphql.path", "/graphql-api" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
-        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
             TEST_RUNTIME_CONFIG_FILE,
             out RuntimeConfig? runtimeConfig,
@@ -196,7 +197,7 @@ public class EndToEndTests
 
         Program.Execute(args.ToArray(), _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
-        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
             TEST_RUNTIME_CONFIG_FILE,
             out RuntimeConfig? runtimeConfig,
@@ -273,7 +274,7 @@ public class EndToEndTests
         // Perform assertions on various properties.
         Assert.IsNotNull(runtimeConfig);
         Assert.IsNotNull(runtimeConfig.Runtime);
-        Assert.IsNull(runtimeConfig.Runtime.Telemetry);
+        Assert.IsNotNull(runtimeConfig.Runtime.Telemetry);
 
         string[] addTelemetryArgs;
         if (appInsightsEnabled is null)

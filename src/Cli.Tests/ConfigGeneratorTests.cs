@@ -176,6 +176,14 @@ public class ConfigGeneratorTests
                     ""provider"": ""AppService""
                         },
                   ""mode"": ""production""
+                                    },
+                                ""telemetry"": {
+                                    ""open-telemetry"": {
+                                        ""enabled"": true,
+                                        ""endpoint"": ""@env('OTEL_EXPORTER_OTLP_ENDPOINT')"",
+                                        ""headers"": ""@env('OTEL_EXPORTER_OTLP_HEADERS')"",
+                                        ""service-name"": ""@env('OTEL_SERVICE_NAME')""
+                                    }
                   }
               },
               ""autoentities"": {},

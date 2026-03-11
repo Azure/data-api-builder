@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
+using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -129,8 +130,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
             queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor.Object);
 
+            IFileSystem fileSystem = new FileSystem();
+            ILogger<RuntimeConfigValidator> validatorLogger = new Mock<ILogger<RuntimeConfigValidator>>().Object;
+            RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, validatorLogger);
+
             SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(
                 runtimeConfigProvider,
+                runtimeConfigValidator,
                 queryManagerFactory.Object,
                 sqlMetadataLogger,
                 dataSourceName);
@@ -215,11 +221,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
                 queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
 
+                IFileSystem fileSystem = new FileSystem();
+                Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
+                RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, loggerValidator.Object);
+
                 ISqlMetadataProvider sqlMetadataProvider = databaseType switch
                 {
-                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
-                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
-                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
                     _ => throw new ArgumentException($"Invalid database type: {databaseType}")
                 };
 
@@ -480,8 +490,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
                 queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(mockQueryExecutor.Object);
 
+                IFileSystem fileSystem = new FileSystem();
+                Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
+                RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, loggerValidator.Object);
+
                 ISqlMetadataProvider sqlMetadataProvider = new MsSqlMetadataProvider(
                     runtimeConfigProvider,
+                    runtimeConfigValidator,
                     queryManagerFactory.Object,
                     sqlMetadataLogger,
                     dataSourceName);
@@ -587,6 +602,67 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SetUpSQLMetadataProvider(runtimeConfigProvider);
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
+        }
+
+        /// <summary>
+        /// Ensures that the query that returns the tables that will be generated
+        /// into entities from the autoentities configuration returns the expected result.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [DataRow(new string[] { "dbo.%book%" }, new string[] { }, "{schema}.{object}.books", new string[] { "book" }, "")]
+        [DataRow(new string[] { "dbo.%publish%" }, new string[] { }, "{schema}.{object}", new string[] { "publish" }, "")]
+        [DataRow(new string[] { "dbo.%book%" }, new string[] { "dbo.%books%" }, "{schema}_{object}_exclude_books", new string[] { "book" }, "books")]
+        [DataRow(new string[] { "dbo.%book%", "dbo.%publish%" }, new string[] { }, "{object}", new string[] { "book", "publish" }, "")]
+        [DataRow(new string[] { }, new string[] { "dbo.%book%" }, "{object}s", new string[] { "" }, "book")]
+        public async Task CheckAutoentitiesQuery(string[] include, string[] exclude, string name, string[] includeObject, string excludeObject)
+        {
+            // Arrange
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+            Autoentity autoentity = new(new AutoentityPatterns(include, exclude, name), null, null);
+            Dictionary<string, Autoentity> dictAutoentity = new()
+            {
+                { "autoentity", autoentity }
+            };
+            RuntimeConfig configWithAutoentity = runtimeConfig with
+            {
+                Autoentities = new RuntimeAutoentities(dictAutoentity)
+            };
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(configWithAutoentity);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
+
+            // Act
+            MsSqlMetadataProvider metadataProvider = (MsSqlMetadataProvider)_sqlMetadataProvider;
+            JsonArray resultArray = await metadataProvider.QueryAutoentitiesAsync(autoentity);
+
+            // Assert
+            Assert.IsNotNull(resultArray);
+            foreach (JsonObject resultObject in resultArray)
+            {
+                bool includedObjectExists = false;
+                foreach (string included in includeObject)
+                {
+                    if (resultObject["object"].ToString().Contains(included))
+                    {
+                        includedObjectExists = true;
+                        Assert.AreNotEqual(name, resultObject["entity_name"].ToString(), "Name returned by query should not include {schema} or {object}.");
+                        if (include.Length > 0)
+                        {
+                            Assert.AreEqual(expected: "dbo", actual: resultObject["schema"].ToString(), "Query does not return expected schema.");
+                        }
+
+                        if (exclude.Length > 0)
+                        {
+                            Assert.IsTrue(!resultObject["object"].ToString().Contains(excludeObject), "Query returns pattern that should be excluded.");
+                        }
+                    }
+                }
+
+                Assert.IsTrue(includedObjectExists, "Query does not return expected object.");
+            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
     }
 }

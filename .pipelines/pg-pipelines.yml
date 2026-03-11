@@ -55,12 +55,7 @@ jobs:
       projects: '$(solution)'
       feedsToUse: config
       nugetConfigPath: Nuget.config
-
-  - task: DockerInstaller@0
-    displayName: Docker Installer
-    inputs:
-      dockerVersion: 17.09.0-ce
-      releaseType: stable
+      restoreArguments: '/p:RuntimeIdentifiers=""'
 
   - task: Bash@3
     displayName: 'Generate password'

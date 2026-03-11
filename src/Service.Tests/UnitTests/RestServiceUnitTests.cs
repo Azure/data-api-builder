@@ -100,6 +100,73 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         #endregion
 
+        #region Sub-directory Path Routing Tests
+
+        /// <summary>
+        /// Tests that sub-directory entity paths are correctly resolved.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("api/shopping-cart/item", "/api", "shopping-cart/item", "ShoppingCartItem", "")]
+        [DataRow("api/shopping-cart/item/id/123", "/api", "shopping-cart/item", "ShoppingCartItem", "id/123")]
+        [DataRow("api/invoice/item/categoryid/1/pieceid/2", "/api", "invoice/item", "InvoiceItem", "categoryid/1/pieceid/2")]
+        public void SubDirectoryPathRoutingTest(
+            string route,
+            string restPath,
+            string entityPath,
+            string expectedEntityName,
+            string expectedPrimaryKeyRoute)
+        {
+            InitializeTestWithEntityPath(restPath, entityPath, expectedEntityName);
+            string routeAfterPathBase = _restService.GetRouteAfterPathBase(route);
+            (string actualEntityName, string actualPrimaryKeyRoute) =
+                _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);
+            Assert.AreEqual(expectedEntityName, actualEntityName);
+            Assert.AreEqual(expectedPrimaryKeyRoute, actualPrimaryKeyRoute);
+        }
+
+        /// <summary>
+        /// Tests longest-prefix matching: when both "cart" and "cart/item" are valid entity paths,
+        /// a request to "/cart/item/id/123" should match "cart/item" (longest match wins).
+        /// </summary>
+        [TestMethod]
+        public void LongestPrefixMatchingTest()
+        {
+            InitializeTestWithMultipleEntityPaths("/api", new Dictionary<string, string>
+            {
+                { "cart", "CartEntity" },
+                { "cart/item", "CartItemEntity" }
+            });
+
+            string routeAfterPathBase = _restService.GetRouteAfterPathBase("api/cart/item/id/123");
+            (string actualEntityName, string actualPrimaryKeyRoute) =
+                _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);
+
+            // Should match "cart/item" (longest), not "cart" (shortest)
+            Assert.AreEqual("CartItemEntity", actualEntityName);
+            Assert.AreEqual("id/123", actualPrimaryKeyRoute);
+        }
+
+        /// <summary>
+        /// Tests that when only shorter path exists, it matches correctly.
+        /// </summary>
+        [TestMethod]
+        public void SinglePathMatchingTest()
+        {
+            InitializeTestWithMultipleEntityPaths("/api", new Dictionary<string, string>
+            {
+                { "cart", "CartEntity" }
+            });
+
+            string routeAfterPathBase = _restService.GetRouteAfterPathBase("api/cart/id/123");
+            (string actualEntityName, string actualPrimaryKeyRoute) =
+                _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);
+
+            Assert.AreEqual("CartEntity", actualEntityName);
+            Assert.AreEqual("id/123", actualPrimaryKeyRoute);
+        }
+
+        #endregion
+
         #region Helper Functions
 
         /// <summary>
@@ -108,6 +175,47 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="restRoutePrefix">path to return from mocked config.</param>
         public static void InitializeTest(string restRoutePrefix, string entityName)
+        {
+            InitializeTestWithEntityPaths(restRoutePrefix, new Dictionary<string, string> { { entityName, entityName } });
+        }
+
+        /// <summary>
+        /// Needed for the callback that is required
+        /// to make use of out parameter with mocking.
+        /// Without use of delegate the out param will
+        /// not be populated with the correct value.
+        /// This delegate is for the callback used
+        /// with the mocked MetadataProvider.
+        /// </summary>
+        /// <param name="entityPath">The entity path.</param>
+        /// <param name="entity">Name of entity.</param>
+        delegate void metaDataCallback(string entityPath, out string entity);
+
+        /// <summary>
+        /// Initializes test with a sub-directory entity path.
+        /// </summary>
+        /// <param name="restRoutePrefix">REST path prefix (e.g., "/api").</param>
+        /// <param name="entityPath">Entity path with sub-directories (e.g., "shopping-cart/item").</param>
+        /// <param name="entityName">Name of the entity.</param>
+        public static void InitializeTestWithEntityPath(string restRoutePrefix, string entityPath, string entityName)
+        {
+            InitializeTestWithEntityPaths(restRoutePrefix, new Dictionary<string, string> { { entityPath, entityName } });
+        }
+
+        /// <summary>
+        /// Initializes test with multiple entity paths for testing overlapping path scenarios.
+        /// </summary>
+        /// <param name="restRoutePrefix">REST path prefix (e.g., "/api").</param>
+        /// <param name="entityPaths">Dictionary mapping entity paths to entity names.</param>
+        public static void InitializeTestWithMultipleEntityPaths(string restRoutePrefix, Dictionary<string, string> entityPaths)
+        {
+            InitializeTestWithEntityPaths(restRoutePrefix, entityPaths);
+        }
+
+        /// <summary>
+        /// Core helper to initialize REST Service with specified entity path mappings.
+        /// </summary>
+        private static void InitializeTestWithEntityPaths(string restRoutePrefix, Dictionary<string, string> entityPaths)
         {
             RuntimeConfig mockConfig = new(
                Schema: "",
@@ -147,7 +255,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor);
 
             RuntimeConfig loadedConfig = provider.GetConfig();
-            loadedConfig.TryAddEntityPathNameToEntityName(entityName, entityName);
+            foreach (KeyValuePair<string, string> mapping in entityPaths)
+            {
+                loadedConfig.TryAddEntityPathNameToEntityName(mapping.Key, mapping.Value);
+            }
 
             Mock<ISqlMetadataProvider> sqlMetadataProvider = new();
             Mock<IAuthorizationService> authorizationService = new();
@@ -195,18 +306,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 provider,
                 requestValidator);
         }
-
-        /// <summary>
-        /// Needed for the callback that is required
-        /// to make use of out parameter with mocking.
-        /// Without use of delegate the out param will
-        /// not be populated with the correct value.
-        /// This delegate is for the callback used
-        /// with the mocked MetadataProvider.
-        /// </summary>
-        /// <param name="entityPath">The entity path.</param>
-        /// <param name="entity">Name of entity.</param>
-        delegate void metaDataCallback(string entityPath, out string entity);
         #endregion
     }
 }

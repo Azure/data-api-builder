@@ -844,7 +844,7 @@ public record RuntimeConfig
         // If entity has an explicit cache config with user-provided enabled value, use it.
         if (entity.Cache is not null && entity.Cache.UserProvidedEnabledOptions)
         {
-            return entity.Cache.Enabled!.Value;
+            return entity.IsCachingEnabled;
         }
 
         // Otherwise, inherit from the global runtime cache setting.

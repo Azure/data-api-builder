@@ -67,6 +67,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<Entity>(entity => entity.IsLinkingEntity);
         // Ignore the UserProvidedTtlOptions. They aren't serialized to our config file, enforced by EntityCacheOptionsConverter.
         VerifierSettings.IgnoreMember<EntityCacheOptions>(cacheOptions => cacheOptions.UserProvidedTtlOptions);
+        // Ignore the UserProvidedEnabledOptions. They aren't serialized to our config file, enforced by EntityCacheOptionsConverter.
+        VerifierSettings.IgnoreMember<EntityCacheOptions>(cacheOptions => cacheOptions.UserProvidedEnabledOptions);
         // Ignore the UserProvidedCustomToolEnabled. They aren't serialized to our config file, enforced by EntityMcpOptionsConverterFactory.
         VerifierSettings.IgnoreMember<EntityMcpOptions>(mcpOptions => mcpOptions.UserProvidedCustomToolEnabled);
         // Ignore the UserProvidedDmlToolsEnabled. They aren't serialized to our config file, enforced by EntityMcpOptionsConverterFactory.

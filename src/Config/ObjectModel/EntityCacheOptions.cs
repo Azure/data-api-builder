@@ -20,8 +20,12 @@ public record EntityCacheOptions
 
     /// <summary>
     /// Default cache level for an entity.
+    /// Placeholder cache level value used when the entity does not explicitly set a level.
+    /// This value is stored on the EntityCacheOptions object but is NOT used at runtime
+    /// for resolution — GetEntityCacheEntryLevel() falls through to GlobalCacheEntryLevel()
+    /// (which infers the level from the runtime Level2 configuration) when UserProvidedLevelOptions is false.
     /// </summary>
-    public const EntityCacheLevel DEFAULT_LEVEL = EntityCacheLevel.L1L2;
+    public const EntityCacheLevel DEFAULT_LEVEL = EntityCacheLevel.L1;
 
     /// <summary>
     /// The L2 cache provider we support.
@@ -30,27 +34,39 @@ public record EntityCacheOptions
 
     /// <summary>
     /// Whether the cache should be used for the entity.
+    /// When null after deserialization, indicates the user did not explicitly set this property,
+    /// and the entity should inherit the runtime-level cache enabled setting.
+    /// After ResolveEntityCacheInheritance runs, this will hold the resolved value
+    /// (inherited from runtime or explicitly set by user). Use UserProvidedEnabledOptions
+    /// to distinguish whether the value was user-provided or inherited.
     /// </summary>
     [JsonPropertyName("enabled")]
-    public bool? Enabled { get; init; } = false;
+    public bool? Enabled { get; init; }
 
     /// <summary>
     /// The number of seconds a cache entry is valid before eligible for cache eviction.
     /// </summary>
     [JsonPropertyName("ttl-seconds")]
-    public int? TtlSeconds { get; init; } = null;
+    public int? TtlSeconds { get; init; }
 
     /// <summary>
     /// The cache levels to use for a cache entry.
     /// </summary>
     [JsonPropertyName("level")]
-    public EntityCacheLevel? Level { get; init; } = null;
+    public EntityCacheLevel? Level { get; init; }
 
     [JsonConstructor]
     public EntityCacheOptions(bool? Enabled = null, int? TtlSeconds = null, EntityCacheLevel? Level = null)
     {
-        // TODO: shouldn't we apply the same "UserProvidedXyz" logic to Enabled, too?
-        this.Enabled = Enabled;
+        if (Enabled is not null)
+        {
+            this.Enabled = Enabled;
+            UserProvidedEnabledOptions = true;
+        }
+        else
+        {
+            this.Enabled = null;
+        }
 
         if (TtlSeconds is not null)
         {
@@ -72,6 +88,18 @@ public record EntityCacheOptions
             this.Level = DEFAULT_LEVEL;
         }
     }
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write the enabled
+    /// property and value to the runtime config file.
+    /// When the user doesn't provide the enabled property/value, which signals DAB
+    /// to inherit from the runtime cache setting, the DAB CLI should not write the
+    /// inherited value to a serialized config. This preserves the user's intent to
+    /// inherit rather than explicitly set the value.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(Enabled))]
+    public bool UserProvidedEnabledOptions { get; init; } = false;
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write ttl-seconds

@@ -51,12 +51,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow("UpdateRecord", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}, \"fields\": {\"title\": \"Updated\"}}", false, DisplayName = "UpdateRecord respects entity-level DmlToolEnabled=false")]
         [DataRow("DeleteRecord", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}}", false, DisplayName = "DeleteRecord respects entity-level DmlToolEnabled=false")]
         [DataRow("ExecuteEntity", "{\"entity\": \"GetBook\"}", true, DisplayName = "ExecuteEntity respects entity-level DmlToolEnabled=false")]
+        [DataRow("AggregateRecords", "{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\"}", false, DisplayName = "AggregateRecords respects entity-level DmlToolEnabled=false")]
         public async Task DmlTool_RespectsEntityLevelDmlToolDisabled(string toolType, string jsonArguments, bool isStoredProcedure)
         {
             // Arrange
             RuntimeConfig config = isStoredProcedure
-                ? CreateConfigWithDmlToolDisabledStoredProcedure()
-                : CreateConfigWithDmlToolDisabledEntity();
+                ? CreateConfig(
+                    entityName: "GetBook", sourceObject: "get_book",
+                    sourceType: EntitySourceType.StoredProcedure,
+                    mcpOptions: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false),
+                    actions: new[] { EntityActionOperation.Execute })
+                : CreateConfig(
+                    mcpOptions: new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: false),
+                    actions: new[] { EntityActionOperation.Read, EntityActionOperation.Create,
+                                     EntityActionOperation.Update, EntityActionOperation.Delete });
             IServiceProvider serviceProvider = CreateServiceProvider(config);
             IMcpTool tool = CreateTool(toolType);
 
@@ -87,8 +95,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             // Arrange
             RuntimeConfig config = useMcpConfig
-                ? CreateConfigWithDmlToolEnabledEntity()
-                : CreateConfigWithEntityWithoutMcpConfig();
+                ? CreateConfig(mcpOptions: new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: true))
+                : CreateConfig();
             IServiceProvider serviceProvider = CreateServiceProvider(config);
             ReadRecordsTool tool = new();
 
@@ -123,7 +131,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         public async Task ReadRecords_RuntimeDisabledTakesPrecedenceOverEntityEnabled()
         {
             // Arrange - Runtime has readRecords=false, but entity has DmlToolEnabled=true
-            RuntimeConfig config = CreateConfigWithRuntimeDisabledButEntityEnabled();
+            RuntimeConfig config = CreateConfig(
+                mcpOptions: new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: true),
+                readRecordsEnabled: false);
             IServiceProvider serviceProvider = CreateServiceProvider(config);
             ReadRecordsTool tool = new();
 
@@ -159,7 +169,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         public async Task DynamicCustomTool_RespectsCustomToolDisabled()
         {
             // Arrange - Create a stored procedure entity with CustomToolEnabled=false
-            RuntimeConfig config = CreateConfigWithCustomToolDisabled();
+            RuntimeConfig config = CreateConfig(
+                entityName: "GetBook", sourceObject: "get_book",
+                sourceType: EntitySourceType.StoredProcedure,
+                mcpOptions: new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: true),
+                actions: new[] { EntityActionOperation.Execute });
             IServiceProvider serviceProvider = CreateServiceProvider(config);
 
             // Create the DynamicCustomTool with the entity that has CustomToolEnabled initially true
@@ -217,7 +231,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // Arrange
             RuntimeConfig config = sourceType == "View"
                 ? CreateConfigWithViewEntity()
-                : CreateConfigWithDmlToolEnabledEntity();
+                : CreateConfig();
             IServiceProvider serviceProvider = CreateServiceProvider(config);
             IMcpTool tool = CreateTool(toolType);
 
@@ -306,31 +320,43 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 "UpdateRecord" => new UpdateRecordTool(),
                 "DeleteRecord" => new DeleteRecordTool(),
                 "ExecuteEntity" => new ExecuteEntityTool(),
+                "AggregateRecords" => new AggregateRecordsTool(),
                 _ => throw new ArgumentException($"Unknown tool type: {toolType}", nameof(toolType))
             };
         }
 
         /// <summary>
-        /// Creates a runtime config with a table entity that has DmlToolEnabled=false.
+        /// Unified config factory. Creates a RuntimeConfig with a single entity.
+        /// Callers specify only the parameters that differ from their test scenario.
         /// </summary>
-        private static RuntimeConfig CreateConfigWithDmlToolDisabledEntity()
+        /// <param name="entityName">Entity key name (default: "Book").</param>
+        /// <param name="sourceObject">Database object (default: "books").</param>
+        /// <param name="sourceType">Table or StoredProcedure (default: Table).</param>
+        /// <param name="mcpOptions">Entity-level MCP options, or null for no MCP config.</param>
+        /// <param name="actions">Entity permissions. Defaults to Read-only.</param>
+        /// <param name="readRecordsEnabled">Runtime-level readRecords flag (default: true).</param>
+        private static RuntimeConfig CreateConfig(
+            string entityName = "Book",
+            string sourceObject = "books",
+            EntitySourceType sourceType = EntitySourceType.Table,
+            EntityMcpOptions mcpOptions = null,
+            EntityActionOperation[] actions = null,
+            bool readRecordsEnabled = true)
         {
+            actions ??= new[] { EntityActionOperation.Read };
+
             Dictionary<string, Entity> entities = new()
             {
-                ["Book"] = new Entity(
-                    Source: new("books", EntitySourceType.Table, null, null),
-                    GraphQL: new("Book", "Books"),
+                [entityName] = new Entity(
+                    Source: new(sourceObject, sourceType, null, null),
+                    GraphQL: new(entityName, entityName == "Book" ? "Books" : entityName),
                     Fields: null,
                     Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
-                        new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null),
-                        new EntityAction(Action: EntityActionOperation.Create, Fields: null, Policy: null),
-                        new EntityAction(Action: EntityActionOperation.Update, Fields: null, Policy: null),
-                        new EntityAction(Action: EntityActionOperation.Delete, Fields: null, Policy: null)
-                    }) },
+                    Permissions: new[] { new EntityPermission(Role: "anonymous",
+                        Actions: Array.ConvertAll(actions, a => new EntityAction(Action: a, Fields: null, Policy: null))) },
                     Mappings: null,
                     Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: false)
+                    Mcp: mcpOptions
                 )
             };
 
@@ -345,234 +371,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                         Path: "/mcp",
                         DmlTools: new(
                             describeEntities: true,
-                            readRecords: true,
-                            createRecord: true,
-                            updateRecord: true,
-                            deleteRecord: true,
-                            executeEntity: true
-                        )
-                    ),
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
-                ),
-                Entities: new(entities)
-            );
-        }
-
-        /// <summary>
-        /// Creates a runtime config with a stored procedure that has DmlToolEnabled=false.
-        /// </summary>
-        private static RuntimeConfig CreateConfigWithDmlToolDisabledStoredProcedure()
-        {
-            Dictionary<string, Entity> entities = new()
-            {
-                ["GetBook"] = new Entity(
-                    Source: new("get_book", EntitySourceType.StoredProcedure, null, null),
-                    GraphQL: new("GetBook", "GetBook"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
-                        new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
-                    }) },
-                    Mappings: null,
-                    Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false)
-                )
-            };
-
-            return new RuntimeConfig(
-                Schema: "test-schema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(
-                        Enabled: true,
-                        Path: "/mcp",
-                        DmlTools: new(
-                            describeEntities: true,
-                            readRecords: true,
-                            createRecord: true,
-                            updateRecord: true,
-                            deleteRecord: true,
-                            executeEntity: true
-                        )
-                    ),
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
-                ),
-                Entities: new(entities)
-            );
-        }
-
-        /// <summary>
-        /// Creates a runtime config with a table entity that has DmlToolEnabled=true.
-        /// </summary>
-        private static RuntimeConfig CreateConfigWithDmlToolEnabledEntity()
-        {
-            Dictionary<string, Entity> entities = new()
-            {
-                ["Book"] = new Entity(
-                    Source: new("books", EntitySourceType.Table, null, null),
-                    GraphQL: new("Book", "Books"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
-                        new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null)
-                    }) },
-                    Mappings: null,
-                    Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: true)
-                )
-            };
-
-            return new RuntimeConfig(
-                Schema: "test-schema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(
-                        Enabled: true,
-                        Path: "/mcp",
-                        DmlTools: new(
-                            describeEntities: true,
-                            readRecords: true,
-                            createRecord: true,
-                            updateRecord: true,
-                            deleteRecord: true,
-                            executeEntity: true
-                        )
-                    ),
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
-                ),
-                Entities: new(entities)
-            );
-        }
-
-        /// <summary>
-        /// Creates a runtime config with a table entity that has no MCP configuration.
-        /// </summary>
-        private static RuntimeConfig CreateConfigWithEntityWithoutMcpConfig()
-        {
-            Dictionary<string, Entity> entities = new()
-            {
-                ["Book"] = new Entity(
-                    Source: new("books", EntitySourceType.Table, null, null),
-                    GraphQL: new("Book", "Books"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
-                        new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null)
-                    }) },
-                    Mappings: null,
-                    Relationships: null,
-                    Mcp: null
-                )
-            };
-
-            return new RuntimeConfig(
-                Schema: "test-schema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(
-                        Enabled: true,
-                        Path: "/mcp",
-                        DmlTools: new(
-                            describeEntities: true,
-                            readRecords: true,
-                            createRecord: true,
-                            updateRecord: true,
-                            deleteRecord: true,
-                            executeEntity: true
-                        )
-                    ),
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
-                ),
-                Entities: new(entities)
-            );
-        }
-
-        /// <summary>
-        /// Creates a runtime config with a stored procedure that has CustomToolEnabled=false.
-        /// Used to test DynamicCustomTool runtime validation.
-        /// </summary>
-        private static RuntimeConfig CreateConfigWithCustomToolDisabled()
-        {
-            Dictionary<string, Entity> entities = new()
-            {
-                ["GetBook"] = new Entity(
-                    Source: new("get_book", EntitySourceType.StoredProcedure, null, null),
-                    GraphQL: new("GetBook", "GetBook"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
-                        new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
-                    }) },
-                    Mappings: null,
-                    Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: true)
-                )
-            };
-
-            return new RuntimeConfig(
-                Schema: "test-schema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(
-                        Enabled: true,
-                        Path: "/mcp",
-                        DmlTools: new(
-                            describeEntities: true,
-                            readRecords: true,
-                            createRecord: true,
-                            updateRecord: true,
-                            deleteRecord: true,
-                            executeEntity: true
-                        )
-                    ),
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
-                ),
-                Entities: new(entities)
-            );
-        }
-
-        /// <summary>
-        /// Creates a runtime config where runtime-level readRecords is disabled,
-        /// but entity-level DmlToolEnabled is true. This tests precedence behavior.
-        /// </summary>
-        private static RuntimeConfig CreateConfigWithRuntimeDisabledButEntityEnabled()
-        {
-            Dictionary<string, Entity> entities = new()
-            {
-                ["Book"] = new Entity(
-                    Source: new("books", EntitySourceType.Table, null, null),
-                    GraphQL: new("Book", "Books"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
-                        new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null)
-                    }) },
-                    Mappings: null,
-                    Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: true)
-                )
-            };
-
-            return new RuntimeConfig(
-                Schema: "test-schema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(
-                        Enabled: true,
-                        Path: "/mcp",
-                        DmlTools: new(
-                            describeEntities: true,
-                            readRecords: false,  // Runtime-level DISABLED
+                            readRecords: readRecordsEnabled,
                             createRecord: true,
                             updateRecord: true,
                             deleteRecord: true,

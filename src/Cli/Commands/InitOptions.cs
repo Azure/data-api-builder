@@ -42,6 +42,7 @@ namespace Cli.Commands
             CliBool mcpEnabled = CliBool.None,
             CliBool restRequestBodyStrict = CliBool.None,
             CliBool multipleCreateOperationEnabled = CliBool.None,
+            int? mcpAggregateRecordsQueryTimeout = null,
             string? config = null)
             : base(config)
         {
@@ -68,6 +69,7 @@ namespace Cli.Commands
             McpEnabled = mcpEnabled;
             RestRequestBodyStrict = restRequestBodyStrict;
             MultipleCreateOperationEnabled = multipleCreateOperationEnabled;
+            McpAggregateRecordsQueryTimeout = mcpAggregateRecordsQueryTimeout;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql, dwsql")]
@@ -139,6 +141,9 @@ namespace Cli.Commands
 
         [Option("graphql.multiple-create.enabled", Required = false, HelpText = "(Default: false) Enables multiple create operation for GraphQL. Supported values: true, false.")]
         public CliBool MultipleCreateOperationEnabled { get; }
+
+        [Option("mcp.aggregate-records.query-timeout", Required = false, HelpText = "Set the execution timeout in seconds for the aggregate-records MCP tool. Default: 30 (integer). Range: 1-600.")]
+        public int? McpAggregateRecordsQueryTimeout { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

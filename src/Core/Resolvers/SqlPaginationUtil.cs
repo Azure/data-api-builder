@@ -751,11 +751,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Extracts and request scheme from "X-Forwarded-Proto" or falls back to the request scheme.
+        /// Extracts the request scheme from "X-Forwarded-Proto" or falls back to the request scheme.
+        /// Invalid forwarded values are ignored.
         /// </summary>
         /// <param name="req">The HTTP request.</param>
         /// <returns>The scheme string ("http" or "https").</returns>
-        /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid scheme.</exception>
         internal static string ResolveRequestScheme(HttpRequest req)
         {
             string? rawScheme = req.Headers["X-Forwarded-Proto"].FirstOrDefault();
@@ -776,10 +776,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Extracts the request host from "X-Forwarded-Host" or falls back to the request host.
+        /// Invalid forwarded values are ignored.
         /// </summary>
         /// <param name="req">The HTTP request.</param>
         /// <returns>The host string.</returns>
-        /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid host.</exception>
         internal static string ResolveRequestHost(HttpRequest req)
         {
             string? rawHost = req.Headers["X-Forwarded-Host"].FirstOrDefault();
@@ -803,7 +803,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="scheme">Scheme, e.g., "http" or "https".</param>
         /// <returns>True if valid, otherwise false.</returns>
-        internal static bool IsValidScheme(string? scheme)
+        private static bool IsValidScheme(string? scheme)
         {
             return scheme is "http" or "https";
         }
@@ -813,7 +813,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="host">The host name (with optional port).</param>
         /// <returns>True if valid, otherwise false.</returns>
-        internal static bool IsValidHost(string? host)
+        private static bool IsValidHost(string? host)
         {
             if (string.IsNullOrWhiteSpace(host))
             {

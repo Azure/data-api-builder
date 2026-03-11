@@ -41,6 +41,6 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         /// <summary>
         /// Operation timed out error code.
         /// </summary>
-        public const string TIMEOUT = "Timeout";
+        public const string OPERATION_TIMEOUT = "OperationTimeout";
     }
 }

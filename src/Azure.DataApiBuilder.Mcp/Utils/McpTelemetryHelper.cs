@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             return ex switch
             {
                 OperationCanceledException => McpTelemetryErrorCodes.OPERATION_CANCELLED,
-                TimeoutException => McpTelemetryErrorCodes.TIMEOUT,
+                TimeoutException => McpTelemetryErrorCodes.OPERATION_TIMEOUT,
                 DataApiBuilderException dabEx when dabEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.AuthenticationChallenge
                     => McpTelemetryErrorCodes.AUTHENTICATION_FAILED,
                 DataApiBuilderException dabEx when dabEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed

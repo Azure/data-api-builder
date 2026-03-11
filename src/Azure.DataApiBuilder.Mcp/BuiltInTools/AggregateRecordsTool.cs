@@ -661,6 +661,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
             HttpContext? httpContext = httpContextAccessor.HttpContext;
 
+            if (httpContext is null)
+            {
+                return (null, McpErrorHelpers.PermissionDenied(toolName, entityName, "read", "No active HTTP request context.", logger));
+            }
+
             if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleCtxError))
             {
                 return (null, McpErrorHelpers.PermissionDenied(toolName, entityName, "read", roleCtxError, logger));
@@ -782,15 +787,22 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             // Add groupby columns as LabelledColumns and GroupByMetadata.Fields
             foreach (string groupbyField in args.Groupby)
             {
-                sqlMetadataProvider.TryGetBackingColumn(entityName, groupbyField, out string? backingGroupbyColumn);
+                if (!sqlMetadataProvider.TryGetBackingColumn(entityName, groupbyField, out string? backingGroupbyColumn) || string.IsNullOrEmpty(backingGroupbyColumn))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"GroupBy field '{groupbyField}' is not a valid field for entity '{entityName}'.",
+                        statusCode: System.Net.HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
                 structure.Columns.Add(new LabelledColumn(
-                    dbObject.SchemaName, dbObject.Name, backingGroupbyColumn!, groupbyField, structure.SourceAlias));
-                structure.GroupByMetadata.Fields[backingGroupbyColumn!] = new Column(
-                    dbObject.SchemaName, dbObject.Name, backingGroupbyColumn!, structure.SourceAlias);
+                    dbObject.SchemaName, dbObject.Name, backingGroupbyColumn, groupbyField, structure.SourceAlias));
+                structure.GroupByMetadata.Fields[backingGroupbyColumn] = new Column(
+                    dbObject.SchemaName, dbObject.Name, backingGroupbyColumn, structure.SourceAlias);
             }
 
             // Build aggregation column using engine's AggregationColumn type.
-            AggregationType aggregationType = Enum.Parse<AggregationType>(args.Function);
+            AggregationType aggregationType = Enum.Parse<AggregationType>(args.Function, ignoreCase: true);
             AggregationColumn aggregationColumn = new(
                 dbObject.SchemaName, dbObject.Name, backingField, aggregationType, alias, args.Distinct, structure.SourceAlias);
 

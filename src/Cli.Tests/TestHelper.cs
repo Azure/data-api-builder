@@ -170,7 +170,7 @@ namespace Cli.Tests
                       ""allow-credentials"": false
                   },
                   ""authentication"": {
-                      ""provider"": ""AppService""
+                      ""provider"": ""Unauthenticated""
                   }
               }
           }";

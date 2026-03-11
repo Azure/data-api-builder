@@ -41,7 +41,7 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: Unauthenticated
+        Provider: AppService
       },
       Mode: Production
     }

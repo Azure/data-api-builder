@@ -34,6 +34,13 @@ namespace Azure.DataApiBuilder.Service
     {
         public static bool IsHttpsRedirectionDisabled { get; private set; }
 
+        /// <summary>
+        /// Shared <see cref="DynamicLogLevelProvider"/> that is wired into the logging pipeline.
+        /// Initialised with the CLI-provided log level before the host builds, then optionally
+        /// updated from the loaded RuntimeConfig in <c>Startup.Configure</c>.
+        /// </summary>
+        public static DynamicLogLevelProvider LogLevelProvider { get; } = new();
+
         public static void Main(string[] args)
         {
             bool runMcpStdio = McpStdioHelper.ShouldRunMcpStdio(args, out string? mcpRole);
@@ -59,7 +66,6 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool StartEngine(string[] args, bool runMcpStdio, string? mcpRole)
         {
-            Console.WriteLine("Starting the runtime engine...");
             try
             {
                 IHost host = CreateHostBuilder(args, runMcpStdio, mcpRole).Build();
@@ -107,9 +113,24 @@ namespace Azure.DataApiBuilder.Service
                         McpStdioHelper.ConfigureMcpStdio(builder, mcpRole);
                     }
                 })
+                .ConfigureServices((_, services) =>
+                {
+                    // Register the shared provider so it can be injected into Startup.
+                    services.AddSingleton(LogLevelProvider);
+                })
+                .ConfigureLogging(logging =>
+                {
+                    // Apply the dynamic log level to the host's logging pipeline so that
+                    // Microsoft.Hosting.Lifetime and similar framework messages are also filtered.
+                    logging.AddFilter("Microsoft", logLevel => LogLevelProvider.ShouldLog(logLevel));
+                    logging.AddFilter("Microsoft.Hosting.Lifetime", logLevel => LogLevelProvider.ShouldLog(logLevel));
+                })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
+                    // Initialise provider immediately so that the host-level filters above are
+                    // already using the CLI-provided level.
+                    LogLevelProvider.SetInitialLogLevel(Startup.MinimumLogLevel, Startup.IsLogLevelOverriddenByCli);
                     ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel, stdio: runMcpStdio);
                     ILogger<Startup> startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
@@ -185,9 +206,9 @@ namespace Azure.DataApiBuilder.Service
                     // "Azure.DataApiBuilder.Service"
                     if (logLevelInitializer is null)
                     {
-                        builder.AddFilter(category: "Microsoft", logLevel);
-                        builder.AddFilter(category: "Azure", logLevel);
-                        builder.AddFilter(category: "Default", logLevel);
+                        builder.AddFilter(category: "Microsoft", level => LogLevelProvider.ShouldLog(level));
+                        builder.AddFilter(category: "Azure", level => LogLevelProvider.ShouldLog(level));
+                        builder.AddFilter(category: "Default", level => LogLevelProvider.ShouldLog(level));
                     }
                     else
                     {

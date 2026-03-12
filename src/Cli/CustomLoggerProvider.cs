@@ -8,18 +8,25 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class CustomLoggerProvider : ILoggerProvider
 {
+    private readonly LogLevel _minimumLogLevel;
+
+    public CustomLoggerProvider(LogLevel minimumLogLevel = LogLevel.Information)
+    {
+        _minimumLogLevel = minimumLogLevel;
+    }
+
     public void Dispose() { }
 
     /// <inheritdoc/>
     public ILogger CreateLogger(string categoryName)
     {
-        return new CustomConsoleLogger();
+        return new CustomConsoleLogger(_minimumLogLevel);
     }
 
     public class CustomConsoleLogger : ILogger
     {
         // Minimum LogLevel. LogLevel below this would be disabled.
-        private readonly LogLevel _minimumLogLevel = LogLevel.Information;
+        private readonly LogLevel _minimumLogLevel;
 
         //  Color values based on LogLevel
         //  LogLevel    Foreground      Background
@@ -56,12 +63,17 @@ public class CustomLoggerProvider : ILoggerProvider
             {LogLevel.Critical, ConsoleColor.DarkRed}
         };
 
+        public CustomConsoleLogger(LogLevel minimumLogLevel = LogLevel.Information)
+        {
+            _minimumLogLevel = minimumLogLevel;
+        }
+
         /// <summary>
         /// Creates Log message by setting console message color based on LogLevel.
         /// </summary>
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
+            if (!IsEnabled(logLevel))
             {
                 return;
             }
@@ -79,8 +91,9 @@ public class CustomLoggerProvider : ILoggerProvider
         /// <inheritdoc/>
         public bool IsEnabled(LogLevel logLevel)
         {
-            return true;
+            return logLevel != LogLevel.None && logLevel >= _minimumLogLevel;
         }
+
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         {
             throw new NotImplementedException();

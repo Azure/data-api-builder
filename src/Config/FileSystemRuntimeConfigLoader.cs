@@ -59,6 +59,19 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     private readonly IFileSystem _fileSystem;
 
+    /// <summary>
+    /// Logger used to log events inside <see cref="FileSystemRuntimeConfigLoader"/>.
+    /// Null until the DI container has been built (i.e. before <see cref="SetLogger"/> is called).
+    /// When null, messages are routed through <see cref="_logBuffer"/> if available, or written
+    /// directly to <see cref="Console.Error"/> for errors.
+    /// </summary>
+    private ILogger<FileSystemRuntimeConfigLoader>? _logger;
+
+    /// <summary>
+    /// Early-startup log buffer used before a proper <see cref="ILogger"/> is available.
+    /// </summary>
+    private StartupLogBuffer? _logBuffer;
+
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";
     public const string ENVIRONMENT_PREFIX = "DAB_";
@@ -82,13 +95,17 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         HotReloadEventHandler<HotReloadEventArgs>? handler = null,
         string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME,
         string? connectionString = null,
-        bool isCliLoader = false)
+        bool isCliLoader = false,
+        ILogger<FileSystemRuntimeConfigLoader>? logger = null,
+        StartupLogBuffer? logBuffer = null)
         : base(handler, connectionString)
     {
         _fileSystem = fileSystem;
         _baseConfigFilePath = baseConfigFilePath;
         ConfigFilePath = GetFinalConfigFilePath();
         _isCliLoader = isCliLoader;
+        _logger = logger;
+        _logBuffer = logBuffer;
     }
 
     /// <summary>
@@ -196,7 +213,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     {
         if (_fileSystem.File.Exists(path))
         {
-            Console.WriteLine($"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
+            LogInformation($"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
 
             // Use File.ReadAllText because DAB doesn't need write access to the file
             // and ensures the file handle is released immediately after reading.
@@ -215,7 +232,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 }
                 catch (IOException ex)
                 {
-                    Console.WriteLine($"IO Exception, retrying due to {ex.Message}");
+                    LogWarning($"IO Exception, retrying due to {ex.Message}");
                     if (runCount == FileUtilities.RunLimit)
                     {
                         throw;
@@ -238,7 +255,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             {
                 if (TrySetupConfigFileWatcher())
                 {
-                    Console.WriteLine("Monitoring config: {0} for hot-reloading.", ConfigFilePath);
+                    LogInformation($"Monitoring config: {ConfigFilePath} for hot-reloading.");
                     logger?.LogInformation("Monitoring config: {ConfigFilePath} for hot-reloading.", ConfigFilePath);
                 }
 
@@ -251,7 +268,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                     {
                         if (logger is null)
                         {
-                            Console.WriteLine("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
+                            LogError("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
                         }
                         else
                         {
@@ -281,16 +298,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             return false;
         }
 
-        if (logger is null)
-        {
-            string errorMessage = $"Unable to find config file: {path} does not exist.";
-            Console.Error.WriteLine(errorMessage);
-        }
-        else
-        {
-            string errorMessage = "Unable to find config file: {path} does not exist.";
-            logger.LogError(message: errorMessage, path);
-        }
+        string configMissingError = $"Unable to find config file: {path} does not exist.";
+        LogError(configMissingError);
 
         config = null;
         return false;
@@ -515,5 +524,86 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     {
         _baseConfigFilePath = filePath;
         ConfigFilePath = filePath;
+    }
+
+    /// <summary>
+    /// Wires the DI-provided logger into this loader.
+    /// Called from <c>Startup.Configure</c> once the DI container has been fully built.
+    /// After this call, subsequent log writes use <paramref name="logger"/> directly.
+    /// </summary>
+    /// <param name="logger">The resolved logger for this class.</param>
+    public void SetLogger(ILogger<FileSystemRuntimeConfigLoader> logger)
+    {
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Flushes all log entries that were buffered before the logger was available.
+    /// Should be called immediately after <see cref="SetLogger"/> in
+    /// <c>Startup.Configure</c> so that early-startup messages are not lost.
+    /// </summary>
+    public void FlushLogBuffer()
+    {
+        _logBuffer?.FlushToLogger(_logger);
+    }
+
+    /// <summary>
+    /// Routes an Information-level message to the logger, the buffer, or (as a last resort)
+    /// to <see cref="Console"/> so that it is never silently dropped.
+    /// </summary>
+    private void LogInformation(string message)
+    {
+        if (_logger is not null)
+        {
+            _logger.LogInformation(message);
+        }
+        else if (_logBuffer is not null)
+        {
+            _logBuffer.BufferLog(LogLevel.Information, message);
+        }
+        else
+        {
+            Console.WriteLine(message);
+        }
+    }
+
+    /// <summary>
+    /// Routes a Warning-level message to the logger, the buffer, or (as a last resort)
+    /// to <see cref="Console"/> so that it is never silently dropped.
+    /// </summary>
+    private void LogWarning(string message)
+    {
+        if (_logger is not null)
+        {
+            _logger.LogWarning(message);
+        }
+        else if (_logBuffer is not null)
+        {
+            _logBuffer.BufferLog(LogLevel.Warning, message);
+        }
+        else
+        {
+            Console.WriteLine(message);
+        }
+    }
+
+    /// <summary>
+    /// Routes an Error-level message to the logger, the buffer, or (as a last resort)
+    /// to <see cref="Console.Error"/> so that it is never silently dropped.
+    /// </summary>
+    private void LogError(string message)
+    {
+        if (_logger is not null)
+        {
+            _logger.LogError(message);
+        }
+        else if (_logBuffer is not null)
+        {
+            _logBuffer.BufferLog(LogLevel.Error, message);
+        }
+        else
+        {
+            Console.Error.WriteLine(message);
+        }
     }
 }

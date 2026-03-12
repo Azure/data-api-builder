@@ -313,3 +313,54 @@ public class UtilsTests
     }
 }
 
+/// <summary>
+/// Unit tests for <see cref="Cli.Program.PreParseLogLevel"/>.
+/// </summary>
+[TestClass]
+public class ProgramPreParseLogLevelTests
+{
+    /// <summary>
+    /// Verifies that numeric and named log level values, including mixed-case variants,
+    /// are parsed correctly from the raw argument array.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow(new string[] { "--LogLevel", "0" }, LogLevel.Trace, DisplayName = "Numeric 0 -> Trace")]
+    [DataRow(new string[] { "--LogLevel", "1" }, LogLevel.Debug, DisplayName = "Numeric 1 -> Debug")]
+    [DataRow(new string[] { "--LogLevel", "2" }, LogLevel.Information, DisplayName = "Numeric 2 -> Information")]
+    [DataRow(new string[] { "--LogLevel", "3" }, LogLevel.Warning, DisplayName = "Numeric 3 -> Warning")]
+    [DataRow(new string[] { "--LogLevel", "4" }, LogLevel.Error, DisplayName = "Numeric 4 -> Error")]
+    [DataRow(new string[] { "--LogLevel", "5" }, LogLevel.Critical, DisplayName = "Numeric 5 -> Critical")]
+    [DataRow(new string[] { "--LogLevel", "6" }, LogLevel.None, DisplayName = "Numeric 6 -> None")]
+    [DataRow(new string[] { "--LogLevel", "Trace" }, LogLevel.Trace, DisplayName = "Named Trace")]
+    [DataRow(new string[] { "--LogLevel", "Debug" }, LogLevel.Debug, DisplayName = "Named Debug")]
+    [DataRow(new string[] { "--LogLevel", "Information" }, LogLevel.Information, DisplayName = "Named Information")]
+    [DataRow(new string[] { "--LogLevel", "Warning" }, LogLevel.Warning, DisplayName = "Named Warning")]
+    [DataRow(new string[] { "--LogLevel", "Error" }, LogLevel.Error, DisplayName = "Named Error")]
+    [DataRow(new string[] { "--LogLevel", "Critical" }, LogLevel.Critical, DisplayName = "Named Critical")]
+    [DataRow(new string[] { "--LogLevel", "None" }, LogLevel.None, DisplayName = "Named None")]
+    [DataRow(new string[] { "--LogLevel", "tRace" }, LogLevel.Trace, DisplayName = "Case-insensitive: tRace -> Trace")]
+    [DataRow(new string[] { "--LogLevel", "NONE" }, LogLevel.None, DisplayName = "Case-insensitive: NONE -> None")]
+    [DataRow(new string[] { "--LogLevel", "waRNing" }, LogLevel.Warning, DisplayName = "Case-insensitive: waRNing -> Warning")]
+    public void PreParseLogLevel_ValidValues_ReturnsExpectedLogLevel(string[] args, LogLevel expected)
+    {
+        LogLevel actual = Cli.Program.PreParseLogLevel(args);
+        Assert.AreEqual(expected, actual);
+    }
+
+    /// <summary>
+    /// Verifies that the default log level (<see cref="LogLevel.Information"/>) is returned
+    /// when <c>--LogLevel</c> is absent or its value is invalid.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow(new string[] { }, DisplayName = "Empty args -> Information")]
+    [DataRow(new string[] { "start", "--config", "dab-config.json" }, DisplayName = "No --LogLevel flag -> Information")]
+    [DataRow(new string[] { "--LogLevel", "bogus" }, DisplayName = "Invalid value -> Information")]
+    [DataRow(new string[] { "--LogLevel", "7" }, DisplayName = "Out-of-range numeric 7 -> Information")]
+    [DataRow(new string[] { "--LogLevel" }, DisplayName = "Flag with no value -> Information")]
+    public void PreParseLogLevel_InvalidOrAbsent_ReturnsInformation(string[] args)
+    {
+        LogLevel actual = Cli.Program.PreParseLogLevel(args);
+        Assert.AreEqual(LogLevel.Information, actual);
+    }
+}
+

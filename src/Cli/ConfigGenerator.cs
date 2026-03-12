@@ -2,16 +2,20 @@
 // Licensed under the MIT License.
 
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
+using System.Text;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using static Cli.Utils;
@@ -264,14 +268,26 @@ namespace Cli
                 Runtime: new(
                     Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
                     GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
-                    Mcp: new(mcpEnabled, mcpPath ?? McpRuntimeOptions.DEFAULT_PATH),
+                    Mcp: new(
+                        Enabled: mcpEnabled,
+                        Path: mcpPath ?? McpRuntimeOptions.DEFAULT_PATH,
+                        DmlTools: options.McpAggregateRecordsQueryTimeout is not null
+                            ? new DmlToolsConfig(aggregateRecordsQueryTimeout: options.McpAggregateRecordsQueryTimeout)
+                            : null),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
                             Provider: options.AuthenticationProvider,
                             Jwt: (options.Audience is null && options.Issuer is null) ? null : new(options.Audience, options.Issuer)),
                         Mode: options.HostMode),
-                    BaseRoute: runtimeBaseRoute
+                    BaseRoute: runtimeBaseRoute,
+                    Telemetry: new TelemetryOptions(
+                        OpenTelemetry: new OpenTelemetryOptions(
+                            Enabled: true,
+                            Endpoint: "@env('OTEL_EXPORTER_OTLP_ENDPOINT')",
+                            Headers: "@env('OTEL_EXPORTER_OTLP_HEADERS')",
+                            ExporterProtocol: null,
+                            ServiceName: "@env('OTEL_SERVICE_NAME')"))
                 ),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
 
@@ -882,7 +898,9 @@ namespace Cli
                 options.RuntimeMcpDmlToolsReadRecordsEnabled != null ||
                 options.RuntimeMcpDmlToolsUpdateRecordEnabled != null ||
                 options.RuntimeMcpDmlToolsDeleteRecordEnabled != null ||
-                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null)
+                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null ||
+                options.RuntimeMcpDmlToolsAggregateRecordsEnabled != null ||
+                options.RuntimeMcpDmlToolsAggregateRecordsQueryTimeout != null)
             {
                 McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
                 bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
@@ -1181,6 +1199,8 @@ namespace Cli
                 bool? updateRecord = currentDmlTools?.UpdateRecord;
                 bool? deleteRecord = currentDmlTools?.DeleteRecord;
                 bool? executeEntity = currentDmlTools?.ExecuteEntity;
+                bool? aggregateRecords = currentDmlTools?.AggregateRecords;
+                int? aggregateRecordsQueryTimeout = currentDmlTools?.AggregateRecordsQueryTimeout;
 
                 updatedValue = options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
                 if (updatedValue != null)
@@ -1230,20 +1250,35 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.execute-entity as '{updatedValue}'", updatedValue);
                 }
 
+                updatedValue = options?.RuntimeMcpDmlToolsAggregateRecordsEnabled;
+                if (updatedValue != null)
+                {
+                    aggregateRecords = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.aggregate-records as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsAggregateRecordsQueryTimeout;
+                if (updatedValue != null)
+                {
+                    aggregateRecordsQueryTimeout = (int)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.aggregate-records.query-timeout as '{updatedValue}'", updatedValue);
+                }
+
                 if (hasToolUpdates)
                 {
                     updatedMcpOptions = updatedMcpOptions! with
                     {
-                        DmlTools = new DmlToolsConfig
-                        {
-                            AllToolsEnabled = false,
-                            DescribeEntities = describeEntities,
-                            CreateRecord = createRecord,
-                            ReadRecords = readRecord,
-                            UpdateRecord = updateRecord,
-                            DeleteRecord = deleteRecord,
-                            ExecuteEntity = executeEntity
-                        }
+                        DmlTools = new DmlToolsConfig(
+                            describeEntities: describeEntities,
+                            createRecord: createRecord,
+                            readRecords: readRecord,
+                            updateRecord: updateRecord,
+                            deleteRecord: deleteRecord,
+                            executeEntity: executeEntity,
+                            aggregateRecords: aggregateRecords,
+                            aggregateRecordsQueryTimeout: aggregateRecordsQueryTimeout)
                     };
                 }
 
@@ -3128,6 +3163,210 @@ namespace Cli
             }
 
             return parsedPermissions;
+        }
+
+        // Column names returned by the autoentities SQL query.
+        private const string AUTOENTITIES_COLUMN_ENTITY_NAME = "entity_name";
+        private const string AUTOENTITIES_COLUMN_OBJECT = "object";
+        private const string AUTOENTITIES_COLUMN_SCHEMA = "schema";
+
+        /// <summary>
+        /// Simulates the autoentities generation by querying the database and displaying
+        /// which entities would be created for each autoentities filter definition.
+        /// When an output file path is provided, results are written as CSV; otherwise they are printed to the console.
+        /// </summary>
+        /// <param name="options">The simulate options provided by the user.</param>
+        /// <param name="loader">The config loader to read the existing config.</param>
+        /// <param name="fileSystem">The filesystem used for reading the config file and writing output.</param>
+        /// <returns>True if the simulation completed successfully; otherwise, false.</returns>
+        public static bool TrySimulateAutoentities(AutoConfigSimulateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            // Load config with env var replacement so the connection string is fully resolved.
+            DeserializationVariableReplacementSettings replacementSettings = new(doReplaceEnvVar: true);
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (runtimeConfig.DataSource.DatabaseType != DatabaseType.MSSQL)
+            {
+                _logger.LogError("Autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
+                return false;
+            }
+
+            if (runtimeConfig.Autoentities?.Autoentities is null || runtimeConfig.Autoentities.Autoentities.Count == 0)
+            {
+                _logger.LogError("No autoentities definitions found in the config file.");
+                return false;
+            }
+
+            string connectionString = runtimeConfig.DataSource.ConnectionString;
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                _logger.LogError("Connection string is missing or empty in config file.");
+                return false;
+            }
+
+            MsSqlQueryBuilder queryBuilder = new();
+            string query = queryBuilder.BuildGetAutoentitiesQuery();
+
+            Dictionary<string, List<(string EntityName, string SchemaName, string ObjectName)>> results = new();
+
+            try
+            {
+                using SqlConnection connection = new(connectionString);
+                connection.Open();
+
+                foreach ((string filterName, Autoentity autoentity) in runtimeConfig.Autoentities.Autoentities)
+                {
+                    string include = string.Join(",", autoentity.Patterns.Include);
+                    string exclude = string.Join(",", autoentity.Patterns.Exclude);
+                    string namePattern = autoentity.Patterns.Name;
+
+                    List<(string EntityName, string SchemaName, string ObjectName)> filterResults = new();
+
+                    using SqlCommand command = new(query, connection);
+                    SqlParameter includeParameter = new("@include_pattern", SqlDbType.NVarChar)
+                    {
+                        Value = include
+                    };
+                    SqlParameter excludeParameter = new("@exclude_pattern", SqlDbType.NVarChar)
+                    {
+                        Value = exclude
+                    };
+                    SqlParameter namePatternParameter = new("@name_pattern", SqlDbType.NVarChar)
+                    {
+                        Value = namePattern
+                    };
+
+                    command.Parameters.Add(includeParameter);
+                    command.Parameters.Add(excludeParameter);
+                    command.Parameters.Add(namePatternParameter);
+                    using SqlDataReader reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        string entityName = reader[AUTOENTITIES_COLUMN_ENTITY_NAME]?.ToString() ?? string.Empty;
+                        string objectName = reader[AUTOENTITIES_COLUMN_OBJECT]?.ToString() ?? string.Empty;
+                        string schemaName = reader[AUTOENTITIES_COLUMN_SCHEMA]?.ToString() ?? string.Empty;
+
+                        if (!string.IsNullOrWhiteSpace(entityName) && !string.IsNullOrWhiteSpace(objectName))
+                        {
+                            filterResults.Add((entityName, schemaName, objectName));
+                        }
+                    }
+
+                    results[filterName] = filterResults;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to query the database: {Message}", ex.Message);
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.Output))
+            {
+                return WriteSimulationResultsToCsvFile(options.Output, results, fileSystem);
+            }
+            else
+            {
+                WriteSimulationResultsToConsole(results);
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Writes the autoentities simulation results to the console in a human-readable format.
+        /// Results are grouped by filter name with entity-to-database-object mappings.
+        /// </summary>
+        /// <param name="results">The simulation results keyed by filter (definition) name.</param>
+        private static void WriteSimulationResultsToConsole(Dictionary<string, List<(string EntityName, string SchemaName, string ObjectName)>> results)
+        {
+            Console.WriteLine("AutoEntities Simulation Results");
+            Console.WriteLine();
+
+            foreach ((string filterName, List<(string EntityName, string SchemaName, string ObjectName)> matches) in results)
+            {
+                Console.WriteLine($"Filter: {filterName}");
+                Console.WriteLine($"Matches: {matches.Count}");
+                Console.WriteLine();
+
+                if (matches.Count == 0)
+                {
+                    Console.WriteLine("(no matches)");
+                }
+                else
+                {
+                    int maxEntityNameLength = matches.Max(m => m.EntityName.Length);
+                    foreach ((string entityName, string schemaName, string objectName) in matches)
+                    {
+                        Console.WriteLine($"{entityName.PadRight(maxEntityNameLength)} -> {schemaName}.{objectName}");
+                    }
+                }
+
+                Console.WriteLine();
+            }
+        }
+
+        /// <summary>
+        /// Writes the autoentities simulation results to a CSV file.
+        /// The file includes a header row followed by one row per matched entity.
+        /// If the file already exists it is overwritten.
+        /// </summary>
+        /// <param name="outputPath">The file path to write the CSV output to.</param>
+        /// <param name="results">The simulation results keyed by filter (definition) name.</param>
+        /// <param name="fileSystem">The filesystem abstraction used for writing the file.</param>
+        /// <returns>True if the file was written successfully; otherwise, false.</returns>
+        private static bool WriteSimulationResultsToCsvFile(
+            string outputPath,
+            Dictionary<string, List<(string EntityName, string SchemaName, string ObjectName)>> results,
+            IFileSystem fileSystem)
+        {
+            try
+            {
+                StringBuilder sb = new();
+                sb.AppendLine("filter_name,entity_name,database_object");
+
+                foreach ((string filterName, List<(string EntityName, string SchemaName, string ObjectName)> matches) in results)
+                {
+                    foreach ((string entityName, string schemaName, string objectName) in matches)
+                    {
+                        sb.AppendLine($"{QuoteCsvValue(filterName)},{QuoteCsvValue(entityName)},{QuoteCsvValue($"{schemaName}.{objectName}")}");
+                    }
+                }
+
+                fileSystem.File.WriteAllText(outputPath, sb.ToString());
+                _logger.LogInformation("Simulation results written to {outputPath}.", outputPath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to write output file: {Message}", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Quotes a value for inclusion in a CSV field.
+        /// If the value contains a comma, double-quote, or newline, it is wrapped in double-quotes
+        /// and any embedded double-quotes are escaped by doubling them.
+        /// </summary>
+        /// <param name="value">The value to quote.</param>
+        /// <returns>A properly escaped CSV field value.</returns>
+        private static string QuoteCsvValue(string value)
+        {
+            if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
+            {
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            }
+
+            return value;
         }
 
         /// <summary>

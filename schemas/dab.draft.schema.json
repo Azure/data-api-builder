@@ -315,6 +315,34 @@
                       "type": "boolean",
                       "description": "Enable/disable the execute-entity tool.",
                       "default": false
+                    },
+                    "aggregate-records": {
+                      "oneOf": [
+                        {
+                          "type": "boolean",
+                          "description": "Enable/disable the aggregate-records tool."
+                        },
+                        {
+                          "type": "object",
+                          "description": "Aggregate records tool configuration",
+                          "additionalProperties": false,
+                          "properties": {
+                            "enabled": {
+                              "type": "boolean",
+                              "description": "Enable/disable the aggregate-records tool.",
+                              "default": true
+                            },
+                            "query-timeout": {
+                              "type": "integer",
+                              "description": "Execution timeout in seconds for aggregate queries. Range: 1-600.",
+                              "default": 30,
+                              "minimum": 1,
+                              "maximum": 600
+                            }
+                          }
+                        }
+                      ],
+                      "default": false
                     }
                   }
                 }

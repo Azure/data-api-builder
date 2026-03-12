@@ -54,7 +54,7 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: AppService
+        Provider: Unauthenticated
       }
     },
     Telemetry: {

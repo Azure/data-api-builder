@@ -792,7 +792,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(McpRuntimeOptions.DEFAULT_PATH, parsedConfig.McpPath);
             Assert.IsTrue(parsedConfig.AllowIntrospection);
             Assert.IsFalse(parsedConfig.IsDevelopmentMode());
-            Assert.IsTrue(parsedConfig.IsAppServiceIdentityProvider);
+            Assert.IsTrue(parsedConfig.IsUnauthenticatedIdentityProvider);
             Assert.IsTrue(parsedConfig.IsRequestBodyStrict);
             Assert.IsTrue(parsedConfig.IsLogLevelNull());
             Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.ApplicationInsights is null

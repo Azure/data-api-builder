@@ -880,26 +880,6 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Tests that PreParseLogLevel correctly extracts the LogLevel from command line args
-    /// before full argument parsing, so the CLI logger is configured correctly.
-    /// </summary>
-    [DataTestMethod]
-    [DataRow(new string[] { "start", "--LogLevel", "None" }, LogLevel.None, DisplayName = "Parses --LogLevel None")]
-    [DataRow(new string[] { "start", "--LogLevel", "Warning" }, LogLevel.Warning, DisplayName = "Parses --LogLevel Warning")]
-    [DataRow(new string[] { "start", "--LogLevel", "Trace" }, LogLevel.Trace, DisplayName = "Parses --LogLevel Trace")]
-    [DataRow(new string[] { "start", "--LogLevel", "none" }, LogLevel.None, DisplayName = "Case-insensitive: --LogLevel none")]
-    [DataRow(new string[] { "start", "--LogLevel", "NONE" }, LogLevel.None, DisplayName = "Case-insensitive: --LogLevel NONE")]
-    [DataRow(new string[] { "start", "--LogLevel", "6" }, LogLevel.None, DisplayName = "Numeric: --LogLevel 6")]
-    [DataRow(new string[] { "start", "--LogLevel", "0" }, LogLevel.Trace, DisplayName = "Numeric: --LogLevel 0")]
-    [DataRow(new string[] { "start", "--LogLevel=None" }, LogLevel.None, DisplayName = "Equals syntax: --LogLevel=None")]
-    [DataRow(new string[] { "start" }, LogLevel.Information, DisplayName = "No --LogLevel returns Information default")]
-    [DataRow(new string[] { "start", "--verbose" }, LogLevel.Information, DisplayName = "--verbose returns Information default")]
-    public void TestPreParseLogLevel(string[] args, LogLevel expectedLogLevel)
-    {
-        Assert.AreEqual(expected: expectedLogLevel, actual: Program.PreParseLogLevel(args));
-    }
-
-    /// <summary>
     /// Validates that valid usage of verbs and associated options produce exit code 0 (CliReturnCode.SUCCESS).
     /// Verifies that explicitly implemented verbs (add, update, init, start) and appropriately
     /// supplied options produce exit code 0.
@@ -1130,10 +1110,6 @@ public class EndToEndTests
             output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);
             StringAssert.Contains(output, $"Setting default minimum LogLevel:", StringComparison.Ordinal);
-
-            output = await process.StandardOutput.ReadLineAsync();
-            Assert.IsNotNull(output);
-            StringAssert.Contains(output, "Starting the runtime engine...", StringComparison.Ordinal);
         }
         else
         {

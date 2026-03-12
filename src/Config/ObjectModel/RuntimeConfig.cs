@@ -771,7 +771,6 @@ public record RuntimeConfig
     /// </summary>
     public LogLevel GetConfiguredLogLevel(string loggerFilter = "")
     {
-
         if (!IsLogLevelNull())
         {
             int max = 0;

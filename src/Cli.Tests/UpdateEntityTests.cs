@@ -1211,7 +1211,7 @@ namespace Cli.Tests
                                     ""allow-credentials"": false
                                 },
                                 ""authentication"": {
-                                    ""provider"": ""AppService"",
+                                    ""provider"": ""Unauthenticated"",
                                     ""jwt"": {
                                     ""audience"": """",
                                     ""issuer"": """"

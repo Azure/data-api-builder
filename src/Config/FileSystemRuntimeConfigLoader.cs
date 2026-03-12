@@ -207,14 +207,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     {
         if (_fileSystem.File.Exists(path))
         {
-            if (_logger is null)
-            {
-                _logBuffer?.BufferLog(LogLevel.Information, $"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
-            }
-            else
-            {
-                _logger?.LogInformation($"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
-            }
+            SendLogToBufferOrLogger(LogLevel.Information, $"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
 
             // Use File.ReadAllText because DAB doesn't need write access to the file
             // and ensures the file handle is released immediately after reading.
@@ -233,14 +226,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 }
                 catch (IOException ex)
                 {
-                    if (_logger is null)
-                    {
-                        _logBuffer?.BufferLog(LogLevel.Warning, $"IO Exception, retrying due to {ex.Message}");
-                    }
-                    else
-                    {
-                        _logger?.LogWarning($"IO Exception, retrying due to {ex.Message}");
-                    }
+                    SendLogToBufferOrLogger(LogLevel.Warning, $"IO Exception, retrying due to {ex.Message}");
 
                     if (runCount == FileUtilities.RunLimit)
                     {
@@ -264,14 +250,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             {
                 if (TrySetupConfigFileWatcher())
                 {
-                    if (_logger is null)
-                    {
-                        _logBuffer?.BufferLog(LogLevel.Information, $"Monitoring config: {ConfigFilePath} for hot-reloading.");
-                    }
-                    else
-                    {
-                        _logger?.LogInformation($"Monitoring config: {ConfigFilePath} for hot-reloading.");
-                    }
+                    SendLogToBufferOrLogger(LogLevel.Information, $"Monitoring config: {ConfigFilePath} for hot-reloading.");
                 }
 
                 // When isDevMode is not null it means we are in a hot-reload scenario, and need to save the previous
@@ -281,14 +260,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                     // Log error when the mode is changed during hot-reload.
                     if (isDevMode != this.RuntimeConfig.IsDevelopmentMode())
                     {
-                        if (_logger is null)
-                        {
-                            _logBuffer?.BufferLog(LogLevel.Error, "Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
-                        }
-                        else
-                        {
-                            _logger?.LogError("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
-                        }
+                        SendLogToBufferOrLogger(LogLevel.Error, "Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
                     }
 
                     RuntimeConfig.Runtime.Host.Mode = (bool)isDevMode ? HostMode.Development : HostMode.Production;
@@ -314,14 +286,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         }
 
         string errorMessage = $"Unable to find config file: {path} does not exist.";
-        if (_logger is null)
-        {
-            _logBuffer?.BufferLog(LogLevel.Error, errorMessage);
-        }
-        else
-        {
-            _logger?.LogError(message: errorMessage);
-        }
+        SendLogToBufferOrLogger(LogLevel.Error, errorMessage);
 
         config = null;
         return false;
@@ -559,5 +524,23 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public void FlushLogBuffer()
     {
         _logBuffer?.FlushToLogger(_logger);
+    }
+
+    /// <summary>
+    /// Helper method that sends the log to the buffer if the logger has not being set up.
+    /// Else, it will send the log to the logger.
+    /// </summary>
+    /// <param name="logLevel">LogLevel of the log.</param>
+    /// <param name="message">Message that will be printed in the log.</param>
+    private void SendLogToBufferOrLogger(LogLevel logLevel, string message)
+    {
+        if (_logger is null)
+        {
+            _logBuffer?.BufferLog(logLevel, message);
+        }
+        else
+        {
+            _logger?.Log(logLevel, message);
+        }
     }
 }

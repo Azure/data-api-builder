@@ -707,7 +707,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                    Mcp: new(),
                    Host: new(null, null)
                ),
-               Entities: new(new Dictionary<string, Entity>()));
+               Entities: new(new Dictionary<string, Entity>())
+           );
 
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));

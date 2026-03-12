@@ -137,4 +137,23 @@ public interface IAuthorizationResolver
 
         return new List<string>();
     }
+
+    /// <summary>
+    /// Determines whether a given client role should be allowed through the GraphQL
+    /// schema-level authorization gate for a specific set of directive roles.
+    /// Centralizes the role inheritance logic so that callers (e.g. GraphQLAuthorizationHandler)
+    /// do not need to duplicate inheritance rules.
+    ///
+    /// Inheritance chain: named-role → authenticated → anonymous → none.
+    /// - If the role is explicitly listed in the directive roles, return true.
+    /// - If the role is 'authenticated' and 'anonymous' is listed, return true (inheritance).
+    /// - If the role is an unconfigured named role (not in any entity's explicit permissions)
+    ///   and either 'authenticated' or 'anonymous' is listed, return true (inheritance).
+    /// - Explicitly configured named roles use strict matching only, to prevent unintended
+    ///   access to operations outside their explicitly scoped permissions.
+    /// </summary>
+    /// <param name="clientRole">The role from the X-MS-API-ROLE header.</param>
+    /// <param name="directiveRoles">The roles listed on the @authorize directive.</param>
+    /// <returns>True if the client role should be allowed through the gate.</returns>
+    public bool IsRoleAllowedByDirective(string clientRole, IReadOnlyList<string>? directiveRoles);
 }

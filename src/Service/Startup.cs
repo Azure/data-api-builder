@@ -704,13 +704,16 @@ namespace Azure.DataApiBuilder.Service
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                // Configure Telemetry
+                // Set LogLevel based on RuntimeConfig
                 DynamicLogLevelProvider logLevelProvider = app.ApplicationServices.GetRequiredService<DynamicLogLevelProvider>();
                 logLevelProvider.UpdateFromRuntimeConfig(runtimeConfig);
                 FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
+
+                //Flush all logs that were buffered before setting the LogLevel
                 configLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
                 configLoader.FlushLogBuffer();
 
+                // Configure Telemetry
                 ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
                 ConfigureOpenTelemetry(runtimeConfig);
                 ConfigureAzureLogAnalytics(runtimeConfig);

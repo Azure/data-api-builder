@@ -811,9 +811,8 @@ public class EndToEndTests
 
     /// <summary>
     /// Test to validate that the engine starts successfully when --verbose and --LogLevel
-    /// options are used with the start command, for log levels at or below Information.
-    /// CLI phase messages (version info, config path) are expected in the output because
-    /// they are logged at Information level.
+    /// options are used with the start command
+    /// This test does not validate whether the engine logs messages at the specified log level
     /// </summary>
     /// <param name="logLevelOption">Log level options</param>
     [DataTestMethod]
@@ -822,12 +821,24 @@ public class EndToEndTests
     [DataRow("--LogLevel 0", DisplayName = "LogLevel 0 from command line.")]
     [DataRow("--LogLevel 1", DisplayName = "LogLevel 1 from command line.")]
     [DataRow("--LogLevel 2", DisplayName = "LogLevel 2 from command line.")]
+    [DataRow("--LogLevel 3", DisplayName = "LogLevel 3 from command line.")]
+    [DataRow("--LogLevel 4", DisplayName = "LogLevel 4 from command line.")]
+    [DataRow("--LogLevel 5", DisplayName = "LogLevel 5 from command line.")]
+    [DataRow("--LogLevel 6", DisplayName = "LogLevel 6 from command line.")]
     [DataRow("--LogLevel Trace", DisplayName = "LogLevel Trace from command line.")]
     [DataRow("--LogLevel Debug", DisplayName = "LogLevel Debug from command line.")]
     [DataRow("--LogLevel Information", DisplayName = "LogLevel Information from command line.")]
+    [DataRow("--LogLevel Warning", DisplayName = "LogLevel Warning from command line.")]
+    [DataRow("--LogLevel Error", DisplayName = "LogLevel Error from command line.")]
+    [DataRow("--LogLevel Critical", DisplayName = "LogLevel Critical from command line.")]
+    [DataRow("--LogLevel None", DisplayName = "LogLevel None from command line.")]
     [DataRow("--LogLevel tRace", DisplayName = "Case sensitivity: LogLevel Trace from command line.")]
     [DataRow("--LogLevel DebUG", DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
     [DataRow("--LogLevel information", DisplayName = "Case sensitivity: LogLevel Information from command line.")]
+    [DataRow("--LogLevel waRNing", DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
+    [DataRow("--LogLevel eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
+    [DataRow("--LogLevel CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
+    [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
     public void TestEngineStartUpWithVerboseAndLogLevelOptions(string logLevelOption)
     {
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
@@ -844,40 +855,6 @@ public class EndToEndTests
         process.Kill();
         Assert.IsNotNull(output);
         StringAssert.Contains(output, $"User provided config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// Test to validate that the engine starts successfully when --LogLevel is set to Warning
-    /// or above. At these levels, CLI phase messages (logged at Information) are suppressed,
-    /// so no stdout output is expected during the CLI phase.
-    /// </summary>
-    /// <param name="logLevelOption">Log level options</param>
-    [DataTestMethod]
-    [DataRow("--LogLevel 3", DisplayName = "LogLevel 3 from command line.")]
-    [DataRow("--LogLevel 4", DisplayName = "LogLevel 4 from command line.")]
-    [DataRow("--LogLevel 5", DisplayName = "LogLevel 5 from command line.")]
-    [DataRow("--LogLevel 6", DisplayName = "LogLevel 6 from command line.")]
-    [DataRow("--LogLevel Warning", DisplayName = "LogLevel Warning from command line.")]
-    [DataRow("--LogLevel Error", DisplayName = "LogLevel Error from command line.")]
-    [DataRow("--LogLevel Critical", DisplayName = "LogLevel Critical from command line.")]
-    [DataRow("--LogLevel None", DisplayName = "LogLevel None from command line.")]
-    [DataRow("--LogLevel waRNing", DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
-    [DataRow("--LogLevel eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
-    [DataRow("--LogLevel CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
-    [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
-    public void TestEngineStartUpWithHighLogLevelOptions(string logLevelOption)
-    {
-        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
-
-        using Process process = ExecuteDabCommand(
-            command: $"start --config {TEST_RUNTIME_CONFIG_FILE}",
-            logLevelOption
-        );
-
-        // CLI phase messages are at Information level and will be suppressed by Warning+.
-        // Verify the engine started (process not immediately exited) then clean up.
-        Assert.IsFalse(process.HasExited);
-        process.Kill();
     }
 
     /// <summary>

@@ -516,11 +516,12 @@ namespace Cli
             string? issuer)
         {
             if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
-                || AuthenticationOptions.SIMULATOR_AUTHENTICATION == authenticationProvider)
+                || AuthenticationOptions.SIMULATOR_AUTHENTICATION.Equals(authenticationProvider, StringComparison.OrdinalIgnoreCase)
+                || AuthenticationOptions.UNAUTHENTICATED_AUTHENTICATION.Equals(authenticationProvider, StringComparison.OrdinalIgnoreCase))
             {
                 if (!(string.IsNullOrWhiteSpace(audience)) || !(string.IsNullOrWhiteSpace(issuer)))
                 {
-                    _logger.LogWarning("Audience and Issuer can't be set for EasyAuth or Simulator authentication.");
+                    _logger.LogWarning("Audience and Issuer can't be set for EasyAuth, Simulator, or Unauthenticated authentication.");
                     return true;
                 }
             }
@@ -528,7 +529,7 @@ namespace Cli
             {
                 if (string.IsNullOrWhiteSpace(audience) || string.IsNullOrWhiteSpace(issuer))
                 {
-                    _logger.LogError($"Authentication providers other than EasyAuth and Simulator require both Audience and Issuer.");
+                    _logger.LogError($"Authentication providers other than EasyAuth, Simulator, and Unauthenticated require both Audience and Issuer.");
                     return false;
                 }
             }

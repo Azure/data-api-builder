@@ -526,7 +526,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // test number of properties/fields defined in Column Definition
             int fields = typeof(ColumnDefinition).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 8);
+            Assert.AreEqual(fields, 9);
 
             // test values
             expectedColumnDefinition.Equals(deserializedColumnDefinition);

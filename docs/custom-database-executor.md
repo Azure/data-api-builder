@@ -1,6 +1,6 @@
 # Extending DAB with a Custom Database Executor
 
-Data API builder (DAB) natively supports Azure SQL / SQL Server, Azure SQL DW, PostgreSQL, MySQL, and Cosmos DB.
+Data API builder (DAB) natively supports SQL Server compatible databases, PostgreSQL, MySQL, and Cosmos DB.
 This guide shows how to create a custom `QueryExecutor` for a database engine that DAB does not support out of the box (for example, Oracle).
 
 ## Prerequisites

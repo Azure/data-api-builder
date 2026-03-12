@@ -6,12 +6,12 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <summary>
 /// Authentication configuration.
 /// </summary>
-/// <param name="Provider">Identity Provider. Default is AppService.
-/// With EasyAuth and Simulator, no Audience or Issuer are expected.
+/// <param name="Provider">Identity Provider. Default is Unauthenticated.
+/// With EasyAuth, Simulator, and Unauthenticated, no Audience or Issuer are expected.
 /// </param>
 /// <param name="Jwt">Settings enabling validation of the received JWT token.
-/// Required only when Provider is other than EasyAuth.</param>
-public record AuthenticationOptions(string Provider = nameof(EasyAuthType.AppService), JwtOptions? Jwt = null)
+/// Required only when Provider is other than EasyAuth, Simulator, or Unauthenticated.</param>
+public record AuthenticationOptions(string Provider = "Unauthenticated", JwtOptions? Jwt = null)
 {
     public const string SIMULATOR_AUTHENTICATION = "Simulator";
     public const string CLIENT_PRINCIPAL_HEADER = "X-MS-CLIENT-PRINCIPAL";
@@ -32,9 +32,17 @@ public record AuthenticationOptions(string Provider = nameof(EasyAuthType.AppSer
     /// <returns>True when development mode should authenticate all requests.</returns>
     public bool IsAuthenticationSimulatorEnabled() => Provider.Equals(SIMULATOR_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
 
+    public const string UNAUTHENTICATED_AUTHENTICATION = "Unauthenticated";
+
+    /// <summary>
+    /// Returns whether the configured Provider value matches the Unauthenticated authentication type.
+    /// </summary>
+    /// <returns>True if Provider is Unauthenticated type.</returns>
+    public bool IsUnauthenticatedAuthenticationProvider() => Provider.Equals(UNAUTHENTICATED_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
+
     /// <summary>
     /// A shorthand method to determine whether JWT is configured for the current authentication provider.
     /// </summary>
     /// <returns>True if the provider is enabled for JWT, otherwise false.</returns>
-    public bool IsJwtConfiguredIdentityProvider() => !IsEasyAuthAuthenticationProvider() && !IsAuthenticationSimulatorEnabled();
+    public bool IsJwtConfiguredIdentityProvider() => !IsEasyAuthAuthenticationProvider() && !IsAuthenticationSimulatorEnabled() && !IsUnauthenticatedAuthenticationProvider();
 };

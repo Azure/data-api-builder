@@ -183,6 +183,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             });
         }
 
+        [TestMethod("Unauthenticated provider is correctly identified by IsUnauthenticatedAuthenticationProvider method")]
+        public void ValidateUnauthenticatedProviderIdentification()
+        {
+            // Test with Unauthenticated provider
+            AuthenticationOptions unauthenticatedOptions = new(Provider: "Unauthenticated");
+            Assert.IsTrue(unauthenticatedOptions.IsUnauthenticatedAuthenticationProvider());
+
+            // Test case-insensitivity
+            AuthenticationOptions unauthenticatedOptionsLower = new(Provider: "unauthenticated");
+            Assert.IsTrue(unauthenticatedOptionsLower.IsUnauthenticatedAuthenticationProvider());
+
+            // Test that other providers are not identified as Unauthenticated
+            AuthenticationOptions appServiceOptions = new(Provider: "AppService");
+            Assert.IsFalse(appServiceOptions.IsUnauthenticatedAuthenticationProvider());
+
+            AuthenticationOptions simulatorOptions = new(Provider: "Simulator");
+            Assert.IsFalse(simulatorOptions.IsUnauthenticatedAuthenticationProvider());
+        }
+
         private static RuntimeConfig CreateRuntimeConfigWithOptionalAuthN(AuthenticationOptions authNConfig = null)
         {
             DataSource dataSource = new(DatabaseType.MSSQL, DEFAULT_CONNECTION_STRING, new());

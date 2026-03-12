@@ -767,15 +767,15 @@ public record RuntimeConfig
     /// </summary>
     public LogLevel GetConfiguredLogLevel(string loggerFilter = "")
     {
-
         if (!IsLogLevelNull())
         {
             int max = 0;
             string currentFilter = string.Empty;
             foreach (KeyValuePair<string, LogLevel?> logger in Runtime!.Telemetry!.LoggerLevel!)
             {
-                // Checks if the new key that is valid has more priority than the current key
-                if (logger.Key.Length > max && loggerFilter.StartsWith(logger.Key))
+                // Checks if the new key that is valid has more priority than the current key.
+                // Case-insensitive comparison so that e.g. "azure" matches "Azure.DataApiBuilder".
+                if (logger.Key.Length > max && loggerFilter.StartsWith(logger.Key, StringComparison.OrdinalIgnoreCase))
                 {
                     max = logger.Key.Length;
                     currentFilter = logger.Key;
@@ -788,10 +788,14 @@ public record RuntimeConfig
                 return (LogLevel)value;
             }
 
-            Runtime!.Telemetry!.LoggerLevel!.TryGetValue("default", out value);
-            if (value is not null)
+            // "default" key is case-insensitive. Use FirstOrDefault so that a mis-configured
+            // file with both "default" and "Default" is handled gracefully (first match wins)
+            // rather than throwing a cryptic InvalidOperationException.
+            LogLevel? defaultValue = Runtime!.Telemetry!.LoggerLevel!
+                .FirstOrDefault(kvp => kvp.Key.Equals("default", StringComparison.OrdinalIgnoreCase)).Value;
+            if (defaultValue is not null)
             {
-                return (LogLevel)value;
+                return (LogLevel)defaultValue;
             }
         }
 

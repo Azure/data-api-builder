@@ -26,8 +26,12 @@ namespace Cli
             // Load environment variables from .env file if present.
             DotNetEnv.Env.Load();
 
+            // Pre-parse --LogLevel from raw args before CommandLine.Parser runs so that
+            // CLI-phase messages (version info, config path) respect the user-specified level.
+            LogLevel cliLogLevel = PreParseLogLevel(args);
+
             // Logger setup and configuration
-            ILoggerFactory loggerFactory = Utils.LoggerFactoryForCli;
+            ILoggerFactory loggerFactory = Utils.GetLoggerFactoryForCli(cliLogLevel);
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
             ILogger<ConfigGenerator> configGeneratorLogger = loggerFactory.CreateLogger<ConfigGenerator>();
             ILogger<Utils> cliUtilsLogger = loggerFactory.CreateLogger<Utils>();
@@ -37,8 +41,40 @@ namespace Cli
             // Sets up the filesystem used for reading and writing runtime configuration files.
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null, isCliLoader: true);
-
             return Execute(args, cliLogger, fileSystem, loader);
+        }
+
+        /// <summary>
+        /// Scans <paramref name="args"/> for a <c>--LogLevel</c> flag and returns the parsed
+        /// <see cref="LogLevel"/>.  Falls back to <see cref="LogLevel.Information"/> when the
+        /// flag is absent or its value cannot be parsed.
+        /// </summary>
+        /// <param name="args">Raw command-line arguments.</param>
+        /// <returns>The log level to use for the CLI logging phase.</returns>
+        public static LogLevel PreParseLogLevel(string[] args)
+        {
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (string.Equals(args[i], "--LogLevel", StringComparison.OrdinalIgnoreCase))
+                {
+                    string raw = args[i + 1];
+                    // Accept both integer form (0-6) and named form (Trace, Debug, …).
+                    if (int.TryParse(raw, out int numericLevel)
+                        && numericLevel >= (int)LogLevel.Trace
+                        && numericLevel <= (int)LogLevel.None)
+                    {
+                        return (LogLevel)numericLevel;
+                    }
+
+                    if (Enum.TryParse<LogLevel>(raw, ignoreCase: true, out LogLevel namedLevel)
+                        && namedLevel >= LogLevel.Trace && namedLevel <= LogLevel.None)
+                    {
+                        return namedLevel;
+                    }
+                }
+            }
+
+            return LogLevel.Information;
         }
 
         /// <summary>

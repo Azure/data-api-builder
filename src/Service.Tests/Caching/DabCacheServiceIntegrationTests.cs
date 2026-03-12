@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.IO.Abstractions;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
@@ -699,10 +700,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             entityToDatabaseObject.Add(entityName, new DatabaseTable());
 
             Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = CreateMockRuntimeConfigProvider(entityName);
+            IFileSystem fileSystem = new FileSystem();
+            Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
+            RuntimeConfigValidator runtimeConfigValidator = new(mockRuntimeConfigProvider.Object, fileSystem, loggerValidator.Object);
             Mock<IAbstractQueryManagerFactory> mockQueryFactory = new();
             Mock<ILogger<ISqlMetadataProvider>> mockLogger = new();
             Mock<MsSqlMetadataProvider> mockSqlMetadataProvider = new(
                 mockRuntimeConfigProvider.Object,
+                runtimeConfigValidator,
                 mockQueryFactory.Object,
                 mockLogger.Object,
                 dataSourceName,
@@ -783,6 +788,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             mockRuntimeConfig
                 .Setup(c => c.GetEntityCacheEntryLevel(It.IsAny<string>()))
                 .Returns(EntityCacheLevel.L1);
+            mockRuntimeConfig
+                .Setup(c => c.IsEntityCachingEnabled(It.IsAny<string>()))
+                .Returns(true);
             Mock<RuntimeConfigLoader> mockLoader = new(null, null);
             Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(mockLoader.Object);
             mockRuntimeConfigProvider

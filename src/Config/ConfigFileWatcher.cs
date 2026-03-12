@@ -20,8 +20,10 @@ namespace Azure.DataApiBuilder.Config;
 /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher.onchanged#remarks"/>
 /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher.notifyfilter"/>
 /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/change-tokens#:~:text=exponential%20back%2Doff.-,Utilities/Utilities.cs%3A,-C%23"/>
-public class ConfigFileWatcher
+public class ConfigFileWatcher : IDisposable
 {
+    private bool _disposed;
+
     /// <summary>
     /// Watches a specific file for modifications and alerts
     /// this class when a change is detected.
@@ -118,6 +120,28 @@ public class ConfigFileWatcher
             // Need to remove the dependencies in startup on the RuntimeConfigProvider
             // before we can have an ILogger here.
             Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Disposes the file watcher and unsubscribes from events to release
+    /// file handles and prevent further file change notifications.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        if (_fileWatcher is not null)
+        {
+            _fileWatcher.EnableRaisingEvents = false;
+            _fileWatcher.Changed -= OnConfigFileChange;
+            _fileWatcher.Dispose();
+            _fileWatcher = null;
         }
     }
 }

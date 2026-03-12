@@ -30,8 +30,9 @@ namespace Azure.DataApiBuilder.Config;
 /// which allows for mocking of the file system in tests, providing a way to run the test
 /// in isolation of other tests or the actual file system.
 /// </remarks>
-public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
+public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 {
+    private bool _disposed;
     /// <summary>
     /// This stores either the default config name e.g. dab-config.json
     /// or user provided config file which could be a relative file path,
@@ -89,6 +90,22 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         _baseConfigFilePath = baseConfigFilePath;
         ConfigFilePath = GetFinalConfigFilePath();
         _isCliLoader = isCliLoader;
+    }
+
+    /// <summary>
+    /// Disposes the config file watcher to release file handles and stop
+    /// monitoring the config file for changes.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _configFileWatcher?.Dispose();
+        _configFileWatcher = null;
     }
 
     /// <summary>

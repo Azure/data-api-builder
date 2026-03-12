@@ -267,29 +267,32 @@ public record RuntimeConfig
     /// To be used when setting up from cli json scenario.
     /// </summary>
     /// <param name="Schema">schema for config.</param>
-    /// <param name="DataSource">Default datasource.</param>
+    /// <param name="DataSource">Default datasource. May be null when data-source-files is specified (multi-config scenario).</param>
     /// <param name="Entities">Entities</param>
     /// <param name="Runtime">Runtime settings.</param>
     /// <param name="DataSourceFiles">List of datasource files for multiple db scenario. Null for single db scenario.</param>
+#pragma warning disable CS8618 // DataSource may be null for multi-config (data-source-files) scenarios; callers should use ListAllDataSources() in that case.
     [JsonConstructor]
     public RuntimeConfig(
         string? Schema,
-        DataSource DataSource,
-        RuntimeEntities Entities,
+        DataSource? DataSource,
+        RuntimeEntities? Entities,
         RuntimeAutoentities? Autoentities = null,
         RuntimeOptions? Runtime = null,
         DataSourceFiles? DataSourceFiles = null,
         AzureKeyVaultOptions? AzureKeyVault = null)
+#pragma warning restore CS8618
     {
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
-        this.DataSource = DataSource;
+        this.DataSource = DataSource!; // May be null for multi-config (data-source-files) scenarios.
         this.Runtime = Runtime;
         this.AzureKeyVault = AzureKeyVault;
         this.Entities = Entities ?? new RuntimeEntities(new Dictionary<string, Entity>());
         this.Autoentities = Autoentities ?? new RuntimeAutoentities(new Dictionary<string, Autoentity>());
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
-        if (this.DataSource is null)
+        // data-source is required unless data-source-files is specified (multi-config scenario).
+        if (this.DataSource is null && DataSourceFiles is null)
         {
             throw new DataApiBuilderException(
                 message: "data-source is a mandatory property in DAB Config",
@@ -297,14 +300,18 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 
-        // we will set them up with default values
-        _dataSourceNameToDataSource = new Dictionary<string, DataSource>
+        // Initialize data source dictionary; only add the default data source when it is present.
+        _dataSourceNameToDataSource = new Dictionary<string, DataSource>();
+        if (this.DataSource is not null)
         {
-            { this.DefaultDataSourceName, this.DataSource }
-        };
+            _dataSourceNameToDataSource.Add(this.DefaultDataSourceName, this.DataSource);
+        }
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        if (Entities is null && this.Entities.Entities.Count == 0 &&
+        // entities/autoentities are required unless data-source-files is present (sub-configs supply them)
+        // or autoentities is present (entities are not required alongside autoentities).
+        if (DataSourceFiles is null &&
+            Entities is null && this.Entities.Entities.Count == 0 &&
             Autoentities is null && this.Autoentities.Autoentities.Count == 0)
         {
             throw new DataApiBuilderException(
@@ -353,8 +360,12 @@ public record RuntimeConfig
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _autoentityNameToDataSourceName = _autoentityNameToDataSourceName.Concat(config._autoentityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                        allEntities = allEntities?.Concat(config.Entities.AsEnumerable());
-                        allAutoentities = allAutoentities?.Concat(config.Autoentities.AsEnumerable());
+                        allEntities = allEntities == null
+                            ? config.Entities.AsEnumerable()
+                            : allEntities.Concat(config.Entities.AsEnumerable());
+                        allAutoentities = allAutoentities == null
+                            ? config.Autoentities.AsEnumerable()
+                            : allAutoentities.Concat(config.Autoentities.AsEnumerable());
                     }
                     catch (Exception e)
                     {

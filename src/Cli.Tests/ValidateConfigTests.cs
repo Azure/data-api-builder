@@ -200,6 +200,53 @@ public class ValidateConfigTests
     }
 
     /// <summary>
+    /// Verifies that a config using autoentities (without an entities section) passes validation.
+    /// When autoentities is present, data-source is required but entities is not.
+    /// </summary>
+    [TestMethod]
+    public void TestValidateConfigPassesWithAutoentitiesAndNoEntities()
+    {
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, CONFIG_WITH_AUTOENTITIES_ONLY);
+
+        try
+        {
+            // Config with autoentities and data-source but no entities should parse successfully.
+            // Full validation may fail due to no live database, but config parsing should succeed.
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE), out RuntimeConfig? config));
+            Assert.IsNotNull(config);
+            Assert.IsTrue(config.Autoentities.Autoentities.Count > 0);
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Verifies that a multi-config (data-source-files) config without data-source or entities passes parsing.
+    /// When data-source-files is present, only runtime is required.
+    /// </summary>
+    [TestMethod]
+    public void TestValidateConfigPassesWithDataSourceFilesOnly()
+    {
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, CONFIG_WITH_DATA_SOURCE_FILES_ONLY);
+
+        try
+        {
+            // Config with data-source-files but no data-source or entities should parse successfully.
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE), out RuntimeConfig? config));
+            Assert.IsNotNull(config);
+            Assert.IsNotNull(config.DataSourceFiles);
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// This Test is used to verify that the validate command is able to catch when data source field is missing.
     /// </summary>
     [TestMethod]

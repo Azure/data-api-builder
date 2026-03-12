@@ -280,6 +280,22 @@ namespace Cli.Tests
         public const string CONFIG_WITH_DISABLED_GLOBAL_REST_GRAPHQL = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION_WITH_DISABLED_REST_GRAPHQL}}}";
 
         /// <summary>
+        /// A valid config json using autoentities instead of entities. data-source is still required.
+        /// </summary>
+        public const string CONFIG_WITH_AUTOENTITIES_ONLY = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}," + @"""autoentities"": { ""myAutoentity"": { ""patterns"": { ""include"": [""%.%""] } } } }";
+
+        /// <summary>
+        /// A valid multi-config (data-source-files) config without data-source or entities at the top level.
+        /// Only runtime is required in this scenario.
+        /// </summary>
+        public const string CONFIG_WITH_DATA_SOURCE_FILES_ONLY = $"{{{SCHEMA_PROPERTY},{RUNTIME_SECTION}," + @"""data-source-files"": [""child-config.json""] }";
+
+        /// <summary>
+        /// A config without data-source and without data-source-files. This is invalid.
+        /// </summary>
+        public const string CONFIG_WITHOUT_DATA_SOURCE_OR_DATA_SOURCE_FILES = $"{{{SCHEMA_PROPERTY},{RUNTIME_SECTION}," + @"""entities"": {} }";
+
+        /// <summary>
         /// A config json with user-delegated-auth enabled. This is used in tests to verify updating existing
         /// user-delegated-auth configuration.
         /// </summary>

@@ -219,43 +219,48 @@ public abstract class RuntimeConfigLoader
                 return false;
             }
 
-            // retreive current connection string from config
-            string updatedConnectionString = config.DataSource.ConnectionString;
-
-            if (!string.IsNullOrEmpty(connectionString))
+            // For single-datasource configs, update the default data source's connection string.
+            // Multi-config (data-source-files) scenarios may have no default DataSource.
+            if (config.DataSource is not null)
             {
-                // update connection string if provided.
-                updatedConnectionString = connectionString;
-            }
+                // retreive current connection string from config
+                string updatedConnectionString = config.DataSource.ConnectionString;
 
-            Dictionary<string, string> datasourceNameToConnectionString = new();
-
-            // add to dictionary if datasourceName is present
-            datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
-
-            // iterate over dictionary and update runtime config with connection strings.
-            foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
-            {
-                string updatedConnection = connectionValue;
-
-                DataSource ds = config.GetDataSourceFromDataSourceName(dataSourceKey);
-
-                // Add Application Name for telemetry for MsSQL or PgSql
-                if (ds.DatabaseType is DatabaseType.MSSQL && replacementSettings?.DoReplaceEnvVar == true)
+                if (!string.IsNullOrEmpty(connectionString))
                 {
-                    updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
-                }
-                else if (ds.DatabaseType is DatabaseType.PostgreSQL && replacementSettings?.DoReplaceEnvVar == true)
-                {
-                    updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue);
+                    // update connection string if provided.
+                    updatedConnectionString = connectionString;
                 }
 
-                ds = ds with { ConnectionString = updatedConnection };
-                config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
+                Dictionary<string, string> datasourceNameToConnectionString = new();
 
-                if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
+                // add to dictionary if datasourceName is present
+                datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
+
+                // iterate over dictionary and update runtime config with connection strings.
+                foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
                 {
-                    config = config with { DataSource = ds };
+                    string updatedConnection = connectionValue;
+
+                    DataSource ds = config.GetDataSourceFromDataSourceName(dataSourceKey);
+
+                    // Add Application Name for telemetry for MsSQL or PgSql
+                    if (ds.DatabaseType is DatabaseType.MSSQL && replacementSettings?.DoReplaceEnvVar == true)
+                    {
+                        updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
+                    }
+                    else if (ds.DatabaseType is DatabaseType.PostgreSQL && replacementSettings?.DoReplaceEnvVar == true)
+                    {
+                        updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue);
+                    }
+
+                    ds = ds with { ConnectionString = updatedConnection };
+                    config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
+
+                    if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        config = config with { DataSource = ds };
+                    }
                 }
             }
         }

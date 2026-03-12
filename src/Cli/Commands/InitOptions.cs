@@ -135,9 +135,8 @@ namespace Cli.Commands
         [Option("mcp.enabled", Required = false, HelpText = "(Default: true) Enables MCP endpoint for all entities. Supported values: true, false.")]
         public CliBool McpEnabled { get; }
 
-        // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
-        // included in the init command.
-        [Option("rest.request-body-strict", Required = false, HelpText = "(Default: true) Allow extraneous fields in the request body for REST.")]
+        // When true, DAB rejects extraneous/unmapped fields in the REST request body (strict mode). When false, extraneous fields are allowed and ignored.
+        [Option("rest.request-body-strict", Required = false, HelpText = "(Default: false) When true, rejects extraneous/unmapped fields in the REST request body. When false, allows and ignores them.")]
         public CliBool RestRequestBodyStrict { get; }
 
         [Option("graphql.multiple-create.enabled", Required = false, HelpText = "(Default: false) Enables multiple create operation for GraphQL. Supported values: true, false.")]

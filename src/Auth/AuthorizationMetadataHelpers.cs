@@ -55,6 +55,23 @@ public class RoleMetadata
     /// Given the key (operation) returns the associated OperationMetadata object.
     /// </summary>
     public Dictionary<EntityActionOperation, OperationMetadata> OperationToColumnMap { get; set; } = new();
+
+    /// <summary>
+    /// Creates a deep clone of this RoleMetadata instance so that mutations
+    /// to the clone do not affect the original (and vice versa).
+    /// This is critical when copying permissions from one role to another
+    /// (e.g., anonymous → authenticated) to prevent shared mutable state.
+    /// </summary>
+    public RoleMetadata DeepClone()
+    {
+        RoleMetadata clone = new();
+        foreach ((EntityActionOperation operation, OperationMetadata metadata) in OperationToColumnMap)
+        {
+            clone.OperationToColumnMap[operation] = metadata.DeepClone();
+        }
+
+        return clone;
+    }
 }
 
 /// <summary>
@@ -68,4 +85,19 @@ public class OperationMetadata
     public HashSet<string> Included { get; set; } = new();
     public HashSet<string> Excluded { get; set; } = new();
     public HashSet<string> AllowedExposedColumns { get; set; } = new();
+
+    /// <summary>
+    /// Creates a deep clone of this OperationMetadata instance so that
+    /// mutations to the clone do not affect the original (and vice versa).
+    /// </summary>
+    public OperationMetadata DeepClone()
+    {
+        return new OperationMetadata
+        {
+            DatabasePolicy = DatabasePolicy,
+            Included = new HashSet<string>(Included),
+            Excluded = new HashSet<string>(Excluded),
+            AllowedExposedColumns = new HashSet<string>(AllowedExposedColumns)
+        };
+    }
 }

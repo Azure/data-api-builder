@@ -106,6 +106,7 @@ namespace Azure.DataApiBuilder.Service
         {
             Startup.AddValidFilters();
             services.AddSingleton(_logBuffer);
+            services.AddSingleton(Program.LogLevelProvider);
             services.AddSingleton(_hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(

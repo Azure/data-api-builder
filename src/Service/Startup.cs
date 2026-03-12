@@ -531,7 +531,7 @@ namespace Azure.DataApiBuilder.Service
 
             if (ShouldUseEntraAuthForRedis(options))
             {
-                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
+                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential()); // CodeQL [SM05137] DefaultAzureCredential will use Managed Identity if available or fallback to default.
             }
 
             return await ConnectionMultiplexer.ConnectAsync(options);

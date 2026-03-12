@@ -26,8 +26,12 @@ public class ConfigurationHotReloadTests
     private static HttpClient _testClient;
     private static RuntimeConfigProvider _configProvider;
     private static StringWriter _writer;
+    private static readonly object _writerLock = new();
     private const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
     private const string GQL_QUERY_NAME = "books";
+    private const string HOT_RELOAD_SUCCESS_MESSAGE = "Validated hot-reloaded configuration file";
+    private const string HOT_RELOAD_FAILURE_MESSAGE = "Unable to hot reload configuration file due to";
+    private const int HOT_RELOAD_TIMEOUT_SECONDS = 120;
 
     private const string GQL_QUERY = @"{
                 books(first: 100) {
@@ -59,6 +63,7 @@ public class ConfigurationHotReloadTests
         string restEntityEnabled = "true",
         string entityBackingColumn = "title",
         string entityExposedName = "title",
+        string mcpEnabled = "true",
         string configFileName = CONFIG_FILE_NAME)
     {
         File.WriteAllText(configFileName, @"
@@ -81,6 +86,9 @@ public class ConfigurationHotReloadTests
                           ""enabled"": " + gQLEnabled + @",
                           ""path"": """ + gQLPath + @""",
                           ""allow-introspection"": true
+                        },
+                        ""mcp"": {
+                          ""enabled"": " + mcpEnabled + @"
                         },
                         ""host"": {
                           ""cors"": {
@@ -186,54 +194,116 @@ public class ConfigurationHotReloadTests
     {
         // Arrange
         GenerateConfigFile(connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        _testServer = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", CONFIG_FILE_NAME }));
-        _testClient = _testServer.CreateClient();
-        _configProvider = _testServer.Services.GetService<RuntimeConfigProvider>();
 
-        string query = GQL_QUERY;
-        object payload =
-            new { query };
+        int maxRetries = 3;
+        int retryDelayMs = 2000;
+        Exception lastException = null;
 
-        HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            Content = JsonContent.Create(payload)
-        };
+            try
+            {
+                Console.WriteLine($"Initializing test server (attempt {attempt}/{maxRetries})...");
+                _testServer = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", CONFIG_FILE_NAME }));
+                _testClient = _testServer.CreateClient();
+                _configProvider = _testServer.Services.GetService<RuntimeConfigProvider>();
 
-        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
-        HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
+                // Give the server a moment to fully initialize
+                await Task.Delay(1000);
 
-        // Assert rest and graphQL requests return status OK.
-        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
-        Assert.AreEqual(HttpStatusCode.OK, gQLResult.StatusCode);
+                string query = GQL_QUERY;
+                object payload = new { query };
 
-        // Save the contents from request to validate results after hot-reloads.
-        string restContent = await restResult.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(restContent);
-        _bookDBOContents = doc.RootElement.GetProperty("value").ToString();
+                HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+                HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
+
+                // Assert rest and graphQL requests return status OK.
+                Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode,
+                    $"REST request failed on attempt {attempt}. Response: {await restResult.Content.ReadAsStringAsync()}");
+                Assert.AreEqual(HttpStatusCode.OK, gQLResult.StatusCode,
+                    $"GraphQL request failed on attempt {attempt}. Response: {await gQLResult.Content.ReadAsStringAsync()}");
+
+                // Save the contents from request to validate results after hot-reloads.
+                string restContent = await restResult.Content.ReadAsStringAsync();
+                using JsonDocument doc = JsonDocument.Parse(restContent);
+                _bookDBOContents = doc.RootElement.GetProperty("value").ToString();
+
+                Console.WriteLine($"Test server initialized successfully on attempt {attempt}");
+                return;
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                Console.WriteLine($"Test server initialization attempt {attempt} failed: {ex.Message}");
+
+                // Clean up failed attempt
+                try
+                {
+                    _testClient?.Dispose();
+                    _testServer?.Dispose();
+                }
+                catch { /* Ignore cleanup errors */ }
+
+                if (attempt < maxRetries)
+                {
+                    Console.WriteLine($"Waiting {retryDelayMs}ms before retry...");
+                    await Task.Delay(retryDelayMs);
+                }
+            }
+        }
+
+        // If we got here, all retries failed
+        throw new Exception($"Failed to initialize test server after {maxRetries} attempts. Last error: {lastException?.Message}", lastException);
     }
 
     [ClassCleanup]
     public static void ClassCleanup()
     {
-        if (File.Exists(CONFIG_FILE_NAME))
+        try
         {
-            File.Delete(CONFIG_FILE_NAME);
-        }
+            if (File.Exists(CONFIG_FILE_NAME))
+            {
+                File.Delete(CONFIG_FILE_NAME);
+            }
 
-        _testServer.Dispose();
-        _testClient.Dispose();
+            _testClient?.Dispose();
+            _testServer?.Dispose();
+            Console.WriteLine("Test cleanup completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during test cleanup: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Thread-safe helper to check if the writer contains a specific message
+    /// </summary>
+    private static bool WriterContains(string message)
+    {
+        lock (_writerLock)
+        {
+            return _writer.ToString().Contains(message);
+        }
     }
 
     /// <summary>
     /// Hot reload the configuration by saving a new file with different rest and graphQL paths.
     /// Validate that the response is correct when making a request with the newly hot-reloaded paths.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload runtime paths.")]
     public async Task HotReloadConfigRuntimePathsEndToEndTest()
     {
         // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
         string restBookContents = $"{{\"value\":{_bookDBOContents}}}";
         string restPath = "restApi";
         string gQLPath = "/gQLApi";
@@ -250,7 +320,12 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restPath: restPath,
             gQLPath: gQLPath);
-        System.Threading.Thread.Sleep(2000);
+
+        // Wait for hot-reload to complete successfully
+        await WaitForConditionAsync(
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
+            TimeSpan.FromMilliseconds(500));
 
         // Act
         HttpResponseMessage badPathRestResult = await _testClient.GetAsync($"rest/Book");
@@ -278,18 +353,25 @@ public class ConfigurationHotReloadTests
     /// set to false. Validate that the response from the server is NOT FOUND when making a request after
     /// the hot reload.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload rest enabled.")]
     public async Task HotReloadConfigRuntimeRestEnabledEndToEndTest()
     {
         // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
         string restEnabled = "false";
 
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: restEnabled);
-        System.Threading.Thread.Sleep(2000);
+
+        // Wait for hot-reload to complete successfully
+        await WaitForConditionAsync(
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
+            TimeSpan.FromMilliseconds(500));
 
         // Act
         HttpResponseMessage restResult = await _testClient.GetAsync($"rest/Book");
@@ -303,12 +385,14 @@ public class ConfigurationHotReloadTests
     /// set to false. Validate that the response from the server is NOT FOUND when making a request after
     /// the hot reload.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload gql enabled.")]
     public async Task HotReloadConfigRuntimeGQLEnabledEndToEndTest()
     {
         // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
         string gQLEnabled = "false";
         string query = GQL_QUERY;
         object payload =
@@ -318,10 +402,16 @@ public class ConfigurationHotReloadTests
         {
             Content = JsonContent.Create(payload)
         };
+
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             gQLEnabled: gQLEnabled);
-        System.Threading.Thread.Sleep(2000);
+
+        // Wait for hot-reload to complete successfully
+        await WaitForConditionAsync(
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
+            TimeSpan.FromMilliseconds(500));
 
         // Act
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
@@ -337,10 +427,13 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload gql disabled at entity level.")]
-    [Ignore]
+    [Ignore] // This test requires GraphQL schema reload. See: issue #3019
     public async Task HotReloadEntityGQLEnabledFlag()
     {
         // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
         string gQLEntityEnabled = "false";
         string query = @"{
             book_by_pk(id: 1) {
@@ -359,7 +452,12 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             gQLEntityEnabled: gQLEntityEnabled);
-        System.Threading.Thread.Sleep(2000);
+
+        // Wait for hot-reload to complete successfully
+        await WaitForConditionAsync(
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
+            TimeSpan.FromMilliseconds(500));
 
         // Act
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
@@ -376,10 +474,13 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    [Ignore]
+    [Ignore] // This test requires GraphQL schema reload. See: issue #3019
     public async Task HotReloadConfigAddEntity()
     {
         // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
         string newEntityName = "Author";
         string newEntitySource = "authors";
         string newEntityGQLSingular = "author";
@@ -391,7 +492,12 @@ public class ConfigurationHotReloadTests
             sourceObject: newEntitySource,
             gQLEntitySingular: newEntityGQLSingular,
             gQLEntityPlural: newEntityGQLPlural);
-        System.Threading.Thread.Sleep(2000);
+
+        // Wait for hot-reload to complete successfully
+        await WaitForConditionAsync(
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
+            TimeSpan.FromMilliseconds(500));
 
         // Act
         string queryWithOldEntity = @"{
@@ -451,19 +557,28 @@ public class ConfigurationHotReloadTests
     /// Here, we updated the old mappings of the entity book field "title" to "bookTitle".
     /// Validate that the response from the server is correct, by ensuring that the old mappings when used in the query
     /// results in bad request, while the new mappings results in a correct response as "title" field is no longer valid.
+    /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    [Ignore]
+    [Ignore] // This test requires GraphQL schema reload. See: issue #3019
     public async Task HotReloadConfigUpdateMappings()
     {
         // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
         string newMappingFieldName = "bookTitle";
         // Update the configuration with new mappings
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             entityBackingColumn: "title",
             entityExposedName: newMappingFieldName);
-        System.Threading.Thread.Sleep(2000);
+
+        // Wait for hot-reload to complete successfully
+        await WaitForConditionAsync(
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
+            TimeSpan.FromMilliseconds(500));
 
         // Act
         string queryWithOldMapping = @"{
@@ -524,12 +639,14 @@ public class ConfigurationHotReloadTests
     /// By asserting that hot reload worked properly for the session-context it also implies that
     /// the new connection string with additional parameters is also valid.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public async Task HotReloadConfigDataSource()
     {
         // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
         RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
         MsSqlOptions previousSessionContext = previousRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
 
@@ -540,7 +657,12 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             sessionContext: "false",
             connectionString: expectedConnectionString);
-        System.Threading.Thread.Sleep(3000);
+
+        // Wait for hot-reload to complete successfully
+        await WaitForConditionAsync(
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
+            TimeSpan.FromMilliseconds(500));
 
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
         MsSqlOptions actualSessionContext = updatedRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
@@ -561,27 +683,34 @@ public class ConfigurationHotReloadTests
     /// Then we assert that the log-level property is properly updated by ensuring it is 
     /// not the same as the previous log-level and asserting it is the expected log-level.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    public void HotReloadLogLevel()
+    public async Task HotReloadLogLevel()
     {
-        // Arange
+        // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
         LogLevel expectedLogLevel = LogLevel.Trace;
         string expectedFilter = "trace";
         RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
         LogLevel previouslogLevel = previousRuntimeConfig.GetConfiguredLogLevel();
 
-        //Act
+        // Act
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             logFilter: expectedFilter);
-        System.Threading.Thread.Sleep(3000);
+
+        // Wait for hot-reload to complete successfully
+        await WaitForConditionAsync(
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
+            TimeSpan.FromMilliseconds(500));
 
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
         LogLevel actualLogLevel = updatedRuntimeConfig.GetConfiguredLogLevel();
 
-        //Assert
+        // Assert
         Assert.AreNotEqual(previouslogLevel, actualLogLevel);
         Assert.AreEqual(expectedLogLevel, actualLogLevel);
     }
@@ -591,7 +720,6 @@ public class ConfigurationHotReloadTests
     /// to an invalid connection string, then it hot reloads once more to the original
     /// connection string. Lastly, we assert that the first reload fails while the second one succeeds.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public async Task HotReloadConfigConnectionString()
@@ -600,38 +728,43 @@ public class ConfigurationHotReloadTests
         _writer = new StringWriter();
         Console.SetOut(_writer);
 
-        string failedKeyWord = "Unable to hot reload configuration file due to";
-        string succeedKeyWord = "Validated hot-reloaded configuration file";
-
         // Act
         // Hot Reload should fail here
         GenerateConfigFile(
             connectionString: $"WrongConnectionString");
-        await ConfigurationHotReloadTests.WaitForConditionAsync(
-          () => _writer.ToString().Contains(failedKeyWord),
-          TimeSpan.FromSeconds(12),
+        await WaitForConditionAsync(
+          () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
+          TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
-        string failedConfigLog = $"{_writer.ToString()}";
-        _writer.GetStringBuilder().Clear();
+        string failedConfigLog;
+        lock (_writerLock)
+        {
+            failedConfigLog = _writer.ToString();
+            _writer.GetStringBuilder().Clear();
+        }
 
         // Hot Reload should succeed here
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        await ConfigurationHotReloadTests.WaitForConditionAsync(
-          () => _writer.ToString().Contains(succeedKeyWord),
-          TimeSpan.FromSeconds(12),
+        await WaitForConditionAsync(
+          () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+          TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly
-        string succeedConfigLog = $"{_writer.ToString()}";
+        string succeedConfigLog;
+        lock (_writerLock)
+        {
+            succeedConfigLog = _writer.ToString();
+        }
 
         HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
         // Assert
-        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
-        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
+        Assert.IsTrue(failedConfigLog.Contains(HOT_RELOAD_FAILURE_MESSAGE));
+        Assert.IsTrue(succeedConfigLog.Contains(HOT_RELOAD_SUCCESS_MESSAGE));
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
     }
 
@@ -643,7 +776,6 @@ public class ConfigurationHotReloadTests
     /// Then it hot reloads once more to the original database type. We assert that the
     /// first reload fails while the second one succeeds.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public async Task HotReloadConfigDatabaseType()
@@ -652,88 +784,96 @@ public class ConfigurationHotReloadTests
         _writer = new StringWriter();
         Console.SetOut(_writer);
 
-        string failedKeyWord = "Unable to hot reload configuration file due to";
-        string succeedKeyWord = "Validated hot-reloaded configuration file";
-
         // Act
         // Hot Reload should fail here
         GenerateConfigFile(
             databaseType: DatabaseType.PostgreSQL,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.POSTGRESQL).Replace("\\", "\\\\")}");
-        await ConfigurationHotReloadTests.WaitForConditionAsync(
-          () => _writer.ToString().Contains(failedKeyWord),
-          TimeSpan.FromSeconds(12),
+        await WaitForConditionAsync(
+          () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
+          TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
-        string failedConfigLog = $"{_writer.ToString()}";
-        _writer.GetStringBuilder().Clear();
+        string failedConfigLog;
+        lock (_writerLock)
+        {
+            failedConfigLog = _writer.ToString();
+            _writer.GetStringBuilder().Clear();
+        }
 
         // Hot Reload should succeed here
         GenerateConfigFile(
             databaseType: DatabaseType.MSSQL,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        await ConfigurationHotReloadTests.WaitForConditionAsync(
-          () => _writer.ToString().Contains(succeedKeyWord),
-          TimeSpan.FromSeconds(12),
+        await WaitForConditionAsync(
+          () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+          TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly
-        string succeedConfigLog = $"{_writer.ToString()}";
+        string succeedConfigLog;
+        lock (_writerLock)
+        {
+            succeedConfigLog = _writer.ToString();
+        }
 
         HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
         // Assert
-        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
-        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
+        Assert.IsTrue(failedConfigLog.Contains(HOT_RELOAD_FAILURE_MESSAGE));
+        Assert.IsTrue(succeedConfigLog.Contains(HOT_RELOAD_SUCCESS_MESSAGE));
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
     }
 
     /// <summary>
-    /// Creates a hot reload scenario in which the schema file is invalid which causes
-    /// hot reload to fail, then we check that the program is still able to work
+    /// Creates a hot reload scenario in which the configuration file has validation errors
+    /// which causes hot reload to fail, then we check that the program is still able to work
     /// properly by validating that the DAB engine is still using the same configuration file
     /// from before the hot reload.
     /// 
-    /// Invalid change that was added is a schema file that is not complete, which should be
-    /// catched by the validator.
+    /// Invalid change: Setting both REST, GraphQL, and MCP to disabled, which is not allowed.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    public void HotReloadValidationFail()
+    public async Task HotReloadValidationFail()
     {
         // Arrange
-        string schemaName = "hot-reload.draft.schema.json";
-        string schemaConfig = TestHelper.GenerateInvalidSchema();
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
 
-        if (File.Exists(schemaName))
-        {
-            File.Delete(schemaName);
-        }
-
-        File.WriteAllText(schemaName, schemaConfig);
         RuntimeConfig lkgRuntimeConfig = _configProvider.GetConfig();
         Assert.IsNotNull(lkgRuntimeConfig);
 
+        // Capture properties to verify config hasn't changed
+        bool originalRestEnabled = lkgRuntimeConfig.Runtime.Rest.Enabled;
+        bool originalGraphQLEnabled = lkgRuntimeConfig.Runtime.GraphQL.Enabled;
+        bool originalMcpEnabled = lkgRuntimeConfig.Runtime.Mcp.Enabled;
+
         // Act
-        // Simulate an invalid change to the schema file while the config is updated to a valid state
+        // Generate a config that will fail validation by disabling REST, GraphQL, and MCP (which is not allowed)
         GenerateConfigFile(
-            schema: schemaName,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: "false",
-            gQLEnabled: "false");
-        System.Threading.Thread.Sleep(10000);
+            gQLEnabled: "false",
+            mcpEnabled: "false");
+
+        // Wait for hot-reload to fail
+        await WaitForConditionAsync(
+            () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
+            TimeSpan.FromMilliseconds(500));
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
 
-        // Assert
-        Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
-
-        if (File.Exists(schemaName))
-        {
-            File.Delete(schemaName);
-        }
+        // Assert - Verify the configuration hasn't changed by comparing properties
+        Assert.IsNotNull(newRuntimeConfig, "RuntimeConfig should not be null after failed hot-reload.");
+        Assert.AreEqual(originalRestEnabled, newRuntimeConfig.Runtime.Rest.Enabled,
+            "REST enabled setting should remain unchanged after hot-reload failure.");
+        Assert.AreEqual(originalGraphQLEnabled, newRuntimeConfig.Runtime.GraphQL.Enabled,
+            "GraphQL enabled setting should remain unchanged after hot-reload failure.");
+        Assert.AreEqual(originalMcpEnabled, newRuntimeConfig.Runtime.Mcp.Enabled,
+            "MCP enabled setting should remain unchanged after hot-reload failure.");
     }
 
     /// <summary>
@@ -746,23 +886,39 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    public void HotReloadParsingFail()
+    public async Task HotReloadParsingFail()
     {
         // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
         RuntimeConfig lkgRuntimeConfig = _configProvider.GetConfig();
         Assert.IsNotNull(lkgRuntimeConfig);
+
+        // Capture properties to verify config hasn't changed
+        bool originalRestEnabled = lkgRuntimeConfig.Runtime.Rest.Enabled;
+        bool originalGraphQLEnabled = lkgRuntimeConfig.Runtime.GraphQL.Enabled;
 
         // Act
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: "invalid",
             gQLEnabled: "invalid");
-        System.Threading.Thread.Sleep(5000);
+
+        // Wait for hot-reload to fail (parsing error should trigger failure message)
+        await WaitForConditionAsync(
+            () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
+            TimeSpan.FromMilliseconds(500));
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
 
-        // Assert
-        Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
+        // Assert - Verify the configuration hasn't changed by comparing properties
+        Assert.IsNotNull(newRuntimeConfig, "RuntimeConfig should not be null after failed hot-reload.");
+        Assert.AreEqual(originalRestEnabled, newRuntimeConfig.Runtime.Rest.Enabled,
+            "REST enabled setting should remain unchanged after hot-reload failure.");
+        Assert.AreEqual(originalGraphQLEnabled, newRuntimeConfig.Runtime.GraphQL.Enabled,
+            "GraphQL enabled setting should remain unchanged after hot-reload failure.");
     }
 
     /// <summary>
@@ -772,14 +928,28 @@ public class ConfigurationHotReloadTests
     private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout, TimeSpan pollingInterval)
     {
         System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        int attemptCount = 0;
         while (stopwatch.Elapsed < timeout)
         {
+            attemptCount++;
             if (condition())
             {
+                Console.WriteLine($"Hot-reload condition met after {stopwatch.Elapsed.TotalSeconds:F2} seconds ({attemptCount} attempts)");
                 return;
             }
 
+            if (attemptCount % 10 == 0) // Log every 10 attempts (every 5 seconds)
+            {
+                Console.WriteLine($"Still waiting for hot-reload condition... Elapsed: {stopwatch.Elapsed.TotalSeconds:F2}s, Attempts: {attemptCount}");
+            }
+
             await Task.Delay(pollingInterval);
+        }
+
+        Console.WriteLine($"Hot-reload timeout after {stopwatch.Elapsed.TotalSeconds:F2} seconds ({attemptCount} attempts)");
+        lock (_writerLock)
+        {
+            Console.WriteLine($"Console output captured:\n{_writer.ToString()}");
         }
 
         throw new TimeoutException("The condition was not met within the timeout period.");

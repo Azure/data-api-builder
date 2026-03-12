@@ -224,12 +224,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     parentMetadata = paginationObjectMetadata;
                 }
 
-                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name];
-                metadata = currentMetadata;
-
-                if (currentMetadata.IsPaginated)
+                // In some scenarios (for example when RBAC removes a relationship
+                // or when multiple sibling nested entities are present), we may not
+                // have pagination metadata for the current field. In those cases we
+                // should simply return the element as-is instead of throwing.
+                if (parentMetadata.Subqueries.TryGetValue(fieldSchema.Name, out PaginationMetadata? currentMetadata))
                 {
-                    return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
+                    metadata = currentMetadata;
+
+                    if (currentMetadata.IsPaginated)
+                    {
+                        return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
+                    }
                 }
             }
 
@@ -324,7 +330,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 // Entity level cache behavior checks
                 bool dbPolicyConfigured = !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]);
-                bool entityCacheEnabled = runtimeConfig.Entities[structure.EntityName].IsCachingEnabled;
+                bool entityCacheEnabled = runtimeConfig.IsEntityCachingEnabled(structure.EntityName);
 
                 // If a db policy is configured for the read operation in the context of the executing role, skip the cache.
                 // We want to avoid caching token metadata because token metadata can change frequently and we want to avoid caching it.
@@ -460,7 +466,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (runtimeConfig.CanUseCache())
             {
                 // Entity level cache behavior checks
-                bool entityCacheEnabled = runtimeConfig.Entities[structure.EntityName].IsCachingEnabled;
+                bool entityCacheEnabled = runtimeConfig.IsEntityCachingEnabled(structure.EntityName);
 
                 // Stored procedures do not support nor honor runtime config defined
                 // authorization policies. Here, DAB only checks that the entity has

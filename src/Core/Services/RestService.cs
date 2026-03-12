@@ -70,6 +70,16 @@ namespace Azure.DataApiBuilder.Core.Services
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
+            QueryString? query = GetHttpContext().Request.QueryString;
+            string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
+
+            // Read the request body early so it can be used for downstream processing.
+            string requestBody = string.Empty;
+            using (StreamReader reader = new(GetHttpContext().Request.Body))
+            {
+                requestBody = await reader.ReadToEndAsync();
+            }
+
             if (dbObject.SourceType is not EntitySourceType.StoredProcedure)
             {
                 await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
@@ -77,15 +87,6 @@ namespace Azure.DataApiBuilder.Core.Services
             else
             {
                 await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new StoredProcedurePermissionsRequirement());
-            }
-
-            QueryString? query = GetHttpContext().Request.QueryString;
-            string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
-
-            string requestBody = string.Empty;
-            using (StreamReader reader = new(GetHttpContext().Request.Body))
-            {
-                requestBody = await reader.ReadToEndAsync();
             }
 
             RestRequestContext context;
@@ -144,7 +145,21 @@ namespace Azure.DataApiBuilder.Core.Services
                     case EntityActionOperation.UpdateIncremental:
                     case EntityActionOperation.Upsert:
                     case EntityActionOperation.UpsertIncremental:
-                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        // For Upsert/UpsertIncremental, a keyless URL is allowed. When the
+                        // primary key route is absent, ValidateUpsertRequestContext checks that
+                        // the body contains all non-auto-generated PK columns so the mutation
+                        // engine can resolve the target row (or insert a new one).
+                        // Update/UpdateIncremental always require the PK in the URL.
+                        if (!string.IsNullOrEmpty(primaryKeyRoute))
+                        {
+                            RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        }
+                        else if (operationType is not EntityActionOperation.Upsert and
+                                 not EntityActionOperation.UpsertIncremental)
+                        {
+                            RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        }
+
                         JsonElement upsertPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                         context = new UpsertRequestContext(
                             entityName,
@@ -153,7 +168,9 @@ namespace Azure.DataApiBuilder.Core.Services
                             operationType);
                         if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
-                            _requestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context);
+                            _requestValidator.ValidateUpsertRequestContext(
+                                (UpsertRequestContext)context,
+                                isPrimaryKeyInUrl: !string.IsNullOrEmpty(primaryKeyRoute));
                         }
 
                         break;
@@ -174,6 +191,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (!string.IsNullOrWhiteSpace(queryString))
                 {
+                    context.RawQueryString = queryString;
                     context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                     RequestParser.ParseQueryString(context, sqlMetadataProvider);
                 }
@@ -277,6 +295,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // So, $filter will be treated as any other parameter (inevitably will raise a Bad Request)
                     if (!string.IsNullOrWhiteSpace(queryString))
                     {
+                        context.RawQueryString = queryString;
                         context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                     }
 
@@ -433,11 +452,17 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Tries to get the Entity name and primary key route from the provided string
-        /// returns the entity name via a lookup using the string which includes
-        /// characters up until the first '/', and then resolves the primary key
-        /// as the substring following the '/'.
+        /// by matching against configured entity paths (which may include '/' for sub-directories)
+        /// using longest-prefix matching, then treating the remaining suffix as the primary key route.
+        /// 
         /// For example, a request route should be of the form
         /// {EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
+        /// where {EntityPath} may be a single segment like "books" or multi-segment like "shopping-cart/item".
+        /// 
+        /// Uses longest-prefix matching (most-specific match wins). When multiple
+        /// entity paths could match, the longest matching path takes precedence. For example,
+        /// if both "cart" and "cart/item" are valid entity paths, a request to
+        /// "cart/item/id/123" will match "cart/item" with primaryKeyRoute "id/123".
         /// </summary>
         /// <param name="routeAfterPathBase">The request route (no '/' prefix) containing the entity path
         /// (and optionally primary key).</param>
@@ -448,26 +473,27 @@ namespace Azure.DataApiBuilder.Core.Services
 
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
-            // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements
-            // this means we have a non-empty primary key route which we save. Otherwise, save
-            // primary key route as empty string. Entity Path will always be the element at index 0.
-            // ie: {EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
-            // splits into [{EntityPath}] when there is an empty primary key route and into
-            // [{EntityPath}, {Primarykeyroute}] when there is a non-empty primary key route.
-            int maxNumberOfElementsFromSplit = 2;
-            string[] entityPathAndPKRoute = routeAfterPathBase.Split(new[] { '/' }, maxNumberOfElementsFromSplit);
-            string entityPath = entityPathAndPKRoute[0];
-            string primaryKeyRoute = entityPathAndPKRoute.Length == maxNumberOfElementsFromSplit ? entityPathAndPKRoute[1] : string.Empty;
+            // Split routeAfterPath to extract segments
+            string[] segments = routeAfterPathBase.Split('/');
 
-            if (!runtimeConfig.TryGetEntityNameFromPath(entityPath, out string? entityName))
+            // Try longest paths first (most-specific match wins)
+            // Start with all segments, then remove one at a time
+            for (int i = segments.Length; i >= 1; i--)
             {
-                throw new DataApiBuilderException(
-                    message: $"Invalid Entity path: {entityPath}.",
-                    statusCode: HttpStatusCode.NotFound,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                string entityPath = string.Join("/", segments.Take(i));
+                if (runtimeConfig.TryGetEntityNameFromPath(entityPath, out string? entityName))
+                {
+                    // Found entity
+                    string primaryKeyRoute = i < segments.Length ? string.Join("/", segments.Skip(i)) : string.Empty;
+                    return (entityName!, primaryKeyRoute);
+                }
             }
 
-            return (entityName!, primaryKeyRoute);
+            // No entity found - show the full path for better debugging
+            throw new DataApiBuilderException(
+                message: $"Invalid Entity path: {routeAfterPathBase}.",
+                statusCode: HttpStatusCode.NotFound,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
 
         /// <summary>

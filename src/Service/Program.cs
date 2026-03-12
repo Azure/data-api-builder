@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.CommandLine;
 using System.CommandLine.Parsing;
@@ -217,7 +220,8 @@ namespace Azure.DataApiBuilder.Service
                         }
                     }
 
-                    if (Startup.OpenTelemetryOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.OpenTelemetryOptions.Endpoint))
+                    if (Startup.OpenTelemetryOptions.Enabled
+                        && Uri.TryCreate(Startup.OpenTelemetryOptions.Endpoint, UriKind.Absolute, out Uri? otlpEndpoint))
                     {
                         builder.AddOpenTelemetry(logging =>
                         {
@@ -226,7 +230,7 @@ namespace Azure.DataApiBuilder.Service
                             logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Startup.OpenTelemetryOptions.ServiceName!));
                             logging.AddOtlpExporter(configure =>
                             {
-                                configure.Endpoint = new Uri(Startup.OpenTelemetryOptions.Endpoint);
+                                configure.Endpoint = otlpEndpoint;
                                 configure.Headers = Startup.OpenTelemetryOptions.Headers;
                                 configure.Protocol = OtlpExportProtocol.Grpc;
                             });

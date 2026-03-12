@@ -9,6 +9,7 @@ namespace Azure.DataApiBuilder.Product;
 public static class ProductInfo
 {
     public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
+    public const string COSMOSDB_DATABASE_NAME = "COSMOSDB_DATABASE_NAME";
     public static readonly string DAB_USER_AGENT = $"dab_oss_{GetProductVersion()}";
     public static readonly string CLOUD_ROLE_NAME = "DataApiBuilder";
 

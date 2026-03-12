@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the DB query by establishing a connection to the DB.
-        public async Task<string?> ExecuteDbQueryAsync(string query, string connectionString, DbProviderFactory providerFactory)
+        public async Task<string?> ExecuteDbQueryAsync(string query, string connectionString, DbProviderFactory providerFactory, DatabaseType databaseType)
         {
             string? errorMessage = null;
             // Execute the query on DB and return the response time.
@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 try
                 {
-                    connection.ConnectionString = connectionString;
+                    connection.ConnectionString = Utilities.NormalizeConnectionString(connectionString, databaseType, _logger);
                     using (DbCommand command = connection.CreateCommand())
                     {
                         command.CommandText = query;

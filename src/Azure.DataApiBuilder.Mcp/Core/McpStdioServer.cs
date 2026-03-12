@@ -3,8 +3,11 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -65,7 +68,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 if (line.Length > MAX_LINE_LENGTH)
                 {
-                    WriteError(id: null, code: -32600, message: "Request too large");
+                    WriteError(id: null, code: McpStdioJsonRpcErrorCodes.INVALID_REQUEST, message: "Request too large");
                     continue;
                 }
 
@@ -77,13 +80,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 catch (JsonException jsonEx)
                 {
                     Console.Error.WriteLine($"[MCP DEBUG] JSON parse error: {jsonEx.Message}");
-                    WriteError(id: null, code: -32700, message: "Parse error");
+                    WriteError(id: null, code: McpStdioJsonRpcErrorCodes.PARSE_ERROR, message: "Parse error");
                     continue;
                 }
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine($"[MCP DEBUG] Unexpected error parsing request: {ex.Message}");
-                    WriteError(id: null, code: -32603, message: "Internal error");
+                    WriteError(id: null, code: McpStdioJsonRpcErrorCodes.INTERNAL_ERROR, message: "Internal error");
                     continue;
                 }
 
@@ -99,7 +102,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                     if (!root.TryGetProperty("method", out JsonElement methodEl))
                     {
-                        WriteError(id, -32600, "Invalid Request");
+                        WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_REQUEST, "Invalid Request");
                         continue;
                     }
 
@@ -133,13 +136,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 return;
 
                             default:
-                                WriteError(id, -32601, $"Method not found: {method}");
+                                WriteError(id, McpStdioJsonRpcErrorCodes.METHOD_NOT_FOUND, $"Method not found: {method}");
                                 break;
                         }
                     }
                     catch (Exception)
                     {
-                        WriteError(id, -32603, "Internal error");
+                        WriteError(id, McpStdioJsonRpcErrorCodes.INTERNAL_ERROR, "Internal error");
                     }
                 }
             }
@@ -158,32 +161,42 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </remarks>
         private void HandleInitialize(JsonElement? id)
         {
-            // Extract the actual id value from the request
-            object? requestId = id.HasValue ? GetIdValue(id.Value) : null;
+            // Get the description from runtime config if available
+            string? instructions = null;
+            RuntimeConfigProvider? runtimeConfigProvider = _serviceProvider.GetService<RuntimeConfigProvider>();
+            if (runtimeConfigProvider != null)
+            {
+                try
+                {
+                    RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+                    instructions = runtimeConfig.Runtime?.Mcp?.Description;
+                }
+                catch (Exception ex)
+                {
+                    // Log to stderr for diagnostics and rethrow to avoid masking configuration errors
+                    Console.Error.WriteLine($"[MCP WARNING] Failed to retrieve MCP description from config: {ex.Message}");
+                    throw;
+                }
+            }
 
             // Create the initialize response
-            var response = new
+            object result = new
             {
-                jsonrpc = "2.0",
-                id = requestId,
-                result = new
+                protocolVersion = _protocolVersion,
+                capabilities = new
                 {
-                    protocolVersion = _protocolVersion,
-                    capabilities = new
-                    {
-                        tools = new { listChanged = true },
-                        logging = new { }
-                    },
-                    serverInfo = new
-                    {
-                        name = "Data API Builder",
-                        version = "1.0.0"
-                    }
-                }
+                    tools = new { listChanged = true },
+                    logging = new { }
+                },
+                serverInfo = new
+                {
+                    name = McpProtocolDefaults.MCP_SERVER_NAME,
+                    version = McpProtocolDefaults.MCP_SERVER_VERSION
+                },
+                instructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null
             };
 
-            string json = JsonSerializer.Serialize(response);
-            Console.Out.WriteLine(json);
+            WriteResult(id, result);
         }
 
         /// <summary>
@@ -225,7 +238,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             if (!root.TryGetProperty("params", out JsonElement @params) || @params.ValueKind != JsonValueKind.Object)
             {
-                WriteError(id, -32602, "Missing params");
+                WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing params");
                 return;
             }
 
@@ -247,14 +260,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
             if (string.IsNullOrWhiteSpace(toolName))
             {
                 Console.Error.WriteLine("[MCP DEBUG] callTool → missing tool name.");
-                WriteError(id, -32602, "Missing tool name");
+                WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing tool name");
                 return;
             }
 
             if (!_toolRegistry.TryGetTool(toolName!, out IMcpTool? tool) || tool is null)
             {
                 Console.Error.WriteLine($"[MCP DEBUG] callTool → tool not found: {toolName}");
-                WriteError(id, -32602, $"Tool not found: {toolName}");
+                WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, $"Tool not found: {toolName}");
                 return;
             }
 
@@ -272,7 +285,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: <none>");
                 }
 
-                // Execute the tool.
+                // Execute the tool with telemetry.
                 // If a MCP stdio role override is set in the environment, create
                 // a request HttpContext with the X-MS-API-ROLE header so tools and authorization
                 // helpers that read IHttpContextAccessor will see the role. We also ensure the
@@ -307,7 +320,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     try
                     {
                         // Execute the tool with the scoped service provider so any scoped services resolve correctly.
-                        callResult = await tool.ExecuteAsync(argsDoc, scopedProvider, ct);
+                        callResult = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                            tool, toolName!, argsDoc, scopedProvider, ct);
                     }
                     finally
                     {
@@ -320,7 +334,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
                 else
                 {
-                    callResult = await tool.ExecuteAsync(argsDoc, _serviceProvider, ct);
+                    callResult = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                        tool, toolName!, argsDoc, _serviceProvider, ct);
                 }
 
                 // Normalize to MCP content blocks (array). We try to pass through if a 'Content' property exists,

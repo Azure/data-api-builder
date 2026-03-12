@@ -227,6 +227,7 @@ public class GQLFilterParser
 
                             cosmosQueryStructure.DatabaseObject.Name = sourceName;
                             cosmosQueryStructure.SourceAlias = sourceAlias;
+                            cosmosQueryStructure.EntityName = entityName;
                         }
                     }
                 }

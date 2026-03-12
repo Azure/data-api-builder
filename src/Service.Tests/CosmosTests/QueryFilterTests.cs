@@ -900,6 +900,31 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
+        /// Test filters on two different nested objects simultaneously
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterOnTwoDifferentNestedObjects()
+        {
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {
+                    character: { name: { eq: ""planet character"" } },
+                    earth: { type: { eq: ""earth4"" } }
+                })
+                {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = "SELECT c.id, c.name FROM c " +
+                "WHERE c.character.name = \"planet character\" AND c.earth.type = \"earth4\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
         /// For "item-level-permission-role" role, DB policies are defined. This test confirms that all the DB policies are considered.
         /// For the reference, Below conditions are applied for an Entity in Db Config file.
         /// MoonAdditionalAttributes (array inside moon object which is an array in container): "@item.name eq 'moonattr0'"

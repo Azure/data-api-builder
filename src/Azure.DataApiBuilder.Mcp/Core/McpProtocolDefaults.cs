@@ -1,3 +1,4 @@
+using Azure.DataApiBuilder.Product;
 using Microsoft.Extensions.Configuration;
 
 namespace Azure.DataApiBuilder.Mcp.Core
@@ -7,6 +8,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
     /// </summary>
     public static class McpProtocolDefaults
     {
+        /// <summary>
+        /// Default MCP server name advertised during initialization.
+        /// </summary>
+        public const string MCP_SERVER_NAME = "SQL MCP Server";
+        /// <summary>
+        /// Default MCP server version advertised during initialization.
+        /// </summary>
+        public static readonly string MCP_SERVER_VERSION = ProductInfo.GetProductVersion();
         /// <summary>
         /// Default MCP protocol version advertised when no configuration override is provided.
         /// </summary>

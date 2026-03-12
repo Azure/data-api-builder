@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 
                 DatabaseObject objA = (DatabaseObject)JsonSerializer.Deserialize(document, concreteType, options)!;
 
-                foreach (PropertyInfo prop in objA.GetType().GetProperties().Where(IsSourceDefinitionProperty))
+                foreach (PropertyInfo prop in objA.GetType().GetProperties().Where(IsSourceDefinitionOrDerivedClassProperty))
                 {
                     SourceDefinition? sourceDef = (SourceDefinition?)prop.GetValue(objA);
                     if (sourceDef is not null)
@@ -73,25 +73,23 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 
                 writer.WritePropertyName(prop.Name);
                 object? propVal = prop.GetValue(value);
-                Type propType = prop.PropertyType;
 
-                // Only escape columns for properties whose type is exactly SourceDefinition (not subclasses).
-                // This is because, we do not want unnecessary mutation of subclasses of SourceDefinition unless needed.
-                if (IsSourceDefinitionProperty(prop) && propVal is SourceDefinition sourceDef && propVal.GetType() == typeof(SourceDefinition))
+                // Only escape columns for properties whose type(derived type) is SourceDefinition.
+                if (IsSourceDefinitionOrDerivedClassProperty(prop) && propVal is SourceDefinition sourceDef)
                 {
                     EscapeDollaredColumns(sourceDef);
                 }
 
-                JsonSerializer.Serialize(writer, propVal, propType, options);
+                JsonSerializer.Serialize(writer, propVal, options);
             }
 
             writer.WriteEndObject();
         }
 
-        private static bool IsSourceDefinitionProperty(PropertyInfo prop)
+        private static bool IsSourceDefinitionOrDerivedClassProperty(PropertyInfo prop)
         {
-            // Only return true for properties whose type is exactly SourceDefinition (not subclasses)
-            return prop.PropertyType == typeof(SourceDefinition);
+            // Return true for properties whose type is SourceDefinition or any class derived from SourceDefinition
+            return typeof(SourceDefinition).IsAssignableFrom(prop.PropertyType);
         }
 
         /// <summary>

@@ -62,12 +62,7 @@ jobs:
       projects: '$(solution)'
       feedsToUse: config
       nugetConfigPath: Nuget.config
-
-  - task: DockerInstaller@0
-    displayName: Docker Installer
-    inputs:
-      dockerVersion: 17.09.0-ce
-      releaseType: stable
+      restoreArguments: '/p:RuntimeIdentifiers=""'
 
   - task: Bash@3
     displayName: 'Generate password'
@@ -82,7 +77,7 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        $connectionString="Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=SA;Password=$(dbPassword);MultipleActiveResultSets=False;Connection Timeout=5;TrustServerCertificate=True;Encrypt=False;"
+        $connectionString="Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=SA;Password=$(dbPassword);MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;Encrypt=False;"
         Write-Host "##vso[task.setvariable variable=data-source.connection-string]$connectionString"
 
   - task: Bash@3
@@ -122,7 +117,7 @@ jobs:
     displayName: 'Run MsSql Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+      arguments: '--filter "TestCategory=MsSql&FullyQualifiedName!~ConfigurationHotReloadTests" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
       projects: '**/*Tests/*.csproj'
 
   - task: CmdLine@2
@@ -167,7 +162,7 @@ jobs:
       # since windows needs a different string.
       # The variable setting on the pipeline UI sets the connection string
       # for the linux job above.
-      data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;TrustServerCertificate=True;
+      data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;
       InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
       SqlVersionCode: '15.0'
 
@@ -192,12 +187,14 @@ jobs:
 
   - task: NuGetToolInstaller@1
 
-  - task: NuGetCommand@2
+  - task: DotNetCoreCLI@2
     displayName: Restore NuGet packages
     inputs:
-      restoreSolution: '$(solution)'
+      command: restore
+      projects: '$(solution)'
       feedsToUse: config
       nugetConfigPath: Nuget.config
+      restoreArguments: '/p:RuntimeIdentifiers=""'
 
   - task: PowerShell@2
     displayName: Install SQL LocalDB
@@ -246,11 +243,20 @@ jobs:
       targetFiles: 'src/out/tests/*/dab-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
-    displayName: 'Run MsSql Integration Tests'
+    displayName: 'MsSql Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+      arguments: '--filter "TestCategory=MsSql&FullyQualifiedName!~ConfigurationHotReloadTests" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
       projects: '**/*Tests/*.csproj'
+
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Hot-Reload Tests'
+    inputs:
+      command: test
+      arguments: '--filter "TestCategory=MsSql&FullyQualifiedName~ConfigurationHotReloadTests" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage" --logger "console;verbosity=detailed"'
+      projects: '**/*Tests/*.csproj'
+    timeoutInMinutes: 45
 
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'

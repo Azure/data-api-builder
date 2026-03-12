@@ -6,6 +6,7 @@ using System.IO.Abstractions;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -304,7 +305,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
     {
         // Convert legacy replaceEnvVar parameter to replacement settings for backward compatibility
-        DeserializationVariableReplacementSettings? replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: replaceEnvVar);
+        DeserializationVariableReplacementSettings? replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: replaceEnvVar, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
         return TryLoadConfig(ConfigFilePath, out config, replacementSettings: replacementSettings);
     }
 

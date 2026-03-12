@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.HealthCheck;
@@ -76,12 +75,13 @@ public record Entity
     }
 
     /// <summary>
-    /// Resolves the value of Entity.Cache property if present, default is false.
-    /// Caching is enabled only when explicitly set to true.
+    /// Resolves the value of Entity.Cache.Enabled property if present, default is false.
+    /// Caching is enabled only when explicitly set to true on the entity.
+    /// To resolve inheritance from the global runtime cache setting, use
+    /// RuntimeConfig.IsEntityCachingEnabled(entityName) instead.
     /// </summary>
-    /// <returns>Whether caching is enabled for the entity.</returns>
+    /// <returns>Whether caching is explicitly enabled for the entity.</returns>
     [JsonIgnore]
-    [MemberNotNullWhen(true, nameof(Cache))]
     public bool IsCachingEnabled => Cache?.Enabled is true;
 
     [JsonIgnore]

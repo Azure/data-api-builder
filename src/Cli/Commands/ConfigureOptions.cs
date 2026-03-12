@@ -28,6 +28,9 @@ namespace Cli.Commands
             string? dataSourceOptionsContainer = null,
             string? dataSourceOptionsSchema = null,
             bool? dataSourceOptionsSetSessionContext = null,
+            string? dataSourceHealthName = null,
+            bool? dataSourceUserDelegatedAuthEnabled = null,
+            string? dataSourceUserDelegatedAuthDatabaseAudience = null,
             int? depthLimit = null,
             bool? runtimeGraphQLEnabled = null,
             string? runtimeGraphQLPath = null,
@@ -38,6 +41,7 @@ namespace Cli.Commands
             bool? runtimeRestRequestBodyStrict = null,
             bool? runtimeMcpEnabled = null,
             string? runtimeMcpPath = null,
+            string? runtimeMcpDescription = null,
             bool? runtimeMcpDmlToolsEnabled = null,
             bool? runtimeMcpDmlToolsDescribeEntitiesEnabled = null,
             bool? runtimeMcpDmlToolsCreateRecordEnabled = null,
@@ -45,8 +49,11 @@ namespace Cli.Commands
             bool? runtimeMcpDmlToolsUpdateRecordEnabled = null,
             bool? runtimeMcpDmlToolsDeleteRecordEnabled = null,
             bool? runtimeMcpDmlToolsExecuteEntityEnabled = null,
+            bool? runtimeMcpDmlToolsAggregateRecordsEnabled = null,
+            int? runtimeMcpDmlToolsAggregateRecordsQueryTimeout = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
+            CompressionLevel? runtimeCompressionLevel = null,
             HostMode? runtimeHostMode = null,
             IEnumerable<string>? runtimeHostCorsOrigins = null,
             bool? runtimeHostCorsAllowCredentials = null,
@@ -70,6 +77,7 @@ namespace Cli.Commands
             RollingInterval? fileSinkRollingInterval = null,
             int? fileSinkRetainedFileCountLimit = null,
             long? fileSinkFileSizeLimitBytes = null,
+            bool showEffectivePermissions = false,
             string? config = null)
             : base(config)
         {
@@ -80,6 +88,9 @@ namespace Cli.Commands
             DataSourceOptionsContainer = dataSourceOptionsContainer;
             DataSourceOptionsSchema = dataSourceOptionsSchema;
             DataSourceOptionsSetSessionContext = dataSourceOptionsSetSessionContext;
+            DataSourceHealthName = dataSourceHealthName;
+            DataSourceUserDelegatedAuthEnabled = dataSourceUserDelegatedAuthEnabled;
+            DataSourceUserDelegatedAuthDatabaseAudience = dataSourceUserDelegatedAuthDatabaseAudience;
             // GraphQL
             DepthLimit = depthLimit;
             RuntimeGraphQLEnabled = runtimeGraphQLEnabled;
@@ -93,6 +104,7 @@ namespace Cli.Commands
             // Mcp
             RuntimeMcpEnabled = runtimeMcpEnabled;
             RuntimeMcpPath = runtimeMcpPath;
+            RuntimeMcpDescription = runtimeMcpDescription;
             RuntimeMcpDmlToolsEnabled = runtimeMcpDmlToolsEnabled;
             RuntimeMcpDmlToolsDescribeEntitiesEnabled = runtimeMcpDmlToolsDescribeEntitiesEnabled;
             RuntimeMcpDmlToolsCreateRecordEnabled = runtimeMcpDmlToolsCreateRecordEnabled;
@@ -100,9 +112,13 @@ namespace Cli.Commands
             RuntimeMcpDmlToolsUpdateRecordEnabled = runtimeMcpDmlToolsUpdateRecordEnabled;
             RuntimeMcpDmlToolsDeleteRecordEnabled = runtimeMcpDmlToolsDeleteRecordEnabled;
             RuntimeMcpDmlToolsExecuteEntityEnabled = runtimeMcpDmlToolsExecuteEntityEnabled;
+            RuntimeMcpDmlToolsAggregateRecordsEnabled = runtimeMcpDmlToolsAggregateRecordsEnabled;
+            RuntimeMcpDmlToolsAggregateRecordsQueryTimeout = runtimeMcpDmlToolsAggregateRecordsQueryTimeout;
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
+            // Compression
+            RuntimeCompressionLevel = runtimeCompressionLevel;
             // Host
             RuntimeHostMode = runtimeHostMode;
             RuntimeHostCorsOrigins = runtimeHostCorsOrigins;
@@ -130,6 +146,7 @@ namespace Cli.Commands
             FileSinkRollingInterval = fileSinkRollingInterval;
             FileSinkRetainedFileCountLimit = fileSinkRetainedFileCountLimit;
             FileSinkFileSizeLimitBytes = fileSinkFileSizeLimitBytes;
+            ShowEffectivePermissions = showEffectivePermissions;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -149,6 +166,15 @@ namespace Cli.Commands
 
         [Option("data-source.options.set-session-context", Required = false, HelpText = "Enable session context. Allowed values: true (default), false.")]
         public bool? DataSourceOptionsSetSessionContext { get; }
+
+        [Option("data-source.health.name", Required = false, HelpText = "Identifier for data source in health check report.")]
+        public string? DataSourceHealthName { get; }
+
+        [Option("data-source.user-delegated-auth.enabled", Required = false, HelpText = "Enable user-delegated authentication (OBO) for Azure SQL and SQL Server. Default: false (boolean).")]
+        public bool? DataSourceUserDelegatedAuthEnabled { get; }
+
+        [Option("data-source.user-delegated-auth.database-audience", Required = false, HelpText = "Database resource identifier for token acquisition (e.g., https://database.windows.net for Azure SQL).")]
+        public string? DataSourceUserDelegatedAuthDatabaseAudience { get; }
 
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]
         public int? DepthLimit { get; }
@@ -180,6 +206,9 @@ namespace Cli.Commands
         [Option("runtime.mcp.path", Required = false, HelpText = "Customize DAB's MCP endpoint path. Default: '/mcp' Conditions: Prefix path with '/'.")]
         public string? RuntimeMcpPath { get; }
 
+        [Option("runtime.mcp.description", Required = false, HelpText = "Set the MCP server description to be exposed in the initialize response.")]
+        public string? RuntimeMcpDescription { get; }
+
         [Option("runtime.mcp.dml-tools.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools endpoint. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsEnabled { get; }
 
@@ -201,11 +230,20 @@ namespace Cli.Commands
         [Option("runtime.mcp.dml-tools.execute-entity.enabled", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsExecuteEntityEnabled { get; }
 
+        [Option("runtime.mcp.dml-tools.aggregate-records.enabled", Required = false, HelpText = "Enable DAB's MCP aggregate records tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsAggregateRecordsEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.aggregate-records.query-timeout", Required = false, HelpText = "Set the execution timeout in seconds for the aggregate-records MCP tool. Default: 30 (integer). Range: 1-600.")]
+        public int? RuntimeMcpDmlToolsAggregateRecordsQueryTimeout { get; }
+
         [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's cache globally. (You must also enable each entity's cache separately.). Default: false (boolean).")]
         public bool? RuntimeCacheEnabled { get; }
 
         [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize the DAB cache's global default time to live in seconds. Default: 5 seconds (Integer).")]
         public int? RuntimeCacheTTL { get; }
+
+        [Option("runtime.compression.level", Required = false, HelpText = "Set the response compression level. Allowed values: optimal (default), fastest, none.")]
+        public CompressionLevel? RuntimeCompressionLevel { get; }
 
         [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: Development.")]
         public HostMode? RuntimeHostMode { get; }
@@ -276,11 +314,27 @@ namespace Cli.Commands
         [Option("runtime.telemetry.file.file-size-limit-bytes", Required = false, HelpText = "Configure maximum file size limit in bytes. Default: 1048576")]
         public long? FileSinkFileSizeLimitBytes { get; }
 
+        [Option("show-effective-permissions", Required = false, HelpText = "Display effective permissions for all entities, including inherited permissions. Entities are listed in alphabetical order.")]
+        public bool ShowEffectivePermissions { get; }
+
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
-            bool isSuccess = ConfigGenerator.TryConfigureSettings(this, loader, fileSystem);
-            if (isSuccess)
+
+            if (ShowEffectivePermissions)
+            {
+                bool isSuccess = ConfigGenerator.TryShowEffectivePermissions(this, loader, fileSystem);
+                if (!isSuccess)
+                {
+                    logger.LogError("Failed to display effective permissions.");
+                    return CliReturnCode.GENERAL_ERROR;
+                }
+
+                return CliReturnCode.SUCCESS;
+            }
+
+            bool configSuccess = ConfigGenerator.TryConfigureSettings(this, loader, fileSystem);
+            if (configSuccess)
             {
                 logger.LogInformation("Successfully updated runtime settings in the config file.");
                 return CliReturnCode.SUCCESS;

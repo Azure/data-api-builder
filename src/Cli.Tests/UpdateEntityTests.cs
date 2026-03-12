@@ -1100,6 +1100,92 @@ namespace Cli.Tests
             Assert.AreEqual("Updated description", updatedRuntimeConfig.Entities["MyEntity"].Description);
         }
 
+        /// <summary>
+        /// Updating a field's description should either preserve or clear
+        /// the existing primary-key flag depending on whether an explicit
+        /// --fields.primary-key value is provided.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, true, DisplayName = "No primary-key flag: preserve existing true")]
+        [DataRow(false, false, DisplayName = "Explicit primary-key false: clear existing true")]
+        public void TestUpdateFieldDescriptionPrimaryKeyBehavior(bool? primaryKeyFlag, bool expectedPrimaryKey)
+        {
+            string initialConfig = GetInitialConfigString() + "," + @"
+                ""entities"": {
+                    ""MyEntity"": {
+                        ""source"": ""MyTable"",
+                        ""fields"": [
+                            {
+                                ""name"": ""Id"",
+                                ""description"": ""Primary key"",
+                                ""primary-key"": true
+                            }
+                        ],
+                        ""permissions"": [
+                            {
+                                ""role"": ""anonymous"",
+                                ""actions"": [""read""]
+                            }
+                        ]
+                    }
+                }
+            }";
+
+            IEnumerable<bool>? primaryKeyFlags = primaryKeyFlag.HasValue
+                ? new[] { primaryKeyFlag.Value }
+                : null;
+
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: null,
+                linkingTargetFields: null,
+                relationshipFields: null,
+                map: null,
+                cacheEnabled: null,
+                cacheTtl: null,
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null,
+                description: null,
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null,
+                fieldsNameCollection: new[] { "Id" },
+                fieldsAliasCollection: null,
+                fieldsDescriptionCollection: new[] { "Unique Key" },
+                fieldsPrimaryKeyCollection: primaryKeyFlags,
+                mcpDmlTools: null,
+                mcpCustomTool: null
+            );
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig), "Parsed config file.");
+            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig), "Successfully updated entity in the config.");
+
+            Entity updatedEntity = updatedRuntimeConfig.Entities["MyEntity"];
+            Assert.IsNotNull(updatedEntity.Fields);
+            Assert.AreEqual(1, updatedEntity.Fields!.Count);
+            FieldMetadata field = updatedEntity.Fields[0];
+            Assert.AreEqual("Id", field.Name);
+            Assert.AreEqual("Unique Key", field.Description);
+            Assert.AreEqual(expectedPrimaryKey, field.PrimaryKey);
+        }
+
         private static string GetInitialConfigString()
         {
             return @"{" +

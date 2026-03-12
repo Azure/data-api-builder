@@ -83,37 +83,10 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             AssertOperationTagsAreSharedInstances(doc);
         }
 
-        /// <summary>
-        /// Validates that when multiple entities share the same REST path,
-        /// only one tag is produced and the first entity's description wins.
-        /// </summary>
-        [TestMethod]
-        public async Task DuplicateRestPaths_ProduceSingleTag_FirstDescriptionWins()
-        {
-            Entity entity1 = CreateEntity("books", EntitySourceType.Table, "/SharedPath", "First description");
-            Entity entity2 = CreateEntity("publishers", EntitySourceType.Table, "/SharedPath", "Second description");
-
-            Dictionary<string, Entity> entities = new()
-            {
-                { "book", entity1 },
-                { "publisher", entity2 }
-            };
-
-            RuntimeEntities runtimeEntities = new(entities);
-            OpenApiDocument doc = await OpenApiTestBootstrap.GenerateOpenApiDocumentAsync(
-                runtimeEntities: runtimeEntities,
-                configFileName: CONFIG_FILE,
-                databaseEnvironment: DB_ENV);
-
-            // Both entities share "SharedPath" after normalization.
-            // Only one tag should exist with the first entity's description.
-            List<OpenApiTag> sharedTags = doc.Tags.Where(t => t.Name == "SharedPath").ToList();
-            Assert.AreEqual(1, sharedTags.Count, "Expected exactly one tag for shared REST path 'SharedPath'.");
-            Assert.AreEqual("First description", sharedTags[0].Description,
-                "First entity's description should win when multiple entities share the same REST path.");
-
-            AssertOperationTagsAreSharedInstances(doc);
-        }
+        // Note: A test for duplicate REST paths (e.g., two entities both mapped to "/SharedPath") is intentionally
+        // omitted because RuntimeConfigValidator rejects duplicate REST paths at startup (see RuntimeConfigValidator
+        // line ~685). The TryAdd in BuildOpenApiDocument is defensive code for this edge case, but it cannot be
+        // exercised through integration tests since the server won't start with an invalid configuration.
 
         /// <summary>
         /// Validates REST-disabled entities produce no tags and no paths.

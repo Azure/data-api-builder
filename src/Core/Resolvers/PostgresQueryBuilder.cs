@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Text;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Npgsql;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -24,6 +25,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public override string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
+        }
+
+        /// <summary>
+        /// PostgreSQL default: NULLs are largest → last in ASC, first in DESC.
+        /// </summary>
+        protected override bool NullsAtEnd(OrderBy direction)
+        {
+            return direction == OrderBy.ASC;
         }
 
         /// <inheritdoc />

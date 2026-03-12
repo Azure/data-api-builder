@@ -95,21 +95,61 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             StringBuilder result = new();
             for (int i = 0; i <= untilIndex; i++)
             {
-                // Combine op and param to accomodate "is NULL" which is used for
-                // params that have value of NULL.
-                string opAndParam = i == untilIndex ?
-                    $"{GetComparisonFromDirection(columns[i].Direction)} {columns[i].ParamName}" :
-                    columns[i].Value is not null ?
-                    $"= {columns[i].ParamName}" : "is NULL";
-                result.Append($"{Build(columns[i], printDirection: false)} {opAndParam}");
-
-                if (i < untilIndex)
+                if (i == untilIndex)
                 {
+                    // This is the inequality column (the cursor boundary).
+                    string colExpr = Build(columns[i], printDirection: false);
+
+                    if (columns[i].Value is null)
+                    {
+                        if (NullsAtEnd(columns[i].Direction))
+                        {
+                            // NULL is at the end of the sort order; nothing comes after it.
+                            return "1 != 1";
+                        }
+                        else
+                        {
+                            // NULL is at the start; all non-NULL values come after.
+                            result.Append($"{colExpr} IS NOT NULL");
+                        }
+                    }
+                    else if (NullsAtEnd(columns[i].Direction))
+                    {
+                        // Non-NULL cursor value, but NULLs sort after all non-NULL values
+                        // in this direction, so they must be included.
+                        result.Append($"({colExpr} {GetComparisonFromDirection(columns[i].Direction)} {columns[i].ParamName} OR {colExpr} IS NULL)");
+                    }
+                    else
+                    {
+                        // Non-NULL cursor value, NULLs sort before all non-NULL values,
+                        // so a plain comparison is sufficient.
+                        result.Append($"{colExpr} {GetComparisonFromDirection(columns[i].Direction)} {columns[i].ParamName}");
+                    }
+                }
+                else
+                {
+                    // Equality comparison for columns before the inequality column.
+                    // Use IS NULL for NULL values since = NULL evaluates to UNKNOWN.
+                    string opAndParam = columns[i].Value is not null ?
+                        $"= {columns[i].ParamName}" : "is NULL";
+                    result.Append($"{Build(columns[i], printDirection: false)} {opAndParam}");
                     result.Append(" AND ");
                 }
             }
 
             return result.ToString();
+        }
+
+        /// <summary>
+        /// Returns true when NULL values sort after all non-NULL values for the
+        /// given direction. Different databases have different defaults:
+        ///   SQL Server / DwSQL / MySQL: NULLs are smallest → first in ASC, last in DESC.
+        ///   PostgreSQL:                 NULLs are largest  → last in ASC, first in DESC.
+        /// </summary>
+        protected virtual bool NullsAtEnd(OrderBy direction)
+        {
+            // Default matches SQL Server / MySQL behaviour.
+            return direction == OrderBy.DESC;
         }
 
         /// <summary>

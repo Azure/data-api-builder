@@ -427,7 +427,7 @@ public class GQLFilterParser
         // predicates to the subquery (existsQuery), connecting queryStructure.SourceAlias to existsQuery.SourceAlias.
         string relationshipName = filterField.Name;
         EntityRelationshipKey fkLookupKey = new(queryStructure.EntityName, relationshipName);
-        
+
         if (queryStructure is not BaseSqlQueryStructure sqlQueryStructure)
         {
             throw new DataApiBuilderException(

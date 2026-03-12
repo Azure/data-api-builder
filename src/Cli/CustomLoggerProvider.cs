@@ -8,30 +8,18 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class CustomLoggerProvider : ILoggerProvider
 {
-    private readonly LogLevel _minimumLogLevel;
-
-    public CustomLoggerProvider(LogLevel minimumLogLevel = LogLevel.Information)
-    {
-        _minimumLogLevel = minimumLogLevel;
-    }
-
     public void Dispose() { }
 
     /// <inheritdoc/>
     public ILogger CreateLogger(string categoryName)
     {
-        return new CustomConsoleLogger(_minimumLogLevel);
+        return new CustomConsoleLogger();
     }
 
     public class CustomConsoleLogger : ILogger
     {
         // Minimum LogLevel. LogLevel below this would be disabled.
-        private readonly LogLevel _minimumLogLevel;
-
-        public CustomConsoleLogger(LogLevel minimumLogLevel = LogLevel.Information)
-        {
-            _minimumLogLevel = minimumLogLevel;
-        }
+        private readonly LogLevel _minimumLogLevel = LogLevel.Information;
 
         //  Color values based on LogLevel
         //  LogLevel    Foreground      Background
@@ -73,7 +61,7 @@ public class CustomLoggerProvider : ILoggerProvider
         /// </summary>
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            if (!IsEnabled(logLevel))
+            if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
             {
                 return;
             }
@@ -91,7 +79,7 @@ public class CustomLoggerProvider : ILoggerProvider
         /// <inheritdoc/>
         public bool IsEnabled(LogLevel logLevel)
         {
-            return logLevel != LogLevel.None && logLevel >= _minimumLogLevel;
+            return true;
         }
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         {

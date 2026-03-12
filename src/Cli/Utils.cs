@@ -960,10 +960,10 @@ namespace Cli
         /// <summary>
         /// Returns ILoggerFactory with CLI custom logger provider.
         /// </summary>
-        public static ILoggerFactory GetLoggerFactoryForCli(LogLevel minimumLogLevel = LogLevel.Information)
+        public static ILoggerFactory GetLoggerFactoryForCli()
         {
             ILoggerFactory loggerFactory = new LoggerFactory();
-            loggerFactory.AddProvider(new CustomLoggerProvider(minimumLogLevel));
+            loggerFactory.AddProvider(new CustomLoggerProvider());
             return loggerFactory;
         }
     }

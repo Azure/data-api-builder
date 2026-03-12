@@ -132,7 +132,8 @@ namespace Azure.DataApiBuilder.Service
 
             if (runtimeConfigAvailable
                 && runtimeConfig?.Runtime?.Telemetry?.OpenTelemetry is not null
-                && runtimeConfig.Runtime.Telemetry.OpenTelemetry.Enabled)
+                && runtimeConfig.Runtime.Telemetry.OpenTelemetry.Enabled
+                && Uri.TryCreate(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint, UriKind.Absolute, out Uri? otlpEndpoint))
             {
                 services.Configure<OpenTelemetryLoggerOptions>(options =>
                 {
@@ -146,7 +147,7 @@ namespace Azure.DataApiBuilder.Service
                     logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
                     .AddOtlpExporter(configure =>
                     {
-                        configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                        configure.Endpoint = otlpEndpoint;
                         configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                         configure.Protocol = OtlpExportProtocol.Grpc;
                     });
@@ -160,7 +161,7 @@ namespace Azure.DataApiBuilder.Service
                         // .AddFusionCacheInstrumentation()
                         .AddOtlpExporter(configure =>
                         {
-                            configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                            configure.Endpoint = otlpEndpoint;
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                             configure.Protocol = OtlpExportProtocol.Grpc;
                         })
@@ -176,7 +177,7 @@ namespace Azure.DataApiBuilder.Service
                         .AddHotChocolateInstrumentation()
                         .AddOtlpExporter(configure =>
                         {
-                            configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                            configure.Endpoint = otlpEndpoint;
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                             configure.Protocol = OtlpExportProtocol.Grpc;
                         })
@@ -520,7 +521,7 @@ namespace Azure.DataApiBuilder.Service
 
             if (ShouldUseEntraAuthForRedis(options))
             {
-                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
+                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential()); // CodeQL [SM05137] DefaultAzureCredential will use Managed Identity if available or fallback to default.
             }
 
             return await ConnectionMultiplexer.ConnectAsync(options);
@@ -1049,9 +1050,10 @@ namespace Azure.DataApiBuilder.Service
                     return;
                 }
 
-                if (string.IsNullOrWhiteSpace(OpenTelemetryOptions?.Endpoint))
+                if (string.IsNullOrWhiteSpace(OpenTelemetryOptions?.Endpoint)
+                    || !Uri.TryCreate(OpenTelemetryOptions.Endpoint, UriKind.Absolute, out _))
                 {
-                    _logger.LogWarning("Logs won't be sent to Open Telemetry because an Open Telemetry connection string is not available in the runtime config.");
+                    _logger.LogWarning("Logs won't be sent to Open Telemetry because a valid Open Telemetry endpoint URI is not available in the runtime config.");
                     return;
                 }
 

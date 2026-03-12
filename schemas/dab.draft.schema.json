@@ -390,7 +390,7 @@
                 },
                 "allow-credentials": {
                   "$ref": "#/$defs/boolean-or-string",
-                  "default": "false",
+                  "default": false,
                   "description": "Set value for Access-Control-Allow-Credentials header"
                 }
               }

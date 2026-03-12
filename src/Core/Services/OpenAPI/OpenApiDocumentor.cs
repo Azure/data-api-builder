@@ -308,28 +308,31 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
             {
                 string entityName = entityDbMetadataMap.Key;
-                if (!entities.ContainsKey(entityName))
+                if (!entities.TryGetValue(entityName, out Entity? entity) || entity is null)
                 {
                     // This can happen for linking entities which are not present in runtime config.
                     continue;
                 }
 
-                string entityRestPath = GetEntityRestPath(entities[entityName].Rest, entityName);
+                // Entities which disable their REST endpoint must not be included in
+                // the OpenAPI description document.
+                if (!entity.Rest.Enabled)
+                {
+                    continue;
+                }
+
+                string entityRestPath = GetEntityRestPath(entity.Rest, entityName);
                 string entityBasePathComponent = $"/{entityRestPath}";
 
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
                 SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
 
-                // Entities which disable their REST endpoint must not be included in
-                // the OpenAPI description document.
-                if (entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
-                {
-                    if (!entity.Rest.Enabled)
-                    {
-                        continue;
-                    }
-                }
-                else
+                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject, role);
+
+                // Skip entities with no available operations before looking up the tag.
+                // This prevents noisy warnings for entities that are legitimately excluded from
+                // the global tags dictionary due to role-based permission filtering.
+                if (!configuredRestOperations.ContainsValue(true))
                 {
                     continue;
                 }
@@ -346,14 +349,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     existingTag
                 };
-
-                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject, role);
-
-                // Skip entities with no available operations
-                if (!configuredRestOperations.ContainsValue(true))
-                {
-                    continue;
-                }
 
                 if (dbObject.SourceType is EntitySourceType.StoredProcedure)
                 {

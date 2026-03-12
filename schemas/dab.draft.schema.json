@@ -1131,7 +1131,8 @@
                   "properties": {
                     "cardinality": {
                       "type": "string",
-                      "enum": ["one", "many"]
+                      "enum": ["one", "many"],
+                      "description": "Defines the cardinality of the relationship between entities."
                     },
                     "target.entity": {
                       "type": "string"
@@ -1455,10 +1456,12 @@
           "additionalProperties": false,
           "properties": {
             "singular": {
-              "type": "string"
+              "type": "string",
+              "description": "Defines the singular GraphQL type name for the entity."
             },
             "plural": {
-              "type": "string"
+              "type": "string",
+              "description": "Defines the plural GraphQL type name for the entity."
             }
           },
           "required": [ "singular" ]

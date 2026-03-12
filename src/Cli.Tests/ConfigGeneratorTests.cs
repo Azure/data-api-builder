@@ -156,7 +156,7 @@ public class ConfigGeneratorTests
                 ""rest"": {
                   ""enabled"": true,
                   ""path"": ""/api"",
-                  ""request-body-strict"": true
+                  ""request-body-strict"": false
                   },
                 ""graphql"": {
                   ""enabled"": true,

@@ -255,8 +255,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             {
                 if (TrySetupConfigFileWatcher())
                 {
+                    // Use LogInformation (routes through _logger, buffer, or Console) to avoid
+                    // duplicate entries when both _logger and the caller's logger are set.
                     LogInformation($"Monitoring config: {ConfigFilePath} for hot-reloading.");
-                    logger?.LogInformation("Monitoring config: {ConfigFilePath} for hot-reloading.", ConfigFilePath);
                 }
 
                 // When isDevMode is not null it means we are in a hot-reload scenario, and need to save the previous
@@ -266,14 +267,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                     // Log error when the mode is changed during hot-reload.
                     if (isDevMode != this.RuntimeConfig.IsDevelopmentMode())
                     {
-                        if (logger is null)
-                        {
-                            LogError("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
-                        }
-                        else
-                        {
-                            logger.LogError("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
-                        }
+                        LogError("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
                     }
 
                     RuntimeConfig.Runtime.Host.Mode = (bool)isDevMode ? HostMode.Development : HostMode.Production;

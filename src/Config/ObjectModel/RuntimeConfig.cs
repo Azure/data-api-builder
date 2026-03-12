@@ -788,10 +788,11 @@ public record RuntimeConfig
                 return (LogLevel)value;
             }
 
-            // "default" key is case-insensitive; use SingleOrDefault to guard against
-            // duplicate keys differing only in case (e.g. "Default" and "default").
+            // "default" key is case-insensitive. Use FirstOrDefault so that a mis-configured
+            // file with both "default" and "Default" is handled gracefully (first match wins)
+            // rather than throwing a cryptic InvalidOperationException.
             LogLevel? defaultValue = Runtime!.Telemetry!.LoggerLevel!
-                .SingleOrDefault(kvp => kvp.Key.Equals("default", StringComparison.OrdinalIgnoreCase)).Value;
+                .FirstOrDefault(kvp => kvp.Key.Equals("default", StringComparison.OrdinalIgnoreCase)).Value;
             if (defaultValue is not null)
             {
                 return (LogLevel)defaultValue;

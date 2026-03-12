@@ -121,9 +121,8 @@ namespace Azure.DataApiBuilder.Service
                 .ConfigureLogging(logging =>
                 {
                     // Apply the dynamic log level to the host's logging pipeline so that
-                    // Microsoft.Hosting.Lifetime and similar framework messages are also filtered.
+                    // all Microsoft.* framework messages are also filtered.
                     logging.AddFilter("Microsoft", logLevel => LogLevelProvider.ShouldLog(logLevel));
-                    logging.AddFilter("Microsoft.Hosting.Lifetime", logLevel => LogLevelProvider.ShouldLog(logLevel));
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {

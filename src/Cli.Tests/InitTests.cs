@@ -49,7 +49,7 @@ namespace Cli.Tests
                 setSessionContext: true,
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -71,7 +71,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 restPath: "/rest-endpoint",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -94,7 +94,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);
@@ -118,7 +118,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Production,
                 corsOrigin: null,
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);
@@ -245,7 +245,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Production,
                 corsOrigin: null,
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);
@@ -301,6 +301,7 @@ namespace Cli.Tests
         [DataRow("StaticWebApps", null, null, DisplayName = "StaticWebApps with no audience and no issuer specified.")]
         [DataRow("AppService", null, null, DisplayName = "AppService with no audience and no issuer specified.")]
         [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
+        [DataRow("Unauthenticated", null, null, DisplayName = "Unauthenticated with no audience and no issuer specified.")]
         [DataRow("AzureAD", "aud-xxx", "issuer-xxx", DisplayName = "AzureAD with both audience and issuer specified.")]
         [DataRow("EntraID", "aud-xxx", "issuer-xxx", DisplayName = "EntraID with both audience and issuer specified.")]
         public Task EnsureCorrectConfigGenerationWithDifferentAuthenticationProviders(
@@ -384,7 +385,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Production,
                 corsOrigin: null,
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 restPath: "abc",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -403,7 +404,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Production,
                 corsOrigin: null,
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 graphQLPath: "abc",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -466,7 +467,7 @@ namespace Cli.Tests
                 setSessionContext: true,
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE,
                 multipleCreateOperationEnabled: isMultipleCreateEnabled);
@@ -482,7 +483,7 @@ namespace Cli.Tests
                 setSessionContext: true,
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE,
                 multipleCreateOperationEnabled: isMultipleCreateEnabled);

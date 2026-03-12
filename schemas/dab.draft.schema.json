@@ -169,6 +169,7 @@
     "data-source-files": {
       "type": "array",
       "description": "Names of runtime configuration files referencing additional databases.",
+      "minItems": 1,
       "default": null
     },
     "runtime": {
@@ -775,6 +776,7 @@
     "autoentities": {
       "type": "object",
       "description": "Defines automatic entity generation rules for MSSQL tables based on include/exclude patterns and defaults.",
+      "minProperties": 1,
       "patternProperties": {
         "^.*$": {
           "type": "object",
@@ -999,7 +1001,8 @@
                       "oneOf": [
                         {
                           "type": "object",
-                          "description": "Dictionary of parameters and their values (deprecated)",
+                          "deprecated": true,
+                          "description": "DEPRECATED. Use the array format instead, which supports per-parameter metadata. Dictionary of parameter names mapped to their default values.",
                           "patternProperties": {
                             "^.*$": {
                               "oneOf": [
@@ -1028,10 +1031,11 @@
                     },
                     "key-fields": {
                       "type": "array",
+                      "deprecated": true,
                       "items": {
                         "type": "string"
                       },
-                      "description": "List of fields to be used as primary keys. Mandatory field for views when generated through the CLI."
+                      "description": "DEPRECATED. Use the 'fields' array and set 'primary-key: true' on each key field instead. List of fields to be used as primary keys."
                     }
                   },
                   "required": ["type", "object"]
@@ -1140,7 +1144,8 @@
             },
             "mappings": {
               "type": "object",
-              "description": "Define mappings between database fields and GraphQL and REST fields",
+              "deprecated": true,
+              "description": "DEPRECATED. Use the 'fields' array and set the 'alias' property on each field instead. Defines mappings between database column names and their exposed API field names.",
               "patternProperties": {
                 "^.*$": {
                   "type": "string"
@@ -1467,17 +1472,44 @@
       }
     }
   },
-  "if": {
-    "required": ["azure-key-vault"]
-  },
-  "then": {
-    "properties": {
-      "azure-key-vault": {
-        "required": ["endpoint"]
+  "allOf": [
+    {
+      "if": { "required": ["azure-key-vault"] },
+      "then": {
+        "properties": {
+          "azure-key-vault": {
+            "required": ["endpoint"]
+          }
+        }
+      }
+    },
+    {
+      "$comment": "When data-source-files is present (multi-config top-level), only runtime is required. When autoentities is present, data-source is required but entities is not. Otherwise both data-source and entities are required.",
+      "if": {
+        "required": ["data-source-files"],
+        "properties": {
+          "data-source-files": { "type": "array", "minItems": 1 }
+        }
+      },
+      "then": {
+        "required": ["runtime"]
+      },
+      "else": {
+        "if": {
+          "required": ["autoentities"],
+          "properties": {
+            "autoentities": { "type": "object", "minProperties": 1 }
+          }
+        },
+        "then": {
+          "required": ["data-source"]
+        },
+        "else": {
+          "required": ["data-source", "entities"]
+        }
       }
     }
-  },
-  "required": ["data-source", "entities"],
+  ],
   "$defs": {
     "singular-plural": {
       "description": "The GraphQL type name for an entity, specified as either a string (singular name) or an object with explicit singular and plural forms.",

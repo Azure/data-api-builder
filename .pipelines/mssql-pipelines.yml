@@ -155,11 +155,11 @@ jobs:
 # MsSql Integration Testing is split into two parallel jobs (~20 min each):
 #
 # 1) windows_combined -> GraphQL, HotReload, REST, Unit, OpenApi, Auth,
-#    Telemetry, and Caching tests (1246 tests).
+#    Telemetry, and Caching tests.
 #    SqlTestBase-inheriting tests (GraphQL, REST) create the DB schema;
 #    the remaining tests find it already in place.
 #
-# 2) windows_configuration -> Pure ConfigurationTests (207 tests).
+# 2) windows_configuration -> Pure ConfigurationTests.
 #    No SqlTestBase tests in this bucket, so initDbSchema creates the
 #    schema via SqlClient before tests run.
 

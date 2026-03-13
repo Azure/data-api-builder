@@ -28,7 +28,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "Simulator"
+        "provider": "Unauthenticated"
       },
       "mode": "development"
     }

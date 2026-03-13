@@ -780,7 +780,6 @@
     "autoentities": {
       "type": "object",
       "description": "Defines automatic entity generation rules for MSSQL tables based on include/exclude patterns and defaults.",
-      "minProperties": 1,
       "patternProperties": {
         "^.*$": {
           "type": "object",

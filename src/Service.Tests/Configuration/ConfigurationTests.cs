@@ -723,9 +723,10 @@ type Moon {
                         File.Delete(CUSTOM_CONFIG_FILENAME);
                         break;
                     }
-                    catch (IOException) when (retryCount < maxRetries)
+                    catch (IOException ex) when (retryCount < maxRetries)
                     {
                         retryCount++;
+                        Console.WriteLine($"CleanupAfterEachTest: Retry {retryCount}/{maxRetries} deleting {CUSTOM_CONFIG_FILENAME}. {ex.Message}");
                         Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(2, retryCount)));
                     }
                 }

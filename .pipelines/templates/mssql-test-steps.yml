@@ -19,6 +19,9 @@ parameters:
   - name: artifactSuffix
     type: string
     default: ''
+  - name: initDbSchema
+    type: boolean
+    default: false
 
 steps:
 - task: CmdLine@2
@@ -72,6 +75,17 @@ steps:
     script: |
       SqlLocalDb.exe start MSSQLLocalDB
       SqlLocalDb.exe info "MSSQLLocalDB"
+
+- ${{ if eq(parameters.initDbSchema, true) }}:
+  - task: PowerShell@2
+    displayName: 'Initialize database schema'
+    inputs:
+      targetType: 'inline'
+      script: |
+        Write-Host "Running DatabaseSchema-MsSql.sql against LocalDB..."
+        sqlcmd -S "(localdb)\MSSQLLocalDB" -i "$(System.DefaultWorkingDirectory)\src\Service.Tests\DatabaseSchema-MsSql.sql"
+        if ($LASTEXITCODE -ne 0) { throw "Schema initialization failed with exit code $LASTEXITCODE" }
+        Write-Host "Database schema initialized successfully."
 
 - task: DotNetCoreCLI@2
   displayName: Build

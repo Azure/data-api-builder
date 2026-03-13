@@ -3,6 +3,7 @@
 
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
@@ -518,6 +519,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Append statement to set read only param value - can be set only once for a connection.
                 string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 0;";
                 sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
+            }
+
+            // Add OpenTelemetry correlation values for observability.
+            // These allow correlating database queries with distributed traces.
+            Activity? currentActivity = Activity.Current;
+            if (currentActivity is not null)
+            {
+                string traceIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                parameters.Add(traceIdParamName, new(currentActivity.TraceId.ToString()));
+                sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.trace_id', {traceIdParamName}, @read_only = 0;");
+
+                string spanIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                parameters.Add(spanIdParamName, new(currentActivity.SpanId.ToString()));
+                sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.span_id', {spanIdParamName}, @read_only = 0;");
+            }
+
+            // Add OBO-specific observability values when user-delegated auth is enabled.
+            // These values are for observability/auditing only and MUST NOT be used for authorization decisions.
+            // For row-level security, use database policies with the user's actual claims.
+            if (_dataSourceUserDelegatedAuth.ContainsKey(dataSourceName))
+            {
+                // Set auth type indicator for OBO requests
+                string authTypeParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                parameters.Add(authTypeParamName, new("obo"));
+                sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.auth_type', {authTypeParamName}, @read_only = 0;");
+
+                // Set user identifier (oid preferred, fallback to sub) for auditing/observability
+                string? userId = httpContext.User.FindFirst("oid")?.Value ?? httpContext.User.FindFirst("sub")?.Value;
+                if (!string.IsNullOrWhiteSpace(userId))
+                {
+                    string userIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(userIdParamName, new(userId));
+                    sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.user_id', {userIdParamName}, @read_only = 0;");
+                }
+
+                // Set tenant identifier for auditing/observability
+                string? tenantId = httpContext.User.FindFirst("tid")?.Value;
+                if (!string.IsNullOrWhiteSpace(tenantId))
+                {
+                    string tenantIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(tenantIdParamName, new(tenantId));
+                    sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.tenant_id', {tenantIdParamName}, @read_only = 0;");
+                }
             }
 
             return sessionMapQuery.ToString();

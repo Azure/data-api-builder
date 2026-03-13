@@ -1502,7 +1502,7 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 for (int j = 0; j < loggerSub.Length; j++)
                 {
-                    if (!loggerSub[j].Equals(validFiltersSub[j]))
+                    if (!loggerSub[j].Equals(validFiltersSub[j], StringComparison.OrdinalIgnoreCase))
                     {
                         isValid = false;
                         break;

@@ -43,7 +43,9 @@ namespace Cli.Commands
             IEnumerable<string>? fieldsAliasCollection,
             IEnumerable<string>? fieldsDescriptionCollection,
             IEnumerable<bool>? fieldsPrimaryKeyCollection,
-            string? config
+            string? mcpDmlTools = null,
+            string? mcpCustomTool = null,
+            string? config = null
         )
         : base(
             entity,
@@ -69,6 +71,8 @@ namespace Cli.Commands
             fieldsAliasCollection,
             fieldsDescriptionCollection,
             fieldsPrimaryKeyCollection,
+            mcpDmlTools,
+            mcpCustomTool,
             config
         )
         {

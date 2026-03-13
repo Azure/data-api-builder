@@ -86,6 +86,7 @@ namespace Azure.DataApiBuilder.Service
         public static AzureLogAnalyticsOptions AzureLogAnalyticsOptions = new();
         public static FileSinkOptions FileSinkOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
+        private StartupLogBuffer _logBuffer = new();
         private readonly HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
         private ILogger<Startup> _logger = logger;
@@ -105,13 +106,15 @@ namespace Azure.DataApiBuilder.Service
         public void ConfigureServices(IServiceCollection services)
         {
             Startup.AddValidFilters();
+            services.AddSingleton(_logBuffer);
+            services.AddSingleton(Program.LogLevelProvider);
             services.AddSingleton(_hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
                 FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
                 null);
             IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, _hotReloadEventHandler, configFileName, connectionString);
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, _hotReloadEventHandler, configFileName, connectionString, logBuffer: _logBuffer);
             RuntimeConfigProvider configProvider = new(configLoader);
             _configProvider = configProvider;
 
@@ -230,6 +233,13 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<CosmosClientProvider>();
             services.AddHealthChecks()
                 .AddCheck<BasicHealthCheck>(nameof(BasicHealthCheck));
+
+            services.AddSingleton<ILogger<FileSystemRuntimeConfigLoader>>(implementationFactory: (serviceProvider) =>
+            {
+                LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(FileSystemRuntimeConfigLoader).FullName, _configProvider, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelInit);
+                return loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
+            });
 
             services.AddSingleton<ILogger<SqlQueryEngine>>(implementationFactory: (serviceProvider) =>
             {
@@ -695,7 +705,16 @@ namespace Azure.DataApiBuilder.Service
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                // Configure Application Insights Telemetry
+                // Set LogLevel based on RuntimeConfig
+                DynamicLogLevelProvider logLevelProvider = app.ApplicationServices.GetRequiredService<DynamicLogLevelProvider>();
+                logLevelProvider.UpdateFromRuntimeConfig(runtimeConfig);
+                FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
+
+                //Flush all logs that were buffered before setting the LogLevel
+                configLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
+                configLoader.FlushLogBuffer();
+
+                // Configure Telemetry
                 ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
                 ConfigureOpenTelemetry(runtimeConfig);
                 ConfigureAzureLogAnalytics(runtimeConfig);

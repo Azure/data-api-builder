@@ -104,8 +104,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         }
 
         _disposed = true;
-        _configFileWatcher?.Dispose();
-        _configFileWatcher = null;
+
+        if (_configFileWatcher is not null)
+        {
+            _configFileWatcher.NewFileContentsDetected -= OnNewFileContentsDetected;
+            _configFileWatcher.Dispose();
+            _configFileWatcher = null;
+        }
     }
 
     /// <summary>

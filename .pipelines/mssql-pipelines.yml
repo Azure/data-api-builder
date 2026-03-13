@@ -5,8 +5,9 @@
 # 1) linux (disabled) -> Run SQL Server 2019 in Linux Docker Image
 # 2) windows_graphql -> GraphQL integration tests on LocalDB
 # 3) windows_rest -> REST API tests on LocalDB
-# 4) windows_config_and_other -> Config, Auth, Unit tests on LocalDB
-# 5) windows_hotreload -> Hot-Reload tests on LocalDB (long timeouts)
+# 4) windows_config_and_integration -> Config, Auth, OpenApi, Telemetry tests on LocalDB
+# 5) windows_unittests -> MsSql unit tests on LocalDB
+# 6) windows_hotreload -> Hot-Reload tests on LocalDB (long timeouts)
 
 trigger:
   batch: true
@@ -154,13 +155,14 @@ jobs:
       summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
 
-# MsSql Integration Testing is split into four parallel jobs:
+# MsSql Integration Testing is split into five parallel jobs:
 # 1) windows_graphql -> GraphQL integration tests (SqlTests.GraphQL*)
 # 2) windows_rest -> REST API tests (SqlTests.Rest*)
-# 3) windows_config_and_other -> Configuration, Authorization, Unit, and other tests
-# 4) windows_hotreload -> ConfigurationHotReloadTests (long timeouts, isolated)
+# 3) windows_config_and_integration -> Configuration, Authorization, OpenApi, Telemetry tests
+# 4) windows_unittests -> MsSql unit tests (UnitTests.*)
+# 5) windows_hotreload -> ConfigurationHotReloadTests (long timeouts, isolated)
 #
-# All four jobs run in parallel on separate VMs with their own LocalDB instance.
+# All five jobs run in parallel on separate VMs with their own LocalDB instance.
 
 - job: windows_graphql
   displayName: 'Windows - GraphQL Integration Tests'
@@ -208,8 +210,8 @@ jobs:
       testDisplayName: 'MsSql REST Integration Tests'
       artifactSuffix: '-REST'
 
-- job: windows_config_and_other
-  displayName: 'Windows - Config & Other Integration Tests'
+- job: windows_config_and_integration
+  displayName: 'Windows - Config & Integration Tests'
   pool:
     vmImage: 'windows-latest'
   variables:
@@ -227,9 +229,32 @@ jobs:
   steps:
   - template: templates/mssql-test-steps.yml
     parameters:
-      testFilter: 'TestCategory=MsSql&FullyQualifiedName!~SqlTests.GraphQL&FullyQualifiedName!~SqlTests.Rest&FullyQualifiedName!~ConfigurationHotReloadTests'
-      testDisplayName: 'MsSql Config & Other Integration Tests'
-      artifactSuffix: '-ConfigAndOther'
+      testFilter: 'TestCategory=MsSql&FullyQualifiedName!~SqlTests.GraphQL&FullyQualifiedName!~SqlTests.Rest&FullyQualifiedName!~ConfigurationHotReloadTests&FullyQualifiedName!~UnitTests'
+      testDisplayName: 'MsSql Config & Integration Tests'
+      artifactSuffix: '-ConfigAndIntegration'
+
+- job: windows_unittests
+  displayName: 'Windows - MsSql Unit Tests'
+  pool:
+    vmImage: 'windows-latest'
+  variables:
+      solution: '**/*.sln'
+      buildPlatform: 'Any CPU'
+      buildConfiguration: 'Release'
+      # Need to override the connection string set on the pipeline UI
+      # since windows needs a different string.
+      # The variable setting on the pipeline UI sets the connection string
+      # for the linux job above.
+      data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;
+      InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
+      SqlVersionCode: '15.0'
+
+  steps:
+  - template: templates/mssql-test-steps.yml
+    parameters:
+      testFilter: 'TestCategory=MsSql&FullyQualifiedName~UnitTests'
+      testDisplayName: 'MsSql Unit Tests'
+      artifactSuffix: '-UnitTests'
 
 - job: windows_hotreload
   displayName: 'Windows - Hot-Reload Tests'

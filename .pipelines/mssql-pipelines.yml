@@ -3,9 +3,8 @@
 
 # MsSql Integration Testing Pipeline config is split into parallel jobs:
 # 1) linux (disabled) -> Run SQL Server 2019 in Linux Docker Image
-# 2) windows_graphql_and_hotreload -> GraphQL + HotReload tests on LocalDB
-# 3) windows_rest_and_unit -> REST + Unit tests on LocalDB
-# 4) windows_config_and_integration -> Config, Auth, OpenApi, Telemetry on LocalDB (with schema init)
+# 2) windows_combined -> GraphQL, REST, Unit, HotReload, OpenApi, Auth, Telemetry, Caching on LocalDB
+# 3) windows_configuration -> Configuration tests on LocalDB (with schema init)
 
 trigger:
   batch: true
@@ -153,19 +152,19 @@ jobs:
       summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
 
-# MsSql Integration Testing is split into three parallel jobs (~30 min each):
-# 1) windows_graphql_and_hotreload -> GraphQL + HotReload tests (597 tests)
-#    GraphQL tests inherit SqlTestBase which creates the DB schema;
-#    HotReload tests then find the schema already in place.
-# 2) windows_rest_and_unit -> REST + Unit tests (541 tests)
-#    REST tests inherit SqlTestBase which creates the DB schema;
-#    Unit tests then find the schema already in place.
-# 3) windows_config_and_integration -> Config, Auth, OpenApi, Telemetry (315 tests)
+# MsSql Integration Testing is split into two parallel jobs (~20 min each):
+#
+# 1) windows_combined -> GraphQL, HotReload, REST, Unit, OpenApi, Auth,
+#    Telemetry, and Caching tests (1246 tests).
+#    SqlTestBase-inheriting tests (GraphQL, REST) create the DB schema;
+#    the remaining tests find it already in place.
+#
+# 2) windows_configuration -> Pure ConfigurationTests (207 tests).
 #    No SqlTestBase tests in this bucket, so initDbSchema creates the
 #    schema via SqlClient before tests run.
 
-- job: windows_graphql_and_hotreload
-  displayName: 'Windows - GraphQL & Hot-Reload Tests'
+- job: windows_combined
+  displayName: 'Windows - Combined Integration Tests'
   pool:
     vmImage: 'windows-latest'
   variables:
@@ -183,12 +182,12 @@ jobs:
   steps:
   - template: templates/mssql-test-steps.yml
     parameters:
-      testFilter: 'TestCategory=MsSql&(FullyQualifiedName~SqlTests.GraphQL|FullyQualifiedName~ConfigurationHotReloadTests)'
-      testDisplayName: 'MsSql GraphQL & Hot-Reload Tests'
-      artifactSuffix: '-GraphQLAndHotReload'
+      testFilter: 'TestCategory=MsSql&(FullyQualifiedName~SqlTests.GraphQL|FullyQualifiedName~ConfigurationHotReloadTests|FullyQualifiedName~SqlTests.Rest|FullyQualifiedName~UnitTests|FullyQualifiedName~OpenApi|FullyQualifiedName~Telemetry|FullyQualifiedName~Authorization|FullyQualifiedName~Caching)'
+      testDisplayName: 'MsSql Combined Integration Tests'
+      artifactSuffix: '-Combined'
 
-- job: windows_rest_and_unit
-  displayName: 'Windows - REST & Unit Tests'
+- job: windows_configuration
+  displayName: 'Windows - Configuration Tests'
   pool:
     vmImage: 'windows-latest'
   variables:
@@ -206,30 +205,7 @@ jobs:
   steps:
   - template: templates/mssql-test-steps.yml
     parameters:
-      testFilter: 'TestCategory=MsSql&(FullyQualifiedName~SqlTests.Rest|FullyQualifiedName~UnitTests)'
-      testDisplayName: 'MsSql REST & Unit Tests'
-      artifactSuffix: '-RestAndUnit'
-
-- job: windows_config_and_integration
-  displayName: 'Windows - Config & Integration Tests'
-  pool:
-    vmImage: 'windows-latest'
-  variables:
-      solution: '**/*.sln'
-      buildPlatform: 'Any CPU'
-      buildConfiguration: 'Release'
-      # Need to override the connection string set on the pipeline UI
-      # since windows needs a different string.
-      # The variable setting on the pipeline UI sets the connection string
-      # for the linux job above.
-      data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;
-      InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
-      SqlVersionCode: '15.0'
-
-  steps:
-  - template: templates/mssql-test-steps.yml
-    parameters:
-      testFilter: 'TestCategory=MsSql&FullyQualifiedName!~SqlTests.GraphQL&FullyQualifiedName!~SqlTests.Rest&FullyQualifiedName!~ConfigurationHotReloadTests&FullyQualifiedName!~UnitTests'
-      testDisplayName: 'MsSql Config & Integration Tests'
-      artifactSuffix: '-ConfigAndIntegration'
+      testFilter: 'TestCategory=MsSql&FullyQualifiedName!~SqlTests.GraphQL&FullyQualifiedName!~ConfigurationHotReloadTests&FullyQualifiedName!~SqlTests.Rest&FullyQualifiedName!~UnitTests&FullyQualifiedName!~OpenApi&FullyQualifiedName!~Telemetry&FullyQualifiedName!~Authorization&FullyQualifiedName!~Caching'
+      testDisplayName: 'MsSql Configuration Tests'
+      artifactSuffix: '-Configuration'
       initDbSchema: true

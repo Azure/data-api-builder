@@ -6,8 +6,8 @@
 # 2) windows_graphql -> GraphQL integration tests on LocalDB
 # 3) windows_rest -> REST API tests on LocalDB
 # 4) windows_config_and_integration -> Config, Auth, OpenApi, Telemetry tests on LocalDB
-# 5) windows_unittests -> MsSql unit tests on LocalDB
-# 6) windows_hotreload -> Hot-Reload tests on LocalDB (long timeouts)
+# 5) windows_unittests -> MsSql unit tests on LocalDB (starts after GraphQL)
+# 6) windows_hotreload -> Hot-Reload tests on LocalDB (starts after GraphQL)
 
 trigger:
   batch: true
@@ -155,14 +155,19 @@ jobs:
       summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
 
-# MsSql Integration Testing is split into five parallel jobs:
+# MsSql Integration Testing is split into five jobs across two phases:
+# Phase 1 (immediate, 3 agents): GraphQL, REST, Config & Integration
+# Phase 2 (after GraphQL, 2 agents): Unit Tests, Hot-Reload
+#
+# This staggering keeps peak agent usage at 3-4 instead of 5, reducing
+# contention with the org-wide Microsoft-Hosted parallelism limit (10),
+# while maintaining the same ~30 min wall-clock time.
+#
 # 1) windows_graphql -> GraphQL integration tests (SqlTests.GraphQL*)
 # 2) windows_rest -> REST API tests (SqlTests.Rest*)
 # 3) windows_config_and_integration -> Configuration, Authorization, OpenApi, Telemetry tests
-# 4) windows_unittests -> MsSql unit tests (UnitTests.*)
-# 5) windows_hotreload -> ConfigurationHotReloadTests (long timeouts, isolated)
-#
-# All five jobs run in parallel on separate VMs with their own LocalDB instance.
+# 4) windows_unittests -> MsSql unit tests (dependsOn: graphql)
+# 5) windows_hotreload -> ConfigurationHotReloadTests (dependsOn: graphql)
 
 - job: windows_graphql
   displayName: 'Windows - GraphQL Integration Tests'
@@ -236,6 +241,7 @@ jobs:
 
 - job: windows_unittests
   displayName: 'Windows - MsSql Unit Tests'
+  dependsOn: windows_graphql
   pool:
     vmImage: 'windows-latest'
   variables:
@@ -260,6 +266,7 @@ jobs:
 
 - job: windows_hotreload
   displayName: 'Windows - Hot-Reload Tests'
+  dependsOn: windows_graphql
   pool:
     vmImage: 'windows-latest'
   variables:

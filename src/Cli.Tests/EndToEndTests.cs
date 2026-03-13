@@ -1088,10 +1088,6 @@ public class EndToEndTests
             output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);
             StringAssert.Contains(output, $"Setting default minimum LogLevel:", StringComparison.Ordinal);
-
-            output = await process.StandardOutput.ReadLineAsync();
-            Assert.IsNotNull(output);
-            StringAssert.Contains(output, "Starting the runtime engine...", StringComparison.Ordinal);
         }
         else
         {

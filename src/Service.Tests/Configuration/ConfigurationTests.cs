@@ -710,9 +710,26 @@ type Moon {
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
+            // Retry file deletion with exponential back-off to handle cases where a
+            // file watcher or hot-reload process may still hold a handle on the file.
             if (File.Exists(CUSTOM_CONFIG_FILENAME))
             {
-                File.Delete(CUSTOM_CONFIG_FILENAME);
+                int retryCount = 0;
+                const int maxRetries = 3;
+                while (true)
+                {
+                    try
+                    {
+                        File.Delete(CUSTOM_CONFIG_FILENAME);
+                        break;
+                    }
+                    catch (IOException ex) when (retryCount < maxRetries)
+                    {
+                        retryCount++;
+                        Console.WriteLine($"CleanupAfterEachTest: Retry {retryCount}/{maxRetries} deleting {CUSTOM_CONFIG_FILENAME}. {ex.Message}");
+                        Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(2, retryCount)));
+                    }
+                }
             }
 
             TestHelper.UnsetAllDABEnvironmentVariables();

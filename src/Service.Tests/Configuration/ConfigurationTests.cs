@@ -4268,6 +4268,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(LogLevel.Trace, "default")]
+        [DataRow(LogLevel.Warning, "Default")]
         [DataRow(LogLevel.Debug, "Azure")]
         [DataRow(LogLevel.Information, "Azure.DataApiBuilder")]
         [DataRow(LogLevel.Warning, "Azure.DataApiBuilder.Core")]

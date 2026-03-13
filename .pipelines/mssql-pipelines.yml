@@ -232,6 +232,7 @@ jobs:
       testFilter: 'TestCategory=MsSql&FullyQualifiedName!~SqlTests.GraphQL&FullyQualifiedName!~SqlTests.Rest&FullyQualifiedName!~ConfigurationHotReloadTests&FullyQualifiedName!~UnitTests'
       testDisplayName: 'MsSql Config & Integration Tests'
       artifactSuffix: '-ConfigAndIntegration'
+      initDbSchema: true
 
 - job: windows_unittests
   displayName: 'Windows - MsSql Unit Tests'
@@ -255,6 +256,7 @@ jobs:
       testFilter: 'TestCategory=MsSql&FullyQualifiedName~UnitTests'
       testDisplayName: 'MsSql Unit Tests'
       artifactSuffix: '-UnitTests'
+      initDbSchema: true
 
 - job: windows_hotreload
   displayName: 'Windows - Hot-Reload Tests'

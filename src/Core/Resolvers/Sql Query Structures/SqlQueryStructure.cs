@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 sqlMetadataProvider,
                 authorizationResolver,
                 ctx.Selection.Field,
-                ctx.Selection.SyntaxNode,
+                ctx.Selection.SyntaxNodes[0].Node,
                 // The outermost query is where we start, so this can define
                 // create the IncrementingInteger that will be shared between
                 // all subqueries in this query.
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IsMultipleCreateOperation = isMultipleCreateOperation;
 
             ObjectField schemaField = _ctx.Selection.Field;
-            FieldNode? queryField = _ctx.Selection.SyntaxNode;
+            FieldNode? queryField = _ctx.Selection.SyntaxNodes[0].Node;
 
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = outputType.NamedType<ObjectType>();
@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (PaginationMetadata.IsPaginated)
             {
-                if (queryField != null && queryField.SelectionSet != null)
+                if (queryField.SelectionSet != null)
                 {
                     // process pagination fields without overriding them
                     ProcessPaginationFields(queryField.SelectionSet.Selections);

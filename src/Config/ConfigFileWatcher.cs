@@ -141,7 +141,6 @@ public class ConfigFileWatcher : IDisposable
             _fileWatcher.EnableRaisingEvents = false;
             _fileWatcher.Changed -= OnConfigFileChange;
             _fileWatcher.Dispose();
-            _fileWatcher = null;
         }
     }
 }

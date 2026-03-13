@@ -3,11 +3,9 @@
 
 # MsSql Integration Testing Pipeline config is split into parallel jobs:
 # 1) linux (disabled) -> Run SQL Server 2019 in Linux Docker Image
-# 2) windows_graphql -> GraphQL integration tests on LocalDB
-# 3) windows_rest -> REST API tests on LocalDB
-# 4) windows_config_and_integration -> Config, Auth, OpenApi, Telemetry tests on LocalDB
-# 5) windows_unittests -> MsSql unit tests on LocalDB (starts after GraphQL)
-# 6) windows_hotreload -> Hot-Reload tests on LocalDB (starts after GraphQL)
+# 2) windows_graphql_and_hotreload -> GraphQL + HotReload tests on LocalDB
+# 3) windows_rest_and_unit -> REST + Unit tests on LocalDB
+# 4) windows_config_and_integration -> Config, Auth, OpenApi, Telemetry on LocalDB (with schema init)
 
 trigger:
   batch: true
@@ -155,22 +153,19 @@ jobs:
       summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
 
-# MsSql Integration Testing is split into five jobs across two phases:
-# Phase 1 (immediate, 3 agents): GraphQL, REST, Config & Integration
-# Phase 2 (after GraphQL, 2 agents): Unit Tests, Hot-Reload
-#
-# This staggering keeps peak agent usage at 3-4 instead of 5, reducing
-# contention with the org-wide Microsoft-Hosted parallelism limit (10),
-# while maintaining the same ~30 min wall-clock time.
-#
-# 1) windows_graphql -> GraphQL integration tests (SqlTests.GraphQL*)
-# 2) windows_rest -> REST API tests (SqlTests.Rest*)
-# 3) windows_config_and_integration -> Configuration, Authorization, OpenApi, Telemetry tests
-# 4) windows_unittests -> MsSql unit tests (dependsOn: graphql)
-# 5) windows_hotreload -> ConfigurationHotReloadTests (dependsOn: graphql)
+# MsSql Integration Testing is split into three parallel jobs (~30 min each):
+# 1) windows_graphql_and_hotreload -> GraphQL + HotReload tests (597 tests)
+#    GraphQL tests inherit SqlTestBase which creates the DB schema;
+#    HotReload tests then find the schema already in place.
+# 2) windows_rest_and_unit -> REST + Unit tests (541 tests)
+#    REST tests inherit SqlTestBase which creates the DB schema;
+#    Unit tests then find the schema already in place.
+# 3) windows_config_and_integration -> Config, Auth, OpenApi, Telemetry (315 tests)
+#    No SqlTestBase tests in this bucket, so initDbSchema creates the
+#    schema via SqlClient before tests run.
 
-- job: windows_graphql
-  displayName: 'Windows - GraphQL Integration Tests'
+- job: windows_graphql_and_hotreload
+  displayName: 'Windows - GraphQL & Hot-Reload Tests'
   pool:
     vmImage: 'windows-latest'
   variables:
@@ -188,12 +183,12 @@ jobs:
   steps:
   - template: templates/mssql-test-steps.yml
     parameters:
-      testFilter: 'TestCategory=MsSql&FullyQualifiedName~SqlTests.GraphQL'
-      testDisplayName: 'MsSql GraphQL Integration Tests'
-      artifactSuffix: '-GraphQL'
+      testFilter: 'TestCategory=MsSql&(FullyQualifiedName~SqlTests.GraphQL|FullyQualifiedName~ConfigurationHotReloadTests)'
+      testDisplayName: 'MsSql GraphQL & Hot-Reload Tests'
+      artifactSuffix: '-GraphQLAndHotReload'
 
-- job: windows_rest
-  displayName: 'Windows - REST Integration Tests'
+- job: windows_rest_and_unit
+  displayName: 'Windows - REST & Unit Tests'
   pool:
     vmImage: 'windows-latest'
   variables:
@@ -211,9 +206,9 @@ jobs:
   steps:
   - template: templates/mssql-test-steps.yml
     parameters:
-      testFilter: 'TestCategory=MsSql&FullyQualifiedName~SqlTests.Rest'
-      testDisplayName: 'MsSql REST Integration Tests'
-      artifactSuffix: '-REST'
+      testFilter: 'TestCategory=MsSql&(FullyQualifiedName~SqlTests.Rest|FullyQualifiedName~UnitTests)'
+      testDisplayName: 'MsSql REST & Unit Tests'
+      artifactSuffix: '-RestAndUnit'
 
 - job: windows_config_and_integration
   displayName: 'Windows - Config & Integration Tests'
@@ -237,56 +232,4 @@ jobs:
       testFilter: 'TestCategory=MsSql&FullyQualifiedName!~SqlTests.GraphQL&FullyQualifiedName!~SqlTests.Rest&FullyQualifiedName!~ConfigurationHotReloadTests&FullyQualifiedName!~UnitTests'
       testDisplayName: 'MsSql Config & Integration Tests'
       artifactSuffix: '-ConfigAndIntegration'
-      initDbSchema: true
-
-- job: windows_unittests
-  displayName: 'Windows - MsSql Unit Tests'
-  dependsOn: windows_graphql
-  pool:
-    vmImage: 'windows-latest'
-  variables:
-      solution: '**/*.sln'
-      buildPlatform: 'Any CPU'
-      buildConfiguration: 'Release'
-      # Need to override the connection string set on the pipeline UI
-      # since windows needs a different string.
-      # The variable setting on the pipeline UI sets the connection string
-      # for the linux job above.
-      data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;
-      InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
-      SqlVersionCode: '15.0'
-
-  steps:
-  - template: templates/mssql-test-steps.yml
-    parameters:
-      testFilter: 'TestCategory=MsSql&FullyQualifiedName~UnitTests'
-      testDisplayName: 'MsSql Unit Tests'
-      artifactSuffix: '-UnitTests'
-      initDbSchema: true
-
-- job: windows_hotreload
-  displayName: 'Windows - Hot-Reload Tests'
-  dependsOn: windows_graphql
-  pool:
-    vmImage: 'windows-latest'
-  variables:
-      solution: '**/*.sln'
-      buildPlatform: 'Any CPU'
-      buildConfiguration: 'Release'
-      # Need to override the connection string set on the pipeline UI
-      # since windows needs a different string.
-      # The variable setting on the pipeline UI sets the connection string
-      # for the linux job above.
-      data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;
-      InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
-      SqlVersionCode: '15.0'
-
-  steps:
-  - template: templates/mssql-test-steps.yml
-    parameters:
-      testFilter: 'TestCategory=MsSql&FullyQualifiedName~ConfigurationHotReloadTests'
-      testDisplayName: 'MsSql Hot-Reload Tests'
-      testTimeout: 45
-      additionalTestArgs: '--logger "console;verbosity=detailed"'
-      artifactSuffix: '-HotReload'
       initDbSchema: true

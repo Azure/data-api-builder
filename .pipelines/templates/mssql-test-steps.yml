@@ -82,10 +82,27 @@ steps:
     inputs:
       targetType: 'inline'
       script: |
-        Write-Host "Running DatabaseSchema-MsSql.sql against LocalDB..."
-        sqlcmd -S "(localdb)\MSSQLLocalDB" -i "$(System.DefaultWorkingDirectory)\src\Service.Tests\DatabaseSchema-MsSql.sql"
-        if ($LASTEXITCODE -ne 0) { throw "Schema initialization failed with exit code $LASTEXITCODE" }
-        Write-Host "Database schema initialized successfully."
+        Write-Host "Running DatabaseSchema-MsSql.sql against LocalDB via SqlClient..."
+        $sqlFile = "$(System.DefaultWorkingDirectory)\src\Service.Tests\DatabaseSchema-MsSql.sql"
+        $sql = Get-Content $sqlFile -Raw
+        $connStr = "Server=(localdb)\MSSQLLocalDB;Integrated Security=True;TrustServerCertificate=True;Connection Timeout=30;"
+        $connection = New-Object System.Data.SqlClient.SqlConnection($connStr)
+        try {
+            $connection.Open()
+            Write-Host "Connected to LocalDB successfully."
+            $command = $connection.CreateCommand()
+            $command.CommandText = $sql
+            $command.CommandTimeout = 120
+            $command.ExecuteNonQuery() | Out-Null
+            Write-Host "Database schema initialized successfully."
+        }
+        catch {
+            Write-Error "Schema initialization failed: $_"
+            throw
+        }
+        finally {
+            $connection.Close()
+        }
 
 - task: DotNetCoreCLI@2
   displayName: Build

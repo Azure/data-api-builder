@@ -77,7 +77,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
                 // Only escape columns for properties whose type(derived type) is SourceDefinition.
                 if (IsSourceDefinitionOrDerivedClassProperty(prop) && propVal is SourceDefinition sourceDef)
                 {
-                    EscapeDollaredColumns(sourceDef);
+                    // Check if we need to escape any column names
+                    propVal = GetSourceDefinitionWithEscapedColumns(sourceDef);
                 }
 
                 JsonSerializer.Serialize(writer, propVal, options);
@@ -93,25 +94,126 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         }
 
         /// <summary>
-        /// Escapes column keys that start with '$' to '_$' for serialization.
+        /// Returns the SourceDefinition as-is if no columns start with '$', 
+        /// otherwise returns a copy with escaped column names.
         /// </summary>
-        private static void EscapeDollaredColumns(SourceDefinition sourceDef)
+        private static SourceDefinition GetSourceDefinitionWithEscapedColumns(SourceDefinition sourceDef)
         {
-            if (sourceDef.Columns is null || sourceDef.Columns.Count == 0)
+            // If no columns or no columns starting with '$', return original
+            if (sourceDef.Columns is null || sourceDef.Columns.Count == 0 ||
+                !sourceDef.Columns.Keys.Any(k => k.StartsWith(DOLLAR_CHAR, StringComparison.Ordinal)))
             {
-                return;
+                return sourceDef;
             }
 
-            List<string> keysToEscape = sourceDef.Columns.Keys
-                .Where(k => k.StartsWith(DOLLAR_CHAR, StringComparison.Ordinal))
-                .ToList();
-
-            foreach (string key in keysToEscape)
+            // Create escaped columns dictionary
+            Dictionary<string, ColumnDefinition> escapedColumns = CreateEscapedColumnsDictionary(sourceDef.Columns);
+            
+            // Create new instance based on the actual type
+            return sourceDef switch
             {
-                ColumnDefinition col = sourceDef.Columns[key];
-                sourceDef.Columns.Remove(key);
-                string newKey = ESCAPED_DOLLARCHAR + key[1..];
-                sourceDef.Columns[newKey] = col;
+                StoredProcedureDefinition spDef => CreateStoredProcedureDefinition(spDef, escapedColumns),
+                _ => CreateSourceDefinition(sourceDef, escapedColumns)
+            };
+        }
+
+        /// <summary>
+        /// Creates a dictionary with escaped column keys for serialization.
+        /// </summary>
+        private static Dictionary<string, ColumnDefinition> CreateEscapedColumnsDictionary(IDictionary<string, ColumnDefinition> originalColumns)
+        {
+            Dictionary<string, ColumnDefinition> escapedColumns = new();
+            foreach (KeyValuePair<string, ColumnDefinition> kvp in originalColumns)
+            {
+                if (kvp.Key.StartsWith(DOLLAR_CHAR, StringComparison.Ordinal))
+                {
+                    string escapedKey = ESCAPED_DOLLARCHAR + kvp.Key[1..];
+                    escapedColumns[escapedKey] = kvp.Value;
+                }
+                else
+                {
+                    escapedColumns[kvp.Key] = kvp.Value;
+                }
+            }
+
+            return escapedColumns;
+        }
+
+        /// <summary>
+        /// Creates a new StoredProcedureDefinition with escaped columns and copied properties.
+        /// </summary>
+        private static StoredProcedureDefinition CreateStoredProcedureDefinition(StoredProcedureDefinition original, Dictionary<string, ColumnDefinition> escapedColumns)
+        {
+            StoredProcedureDefinition newSpDef = new()
+            {
+                IsInsertDMLTriggerEnabled = original.IsInsertDMLTriggerEnabled,
+                IsUpdateDMLTriggerEnabled = original.IsUpdateDMLTriggerEnabled,
+                PrimaryKey = original.PrimaryKey
+            };
+                
+            // Add escaped columns
+            AddColumnsToDictionary(newSpDef.Columns, escapedColumns);
+                
+            // Copy parameters
+            AddParametersToDictionary(newSpDef.Parameters, original.Parameters);
+
+            // Copy relationship map if it exists
+            CopyRelationshipMap(newSpDef.SourceEntityRelationshipMap, original.SourceEntityRelationshipMap);
+                
+            return newSpDef;
+        }
+
+        /// <summary>
+        /// Creates a new SourceDefinition with escaped columns and copied properties.
+        /// </summary>
+        private static SourceDefinition CreateSourceDefinition(SourceDefinition original, Dictionary<string, ColumnDefinition> escapedColumns)
+        {
+            SourceDefinition newSourceDef = new()
+            {
+                IsInsertDMLTriggerEnabled = original.IsInsertDMLTriggerEnabled,
+                IsUpdateDMLTriggerEnabled = original.IsUpdateDMLTriggerEnabled,
+                PrimaryKey = original.PrimaryKey
+            };
+                
+            // Add escaped columns
+            AddColumnsToDictionary(newSourceDef.Columns, escapedColumns);
+
+            // Copy relationship map if it exists
+            CopyRelationshipMap(newSourceDef.SourceEntityRelationshipMap, original.SourceEntityRelationshipMap);
+                
+            return newSourceDef;
+        }
+
+        /// <summary>
+        /// Helper method to add columns to a dictionary.
+        /// </summary>
+        private static void AddColumnsToDictionary(IDictionary<string, ColumnDefinition> target, Dictionary<string, ColumnDefinition> source)
+        {
+            foreach (KeyValuePair<string, ColumnDefinition> kvp in source)
+            {
+                target.Add(kvp.Key, kvp.Value);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to add parameters to a dictionary.
+        /// </summary>
+        private static void AddParametersToDictionary(IDictionary<string, ParameterDefinition> target, IDictionary<string, ParameterDefinition> source)
+        {
+            foreach (KeyValuePair<string, ParameterDefinition> kvp in source)
+            {
+                target.Add(kvp.Key, kvp.Value);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to copy relationship map between SourceDefinition instances.
+        /// </summary>
+        private static void CopyRelationshipMap(IDictionary<string, RelationshipMetadata> target, IDictionary<string, RelationshipMetadata> source)
+        {
+            foreach (KeyValuePair<string, RelationshipMetadata> kvp in source)
+            {
+                target.Add(kvp.Key, kvp.Value);
             }
         }
 

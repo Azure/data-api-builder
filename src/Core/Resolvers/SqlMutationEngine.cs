@@ -542,86 +542,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 try
                 {
-                    if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
+                    // When an upsert has no primary key values, it degenerates to a pure INSERT.
+                    // Skip the upsert path and fall through to the shared insert/update handling
+                    // so the mutation engine generates a correct INSERT statement instead of an
+                    // UPDATE with an empty WHERE clause (WHERE 1 = 1) that would match every row.
+                    bool isKeylessUpsert = (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
+                        && context.PrimaryKeyValuePairs.Count == 0;
+
+                    if (!isKeylessUpsert && (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental))
                     {
-                        // When no primary key values are provided (empty PrimaryKeyValuePairs),
-                        // there is no row to look up for update. The upsert degenerates to a
-                        // pure INSERT - execute it via the insert path so the mutation engine
-                        // generates a correct INSERT statement instead of an UPDATE with an
-                        // empty WHERE clause (WHERE 1 = 1) that would match every row.
-                        if (context.PrimaryKeyValuePairs.Count == 0)
-                        {
-                            DbResultSetRow? insertResultRow = null;
-
-                            try
-                            {
-                                using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
-                                {
-                                    insertResultRow =
-                                        await PerformMutationOperation(
-                                            entityName: context.EntityName,
-                                            operationType: EntityActionOperation.Insert,
-                                            parameters: parameters,
-                                            sqlMetadataProvider: sqlMetadataProvider);
-
-                                    if (insertResultRow is null)
-                                    {
-                                        throw new DataApiBuilderException(
-                                            message: "An unexpected error occurred while trying to execute the query.",
-                                            statusCode: HttpStatusCode.InternalServerError,
-                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                                    }
-
-                                    if (insertResultRow.Columns.Count == 0)
-                                    {
-                                        throw new DataApiBuilderException(
-                                            message: "Could not insert row with given values.",
-                                            statusCode: HttpStatusCode.Forbidden,
-                                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
-                                    }
-
-                                    if (isDatabasePolicyDefinedForReadAction)
-                                    {
-                                        FindRequestContext findRequestContext = ConstructFindRequestContext(context, insertResultRow, roleName, sqlMetadataProvider);
-                                        IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
-                                        selectOperationResponse = await queryEngine.ExecuteAsync(findRequestContext);
-                                    }
-
-                                    transactionScope.Complete();
-                                }
-                            }
-                            catch (TransactionException)
-                            {
-                                throw _dabExceptionWithTransactionErrorMessage;
-                            }
-
-                            if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
-                            {
-                                IEnumerable<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
-                                foreach (string columnInResponse in insertResultRow.Columns.Keys)
-                                {
-                                    if (!allowedExposedColumns.Contains(columnInResponse))
-                                    {
-                                        insertResultRow.Columns.Remove(columnInResponse);
-                                    }
-                                }
-                            }
-
-                            string pkRouteForLocationHeader = isReadPermissionConfiguredForRole
-                                ? SqlResponseHelpers.ConstructPrimaryKeyRoute(context, insertResultRow.Columns, sqlMetadataProvider)
-                                : string.Empty;
-
-                            return SqlResponseHelpers.ConstructCreatedResultResponse(
-                                insertResultRow.Columns,
-                                selectOperationResponse,
-                                pkRouteForLocationHeader,
-                                isReadPermissionConfiguredForRole,
-                                isDatabasePolicyDefinedForReadAction,
-                                context.OperationType,
-                                GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()),
-                                GetHttpContext());
-                        }
-
                         DbResultSet? upsertOperationResult;
                         DbResultSetRow upsertOperationResultSetRow;
 
@@ -723,7 +652,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else
                     {
-                        // This code block gets executed when the operation type is one among Insert, Update or UpdateIncremental.
+                        // This code block handles Insert, Update, UpdateIncremental,
+                        // and keyless upsert (which degenerates to Insert).
+                        EntityActionOperation effectiveOperationType = isKeylessUpsert
+                            ? EntityActionOperation.Insert
+                            : context.OperationType;
+
                         DbResultSetRow? mutationResultRow = null;
 
                         try
@@ -734,13 +668,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 mutationResultRow =
                                         await PerformMutationOperation(
                                             entityName: context.EntityName,
-                                            operationType: context.OperationType,
+                                            operationType: effectiveOperationType,
                                             parameters: parameters,
                                             sqlMetadataProvider: sqlMetadataProvider);
 
                                 if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
                                 {
-                                    if (context.OperationType is EntityActionOperation.Insert)
+                                    if (effectiveOperationType is EntityActionOperation.Insert)
                                     {
                                         if (mutationResultRow is null)
                                         {
@@ -827,15 +761,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         string primaryKeyRouteForLocationHeader = isReadPermissionConfiguredForRole ? SqlResponseHelpers.ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider)
                                                                                                     : string.Empty;
 
-                        if (context.OperationType is EntityActionOperation.Insert)
+                        if (effectiveOperationType is EntityActionOperation.Insert)
                         {
                             // Location Header is made up of the Base URL of the request and the primary key of the item created.
                             // For POST requests, the primary key info would not be available in the URL and needs to be appended. So, the primary key of the newly created item
                             // which is stored in the primaryKeyRoute is used to construct the Location Header.
+                            // Note: context.OperationType (not effectiveOperationType) is passed intentionally so that
+                            // ConstructCreatedResultResponse can distinguish a keyless upsert from a true Insert when
+                            // deciding whether to populate the Location header.
                             return SqlResponseHelpers.ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
                         }
 
-                        if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
+                        if (effectiveOperationType is EntityActionOperation.Update || effectiveOperationType is EntityActionOperation.UpdateIncremental)
                         {
                             return SqlResponseHelpers.ConstructOkMutationResponse(mutationResultRow!.Columns, selectOperationResponse, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
                         }

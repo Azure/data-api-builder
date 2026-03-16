@@ -542,10 +542,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 try
                 {
-                    // When an upsert has no primary key values, it degenerates to a pure INSERT.
-                    // Skip the upsert path and fall through to the shared insert/update handling
-                    // so the mutation engine generates a correct INSERT statement instead of an
-                    // UPDATE with an empty WHERE clause (WHERE 1 = 1) that would match every row.
+                    // When the URL path has no primary key route but the request body contains
+                    // ALL PK columns, promote those values into PrimaryKeyValuePairs so the upsert
+                    // path can build a proper UPDATE ... WHERE pk = value (with INSERT fallback)
+                    // instead of blindly inserting and failing on a PK violation.
+                    // Every PK column must be present — including auto-generated ones — because
+                    // a partial composite key cannot uniquely identify a row for UPDATE.
+                    if ((context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
+                        && context.PrimaryKeyValuePairs.Count == 0)
+                    {
+                        SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(context.EntityName);
+                        bool allPKsInBody = true;
+
+                        foreach (string pk in sourceDefinition.PrimaryKey)
+                        {
+                            if (sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, pk, out string? exposedName)
+                                && context.FieldValuePairsInBody.ContainsKey(exposedName!))
+                            {
+                                continue;
+                            }
+
+                            allPKsInBody = false;
+                            break;
+                        }
+
+                        if (allPKsInBody)
+                        {
+                            // Populate PrimaryKeyValuePairs from the body so the upsert path
+                            // generates an UPDATE with the correct WHERE clause.
+                            foreach (string pk in sourceDefinition.PrimaryKey)
+                            {
+                                if (sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, pk, out string? exposedName)
+                                    && context.FieldValuePairsInBody.TryGetValue(exposedName!, out object? value))
+                                {
+                                    context.PrimaryKeyValuePairs[exposedName!] = value!;
+                                }
+                            }
+                        }
+                    }
+
+                    // When an upsert still has no primary key values after checking the body,
+                    // it degenerates to a pure INSERT. Fall through to the shared insert/update
+                    // handling so the mutation engine generates a correct INSERT statement instead
+                    // of an UPDATE with an empty WHERE clause (WHERE 1 = 1) that would match every row.
                     bool isKeylessUpsert = (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
                         && context.PrimaryKeyValuePairs.Count == 0;
 

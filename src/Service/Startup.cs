@@ -707,7 +707,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Set LogLevel based on RuntimeConfig
                 DynamicLogLevelProvider logLevelProvider = app.ApplicationServices.GetRequiredService<DynamicLogLevelProvider>();
-                logLevelProvider.UpdateFromRuntimeConfig(runtimeConfig);
+                logLevelProvider.UpdateFromRuntimeConfig(runtimeConfig, typeof(Startup).FullName);
                 FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
 
                 //Flush all logs that were buffered before setting the LogLevel

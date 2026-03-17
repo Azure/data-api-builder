@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, issue_number
-                        FROM " + _integration_NonAutoGenPK_TableName + @"
+                        FROM " + "foo." + _integration_NonAutoGenPK_TableName + @"
                         WHERE id = 1
                             AND title = 'Updated Vogue' AND issue_number = 1234
                     ) AS subq
@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, issue_number
-                        FROM " + _integration_NonAutoGenPK_TableName + @"
+                        FROM " + "foo." + _integration_NonAutoGenPK_TableName + @"
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                             AND title = 'Brand New Magazine'
                     ) AS subq

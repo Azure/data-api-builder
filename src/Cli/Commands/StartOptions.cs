@@ -34,7 +34,7 @@ namespace Cli.Commands
         [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specifies logging level as informational.")]
         public bool Verbose { get; }
 
-        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = LOGLEVEL_HELPTEXT)]
+        [Option("loglevel", SetName = "loglevel", Required = false, HelpText = LOGLEVEL_HELPTEXT)]
         public LogLevel? LogLevel { get; }
 
         [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]

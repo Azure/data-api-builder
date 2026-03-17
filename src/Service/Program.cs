@@ -133,9 +133,9 @@ namespace Azure.DataApiBuilder.Service
         /// the out param. For log level out of range we throw an exception.
         /// </summary>
         /// <param name="args">array that may contain log level information.</param>
-        /// <param name="isLogLevelOverridenByCli">sets if log level is found in the args.</param>
+        /// <param name="isLogLevelOverriddenByCli">sets if log level is found in the args.</param>
         /// <returns>Appropriate log level.</returns>
-        private static LogLevel GetLogLevelFromCommandLineArgs(string[] args, out bool isLogLevelOverridenByCli)
+        private static LogLevel GetLogLevelFromCommandLineArgs(string[] args, out bool isLogLevelOverriddenByCli)
         {
             Command cmd = new(name: "start");
             Option<LogLevel> logLevelOption = new(name: "--LogLevel");
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service
             ParseResult result = GetParseResult(cmd, args);
             bool matchedToken = result.Tokens.Count - result.UnmatchedTokens.Count - result.UnparsedTokens.Count > 1;
             LogLevel logLevel = matchedToken ? result.GetValueForOption(logLevelOption) : LogLevel.Error;
-            isLogLevelOverridenByCli = matchedToken;
+            isLogLevelOverriddenByCli = matchedToken;
 
             if (logLevel is > LogLevel.None or < LogLevel.Trace)
             {

@@ -1153,7 +1153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         [TestMethod]
         public virtual async Task PutWithNoPrimaryKeyRouteAndPartialCompositeKeyInBodyTest()
         {
-            // Body only contains categoryid but not pieceid � both are required
+            // Body only contains categoryid but not pieceid - both are required
             // since neither is auto-generated.
             string requestBody = @"
             {

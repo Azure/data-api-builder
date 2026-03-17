@@ -269,6 +269,11 @@ public record RuntimeConfig
         return false;
     }
 
+    public bool RemoveGeneratedAutoentityNameFromDataSourceName(string entityName)
+    {
+        return _entityNameToDataSourceName.Remove(entityName);
+    }
+
     /// <summary>
     /// Constructor for runtimeConfig.
     /// To be used when setting up from cli json scenario.

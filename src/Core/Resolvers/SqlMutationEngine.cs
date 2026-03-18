@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Data;
 using System.Data.Common;
 using System.Net;
 using System.Text.Json;

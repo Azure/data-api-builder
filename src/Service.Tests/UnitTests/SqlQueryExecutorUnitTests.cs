@@ -628,7 +628,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Makes sure the stream logic handles cells with empty strings correctly.
         /// </summary>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
-        public void ValidateStreamingLogicForEmptyCells()
+        public void ValidateStreamingLogicForEmptyCellsAsync()
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             FileSystem fileSystem = new();

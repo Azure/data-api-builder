@@ -95,9 +95,7 @@ public record RuntimeConfig
     /// <returns>True if the authentication provider is enabled for Static Web Apps, otherwise false.</returns>
     [JsonIgnore]
     public bool IsStaticWebAppsIdentityProvider =>
-        Runtime is null ||
-        Runtime.Host is null ||
-        Runtime.Host.Authentication is null ||
+        Runtime?.Host?.Authentication is not null &&
         EasyAuthType.StaticWebApps.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
@@ -106,10 +104,19 @@ public record RuntimeConfig
     /// <returns>True if the authentication provider is enabled for App Service, otherwise false.</returns>
     [JsonIgnore]
     public bool IsAppServiceIdentityProvider =>
+        Runtime?.Host?.Authentication is not null &&
+        EasyAuthType.AppService.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// A shorthand method to determine whether Unauthenticated is configured for the current authentication provider.
+    /// </summary>
+    /// <returns>True if the authentication provider is Unauthenticated (the default), otherwise false.</returns>
+    [JsonIgnore]
+    public bool IsUnauthenticatedIdentityProvider =>
         Runtime is null ||
         Runtime.Host is null ||
         Runtime.Host.Authentication is null ||
-        EasyAuthType.AppService.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
+        AuthenticationOptions.UNAUTHENTICATED_AUTHENTICATION.Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The path at which Rest APIs are available
@@ -767,7 +774,6 @@ public record RuntimeConfig
     /// </summary>
     public LogLevel GetConfiguredLogLevel(string loggerFilter = "")
     {
-
         if (!IsLogLevelNull())
         {
             int max = 0;
@@ -788,7 +794,8 @@ public record RuntimeConfig
                 return (LogLevel)value;
             }
 
-            Runtime!.Telemetry!.LoggerLevel!.TryGetValue("default", out value);
+            value = Runtime!.Telemetry!.LoggerLevel!
+                .SingleOrDefault(kvp => kvp.Key.Equals("default", StringComparison.OrdinalIgnoreCase)).Value;
             if (value is not null)
             {
                 return (LogLevel)value;

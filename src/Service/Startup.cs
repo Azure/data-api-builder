@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthentication;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -85,6 +86,7 @@ namespace Azure.DataApiBuilder.Service
         public static AzureLogAnalyticsOptions AzureLogAnalyticsOptions = new();
         public static FileSinkOptions FileSinkOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
+        private StartupLogBuffer _logBuffer = new();
         private readonly HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
         private ILogger<Startup> _logger = logger;
@@ -104,13 +106,15 @@ namespace Azure.DataApiBuilder.Service
         public void ConfigureServices(IServiceCollection services)
         {
             Startup.AddValidFilters();
+            services.AddSingleton(_logBuffer);
+            services.AddSingleton(Program.LogLevelProvider);
             services.AddSingleton(_hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
                 FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
                 null);
             IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, _hotReloadEventHandler, configFileName, connectionString);
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, _hotReloadEventHandler, configFileName, connectionString, logBuffer: _logBuffer);
             RuntimeConfigProvider configProvider = new(configLoader);
             _configProvider = configProvider;
 
@@ -229,6 +233,13 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<CosmosClientProvider>();
             services.AddHealthChecks()
                 .AddCheck<BasicHealthCheck>(nameof(BasicHealthCheck));
+
+            services.AddSingleton<ILogger<FileSystemRuntimeConfigLoader>>(implementationFactory: (serviceProvider) =>
+            {
+                LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(FileSystemRuntimeConfigLoader).FullName, _configProvider, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelInit);
+                return loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
+            });
 
             services.AddSingleton<ILogger<SqlQueryEngine>>(implementationFactory: (serviceProvider) =>
             {
@@ -521,7 +532,7 @@ namespace Azure.DataApiBuilder.Service
 
             if (ShouldUseEntraAuthForRedis(options))
             {
-                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
+                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential()); // CodeQL [SM05137] DefaultAzureCredential will use Managed Identity if available or fallback to default.
             }
 
             return await ConnectionMultiplexer.ConnectAsync(options);
@@ -694,7 +705,16 @@ namespace Azure.DataApiBuilder.Service
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                // Configure Application Insights Telemetry
+                // Set LogLevel based on RuntimeConfig
+                DynamicLogLevelProvider logLevelProvider = app.ApplicationServices.GetRequiredService<DynamicLogLevelProvider>();
+                logLevelProvider.UpdateFromRuntimeConfig(runtimeConfig);
+                FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
+
+                //Flush all logs that were buffered before setting the LogLevel
+                configLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
+                configLoader.FlushLogBuffer();
+
+                // Configure Telemetry
                 ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
                 ConfigureOpenTelemetry(runtimeConfig);
                 ConfigureAzureLogAnalytics(runtimeConfig);
@@ -901,7 +921,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
                 HostMode mode = runtimeConfig.Runtime.Host.Mode;
-                if (!authOptions.IsAuthenticationSimulatorEnabled() && !authOptions.IsEasyAuthAuthenticationProvider())
+                if (authOptions.IsJwtConfiguredIdentityProvider())
                 {
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
@@ -937,6 +957,11 @@ namespace Azure.DataApiBuilder.Service
 
                     _logger.LogInformation("Registered EasyAuth scheme: {Scheme}", defaultScheme);
 
+                }
+                else if (authOptions.IsUnauthenticatedAuthenticationProvider())
+                {
+                    services.AddAuthentication(UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                        .AddUnauthenticatedAuthentication();
                 }
                 else if (mode == HostMode.Development && authOptions.IsAuthenticationSimulatorEnabled())
                 {
@@ -979,7 +1004,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddAuthentication()
                     .AddEnvDetectedEasyAuth()
                     .AddJwtBearer()
-                    .AddSimulatorAuthentication();
+                    .AddSimulatorAuthentication()
+                    .AddUnauthenticatedAuthentication();
         }
 
         /// <summary>

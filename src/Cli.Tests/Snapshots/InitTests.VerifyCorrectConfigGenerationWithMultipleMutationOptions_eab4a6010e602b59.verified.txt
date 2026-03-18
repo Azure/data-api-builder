@@ -6,7 +6,7 @@
     Rest: {
       Enabled: true,
       Path: /rest-api,
-      RequestBodyStrict: true
+      RequestBodyStrict: false
     },
     GraphQL: {
       Enabled: true,
@@ -46,7 +46,7 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: AppService
+        Provider: Unauthenticated
       }
     },
     Telemetry: {

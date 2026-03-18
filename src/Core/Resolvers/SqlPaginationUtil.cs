@@ -751,12 +751,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Extracts and request scheme from "X-Forwarded-Proto" or falls back to the request scheme.
+        /// Extracts the request scheme from "X-Forwarded-Proto" or falls back to the request scheme.
+        /// Invalid forwarded values are ignored.
         /// </summary>
         /// <param name="req">The HTTP request.</param>
         /// <returns>The scheme string ("http" or "https").</returns>
-        /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid scheme.</exception>
-        private static string ResolveRequestScheme(HttpRequest req)
+        internal static string ResolveRequestScheme(HttpRequest req)
         {
             string? rawScheme = req.Headers["X-Forwarded-Proto"].FirstOrDefault();
             string? normalized = rawScheme?.Trim().ToLowerInvariant();
@@ -776,11 +776,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Extracts the request host from "X-Forwarded-Host" or falls back to the request host.
+        /// Invalid forwarded values are ignored.
         /// </summary>
         /// <param name="req">The HTTP request.</param>
         /// <returns>The host string.</returns>
-        /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid host.</exception>
-        private static string ResolveRequestHost(HttpRequest req)
+        internal static string ResolveRequestHost(HttpRequest req)
         {
             string? rawHost = req.Headers["X-Forwarded-Host"].FirstOrDefault();
             string? trimmed = rawHost?.Trim();

@@ -1088,10 +1088,6 @@ public class EndToEndTests
             output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);
             StringAssert.Contains(output, $"Setting default minimum LogLevel:", StringComparison.Ordinal);
-
-            output = await process.StandardOutput.ReadLineAsync();
-            Assert.IsNotNull(output);
-            StringAssert.Contains(output, "Starting the runtime engine...", StringComparison.Ordinal);
         }
         else
         {
@@ -1122,12 +1118,15 @@ public class EndToEndTests
     [DataRow("AppService", true)]
     [DataRow("AzureAD", true)]
     [DataRow("EntraID", true)]
+    [DataRow("Unauthenticated", true)]
     public void TestBaseRouteIsConfigurableForSWA(string authProvider, bool isExceptionExpected)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
             "--connection-string", SAMPLE_TEST_CONN_STRING, "--auth.provider", authProvider, "--runtime.base-route", "base-route" };
 
-        if (!Enum.TryParse(authProvider, ignoreCase: true, out EasyAuthType _))
+        if (!Enum.TryParse(authProvider, ignoreCase: true, out EasyAuthType _) &&
+            !authProvider.Equals("Unauthenticated", StringComparison.OrdinalIgnoreCase) &&
+            !authProvider.Equals("Simulator", StringComparison.OrdinalIgnoreCase))
         {
             string[] audIssuers = { "--auth.audience", "aud-xxx", "--auth.issuer", "issuer-xxx" };
             initArgs = initArgs.Concat(audIssuers).ToArray();
@@ -1224,7 +1223,7 @@ public class EndToEndTests
     [DataTestMethod]
     [DataRow(true, false, DisplayName = "dab init command specifies --rest.request-body-strict as false - REST request body allows extraneous fields.")]
     [DataRow(true, true, DisplayName = "dab init command specifies --rest.request-body-strict as true - REST request body doesn't allow extraneous fields.")]
-    [DataRow(false, true, DisplayName = "dab init command does not include --rest.request-body-strict flag. The default behavior is followed - REST request body doesn't allow extraneous fields.")]
+    [DataRow(false, false, DisplayName = "dab init command does not include --rest.request-body-strict flag. The default behavior is followed - REST request body allows extraneous fields.")]
     public void TestRestRequestBodyStrictMode(bool includeRestRequestBodyStrictFlag, bool isRequestBodyStrict)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",

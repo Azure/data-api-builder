@@ -1142,20 +1142,28 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates that GetSessionParamsQuery does NOT include correlation values
-        /// when no Activity is present.
+        /// Validates that GetSessionParamsQuery does NOT include trace_id and span_id
+        /// when no Activity is present, but still includes other OBO observability values.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public void GetSessionParamsQuery_ExcludesCorrelationIds_WhenNoActivity()
         {
             // Arrange
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+
+            // Create runtime config with user-delegated-auth enabled
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
                 DataSource: new DataSource(
                     DatabaseType: DatabaseType.MSSQL,
                     ConnectionString: "Server=localhost;Database=TestDb;",
-                    Options: new Dictionary<string, object> { { "set-session-context", true } }),
+                    Options: new Dictionary<string, object> { { "set-session-context", true } })
+                {
+                    UserDelegatedAuth = new UserDelegatedAuthOptions(
+                        Enabled: true,
+                        Provider: "EntraId",
+                        DatabaseAudience: "https://database.windows.net/")
+                },
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -1178,17 +1186,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 queryExecutorLogger.Object,
                 httpContextAccessor.Object);
 
-            // Create a mock HttpContext with a simple authenticated user
+            // Create a mock HttpContext with OBO-specific claims
             Mock<HttpContext> mockContext = new();
             Mock<HttpRequest> mockRequest = new();
             Mock<IHeaderDictionary> mockHeaders = new();
 
-            mockHeaders.Setup(h => h["Authorization"]).Returns(string.Empty);
+            mockHeaders.Setup(h => h["Authorization"]).Returns("Bearer test-token");
             mockRequest.Setup(r => r.Headers).Returns(mockHeaders.Object);
             mockContext.Setup(c => c.Request).Returns(mockRequest.Object);
 
             var identity = new System.Security.Claims.ClaimsIdentity(
-                new[] { new System.Security.Claims.Claim("sub", "test-user") },
+                new[]
+                {
+                    new System.Security.Claims.Claim("oid", "44444444-4444-4444-4444-444444444444"),
+                    new System.Security.Claims.Claim("tid", "55555555-5555-5555-5555-555555555555"),
+                    new System.Security.Claims.Claim("sub", "test-user-no-activity")
+                },
                 "TestAuth");
             var principal = new System.Security.Claims.ClaimsPrincipal(identity);
             mockContext.Setup(c => c.User).Returns(principal);
@@ -1196,14 +1209,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, DbConnectionParam> parameters = new();
 
             // Act - Ensure no Activity is present (Activity.Current should be null)
-            // We don't start any activity here
+            // We don't start any activity here, so trace_id and span_id should NOT be included
             string sessionParamsQuery = msSqlQueryExecutor.GetSessionParamsQuery(
                 mockContext.Object,
                 parameters,
                 runtimeConfigProvider.GetConfig().DefaultDataSourceName);
 
             // Assert
-            Assert.IsFalse(string.IsNullOrEmpty(sessionParamsQuery), "Session params query should not be empty (has user claims)");
+            Assert.IsFalse(string.IsNullOrEmpty(sessionParamsQuery), "Session params query should not be empty");
 
             // Verify trace_id and span_id are NOT included when no Activity
             Assert.IsFalse(
@@ -1212,6 +1225,148 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(
                 sessionParamsQuery.Contains("'dab.span_id'"),
                 "Session params query should NOT include dab.span_id when no Activity present");
+
+            // Verify other OBO observability values ARE still included (they don't depend on Activity)
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.auth_type'"),
+                "Session params query should include dab.auth_type even without Activity");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.user_id'"),
+                "Session params query should include dab.user_id even without Activity");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.tenant_id'"),
+                "Session params query should include dab.tenant_id even without Activity");
+        }
+
+        /// <summary>
+        /// Validates that GetSessionParamsQuery includes OBO observability values
+        /// even when set-session-context is FALSE.
+        /// OBO observability is independent of the set-session-context setting.
+        /// This addresses the concern that OBO session context should be set regardless
+        /// of whether user claims are forwarded via set-session-context.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void GetSessionParamsQuery_IncludesOboValues_WhenOboEnabledButSessionContextDisabled()
+        {
+            // Arrange
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+
+            // Create runtime config with user-delegated-auth enabled but set-session-context DISABLED
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(
+                    DatabaseType: DatabaseType.MSSQL,
+                    ConnectionString: "Server=localhost;Database=TestDb;",
+                    Options: new Dictionary<string, object> { { "set-session-context", false } })  // Explicitly disabled
+                {
+                    UserDelegatedAuth = new UserDelegatedAuthOptions(
+                        Enabled: true,
+                        Provider: "EntraId",
+                        DatabaseAudience: "https://database.windows.net/")
+                },
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null)),
+                Entities: new(new Dictionary<string, Entity>()));
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(runtimeConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+
+            MsSqlQueryExecutor msSqlQueryExecutor = new(
+                runtimeConfigProvider,
+                dbExceptionParser,
+                queryExecutorLogger.Object,
+                httpContextAccessor.Object);
+
+            // Create a mock HttpContext with OBO-specific claims (oid, tid, sub)
+            Mock<HttpContext> mockContext = new();
+            Mock<HttpRequest> mockRequest = new();
+            Mock<IHeaderDictionary> mockHeaders = new();
+
+            mockHeaders.Setup(h => h["Authorization"]).Returns("Bearer test-token");
+            mockRequest.Setup(r => r.Headers).Returns(mockHeaders.Object);
+            mockContext.Setup(c => c.Request).Returns(mockRequest.Object);
+
+            var identity = new System.Security.Claims.ClaimsIdentity(
+                new[]
+                {
+                    new System.Security.Claims.Claim("oid", "22222222-2222-2222-2222-222222222222"),
+                    new System.Security.Claims.Claim("tid", "33333333-3333-3333-3333-333333333333"),
+                    new System.Security.Claims.Claim("sub", "test-subject-obo"),
+                    new System.Security.Claims.Claim("roles", "admin")  // User claim that should NOT be included
+                },
+                "TestAuth");
+            var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+            mockContext.Setup(c => c.User).Returns(principal);
+
+            Dictionary<string, DbConnectionParam> parameters = new();
+
+            // Act - Create an Activity to simulate OpenTelemetry tracing
+            using ActivitySource activitySource = new("TestActivitySource");
+            using ActivityListener listener = new()
+            {
+                ShouldListenTo = _ => true,
+                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+            };
+            ActivitySource.AddActivityListener(listener);
+
+            using Activity testActivity = activitySource.StartActivity("TestOperation")!;
+            Assert.IsNotNull(testActivity, "Activity should be created for test");
+
+            string sessionParamsQuery = msSqlQueryExecutor.GetSessionParamsQuery(
+                mockContext.Object,
+                parameters,
+                runtimeConfigProvider.GetConfig().DefaultDataSourceName);
+
+            // Assert - OBO values should be present even with set-session-context=false
+            Assert.IsFalse(string.IsNullOrEmpty(sessionParamsQuery),
+                "Session params query should not be empty when OBO is enabled, even if set-session-context is false");
+
+            // Verify OBO-specific observability values ARE included
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.auth_type'"),
+                "Session params query should include dab.auth_type even when set-session-context is false");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.user_id'"),
+                "Session params query should include dab.user_id even when set-session-context is false");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.tenant_id'"),
+                "Session params query should include dab.tenant_id even when set-session-context is false");
+
+            // Verify OpenTelemetry correlation values ARE included (when OBO is enabled)
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.trace_id'"),
+                "Session params query should include dab.trace_id when OBO is enabled");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.span_id'"),
+                "Session params query should include dab.span_id when OBO is enabled");
+
+            // Verify the OBO parameter values are correct
+            Assert.IsTrue(
+                parameters.Values.Any(p => p.Value?.ToString() == "obo"),
+                "Parameters should contain auth_type value: obo");
+            Assert.IsTrue(
+                parameters.Values.Any(p => p.Value?.ToString() == "22222222-2222-2222-2222-222222222222"),
+                "Parameters should contain user_id value (oid)");
+            Assert.IsTrue(
+                parameters.Values.Any(p => p.Value?.ToString() == "33333333-3333-3333-3333-333333333333"),
+                "Parameters should contain tenant_id value");
+
+            // Verify that user claims (like 'roles') are NOT forwarded when set-session-context=false
+            Assert.IsFalse(
+                sessionParamsQuery.Contains("'roles'"),
+                "User claims should NOT be included when set-session-context is false");
+            Assert.IsFalse(
+                parameters.Values.Any(p => p.Value?.ToString() == "admin"),
+                "User claim values should NOT be in parameters when set-session-context is false");
         }
 
         [TestCleanup]

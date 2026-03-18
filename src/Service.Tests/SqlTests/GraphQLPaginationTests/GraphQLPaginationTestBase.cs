@@ -175,7 +175,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 ""hasNextPage"": false
             }";
 
-            // Note: The max page size is 21 for MsSql and 20 for all other data sources, so when using -1
             // this resultset represents all books in the db.
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
 

@@ -6,6 +6,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Transactions;
+using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -552,29 +553,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(context.EntityName);
                         bool allPKsInBody = true;
+                        List<string> pkExposedNames = new();
 
                         foreach (string pk in sourceDefinition.PrimaryKey)
                         {
-                            if (sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, pk, out string? exposedName)
-                                && context.FieldValuePairsInBody.ContainsKey(exposedName!))
+                            if (!sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, pk, out string? exposedName))
                             {
-                                continue;
+                                allPKsInBody = false;
+                                break;
                             }
 
-                            allPKsInBody = false;
-                            break;
+                            if (!context.FieldValuePairsInBody.ContainsKey(exposedName))
+                            {
+                                allPKsInBody = false;
+                                break;
+                            }
+
+                            pkExposedNames.Add(exposedName);
                         }
 
                         if (allPKsInBody)
                         {
                             // Populate PrimaryKeyValuePairs from the body so the upsert path
                             // generates an UPDATE with the correct WHERE clause.
-                            foreach (string pk in sourceDefinition.PrimaryKey)
+                            foreach (string exposedName in pkExposedNames)
                             {
-                                if (sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, pk, out string? exposedName)
-                                    && context.FieldValuePairsInBody.TryGetValue(exposedName!, out object? value))
+                                if (context.FieldValuePairsInBody.TryGetValue(exposedName, out object? value))
                                 {
-                                    context.PrimaryKeyValuePairs[exposedName!] = value!;
+                                    context.PrimaryKeyValuePairs[exposedName] = value!;
                                 }
                             }
                         }

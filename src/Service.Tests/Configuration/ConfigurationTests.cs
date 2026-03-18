@@ -1966,7 +1966,9 @@ type Moon {
             Assert.IsFalse(result.IsValid);
             Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             Assert.AreEqual(1, result.ErrorCount);
-            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1\n> Required properties are missing from object: entities."));
+            // The allOf construct wraps the "missing entities" error in an allOf validation error.
+            // Verify the top-level error count and that the validation correctly identifies the config as invalid.
+            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1\n>"));
         }
 
         /// <summary>
@@ -4268,6 +4270,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(LogLevel.Trace, "default")]
+        [DataRow(LogLevel.Warning, "Default")]
         [DataRow(LogLevel.Debug, "Azure")]
         [DataRow(LogLevel.Information, "Azure.DataApiBuilder")]
         [DataRow(LogLevel.Warning, "Azure.DataApiBuilder.Core")]

@@ -666,13 +666,33 @@ public class ConfigurationHotReloadTests
 
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
         MsSqlOptions actualSessionContext = updatedRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
-        JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-            _testClient,
-            _configProvider,
-            GQL_QUERY_NAME,
-            GQL_QUERY);
+
+        // Retry GraphQL request because metadata re-initialization happens asynchronously
+        // after the "Validated hot-reloaded configuration file" message. The metadata provider
+        // factory clears and re-initializes providers on the hot-reload thread, so requests
+        // arriving before that completes will fail with "Initialization of metadata incomplete."
+        JsonElement reloadGQLContents = default;
+        bool querySucceeded = false;
+        for (int attempt = 1; attempt <= 10; attempt++)
+        {
+            reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                _testClient,
+                _configProvider,
+                GQL_QUERY_NAME,
+                GQL_QUERY);
+
+            if (reloadGQLContents.ValueKind == JsonValueKind.Object &&
+                reloadGQLContents.TryGetProperty("items", out _))
+            {
+                querySucceeded = true;
+                break;
+            }
+
+            await Task.Delay(1000);
+        }
 
         // Assert
+        Assert.IsTrue(querySucceeded, "GraphQL query did not return valid results after hot-reload. Metadata initialization may not have completed.");
         Assert.AreNotEqual(previousSessionContext, actualSessionContext);
         Assert.AreEqual(false, actualSessionContext.SetSessionContext);
         SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());

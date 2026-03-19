@@ -10,7 +10,7 @@
     Rest: {
       Enabled: false,
       Path: /api,
-      RequestBodyStrict: true
+      RequestBodyStrict: false
     },
     GraphQL: {
       Enabled: true,
@@ -28,13 +28,17 @@
         UpdateRecord: true,
         DeleteRecord: true,
         ExecuteEntity: true,
+        AggregateRecords: true,
         UserProvidedAllTools: false,
         UserProvidedDescribeEntities: false,
         UserProvidedCreateRecord: false,
         UserProvidedReadRecords: false,
         UserProvidedUpdateRecord: false,
         UserProvidedDeleteRecord: false,
-        UserProvidedExecuteEntity: false
+        UserProvidedExecuteEntity: false,
+        UserProvidedAggregateRecords: false,
+        UserProvidedAggregateRecordsQueryTimeout: false,
+        EffectiveAggregateRecordsQueryTimeoutSeconds: 30
       }
     },
     Host: {
@@ -46,6 +50,14 @@
       },
       Authentication: {
         Provider: AppService
+      }
+    },
+    Telemetry: {
+      OpenTelemetry: {
+        Enabled: true,
+        Endpoint: @env('OTEL_EXPORTER_OTLP_ENDPOINT'),
+        Headers: @env('OTEL_EXPORTER_OTLP_HEADERS'),
+        ServiceName: @env('OTEL_SERVICE_NAME')
       }
     }
   },

@@ -910,6 +910,17 @@ public class RuntimeConfigValidator : IConfigValidator
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
+
+        // Validate aggregate-records query-timeout if provided
+        if (runtimeConfig.Runtime.Mcp.DmlTools?.AggregateRecordsQueryTimeout is not null &&
+            (runtimeConfig.Runtime.Mcp.DmlTools.AggregateRecordsQueryTimeout < 1 || runtimeConfig.Runtime.Mcp.DmlTools.AggregateRecordsQueryTimeout > DmlToolsConfig.MAX_QUERY_TIMEOUT_SECONDS))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"Aggregate-records query-timeout must be between 1 and {DmlToolsConfig.MAX_QUERY_TIMEOUT_SECONDS} seconds. " +
+                         $"Provided value: {runtimeConfig.Runtime.Mcp.DmlTools.AggregateRecordsQueryTimeout}.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
     }
 
     private void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)
@@ -1574,7 +1585,7 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 for (int j = 0; j < loggerSub.Length; j++)
                 {
-                    if (!loggerSub[j].Equals(validFiltersSub[j]))
+                    if (!loggerSub[j].Equals(validFiltersSub[j], StringComparison.OrdinalIgnoreCase))
                     {
                         isValid = false;
                         break;

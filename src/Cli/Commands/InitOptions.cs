@@ -42,6 +42,7 @@ namespace Cli.Commands
             CliBool mcpEnabled = CliBool.None,
             CliBool restRequestBodyStrict = CliBool.None,
             CliBool multipleCreateOperationEnabled = CliBool.None,
+            int? mcpAggregateRecordsQueryTimeout = null,
             string? config = null)
             : base(config)
         {
@@ -68,6 +69,7 @@ namespace Cli.Commands
             McpEnabled = mcpEnabled;
             RestRequestBodyStrict = restRequestBodyStrict;
             MultipleCreateOperationEnabled = multipleCreateOperationEnabled;
+            McpAggregateRecordsQueryTimeout = mcpAggregateRecordsQueryTimeout;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql, dwsql")]
@@ -94,7 +96,7 @@ namespace Cli.Commands
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
         public IEnumerable<string>? CorsOrigin { get; }
 
-        [Option("auth.provider", Default = "AppService", Required = false, HelpText = "Specify the Identity Provider.")]
+        [Option("auth.provider", Default = "Unauthenticated", Required = false, HelpText = "Specify the Identity Provider.")]
         public string AuthenticationProvider { get; }
 
         [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
@@ -133,13 +135,15 @@ namespace Cli.Commands
         [Option("mcp.enabled", Required = false, HelpText = "(Default: true) Enables MCP endpoint for all entities. Supported values: true, false.")]
         public CliBool McpEnabled { get; }
 
-        // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
-        // included in the init command.
-        [Option("rest.request-body-strict", Required = false, HelpText = "(Default: true) Allow extraneous fields in the request body for REST.")]
+        // When true, DAB rejects extraneous/unmapped fields in the REST request body (strict mode). When false, extraneous fields are allowed and ignored.
+        [Option("rest.request-body-strict", Required = false, HelpText = "(Default: false) When true, rejects extraneous/unmapped fields in the REST request body. When false, allows and ignores them.")]
         public CliBool RestRequestBodyStrict { get; }
 
         [Option("graphql.multiple-create.enabled", Required = false, HelpText = "(Default: false) Enables multiple create operation for GraphQL. Supported values: true, false.")]
         public CliBool MultipleCreateOperationEnabled { get; }
+
+        [Option("mcp.aggregate-records.query-timeout", Required = false, HelpText = "Set the execution timeout in seconds for the aggregate-records MCP tool. Default: 30 (integer). Range: 1-600.")]
+        public int? McpAggregateRecordsQueryTimeout { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

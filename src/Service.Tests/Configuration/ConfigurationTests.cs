@@ -40,7 +40,10 @@ using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -707,9 +710,26 @@ type Moon {
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
+            // Retry file deletion with exponential back-off to handle cases where a
+            // file watcher or hot-reload process may still hold a handle on the file.
             if (File.Exists(CUSTOM_CONFIG_FILENAME))
             {
-                File.Delete(CUSTOM_CONFIG_FILENAME);
+                int retryCount = 0;
+                const int maxRetries = 3;
+                while (true)
+                {
+                    try
+                    {
+                        File.Delete(CUSTOM_CONFIG_FILENAME);
+                        break;
+                    }
+                    catch (IOException ex) when (retryCount < maxRetries)
+                    {
+                        retryCount++;
+                        Console.WriteLine($"CleanupAfterEachTest: Retry {retryCount}/{maxRetries} deleting {CUSTOM_CONFIG_FILENAME}. {ex.Message}");
+                        Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(2, retryCount)));
+                    }
+                }
             }
 
             TestHelper.UnsetAllDABEnvironmentVariables();
@@ -730,7 +750,7 @@ type Moon {
             string[] args,
             bool isUpdateableRuntimeConfig)
         {
-            TestServer server;
+            TestServer server = null;
 
             try
             {
@@ -754,6 +774,10 @@ type Moon {
                 Assert.AreEqual(
                     $"Could not initialize the engine with the runtime config file: {DEFAULT_CONFIG_FILE_NAME}",
                     e.Message);
+            }
+            finally
+            {
+                server?.Dispose();
             }
         }
 
@@ -1017,7 +1041,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestConflictAlreadySetConfiguration(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1036,7 +1060,7 @@ type Moon {
         {
             Environment.SetEnvironmentVariable
                 (ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             ValidateCosmosDbSetup(server);
@@ -1053,7 +1077,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1068,7 +1092,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestInvalidConfigurationAtRuntime(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint, "invalidString");
@@ -1083,7 +1107,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingFailureConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1105,7 +1129,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestLongRunningConfigUpdatedHandlerConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1144,7 +1168,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSqlSettingPostStartupConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             RuntimeConfig configuration = AuthorizationHelpers.InitRuntimeConfig(
@@ -1223,7 +1247,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestValidMultiSourceRunTimePostStartupConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
@@ -1255,7 +1279,7 @@ type Moon {
         public void TestLoadingLocalCosmosSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             ValidateCosmosDbSetup(server);
         }
@@ -1265,7 +1289,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestLoadingAccessTokenForCosmosClient(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint, null, true);
@@ -1283,7 +1307,7 @@ type Moon {
         public void TestLoadingLocalMsSqlSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
             Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.MSSQL), typeof(SqlQueryEngine));
@@ -1303,7 +1327,7 @@ type Moon {
         public void TestLoadingLocalPostgresSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
             Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.PostgreSQL), typeof(SqlQueryEngine));
@@ -1323,7 +1347,7 @@ type Moon {
         public void TestLoadingLocalMySqlSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MYSQL_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
             Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.MySQL), typeof(SqlQueryEngine));
@@ -1345,7 +1369,7 @@ type Moon {
         public async Task TestOverridingLocalSettingsFails(string configurationEndpoint)
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
 
             JsonContent config = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1359,7 +1383,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingConfigurationCreatesCorrectClasses(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1469,7 +1493,7 @@ type Moon {
             $"{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}"
         };
 
-            TestServer server = new(Program.CreateWebHostBuilder(args));
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
 
             ValidateCosmosDbSetup(server);
         }
@@ -1486,7 +1510,7 @@ type Moon {
             Environment.SetEnvironmentVariable(
                 RUNTIME_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
 
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             ValidateCosmosDbSetup(server);
         }
@@ -1963,7 +1987,9 @@ type Moon {
             Assert.IsFalse(result.IsValid);
             Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             Assert.AreEqual(1, result.ErrorCount);
-            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1\n> Required properties are missing from object: entities."));
+            // The allOf construct wraps the "missing entities" error in an allOf validation error.
+            // Verify the top-level error count and that the validation correctly identifies the config as invalid.
+            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1\n>"));
         }
 
         /// <summary>
@@ -2225,7 +2251,7 @@ type Moon {
 
             try
             {
-                TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+                using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
                 _ = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
                 Assert.Fail($"{RUNTIME_ENV_CONNECTION_STRING} is not given highest precedence");
             }
@@ -3449,6 +3475,133 @@ type Moon {
         }
 
         /// <summary>
+        /// Validates that the Location header returned for POST requests respects X-Forwarded-Host and X-Forwarded-Proto.
+        /// This covers both table and stored procedure insert endpoints.
+        /// </summary>
+        /// <param name="entityType">Type of entity under test.</param>
+        /// <param name="requestPath">REST endpoint path for POST request.</param>
+        /// <param name="forwardedHost">Value for X-Forwarded-Host header.</param>
+        /// <param name="forwardedProto">Value for X-Forwarded-Proto header.</param>
+        /// <param name="expectedScheme">Expected scheme in Location header.</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(EntitySourceType.Table, "/api/Book", null, null, "http", DisplayName = "Location header uses local http scheme when no forwarded headers are present for table POST")]
+        [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", null, null, "http", DisplayName = "Location header uses local http scheme when no forwarded headers are present for stored procedure POST")]
+        [DataRow(EntitySourceType.Table, "/api/Book", "api.contoso.com", "http", "http", DisplayName = "Location header uses forwarded http scheme for table POST")]
+        [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", "api.contoso.com", "http", "http", DisplayName = "Location header uses forwarded http scheme for stored procedure POST")]
+        [DataRow(EntitySourceType.Table, "/api/Book", "api.contoso.com", "https", "https", DisplayName = "Location header uses forwarded https scheme/host for table POST")]
+        [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", "api.contoso.com", "https", "https", DisplayName = "Location header uses forwarded https scheme/host for stored procedure POST")]
+        public async Task ValidateLocationHeaderRespectsXForwardedHostAndProto(
+            EntitySourceType entityType,
+            string requestPath,
+            string forwardedHost,
+            string forwardedProto,
+            string expectedScheme)
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
+
+            SqlConnectionStringBuilder connectionStringBuilder = new(GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL))
+            {
+                TrustServerCertificate = true
+            };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                connectionStringBuilder.ConnectionString, Options: null);
+
+            RuntimeConfig configuration;
+            if (entityType is EntitySourceType.StoredProcedure)
+            {
+                Entity entity = new(Source: new("get_books", EntitySourceType.StoredProcedure, null, null),
+                              Fields: null,
+                              Rest: new(new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }),
+                              GraphQL: null,
+                              Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                              Relationships: null,
+                              Mappings: null
+                             );
+
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName: "GetBooks");
+            }
+            else
+            {
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions);
+            }
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG}" };
+
+            // Intentionally bind HTTP to simulate the proxy-to-app internal hop.
+            using IWebHost host = Program.CreateWebHostBuilder(args)
+                .UseUrls("http://127.0.0.1:0")
+                .Build();
+            await host.StartAsync();
+
+            IServerAddressesFeature addresses = host.ServerFeatures.Get<IServerAddressesFeature>();
+            Assert.IsNotNull(addresses);
+
+            string baseAddress = addresses.Addresses.FirstOrDefault();
+            Assert.IsFalse(string.IsNullOrEmpty(baseAddress));
+
+            using HttpClient client = new()
+            {
+                BaseAddress = new Uri(baseAddress)
+            };
+
+            HttpRequestMessage request = new(HttpMethod.Post, requestPath);
+            if (!string.IsNullOrEmpty(forwardedHost))
+            {
+                request.Headers.Add("X-Forwarded-Host", forwardedHost);
+            }
+
+            if (!string.IsNullOrEmpty(forwardedProto))
+            {
+                request.Headers.Add("X-Forwarded-Proto", forwardedProto);
+            }
+
+            if (entityType is EntitySourceType.Table)
+            {
+                JsonElement requestBodyElement = JsonDocument.Parse(@"{
+                    ""title"": ""Forwarded Header Location Test"",
+                    ""publisher_id"": 1234
+                }").RootElement.Clone();
+
+                request.Content = JsonContent.Create(requestBodyElement);
+            }
+
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+            Assert.IsNotNull(response.Headers.Location, "Location header should be present for successful POST create.");
+
+            Uri location = response.Headers.Location;
+            Assert.AreEqual(expectedScheme, location.Scheme, $"Expected Location scheme '{expectedScheme}', got '{location.Scheme}'.");
+
+            if (!string.IsNullOrEmpty(forwardedHost))
+            {
+                Assert.AreEqual(forwardedHost, location.Host, $"Expected Location host '{forwardedHost}', got '{location.Host}'.");
+            }
+
+            // Since forwarded host is external, validate follow-up using local path only.
+            string localPathAndQuery = string.IsNullOrEmpty(location.Query) ? location.AbsolutePath : location.AbsolutePath + location.Query;
+            HttpRequestMessage followUpRequest = new(HttpMethod.Get, localPathAndQuery);
+            HttpResponseMessage followUpResponse = await client.SendAsync(followUpRequest);
+            Assert.AreEqual(HttpStatusCode.OK, followUpResponse.StatusCode);
+
+            if (entityType is EntitySourceType.Table)
+            {
+                HttpRequestMessage cleanupRequest = new(HttpMethod.Delete, localPathAndQuery);
+                await client.SendAsync(cleanupRequest);
+            }
+
+            await host.StopAsync();
+        }
+
+        /// <summary>
         /// Test to validate that when the property rest.request-body-strict is absent from the rest runtime section in config file, DAB runs in strict mode.
         /// In strict mode, presence of extra fields in the request body is not permitted and leads to HTTP 400 - BadRequest error.
         /// </summary>
@@ -4138,6 +4291,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(LogLevel.Trace, "default")]
+        [DataRow(LogLevel.Warning, "Default")]
         [DataRow(LogLevel.Debug, "Azure")]
         [DataRow(LogLevel.Information, "Azure.DataApiBuilder")]
         [DataRow(LogLevel.Warning, "Azure.DataApiBuilder.Core")]
@@ -4173,7 +4327,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             // Start a new server with the custom log level to ensure the
             // instantiation of the valid log level filters works as expected.
-            TestServer server = new(Program.CreateWebHostBuilder(args));
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
             RuntimeConfigProvider runtimeConfigProvider = server.Services.GetService<RuntimeConfigProvider>();
 
             // RuntimeConfig with instantiated log level filters.

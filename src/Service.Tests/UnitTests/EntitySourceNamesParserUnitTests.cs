@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     /// can handle a wide range of valid formats correctly,
     /// and throws exceptions for invalid formats as expected.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
+    [TestClass]
     public class EntitySourceNamesParserUnitTests
     {
 

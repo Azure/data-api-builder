@@ -807,17 +807,30 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         if (effectiveOperationType is EntityActionOperation.Insert)
                         {
                             // Location Header is made up of the Base URL of the request and the primary key of the item created.
-                            // For POST requests, the primary key info would not be available in the URL and needs to be appended. So, the primary key of the newly created item
-                            // which is stored in the primaryKeyRoute is used to construct the Location Header.
-                            // Note: context.OperationType (not effectiveOperationType) is passed intentionally so that
-                            // ConstructCreatedResultResponse can distinguish a keyless upsert from a true Insert when
-                            // deciding whether to populate the Location header.
-                            return SqlResponseHelpers.ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
+                            // For POST requests and keyless PUT/PATCH requests, the primary key info would not be available
+                            // in the URL and needs to be appended. So, the primary key of the newly created item which is
+                            // stored in the primaryKeyRoute is used to construct the Location Header.
+                            // effectiveOperationType (Insert) is passed so that ConstructCreatedResultResponse populates
+                            // the Location header for both true POST inserts and keyless upserts that result in an insert.
+                            return SqlResponseHelpers.ConstructCreatedResultResponse(
+                                mutationResultRow!.Columns,
+                                selectOperationResponse, 
+                                primaryKeyRouteForLocationHeader, 
+                                isReadPermissionConfiguredForRole, 
+                                isDatabasePolicyDefinedForReadAction, 
+                                effectiveOperationType, 
+                                GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), 
+                                GetHttpContext());
                         }
 
                         if (effectiveOperationType is EntityActionOperation.Update || effectiveOperationType is EntityActionOperation.UpdateIncremental)
                         {
-                            return SqlResponseHelpers.ConstructOkMutationResponse(mutationResultRow!.Columns, selectOperationResponse, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
+                            return SqlResponseHelpers.ConstructOkMutationResponse(
+                                mutationResultRow!.Columns, 
+                                selectOperationResponse, 
+                                isReadPermissionConfiguredForRole, 
+                                isDatabasePolicyDefinedForReadAction
+                            );
                         }
                     }
 

@@ -393,23 +393,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             // Parse filter
             string? filter = root.TryGetProperty("filter", out JsonElement filterElement) ? filterElement.GetString() : null;
 
-            // Parse orderby
+            // Parse orderby (validation deferred until after groupby is known;
+            // if groupby is absent, orderby is silently ignored per #3279)
             bool userProvidedOrderby = root.TryGetProperty("orderby", out JsonElement orderbyElement) && !string.IsNullOrWhiteSpace(orderbyElement.GetString());
             string orderby = "desc";
-            if (userProvidedOrderby)
-            {
-                string normalizedOrderby = (orderbyElement.GetString() ?? string.Empty).Trim().ToLowerInvariant();
-                if (normalizedOrderby != "asc" && normalizedOrderby != "desc")
-                {
-                    return McpResponseBuilder.BuildErrorResult(
-                        toolName,
-                        "InvalidArguments",
-                        $"Argument 'orderby' must be either 'asc' or 'desc' when provided. Got: '{orderbyElement.GetString()}'.",
-                        logger);
-                }
-
-                orderby = normalizedOrderby;
-            }
 
             // Parse first
             int? first = null;
@@ -446,6 +433,22 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             if (dependencyError != null)
             {
                 return dependencyError;
+            }
+
+            // Validate orderby value only when groupby is present (orderby is ignored otherwise)
+            if (userProvidedOrderby)
+            {
+                string normalizedOrderby = (orderbyElement.GetString() ?? string.Empty).Trim().ToLowerInvariant();
+                if (normalizedOrderby != "asc" && normalizedOrderby != "desc")
+                {
+                    return McpResponseBuilder.BuildErrorResult(
+                        toolName,
+                        "InvalidArguments",
+                        $"Argument 'orderby' must be either 'asc' or 'desc' when provided. Got: '{orderbyElement.GetString()}'.",
+                        logger);
+                }
+
+                orderby = normalizedOrderby;
             }
 
             // Parse having clause

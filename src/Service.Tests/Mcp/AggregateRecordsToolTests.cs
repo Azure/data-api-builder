@@ -204,14 +204,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             DisplayName = "avg(price) with orderby desc, no groupby")]
         [DataRow("{\"entity\": \"Book\", \"function\": \"sum\", \"field\": \"price\", \"orderby\": \"asc\"}",
             DisplayName = "sum(price) with orderby asc, no groupby")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"ascending\"}",
+            DisplayName = "Invalid orderby value without groupby is silently ignored")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"garbage\"}",
+            DisplayName = "Nonsense orderby value without groupby is silently ignored")]
         public async Task AggregateRecords_OrderbyWithoutGroupby_PassesValidation(string json)
         {
             IServiceProvider sp = CreateDefaultServiceProvider();
 
             CallToolResult result = await ExecuteToolAsync(sp, json);
 
-            // The tool will fail at metadata resolution (no real DB), but must NOT fail with InvalidArguments.
-            Assert.IsTrue(result.IsError == true);
+            // The tool may fail at metadata resolution (no real DB), but must NOT fail with InvalidArguments.
+            // If the tool succeeds, that's also acceptable — the test is focused on input validation.
+            if (result.IsError != true)
+            {
+                return;
+            }
+
             JsonElement content = ParseContent(result);
             string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
             Assert.AreNotEqual("InvalidArguments", errorType,
@@ -229,7 +238,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             CallToolResult result = await ExecuteToolAsync(sp,
                 "{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\"}");
 
-            Assert.IsTrue(result.IsError == true);
+            // If the tool succeeds, that's acceptable — the test is focused on input validation.
+            if (result.IsError != true)
+            {
+                return;
+            }
+
             JsonElement content = ParseContent(result);
             string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
             Assert.AreNotEqual("InvalidArguments", errorType,

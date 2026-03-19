@@ -78,6 +78,12 @@ public abstract class RestRequestContext
     public NameValueCollection ParsedQueryString { get; set; } = new();
 
     /// <summary>
+    /// Raw query string from the HTTP request (URL-encoded).
+    /// Used to preserve encoding for special characters in query parameters.
+    /// </summary>
+    public string RawQueryString { get; set; } = string.Empty;
+
+    /// <summary>
     /// String holds information needed for pagination.
     /// Based on request this property may or may not be populated.
     /// </summary>

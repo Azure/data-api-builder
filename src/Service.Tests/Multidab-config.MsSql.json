@@ -1563,5 +1563,81 @@
         }
       ]
     }
+  },
+  "autoentities": {
+    "AutoPublisher": {
+      "patterns": {
+        "include": [
+          "%publisher%"
+        ],
+        "exclude": [
+          "%book%"
+        ],
+        "name": "auto{object}"
+      },
+      "template": {
+        "rest": {
+          "enabled": true
+        },
+        "graphql": {
+          "enabled": true
+        },
+        "health": {
+          "enabled": false
+        },
+        "cache": {
+          "enabled": false,
+          "ttl-seconds": 10,
+          "level": "l1l2"
+        }
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "NewBooks": {
+      "patterns": {
+        "include": [
+          "%book%"
+        ],
+        "exclude": [
+          "%publisher%"
+        ],
+        "name": "{schema}_auto_{object}"
+      },
+      "template": {
+        "rest": {
+          "enabled": true
+        },
+        "graphql": {
+          "enabled": true
+        },
+        "health": {
+          "enabled": true
+        },
+        "cache": {
+          "enabled": true,
+          "ttl-seconds": 5,
+          "level": "l1l2"
+        }
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        }
+      ]
+    }
   }
 }

@@ -49,6 +49,19 @@ public class RuntimeConfigValidator : IConfigValidator
         DatabaseType.DWSQL
     ];
 
+    // Error messages for user-delegated authentication configuration.
+    public const string USER_DELEGATED_AUTH_DATABASE_TYPE_ERR_MSG =
+        "User-delegated authentication is only supported when data-source.database-type is 'mssql'.";
+
+    public const string USER_DELEGATED_AUTH_MISSING_AUDIENCE_ERR_MSG =
+        "data-source.user-delegated-auth.database-audience must be set when user-delegated-auth is configured.";
+
+    public const string USER_DELEGATED_AUTH_CACHING_ERR_MSG =
+        "runtime.cache.enabled must be false when user-delegated-auth is configured.";
+
+    public const string USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG =
+        "User-delegated authentication requires DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, and DAB_OBO_CLIENT_SECRET environment variables.";
+
     // Error messages.
     public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
 
@@ -83,18 +96,6 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateLoggerFilters(runtimeConfig);
         ValidateAzureLogAnalyticsAuth(runtimeConfig);
         ValidateFileSinkPath(runtimeConfig);
-
-        // Running these graphQL validations only in development mode to ensure
-        // fast startup of engine in production mode.
-        if (runtimeConfig.IsDevelopmentMode())
-        {
-            ValidateEntityConfiguration(runtimeConfig);
-
-            if (runtimeConfig.IsGraphQLEnabled)
-            {
-                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
-            }
-        }
     }
 
     /// <summary>
@@ -119,6 +120,68 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         ValidateDatabaseType(runtimeConfig, fileSystem, logger);
+
+        ValidateUserDelegatedAuthOptions(runtimeConfig);
+    }
+
+    /// <summary>
+    /// Validates configuration for user-delegated authentication (OBO).
+    /// When any data source has user-delegated-auth configured, the following
+    /// rules are enforced:
+    /// - data-source.database-type must be "mssql".
+    /// - data-source.user-delegated-auth.database-audience must be present.
+    /// - runtime.cache.enabled must be false.
+    /// - Environment variables DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, and DAB_OBO_CLIENT_SECRET must be set.
+    /// </summary>
+    /// <param name="runtimeConfig">Runtime configuration.</param>
+    private void ValidateUserDelegatedAuthOptions(RuntimeConfig runtimeConfig)
+    {
+        foreach (DataSource dataSource in runtimeConfig.ListAllDataSources())
+        {
+            // Skip validation if user-delegated-auth is not configured or not enabled
+            if (dataSource.UserDelegatedAuth is null || !dataSource.UserDelegatedAuth.Enabled)
+            {
+                continue;
+            }
+
+            if (dataSource.DatabaseType != DatabaseType.MSSQL)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: USER_DELEGATED_AUTH_DATABASE_TYPE_ERR_MSG,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            if (string.IsNullOrWhiteSpace(dataSource.UserDelegatedAuth.DatabaseAudience))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: USER_DELEGATED_AUTH_MISSING_AUDIENCE_ERR_MSG,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            // Validate OBO App Registration credentials are configured via environment variables.
+            string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR);
+            string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR);
+            string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR);
+
+            if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(clientSecret))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            // Validate caching is disabled when user-delegated-auth is enabled
+            if (runtimeConfig.Runtime?.Cache?.Enabled == true)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: USER_DELEGATED_AUTH_CACHING_ERR_MSG,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
     }
 
     /// <summary>
@@ -259,6 +322,11 @@ public class RuntimeConfigValidator : IConfigValidator
 
         _logger.LogInformation("Validating entity relationships.");
         ValidateRelationshipConfigCorrectness(runtimeConfig);
+
+        // This function initializes the metadata providers which in turn validates the connectivity to the
+        // database and also validates all the REST and GraphQL paths as well as the permissions of the entities
+        // that are created from the 'Entities' and 'Autoentities' configuration, including the relationships defined in the config against the database metadata.
+        // Any exceptions caught during this process are added to the ConfigValidationExceptions list and logged at the end of this function.
         await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
 
         if (validationResult.IsValid && !ConfigValidationExceptions.Any())
@@ -411,6 +479,8 @@ public class RuntimeConfigValidator : IConfigValidator
     /// This method validates the entities relationships against the database objects using
     /// metadata from the backend DB generated by this function.
     /// </summary>
+    /// NOTE: This function should not be used in the regular flow of DAB as we already initialize the metadata providers during startup,
+    /// doing it again will cause the application to fail as it will try to add data that is already present.
     public async Task ValidateEntitiesMetadata(RuntimeConfig runtimeConfig, ILoggerFactory loggerFactory)
     {
         // Only used for validation so we don't need the handler which is for hot reload scenarios.
@@ -424,6 +494,7 @@ public class RuntimeConfigValidator : IConfigValidator
         // Only used for validation so we don't need the handler which is for hot reload scenarios.
         MetadataProviderFactory metadataProviderFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
+            runtimeConfigValidator: this,
             queryManagerFactory: queryManagerFactory,
             logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
             fileSystem: _fileSystem,
@@ -836,6 +907,17 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             HandleOrRecordException(new DataApiBuilderException(
                 message: $"MCP path {exceptionMsgSuffix}",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        // Validate aggregate-records query-timeout if provided
+        if (runtimeConfig.Runtime.Mcp.DmlTools?.AggregateRecordsQueryTimeout is not null &&
+            (runtimeConfig.Runtime.Mcp.DmlTools.AggregateRecordsQueryTimeout < 1 || runtimeConfig.Runtime.Mcp.DmlTools.AggregateRecordsQueryTimeout > DmlToolsConfig.MAX_QUERY_TIMEOUT_SECONDS))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"Aggregate-records query-timeout must be between 1 and {DmlToolsConfig.MAX_QUERY_TIMEOUT_SECONDS} seconds. " +
+                         $"Provided value: {runtimeConfig.Runtime.Mcp.DmlTools.AggregateRecordsQueryTimeout}.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
@@ -1503,7 +1585,7 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 for (int j = 0; j < loggerSub.Length; j++)
                 {
-                    if (!loggerSub[j].Equals(validFiltersSub[j]))
+                    if (!loggerSub[j].Equals(validFiltersSub[j], StringComparison.OrdinalIgnoreCase))
                     {
                         isValid = false;
                         break;
@@ -1518,5 +1600,27 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Checks that all of the entities created with the Entities and Autoentities properties
+    /// are valid by having unique paths for both REST and GraphQL, that there are no duplicate
+    /// Queries or Mutation entities, and ensure the semantic correctness of all the entities.
+    /// </summary>
+    /// <param name="runtimeConfig">The runtime configuration.</param>
+    public void ValidateEntityAndAutoentityConfigurations(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.IsDevelopmentMode())
+        {
+            ValidateEntityConfiguration(runtimeConfig);
+
+            if (runtimeConfig.IsGraphQLEnabled)
+            {
+                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
+            }
+
+            // Running only in developer mode to ensure fast and smooth startup in production.
+            ValidatePermissionsInConfig(runtimeConfig);
+        }
     }
 }

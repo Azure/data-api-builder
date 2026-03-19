@@ -61,6 +61,28 @@
               "maximum": 2147483647
             }
           }
+        },
+        "user-delegated-auth": {
+          "description": "User-delegated authentication configuration for On-Behalf-Of (OBO) flow. Enables DAB to connect to the database using the calling user's identity.",
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "#/$defs/boolean-or-string",
+              "description": "Enable user-delegated authentication (OBO flow).",
+              "default": false
+            },
+            "provider": {
+              "type": "string",
+              "description": "Identity provider for user-delegated authentication.",
+              "enum": ["EntraId"],
+              "default": "EntraId"
+            },
+            "database-audience": {
+              "type": "string",
+              "description": "The audience URI for the target database (e.g., https://database.windows.net for Azure SQL)."
+            }
+          }
         }
       },
       "allOf": [
@@ -113,7 +135,7 @@
                 "additionalProperties": false,
                 "properties": {
                   "set-session-context": {
-                    "type": "boolean",
+                    "$ref": "#/$defs/boolean-or-string",
                     "description": "Enable sending data to MsSql using session context"
                   }
                 }
@@ -147,6 +169,7 @@
     "data-source-files": {
       "type": "array",
       "description": "Names of runtime configuration files referencing additional databases.",
+      "minItems": 1,
       "default": null
     },
     "runtime": {
@@ -156,6 +179,7 @@
       "properties": {
         "pagination": {
           "type": "object",
+          "description": "Pagination settings for REST and GraphQL API responses.",
           "properties": {
             "max-page-size": {
               "type": [ "integer", "null" ],
@@ -170,7 +194,7 @@
               "minimum": 1
             },
             "next-link-relative": {
-              "type": "boolean",
+              "$ref": "#/$defs/boolean-or-string",
               "default": false,
               "description": "When true, nextLink in paginated results will use a relative URL."
             }
@@ -183,14 +207,15 @@
           "properties": {
             "path": {
               "default": "/api",
-              "type": "string"
+              "type": "string",
+              "description": "URL prefix path for all REST entity endpoints."
             },
             "enabled": {
               "$ref": "#/$defs/boolean-or-string",
               "description": "Allow enabling/disabling REST requests for all entities."
             },
             "request-body-strict": {
-              "type": "boolean",
+              "$ref": "#/$defs/boolean-or-string",
               "description": "Does not allow extraneous fields in request body when set to true.",
               "default": true
             }
@@ -202,12 +227,13 @@
           "additionalProperties": false,
           "properties": {
             "allow-introspection": {
-              "type": "boolean",
+              "$ref": "#/$defs/boolean-or-string",
               "description": "Allow querying of the underlying GraphQL schema."
             },
             "path": {
               "default": "/graphql",
-              "type": "string"
+              "type": "string",
+              "description": "URL prefix path for the GraphQL endpoint."
             },
             "enabled": {
               "$ref": "#/$defs/boolean-or-string",
@@ -229,7 +255,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "enabled": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Allow enabling/disabling multiple create operations for all entities.",
                       "default": false
                     }
@@ -246,17 +272,19 @@
           "properties": {
             "path": {
               "default": "/mcp",
-              "type": "string"
+              "type": "string",
+              "description": "URL prefix path for MCP endpoints."
             },
             "enabled": {
-              "type": "boolean",
+              "$ref": "#/$defs/boolean-or-string",
               "description": "Allow enabling/disabling MCP requests for all entities.",
               "default": true
             },
             "dml-tools": {
+              "description": "Configuration for MCP Data Manipulation Language (DML) tools. Set to true/false to enable/disable all tools, or use an object to configure individual tools.",
               "oneOf": [
                 {
-                  "type": "boolean",
+                  "$ref": "#/$defs/boolean-or-string",
                   "description": "Enable/disable all DML tools with default settings."
                 },
                 {
@@ -265,33 +293,62 @@
                   "additionalProperties": false,
                   "properties": {
                     "describe-entities": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the describe-entities tool.",
                       "default": false
                     },
                     "create-record": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the create-record tool.",
                       "default": false
                     },
                     "read-records": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the read-records tool.",
                       "default": false
                     },
                     "update-record": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the update-record tool.",
                       "default": false
                     },
                     "delete-record": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the delete-record tool.",
                       "default": false
                     },
                     "execute-entity": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the execute-entity tool.",
+                      "default": false
+                    },
+                    "aggregate-records": {
+                      "description": "Enable/disable or configure the aggregate-records MCP tool.",
+                      "oneOf": [
+                        {
+                          "$ref": "#/$defs/boolean-or-string",
+                          "description": "Enable/disable the aggregate-records tool."
+                        },
+                        {
+                          "type": "object",
+                          "description": "Aggregate records tool configuration",
+                          "additionalProperties": false,
+                          "properties": {
+                            "enabled": {
+                              "$ref": "#/$defs/boolean-or-string",
+                              "description": "Enable/disable the aggregate-records tool.",
+                              "default": true
+                            },
+                            "query-timeout": {
+                              "type": "integer",
+                              "description": "Execution timeout in seconds for aggregate queries. Range: 1-600.",
+                              "default": 30,
+                              "minimum": 1,
+                              "maximum": 600
+                            }
+                          }
+                        }
+                      ],
                       "default": false
                     }
                   }
@@ -332,14 +389,15 @@
                   "default": []
                 },
                 "allow-credentials": {
-                  "type": "boolean",
-                  "default": "false",
+                  "$ref": "#/$defs/boolean-or-string",
+                  "default": false,
                   "description": "Set value for Access-Control-Allow-Credentials header"
                 }
               }
             },
             "authentication": {
               "type": [ "object", "null" ],
+              "description": "Authentication settings for the runtime host.",
               "additionalProperties": false,
               "properties": {
                 "provider": {
@@ -368,19 +426,26 @@
                     {
                       "const": "Custom",
                       "description": "Custom authentication provider defined by the user. Use the JWT property to configure the custom provider."
+                    },
+                    {
+                      "const": "Unauthenticated",
+                      "description": "Unauthenticated provider where all operations run as anonymous. Use when Data API builder is behind an app gateway or APIM where authentication is handled externally."
                     }
                   ],
                   "default": "AppService"
                 },
                 "jwt": {
                   "type": "object",
+                  "description": "JWT token validation settings. Required when using a JWT-based identity provider (e.g., EntraID, AzureAD, or Custom).",
                   "additionalProperties": false,
                   "properties": {
                     "audience": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The expected audience (aud) claim of incoming JWT tokens."
                     },
                     "issuer": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The expected issuer (iss) claim of incoming JWT tokens."
                     }
                   },
                   "required": [ "audience", "issuer" ]
@@ -410,10 +475,11 @@
         },
         "cache": {
           "type": "object",
+          "description": "Runtime-level cache configuration. Caching is only active when enabled is set to true.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "$ref": "#/$defs/boolean-or-string",
               "description": "Enable caching of responses globally.",
               "default": false
             },
@@ -444,6 +510,7 @@
           "properties": {
             "application-insights": {
               "type": "object",
+              "description": "Configuration for sending telemetry to Azure Application Insights.",
               "additionalProperties": false,
               "properties": {
                 "connection-string": {
@@ -460,6 +527,7 @@
             },
             "open-telemetry": {
               "type": "object",
+              "description": "Configuration for OpenTelemetry-based telemetry export.",
               "additionalProperties": false,
               "properties": {
                 "endpoint": {
@@ -482,7 +550,7 @@
                   "enum": [ "grpc", "httpprotobuf" ]
                 },
                 "enabled": {
-                  "type": "boolean",
+                  "$ref": "#/$defs/boolean-or-string",
                   "description": "Allow enabling/disabling Open Telemetry.",
                   "default": true
                 }
@@ -491,6 +559,7 @@
             },
             "azure-log-analytics": {
               "type": "object",
+              "description": "Configuration for sending logs to Azure Log Analytics.",
               "additionalProperties": false,
               "properties": {
                 "enabled": {
@@ -500,6 +569,7 @@
                 },
                 "auth": {
                   "type": "object",
+                  "description": "Authentication credentials for connecting to Azure Log Analytics.",
                   "additionalProperties": false,
                   "properties": {
                     "custom-table-name": {
@@ -559,10 +629,11 @@
             },
             "file": {
               "type": "object",
+              "description": "Configuration for writing telemetry logs to a local file.",
               "additionalProperties": false,
               "properties": {
                 "enabled": {
-                  "type": "boolean",
+                  "$ref": "#/$defs/boolean-or-string",
                   "description": "Enable/disable file sink telemetry logging.",
                   "default": false
                 },
@@ -753,7 +824,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "dml-tools": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable all DML tools with default settings."
                     }
                   }
@@ -764,7 +835,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "enabled": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable REST endpoint",
                       "default": true
                     }
@@ -776,7 +847,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "enabled": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable GraphQL endpoint",
                       "default": true
                     }
@@ -788,7 +859,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "enabled": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable health check endpoint",
                       "default": true
                     }
@@ -800,7 +871,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "enabled": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable caching",
                       "default": false
                     },
@@ -872,6 +943,7 @@
       "patternProperties": {
         "^.*$": {
           "type": "object",
+          "description": "Configuration for a single entity exposed via REST, GraphQL, and/or MCP.",
           "additionalProperties": false,
           "properties": {
             "description": {
@@ -884,7 +956,7 @@
               "additionalProperties": false,
               "properties": {
                 "enabled": {
-                  "type": "boolean",
+                  "$ref": "#/$defs/boolean-or-string",
                   "description": "Enable health check endpoint for particular entity",
                   "default": true,
                   "additionalProperties": false
@@ -908,6 +980,7 @@
               }
             },
             "source": {
+              "description": "The database object this entity maps to. Can be a table name string or a detailed source object.",
               "oneOf": [
                 {
                   "type": "string",
@@ -931,7 +1004,8 @@
                       "oneOf": [
                         {
                           "type": "object",
-                          "description": "Dictionary of parameters and their values (deprecated)",
+                          "deprecated": true,
+                          "description": "DEPRECATED. Use the array format instead, which supports per-parameter metadata. Dictionary of parameter names mapped to their default values.",
                           "patternProperties": {
                             "^.*$": {
                               "oneOf": [
@@ -950,7 +1024,7 @@
                             "required": ["name"],
                             "properties": {
                               "name": { "type": "string", "description": "Parameter name" },
-                              "required": { "type": "boolean", "description": "Is parameter required" },
+                              "required": { "$ref": "#/$defs/boolean-or-string", "description": "Is parameter required" },
                               "default": { "type": ["string", "number", "boolean", "null"], "description": "Default value" },
                               "description": { "type": "string", "description": "Parameter description. Since descriptions for multiple parameters are provided as a comma-separated string, individual parameter descriptions must not contain a comma (',')." }
                             }
@@ -960,10 +1034,15 @@
                     },
                     "key-fields": {
                       "type": "array",
+                      "deprecated": true,
                       "items": {
                         "type": "string"
                       },
-                      "description": "List of fields to be used as primary keys. Mandatory field for views when generated through the CLI."
+                      "description": "DEPRECATED. Use the 'fields' array and set 'primary-key: true' on each key field instead. List of fields to be used as primary keys."
+                    },
+                    "object-description": {
+                      "type": "string",
+                      "description": "Human-readable description of the database object, used for MCP tool discovery and documentation."
                     }
                   },
                   "required": ["type", "object"]
@@ -979,33 +1058,36 @@
                   "name": { "type": "string", "description": "Database column name." },
                   "alias": { "type": "string", "description": "Exposed name for the field." },
                   "description": { "type": "string", "description": "Field description." },
-                  "primary-key": { "type": "boolean", "description": "Indicates whether this field is a primary key." }
+                  "primary-key": { "$ref": "#/$defs/boolean-or-string", "description": "Indicates whether this field is a primary key." }
                 },
                 "required": ["name"]
               },
               "uniqueItems": true
             },
             "rest": {
+              "description": "REST API configuration for this entity. Set to false to disable, true to enable with defaults, or an object for detailed configuration.",
               "oneOf": [
                 {
-                  "type": "boolean"
+                  "$ref": "#/$defs/boolean-or-string"
                 },
                 {
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
                     "path": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "Custom URL path segment for this entity's REST endpoint. Overrides the entity name in the URL."
                     },
                     "methods": {
                       "type": "array",
+                      "description": "HTTP methods allowed for this entity's REST endpoint. Only relevant for stored-procedure entities.",
                       "items": {
                         "type": "string",
                         "enum": ["get", "post", "put", "patch", "delete"]
                       }
                     },
                     "enabled": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Allow enabling/disabling REST requests this specific entity.",
                       "default": true
                     }
@@ -1025,23 +1107,26 @@
               ]
             },
             "graphql": {
+              "description": "GraphQL configuration for this entity. Set to false to disable, true to enable with defaults, or an object for detailed configuration.",
               "oneOf": [
                 {
-                  "type": "boolean"
+                  "$ref": "#/$defs/boolean-or-string"
                 },
                 {
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
                     "type": {
-                      "$ref": "#/$defs/singular-plural"
+                      "$ref": "#/$defs/singular-plural",
+                      "description": "Singular and/or plural GraphQL type names for this entity."
                     },
                     "operation": {
                       "type": "string",
-                      "enum": ["mutation", "query"]
+                      "enum": ["mutation", "query"],
+                      "description": "For stored-procedure entities, specifies whether the GraphQL operation is a query or mutation."
                     },
                     "enabled": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Allow enabling/disabling GraphQL requests for this specific entity.",
                       "default": true
                     }
@@ -1066,7 +1151,8 @@
             },
             "mappings": {
               "type": "object",
-              "description": "Define mappings between database fields and GraphQL and REST fields",
+              "deprecated": true,
+              "description": "DEPRECATED. Use the 'fields' array and set the 'alias' property on each field instead. Defines mappings between database column names and their exposed API field names.",
               "patternProperties": {
                 "^.*$": {
                   "type": "string"
@@ -1075,25 +1161,31 @@
             },
             "relationships": {
               "type": "object",
+              "description": "Relationship definitions between this entity and other entities.",
               "patternProperties": {
                 "^.*$": {
+                  "description": "Configuration for a single named relationship.",
                   "additionalProperties": false,
                   "properties": {
                     "cardinality": {
                       "type": "string",
-                      "enum": ["one", "many"]
+                      "enum": ["one", "many"],
+                      "description": "Defines the cardinality of the relationship between entities."
                     },
                     "target.entity": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The name of the related entity."
                     },
                     "source.fields": {
                       "type": "array",
+                      "description": "Fields on the source entity used to join to the target entity.",
                       "items": {
                         "type": "string"
                       }
                     },
                     "target.fields": {
                       "type": "array",
+                      "description": "Fields on the target entity used to join from the source entity.",
                       "items": {
                         "type": "string"
                       }
@@ -1104,12 +1196,14 @@
                     },
                     "linking.source.fields": {
                       "type": "array",
+                      "description": "Fields on the linking object that reference the source entity.",
                       "items": {
                         "type": "string"
                       }
                     },
                     "linking.target.fields": {
                       "type": "array",
+                      "description": "Fields on the linking object that reference the target entity.",
                       "items": {
                         "type": "string"
                       }
@@ -1121,10 +1215,11 @@
             },
             "cache": {
               "type": "object",
+              "description": "Caching configuration for this entity's API responses.",
               "additionalProperties": false,
               "properties": {
                 "enabled": {
-                  "type": "boolean",
+                  "$ref": "#/$defs/boolean-or-string",
                   "description": "Enable caching of responses for this entity.",
                   "default": false
                 },
@@ -1145,20 +1240,21 @@
             "mcp": {
               "oneOf": [
                 {
-                  "type": "boolean",
+                  "$ref": "#/$defs/boolean-or-string",
                   "description": "Boolean shorthand: true enables dml-tools only (custom-tool remains false), false disables all MCP functionality."
                 },
                 {
                   "type": "object",
+                  "description": "Detailed MCP configuration for this entity.",
                   "additionalProperties": false,
                   "properties": {
                     "dml-tools": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable MCP DML (Data Manipulation Language) tools for this entity. Allows CRUD operations via MCP.",
                       "default": true
                     },
                     "custom-tool": {
-                      "type": "boolean",
+                      "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable MCP custom tool for this entity. Only valid for stored procedures.",
                       "default": false
                     }
@@ -1383,19 +1479,47 @@
       }
     }
   },
-  "if": {
-    "required": ["azure-key-vault"]
-  },
-  "then": {
-    "properties": {
-      "azure-key-vault": {
-        "required": ["endpoint"]
+  "allOf": [
+    {
+      "if": { "required": ["azure-key-vault"] },
+      "then": {
+        "properties": {
+          "azure-key-vault": {
+            "required": ["endpoint"]
+          }
+        }
+      }
+    },
+    {
+      "$comment": "When data-source-files is present (multi-config top-level), only runtime is required. When autoentities is present, data-source is required but entities is not. Otherwise both data-source and entities are required.",
+      "if": {
+        "required": ["data-source-files"],
+        "properties": {
+          "data-source-files": { "type": "array", "minItems": 1 }
+        }
+      },
+      "then": {
+        "required": ["runtime"]
+      },
+      "else": {
+        "if": {
+          "required": ["autoentities"],
+          "properties": {
+            "autoentities": { "type": "object", "minProperties": 1 }
+          }
+        },
+        "then": {
+          "required": ["data-source"]
+        },
+        "else": {
+          "required": ["data-source", "entities"]
+        }
       }
     }
-  },
-  "required": ["data-source", "entities"],
+  ],
   "$defs": {
     "singular-plural": {
+      "description": "The GraphQL type name for an entity, specified as either a string (singular name) or an object with explicit singular and plural forms.",
       "oneOf": [
         {
           "type": "string"
@@ -1405,10 +1529,12 @@
           "additionalProperties": false,
           "properties": {
             "singular": {
-              "type": "string"
+              "type": "string",
+              "description": "Defines the singular GraphQL type name for the entity."
             },
             "plural": {
-              "type": "string"
+              "type": "string",
+              "description": "Defines the plural GraphQL type name for the entity."
             }
           },
           "required": [ "singular" ]
@@ -1424,6 +1550,7 @@
       ]
     },
     "action": {
+      "description": "A CRUD action permitted on an entity: create, read, update, delete, or * for all.",
       "oneOf": [
         {
           "type": "string",

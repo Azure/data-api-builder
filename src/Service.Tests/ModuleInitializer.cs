@@ -27,6 +27,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.IsDatasourceHealthEnabled);
         // Ignore the DatasourceThresholdMs from the output to avoid committing it.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatasourceThresholdMs);
+        // Ignore the IsUserDelegatedAuthEnabled from the output as it's a computed property.
+        VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.IsUserDelegatedAuthEnabled);
         // Ignore the JSON schema path as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
         // Ignore the datasource files as that's unimportant from a test standpoint.
@@ -69,6 +71,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<Entity>(entity => entity.IsLinkingEntity);
         // Ignore the UserProvidedTtlOptions. They aren't serialized to our config file, enforced by EntityCacheOptionsConverter.
         VerifierSettings.IgnoreMember<EntityCacheOptions>(cacheOptions => cacheOptions.UserProvidedTtlOptions);
+        // Ignore the UserProvidedEnabledOptions. They aren't serialized to our config file, enforced by EntityCacheOptionsConverter.
+        VerifierSettings.IgnoreMember<EntityCacheOptions>(cacheOptions => cacheOptions.UserProvidedEnabledOptions);
         // Ignore the UserProvidedCustomToolEnabled. They aren't serialized to our config file, enforced by EntityMcpOptionsConverterFactory.
         VerifierSettings.IgnoreMember<EntityMcpOptions>(mcpOptions => mcpOptions.UserProvidedCustomToolEnabled);
         // Ignore the UserProvidedDmlToolsEnabled. They aren't serialized to our config file, enforced by EntityMcpOptionsConverterFactory.
@@ -83,6 +87,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsStaticWebAppsIdentityProvider);
         // Ignore the IsAppServiceIdentityProvider as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsAppServiceIdentityProvider);
+        // Ignore the IsUnauthenticatedIdentityProvider as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsUnauthenticatedIdentityProvider);
         // Ignore the RestPath as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.RestPath);
         // Ignore the GraphQLPath as that's unimportant from a test standpoint.
@@ -103,6 +109,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(options => options.EnableDwNto1JoinOpt);
         // Ignore the FeatureFlags as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.FeatureFlags);
+        // Ignore the JSON schema path as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Autoentities);
         // Ignore the message as that's not serialized in our config file anyway.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
         // Ignore DefaultDataSourceName as that's not serialized in our config file.

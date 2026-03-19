@@ -17,6 +17,13 @@ namespace Azure.DataApiBuilder.Core.Authorization;
 /// </summary>
 public class GraphQLAuthorizationHandler : IAuthorizationHandler
 {
+    private readonly Azure.DataApiBuilder.Auth.IAuthorizationResolver _authorizationResolver;
+
+    public GraphQLAuthorizationHandler(Azure.DataApiBuilder.Auth.IAuthorizationResolver authorizationResolver)
+    {
+        _authorizationResolver = authorizationResolver;
+    }
+
     /// <summary>
     /// Authorize access to field based on contents of @authorize directive.
     /// Validates that the requestor is authenticated, and that the
@@ -44,7 +51,7 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
 
         // Schemas defining authorization policies are not supported, even when roles are defined appropriately.
         // Requests will be short circuited and rejected (authorization forbidden).
-        if (TryGetApiRoleHeader(context.ContextData, out string? clientRole) && IsInHeaderDesignatedRole(clientRole, directive.Roles))
+        if (TryGetApiRoleHeader(context.ContextData, out string? clientRole) && _authorizationResolver.IsRoleAllowedByDirective(clientRole, directive.Roles))
         {
             if (!string.IsNullOrEmpty(directive.Policy))
             {
@@ -83,7 +90,7 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
         {
             // Schemas defining authorization policies are not supported, even when roles are defined appropriately.
             // Requests will be short circuited and rejected (authorization forbidden).
-            if (TryGetApiRoleHeader(context.ContextData, out string? clientRole) && IsInHeaderDesignatedRole(clientRole, directive.Roles))
+            if (TryGetApiRoleHeader(context.ContextData, out string? clientRole) && _authorizationResolver.IsRoleAllowedByDirective(clientRole, directive.Roles))
             {
                 if (!string.IsNullOrEmpty(directive.Policy))
                 {
@@ -126,30 +133,6 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
         }
 
         clientRole = null;
-        return false;
-    }
-
-    /// <summary>
-    /// Checks the pre-validated clientRoleHeader value against the roles listed in @authorize directive's roles.
-    /// The runtime's GraphQLSchemaBuilder will not add an @authorize directive without any roles defined,
-    /// however, since the Roles property of HotChocolate's AuthorizeDirective object is nullable,
-    /// handle the possible null gracefully.
-    /// </summary>
-    /// <param name="clientRoleHeader">Role defined in request HTTP Header, X-MS-API-ROLE</param>
-    /// <param name="roles">Roles defined on the @authorize directive. Case insensitive.</param>
-    /// <returns>True when the authenticated user's explicitly defined role is present in the authorize directive role list. Otherwise, false.</returns>
-    private static bool IsInHeaderDesignatedRole(string clientRoleHeader, IReadOnlyList<string>? roles)
-    {
-        if (roles is null || roles.Count == 0)
-        {
-            return false;
-        }
-
-        if (roles.Any(role => role.Equals(clientRoleHeader, StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
-
         return false;
     }
 

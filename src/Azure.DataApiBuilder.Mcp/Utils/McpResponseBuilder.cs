@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             {
                 Content = new List<ContentBlock>
                 {
-                    new TextContentBlock { Type = "text", Text = output }
+                    new TextContentBlock { Text = output }
                 }
             };
         }
@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             {
                 Content = new List<ContentBlock>
                 {
-                    new TextContentBlock { Type = "text", Text = output }
+                    new TextContentBlock { Text = output }
                 },
                 IsError = true
             };

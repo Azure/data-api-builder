@@ -814,23 +814,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             // the Location header for both true POST inserts and keyless upserts that result in an insert.
                             return SqlResponseHelpers.ConstructCreatedResultResponse(
                                 mutationResultRow!.Columns,
-                                selectOperationResponse, 
-                                primaryKeyRouteForLocationHeader, 
-                                isReadPermissionConfiguredForRole, 
-                                isDatabasePolicyDefinedForReadAction, 
-                                effectiveOperationType, 
-                                GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), 
+                                selectOperationResponse,
+                                primaryKeyRouteForLocationHeader,
+                                isReadPermissionConfiguredForRole,
+                                isDatabasePolicyDefinedForReadAction,
+                                effectiveOperationType,
+                                GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()),
                                 GetHttpContext());
                         }
 
                         if (effectiveOperationType is EntityActionOperation.Update || effectiveOperationType is EntityActionOperation.UpdateIncremental)
                         {
                             return SqlResponseHelpers.ConstructOkMutationResponse(
-                                mutationResultRow!.Columns, 
-                                selectOperationResponse, 
-                                isReadPermissionConfiguredForRole, 
-                                isDatabasePolicyDefinedForReadAction
-                            );
+                                mutationResultRow!.Columns,
+                                selectOperationResponse,
+                                isReadPermissionConfiguredForRole,
+                                isDatabasePolicyDefinedForReadAction);
                         }
                     }
 

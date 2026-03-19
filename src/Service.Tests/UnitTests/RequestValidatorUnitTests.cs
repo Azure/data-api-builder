@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     /// Unit tests for RequestValidator.cs. Makes sure the proper primary key validation
     /// occurs for REST requests for FindOne().
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
+    [TestClass]
     public class RequestValidatorUnitTests
     {
         private static Mock<ISqlMetadataProvider> _mockMetadataStore;

@@ -185,7 +185,7 @@ public class ConfigurationHotReloadTests
                     ""autoentities"": {
                       ""BooksAutoentities"": {
                         ""patterns"": {
-                          ""include"": ""query"",
+                          ""include"": [ ""%book%"" ],
                           ""name"": """ + autoentityName + @"""
                         },
                         ""template"": {
@@ -806,7 +806,7 @@ public class ConfigurationHotReloadTests
         Console.SetOut(_writer);
 
         // Act
-        HttpResponseMessage restResult = await _testClient.GetAsync($"rest/Autoentities_books");
+        HttpResponseMessage restResult = await _testClient.GetAsync($"rest/autoentity_books");
 
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
@@ -816,7 +816,7 @@ public class ConfigurationHotReloadTests
           TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
-        HttpResponseMessage failRestResult = await _testClient.GetAsync($"rest/Autoentities_books");
+        HttpResponseMessage failRestResult = await _testClient.GetAsync($"rest/autoentity_books");
         HttpResponseMessage hotReloadRestResult = await _testClient.GetAsync($"rest/HotReload_books");
 
         // Assert

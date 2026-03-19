@@ -32,6 +32,12 @@ public class EmbeddingService : IEmbeddingService
     private const string CACHE_KEY_PREFIX = "embedding";
 
     /// <summary>
+    /// Maximum number of text chunks accepted in one batch embedding request.
+    /// This protects the system from accidentally submitting extremely large arrays.
+    /// </summary>
+    public const int MAX_BATCH_TEXT_COUNT = 2048;
+
+    /// <summary>
     /// Default cache TTL in hours. Set high since embeddings are deterministic and don't get outdated.
     /// </summary>
     private const int DEFAULT_CACHE_TTL_HOURS = 24;
@@ -178,6 +184,18 @@ public class EmbeddingService : IEmbeddingService
             return new EmbeddingBatchResult(false, null, "Texts array cannot be null or empty.");
         }
 
+        if (texts.Length > MAX_BATCH_TEXT_COUNT)
+        {
+            _logger.LogWarning(
+                "TryEmbedBatchAsync called with {Count} texts, which exceeds max supported batch size {MaxBatchSize}",
+                texts.Length,
+                MAX_BATCH_TEXT_COUNT);
+            return new EmbeddingBatchResult(
+                false,
+                null,
+                $"Texts array exceeds max supported batch size of {MAX_BATCH_TEXT_COUNT}.");
+        }
+
         Stopwatch stopwatch = Stopwatch.StartNew();
         using Activity? activity = EmbeddingTelemetryHelper.StartEmbeddingActivity("TryEmbedBatchAsync");
         activity?.SetEmbeddingActivityTags(_providerName, _options.EffectiveModel, texts.Length);
@@ -238,6 +256,13 @@ public class EmbeddingService : IEmbeddingService
         if (texts is null || texts.Length == 0)
         {
             throw new ArgumentException("Texts cannot be null or empty.", nameof(texts));
+        }
+
+        if (texts.Length > MAX_BATCH_TEXT_COUNT)
+        {
+            throw new ArgumentException(
+                $"Texts array exceeds max supported batch size of {MAX_BATCH_TEXT_COUNT}.",
+                nameof(texts));
         }
 
         // For batch, check cache for each text individually

@@ -685,6 +685,28 @@ public class EmbeddingServiceTests
     }
 
     /// <summary>
+    /// Tests that TryEmbedBatchAsync returns failure when texts array exceeds max batch size.
+    /// </summary>
+    [TestMethod]
+    public async Task TryEmbedBatchAsync_ReturnsFailure_WhenTextsExceedMaxBatchSize()
+    {
+        // Arrange
+        EmbeddingsOptions options = CreateAzureOpenAIOptions();
+        HttpClient httpClient = new();
+        EmbeddingService service = new(httpClient, options, _mockLogger.Object, _mockCache.Object);
+        string[] oversizedTexts = Enumerable.Repeat("chunk", EmbeddingService.MAX_BATCH_TEXT_COUNT + 1).ToArray();
+
+        // Act
+        EmbeddingBatchResult result = await service.TryEmbedBatchAsync(oversizedTexts);
+
+        // Assert
+        Assert.IsFalse(result.Success);
+        Assert.IsNull(result.Embeddings);
+        Assert.IsNotNull(result.ErrorMessage);
+        StringAssert.Contains(result.ErrorMessage, EmbeddingService.MAX_BATCH_TEXT_COUNT.ToString());
+    }
+
+    /// <summary>
     /// Tests that EmbedBatchAsync throws when the service is disabled.
     /// </summary>
     [TestMethod]
@@ -703,6 +725,24 @@ public class EmbeddingServiceTests
         // Act & Assert
         await Assert.ThrowsExceptionAsync<InvalidOperationException>(
             () => service.EmbedBatchAsync(new[] { "text1" }));
+    }
+
+    /// <summary>
+    /// Tests that EmbedBatchAsync throws when texts array exceeds max batch size.
+    /// </summary>
+    [TestMethod]
+    public async Task EmbedBatchAsync_Throws_WhenTextsExceedMaxBatchSize()
+    {
+        // Arrange
+        EmbeddingsOptions options = CreateAzureOpenAIOptions();
+        HttpClient httpClient = new();
+        EmbeddingService service = new(httpClient, options, _mockLogger.Object, _mockCache.Object);
+        string[] oversizedTexts = Enumerable.Repeat("chunk", EmbeddingService.MAX_BATCH_TEXT_COUNT + 1).ToArray();
+
+        // Act & Assert
+        ArgumentException exception = await Assert.ThrowsExceptionAsync<ArgumentException>(
+            () => service.EmbedBatchAsync(oversizedTexts));
+        StringAssert.Contains(exception.Message, EmbeddingService.MAX_BATCH_TEXT_COUNT.ToString());
     }
 
     /// <summary>

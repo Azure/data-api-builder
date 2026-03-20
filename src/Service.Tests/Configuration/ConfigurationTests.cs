@@ -710,9 +710,26 @@ type Moon {
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
+            // Retry file deletion with exponential back-off to handle cases where a
+            // file watcher or hot-reload process may still hold a handle on the file.
             if (File.Exists(CUSTOM_CONFIG_FILENAME))
             {
-                File.Delete(CUSTOM_CONFIG_FILENAME);
+                int retryCount = 0;
+                const int maxRetries = 3;
+                while (true)
+                {
+                    try
+                    {
+                        File.Delete(CUSTOM_CONFIG_FILENAME);
+                        break;
+                    }
+                    catch (IOException ex) when (retryCount < maxRetries)
+                    {
+                        retryCount++;
+                        Console.WriteLine($"CleanupAfterEachTest: Retry {retryCount}/{maxRetries} deleting {CUSTOM_CONFIG_FILENAME}. {ex.Message}");
+                        Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(2, retryCount)));
+                    }
+                }
             }
 
             TestHelper.UnsetAllDABEnvironmentVariables();
@@ -733,7 +750,7 @@ type Moon {
             string[] args,
             bool isUpdateableRuntimeConfig)
         {
-            TestServer server;
+            TestServer server = null;
 
             try
             {
@@ -757,6 +774,10 @@ type Moon {
                 Assert.AreEqual(
                     $"Could not initialize the engine with the runtime config file: {DEFAULT_CONFIG_FILE_NAME}",
                     e.Message);
+            }
+            finally
+            {
+                server?.Dispose();
             }
         }
 
@@ -1020,7 +1041,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestConflictAlreadySetConfiguration(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1039,7 +1060,7 @@ type Moon {
         {
             Environment.SetEnvironmentVariable
                 (ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             ValidateCosmosDbSetup(server);
@@ -1056,7 +1077,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1071,7 +1092,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestInvalidConfigurationAtRuntime(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint, "invalidString");
@@ -1086,7 +1107,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingFailureConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1108,7 +1129,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestLongRunningConfigUpdatedHandlerConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1147,7 +1168,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSqlSettingPostStartupConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             RuntimeConfig configuration = AuthorizationHelpers.InitRuntimeConfig(
@@ -1226,7 +1247,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestValidMultiSourceRunTimePostStartupConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
@@ -1258,7 +1279,7 @@ type Moon {
         public void TestLoadingLocalCosmosSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             ValidateCosmosDbSetup(server);
         }
@@ -1268,7 +1289,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestLoadingAccessTokenForCosmosClient(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint, null, true);
@@ -1286,7 +1307,7 @@ type Moon {
         public void TestLoadingLocalMsSqlSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
             Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.MSSQL), typeof(SqlQueryEngine));
@@ -1306,7 +1327,7 @@ type Moon {
         public void TestLoadingLocalPostgresSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
             Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.PostgreSQL), typeof(SqlQueryEngine));
@@ -1326,7 +1347,7 @@ type Moon {
         public void TestLoadingLocalMySqlSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MYSQL_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
             Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.MySQL), typeof(SqlQueryEngine));
@@ -1348,7 +1369,7 @@ type Moon {
         public async Task TestOverridingLocalSettingsFails(string configurationEndpoint)
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
 
             JsonContent config = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1362,7 +1383,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingConfigurationCreatesCorrectClasses(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -1472,7 +1493,7 @@ type Moon {
             $"{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}"
         };
 
-            TestServer server = new(Program.CreateWebHostBuilder(args));
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
 
             ValidateCosmosDbSetup(server);
         }
@@ -1489,7 +1510,7 @@ type Moon {
             Environment.SetEnvironmentVariable(
                 RUNTIME_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
 
-            TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+            using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
             ValidateCosmosDbSetup(server);
         }
@@ -2230,7 +2251,7 @@ type Moon {
 
             try
             {
-                TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
+                using TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
                 _ = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
                 Assert.Fail($"{RUNTIME_ENV_CONNECTION_STRING} is not given highest precedence");
             }
@@ -4306,7 +4327,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             // Start a new server with the custom log level to ensure the
             // instantiation of the valid log level filters works as expected.
-            TestServer server = new(Program.CreateWebHostBuilder(args));
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
             RuntimeConfigProvider runtimeConfigProvider = server.Services.GetService<RuntimeConfigProvider>();
 
             // RuntimeConfig with instantiated log level filters.

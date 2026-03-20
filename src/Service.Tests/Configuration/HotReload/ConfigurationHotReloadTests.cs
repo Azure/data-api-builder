@@ -336,38 +336,8 @@ public class ConfigurationHotReloadTests
         HttpResponseMessage result = await WaitForRestEndpointAsync($"{restPath}/Book", HttpStatusCode.OK);
         string reloadRestContent = await result.Content.ReadAsStringAsync();
 
-        // Retry GraphQL request because metadata re-initialization happens asynchronously
-        // after the "Validated hot-reloaded configuration file" message.
-        // PostGraphQLRequestAsync can also throw (e.g. JsonException) if the server returns
-        // a non-JSON error response during re-initialization, so we catch and retry.
-        JsonElement reloadGQLContents = default;
-        bool querySucceeded = false;
-        for (int attempt = 1; attempt <= 5; attempt++)
-        {
-            try
-            {
-                reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                    _testClient,
-                    _configProvider,
-                    GQL_QUERY_NAME,
-                    GQL_QUERY);
-
-                if (reloadGQLContents.ValueKind == JsonValueKind.Object &&
-                    reloadGQLContents.TryGetProperty("items", out _))
-                {
-                    querySucceeded = true;
-                    break;
-                }
-
-                Console.WriteLine($"GraphQL query returned {reloadGQLContents.ValueKind} on attempt {attempt}/5, retrying...");
-            }
-            catch (Exception ex) when (ex is JsonException || ex is HttpRequestException)
-            {
-                Console.WriteLine($"GraphQL request threw {ex.GetType().Name} on attempt {attempt}/5: {ex.Message}");
-            }
-
-            await Task.Delay(1000);
-        }
+        // Poll the GraphQL endpoint to allow time for the engine to become fully ready.
+        (bool querySucceeded, JsonElement reloadGQLContents) = await WaitForGraphQLEndpointAsync(GQL_QUERY_NAME, GQL_QUERY);
 
         // Assert
         // Old paths are not found.
@@ -698,36 +668,8 @@ public class ConfigurationHotReloadTests
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
         MsSqlOptions actualSessionContext = updatedRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
 
-        // Retry GraphQL request because metadata re-initialization happens asynchronously
-        // after the "Validated hot-reloaded configuration file" message. The metadata provider
-        // factory clears and re-initializes providers on the hot-reload thread, so requests
-        // arriving before that completes will fail with "Initialization of metadata incomplete."
-        JsonElement reloadGQLContents = default;
-        bool querySucceeded = false;
-        for (int attempt = 1; attempt <= 10; attempt++)
-        {
-            try
-            {
-                reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                    _testClient,
-                    _configProvider,
-                    GQL_QUERY_NAME,
-                    GQL_QUERY);
-
-                if (reloadGQLContents.ValueKind == JsonValueKind.Object &&
-                    reloadGQLContents.TryGetProperty("items", out _))
-                {
-                    querySucceeded = true;
-                    break;
-                }
-            }
-            catch (Exception ex) when (ex is JsonException || ex is HttpRequestException)
-            {
-                Console.WriteLine($"GraphQL request threw {ex.GetType().Name} on attempt {attempt}/10: {ex.Message}");
-            }
-
-            await Task.Delay(1000);
-        }
+        // Poll the GraphQL endpoint to allow time for the engine to become fully ready.
+        (bool querySucceeded, JsonElement reloadGQLContents) = await WaitForGraphQLEndpointAsync(GQL_QUERY_NAME, GQL_QUERY, maxRetries: 10);
 
         // Assert
         Assert.IsTrue(querySucceeded, "GraphQL query did not return valid results after hot-reload. Metadata initialization may not have completed.");
@@ -1050,5 +992,50 @@ public class ConfigurationHotReloadTests
 
         // Return the last response (undisposed) so the caller can inspect/assert on it.
         return response;
+    }
+
+    /// <summary>
+    /// Polls a GraphQL endpoint until it returns a valid response containing
+    /// the expected property. After a successful hot-reload, the engine may
+    /// still be re-initializing metadata providers, so an immediate request
+    /// can intermittently fail. PostGraphQLRequestAsync can also throw
+    /// (e.g. JsonException) if the server returns a non-JSON error response
+    /// during re-initialization.
+    /// </summary>
+    private static async Task<(bool Success, JsonElement Result)> WaitForGraphQLEndpointAsync(
+        string queryName,
+        string query,
+        string expectedProperty = "items",
+        int maxRetries = 5,
+        int delayMilliseconds = 1000)
+    {
+        JsonElement result = default;
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                result = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                    _testClient,
+                    _configProvider,
+                    queryName,
+                    query);
+
+                if (result.ValueKind == JsonValueKind.Object &&
+                    result.TryGetProperty(expectedProperty, out _))
+                {
+                    return (true, result);
+                }
+
+                Console.WriteLine($"GraphQL query returned {result.ValueKind} on attempt {attempt}/{maxRetries}, retrying...");
+            }
+            catch (Exception ex) when (ex is JsonException || ex is HttpRequestException)
+            {
+                Console.WriteLine($"GraphQL request threw {ex.GetType().Name} on attempt {attempt}/{maxRetries}: {ex.Message}");
+            }
+
+            await Task.Delay(delayMilliseconds);
+        }
+
+        return (false, result);
     }
 }

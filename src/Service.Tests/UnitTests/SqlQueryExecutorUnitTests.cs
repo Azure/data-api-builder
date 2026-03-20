@@ -11,6 +11,7 @@ using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
@@ -1013,6 +1014,202 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         #endregion
+
+        /// <summary>
+        /// Validates that when the CancellationToken from httpContext.RequestAborted times out
+        /// during a long-running query execution (simulating ExecuteReaderAsync being interrupted
+        /// by a token timeout), the resulting TaskCanceledException propagates through the Polly
+        /// retry policy without any retry attempts.
+        /// Unlike TestCancellationExceptionIsNotRetriedByRetryPolicy which throws immediately,
+        /// this test simulates a real timeout where the cancellation occurs asynchronously
+        /// after a delay.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestCancellationTokenTimeoutDuringQueryExecutionAsync()
+        {
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, "", new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Mcp: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader)
+            {
+                IsLateConfigured = true
+            };
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            HttpContext context = new DefaultHttpContext();
+            httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+            Mock<MsSqlQueryExecutor> queryExecutor
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null, null);
+
+            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+
+            queryExecutor.Setup(x => x.CreateConnection(
+               It.IsAny<string>())).CallBase();
+
+            // Set up a CancellationTokenSource that times out after a short delay,
+            // simulating httpContext.RequestAborted firing due to a client timeout.
+            CancellationTokenSource cts = new();
+            cts.CancelAfter(TimeSpan.FromMilliseconds(100));
+            context.RequestAborted = cts.Token;
+
+            // Mock ExecuteQueryAgainstDbAsync to simulate a long-running database query
+            // that is interrupted when the CancellationToken times out.
+            // Task.Delay with the cancellation token throws TaskCanceledException when the
+            // token fires, mimicking cmd.ExecuteReaderAsync being cancelled by a timed-out token.
+            // The Stopwatch + finally block mirrors the real ExecuteQueryAgainstDbAsync to verify
+            // that execution time is recorded even when a timeout occurs.
+            queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
+                It.IsAny<SqlConnection>(),
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<HttpContext>(),
+                provider.GetConfig().DefaultDataSourceName,
+                It.IsAny<List<string>>()))
+            .Returns(async () =>
+            {
+                Stopwatch timer = Stopwatch.StartNew();
+                try
+                {
+                    // Simulate a long-running query interrupted by token timeout.
+                    // Timeout.Infinite (-1) means "wait forever" — the only way this
+                    // completes is when cts.Token fires after ~100 ms, which causes
+                    // Task.Delay to throw TaskCanceledException.
+                    await Task.Delay(Timeout.Infinite, cts.Token);
+                    return (object)null;
+                }
+                finally
+                {
+                    timer.Stop();
+                    queryExecutor.Object.AddDbExecutionTimeToMiddlewareContext(timer.ElapsedMilliseconds);
+                }
+            });
+
+            // Call the actual ExecuteQueryAsync method (includes Polly retry policy).
+            queryExecutor.Setup(x => x.ExecuteQueryAsync(
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<string>(),
+                It.IsAny<HttpContext>(),
+                It.IsAny<List<string>>())).CallBase();
+
+            // Act & Assert: TaskCanceledException should propagate without retries.
+            await Assert.ThrowsExceptionAsync<TaskCanceledException>(async () =>
+            {
+                await queryExecutor.Object.ExecuteQueryAsync<object>(
+                    sqltext: string.Empty,
+                    parameters: new Dictionary<string, DbConnectionParam>(),
+                    dataReaderHandler: null,
+                    dataSourceName: String.Empty,
+                    httpContext: context,
+                    args: null);
+            });
+
+            // Verify no retry log messages were emitted. Polly does not handle
+            // TaskCanceledException (subclass of OperationCanceledException), so
+            // the exception propagates immediately without any retry attempts.
+            Assert.AreEqual(0, queryExecutorLogger.Invocations.Count);
+
+            // Verify the finally block recorded execution time even though the token timed out.
+            Assert.IsTrue(
+                context.Items.ContainsKey(TOTAL_DB_EXECUTION_TIME),
+                "HttpContext must contain the total db execution time even when the request is cancelled.");
+        }
+
+        /// <summary>
+        /// Validates that when ExecuteQueryAgainstDbAsync throws OperationCanceledException
+        /// (e.g., due to client disconnect via httpContext.RequestAborted cancellation token),
+        /// the Polly retry policy does NOT retry and the exception propagates to the caller.
+        /// The retry policy is configured to only handle DbException, so OperationCanceledException
+        /// should be immediately re-thrown without any retry attempts.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestCancellationExceptionIsNotRetriedByRetryPolicy()
+        {
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, "", new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Mcp: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader)
+            {
+                IsLateConfigured = true
+            };
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+            Mock<MsSqlQueryExecutor> queryExecutor
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null, null);
+
+            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+
+            queryExecutor.Setup(x => x.CreateConnection(
+               It.IsAny<string>())).CallBase();
+
+            // Mock ExecuteQueryAgainstDbAsync to throw OperationCanceledException,
+            // simulating a cancelled CancellationToken from httpContext.RequestAborted.
+            queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
+                It.IsAny<SqlConnection>(),
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<HttpContext>(),
+                provider.GetConfig().DefaultDataSourceName,
+                It.IsAny<List<string>>()))
+            .ThrowsAsync(new OperationCanceledException("The operation was canceled."));
+
+            // Call the actual ExecuteQueryAsync method.
+            queryExecutor.Setup(x => x.ExecuteQueryAsync(
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<string>(),
+                It.IsAny<HttpContext>(),
+                It.IsAny<List<string>>())).CallBase();
+
+            // Act & Assert: OperationCanceledException should propagate without retries.
+            await Assert.ThrowsExceptionAsync<OperationCanceledException>(async () =>
+            {
+                await queryExecutor.Object.ExecuteQueryAsync<object>(
+                    sqltext: string.Empty,
+                    parameters: new Dictionary<string, DbConnectionParam>(),
+                    dataReaderHandler: null,
+                    dataSourceName: String.Empty,
+                    httpContext: null,
+                    args: null);
+            });
+
+            // Verify no retry log messages were emitted. Since IsLateConfigured is true,
+            // the debug log is skipped, and since Polly doesn't handle OperationCanceledException,
+            // no retry occurs → zero logger invocations.
+            Assert.AreEqual(0, queryExecutorLogger.Invocations.Count);
+        }
 
         [TestCleanup]
         public void CleanupAfterEachTest()

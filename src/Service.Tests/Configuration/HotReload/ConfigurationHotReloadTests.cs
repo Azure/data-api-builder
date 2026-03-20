@@ -780,12 +780,28 @@ public class ConfigurationHotReloadTests
             succeedConfigLog = _writer.ToString();
         }
 
-        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+        // Retry REST request because metadata re-initialization happens asynchronously
+        // after the "Validated hot-reloaded configuration file" message. The metadata provider
+        // factory clears and re-initializes providers on the hot-reload thread, so requests
+        // arriving before that completes will fail.
+        HttpResponseMessage restResult = null;
+        bool restSucceeded = false;
+        for (int attempt = 1; attempt <= 10; attempt++)
+        {
+            restResult = await _testClient.GetAsync("/rest/Book");
+            if (restResult.StatusCode == HttpStatusCode.OK)
+            {
+                restSucceeded = true;
+                break;
+            }
+
+            await Task.Delay(1000);
+        }
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(HOT_RELOAD_FAILURE_MESSAGE));
         Assert.IsTrue(succeedConfigLog.Contains(HOT_RELOAD_SUCCESS_MESSAGE));
-        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
+        Assert.IsTrue(restSucceeded, $"REST request did not return OK after hot-reload. Last status: {restResult?.StatusCode}");
     }
 
     /// <summary>
@@ -838,12 +854,28 @@ public class ConfigurationHotReloadTests
             succeedConfigLog = _writer.ToString();
         }
 
-        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+        // Retry REST request because metadata re-initialization happens asynchronously
+        // after the "Validated hot-reloaded configuration file" message. The metadata provider
+        // factory clears and re-initializes providers on the hot-reload thread, so requests
+        // arriving before that completes will fail.
+        HttpResponseMessage restResult = null;
+        bool restSucceeded = false;
+        for (int attempt = 1; attempt <= 10; attempt++)
+        {
+            restResult = await _testClient.GetAsync("/rest/Book");
+            if (restResult.StatusCode == HttpStatusCode.OK)
+            {
+                restSucceeded = true;
+                break;
+            }
+
+            await Task.Delay(1000);
+        }
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(HOT_RELOAD_FAILURE_MESSAGE));
         Assert.IsTrue(succeedConfigLog.Contains(HOT_RELOAD_SUCCESS_MESSAGE));
-        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
+        Assert.IsTrue(restSucceeded, $"REST request did not return OK after hot-reload. Last status: {restResult?.StatusCode}");
     }
 
     /// <summary>

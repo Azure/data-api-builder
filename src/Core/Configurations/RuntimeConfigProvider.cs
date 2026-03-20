@@ -426,4 +426,23 @@ public class RuntimeConfigProvider
         };
         _configLoader.EditRuntimeConfig(newRuntimeConfig);
     }
+
+    public void RemoveGeneratedAutoentitiesFromConfig()
+    {
+        Dictionary<string, Entity> entities = new(_configLoader.RuntimeConfig!.Entities);
+        foreach ((string name, Entity entity) in entities)
+        {
+            if (entity.IsAutoentity)
+            {
+                entities.Remove(name);
+                _configLoader.RuntimeConfig!.RemoveGeneratedAutoentityNameFromDataSourceName(name);
+            }
+        }
+
+        RuntimeConfig newRuntimeConfig = _configLoader.RuntimeConfig! with
+        {
+            Entities = new(entities)
+        };
+        _configLoader.EditRuntimeConfig(newRuntimeConfig);
+    }
 }

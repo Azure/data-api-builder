@@ -780,7 +780,9 @@ public class ConfigurationHotReloadTests
             succeedConfigLog = _writer.ToString();
         }
 
-        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+        // After hot-reload, the engine may still be re-initializing metadata providers.
+        // Poll the REST endpoint to allow time for the engine to become fully ready.
+        HttpResponseMessage restResult = await WaitForRestEndpointAsync("/rest/Book", HttpStatusCode.OK);
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(HOT_RELOAD_FAILURE_MESSAGE));
@@ -838,7 +840,9 @@ public class ConfigurationHotReloadTests
             succeedConfigLog = _writer.ToString();
         }
 
-        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+        // After hot-reload, the engine may still be re-initializing metadata providers.
+        // Poll the REST endpoint to allow time for the engine to become fully ready.
+        HttpResponseMessage restResult = await WaitForRestEndpointAsync("/rest/Book", HttpStatusCode.OK);
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(HOT_RELOAD_FAILURE_MESSAGE));
@@ -973,5 +977,32 @@ public class ConfigurationHotReloadTests
         }
 
         throw new TimeoutException("The condition was not met within the timeout period.");
+    }
+
+    /// <summary>
+    /// Polls a REST endpoint until it returns the expected status code.
+    /// After a successful hot-reload, the engine may still be re-initializing
+    /// metadata providers, so an immediate request can intermittently fail.
+    /// </summary>
+    private static async Task<HttpResponseMessage> WaitForRestEndpointAsync(
+        string requestUri,
+        HttpStatusCode expectedStatus,
+        int maxRetries = 5,
+        int delayMilliseconds = 1000)
+    {
+        HttpResponseMessage response = null;
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            response = await _testClient.GetAsync(requestUri);
+            if (response.StatusCode == expectedStatus)
+            {
+                return response;
+            }
+
+            Console.WriteLine($"REST {requestUri} returned {response.StatusCode} on attempt {attempt}/{maxRetries}, retrying...");
+            await Task.Delay(delayMilliseconds);
+        }
+
+        return response;
     }
 }

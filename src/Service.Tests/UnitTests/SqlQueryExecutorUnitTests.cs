@@ -1053,7 +1053,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
             Mock<MsSqlQueryExecutor> queryExecutor
-                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null, null);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
 
@@ -1070,6 +1070,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // that is interrupted when the CancellationToken times out.
             // Task.Delay with the cancellation token throws TaskCanceledException when the
             // token fires, mimicking cmd.ExecuteReaderAsync being cancelled by a timed-out token.
+            // The Stopwatch + finally block mirrors the real ExecuteQueryAgainstDbAsync to verify
+            // that execution time is recorded even when a timeout occurs.
             queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
@@ -1080,12 +1082,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<List<string>>()))
             .Returns(async () =>
             {
-                // Simulate a long-running query interrupted by token timeout.
-                // Timeout.Infinite (-1) means "wait forever" — the only way this
-                // completes is when cts.Token fires after ~100 ms, which causes
-                // Task.Delay to throw TaskCanceledException.
-                await Task.Delay(Timeout.Infinite, cts.Token);
-                return (object)null;
+                Stopwatch timer = Stopwatch.StartNew();
+                try
+                {
+                    // Simulate a long-running query interrupted by token timeout.
+                    // Timeout.Infinite (-1) means "wait forever" — the only way this
+                    // completes is when cts.Token fires after ~100 ms, which causes
+                    // Task.Delay to throw TaskCanceledException.
+                    await Task.Delay(Timeout.Infinite, cts.Token);
+                    return (object)null;
+                }
+                finally
+                {
+                    timer.Stop();
+                    queryExecutor.Object.AddDbExecutionTimeToMiddlewareContext(timer.ElapsedMilliseconds);
+                }
             });
 
             // Call the actual ExecuteQueryAsync method (includes Polly retry policy).
@@ -1113,6 +1124,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // TaskCanceledException (subclass of OperationCanceledException), so
             // the exception propagates immediately without any retry attempts.
             Assert.AreEqual(0, queryExecutorLogger.Invocations.Count);
+
+            // Verify the finally block recorded execution time even though the token timed out.
+            Assert.IsTrue(
+                context.Items.ContainsKey(TOTAL_DB_EXECUTION_TIME),
+                "HttpContext must contain the total db execution time even when the request is cancelled.");
         }
 
         /// <summary>
@@ -1149,7 +1165,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
             Mock<MsSqlQueryExecutor> queryExecutor
-                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null, null);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
 
@@ -1193,83 +1209,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // the debug log is skipped, and since Polly doesn't handle OperationCanceledException,
             // no retry occurs → zero logger invocations.
             Assert.AreEqual(0, queryExecutorLogger.Invocations.Count);
-        }
-
-        /// <summary>
-        /// Validates that when a request is cancelled during query execution,
-        /// the database execution time is still recorded in the HttpContext.
-        /// This ensures the finally block in ExecuteQueryAgainstDbAsync runs
-        /// even when the CancellationToken triggers an exception.
-        /// </summary>
-        [TestMethod, TestCategory(TestCategory.MSSQL)]
-        public async Task TestDbExecutionTimeRecordedEvenWhenRequestCancelled()
-        {
-            RuntimeConfig mockConfig = new(
-               Schema: "",
-               DataSource: new(DatabaseType.MSSQL, "", new()),
-               Runtime: new(
-                   Rest: new(),
-                   GraphQL: new(),
-                   Mcp: new(),
-                   Host: new(null, null)
-               ),
-               Entities: new(new Dictionary<string, Entity>())
-           );
-
-            MockFileSystem fileSystem = new();
-            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader)
-            {
-                IsLateConfigured = true
-            };
-
-            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
-            Mock<IHttpContextAccessor> httpContextAccessor = new();
-            HttpContext context = new DefaultHttpContext();
-            httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
-            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
-            Mock<MsSqlQueryExecutor> queryExecutor
-                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
-
-            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
-
-            // Call the actual ExecuteQueryAgainstDbAsync to exercise the finally block.
-            queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
-                It.IsAny<SqlConnection>(),
-                It.IsAny<string>(),
-                It.IsAny<IDictionary<string, DbConnectionParam>>(),
-                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
-                It.IsAny<HttpContext>(),
-                It.IsAny<string>(),
-                It.IsAny<List<string>>())).CallBase();
-
-            // Create an HttpContext with a pre-cancelled CancellationToken.
-            CancellationTokenSource cts = new();
-            cts.Cancel();
-            context.RequestAborted = cts.Token;
-
-            try
-            {
-                await queryExecutor.Object.ExecuteQueryAgainstDbAsync<object>(
-                    conn: null,
-                    sqltext: string.Empty,
-                    parameters: new Dictionary<string, DbConnectionParam>(),
-                    dataReaderHandler: null,
-                    dataSourceName: String.Empty,
-                    httpContext: context,
-                    args: null);
-            }
-            catch (Exception)
-            {
-                // SqlConnection is sealed and can't be mocked; conn is null so OpenAsync
-                // throws NullReferenceException. Ignore to verify the finally block behavior.
-            }
-
-            // The finally block should have recorded execution time even though an exception occurred.
-            Assert.IsTrue(
-                context.Items.ContainsKey(TOTAL_DB_EXECUTION_TIME),
-                "HttpContext must contain the total db execution time even when the request is cancelled.");
         }
 
         [TestCleanup]

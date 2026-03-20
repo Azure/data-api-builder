@@ -211,7 +211,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" (double quotes) due to stringagg parsing and hence we need to ensure parsing is correct.
                         DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
                         HotChocolate.Types.NodaTime.LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
-                        ByteArrayType => fieldValue.GetBytesFromBase64(),
+                        Base64StringType => fieldValue.GetBytesFromBase64(),
                         BooleanType => fieldValue.GetBoolean(), // spec
                         UrlType => new Uri(fieldValue.GetString()!),
                         UuidType => fieldValue.GetGuid(),
@@ -508,7 +508,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             return GetParametersFromSchemaAndQueryFields(
                 context.Selection.Field,
-                context.Selection.SyntaxNode,
+                context.Selection.SyntaxNodes[0].Node,
                 context.Variables);
         }
 
@@ -627,7 +627,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // e.g. metadata for index 4 will not exist. only 3.
                 // Depth: /  0   / 1  /   2    /   3      /   4
                 // Path:  /books/items/items[0]/publishers/books
-                // 
+                //
                 // To handle arbitrary nesting depths with sibling relationships, we need to include
                 // the relationship field path in the key. For example:
                 // - /entity/items[0]/rel1/nested uses key ::3::rel1

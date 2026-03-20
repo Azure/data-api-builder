@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     /// we throw the right exception when environment
     /// variable names are not found.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
+    [TestClass]
     public class RuntimeConfigLoaderJsonDeserializerTests
     {
         #region Positive Tests

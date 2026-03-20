@@ -331,19 +331,40 @@ public class ConfigurationHotReloadTests
         HttpResponseMessage badPathRestResult = await _testClient.GetAsync($"rest/Book");
         HttpResponseMessage badPathGQLResult = await _testClient.SendAsync(request);
 
-        HttpResponseMessage result = await _testClient.GetAsync($"{restPath}/Book");
+        // After hot-reload, the engine may still be re-initializing metadata providers.
+        // Poll the REST endpoint to allow time for the engine to become fully ready.
+        HttpResponseMessage result = await WaitForRestEndpointAsync($"{restPath}/Book", HttpStatusCode.OK);
         string reloadRestContent = await result.Content.ReadAsStringAsync();
-        JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-            _testClient,
-            _configProvider,
-            GQL_QUERY_NAME,
-            GQL_QUERY);
+
+        // Retry GraphQL request because metadata re-initialization happens asynchronously
+        // after the "Validated hot-reloaded configuration file" message.
+        JsonElement reloadGQLContents = default;
+        bool querySucceeded = false;
+        for (int attempt = 1; attempt <= 5; attempt++)
+        {
+            reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                _testClient,
+                _configProvider,
+                GQL_QUERY_NAME,
+                GQL_QUERY);
+
+            if (reloadGQLContents.ValueKind == JsonValueKind.Object &&
+                reloadGQLContents.TryGetProperty("items", out _))
+            {
+                querySucceeded = true;
+                break;
+            }
+
+            Console.WriteLine($"GraphQL query returned {reloadGQLContents.ValueKind} on attempt {attempt}/5, retrying...");
+            await Task.Delay(1000);
+        }
 
         // Assert
         // Old paths are not found.
         Assert.AreEqual(HttpStatusCode.BadRequest, badPathRestResult.StatusCode);
         Assert.AreEqual(HttpStatusCode.NotFound, badPathGQLResult.StatusCode);
         // Hot reloaded paths return correct response.
+        Assert.IsTrue(querySucceeded, "GraphQL query did not return valid results after hot-reload.");
         Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(restBookContents, reloadRestContent));
         SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
     }

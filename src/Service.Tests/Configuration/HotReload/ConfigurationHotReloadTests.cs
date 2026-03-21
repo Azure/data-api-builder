@@ -333,7 +333,7 @@ public class ConfigurationHotReloadTests
 
         // After hot-reload, the engine may still be re-initializing metadata providers.
         // Poll the REST endpoint to allow time for the engine to become fully ready.
-        HttpResponseMessage result = await WaitForRestEndpointAsync($"{restPath}/Book", HttpStatusCode.OK);
+        using HttpResponseMessage result = await WaitForRestEndpointAsync($"{restPath}/Book", HttpStatusCode.OK);
         string reloadRestContent = await result.Content.ReadAsStringAsync();
 
         // Poll the GraphQL endpoint to allow time for the engine to become fully ready.
@@ -762,7 +762,7 @@ public class ConfigurationHotReloadTests
 
         // After hot-reload, the engine may still be re-initializing metadata providers.
         // Poll the REST endpoint to allow time for the engine to become fully ready.
-        HttpResponseMessage restResult = await WaitForRestEndpointAsync("/rest/Book", HttpStatusCode.OK);
+        using HttpResponseMessage restResult = await WaitForRestEndpointAsync("/rest/Book", HttpStatusCode.OK);
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(HOT_RELOAD_FAILURE_MESSAGE));
@@ -822,7 +822,7 @@ public class ConfigurationHotReloadTests
 
         // After hot-reload, the engine may still be re-initializing metadata providers.
         // Poll the REST endpoint to allow time for the engine to become fully ready.
-        HttpResponseMessage restResult = await WaitForRestEndpointAsync("/rest/Book", HttpStatusCode.OK);
+        using HttpResponseMessage restResult = await WaitForRestEndpointAsync("/rest/Book", HttpStatusCode.OK);
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(HOT_RELOAD_FAILURE_MESSAGE));

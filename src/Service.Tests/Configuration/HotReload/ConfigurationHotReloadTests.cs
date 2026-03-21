@@ -331,19 +331,20 @@ public class ConfigurationHotReloadTests
         HttpResponseMessage badPathRestResult = await _testClient.GetAsync($"rest/Book");
         HttpResponseMessage badPathGQLResult = await _testClient.SendAsync(request);
 
-        HttpResponseMessage result = await _testClient.GetAsync($"{restPath}/Book");
+        // After hot-reload, the engine may still be re-initializing metadata providers.
+        // Poll the REST endpoint to allow time for the engine to become fully ready.
+        using HttpResponseMessage result = await WaitForRestEndpointAsync($"{restPath}/Book", HttpStatusCode.OK);
         string reloadRestContent = await result.Content.ReadAsStringAsync();
-        JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-            _testClient,
-            _configProvider,
-            GQL_QUERY_NAME,
-            GQL_QUERY);
+
+        // Poll the GraphQL endpoint to allow time for the engine to become fully ready.
+        (bool querySucceeded, JsonElement reloadGQLContents) = await WaitForGraphQLEndpointAsync(GQL_QUERY_NAME, GQL_QUERY);
 
         // Assert
         // Old paths are not found.
         Assert.AreEqual(HttpStatusCode.BadRequest, badPathRestResult.StatusCode);
         Assert.AreEqual(HttpStatusCode.NotFound, badPathGQLResult.StatusCode);
         // Hot reloaded paths return correct response.
+        Assert.IsTrue(querySucceeded, "GraphQL query did not return valid results after hot-reload.");
         Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(restBookContents, reloadRestContent));
         SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
     }
@@ -667,29 +668,8 @@ public class ConfigurationHotReloadTests
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
         MsSqlOptions actualSessionContext = updatedRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
 
-        // Retry GraphQL request because metadata re-initialization happens asynchronously
-        // after the "Validated hot-reloaded configuration file" message. The metadata provider
-        // factory clears and re-initializes providers on the hot-reload thread, so requests
-        // arriving before that completes will fail with "Initialization of metadata incomplete."
-        JsonElement reloadGQLContents = default;
-        bool querySucceeded = false;
-        for (int attempt = 1; attempt <= 10; attempt++)
-        {
-            reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                _testClient,
-                _configProvider,
-                GQL_QUERY_NAME,
-                GQL_QUERY);
-
-            if (reloadGQLContents.ValueKind == JsonValueKind.Object &&
-                reloadGQLContents.TryGetProperty("items", out _))
-            {
-                querySucceeded = true;
-                break;
-            }
-
-            await Task.Delay(1000);
-        }
+        // Poll the GraphQL endpoint to allow time for the engine to become fully ready.
+        (bool querySucceeded, JsonElement reloadGQLContents) = await WaitForGraphQLEndpointAsync(GQL_QUERY_NAME, GQL_QUERY, maxRetries: 10);
 
         // Assert
         Assert.IsTrue(querySucceeded, "GraphQL query did not return valid results after hot-reload. Metadata initialization may not have completed.");
@@ -780,7 +760,9 @@ public class ConfigurationHotReloadTests
             succeedConfigLog = _writer.ToString();
         }
 
-        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+        // After hot-reload, the engine may still be re-initializing metadata providers.
+        // Poll the REST endpoint to allow time for the engine to become fully ready.
+        using HttpResponseMessage restResult = await WaitForRestEndpointAsync("/rest/Book", HttpStatusCode.OK);
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(HOT_RELOAD_FAILURE_MESSAGE));
@@ -838,7 +820,9 @@ public class ConfigurationHotReloadTests
             succeedConfigLog = _writer.ToString();
         }
 
-        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+        // After hot-reload, the engine may still be re-initializing metadata providers.
+        // Poll the REST endpoint to allow time for the engine to become fully ready.
+        using HttpResponseMessage restResult = await WaitForRestEndpointAsync("/rest/Book", HttpStatusCode.OK);
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(HOT_RELOAD_FAILURE_MESSAGE));
@@ -973,5 +957,85 @@ public class ConfigurationHotReloadTests
         }
 
         throw new TimeoutException("The condition was not met within the timeout period.");
+    }
+
+    /// <summary>
+    /// Polls a REST endpoint until it returns the expected status code.
+    /// After a successful hot-reload, the engine may still be re-initializing
+    /// metadata providers, so an immediate request can intermittently fail.
+    /// </summary>
+    private static async Task<HttpResponseMessage> WaitForRestEndpointAsync(
+        string requestUri,
+        HttpStatusCode expectedStatus,
+        int maxRetries = 5,
+        int delayMilliseconds = 1000)
+    {
+        HttpResponseMessage response = null;
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            response = await _testClient.GetAsync(requestUri);
+            if (response.StatusCode == expectedStatus)
+            {
+                return response;
+            }
+
+            Console.WriteLine($"REST {requestUri} returned {response.StatusCode} on attempt {attempt}/{maxRetries}, retrying...");
+
+            // Dispose unsuccessful responses to avoid leaking connections/sockets.
+            if (attempt < maxRetries)
+            {
+                response.Dispose();
+            }
+
+            await Task.Delay(delayMilliseconds);
+        }
+
+        // Return the last response (undisposed) so the caller can inspect/assert on it.
+        return response;
+    }
+
+    /// <summary>
+    /// Polls a GraphQL endpoint until it returns a valid response containing
+    /// the expected property. After a successful hot-reload, the engine may
+    /// still be re-initializing metadata providers, so an immediate request
+    /// can intermittently fail. PostGraphQLRequestAsync can also throw
+    /// (e.g. JsonException) if the server returns a non-JSON error response
+    /// during re-initialization.
+    /// </summary>
+    private static async Task<(bool Success, JsonElement Result)> WaitForGraphQLEndpointAsync(
+        string queryName,
+        string query,
+        string expectedProperty = "items",
+        int maxRetries = 5,
+        int delayMilliseconds = 1000)
+    {
+        JsonElement result = default;
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                result = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                    _testClient,
+                    _configProvider,
+                    queryName,
+                    query);
+
+                if (result.ValueKind == JsonValueKind.Object &&
+                    result.TryGetProperty(expectedProperty, out _))
+                {
+                    return (true, result);
+                }
+
+                Console.WriteLine($"GraphQL query returned {result.ValueKind} on attempt {attempt}/{maxRetries}, retrying...");
+            }
+            catch (Exception ex) when (ex is JsonException || ex is HttpRequestException)
+            {
+                Console.WriteLine($"GraphQL request threw {ex.GetType().Name} on attempt {attempt}/{maxRetries}: {ex.Message}");
+            }
+
+            await Task.Delay(delayMilliseconds);
+        }
+
+        return (false, result);
     }
 }

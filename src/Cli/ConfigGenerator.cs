@@ -3634,9 +3634,9 @@ namespace Cli
         /// </summary>
         internal static void WarnIfNoEntitiesDefined(RuntimeConfig config)
         {
-            if (config.Entities.Count() == 0
-                && (config.Autoentities is null || config.Autoentities.Count() == 0)
-                && config.DataSourceFiles is null)
+            if (config.Entities.Entities.Count == 0
+                && config.Autoentities.Autoentities.Count == 0
+                && (config.DataSourceFiles?.SourceFiles is null || !config.DataSourceFiles.SourceFiles.Any()))
             {
                 _logger.LogWarning("No entities are defined in this configuration.");
             }

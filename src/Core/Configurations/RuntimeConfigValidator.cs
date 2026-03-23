@@ -972,15 +972,6 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             HashSet<EntityActionOperation> totalSupportedOperationsFromAllRoles = new();
 
-            if (entity.Permissions.Length == 0)
-            {
-                HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Entity: {entityName} has no permissions defined.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-
-            }
-
             foreach (EntityPermission permissionSetting in entity.Permissions)
             {
                 string roleName = permissionSetting.Role;

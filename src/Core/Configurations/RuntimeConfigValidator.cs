@@ -971,7 +971,6 @@ public class RuntimeConfigValidator : IConfigValidator
         foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
         {
             HashSet<EntityActionOperation> totalSupportedOperationsFromAllRoles = new();
-
             foreach (EntityPermission permissionSetting in entity.Permissions)
             {
                 string roleName = permissionSetting.Role;

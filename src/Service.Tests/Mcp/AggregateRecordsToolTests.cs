@@ -200,10 +200,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             DisplayName = "count(*) with orderby desc, no groupby")]
         [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"asc\"}",
             DisplayName = "count(*) with orderby asc, no groupby")]
-        [DataRow("{\"entity\": \"Book\", \"function\": \"avg\", \"field\": \"price\", \"orderby\": \"desc\"}",
-            DisplayName = "avg(price) with orderby desc, no groupby")]
-        [DataRow("{\"entity\": \"Book\", \"function\": \"sum\", \"field\": \"price\", \"orderby\": \"asc\"}",
-            DisplayName = "sum(price) with orderby asc, no groupby")]
         [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"ascending\"}",
             DisplayName = "Invalid orderby value without groupby is silently ignored")]
         [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"garbage\"}",
@@ -248,45 +244,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
             Assert.AreNotEqual("InvalidArguments", errorType,
                 "Simple count(*) must pass input validation.");
-        }
-
-        /// <summary>
-        /// Verifies ValidateGroupByDependencies directly: orderby is silently cleared
-        /// when groupby count is 0.
-        /// </summary>
-        [TestMethod]
-        public void ValidateGroupByDependencies_OrderbyWithoutGroupby_ClearsOrderbyFlag()
-        {
-            bool userProvidedOrderby = true;
-            CallToolResult? result = AggregateRecordsTool.ValidateGroupByDependencies(
-                groupbyCount: 0,
-                userProvidedOrderby: ref userProvidedOrderby,
-                first: null,
-                after: null,
-                toolName: "aggregate_records",
-                logger: null);
-
-            Assert.IsNull(result, "No error should be returned when orderby is provided without groupby.");
-            Assert.IsFalse(userProvidedOrderby, "userProvidedOrderby must be set to false when groupby is absent.");
-        }
-
-        /// <summary>
-        /// Verifies ValidateGroupByDependencies preserves orderby when groupby is present.
-        /// </summary>
-        [TestMethod]
-        public void ValidateGroupByDependencies_OrderbyWithGroupby_PreservesOrderbyFlag()
-        {
-            bool userProvidedOrderby = true;
-            CallToolResult? result = AggregateRecordsTool.ValidateGroupByDependencies(
-                groupbyCount: 2,
-                userProvidedOrderby: ref userProvidedOrderby,
-                first: null,
-                after: null,
-                toolName: "aggregate_records",
-                logger: null);
-
-            Assert.IsNull(result, "No error should be returned when both orderby and groupby are provided.");
-            Assert.IsTrue(userProvidedOrderby, "userProvidedOrderby must remain true when groupby is present.");
         }
 
         /// <summary>

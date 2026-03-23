@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return false;
             }
 
-            mcpOptions = runtimeConfig?.Runtime?.Mcp;
+            mcpOptions = runtimeConfig?.Runtime?.Mcp ?? new McpRuntimeOptions();
             return mcpOptions != null;
         }
     }

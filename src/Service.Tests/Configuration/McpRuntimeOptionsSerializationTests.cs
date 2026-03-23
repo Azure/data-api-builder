@@ -192,6 +192,95 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// When the mcp and runtime config blocks are omitted entirely, IsMcpEnabled should default to true.
+        /// This validates the fix for GitHub issue #3284.
+        /// </summary>
+        [TestMethod]
+        public void TestIsMcpEnabledDefaultsTrueWhenMcpAndRuntimeBlocksAbsent()
+        {
+            // Arrange - config with no runtime/mcp block
+            string configJson = @"{
+                ""$schema"": ""test-schema"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""Server=test;Database=test;""
+                },
+                ""entities"": {}
+            }";
+
+            // Act
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig config);
+
+            // Assert
+            Assert.IsTrue(parseSuccess);
+            Assert.IsNull(config.Runtime, "Runtime should be null when not specified");
+            Assert.IsNull(config.Runtime?.Mcp, "Mcp should be null when not specified");
+            Assert.IsTrue(config.IsMcpEnabled, "IsMcpEnabled should default to true when mcp block is absent");
+            Assert.AreEqual(McpRuntimeOptions.DEFAULT_PATH, config.McpPath, "McpPath should return default when mcp block is absent");
+        }
+
+        /// <summary>
+        /// When the mcp config block is present but enabled is not specified,
+        /// IsMcpEnabled should default to true.
+        /// </summary>
+        [TestMethod]
+        public void TestIsMcpEnabledDefaultsTrueWhenEnabledNotSpecified()
+        {
+            // Arrange - config with mcp block but no enabled field
+            string configJson = @"{
+                ""$schema"": ""test-schema"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""Server=test;Database=test;""
+                },
+                ""runtime"": {
+                    ""mcp"": {
+                        ""path"": ""/mcp""
+                    }
+                },
+                ""entities"": {}
+            }";
+
+            // Act
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig config);
+
+            // Assert
+            Assert.IsTrue(parseSuccess);
+            Assert.IsNotNull(config.Runtime?.Mcp);
+            Assert.IsTrue(config.IsMcpEnabled, "IsMcpEnabled should default to true when enabled is not specified");
+        }
+
+        /// <summary>
+        /// When mcp.enabled is explicitly set to false, IsMcpEnabled should return false.
+        /// </summary>
+        [TestMethod]
+        public void TestIsMcpEnabledReturnsFalseWhenExplicitlyDisabled()
+        {
+            // Arrange
+            string configJson = @"{
+                ""$schema"": ""test-schema"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""Server=test;Database=test;""
+                },
+                ""runtime"": {
+                    ""mcp"": {
+                        ""enabled"": false
+                    }
+                },
+                ""entities"": {}
+            }";
+
+            // Act
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig config);
+
+            // Assert
+            Assert.IsTrue(parseSuccess);
+            Assert.IsNotNull(config.Runtime?.Mcp);
+            Assert.IsFalse(config.IsMcpEnabled, "IsMcpEnabled should be false when explicitly disabled");
+        }
+
+        /// <summary>
         /// Creates a minimal RuntimeConfig with the specified MCP options for testing.
         /// </summary>
         private static RuntimeConfig CreateMinimalConfigWithMcp(McpRuntimeOptions mcpOptions)

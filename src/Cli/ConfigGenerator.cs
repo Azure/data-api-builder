@@ -2666,6 +2666,14 @@ namespace Cli
                         }
                     }
 
+                    // Warn when no entities are defined and no autoentities or data-source-files are configured
+                    if (config.Entities.Count() == 0
+                        && (config.Autoentities is null || config.Autoentities.Count() == 0)
+                        && config.DataSourceFiles is null)
+                    {
+                        _logger.LogWarning("No entities are defined in this configuration.");
+                    }
+
                     // Warn if Unauthenticated provider is used with authenticated or custom roles
                     if (config.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
                     {

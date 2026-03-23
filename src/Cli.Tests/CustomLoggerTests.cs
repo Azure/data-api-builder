@@ -27,17 +27,25 @@ public class CustomLoggerTests
         CustomLoggerProvider provider = new();
         ILogger logger = provider.CreateLogger("TestCategory");
 
-        StringWriter writer = new();
-        Console.SetOut(writer);
+        TextWriter originalOut = Console.Out;
+        try
+        {
+            StringWriter writer = new();
+            Console.SetOut(writer);
 
-        logger.Log(logLevel, "test message");
+            logger.Log(logLevel, "test message");
 
-        string output = writer.ToString();
-        Assert.IsTrue(
-            output.StartsWith(expectedPrefix),
-            $"Expected output to start with '{expectedPrefix}' but got: '{output}'");
-        Assert.IsTrue(
-            output.Contains("test message"),
-            $"Expected output to contain 'test message' but got: '{output}'");
+            string output = writer.ToString();
+            Assert.IsTrue(
+                output.StartsWith(expectedPrefix),
+                $"Expected output to start with '{expectedPrefix}' but got: '{output}'");
+            Assert.IsTrue(
+                output.Contains("test message"),
+                $"Expected output to contain 'test message' but got: '{output}'");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
     }
 }

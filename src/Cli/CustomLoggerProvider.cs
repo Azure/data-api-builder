@@ -79,11 +79,16 @@ public class CustomLoggerProvider : ILoggerProvider
                 return;
             }
 
+            if (!_logLevelToAbbreviation.TryGetValue(logLevel, out string? abbreviation))
+            {
+                return;
+            }
+
             ConsoleColor originalForeGroundColor = Console.ForegroundColor;
             ConsoleColor originalBackGroundColor = Console.BackgroundColor;
-            Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap[logLevel];
-            Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap[logLevel];
-            Console.Write($"{_logLevelToAbbreviation[logLevel]}:");
+            Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
+            Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
+            Console.Write($"{abbreviation}:");
             Console.ForegroundColor = originalForeGroundColor;
             Console.BackgroundColor = originalBackGroundColor;
             Console.WriteLine($" {formatter(state, exception)}");

@@ -2648,21 +2648,18 @@ namespace Cli
 
             bool isValid = runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
 
-            // Run config-structure warnings regardless of validation outcome.
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
             {
+                // Run config-structure warnings regardless of validation outcome.
                 WarnIfNoEntitiesDefined(config);
-            }
 
-            // Additional validation: warn if fields are missing and MCP is enabled
-            if (isValid)
-            {
-                if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? validatedConfig) && validatedConfig is not null)
+                // Additional validation: warn if fields are missing and MCP is enabled
+                if (isValid)
                 {
-                    bool mcpEnabled = validatedConfig.Runtime?.Mcp?.Enabled == true;
+                    bool mcpEnabled = config.Runtime?.Mcp?.Enabled == true;
                     if (mcpEnabled)
                     {
-                        foreach (KeyValuePair<string, Entity> entity in validatedConfig.Entities)
+                        foreach (KeyValuePair<string, Entity> entity in config.Entities)
                         {
                             if (entity.Value.Fields == null || !entity.Value.Fields.Any())
                             {
@@ -2673,9 +2670,9 @@ namespace Cli
                     }
 
                     // Warn if Unauthenticated provider is used with authenticated or custom roles
-                    if (validatedConfig.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
+                    if (config.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
                     {
-                        bool hasNonAnonymousRoles = validatedConfig.Entities
+                        bool hasNonAnonymousRoles = config.Entities
                             .Where(e => e.Value.Permissions is not null)
                             .SelectMany(e => e.Value.Permissions!)
                             .Any(p => !p.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase));

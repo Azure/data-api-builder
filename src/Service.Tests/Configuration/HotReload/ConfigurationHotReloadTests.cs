@@ -190,8 +190,7 @@ public class ConfigurationHotReloadTests
                         },
                         ""template"": {
                           ""rest"": {
-                              ""enabled"": true
-                            }
+                            ""enabled"": true
                           }
                         },
                         ""permissions"": [

@@ -410,7 +410,8 @@ namespace Azure.DataApiBuilder.Core.Services
             // forward slash '/'.
             configuredRestPathBase = configuredRestPathBase.Substring(1);
 
-            if (route.Equals(_runtimeConfigProvider.GetConfig().McpPath.Substring(1)))
+            if (route.Equals(_runtimeConfigProvider.GetConfig().McpPath.Substring(1))
+                && !_runtimeConfigProvider.GetConfig().IsMcpEnabled)
             {
                 throw new DataApiBuilderException(
                     message: $"Route {route} was not found.",

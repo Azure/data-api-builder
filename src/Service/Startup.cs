@@ -600,7 +600,7 @@ namespace Azure.DataApiBuilder.Service
                 options.Level = systemCompressionLevel;
             });
 
-            _logger.LogInformation("Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.", compressionLevel);
+            _logger.LogDebug("Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.", compressionLevel);
         }
 
         /// <summary>
@@ -1251,7 +1251,7 @@ namespace Azure.DataApiBuilder.Service
                     }
                 }
 
-                _logger.LogInformation("Successfully completed runtime initialization.");
+                _logger.LogDebug("Successfully completed runtime initialization.");
                 return true;
             }
             catch (Exception ex)

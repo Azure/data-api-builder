@@ -2569,7 +2569,7 @@ namespace Cli
             }
             else
             {
-                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
+                _logger.LogDebug("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
             }
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
@@ -2596,7 +2596,7 @@ namespace Cli
                 }
 
                 minimumLogLevel = (LogLevel)options.LogLevel;
-                _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
+                _logger.LogDebug("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
             }
             else
             {

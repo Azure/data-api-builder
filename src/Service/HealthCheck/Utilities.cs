@@ -7,6 +7,8 @@ using System.Data.Common;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
+using MySqlConnector;
 using Npgsql;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
@@ -68,6 +70,33 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // Create the payload for the REST HTTP request.
             // "EntityName?$first=4"
             return $"/{entityName}?$first={first}";
+        }
+
+        public static string NormalizeConnectionString(string connectionString, DatabaseType dbType, ILogger? logger = null)
+        {
+            try
+            {
+                switch (dbType)
+                {
+                    case DatabaseType.PostgreSQL:
+                        return new NpgsqlConnectionStringBuilder(connectionString).ToString();
+                    case DatabaseType.MySQL:
+                        return new MySqlConnectionStringBuilder(connectionString).ToString();
+                    case DatabaseType.MSSQL:
+                    case DatabaseType.DWSQL:
+                        return new SqlConnectionStringBuilder(connectionString).ToString();
+                    default:
+                        return connectionString;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception if a logger is provided
+                logger?.LogWarning(ex, "Failed to parse connection string for database type {DatabaseType}. Returning original connection string.", dbType);
+                // If the connection string cannot be parsed by the builder,
+                // return the original string to avoid failing the health check.
+                return connectionString;
+            }
         }
     }
 }

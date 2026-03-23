@@ -1,0 +1,60 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace Azure.DataApiBuilder.Config.Converters;
+
+/// <summary>
+/// JSON converter for boolean values that also supports string representations such as
+/// "true", "false", "1", and "0". Any environment variable replacement is handled by
+/// other converters (for example, the string converter) before the value is parsed here.
+/// </summary>
+public class BoolJsonConverter : JsonConverter<bool>
+{
+
+    public override bool Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType is JsonTokenType.Null)
+        {
+
+            throw new JsonException("Unexpected null JSON token. Expected a boolean literal or a valid @expression.");
+        }
+
+        if (reader.TokenType == JsonTokenType.String)
+        {
+
+            string? tempBoolean = JsonSerializer.Deserialize<string>(ref reader, options);
+
+            bool result = tempBoolean?.ToLower() switch
+            {
+                //numeric values have to be checked here as they may come from string replacement 
+                "true" or "1" => true,
+                "false" or "0" => false,
+                _ => throw new JsonException($"Invalid boolean value: {tempBoolean}. Specify either true or 1 for true, false or 0 for false"),
+            };
+
+            return result;
+        }
+        else if (reader.TokenType == JsonTokenType.Number)
+        {
+            bool result = reader.GetInt32() switch
+            {
+                1 => true,
+                0 => false,
+                _ => throw new JsonException($"Invalid value for boolean attribute. Specify either 1 or 0."),
+            };
+            return result;
+        }
+        else
+        {
+            return reader.GetBoolean();
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, bool value, JsonSerializerOptions options)
+    {
+        writer.WriteBooleanValue(value);
+    }
+}

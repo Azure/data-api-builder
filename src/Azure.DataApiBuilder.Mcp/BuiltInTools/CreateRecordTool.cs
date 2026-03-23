@@ -83,6 +83,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
+                // Check entity-level DML tool configuration
+                if (runtimeConfig.Entities?.TryGetValue(entityName, out Entity? entity) == true &&
+                    entity.Mcp?.DmlToolEnabled == false)
+                {
+                    return McpErrorHelpers.ToolDisabled(toolName, logger, $"DML tools are disabled for entity '{entityName}'.");
+                }
+
                 if (!McpMetadataHelper.TryResolveMetadata(
                         entityName,
                         runtimeConfig,
@@ -117,17 +124,23 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 JsonElement insertPayloadRoot = dataElement.Clone();
+
+                // Validate it's a table or view - stored procedures use execute_entity
+                if (dbObject.SourceType != EntitySourceType.Table && dbObject.SourceType != EntitySourceType.View)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity '{entityName}' is not a table or view. For stored procedures, use the execute_entity tool instead.", logger);
+                }
+
                 InsertRequestContext insertRequestContext = new(
                     entityName,
                     dbObject,
                     insertPayloadRoot,
                     EntityActionOperation.Insert);
 
-                RequestValidator requestValidator = serviceProvider.GetRequiredService<RequestValidator>();
-
-                // Only validate tables
+                // Only validate tables. For views, skip validation and let the database handle any errors.
                 if (dbObject.SourceType is EntitySourceType.Table)
                 {
+                    RequestValidator requestValidator = serviceProvider.GetRequiredService<RequestValidator>();
                     try
                     {
                         requestValidator.ValidateInsertRequestContext(insertRequestContext);
@@ -136,14 +149,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         return McpResponseBuilder.BuildErrorResult(toolName, "ValidationFailed", $"Request validation failed: {ex.Message}", logger);
                     }
-                }
-                else
-                {
-                    return McpResponseBuilder.BuildErrorResult(
-                        toolName,
-                        "InvalidCreateTarget",
-                        "The create_record tool is only available for tables.",
-                        logger);
                 }
 
                 IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();

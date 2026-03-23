@@ -67,6 +67,94 @@ public static class RuntimeConfigValidatorUtil
     }
 
     /// <summary>
+    /// Method to validate an entity REST path allowing sub-directories (forward slashes).
+    /// Each segment of the path is validated for reserved characters and path traversal patterns.
+    /// </summary>
+    /// <param name="entityRestPath">The entity REST path to validate.</param>
+    /// <param name="errorMessage">Output parameter containing a specific error message if validation fails.</param>
+    /// <returns>true if the path is valid, false otherwise.</returns>
+    public static bool TryValidateEntityRestPath(string entityRestPath, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        // Check for maximum path length (reasonable limit for URL paths)
+        const int MAX_PATH_LENGTH = 2048;
+        if (entityRestPath.Length > MAX_PATH_LENGTH)
+        {
+            errorMessage = $"exceeds maximum allowed length of {MAX_PATH_LENGTH} characters.";
+            return false;
+        }
+
+        // Check for backslash usage - common mistake
+        if (entityRestPath.Contains('\\'))
+        {
+            errorMessage = "contains a backslash (\\). Use forward slash (/) for path separators.";
+            return false;
+        }
+
+        // Check for percent-encoded characters (URL encoding not allowed in config)
+        if (entityRestPath.Contains('%'))
+        {
+            errorMessage = "contains percent-encoding (%) which is not allowed. Use literal characters only.";
+            return false;
+        }
+
+        // Check for whitespace
+        if (entityRestPath.Any(char.IsWhiteSpace))
+        {
+            errorMessage = "contains whitespace which is not allowed in URL paths.";
+            return false;
+        }
+
+        // Split the path by '/' to validate each segment separately
+        string[] segments = entityRestPath.Split('/');
+
+        // Validate each segment doesn't contain reserved characters
+        foreach (string segment in segments)
+        {
+            if (string.IsNullOrEmpty(segment))
+            {
+                errorMessage = "contains empty path segments. Ensure there are no leading, consecutive, or trailing slashes.";
+                return false;
+            }
+
+            // Check for path traversal patterns
+            if (segment == "." || segment == "..")
+            {
+                errorMessage = "contains path traversal patterns ('.' or '..') which are not allowed.";
+                return false;
+            }
+
+            // Check for specific reserved characters and provide helpful messages
+            if (segment.Contains('?'))
+            {
+                errorMessage = "contains '?' which is reserved for query strings in URLs.";
+                return false;
+            }
+
+            if (segment.Contains('#'))
+            {
+                errorMessage = "contains '#' which is reserved for URL fragments.";
+                return false;
+            }
+
+            if (segment.Contains(':'))
+            {
+                errorMessage = "contains ':' which is a reserved character and not allowed in URL paths.";
+                return false;
+            }
+
+            if (_reservedUriCharsRgx.IsMatch(segment))
+            {
+                errorMessage = "contains reserved characters that are not allowed in URL paths.";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Method to validate if the TTL passed by the user is valid
     /// </summary>
     /// <param name="ttl">Time to Live</param>

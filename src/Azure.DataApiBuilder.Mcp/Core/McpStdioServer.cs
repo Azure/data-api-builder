@@ -3,8 +3,11 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -158,7 +161,26 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </remarks>
         private void HandleInitialize(JsonElement? id)
         {
-            var result = new
+            // Get the description from runtime config if available
+            string? instructions = null;
+            RuntimeConfigProvider? runtimeConfigProvider = _serviceProvider.GetService<RuntimeConfigProvider>();
+            if (runtimeConfigProvider != null)
+            {
+                try
+                {
+                    RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+                    instructions = runtimeConfig.Runtime?.Mcp?.Description;
+                }
+                catch (Exception ex)
+                {
+                    // Log to stderr for diagnostics and rethrow to avoid masking configuration errors
+                    Console.Error.WriteLine($"[MCP WARNING] Failed to retrieve MCP description from config: {ex.Message}");
+                    throw;
+                }
+            }
+
+            // Create the initialize response
+            object result = new
             {
                 protocolVersion = _protocolVersion,
                 capabilities = new
@@ -170,7 +192,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 {
                     name = McpProtocolDefaults.MCP_SERVER_NAME,
                     version = McpProtocolDefaults.MCP_SERVER_VERSION
-                }
+                },
+                instructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null
             };
 
             WriteResult(id, result);
@@ -262,7 +285,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: <none>");
                 }
 
-                // Execute the tool.
+                // Execute the tool with telemetry.
                 // If a MCP stdio role override is set in the environment, create
                 // a request HttpContext with the X-MS-API-ROLE header so tools and authorization
                 // helpers that read IHttpContextAccessor will see the role. We also ensure the
@@ -297,7 +320,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     try
                     {
                         // Execute the tool with the scoped service provider so any scoped services resolve correctly.
-                        callResult = await tool.ExecuteAsync(argsDoc, scopedProvider, ct);
+                        callResult = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                            tool, toolName!, argsDoc, scopedProvider, ct);
                     }
                     finally
                     {
@@ -310,7 +334,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
                 else
                 {
-                    callResult = await tool.ExecuteAsync(argsDoc, _serviceProvider, ct);
+                    callResult = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                        tool, toolName!, argsDoc, _serviceProvider, ct);
                 }
 
                 // Normalize to MCP content blocks (array). We try to pass through if a 'Content' property exists,

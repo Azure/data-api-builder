@@ -115,6 +115,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
+                // Check entity-level DML tool configuration
+                if (config.Entities?.TryGetValue(entityName, out Entity? entity) == true &&
+                    entity.Mcp?.DmlToolEnabled == false)
+                {
+                    return McpErrorHelpers.ToolDisabled(toolName, logger, $"DML tools are disabled for entity '{entityName}'.");
+                }
+
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
 
@@ -128,6 +135,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out string metadataError))
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
+                }
+
+                // Validate it's a table or view
+                if (dbObject.SourceType != EntitySourceType.Table && dbObject.SourceType != EntitySourceType.View)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity '{entityName}' is not a table or view. For stored procedures, use the execute_entity tool instead.", logger);
                 }
 
                 // 5) Authorization after we have a known entity

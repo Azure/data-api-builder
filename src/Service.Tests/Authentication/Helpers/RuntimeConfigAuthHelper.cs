@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+#nullable enable
+
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -25,6 +27,31 @@ internal static class RuntimeConfigAuthHelper
             ),
             Entities: new(new Dictionary<string, Entity>())
         );
+        return config;
+    }
+
+    internal static RuntimeConfig CreateTestConfigWithAuthNProviderAndUserDelegatedAuth(
+        AuthenticationOptions authenticationOptions,
+        UserDelegatedAuthOptions userDelegatedAuthOptions)
+    {
+        DataSource dataSource = new DataSource(DatabaseType.MSSQL, "", new Dictionary<string, object?>()) with
+        {
+            UserDelegatedAuth = userDelegatedAuthOptions
+        };
+
+        HostOptions hostOptions = new(Cors: null, Authentication: authenticationOptions);
+        RuntimeConfig config = new(
+            Schema: FileSystemRuntimeConfigLoader.SCHEMA,
+            DataSource: dataSource,
+            Runtime: new RuntimeOptions(
+                Rest: new RestRuntimeOptions(),
+                GraphQL: new GraphQLRuntimeOptions(),
+                Mcp: new McpRuntimeOptions(),
+                Host: hostOptions
+            ),
+            Entities: new(new Dictionary<string, Entity>())
+        );
+
         return config;
     }
 }

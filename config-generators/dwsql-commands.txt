@@ -1,4 +1,4 @@
-init --config "dab-config.DwSql.json" --database-type dwsql --set-session-context true --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --cors-origin "http://localhost:5000"
+init --config "dab-config.DwSql.json" --database-type dwsql --set-session-context true --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --cors-origin "http://localhost:5000" --rest.request-body-strict true --auth.provider AppService
 add Publisher --config "dab-config.DwSql.json" --source publishers --permissions "anonymous:read" --source.key-fields "id"
 add Stock --config "dab-config.DwSql.json" --source stocks --permissions "anonymous:create,read,update,delete" --source.key-fields "categoryid,pieceid"
 add stocks_price --config "dab-config.DwSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete" --source.key-fields "categoryid,pieceid,instant"

@@ -114,6 +114,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
+                // Check entity-level DML tool configuration
+                if (runtimeConfig.Entities?.TryGetValue(entityName, out Entity? entity) == true &&
+                    entity.Mcp?.DmlToolEnabled == false)
+                {
+                    return McpErrorHelpers.ToolDisabled(toolName, logger, $"DML tools are disabled for entity '{entityName}'.");
+                }
+
                 if (root.TryGetProperty("select", out JsonElement selectElement))
                 {
                     select = selectElement.GetString();
@@ -149,6 +156,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out string metadataError))
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
+                }
+
+                // Validate it's a table or view
+                if (dbObject.SourceType != EntitySourceType.Table && dbObject.SourceType != EntitySourceType.View)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity '{entityName}' is not a table or view. For stored procedures, use the execute_entity tool instead.", logger);
                 }
 
                 // Authorization check in the existing entity

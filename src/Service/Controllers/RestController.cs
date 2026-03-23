@@ -257,16 +257,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         return Content(roleDocument, MediaTypeNames.Application.Json);
                     }
 
-                    ProblemDetails problemDetails = new()
-                    {
-                        Status = StatusCodes.Status404NotFound,
-                        Title = "Not Found",
-                        Type = "https://tools.ietf.org/html/rfc9110#section-15.5.5"
-                    };
-
-                    problemDetails.Extensions["message"] = $"Role '{role}' is not present in the configuration.";
-
-                    return NotFound(problemDetails);
+                    return Problem(
+                        detail: $"Role '{role}' is not present in the configuration.",
+                        statusCode: StatusCodes.Status404NotFound,
+                        title: "Not Found");
                 }
 
                 (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);

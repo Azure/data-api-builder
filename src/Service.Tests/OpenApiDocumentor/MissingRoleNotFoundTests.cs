@@ -76,8 +76,8 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             Assert.IsTrue(root.TryGetProperty("type", out _), "ProblemDetails should contain a 'type' field.");
             Assert.IsTrue(root.TryGetProperty("traceId", out _), "ProblemDetails should contain a 'traceId' field.");
 
-            string message = root.GetProperty("message").GetString();
-            Assert.IsTrue(message.Contains(missingRole), $"Message should contain the missing role name '{missingRole}'. Actual: {message}");
+            string detail = root.GetProperty("detail").GetString();
+            Assert.IsTrue(detail.Contains(missingRole), $"Detail should contain the missing role name '{missingRole}'. Actual: {detail}");
 
             TestHelper.UnsetAllDABEnvironmentVariables();
         }

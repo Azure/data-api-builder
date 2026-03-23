@@ -2648,15 +2648,21 @@ namespace Cli
 
             bool isValid = runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
 
+            // Run config-structure warnings regardless of validation outcome.
+            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
+            {
+                WarnIfNoEntitiesDefined(config);
+            }
+
             // Additional validation: warn if fields are missing and MCP is enabled
             if (isValid)
             {
-                if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
+                if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? validatedConfig) && validatedConfig is not null)
                 {
-                    bool mcpEnabled = config.Runtime?.Mcp?.Enabled == true;
+                    bool mcpEnabled = validatedConfig.Runtime?.Mcp?.Enabled == true;
                     if (mcpEnabled)
                     {
-                        foreach (KeyValuePair<string, Entity> entity in config.Entities)
+                        foreach (KeyValuePair<string, Entity> entity in validatedConfig.Entities)
                         {
                             if (entity.Value.Fields == null || !entity.Value.Fields.Any())
                             {
@@ -2666,18 +2672,10 @@ namespace Cli
                         }
                     }
 
-                    // Warn when no entities are defined and no autoentities or data-source-files are configured
-                    if (config.Entities.Count() == 0
-                        && (config.Autoentities is null || config.Autoentities.Count() == 0)
-                        && config.DataSourceFiles is null)
-                    {
-                        _logger.LogWarning("No entities are defined in this configuration.");
-                    }
-
                     // Warn if Unauthenticated provider is used with authenticated or custom roles
-                    if (config.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
+                    if (validatedConfig.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
                     {
-                        bool hasNonAnonymousRoles = config.Entities
+                        bool hasNonAnonymousRoles = validatedConfig.Entities
                             .Where(e => e.Value.Permissions is not null)
                             .SelectMany(e => e.Value.Permissions!)
                             .Any(p => !p.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase));
@@ -3629,6 +3627,19 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Logs a warning if no entities, autoentities, or data-source-files are configured.
+        /// </summary>
+        internal static void WarnIfNoEntitiesDefined(RuntimeConfig config)
+        {
+            if (config.Entities.Count() == 0
+                && (config.Autoentities is null || config.Autoentities.Count() == 0)
+                && config.DataSourceFiles is null)
+            {
+                _logger.LogWarning("No entities are defined in this configuration.");
+            }
         }
     }
 }

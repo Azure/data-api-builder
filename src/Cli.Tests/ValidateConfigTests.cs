@@ -359,4 +359,29 @@ public class ValidateConfigTests
         JsonSchemaValidationResult result = await validator.ValidateConfigSchema(config, TEST_RUNTIME_CONFIG_FILE, mockLoggerFactory.Object);
         Assert.IsFalse(result.IsValid);
     }
+
+    /// <summary>
+    /// Validates that WarnIfNoEntitiesDefined logs a warning when the config has
+    /// an empty entities collection and no autoentities or data-source-files.
+    /// This calls the extracted method directly, avoiding any DB connection.
+    /// </summary>
+    [TestMethod]
+    public void TestValidateWarnsOnZeroEntities()
+    {
+        Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
+
+        Mock<ILogger<ConfigGenerator>> mockLogger = new();
+        SetLoggerForCliConfigGenerator(mockLogger.Object);
+
+        ConfigGenerator.WarnIfNoEntitiesDefined(config!);
+
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No entities are defined in this configuration.")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
 }

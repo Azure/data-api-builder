@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -66,13 +67,19 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
     {
         if (principal is null)
         {
-            _logger.LogWarning("Cannot acquire OBO token: ClaimsPrincipal is null.");
+            _logger.LogWarning(
+                "{EventType}: Cannot acquire OBO token - ClaimsPrincipal is null (traceId: {TraceId}).",
+                "OboValidationFailed",
+                Activity.Current?.TraceId.ToString() ?? "none");
             return null;
         }
 
         if (string.IsNullOrWhiteSpace(incomingJwtAssertion))
         {
-            _logger.LogWarning("Cannot acquire OBO token: Incoming JWT assertion is null or empty.");
+            _logger.LogWarning(
+                "{EventType}: Cannot acquire OBO token - Incoming JWT assertion is null or empty (traceId: {TraceId}).",
+                "OboValidationFailed",
+                Activity.Current?.TraceId.ToString() ?? "none");
             return null;
         }
 
@@ -80,7 +87,10 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
         string? subjectId = ExtractSubjectId(principal);
         if (string.IsNullOrWhiteSpace(subjectId))
         {
-            _logger.LogWarning("Cannot acquire OBO token: Neither 'oid' nor 'sub' claim found in token.");
+            _logger.LogWarning(
+                "{EventType}: Cannot acquire OBO token - Neither 'oid' nor 'sub' claim found in token (traceId: {TraceId}).",
+                "OboValidationFailed",
+                Activity.Current?.TraceId.ToString() ?? "none");
             throw new DataApiBuilderException(
                 message: DataApiBuilderException.OBO_IDENTITY_CLAIMS_MISSING,
                 statusCode: HttpStatusCode.Unauthorized,
@@ -90,7 +100,10 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
         string? tenantId = principal.FindFirst("tid")?.Value;
         if (string.IsNullOrWhiteSpace(tenantId))
         {
-            _logger.LogWarning("Cannot acquire OBO token: 'tid' (tenant id) claim not found or empty in token.");
+            _logger.LogWarning(
+                "{EventType}: Cannot acquire OBO token - 'tid' (tenant id) claim not found or empty in token (traceId: {TraceId}).",
+                "OboValidationFailed",
+                Activity.Current?.TraceId.ToString() ?? "none");
             throw new DataApiBuilderException(
                 message: DataApiBuilderException.OBO_TENANT_CLAIM_MISSING,
                 statusCode: HttpStatusCode.Unauthorized,
@@ -115,9 +128,11 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
                 {
                     wasCacheMiss = true;
                     _logger.LogInformation(
-                        "OBO token cache MISS for subject {SubjectId} (tenant: {TenantId}). Acquiring new token from Azure AD.",
+                        "{EventType}: OBO token cache MISS for subject {SubjectId} (tenant: {TenantId}, traceId: {TraceId}). Acquiring new token from Azure AD.",
+                        "OboTokenCacheMiss",
                         subjectId,
-                        tenantId);
+                        tenantId,
+                        Activity.Current?.TraceId.ToString() ?? "none");
 
                     AuthenticationResult result = await _msalClient.AcquireTokenOnBehalfOfAsync(
                         scopes,
@@ -144,8 +159,10 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
                     ctx.Options.SetSkipDistributedCache(true, true);
 
                     _logger.LogInformation(
-                        "OBO token ACQUIRED for subject {SubjectId}. Expires: {ExpiresOn}, Cache TTL: {CacheDuration}.",
+                        "{EventType}: OBO token ACQUIRED for subject {SubjectId} (traceId: {TraceId}). Expires: {ExpiresOn}, Cache TTL: {CacheDuration}.",
+                        "OboTokenAcquired",
                         subjectId,
+                        Activity.Current?.TraceId.ToString() ?? "none",
                         result.ExpiresOn,
                         cacheDuration);
 
@@ -155,7 +172,11 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
 
             if (!string.IsNullOrEmpty(accessToken) && !wasCacheMiss)
             {
-                _logger.LogInformation("OBO token cache HIT for subject {SubjectId}.", subjectId);
+                _logger.LogInformation(
+                    "{EventType}: OBO token cache HIT for subject {SubjectId} (traceId: {TraceId}).",
+                    "OboTokenCacheHit",
+                    subjectId,
+                    Activity.Current?.TraceId.ToString() ?? "none");
             }
 
             return accessToken;
@@ -164,8 +185,10 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
         {
             _logger.LogError(
                 ex,
-                "Failed to acquire OBO token for subject {SubjectId}. Error: {ErrorCode} - {Message}",
+                "{EventType}: Failed to acquire OBO token for subject {SubjectId} (traceId: {TraceId}). Error: {ErrorCode} - {Message}",
+                "OboTokenAcquisitionFailed",
                 subjectId,
+                Activity.Current?.TraceId.ToString() ?? "none",
                 ex.ErrorCode,
                 ex.Message);
             throw new DataApiBuilderException(

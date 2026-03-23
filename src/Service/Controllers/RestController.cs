@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         return Content(roleDocument, MediaTypeNames.Application.Json);
                     }
 
-                    return NotFound();
+                    return NotFound($"Role '{role}' is not present in the configuration.");
                 }
 
                 (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);

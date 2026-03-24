@@ -1,9 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO;
+using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -385,5 +391,106 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Assert
             Assert.IsFalse(success, "Config parsing should fail with unknown MCP property");
         }
+
+        #region JSON Schema Validation Tests
+
+        /// <summary>
+        /// Helper to create a minimal valid config JSON string with an entity block injected.
+        /// Uses explicit source object format (type + object) to test schema constraints.
+        /// </summary>
+        private static string CreateSchemaValidationConfig(string entityName, string entityJson)
+        {
+            return $@"{{
+                ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                ""data-source"": {{
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""Server=test;Database=test;""
+                }},
+                ""entities"": {{
+                    ""{entityName}"": {entityJson}
+                }}
+            }}";
+        }
+
+        /// <summary>
+        /// Helper to validate config JSON against the schema and return the result.
+        /// </summary>
+        private static JsonSchemaValidationResult ValidateAgainstSchema(string jsonData)
+        {
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+            Mock<ILogger<JsonConfigSchemaValidator>> logger = new();
+            JsonConfigSchemaValidator validator = new(logger.Object, new MockFileSystem());
+            return validator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
+        }
+
+        /// <summary>
+        /// Validates entity-level MCP configurations against the JSON schema.
+        /// Covers table/view entities with dml-tools, boolean shorthand, custom-tool,
+        /// and no-mcp scenarios. Ensures the schema's if/then guard for custom-tool
+        /// only fires when mcp is an object with custom-tool: true (not for boolean shorthand).
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("table", "books", @"""mcp"": { ""dml-tools"": true }", true, DisplayName = "Table with dml-tools=true is valid")]
+        [DataRow("table", "books", @"""mcp"": { ""dml-tools"": false }", true, DisplayName = "Table with dml-tools=false is valid")]
+        [DataRow("table", "books", @"""mcp"": true", true, DisplayName = "Table with mcp=true (boolean shorthand) is valid")]
+        [DataRow("table", "books", @"""mcp"": false", true, DisplayName = "Table with mcp=false (boolean shorthand) is valid")]
+        [DataRow("view", "vw_books", @"""mcp"": { ""dml-tools"": true }", true, DisplayName = "View with dml-tools=true is valid")]
+        [DataRow("table", "books", @"""mcp"": { ""custom-tool"": false }", true, DisplayName = "Table with custom-tool=false is valid")]
+        [DataRow("table", "books", null, true, DisplayName = "Table with no mcp property is valid")]
+        [DataRow("stored-procedure", "dbo.GetBook", @"""mcp"": { ""custom-tool"": true }", true, DisplayName = "SP with custom-tool=true is valid")]
+        [DataRow("stored-procedure", "dbo.GetBook", @"""mcp"": { ""custom-tool"": true, ""dml-tools"": false }", true, DisplayName = "SP with custom-tool and dml-tools is valid")]
+        [DataRow("table", "books", @"""mcp"": { ""custom-tool"": true }", false, DisplayName = "Table with custom-tool=true is invalid")]
+        public void SchemaValidation_EntityMcpConfig(string sourceType, string sourceObject, string mcpJson, bool shouldBeValid)
+        {
+            string actions = sourceType == "stored-procedure" ? @"""execute""" : @"""*""";
+            string mcpLine = mcpJson != null ? $",\n                {mcpJson}" : "";
+
+            string jsonData = CreateSchemaValidationConfig("TestEntity", $@"{{
+                ""source"": {{ ""type"": ""{sourceType}"", ""object"": ""{sourceObject}"" }},
+                ""permissions"": [{{ ""role"": ""anonymous"", ""actions"": [{actions}] }}]{mcpLine}
+            }}");
+
+            JsonSchemaValidationResult result = ValidateAgainstSchema(jsonData);
+
+            if (shouldBeValid)
+            {
+                Assert.IsTrue(result.IsValid, $"Expected valid but got errors: {result.ErrorMessage}");
+            }
+            else
+            {
+                Assert.IsFalse(result.IsValid, "Expected schema validation to fail");
+            }
+        }
+
+        /// <summary>
+        /// End-to-end round-trip test: parse config with mcp options, serialize via ToJson(),
+        /// then validate the serialized JSON against the schema. This exercises the exact code path
+        /// used by "dab validate" that was broken before the fix.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("table", "books", @"""dml-tools"": true", @"""*""", DisplayName = "Round-trip: table with dml-tools=true")]
+        [DataRow("table", "books", @"""dml-tools"": false", @"""*""", DisplayName = "Round-trip: table with dml-tools=false")]
+        [DataRow("stored-procedure", "dbo.GetBook", @"""custom-tool"": true, ""dml-tools"": true", @"""execute""", DisplayName = "Round-trip: SP with custom-tool and dml-tools")]
+        public void SchemaValidation_RoundTrip_IsValid(string sourceType, string sourceObject, string mcpProperties, string actions)
+        {
+            string config = CreateConfig($@"
+                ""TestEntity"": {{
+                    ""source"": {{ ""type"": ""{sourceType}"", ""object"": ""{sourceObject}"" }},
+                    ""permissions"": [{{ ""role"": ""anonymous"", ""actions"": [{actions}] }}],
+                    ""mcp"": {{ {mcpProperties} }}
+                }}
+            ");
+
+            bool parsed = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig runtimeConfig);
+            Assert.IsTrue(parsed, "Config should parse successfully");
+
+            string serializedJson = runtimeConfig.ToJson();
+
+            JsonSchemaValidationResult result = ValidateAgainstSchema(serializedJson);
+            Assert.IsTrue(result.IsValid,
+                $"Round-trip serialized config should pass schema validation but got errors: {result.ErrorMessage}");
+        }
+
+        #endregion
     }
 }

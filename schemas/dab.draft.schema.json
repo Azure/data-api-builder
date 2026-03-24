@@ -1451,6 +1451,8 @@
               "if": {
                 "properties": {
                   "mcp": {
+                    "type": "object",
+                    "required": ["custom-tool"],
                     "properties": {
                       "custom-tool": {
                         "const": true

@@ -64,6 +64,7 @@ public class ConfigurationHotReloadTests
         string entityBackingColumn = "title",
         string entityExposedName = "title",
         string mcpEnabled = "true",
+        string autoentityName = "autoentity_{object}",
         string configFileName = CONFIG_FILE_NAME)
     {
         File.WriteAllText(configFileName, @"
@@ -172,6 +173,29 @@ public class ConfigurationHotReloadTests
                           },
                           {
                             ""role"": ""authenticated"",
+                            ""actions"": [
+                              {
+                                ""action"": ""*""
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    ""autoentities"": {
+                      ""BooksAutoentities"": {
+                        ""patterns"": {
+                          ""include"": [ ""%book%"" ],
+                          ""name"": """ + autoentityName + @"""
+                        },
+                        ""template"": {
+                          ""rest"": {
+                            ""enabled"": true
+                          }
+                        },
+                        ""permissions"": [
+                          {
+                            ""role"": ""anonymous"",
                             ""actions"": [
                               {
                                 ""action"": ""*""
@@ -768,6 +792,41 @@ public class ConfigurationHotReloadTests
         Assert.IsTrue(failedConfigLog.Contains(HOT_RELOAD_FAILURE_MESSAGE));
         Assert.IsTrue(succeedConfigLog.Contains(HOT_RELOAD_SUCCESS_MESSAGE));
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
+    }
+
+    /// <summary>
+    /// Hot reload the configuration file so that it changes the name of the autoentity properties.
+    /// Then we assert that the hot reload is successful by sending a request to the newly created autoentity.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadAutoentities()
+    {
+        // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
+        // Act
+        HttpResponseMessage restResult = await _testClient.GetAsync($"rest/autoentity_books");
+
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
+            autoentityName: "HotReload_{object}");
+        await WaitForConditionAsync(
+          () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+          TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
+          TimeSpan.FromMilliseconds(500));
+
+        HttpResponseMessage failRestResult = await _testClient.GetAsync($"rest/autoentity_books");
+        HttpResponseMessage hotReloadRestResult = await _testClient.GetAsync($"rest/HotReload_books");
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode,
+                    $"REST request before hot-reload failed when it was expected to succeed. Response: {await restResult.Content.ReadAsStringAsync()}");
+        Assert.AreEqual(HttpStatusCode.NotFound, failRestResult.StatusCode,
+                    $"REST request after hot-reload succeeded when it was expected to fail. Response: {await failRestResult.Content.ReadAsStringAsync()}");
+        Assert.AreEqual(HttpStatusCode.OK, hotReloadRestResult.StatusCode,
+                    $"REST request after hot-reload failed when it was expected to succeed. Response: {await hotReloadRestResult.Content.ReadAsStringAsync()}");
     }
 
     /// <summary>

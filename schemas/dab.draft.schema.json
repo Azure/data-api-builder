@@ -819,15 +819,23 @@
               "additionalProperties": false,
               "properties": {
                 "mcp": {
-                  "type": "object",
-                  "description": "MCP endpoint configuration",
-                  "additionalProperties": false,
-                  "properties": {
-                    "dml-tools": {
+                  "oneOf": [
+                    {
                       "$ref": "#/$defs/boolean-or-string",
-                      "description": "Enable/disable all DML tools with default settings."
+                      "description": "Boolean shorthand: true enables dml-tools only (custom-tool remains false), false disables all MCP functionality."
+                    },
+                    {
+                      "type": "object",
+                      "description": "MCP endpoint configuration",
+                      "additionalProperties": false,
+                      "properties": {
+                        "dml-tools": {
+                          "$ref": "#/$defs/boolean-or-string",
+                          "description": "Enable/disable all DML tools with default settings."
+                        }
+                      }
                     }
-                  }
+                  ]
                 },
                 "rest": {
                   "type": "object",

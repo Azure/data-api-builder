@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         ""orderby"": {
                             ""type"": ""string"",
                             ""enum"": [""asc"", ""desc""],
-                            ""description"": ""Sort grouped results by the aggregation result alias (example avg_unitPrice). Requires groupby. Cannot sort by entity fields.""
+                            ""description"": ""Sort direction for grouped results by the aggregated value (ascending or descending). Requires groupby. Cannot sort by entity fields. If omitted, the default sort direction is used.""
                         },
                         ""having"": {
                             ""type"": ""object"",

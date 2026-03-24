@@ -200,6 +200,56 @@ public class ValidateConfigTests
     }
 
     /// <summary>
+    /// Validates that when the config has no entities or autoentities, TryParseConfig
+    /// sets a clean error message (not a raw exception with stack trace) and
+    /// IsConfigValid returns false without throwing.
+    /// Regression test for https://github.com/Azure/data-api-builder/issues/3268
+    /// </summary>
+    [TestMethod]
+    public void TestValidateConfigWithNoEntitiesProducesCleanError()
+    {
+        string configWithoutEntities = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
+
+        // Verify TryParseConfig produces a clean error without stack traces.
+        RuntimeConfigLoader.LastParseError = null;
+
+        StringWriter errorWriter = new();
+        TextWriter originalError = Console.Error;
+        Console.SetError(errorWriter);
+        try
+        {
+            bool parsed = RuntimeConfigLoader.TryParseConfig(configWithoutEntities, out _);
+            Assert.IsFalse(parsed, "Config with no entities should fail to parse.");
+        }
+        finally
+        {
+            Console.SetError(originalError);
+        }
+
+        // LastParseError should contain the clean validation message.
+        Assert.IsNotNull(RuntimeConfigLoader.LastParseError,
+            "LastParseError should be set when config parsing fails.");
+        StringAssert.Contains(RuntimeConfigLoader.LastParseError,
+            "Configuration file should contain either at least the entities or autoentities property",
+            "Parse error should contain the clean validation message.");
+
+        // Console.Error output should be clean (no stack trace, no "Deserialization" wrapper).
+        string stderrOutput = errorWriter.ToString();
+        Assert.IsFalse(stderrOutput.Contains("Stack Trace"),
+            "Stack trace should not be present in stderr output.");
+        Assert.IsFalse(stderrOutput.Contains("Deserialization of the configuration file failed"),
+            "Deserialization wrapper should not appear for DataApiBuilderException errors.");
+        StringAssert.Contains(stderrOutput,
+            "Configuration file should contain either at least the entities or autoentities property",
+            "stderr should show just the clean error message.");
+
+        // Verify IsConfigValid also returns false cleanly (no exception thrown).
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, configWithoutEntities);
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+        Assert.IsFalse(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
+    }
+
+    /// <summary>
     /// This Test is used to verify that the validate command is able to catch when data source field is missing.
     /// </summary>
     [TestMethod]

@@ -38,6 +38,12 @@ public abstract class RuntimeConfigLoader
 
     public bool IsNewConfigValidated;
 
+    /// <summary>
+    /// Stores the last config parse error message for callers that need
+    /// to retrieve and log it through their own logging infrastructure.
+    /// </summary>
+    public static string? LastParseError { get; set; }
+
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
         _changeToken = new DabChangeToken();
@@ -263,17 +269,19 @@ public abstract class RuntimeConfigLoader
             ex is JsonException ||
             ex is DataApiBuilderException)
         {
-            string errorMessage = ex is JsonException ? "Deserialization of the configuration file failed." :
-                "Deserialization of the configuration file failed during a post-processing step.";
+            // Store the parse error so callers (e.g. CLI) can retrieve and
+            // log it through their own structured logging infrastructure.
+            LastParseError = ex is DataApiBuilderException
+                ? ex.Message
+                : $"Deserialization of the configuration file failed. {ex.Message}";
 
-            // logger can be null when called from CLI
-            if (logger is null)
+            if (logger is not null)
             {
-                Console.Error.WriteLine(errorMessage + $"\n" + $"Message:\n {ex.Message}\n" + $"Stack Trace:\n {ex.StackTrace}");
+                logger.LogError(exception: ex, message: "{ParseError}", LastParseError);
             }
             else
             {
-                logger.LogError(exception: ex, message: errorMessage);
+                Console.Error.WriteLine(LastParseError);
             }
 
             config = null;

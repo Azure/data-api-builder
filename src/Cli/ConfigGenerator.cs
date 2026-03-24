@@ -2564,7 +2564,9 @@ namespace Cli
             // Replaces all the environment variables while deserializing when starting DAB.
             if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
             {
-                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                string? parseError = RuntimeConfigLoader.LastParseError;
+                RuntimeConfigLoader.LastParseError = null;
+                _logger.LogError("{parseError}", parseError ?? $"Failed to parse the config file: {runtimeConfigFile}.");
                 return false;
             }
             else
@@ -2642,6 +2644,28 @@ namespace Cli
             _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
 
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            // Suppress Console.Error during config loading so that parse errors
+            // are routed through the CLI's structured logger instead of raw stderr.
+            TextWriter originalError = Console.Error;
+            Console.SetError(TextWriter.Null);
+            bool configLoaded;
+            try
+            {
+                configLoaded = runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _);
+            }
+            finally
+            {
+                Console.SetError(originalError);
+            }
+
+            if (!configLoaded)
+            {
+                string? parseError = RuntimeConfigLoader.LastParseError;
+                RuntimeConfigLoader.LastParseError = null;
+                _logger.LogError("{parseError}", parseError ?? "Failed to parse the config file.");
+                return false;
+            }
 
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);

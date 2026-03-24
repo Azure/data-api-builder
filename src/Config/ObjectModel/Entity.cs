@@ -45,6 +45,9 @@ public record Entity
     [JsonIgnore]
     public bool IsLinkingEntity { get; init; }
 
+    [JsonIgnore]
+    public bool IsAutoentity { get; init; }
+
     [JsonConstructor]
     public Entity(
         EntitySource Source,
@@ -58,7 +61,8 @@ public record Entity
         bool IsLinkingEntity = false,
         EntityHealthCheckConfig? Health = null,
         string? Description = null,
-        EntityMcpOptions? Mcp = null)
+        EntityMcpOptions? Mcp = null,
+        bool IsAutoentity = false)
     {
         this.Health = Health;
         this.Source = Source;
@@ -72,6 +76,7 @@ public record Entity
         this.IsLinkingEntity = IsLinkingEntity;
         this.Description = Description;
         this.Mcp = Mcp;
+        this.IsAutoentity = IsAutoentity;
     }
 
     /// <summary>

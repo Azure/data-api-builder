@@ -88,8 +88,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         ""orderby"": {
                             ""type"": ""string"",
                             ""enum"": [""asc"", ""desc""],
-                            ""description"": ""Sort grouped results by the aggregated value. Requires groupby."",
-                            ""default"": ""desc""
+                            ""description"": ""Sort direction for grouped results by the aggregated value. Only applies when groupby is provided; ignored otherwise.""
                         },
                         ""having"": {
                             ""type"": ""object"",
@@ -394,23 +393,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             // Parse filter
             string? filter = root.TryGetProperty("filter", out JsonElement filterElement) ? filterElement.GetString() : null;
 
-            // Parse orderby
+            // Parse orderby (validation deferred until after groupby is known;
+            // if groupby is absent, orderby is silently ignored per #3279)
             bool userProvidedOrderby = root.TryGetProperty("orderby", out JsonElement orderbyElement) && !string.IsNullOrWhiteSpace(orderbyElement.GetString());
             string orderby = "desc";
-            if (userProvidedOrderby)
-            {
-                string normalizedOrderby = (orderbyElement.GetString() ?? string.Empty).Trim().ToLowerInvariant();
-                if (normalizedOrderby != "asc" && normalizedOrderby != "desc")
-                {
-                    return McpResponseBuilder.BuildErrorResult(
-                        toolName,
-                        "InvalidArguments",
-                        $"Argument 'orderby' must be either 'asc' or 'desc' when provided. Got: '{orderbyElement.GetString()}'.",
-                        logger);
-                }
-
-                orderby = normalizedOrderby;
-            }
 
             // Parse first
             int? first = null;
@@ -443,10 +429,26 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             // Validate groupby-dependent parameters
             CallToolResult? dependencyError = ValidateGroupByDependencies(
-                groupby.Count, userProvidedOrderby, first, after, toolName, logger);
+                groupby.Count, ref userProvidedOrderby, first, after, toolName, logger);
             if (dependencyError != null)
             {
                 return dependencyError;
+            }
+
+            // Validate orderby value only when groupby is present (orderby is ignored otherwise)
+            if (userProvidedOrderby)
+            {
+                string normalizedOrderby = (orderbyElement.GetString() ?? string.Empty).Trim().ToLowerInvariant();
+                if (normalizedOrderby != "asc" && normalizedOrderby != "desc")
+                {
+                    return McpResponseBuilder.BuildErrorResult(
+                        toolName,
+                        "InvalidArguments",
+                        $"Argument 'orderby' must be either 'asc' or 'desc' when provided. Got: '{orderbyElement.GetString()}'.",
+                        logger);
+                }
+
+                orderby = normalizedOrderby;
             }
 
             // Parse having clause
@@ -481,12 +483,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Validates that parameters requiring groupby (orderby, first, after) are only used when groupby is present.
+        /// Validates that parameters requiring groupby (first, after) are only used when groupby is present.
         /// Also validates that 'after' requires 'first'.
+        /// Note: 'orderby' without groupby is silently ignored rather than rejected (see #3279).
         /// </summary>
-        private static CallToolResult? ValidateGroupByDependencies(
+        internal static CallToolResult? ValidateGroupByDependencies(
             int groupbyCount,
-            bool userProvidedOrderby,
+            ref bool userProvidedOrderby,
             int? first,
             string? after,
             string toolName,
@@ -494,11 +497,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             if (groupbyCount == 0)
             {
-                if (userProvidedOrderby)
-                {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
-                        "The 'orderby' parameter requires 'groupby' to be specified. Sorting applies to grouped aggregation results.", logger);
-                }
+                // Silently ignore orderby when groupby is not provided.
+                // LLMs may send orderby due to schema defaults; this is harmless
+                // since ordering is meaningless without grouping.
+                userProvidedOrderby = false;
 
                 if (first.HasValue)
                 {

@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 + "Use groupby to compute aggregated rows per group. All groupby fields must exist on the entity and must be discovered through describe_entities. "
                 + "Grouped results include the groupby fields and the aggregated value. "
                 + "orderby, having, first, and after apply only when groupby is present. "
-                + "orderby sorts groups by the aggregation result alias (example: avg_unitPrice). It cannot sort by entity fields. "
+                + "orderby controls the sort direction of groups based on the aggregation result value. Allowed values are 'asc' and 'desc'; if omitted, 'desc' is used. It cannot sort by entity fields. "
                 + "having filters groups based on the aggregated value produced by the function. Supported operators: eq, neq, gt, gte, lt, lte, in. "
                 + "When groupby and first are used together, the response includes items, endCursor, and hasNextPage. "
                 + "To retrieve the next page, pass the returned endCursor value as the after parameter in a subsequent call with the same inputs. "

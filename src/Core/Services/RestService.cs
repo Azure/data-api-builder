@@ -402,7 +402,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// does not match the configured REST path or the global REST endpoint is disabled.</exception>
         public string GetRouteAfterPathBase(string route)
         {
-            string configuredRestPathBase = _runtimeConfigProvider.GetConfig().RestPath;
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            string configuredRestPathBase = runtimeConfig.RestPath;
 
             // Strip the leading '/' from the REST path provided in the runtime configuration
             // because the input argument 'route' has no starting '/'.
@@ -410,8 +411,8 @@ namespace Azure.DataApiBuilder.Core.Services
             // forward slash '/'.
             configuredRestPathBase = configuredRestPathBase.Substring(1);
 
-            if (route.Equals(_runtimeConfigProvider.GetConfig().McpPath.Substring(1))
-                && !_runtimeConfigProvider.GetConfig().IsMcpEnabled)
+            if (route.Equals(runtimeConfig.McpPath.Substring(1))
+                && !runtimeConfig.IsMcpEnabled)
             {
                 throw new DataApiBuilderException(
                     message: $"Route {route} was not found.",

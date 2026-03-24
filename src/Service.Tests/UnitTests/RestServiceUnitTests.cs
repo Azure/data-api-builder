@@ -255,7 +255,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Core helper to initialize REST Service with specified entity path mappings.
         /// </summary>
-        private static void InitializeTestWithEntityPaths(string restRoutePrefix, Dictionary<string, string> entityPaths)
+        private static void InitializeTestWithEntityPaths(string restRoutePrefix, Dictionary<string, string> entityPaths, McpRuntimeOptions mcpOptions = null, bool useMcpParam = false)
         {
             RuntimeConfig mockConfig = new(
                Schema: "",
@@ -263,7 +263,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                Runtime: new(
                    Rest: new(Path: restRoutePrefix),
                    GraphQL: new(),
-                   Mcp: new(),
+                   Mcp: useMcpParam ? mcpOptions : (mcpOptions ?? new()),
                    Host: new(null, null)
                ),
                Entities: new(new Dictionary<string, Entity>())
@@ -354,84 +354,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="mcpOptions">MCP options, or null to simulate absent mcp config block.</param>
         private static void InitializeTestWithMcpConfig(string restRoutePrefix, McpRuntimeOptions mcpOptions)
         {
-            RuntimeConfig mockConfig = new(
-               Schema: "",
-               DataSource: new(DatabaseType.PostgreSQL, "", new()),
-               Runtime: new(
-                   Rest: new(Path: restRoutePrefix),
-                   GraphQL: new(),
-                   Mcp: mcpOptions,
-                   Host: new(null, null)
-               ),
-               Entities: new(new Dictionary<string, Entity>())
-           );
-
-            MockFileSystem fileSystem = new();
-            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            MsSqlQueryBuilder queryBuilder = new();
-            Mock<DbExceptionParser> dbExceptionParser = new(provider);
-            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
-            Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
-            Mock<IHttpContextAccessor> httpContextAccessor = new();
-            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
-            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
-            Mock<IQueryEngineFactory> queryEngineFactory = new();
-
-            MsSqlQueryExecutor queryExecutor = new(
-                provider,
-                dbExceptionParser.Object,
-                queryExecutorLogger.Object,
-                httpContextAccessor.Object);
-
-            queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
-            queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor);
-
-            Mock<ISqlMetadataProvider> sqlMetadataProvider = new();
-            Mock<IAuthorizationService> authorizationService = new();
-            DefaultHttpContext context = new();
-            httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
-            AuthorizationResolver authorizationResolver = new(provider, metadataProviderFactory.Object);
-            GQLFilterParser gQLFilterParser = new(provider, metadataProviderFactory.Object);
-
-            Mock<IFusionCache> cache = new();
-            DabCacheService cacheService = new(cache.Object, logger: null, httpContextAccessor.Object);
-
-            SqlQueryEngine queryEngine = new(
-                queryManagerFactory.Object,
-                metadataProviderFactory.Object,
-                httpContextAccessor.Object,
-                authorizationResolver,
-                gQLFilterParser,
-                queryEngineLogger.Object,
-                provider,
-                cacheService);
-
-            queryEngineFactory.Setup(x => x.GetQueryEngine(It.IsAny<DatabaseType>())).Returns(queryEngine);
-
-            SqlMutationEngine mutationEngine =
-                new(
-                queryManagerFactory.Object,
-                metadataProviderFactory.Object,
-                queryEngineFactory.Object,
-                authorizationResolver,
-                gQLFilterParser,
-                httpContextAccessor.Object,
-                provider);
-
-            Mock<IMutationEngineFactory> mutationEngineFactory = new();
-            mutationEngineFactory.Setup(x => x.GetMutationEngine(It.IsAny<DatabaseType>())).Returns(mutationEngine);
-            RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);
-
-            _restService = new RestService(
-                queryEngineFactory.Object,
-                mutationEngineFactory.Object,
-                metadataProviderFactory.Object,
-                httpContextAccessor.Object,
-                authorizationService.Object,
-                provider,
-                requestValidator);
+            InitializeTestWithEntityPaths(restRoutePrefix, new Dictionary<string, string>(), mcpOptions, useMcpParam: true);
         }
         #endregion
     }

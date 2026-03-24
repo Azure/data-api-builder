@@ -1251,7 +1251,7 @@ namespace Azure.DataApiBuilder.Service
                     }
                 }
 
-                _logger.LogDebug("Successfully completed runtime initialization.");
+                _logger.LogInformation("Successfully completed runtime initialization.");
                 return true;
             }
             catch (Exception ex)

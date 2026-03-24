@@ -229,7 +229,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     {
         if (_fileSystem.File.Exists(path))
         {
-            SendLogToBufferOrLogger(LogLevel.Debug, $"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
+            SendLogToBufferOrLogger(LogLevel.Information, $"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
 
             // Use File.ReadAllText because DAB doesn't need write access to the file
             // and ensures the file handle is released immediately after reading.
@@ -272,7 +272,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             {
                 if (TrySetupConfigFileWatcher())
                 {
-                    SendLogToBufferOrLogger(LogLevel.Debug, $"Monitoring config: {ConfigFilePath} for hot-reloading.");
+                    SendLogToBufferOrLogger(LogLevel.Information, $"Monitoring config: {ConfigFilePath} for hot-reloading.");
                 }
 
                 // When isDevMode is not null it means we are in a hot-reload scenario, and need to save the previous

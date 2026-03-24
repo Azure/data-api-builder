@@ -314,7 +314,7 @@ namespace Cli
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 /// The existence of user provided config file is not checked here.
-                _logger.LogDebug("User provided config file: {userProvidedConfigFile}", userProvidedConfigFile);
+                _logger.LogInformation("User provided config file: {userProvidedConfigFile}", userProvidedConfigFile);
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
             }

@@ -2645,7 +2645,7 @@ namespace Cli
             {
                 if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
                 {
-                    bool mcpEnabled = config.Runtime?.Mcp?.Enabled == true;
+                    bool mcpEnabled = config.IsMcpEnabled;
                     if (mcpEnabled)
                     {
                         foreach (KeyValuePair<string, Entity> entity in config.Entities)

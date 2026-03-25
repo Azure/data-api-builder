@@ -167,6 +167,46 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         #endregion
 
+        #region MCP Path Guard Tests
+
+        /// <summary>
+        /// When MCP is explicitly disabled and the route matches the MCP path (default or custom),
+        /// GetRouteAfterPathBase should throw GlobalMcpEndpointDisabled.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("/mcp", "mcp", DisplayName = "MCP disabled with default path")]
+        [DataRow("/custom-mcp", "custom-mcp", DisplayName = "MCP disabled with custom path")]
+        public void McpPathThrowsWhenMcpDisabled(string mcpPath, string route)
+        {
+            InitializeTestWithMcpConfig("/api", new McpRuntimeOptions(Enabled: false, Path: mcpPath));
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => _restService.GetRouteAfterPathBase(route));
+            Assert.AreEqual(HttpStatusCode.NotFound, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.GlobalMcpEndpointDisabled, ex.SubStatusCode);
+        }
+
+        /// <summary>
+        /// When MCP is enabled (explicitly or by default when config is absent),
+        /// the MCP path route should NOT throw GlobalMcpEndpointDisabled.
+        /// It falls through to the normal path-base check.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, DisplayName = "MCP explicitly enabled")]
+        [DataRow(null, DisplayName = "MCP config absent (defaults to enabled)")]
+        public void McpPathDoesNotThrowGlobalMcpEndpointDisabledWhenMcpEnabled(bool? mcpEnabled)
+        {
+            McpRuntimeOptions mcpOptions = mcpEnabled.HasValue ? new McpRuntimeOptions(Enabled: mcpEnabled.Value) : null;
+            InitializeTestWithMcpConfig("/api", mcpOptions);
+            // "mcp" doesn't start with "api", so it should throw BadRequest (invalid path),
+            // NOT GlobalMcpEndpointDisabled.
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => _restService.GetRouteAfterPathBase("mcp"));
+            Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.BadRequest, ex.SubStatusCode);
+        }
+
+        #endregion
+
         #region Helper Functions
 
         /// <summary>
@@ -215,7 +255,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Core helper to initialize REST Service with specified entity path mappings.
         /// </summary>
-        private static void InitializeTestWithEntityPaths(string restRoutePrefix, Dictionary<string, string> entityPaths)
+        private static void InitializeTestWithEntityPaths(string restRoutePrefix, Dictionary<string, string> entityPaths, McpRuntimeOptions mcpOptions = null, bool useMcpParam = false)
         {
             RuntimeConfig mockConfig = new(
                Schema: "",
@@ -223,7 +263,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                Runtime: new(
                    Rest: new(Path: restRoutePrefix),
                    GraphQL: new(),
-                   Mcp: new(),
+                   Mcp: useMcpParam ? mcpOptions : (mcpOptions ?? new()),
                    Host: new(null, null)
                ),
                Entities: new(new Dictionary<string, Entity>())
@@ -305,6 +345,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 authorizationService.Object,
                 provider,
                 requestValidator);
+        }
+
+        /// <summary>
+        /// Initializes RestService with a specific MCP configuration for testing MCP path guard behavior.
+        /// </summary>
+        /// <param name="restRoutePrefix">REST path prefix (e.g., "/api").</param>
+        /// <param name="mcpOptions">MCP options, or null to simulate absent mcp config block.</param>
+        private static void InitializeTestWithMcpConfig(string restRoutePrefix, McpRuntimeOptions mcpOptions)
+        {
+            InitializeTestWithEntityPaths(restRoutePrefix, new Dictionary<string, string>(), mcpOptions, useMcpParam: true);
         }
         #endregion
     }

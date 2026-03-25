@@ -89,7 +89,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// Indicates whether the most recent TryLoadConfig call encountered a parse error
     /// that was already emitted to Console.Error.
     /// </summary>
-    public bool ParseErrorEmitted { get; private set; }
+    public bool IsParseErrorEmitted { get; private set; }
 
     public FileSystemRuntimeConfigLoader(
         IFileSystem fileSystem,
@@ -233,7 +233,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         bool? isDevMode = null,
         DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        ParseErrorEmitted = false;
+        IsParseErrorEmitted = false;
         if (_fileSystem.File.Exists(path))
         {
             SendLogToBufferOrLogger(LogLevel.Information, $"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
@@ -311,7 +311,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
                 RuntimeConfig = LastValidRuntimeConfig;
             }
 
-            ParseErrorEmitted = parseError is not null;
+            IsParseErrorEmitted = parseError is not null;
 
             if (parseError is not null)
             {

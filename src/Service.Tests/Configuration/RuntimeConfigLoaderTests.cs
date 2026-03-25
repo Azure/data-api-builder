@@ -94,8 +94,8 @@ public class RuntimeConfigLoaderTests
 
         loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
 
-        Assert.IsTrue(loader.ParseErrorEmitted,
-            "ParseErrorEmitted should be true when config parsing fails.");
+        Assert.IsTrue(loader.IsParseErrorEmitted,
+            "IsParseErrorEmitted should be true when config parsing fails.");
     }
 
     /// <summary>

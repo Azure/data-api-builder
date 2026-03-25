@@ -510,6 +510,14 @@
                   "type": "string",
                   "description": "The prefix to use for cache keys in level 2 and backplane, useful in a shared environment to avoid collisions."
                 }
+              },
+              "if": {
+                "properties": {
+                  "enabled": { "const": true }
+                }
+              },
+              "then": {
+                "required": ["connection-string"]
               }
             }
           }

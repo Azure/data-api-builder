@@ -34,7 +34,7 @@ namespace Cli.Commands
         [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specifies logging level as informational.")]
         public bool Verbose { get; }
 
-        [Option("loglevel", SetName = "loglevel", Required = false, HelpText = LOGLEVEL_HELPTEXT)]
+        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = LOGLEVEL_HELPTEXT)]
         public LogLevel? LogLevel { get; }
 
         [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
@@ -48,13 +48,12 @@ namespace Cli.Commands
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
+            ConfigGenerator.SendLogToBufferOrLogger(Microsoft.Extensions.Logging.LogLevel.Information, $"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
             bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(this, loader, fileSystem);
 
             if (!isSuccess)
             {
-                logger.LogError("Failed to start the engine{mode}.",
-                    McpStdio ? " in MCP stdio mode" : string.Empty);
+                ConfigGenerator.SendLogToBufferOrLogger(Microsoft.Extensions.Logging.LogLevel.Error, $"Failed to start the engine{(McpStdio ? " in MCP stdio mode" : string.Empty)}.");
             }
 
             return isSuccess ? CliReturnCode.SUCCESS : CliReturnCode.GENERAL_ERROR;

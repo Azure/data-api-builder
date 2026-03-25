@@ -64,7 +64,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     private ILogger<FileSystemRuntimeConfigLoader>? _logger;
 
-    private StartupLogBuffer? _logBuffer;
+    private LogBuffer? _logBuffer = new();
 
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";
@@ -90,8 +90,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME,
         string? connectionString = null,
         bool isCliLoader = false,
-        ILogger<FileSystemRuntimeConfigLoader>? logger = null,
-        StartupLogBuffer? logBuffer = null)
+        ILogger<FileSystemRuntimeConfigLoader>? logger = null)
         : base(handler, connectionString)
     {
         _fileSystem = fileSystem;
@@ -99,7 +98,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         ConfigFilePath = GetFinalConfigFilePath();
         _isCliLoader = isCliLoader;
         _logger = logger;
-        _logBuffer = logBuffer;
     }
 
     /// <summary>

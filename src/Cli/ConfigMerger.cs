@@ -32,16 +32,16 @@ public static class ConfigMerger
                     string overrideConfigJson = fileSystem.File.ReadAllText(environmentBasedConfigFile);
 
                     string currentDir = fileSystem.Directory.GetCurrentDirectory();
-                    logger.LogInformation("Merging {baseFilePath} and {envFilePath}", Path.Combine(currentDir, baseConfigFile), Path.Combine(currentDir, environmentBasedConfigFile));
+                    ConfigGenerator.SendLogToBufferOrLogger(LogLevel.Information, $"Merging {Path.Combine(currentDir, baseConfigFile)} and {Path.Combine(currentDir, environmentBasedConfigFile)}");
                     string mergedConfigJson = MergeJsonProvider.Merge(baseConfigJson, overrideConfigJson);
                     mergedConfigFile = FileSystemRuntimeConfigLoader.GetMergedFileNameForEnvironment(FileSystemRuntimeConfigLoader.CONFIGFILE_NAME, environmentValue);
                     fileSystem.File.WriteAllText(mergedConfigFile, mergedConfigJson);
-                    logger.LogInformation("Generated merged config file: {mergedFile}", Path.Combine(currentDir, mergedConfigFile));
+                    ConfigGenerator.SendLogToBufferOrLogger(LogLevel.Information, $"Generated merged config file: {Path.Combine(currentDir, mergedConfigFile)}");
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Failed to merge the config files.");
+                    ConfigGenerator.SendLogToBufferOrLogger(LogLevel.Error, "Failed to merge the config files.", ex);
                     mergedConfigFile = null;
                     return false;
                 }

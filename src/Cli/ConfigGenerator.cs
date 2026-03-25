@@ -29,12 +29,15 @@ namespace Cli
     {
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private static ILogger<ConfigGenerator> _logger;
+        private static LogBuffer? _cliBuffer;
 #pragma warning restore CS8618
 
         public static void SetLoggerForCliConfigGenerator(
-            ILogger<ConfigGenerator> configGeneratorLoggerFactory)
+            ILogger<ConfigGenerator> configGeneratorLoggerFactory,
+            LogBuffer? cliBuffer)
         {
             _logger = configGeneratorLoggerFactory;
+            _cliBuffer = cliBuffer;
         }
 
         /// <summary>
@@ -2564,17 +2567,17 @@ namespace Cli
             // Replaces all the environment variables while deserializing when starting DAB.
             if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
             {
-                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                SendLogToBufferOrLogger(LogLevel.Error, $"Failed to parse the config file: {runtimeConfigFile}.");
                 return false;
             }
             else
             {
-                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
+                SendLogToBufferOrLogger(LogLevel.Information, $"Loaded config file: {runtimeConfigFile}");
             }
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
             {
-                _logger.LogError("Invalid connection-string provided in the config.");
+                SendLogToBufferOrLogger(LogLevel.Error, "Invalid connection-string provided in the config.");
                 return false;
             }
 
@@ -2589,22 +2592,26 @@ namespace Cli
             {
                 if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
                 {
-                    _logger.LogError(
-                        "LogLevel's valid range is 0 to 6, your value: {logLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel",
-                        options.LogLevel);
+                    SendLogToBufferOrLogger(LogLevel.Error,
+                        $"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel");
                     return false;
                 }
 
                 minimumLogLevel = (LogLevel)options.LogLevel;
-                _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
+                SendLogToBufferOrLogger(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");
             }
             else
             {
                 minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
                 HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
 
-                _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.", minimumLogLevel, hostModeType);
+                SendLogToBufferOrLogger(LogLevel.Information, $"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.");
             }
+
+            Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli(minimumLogLevel);
+            ILogger<ConfigGenerator> configGeneratorLogger = Utils.LoggerFactoryForCli.CreateLogger<ConfigGenerator>();
+            SetLoggerForCliConfigGenerator(configGeneratorLogger, _cliBuffer);
+            _cliBuffer?.FlushToLogger(_logger);
 
             args.Add("--LogLevel");
             args.Add(minimumLogLevel.ToString());
@@ -2700,12 +2707,12 @@ namespace Cli
         {
             if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
             {
-                _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
+                SendLogToBufferOrLogger(LogLevel.Information, $"Using merged config file based on environment: {configToBeUsed}.");
             }
 
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile))
             {
-                _logger.LogError("Config not provided and default config file doesn't exist.");
+                SendLogToBufferOrLogger(LogLevel.Error, "Config not provided and default config file doesn't exist.");
                 return false;
             }
 
@@ -3621,6 +3628,24 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Helper method that sends the log to the buffer if the buffer has being set up.
+        /// Else, it will send the log to the logger.
+        /// </summary>
+        /// <param name="logLevel">LogLevel of the log.</param>
+        /// <param name="message">Message that will be printed in the log.</param>
+        public static void SendLogToBufferOrLogger(LogLevel logLevel, string message, Exception? ex = null)
+        {
+            if (_cliBuffer is not null)
+            {
+                _cliBuffer.BufferLog(logLevel, message, ex);
+            }
+            else
+            {
+                _logger.Log(logLevel, ex, message);
+            }
         }
     }
 }

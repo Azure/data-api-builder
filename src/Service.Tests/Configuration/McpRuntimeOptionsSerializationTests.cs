@@ -193,7 +193,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// When the mcp and runtime config blocks are omitted entirely, IsMcpEnabled should default to true.
-        /// This validates the fix for GitHub issue #3284.
         /// </summary>
         [TestMethod]
         public void TestIsMcpEnabledDefaultsTrueWhenMcpAndRuntimeBlocksAbsent()

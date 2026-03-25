@@ -164,7 +164,7 @@ public class EnvironmentTests
 
         string? output = await process.StandardError.ReadLineAsync();
         Assert.IsNotNull(output);
-        // Clean error message with no wrapper prefix or stack trace.
+        // Clean error message on stderr with no stack trace.
         StringAssert.Contains(output, "A valid Connection String should be provided.", StringComparison.Ordinal);
         process.Kill();
     }

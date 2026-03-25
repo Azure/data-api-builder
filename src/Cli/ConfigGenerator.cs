@@ -2564,9 +2564,15 @@ namespace Cli
             // Replaces all the environment variables while deserializing when starting DAB.
             if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
             {
-                string? parseError = RuntimeConfigLoader.LastParseError;
-                RuntimeConfigLoader.LastParseError = null;
-                _logger.LogError("{parseError}", parseError ?? $"Failed to parse the config file: {runtimeConfigFile}.");
+                // When HasParseError is true, TryParseConfig already emitted the
+                // detailed error to Console.Error. Only log a generic message to avoid
+                // duplicate output (stderr + stdout).
+                if (!RuntimeConfigLoader.HasParseError)
+                {
+                    _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                }
+
+                RuntimeConfigLoader.HasParseError = false;
                 return false;
             }
             else
@@ -2645,25 +2651,17 @@ namespace Cli
 
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
-            // Suppress Console.Error during config loading so that parse errors
-            // are routed through the CLI's structured logger instead of raw stderr.
-            TextWriter originalError = Console.Error;
-            Console.SetError(TextWriter.Null);
-            bool configLoaded;
-            try
+            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _))
             {
-                configLoaded = runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _);
-            }
-            finally
-            {
-                Console.SetError(originalError);
-            }
+                // When HasParseError is true, TryParseConfig already emitted the
+                // detailed error to Console.Error. Only log a generic message to avoid
+                // duplicate output (stderr + stdout).
+                if (!RuntimeConfigLoader.HasParseError)
+                {
+                    _logger.LogError("Failed to parse the config file.");
+                }
 
-            if (!configLoaded)
-            {
-                string? parseError = RuntimeConfigLoader.LastParseError;
-                RuntimeConfigLoader.LastParseError = null;
-                _logger.LogError("{parseError}", parseError ?? "Failed to parse the config file.");
+                RuntimeConfigLoader.HasParseError = false;
                 return false;
             }
 

@@ -39,10 +39,10 @@ public abstract class RuntimeConfigLoader
     public bool IsNewConfigValidated;
 
     /// <summary>
-    /// Stores the last config parse error message for callers that need
-    /// to retrieve and log it through their own logging infrastructure.
+    /// Flag indicating that TryParseConfig already emitted a parse error
+    /// to Console.Error, so callers can skip their own generic message.
     /// </summary>
-    public static string? LastParseError { get; set; }
+    public static bool HasParseError { get; set; }
 
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
@@ -269,19 +269,21 @@ public abstract class RuntimeConfigLoader
             ex is JsonException ||
             ex is DataApiBuilderException)
         {
-            // Store the parse error so callers (e.g. CLI) can retrieve and
-            // log it through their own structured logging infrastructure.
-            LastParseError = ex is DataApiBuilderException
+            string parseError = ex is DataApiBuilderException
                 ? ex.Message
                 : $"Deserialization of the configuration file failed. {ex.Message}";
 
+            HasParseError = true;
+
             if (logger is not null)
             {
-                logger.LogError(exception: ex, message: "{ParseError}", LastParseError);
+                logger.LogError(exception: ex, message: "{ParseError}", parseError);
             }
             else
             {
-                Console.Error.WriteLine(LastParseError);
+                // Fallback for callers that don't provide a logger (e.g. engine startup).
+                // CLI callers check HasParseError and skip their own generic message.
+                Console.Error.WriteLine(parseError);
             }
 
             config = null;

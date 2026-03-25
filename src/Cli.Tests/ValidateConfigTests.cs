@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Serilog;
@@ -210,38 +211,25 @@ public class ValidateConfigTests
     {
         string configWithoutEntities = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
 
-        // Verify TryParseConfig produces a clean error without stack traces.
-        RuntimeConfigLoader.LastParseError = null;
-
+        // Capture stderr to verify TryParseConfig produces a clean error without stack traces.
+        RuntimeConfigLoader.HasParseError = false;
         StringWriter errorWriter = new();
         TextWriter originalError = Console.Error;
         Console.SetError(errorWriter);
-        try
-        {
-            bool parsed = RuntimeConfigLoader.TryParseConfig(configWithoutEntities, out _);
-            Assert.IsFalse(parsed, "Config with no entities should fail to parse.");
-        }
-        finally
-        {
-            Console.SetError(originalError);
-        }
 
-        // LastParseError should contain the clean validation message.
-        Assert.IsNotNull(RuntimeConfigLoader.LastParseError,
-            "LastParseError should be set when config parsing fails.");
-        StringAssert.Contains(RuntimeConfigLoader.LastParseError,
+        bool parsed = RuntimeConfigLoader.TryParseConfig(configWithoutEntities, out _);
+
+        Console.SetError(originalError);
+        string errorOutput = errorWriter.ToString();
+
+        Assert.IsFalse(parsed, "Config with no entities should fail to parse.");
+        Assert.IsTrue(RuntimeConfigLoader.HasParseError,
+            "HasParseError should be true when config parsing fails.");
+        StringAssert.Contains(errorOutput,
             "Configuration file should contain either at least the entities or autoentities property",
             "Parse error should contain the clean validation message.");
-
-        // Console.Error output should be clean (no stack trace, no "Deserialization" wrapper).
-        string stderrOutput = errorWriter.ToString();
-        Assert.IsFalse(stderrOutput.Contains("Stack Trace"),
-            "Stack trace should not be present in stderr output.");
-        Assert.IsFalse(stderrOutput.Contains("Deserialization of the configuration file failed"),
-            "Deserialization wrapper should not appear for DataApiBuilderException errors.");
-        StringAssert.Contains(stderrOutput,
-            "Configuration file should contain either at least the entities or autoentities property",
-            "stderr should show just the clean error message.");
+        Assert.IsFalse(errorOutput.Contains("StackTrace"),
+            "Stack trace should not be present in parse error.");
 
         // Verify IsConfigValid also returns false cleanly (no exception thrown).
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, configWithoutEntities);

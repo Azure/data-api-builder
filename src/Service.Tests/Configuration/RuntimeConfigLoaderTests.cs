@@ -92,15 +92,21 @@ public class RuntimeConfigLoaderTests
 
         FileSystemRuntimeConfigLoader loader = new(fs);
 
-        StringWriter sw = new();
-        Console.SetError(sw);
+        RuntimeConfigLoader.HasParseError = false;
+        StringWriter errorWriter = new();
+        TextWriter originalError = Console.Error;
+        Console.SetError(errorWriter);
 
         loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
-        string error = sw.ToString();
 
-        Assert.IsTrue(error.Contains("An item with the same key has already been added."),
+        Console.SetError(originalError);
+        string errorOutput = errorWriter.ToString();
+
+        Assert.IsTrue(RuntimeConfigLoader.HasParseError,
+            "HasParseError should be true when config parsing fails.");
+        Assert.IsTrue(errorOutput.Contains("An item with the same key has already been added."),
             "Error should contain the specific validation message.");
-        Assert.IsFalse(error.Contains("Stack Trace"),
+        Assert.IsFalse(errorOutput.Contains("StackTrace"),
             "Stack trace should not be present in error output.");
     }
 

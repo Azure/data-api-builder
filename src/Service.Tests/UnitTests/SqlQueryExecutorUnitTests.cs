@@ -1120,10 +1120,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     args: null);
             });
 
-            // Verify no retry log messages were emitted. Polly does not handle
-            // TaskCanceledException (subclass of OperationCanceledException), so
-            // the exception propagates immediately without any retry attempts.
-            Assert.AreEqual(0, queryExecutorLogger.Invocations.Count);
+
+            // Verify that the underlying database execution is invoked exactly once,
+            // confirming that Polly does not perform any retries for TaskCanceledException.
+            queryExecutor.Verify(q => q.ExecuteQueryAgainstDbAsync(
+                    It.IsAny<SqlConnection>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                    It.IsAny<HttpContext>(),
+                    provider.GetConfig().DefaultDataSourceName,
+                    It.IsAny<List<string>>()),
+                Times.Once);
 
             // Verify the finally block recorded execution time even though the token timed out.
             Assert.IsTrue(

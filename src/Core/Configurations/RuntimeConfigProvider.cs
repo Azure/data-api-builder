@@ -188,6 +188,7 @@ public class RuntimeConfigProvider
         if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig,
+                out string? parseError,
                 replacementSettings: null))
         {
             _configLoader.RuntimeConfig = runtimeConfig;
@@ -269,7 +270,7 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replacementSettings))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, out string? _, replacementSettings))
         {
             _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {

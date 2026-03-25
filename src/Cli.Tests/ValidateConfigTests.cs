@@ -211,24 +211,15 @@ public class ValidateConfigTests
     {
         string configWithoutEntities = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
 
-        // Capture stderr to verify TryParseConfig produces a clean error without stack traces.
-        RuntimeConfigLoader.HasParseError = false;
-        StringWriter errorWriter = new();
-        TextWriter originalError = Console.Error;
-        Console.SetError(errorWriter);
-
-        bool parsed = RuntimeConfigLoader.TryParseConfig(configWithoutEntities, out _);
-
-        Console.SetError(originalError);
-        string errorOutput = errorWriter.ToString();
+        // Verify TryParseConfig produces a clean error without stack traces.
+        bool parsed = RuntimeConfigLoader.TryParseConfig(configWithoutEntities, out _, out string? parseError);
 
         Assert.IsFalse(parsed, "Config with no entities should fail to parse.");
-        Assert.IsTrue(RuntimeConfigLoader.HasParseError,
-            "HasParseError should be true when config parsing fails.");
-        StringAssert.Contains(errorOutput,
+        Assert.IsNotNull(parseError, "parseError should be set when config parsing fails.");
+        StringAssert.Contains(parseError,
             "Configuration file should contain either at least the entities or autoentities property",
             "Parse error should contain the clean validation message.");
-        Assert.IsFalse(errorOutput.Contains("StackTrace"),
+        Assert.IsFalse(parseError.Contains("StackTrace"),
             "Stack trace should not be present in parse error.");
 
         // Verify IsConfigValid also returns false cleanly (no exception thrown).

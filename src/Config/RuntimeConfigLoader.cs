@@ -38,12 +38,6 @@ public abstract class RuntimeConfigLoader
 
     public bool IsNewConfigValidated;
 
-    /// <summary>
-    /// Flag indicating that TryParseConfig already emitted a parse error
-    /// to Console.Error, so callers can skip their own generic message.
-    /// </summary>
-    public static bool HasParseError { get; set; }
-
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
         _changeToken = new DabChangeToken();
@@ -185,16 +179,34 @@ public abstract class RuntimeConfigLoader
     /// </summary>
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
+    /// <param name="parseError">A clean error message when parsing fails, or null on success.</param>
     /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, no variable replacement will be performed.</param>
-    /// <param name="logger">logger to log messages</param>
     /// <param name="connectionString">connectionString to add to config if specified</param>
     /// <returns>True if the config was parsed, otherwise false.</returns>
     public static bool TryParseConfig(string json,
         [NotNullWhen(true)] out RuntimeConfig? config,
         DeserializationVariableReplacementSettings? replacementSettings = null,
-        ILogger? logger = null,
         string? connectionString = null)
     {
+        return TryParseConfig(json, out config, out _, replacementSettings, connectionString);
+    }
+
+    /// <summary>
+    /// Parses a JSON string into a <c>RuntimeConfig</c> object for single database scenario.
+    /// </summary>
+    /// <param name="json">JSON that represents the config file.</param>
+    /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
+    /// <param name="parseError">A clean error message when parsing fails, or null on success.</param>
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, no variable replacement will be performed.</param>
+    /// <param name="connectionString">connectionString to add to config if specified</param>
+    /// <returns>True if the config was parsed, otherwise false.</returns>
+    public static bool TryParseConfig(string json,
+        [NotNullWhen(true)] out RuntimeConfig? config,
+        out string? parseError,
+        DeserializationVariableReplacementSettings? replacementSettings = null,
+        string? connectionString = null)
+    {
+        parseError = null;
         // First pass: extract AzureKeyVault options if AKV replacement is requested
         if (replacementSettings?.DoReplaceAkvVar is true)
         {
@@ -269,22 +281,9 @@ public abstract class RuntimeConfigLoader
             ex is JsonException ||
             ex is DataApiBuilderException)
         {
-            string parseError = ex is DataApiBuilderException
+            parseError = ex is DataApiBuilderException
                 ? ex.Message
                 : $"Deserialization of the configuration file failed. {ex.Message}";
-
-            HasParseError = true;
-
-            if (logger is not null)
-            {
-                logger.LogError(exception: ex, message: "{ParseError}", parseError);
-            }
-            else
-            {
-                // Fallback for callers that don't provide a logger (e.g. engine startup).
-                // CLI callers check HasParseError and skip their own generic message.
-                Console.Error.WriteLine(parseError);
-            }
 
             config = null;
             return false;

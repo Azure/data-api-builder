@@ -14,9 +14,7 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -329,7 +327,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             bool isParsed = RuntimeConfigLoader.TryParseConfig(
                 configJson,
                 out RuntimeConfig runtimeConfig,
-                out string? parseError,
+                out string parseError,
                 replacementSettings: new DeserializationVariableReplacementSettings(
                     azureKeyVaultOptions: null,
                     doReplaceEnvVar: true,

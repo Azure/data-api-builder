@@ -188,7 +188,7 @@ public class RuntimeConfigProvider
         if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig,
-                out string? parseError,
+                out _,
                 replacementSettings: null))
         {
             _configLoader.RuntimeConfig = runtimeConfig;

@@ -118,7 +118,7 @@ namespace Azure.DataApiBuilder.Service
             _configProvider = configProvider;
 
             services.AddSingleton(fileSystem);
-            services.AddSingleton(configLoader);
+            services.AddSingleton<FileSystemRuntimeConfigLoader>(sp => configLoader);
             services.AddSingleton(configProvider);
 
             bool runtimeConfigAvailable = configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);

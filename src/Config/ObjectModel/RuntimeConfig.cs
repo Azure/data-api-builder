@@ -383,7 +383,7 @@ public record RuntimeConfig
                 else
                 {
                     throw new DataApiBuilderException(
-                        message: $"Failed to load datasource file: {dataSourceFile}",
+                        message: $"Failed to load datasource file: {dataSourceFile}. The file may not exist, contain invalid JSON, or have other configuration errors.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }

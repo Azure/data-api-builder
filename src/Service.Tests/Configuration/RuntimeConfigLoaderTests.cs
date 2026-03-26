@@ -7,7 +7,6 @@ using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
@@ -176,20 +175,23 @@ public class RuntimeConfigLoaderTests
             }
         }";
 
-        // Ensure the referenced env vars do not exist.
+        // Save original env var values and clear them to ensure they don't exist.
+        string? origEndpoint = Environment.GetEnvironmentVariable("NONEXISTENT_OTEL_ENDPOINT");
+        string? origHeaders = Environment.GetEnvironmentVariable("NONEXISTENT_OTEL_HEADERS");
+        string? origServiceName = Environment.GetEnvironmentVariable("NONEXISTENT_OTEL_SERVICE_NAME");
         Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_ENDPOINT", null);
         Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_HEADERS", null);
         Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_SERVICE_NAME", null);
 
-        // Write the child config to a real file on disk because the RuntimeConfig
+        // Write the child config to a unique temp file because the RuntimeConfig
         // constructor creates a real FileSystem to load child data-source-files.
-        string childFileName = "test-child-config-envvar.json";
+        string childFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".json");
         try
         {
-            await File.WriteAllTextAsync(childFileName, childConfig);
+            await File.WriteAllTextAsync(childFilePath, childConfig);
 
             JObject parentJson = JObject.Parse(parentConfig);
-            parentJson.Add("data-source-files", new JArray(childFileName));
+            parentJson.Add("data-source-files", new JArray(childFilePath));
             string parentJsonStr = parentJson.ToString();
 
             MockFileSystem fs = new(new Dictionary<string, MockFileData>()
@@ -213,9 +215,13 @@ public class RuntimeConfigLoaderTests
         }
         finally
         {
-            if (File.Exists(childFileName))
+            Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_ENDPOINT", origEndpoint);
+            Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_HEADERS", origHeaders);
+            Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_SERVICE_NAME", origServiceName);
+
+            if (File.Exists(childFilePath))
             {
-                File.Delete(childFileName);
+                File.Delete(childFilePath);
             }
         }
     }
@@ -242,13 +248,21 @@ public class RuntimeConfigLoaderTests
 
         FileSystemRuntimeConfigLoader loader = new(fs);
 
+        TextWriter originalError = Console.Error;
         StringWriter sw = new();
         Console.SetError(sw);
 
-        bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
-        string error = sw.ToString();
+        try
+        {
+            bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
+            string error = sw.ToString();
 
-        Assert.IsFalse(loaded, "Config loading should fail when a child config file cannot be loaded.");
-        Assert.IsTrue(error.Contains("Failed to load datasource file"), "Error message should indicate the child config file that failed to load.");
+            Assert.IsFalse(loaded, "Config loading should fail when a child config file cannot be loaded.");
+            Assert.IsTrue(error.Contains("Failed to load datasource file"), "Error message should indicate the child config file that failed to load.");
+        }
+        finally
+        {
+            Console.SetError(originalError);
+        }
     }
 }

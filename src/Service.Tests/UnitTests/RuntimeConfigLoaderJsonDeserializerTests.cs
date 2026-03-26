@@ -510,12 +510,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     ""entities"":{ }
                                 }";
 
+            TextWriter originalError = Console.Error;
             StringWriter sw = new();
             Console.SetError(sw);
 
-            Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Config loading should fail when a child config file cannot be found.");
-            string error = sw.ToString();
-            Assert.IsTrue(error.Contains("Failed to load datasource file"), "Error message should indicate the child config file that failed.");
+            try
+            {
+                Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Config loading should fail when a child config file cannot be found.");
+                string error = sw.ToString();
+                Assert.IsTrue(error.Contains("Failed to load datasource file"), "Error message should indicate the child config file that failed.");
+            }
+            finally
+            {
+                Console.SetError(originalError);
+            }
         }
 
         #endregion Negative Tests

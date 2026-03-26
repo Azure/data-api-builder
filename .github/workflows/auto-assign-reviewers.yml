@@ -1,0 +1,139 @@
+name: PR Review Assignment Bot
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+
+  workflow_dispatch:
+
+  # schedule:
+  #   - cron: "*/10 * * * *"
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  assign-reviewers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign reviewers to eligible PRs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reviewers = ["souvikghosh04", "Aniruddh25", "reviewerX"];
+            const REQUIRED_REVIEWERS = 2;
+            const DRY_RUN = true;
+
+            const { owner, repo } = context.repo;
+
+            // Fetch all open PRs
+            const { data: allPRs } = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+
+            // Determine if a PR is eligible
+            function isEligible(pr) {
+              const labels = pr.labels.map((l) => l.name);
+              if (!labels.includes("assign-for-review")) return false;
+              if (pr.draft) return false;
+              if ((pr.requested_reviewers || []).length >= REQUIRED_REVIEWERS) return false;
+              return true;
+            }
+
+            // Calculate PR weight from labels
+            function getWeight(pr) {
+              const labels = pr.labels.map((l) => l.name);
+              let weight = 1;
+              if (labels.includes("size-medium")) weight = 2;
+              else if (labels.includes("size-large")) weight = 3;
+              if (labels.includes("priority-high")) weight += 1;
+              return weight;
+            }
+
+            // Build load map from all load-relevant PRs (assigned + unassigned)
+            const load = {};
+            for (const r of reviewers) {
+              load[r] = 0;
+            }
+
+            const loadRelevantPRs = allPRs.filter((pr) => {
+              const labels = pr.labels.map((l) => l.name);
+              return labels.includes("assign-for-review") && !pr.draft;
+            });
+
+            const eligiblePRs = allPRs.filter(isEligible);
+            core.info(`Total eligible PRs: ${eligiblePRs.length}`);
+
+            for (const pr of loadRelevantPRs) {
+              const weight = getWeight(pr);
+              const assigned = (pr.requested_reviewers || []).map((r) => r.login);
+              for (const reviewer of assigned) {
+                if (reviewer in load) {
+                  load[reviewer] += weight;
+                }
+              }
+            }
+
+            core.info(`Current load: ${JSON.stringify(load)}`);
+
+            // Sort eligible PRs by weight descending (prioritize large PRs)
+            eligiblePRs.sort((a, b) => getWeight(b) - getWeight(a));
+
+            // Assign reviewers to each eligible PR
+            for (const pr of eligiblePRs) {
+              const weight = getWeight(pr);
+              const assigned = (pr.requested_reviewers || []).map((r) => r.login);
+              const needed = REQUIRED_REVIEWERS - assigned.length;
+
+              core.info(`PR #${pr.number} — weight: ${weight}, existing reviewers: [${assigned.join(", ")}]`);
+
+              if (needed <= 0) {
+                core.info(`PR #${pr.number} already has ${REQUIRED_REVIEWERS} reviewers, skipping.`);
+                continue;
+              }
+
+              const author = pr.user.login;
+
+              // Build candidates: exclude author and already-assigned reviewers
+              const candidates = reviewers
+                .filter((r) => r !== author && !assigned.includes(r));
+
+              if (candidates.length === 0) {
+                core.info(`PR #${pr.number} — no candidates after filtering.`);
+                continue;
+              }
+
+              candidates.sort((a, b) => {
+                if (load[a] !== load[b]) return load[a] - load[b];
+                return a.localeCompare(b);
+              });
+
+              core.info(`PR #${pr.number} candidates: ${JSON.stringify(candidates)}`);
+
+              const selected = candidates.slice(0, needed);
+
+              if (DRY_RUN) {
+                core.info(`[DRY RUN] Would assign [${selected.join(", ")}] to PR #${pr.number}`);
+              } else {
+                await github.rest.pulls.requestReviewers({
+                  owner,
+                  repo,
+                  pull_number: pr.number,
+                  reviewers: selected,
+                });
+                core.info(`Assigned [${selected.join(", ")}] to PR #${pr.number}`);
+              }
+
+              // Update load in-memory
+              for (const reviewer of selected) {
+                load[reviewer] += weight;
+              }
+
+              core.info(`Updated load: ${JSON.stringify(load)}`);
+            }
+
+            core.info("Review assignment complete.");

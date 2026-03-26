@@ -60,6 +60,13 @@ jobs:
               load[r] = 0;
             }
 
+            // Debug: log all open PRs for diagnosis
+            core.info(`Total open PRs fetched: ${allPRs.length}`);
+            for (const pr of allPRs) {
+              const labels = pr.labels.map((l) => l.name);
+              core.info(`  PR #${pr.number}: draft=${pr.draft}, labels=[${labels.join(", ")}]`);
+            }
+
             const loadRelevantPRs = allPRs.filter((pr) => {
               const labels = pr.labels.map((l) => l.name);
               return labels.includes("assign-for-review") && !pr.draft;

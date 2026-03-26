@@ -818,7 +818,10 @@ public class ConfigurationHotReloadTests
           TimeSpan.FromMilliseconds(500));
 
         HttpResponseMessage failRestResult = await _testClient.GetAsync($"rest/autoentity_books");
-        HttpResponseMessage hotReloadRestResult = await _testClient.GetAsync($"rest/HotReload_books");
+
+        // After hot-reload, the engine may still be re-initializing metadata providers.
+        // Poll the REST endpoint to allow time for the engine to become fully ready.
+        using HttpResponseMessage hotReloadRestResult = await WaitForRestEndpointAsync("rest/HotReload_books", HttpStatusCode.OK);
 
         // Assert
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode,

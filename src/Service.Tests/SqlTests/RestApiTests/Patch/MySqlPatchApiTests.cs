@@ -25,6 +25,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 "
             },
             {
+                "PatchOne_Update_KeylessWithPKInBody_ExistingRow_Test",
+                @"SELECT JSON_OBJECT('id', id, 'title', title, 'issue_number', issue_number) AS data
+                    FROM (
+                        SELECT id, title, issue_number
+                        FROM " + _integration_NonAutoGenPK_TableName + @"
+                        WHERE id = 1
+                        AND title = 'Updated Vogue' AND issue_number = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOne_Insert_KeylessWithPKInBody_NewRow_Test",
+                @"SELECT JSON_OBJECT('id', id, 'title', title, 'issue_number', issue_number) AS data
+                    FROM (
+                        SELECT id, title, issue_number
+                        FROM " + _integration_NonAutoGenPK_TableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                        AND title = 'Brand New Magazine'
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOne_Insert_NonAutoGenPK_Test",
                 @"SELECT JSON_OBJECT('id', id, 'title', title, 'issue_number', issue_number ) AS data
                     FROM (

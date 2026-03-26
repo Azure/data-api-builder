@@ -353,6 +353,12 @@ namespace Azure.DataApiBuilder.Core.Services
 
             GenerateRestPathToEntityMap();
             InitODataParser();
+
+            if (_isValidateOnly)
+            {
+                RemoveGeneratedAutoentities();
+            }
+
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
@@ -712,6 +718,15 @@ namespace Azure.DataApiBuilder.Core.Services
         protected virtual Task GenerateAutoentitiesIntoEntities(IReadOnlyDictionary<string, Autoentity>? autoentities)
         {
             throw new NotSupportedException($"{GetType().Name} does not support Autoentities yet.");
+        }
+
+        /// <summary>
+        /// Removes the entities that were generated from the autoentities property.
+        /// This should only be done when we only want to validate the entities.
+        /// </summary>
+        private void RemoveGeneratedAutoentities()
+        {
+            _runtimeConfigProvider.RemoveGeneratedAutoentitiesFromConfig();
         }
 
         protected void PopulateDatabaseObjectForEntity(

@@ -2656,7 +2656,7 @@ namespace Cli
                 // Additional validation: warn if fields are missing and MCP is enabled
                 if (isValid)
                 {
-                    bool mcpEnabled = config.Runtime?.Mcp?.Enabled == true;
+                    bool mcpEnabled = config.IsMcpEnabled;
                     if (mcpEnabled)
                     {
                         foreach (KeyValuePair<string, Entity> entity in config.Entities)

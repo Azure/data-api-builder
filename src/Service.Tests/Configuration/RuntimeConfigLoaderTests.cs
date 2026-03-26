@@ -227,8 +227,9 @@ public class RuntimeConfigLoaderTests
     }
 
     /// <summary>
-    /// Validates that when a child config file cannot be loaded (e.g. file not found, invalid JSON),
+    /// Validates that when a child config file exists but contains invalid content,
     /// the parent config loading fails instead of silently skipping the child.
+    /// Non-existent child files are intentionally skipped to support late-configured scenarios.
     /// Regression test for https://github.com/Azure/data-api-builder/issues/3271
     /// </summary>
     [TestMethod]
@@ -236,33 +237,47 @@ public class RuntimeConfigLoaderTests
     {
         string parentConfig = await File.ReadAllTextAsync("Multidab-config.MsSql.json");
 
-        JObject parentJson = JObject.Parse(parentConfig);
-        parentJson.Add("data-source-files", new JArray("nonexistent-child.json"));
-        string parentJsonStr = parentJson.ToString();
-
-        MockFileSystem fs = new(new Dictionary<string, MockFileData>()
-        {
-            { "dab-config.json", new MockFileData(parentJsonStr) }
-            // nonexistent-child.json intentionally NOT added to the mock file system
-        });
-
-        FileSystemRuntimeConfigLoader loader = new(fs);
-
-        TextWriter originalError = Console.Error;
-        StringWriter sw = new();
-        Console.SetError(sw);
+        // Use a real temp file with invalid JSON so the file exists but fails to parse.
+        string invalidChildPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".json");
 
         try
         {
-            bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
-            string error = sw.ToString();
+            await File.WriteAllTextAsync(invalidChildPath, "{ this is not valid json }");
 
-            Assert.IsFalse(loaded, "Config loading should fail when a child config file cannot be loaded.");
-            Assert.IsTrue(error.Contains("Failed to load datasource file"), "Error message should indicate the child config file that failed to load.");
+            JObject parentJson = JObject.Parse(parentConfig);
+            parentJson.Add("data-source-files", new JArray(invalidChildPath));
+            string parentJsonStr = parentJson.ToString();
+
+            MockFileSystem fs = new(new Dictionary<string, MockFileData>()
+            {
+                { "dab-config.json", new MockFileData(parentJsonStr) }
+            });
+
+            FileSystemRuntimeConfigLoader loader = new(fs);
+
+            TextWriter originalError = Console.Error;
+            StringWriter sw = new();
+            Console.SetError(sw);
+
+            try
+            {
+                bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
+                string error = sw.ToString();
+
+                Assert.IsFalse(loaded, "Config loading should fail when a child config file exists but cannot be parsed.");
+                Assert.IsTrue(error.Contains("Failed to load datasource file"), "Error message should indicate the child config file that failed to load.");
+            }
+            finally
+            {
+                Console.SetError(originalError);
+            }
         }
         finally
         {
-            Console.SetError(originalError);
+            if (File.Exists(invalidChildPath))
+            {
+                File.Delete(invalidChildPath);
+            }
         }
     }
 }

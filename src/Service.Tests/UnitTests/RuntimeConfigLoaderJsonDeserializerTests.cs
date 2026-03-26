@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
@@ -485,10 +486,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Method to validate that config loading fails when a sub-data source file is not found.
-        /// Previously this test asserted that the missing child was silently skipped;
-        /// after the fix for https://github.com/Azure/data-api-builder/issues/3271,
-        /// a missing child config now correctly causes the parent config to fail loading.
+        /// Method to validate that when a sub-data source file is not found, it is gracefully
+        /// skipped and the parent config loads successfully. Non-existent child files are
+        /// tolerated to support late-configured scenarios where data-source-files may reference
+        /// files not present on the host.
         /// </summary>
         [TestMethod]
         public void TestLoadRuntimeConfigSubFilesFails()
@@ -508,21 +509,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     ""data-source-files"":[""FileNotFound.json""],
                                     ""entities"":{ }
                                 }";
-
-            TextWriter originalError = Console.Error;
-            StringWriter sw = new();
-            Console.SetError(sw);
-
-            try
-            {
-                Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Config loading should fail when a child config file cannot be found.");
-                string error = sw.ToString();
-                Assert.IsTrue(error.Contains("Failed to load datasource file"), "Error message should indicate the child config file that failed.");
-            }
-            finally
-            {
-                Console.SetError(originalError);
-            }
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig runtimeConfig), "Should parse the data-source-files correctly.");
+            Assert.IsTrue(runtimeConfig.ListAllDataSources().Count() == 1);
         }
 
         #endregion Negative Tests

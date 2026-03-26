@@ -380,10 +380,14 @@ public record RuntimeConfig
                             e.InnerException);
                     }
                 }
-                else
+                else if (fileSystem.File.Exists(dataSourceFile))
                 {
+                    // The file exists but failed to load (e.g. invalid JSON, deserialization error).
+                    // Throw to prevent silently skipping a broken child config.
+                    // Non-existent files are skipped gracefully to support late-configured scenarios
+                    // where data-source-files may reference files not present on the host.
                     throw new DataApiBuilderException(
-                        message: $"Failed to load datasource file: {dataSourceFile}. The file may not exist, contain invalid JSON, or have other configuration errors.",
+                        message: $"Failed to load datasource file: {dataSourceFile}. The file exists but contains invalid JSON or has other configuration errors.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }

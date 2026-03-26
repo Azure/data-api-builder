@@ -59,6 +59,45 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
 
             // Base entity schema should still exist
             Assert.IsTrue(doc.Components.Schemas.ContainsKey("book"), "Base entity schema should exist");
+
+            // Operations (POST/PUT/PATCH) should reference the base 'book' schema for their request bodies
+            bool foundRequestBodyForWritableOperation = false;
+            foreach (OpenApiPathItem pathItem in doc.Paths.Values)
+            {
+                foreach (KeyValuePair<OperationType, OpenApiOperation> operationKvp in pathItem.Operations)
+                {
+                    OperationType operationType = operationKvp.Key;
+                    OpenApiOperation operation = operationKvp.Value;
+
+                    if (operationType != OperationType.Post
+                        && operationType != OperationType.Put
+                        && operationType != OperationType.Patch)
+                    {
+                        continue;
+                    }
+
+                    if (operation.RequestBody is null)
+                    {
+                        continue;
+                    }
+
+                    if (!operation.RequestBody.Content.TryGetValue("application/json", out OpenApiMediaType mediaType)
+                        || mediaType.Schema is null)
+                    {
+                        continue;
+                    }
+
+                    foundRequestBodyForWritableOperation = true;
+                    OpenApiSchema schema = mediaType.Schema;
+
+                    Assert.IsNotNull(schema.Reference, "Request body schema should reference a component schema when request-body-strict is false.");
+                    Assert.AreEqual("book", schema.Reference.Id, "Request body should reference the base 'book' schema when request-body-strict is false.");
+                    Assert.AreNotEqual("book_NoAutoPK", schema.Reference.Id, "Request body should not reference the 'book_NoAutoPK' schema when request-body-strict is false.");
+                    Assert.AreNotEqual("book_NoPK", schema.Reference.Id, "Request body should not reference the 'book_NoPK' schema when request-body-strict is false.");
+                }
+            }
+
+            Assert.IsTrue(foundRequestBodyForWritableOperation, "Expected at least one POST/PUT/PATCH operation with a JSON request body.");
         }
 
         private static async Task<OpenApiDocument> GenerateDocumentWithPermissions(EntityPermission[] permissions, bool? requestBodyStrict = null)

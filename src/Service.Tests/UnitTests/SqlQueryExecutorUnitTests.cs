@@ -1120,7 +1120,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     args: null);
             });
 
-
             // Verify that the underlying database execution is invoked exactly once,
             // confirming that Polly does not perform any retries for TaskCanceledException.
             queryExecutor.Verify(q => q.ExecuteQueryAgainstDbAsync(

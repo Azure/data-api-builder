@@ -7,8 +7,10 @@ using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
@@ -130,5 +132,123 @@ public class RuntimeConfigLoaderTests
         Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig), "Should successfully load config");
         Assert.IsTrue(runtimeConfig.SqlDataSourceUsed, "Should have Sql data source");
         Assert.AreEqual(expectedEntities, runtimeConfig.Entities.Entities.Count, "Number of entities is not what is expected.");
+    }
+
+    /// <summary>
+    /// Validates that when a child config contains @env('...') references to environment variables
+    /// that do not exist, the config still loads successfully because the child config uses
+    /// EnvironmentVariableReplacementFailureMode.Ignore (matching the parent config behavior).
+    /// Regression test for https://github.com/Azure/data-api-builder/issues/3271
+    /// </summary>
+    [TestMethod]
+    public async Task ChildConfigWithMissingEnvVarsLoadsSuccessfully()
+    {
+        string parentConfig = await File.ReadAllTextAsync("Multidab-config.MsSql.json");
+
+        // Child config references env vars that do not exist in the environment.
+        string childConfig = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
+            },
+            ""runtime"": {
+                ""rest"": { ""enabled"": true },
+                ""graphql"": { ""enabled"": true },
+                ""host"": {
+                    ""cors"": { ""origins"": [] },
+                    ""authentication"": { ""provider"": ""StaticWebApps"" }
+                },
+                ""telemetry"": {
+                    ""open-telemetry"": {
+                        ""enabled"": true,
+                        ""endpoint"": ""@env('NONEXISTENT_OTEL_ENDPOINT')"",
+                        ""headers"": ""@env('NONEXISTENT_OTEL_HEADERS')"",
+                        ""service-name"": ""@env('NONEXISTENT_OTEL_SERVICE_NAME')""
+                    }
+                }
+            },
+            ""entities"": {
+                ""ChildEntity"": {
+                    ""source"": ""dbo.ChildTable"",
+                    ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""read""] }]
+                }
+            }
+        }";
+
+        // Ensure the referenced env vars do not exist.
+        Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_ENDPOINT", null);
+        Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_HEADERS", null);
+        Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_SERVICE_NAME", null);
+
+        // Write the child config to a real file on disk because the RuntimeConfig
+        // constructor creates a real FileSystem to load child data-source-files.
+        string childFileName = "test-child-config-envvar.json";
+        try
+        {
+            await File.WriteAllTextAsync(childFileName, childConfig);
+
+            JObject parentJson = JObject.Parse(parentConfig);
+            parentJson.Add("data-source-files", new JArray(childFileName));
+            string parentJsonStr = parentJson.ToString();
+
+            MockFileSystem fs = new(new Dictionary<string, MockFileData>()
+            {
+                { "dab-config.json", new MockFileData(parentJsonStr) }
+            });
+
+            FileSystemRuntimeConfigLoader loader = new(fs);
+
+            DeserializationVariableReplacementSettings replacementSettings = new(
+                azureKeyVaultOptions: null,
+                doReplaceEnvVar: true,
+                doReplaceAkvVar: false,
+                envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
+
+            Assert.IsTrue(
+                loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig, replacementSettings: replacementSettings),
+                "Config should load successfully even when child config has missing env vars.");
+
+            Assert.IsTrue(runtimeConfig.Entities.ContainsKey("ChildEntity"), "Child config entity should be merged into the parent config.");
+        }
+        finally
+        {
+            if (File.Exists(childFileName))
+            {
+                File.Delete(childFileName);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates that when a child config file cannot be loaded (e.g. file not found, invalid JSON),
+    /// the parent config loading fails instead of silently skipping the child.
+    /// Regression test for https://github.com/Azure/data-api-builder/issues/3271
+    /// </summary>
+    [TestMethod]
+    public async Task ChildConfigLoadFailureHaltsParentConfigLoading()
+    {
+        string parentConfig = await File.ReadAllTextAsync("Multidab-config.MsSql.json");
+
+        JObject parentJson = JObject.Parse(parentConfig);
+        parentJson.Add("data-source-files", new JArray("nonexistent-child.json"));
+        string parentJsonStr = parentJson.ToString();
+
+        MockFileSystem fs = new(new Dictionary<string, MockFileData>()
+        {
+            { "dab-config.json", new MockFileData(parentJsonStr) }
+            // nonexistent-child.json intentionally NOT added to the mock file system
+        });
+
+        FileSystemRuntimeConfigLoader loader = new(fs);
+
+        StringWriter sw = new();
+        Console.SetError(sw);
+
+        bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
+        string error = sw.ToString();
+
+        Assert.IsFalse(loaded, "Config loading should fail when a child config file cannot be loaded.");
+        Assert.IsTrue(error.Contains("Failed to load datasource file"), "Error message should indicate the child config file that failed to load.");
     }
 }

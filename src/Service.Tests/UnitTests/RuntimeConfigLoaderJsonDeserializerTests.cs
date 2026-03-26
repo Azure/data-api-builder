@@ -486,7 +486,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Method to validate that FileNotFoundException is thrown if sub-data source file is not found.
+        /// Method to validate that config loading fails when a sub-data source file is not found.
+        /// Previously this test asserted that the missing child was silently skipped;
+        /// after the fix for https://github.com/Azure/data-api-builder/issues/3271,
+        /// a missing child config now correctly causes the parent config to fail loading.
         /// </summary>
         [TestMethod]
         public void TestLoadRuntimeConfigSubFilesFails()
@@ -506,8 +509,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     ""data-source-files"":[""FileNotFound.json""],
                                     ""entities"":{ }
                                 }";
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig runtimeConfig), "Should parse the data-source-files correctly.");
-            Assert.IsTrue(runtimeConfig.ListAllDataSources().Count() == 1);
+
+            StringWriter sw = new();
+            Console.SetError(sw);
+
+            Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Config loading should fail when a child config file cannot be found.");
+            string error = sw.ToString();
+            Assert.IsTrue(error.Contains("Failed to load datasource file"), "Error message should indicate the child config file that failed.");
         }
 
         #endregion Negative Tests

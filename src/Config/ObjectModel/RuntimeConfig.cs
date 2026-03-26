@@ -6,6 +6,7 @@ using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -355,8 +356,9 @@ public record RuntimeConfig
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-                // Use default replacement settings for environment variable replacement
-                DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+                // Use Ignore mode so missing env vars are left as literal @env() strings,
+                // consistent with how the parent config is loaded in TryLoadKnownConfig.
+                DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
 
                 if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replacementSettings: replacementSettings))
                 {
@@ -377,6 +379,13 @@ public record RuntimeConfig
                             DataApiBuilderException.SubStatusCodes.ConfigValidationError,
                             e.InnerException);
                     }
+                }
+                else
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Failed to load datasource file: {dataSourceFile}",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
             }
 

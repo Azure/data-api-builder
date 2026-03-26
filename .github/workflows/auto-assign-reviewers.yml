@@ -39,7 +39,7 @@ jobs:
             function isEligible(pr) {
               const labels = pr.labels.map((l) => l.name);
               if (!labels.includes("assign-for-review")) return false;
-              if (pr.draft) return false;
+              // if (pr.draft) return false;
               if ((pr.requested_reviewers || []).length >= REQUIRED_REVIEWERS) return false;
               return true;
             }
@@ -69,7 +69,7 @@ jobs:
 
             const loadRelevantPRs = allPRs.filter((pr) => {
               const labels = pr.labels.map((l) => l.name);
-              return labels.includes("assign-for-review") && !pr.draft;
+              return labels.includes("assign-for-review");
             });
 
             const eligiblePRs = allPRs.filter(isEligible);

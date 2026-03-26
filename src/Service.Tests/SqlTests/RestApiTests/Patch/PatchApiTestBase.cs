@@ -374,6 +374,65 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route, where the request body contains
+        /// all PK columns that match an existing row.
+        /// The engine should detect the PK in the body, route through the
+        /// upsert path, find the existing row, and perform an UPDATE (200 OK).
+        /// This is a regression test: previously, a keyless upsert with body PKs
+        /// always executed an INSERT, which would fail on a PK violation.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_KeylessWithPKInBody_ExistingRow_Test()
+        {
+            // id=1 exists in the magazines table with title='Vogue'.
+            // Sending a PATCH with the PK in the body should UPDATE the existing row.
+            string requestBody = @"
+            {
+                ""id"": 1,
+                ""title"": ""Updated Vogue""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integration_NonAutoGenPK_EntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_KeylessWithPKInBody_ExistingRow_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route, where the request body contains
+        /// all PK columns that do NOT match any existing row.
+        /// The engine should detect the PK in the body, route through the
+        /// upsert path, find no existing row, and perform an INSERT (201 Created).
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Insert_KeylessWithPKInBody_NewRow_Test()
+        {
+            string requestBody = @"
+            {
+                ""id"": " + STARTING_ID_FOR_TEST_INSERTS + @",
+                ""title"": ""Brand New Magazine""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integration_NonAutoGenPK_EntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_KeylessWithPKInBody_NewRow_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
         /// Tests successful execution of PATCH update requests on views
         /// when requests try to modify fields belonging to one base table
         /// in the view.

@@ -43,22 +43,22 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         }
 
         /// <summary>
-        /// Validates that when request-body-strict is false, request body schemas
-        /// have additionalProperties set to true.
+        /// Validates that when request-body-strict is false, the redundant _NoAutoPK and _NoPK
+        /// schemas are not generated. Operations reference the base entity schema instead.
         /// </summary>
         [TestMethod]
-        public async Task RequestBodyStrict_False_AllowsExtraFields()
+        public async Task RequestBodyStrict_False_OmitsRedundantSchemas()
         {
             OpenApiDocument doc = await GenerateDocumentWithPermissions(
                 OpenApiTestBootstrap.CreateBasicPermissions(),
                 requestBodyStrict: false);
 
-            // Request body schemas should have additionalProperties = true
-            Assert.IsTrue(doc.Components.Schemas.ContainsKey("book_NoAutoPK"), "POST request body schema should exist");
-            Assert.IsTrue(doc.Components.Schemas["book_NoAutoPK"].AdditionalPropertiesAllowed, "POST request body should allow extra fields in non-strict mode");
+            // _NoAutoPK and _NoPK schemas should not be generated when strict mode is off
+            Assert.IsFalse(doc.Components.Schemas.ContainsKey("book_NoAutoPK"), "POST request body schema should not exist in non-strict mode");
+            Assert.IsFalse(doc.Components.Schemas.ContainsKey("book_NoPK"), "PUT/PATCH request body schema should not exist in non-strict mode");
 
-            Assert.IsTrue(doc.Components.Schemas.ContainsKey("book_NoPK"), "PUT/PATCH request body schema should exist");
-            Assert.IsTrue(doc.Components.Schemas["book_NoPK"].AdditionalPropertiesAllowed, "PUT/PATCH request body should allow extra fields in non-strict mode");
+            // Base entity schema should still exist
+            Assert.IsTrue(doc.Components.Schemas.ContainsKey("book"), "Base entity schema should exist");
         }
 
         private static async Task<OpenApiDocument> GenerateDocumentWithPermissions(EntityPermission[] permissions, bool? requestBodyStrict = null)

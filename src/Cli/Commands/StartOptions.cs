@@ -17,6 +17,7 @@ namespace Cli.Commands
     [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
     public class StartOptions : Options
     {
+        private static LogBuffer _cliBuffer = new();
         private const string LOGLEVEL_HELPTEXT = "Specifies logging level as provided value. For possible values, see: https://go.microsoft.com/fwlink/?linkid=2263106";
 
         public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, bool mcpStdio, string? mcpRole, string config)
@@ -48,6 +49,7 @@ namespace Cli.Commands
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
+            ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger, _cliBuffer);
             ConfigGenerator.SendLogToBufferOrLogger(Microsoft.Extensions.Logging.LogLevel.Information, $"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
             bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(this, loader, fileSystem);
 

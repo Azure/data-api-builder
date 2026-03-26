@@ -33,10 +33,13 @@ namespace Cli
 #pragma warning restore CS8618
 
         public static void SetLoggerForCliConfigGenerator(
-            ILogger<ConfigGenerator> configGeneratorLoggerFactory,
-            LogBuffer? cliBuffer)
+            ILogger<ConfigGenerator> configGeneratorLoggerFactory)
         {
             _logger = configGeneratorLoggerFactory;
+        }
+
+        public static void SetBufferForCliConfigGenerator(LogBuffer cliBuffer)
+        {
             _cliBuffer = cliBuffer;
         }
 
@@ -2610,7 +2613,7 @@ namespace Cli
 
             Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli(minimumLogLevel);
             ILogger<ConfigGenerator> configGeneratorLogger = Utils.LoggerFactoryForCli.CreateLogger<ConfigGenerator>();
-            SetLoggerForCliConfigGenerator(configGeneratorLogger, _cliBuffer);
+            SetLoggerForCliConfigGenerator(configGeneratorLogger);
             _cliBuffer?.FlushToLogger(_logger);
 
             args.Add("--LogLevel");

@@ -16,8 +16,6 @@ namespace Cli
     {
         public const string PRODUCT_NAME = "Microsoft.DataApiBuilder";
 
-        private static LogBuffer _cliBuffer = new();
-
         /// <summary>
         /// Main CLI entry point
         /// </summary>
@@ -33,7 +31,7 @@ namespace Cli
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
             ILogger<ConfigGenerator> configGeneratorLogger = loggerFactory.CreateLogger<ConfigGenerator>();
             ILogger<Utils> cliUtilsLogger = loggerFactory.CreateLogger<Utils>();
-            ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger, _cliBuffer);
+            ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
 
             // Sets up the filesystem used for reading and writing runtime configuration files.

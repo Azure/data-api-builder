@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     // Ensure cachedResponse is not null before calling WriteAsync
                     if (report != null)
                     {
-                        // Set currentRole per-request (not cached) so each caller sees their own role
+                        // Set current-role per-request (not cached) so each caller sees their own role
                         await context.Response.WriteAsync(SerializeReport(report with { CurrentRole = _healthCheckHelper.GetCurrentRole(roleHeader, roleToken) }));
                     }
                     else

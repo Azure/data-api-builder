@@ -374,7 +374,7 @@ namespace Azure.DataApiBuilder.Service
                     int port = PortResolutionHelper.ResolveInternalPort();
                     string baseUri = $"http://localhost:{port}";
                     client.BaseAddress = new Uri(baseUri);
-                    _logBuffer.BufferLog(LogLevel.Information, $"Configured HealthCheck HttpClient BaseAddress as: {baseUri}");
+                    _logger.LogInformation($"Configured HealthCheck HttpClient BaseAddress as: {baseUri}");
                     client.DefaultRequestHeaders.Accept.Clear();
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     client.Timeout = TimeSpan.FromSeconds(200);
@@ -648,13 +648,13 @@ namespace Azure.DataApiBuilder.Service
             {
                 if (error.Exception is not null)
                 {
-                    _logBuffer.BufferLog(LogLevel.Error, "A GraphQL request execution error occurred.", error.Exception);
+                    _logger.LogError(error.Exception, "A GraphQL request execution error occurred.");
                     return error.WithMessage(error.Exception.Message);
                 }
 
                 if (error.Code is not null)
                 {
-                    _logBuffer.BufferLog(LogLevel.Error, $"Error code: {error.Code}\nError message: {error.Message}");
+                    _logger.LogError($"Error code: {error.Code}\nError message: {error.Message}");
                     return error.WithMessage(error.Message);
                 }
 

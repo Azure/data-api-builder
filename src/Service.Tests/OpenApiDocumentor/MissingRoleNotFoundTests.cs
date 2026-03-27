@@ -27,11 +27,14 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         private const string DB_ENV = TestCategory.MSSQL;
 
         /// <summary>
-        /// Validates that a request for /api/openapi/{nonexistentRole} returns a 404
-        /// ProblemDetails response containing the role name in the message extension.
+        /// Validates that a request for /api/openapi/{role} returns a 404
+        /// ProblemDetails response containing the role name in the detail message
+        /// when the role is not present in the configuration or contains invalid characters.
         /// </summary>
-        [TestMethod]
-        public async Task MissingRole_Returns404ProblemDetailsWithMessage()
+        [DataTestMethod]
+        [DataRow("nonexistentrole", DisplayName = "Missing role returns 404 ProblemDetails")]
+        [DataRow("foo/bar", DisplayName = "Role with path separator returns 404 ProblemDetails")]
+        public async Task MissingRole_Returns404ProblemDetailsWithMessage(string roleName)
         {
             TestHelper.SetupDatabaseEnvironment(DB_ENV);
             FileSystem fileSystem = new();
@@ -62,8 +65,8 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
 
-            string missingRole = "nonexistentrole";
-            HttpResponseMessage response = await client.GetAsync($"/api/openapi/{missingRole}");
+            string missingRole = roleName;
+            HttpResponseMessage response = await client.GetAsync($"/api/openapi/{Uri.EscapeDataString(missingRole)}");
 
             Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode, "Expected 404 for a role not in the configuration.");
 

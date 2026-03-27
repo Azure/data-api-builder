@@ -249,7 +249,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     // Validate role doesn't contain path separators (reject /openapi/foo/bar)
                     if (string.IsNullOrEmpty(role) || role.Contains('/'))
                     {
-                        return NotFound();
+                        return Problem(
+                            detail: $"Invalid role name '{role}'. Role names must not be empty or contain path separators.",
+                            statusCode: StatusCodes.Status404NotFound,
+                            title: "Not Found");
                     }
 
                     if (_openApiDocumentor.TryGetDocumentForRole(role, out string? roleDocument))

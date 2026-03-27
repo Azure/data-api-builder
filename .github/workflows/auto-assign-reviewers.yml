@@ -1,10 +1,19 @@
 name: PR Review Assignment Bot
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, reopened, synchronize, labeled]
 
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no actual assignments)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
   # schedule:
   #   - cron: "*/10 * * * *"
@@ -12,6 +21,10 @@ on:
 permissions:
   pull-requests: write
   contents: read
+
+concurrency:
+  group: pr-review-assignment
+  cancel-in-progress: false
 
 jobs:
   assign-reviewers:
@@ -23,12 +36,12 @@ jobs:
           script: |
             const reviewers = ["souvikghosh04", "Aniruddh25", "aaronburtle", "anushakolan", "RubenCerna2079", "JerryNixon"];
             const REQUIRED_REVIEWERS = 2;
-            const DRY_RUN = true;
+            const DRY_RUN = '${{ github.event.inputs.dry_run || 'true' }}' === 'true';
 
             const { owner, repo } = context.repo;
 
-            // Fetch all open PRs
-            const { data: allPRs } = await github.rest.pulls.list({
+            // Fetch all open PRs (paginated)
+            const allPRs = await github.paginate(github.rest.pulls.list, {
               owner,
               repo,
               state: "open",
@@ -40,7 +53,8 @@ jobs:
               const labels = pr.labels.map((l) => l.name);
               if (!labels.includes("assign-for-review")) return false;
               // if (pr.draft) return false;
-              if ((pr.requested_reviewers || []).length >= REQUIRED_REVIEWERS) return false;
+              const totalReviewers = (pr.requested_reviewers || []).length + (pr.requested_teams || []).length;
+              if (totalReviewers >= REQUIRED_REVIEWERS) return false;
               return true;
             }
 

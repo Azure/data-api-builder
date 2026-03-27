@@ -329,7 +329,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     if (string.IsNullOrWhiteSpace(entityName) || string.IsNullOrWhiteSpace(objectName) || string.IsNullOrWhiteSpace(schemaName))
                     {
-                        _logger.LogError("Skipping autoentity generation: 'entity_name', 'object', or 'schema' is null or empty for autoentities definition '{AutoentityName}'.", autoentityName);
+                        _logger.LogError("Skipping autoentity generation: 'entity_name', 'object', or 'schema' is null or empty for autoentities definition '{autoentityName}'.", autoentityName);
                         continue;
                     }
 
@@ -396,9 +396,9 @@ namespace Azure.DataApiBuilder.Core.Services
             };
 
             _logger.LogDebug("Query for autoentities is being executed with the following parameters.");
-            _logger.LogDebug($"The autoentities definition '{autoentityName}' include pattern: {include}");
-            _logger.LogDebug($"The autoentities definition '{autoentityName}' exclude pattern: {exclude}");
-            _logger.LogDebug($"The autoentities definition '{autoentityName}' name pattern: {namePattern}");
+            _logger.LogDebug("The autoentities definition '{autoentityName}' include pattern: {include}", autoentityName, include);
+            _logger.LogDebug("The autoentities definition '{autoentityName}' exclude pattern: {exclude}", autoentityName, exclude);
+            _logger.LogDebug("The autoentities definition '{autoentityName}' name pattern: {namePattern}", autoentityName, namePattern);
 
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: getAutoentitiesQuery,

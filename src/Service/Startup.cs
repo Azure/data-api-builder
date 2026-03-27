@@ -600,7 +600,7 @@ namespace Azure.DataApiBuilder.Service
                 options.Level = systemCompressionLevel;
             });
 
-            _logger.LogInformation("Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.", compressionLevel);
+            _logger.LogDebug("Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.", compressionLevel);
         }
 
         /// <summary>

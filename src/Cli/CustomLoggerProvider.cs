@@ -62,6 +62,19 @@ public class CustomLoggerProvider : ILoggerProvider
         };
 
         /// <summary>
+        /// Maps LogLevel to abbreviated labels matching ASP.NET Core's default console formatter.
+        /// </summary>
+        private static readonly Dictionary<LogLevel, string> _logLevelToAbbreviation = new()
+        {
+            {LogLevel.Trace, "trce"},
+            {LogLevel.Debug, "dbug"},
+            {LogLevel.Information, "info"},
+            {LogLevel.Warning, "warn"},
+            {LogLevel.Error, "fail"},
+            {LogLevel.Critical, "crit"}
+        };
+
+        /// <summary>
         /// Creates Log message by setting console message color based on LogLevel.
         /// In MCP stdio mode:
         /// - If user explicitly set --LogLevel: write to stderr (colored output)
@@ -100,11 +113,16 @@ public class CustomLoggerProvider : ILoggerProvider
                 return;
             }
 
+            if (!_logLevelToAbbreviation.TryGetValue(logLevel, out string? abbreviation))
+            {
+                return;
+            }
+
             ConsoleColor originalForeGroundColor = Console.ForegroundColor;
             ConsoleColor originalBackGroundColor = Console.BackgroundColor;
-            Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap[logLevel];
-            Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap[logLevel];
-            Console.Write($"{logLevel}:");
+            Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
+            Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
+            Console.Write($"{abbreviation}:");
             Console.ForegroundColor = originalForeGroundColor;
             Console.BackgroundColor = originalBackGroundColor;
             Console.WriteLine($" {formatter(state, exception)}");

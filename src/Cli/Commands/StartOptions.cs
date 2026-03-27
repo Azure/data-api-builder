@@ -49,7 +49,7 @@ namespace Cli.Commands
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger, _cliBuffer);
+            ConfigGenerator.SetBufferForCliConfigGenerator(_cliBuffer);
             ConfigGenerator.SendLogToBufferOrLogger(Microsoft.Extensions.Logging.LogLevel.Information, $"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
             bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(this, loader, fileSystem);
 

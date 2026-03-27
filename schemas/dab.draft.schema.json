@@ -486,7 +486,40 @@
             "ttl-seconds": {
               "type": "integer",
               "description": "Time to live in seconds",
-              "default": 5
+              "default": 5,
+              "minimum": 1
+            },
+            "level-2": {
+              "type": "object",
+              "description": "Configuration for the level 2 (distributed) cache and backplane.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/$defs/boolean-or-string",
+                  "description": "Enable or disable the level 2 distributed cache.",
+                  "default": false
+                },
+                "provider": {
+                  "type": "string",
+                  "description": "The provider for the L2 cache. Currently only 'redis' is supported."
+                },
+                "connection-string": {
+                  "type": "string",
+                  "description": "The connection string for the level 2 cache provider."
+                },
+                "partition": {
+                  "type": "string",
+                  "description": "The prefix to use for cache keys in level 2 and backplane, useful in a shared environment to avoid collisions."
+                }
+              },
+              "if": {
+                "properties": {
+                  "enabled": { "const": true }
+                }
+              },
+              "then": {
+                "required": ["connection-string"]
+              }
             }
           }
         },

@@ -15,7 +15,7 @@ public static class ConfigMerger
     /// and create a merged file called dab-config.{DAB_ENVIRONMENT}.merged.json
     /// </summary>
     /// <returns>Returns the name of the merged Config if successful.</returns>
-    public static bool TryMergeConfigsIfAvailable(IFileSystem fileSystem, FileSystemRuntimeConfigLoader loader, ILogger logger, out string? mergedConfigFile)
+    public static bool TryMergeConfigsIfAvailable(IFileSystem fileSystem, FileSystemRuntimeConfigLoader loader, out string? mergedConfigFile)
     {
         string? environmentValue = Environment.GetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME);
         mergedConfigFile = null;

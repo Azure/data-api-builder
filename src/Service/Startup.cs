@@ -159,32 +159,32 @@ namespace Azure.DataApiBuilder.Service
                 .WithMetrics(metrics =>
                 {
                     metrics.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
-                        // TODO: should we also add FusionCache metrics?
-                        // To do so we just need to add the package ZiggyCreatures.FusionCache.OpenTelemetry and call
-                        // .AddFusionCacheInstrumentation()
-                        .AddOtlpExporter(configure =>
-                        {
-                            configure.Endpoint = otlpEndpoint;
-                            configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = OtlpExportProtocol.Grpc;
-                        })
-                        .AddMeter(TelemetryMetricsHelper.MeterName);
+                    // TODO: should we also add FusionCache metrics?
+                    // To do so we just need to add the package ZiggyCreatures.FusionCache.OpenTelemetry and call
+                    // .AddFusionCacheInstrumentation()
+                    .AddOtlpExporter(configure =>
+                    {
+                        configure.Endpoint = otlpEndpoint;
+                        configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                        configure.Protocol = OtlpExportProtocol.Grpc;
+                    })
+                    .AddMeter(TelemetryMetricsHelper.MeterName);
                 })
                 .WithTracing(tracing =>
                 {
                     tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
-                        .AddHttpClientInstrumentation()
-                        // TODO: should we also add FusionCache traces?
-                        // To do so we just need to add the package ZiggyCreatures.FusionCache.OpenTelemetry and call
-                        // .AddFusionCacheInstrumentation()
-                        .AddHotChocolateInstrumentation()
-                        .AddOtlpExporter(configure =>
-                        {
-                            configure.Endpoint = otlpEndpoint;
-                            configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = OtlpExportProtocol.Grpc;
-                        })
-                        .AddSource(TelemetryTracesHelper.DABActivitySource.Name);
+                    .AddHttpClientInstrumentation()
+                    // TODO: should we also add FusionCache traces?
+                    // To do so we just need to add the package ZiggyCreatures.FusionCache.OpenTelemetry and call
+                    // .AddFusionCacheInstrumentation()
+                    .AddHotChocolateInstrumentation()
+                    .AddOtlpExporter(configure =>
+                    {
+                        configure.Endpoint = otlpEndpoint;
+                        configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                        configure.Protocol = OtlpExportProtocol.Grpc;
+                    })
+                    .AddSource(TelemetryTracesHelper.DABActivitySource.Name);
                 });
             }
 
@@ -660,30 +660,30 @@ namespace Azure.DataApiBuilder.Service
 
                 return error;
             })
-                .AddErrorFilter(error =>
+            .AddErrorFilter(error =>
+            {
+                if (error.Exception is DataApiBuilderException thrownException)
                 {
-                    if (error.Exception is DataApiBuilderException thrownException)
+                    error = error
+                        .WithException(null)
+                        .WithMessage(thrownException.Message)
+                        .WithCode($"{thrownException.SubStatusCode}");
+
+                    // If user error i.e. validation error or conflict error with datasource, then retain location/path
+                    if (!thrownException.StatusCode.IsClientError())
                     {
-                        error = error
-                            .WithException(null)
-                            .WithMessage(thrownException.Message)
-                            .WithCode($"{thrownException.SubStatusCode}");
-
-                        // If user error i.e. validation error or conflict error with datasource, then retain location/path
-                        if (!thrownException.StatusCode.IsClientError())
-                        {
-                            error = error.WithLocations(Array.Empty<Location>());
-                        }
+                        error = error.WithLocations(Array.Empty<Location>());
                     }
+                }
 
-                    return error;
-                })
-                // Allows DAB to override the HTTP error code set by HotChocolate.
-                // This is used to ensure HTTP code 4XX is set when the datatbase
-                // returns a "bad request" error such as stored procedure params missing.
-                .UseRequest<DetermineStatusCodeMiddleware>()
-                .UseRequest<BuildRequestStateMiddleware>()
-                .UseDefaultPipeline();
+                return error;
+            })
+            // Allows DAB to override the HTTP error code set by HotChocolate.
+            // This is used to ensure HTTP code 4XX is set when the datatbase
+            // returns a "bad request" error such as stored procedure params missing.
+            .UseRequest<DetermineStatusCodeMiddleware>()
+            .UseRequest<BuildRequestStateMiddleware>()
+            .UseDefaultPipeline();
         }
 
         /// <summary>

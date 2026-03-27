@@ -2708,7 +2708,7 @@ namespace Cli
             IFileSystem fileSystem,
             out string runtimeConfigFile)
         {
-            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
+            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, out configToBeUsed))
             {
                 SendLogToBufferOrLogger(LogLevel.Information, $"Using merged config file based on environment: {configToBeUsed}.");
             }

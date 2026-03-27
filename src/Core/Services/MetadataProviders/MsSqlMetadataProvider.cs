@@ -349,7 +349,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         Health: autoentity.Template.Health,
                         Fields: null,
                         Relationships: null,
-                        Mappings: new());
+                        Mappings: new(),
+                        IsAutoentity: true);
 
                     // Add the generated entity to the linking entities dictionary.
                     // This allows the entity to be processed later during metadata population.

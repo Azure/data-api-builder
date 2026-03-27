@@ -706,7 +706,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Create log level initializer for Startup, which allows it to respond to runtime config changes and update the log level accordingly.
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(Startup).FullName, runtimeConfigProvider, _hotReloadEventHandler);
-                
+
                 // Set LogLevel based on RuntimeConfig
                 DynamicLogLevelProvider logLevelProvider = app.ApplicationServices.GetRequiredService<DynamicLogLevelProvider>();
                 logLevelProvider.UpdateFromRuntimeConfig(runtimeConfig);

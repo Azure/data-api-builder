@@ -135,6 +135,12 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 columnSystemType = columnSystemType.GetElementType()!;
             }
+            else if (columnSystemType == typeof(Array))
+            {
+                // Npgsql may report abstract System.Array for unresolved PostgreSQL array columns.
+                // Default to String if the element type hasn't been resolved yet.
+                return EdmPrimitiveTypeKind.String;
+            }
 
             EdmPrimitiveTypeKind type = columnSystemType.Name switch
             {

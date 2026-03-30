@@ -111,7 +111,8 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     // each column represents a property of the current entity we are adding
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        Type columnSystemType = sourceDefinition.Columns[column].SystemType;
+                        ColumnDefinition columnDef = sourceDefinition.Columns[column];
+                        Type columnSystemType = columnDef.SystemType;
                         // need to convert our column system type to an Edm type
                         EdmPrimitiveTypeKind type = TypeHelper.GetEdmPrimitiveTypeFromSystemType(columnSystemType);
 
@@ -124,6 +125,14 @@ namespace Azure.DataApiBuilder.Core.Parsers
                         {
                             sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
                             newEntity.AddKeys(newEntity.AddStructuralProperty(name: exposedColumnName, type, isNullable: false));
+                        }
+                        else if (columnDef.IsArrayType)
+                        {
+                            // Array columns are represented as EDM collection types (e.g., Collection(Edm.Int32) for int[]).
+                            sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
+                            EdmPrimitiveTypeReference elementTypeRef = new(EdmCoreModel.Instance.GetPrimitiveType(type), isNullable: true);
+                            EdmCollectionTypeReference collectionTypeRef = new(new EdmCollectionType(elementTypeRef));
+                            newEntity.AddStructuralProperty(name: exposedColumnName, collectionTypeRef);
                         }
                         else
                         {

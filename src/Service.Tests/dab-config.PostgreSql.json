@@ -1313,6 +1313,40 @@
         "id": "typeid"
       }
     },
+    "ArrayType": {
+      "source": {
+        "object": "array_type_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "ArrayType",
+          "plural": "ArrayTypes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        }
+      ]
+    },
     "stocks_price": {
       "source": {
         "object": "stocks_price",

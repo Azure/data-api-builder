@@ -441,7 +441,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
-            NamedTypeNode fieldType = new(GetGraphQLTypeFromSystemType(column.SystemType));
+            NamedTypeNode namedType = new(GetGraphQLTypeFromSystemType(column.SystemType));
+
+            // For array columns, wrap the element type in a ListTypeNode (e.g., [Int], [String]).
+            INullableTypeNode fieldType = column.IsArrayType
+                ? new ListTypeNode(namedType)
+                : namedType;
+
             FieldDefinitionNode field = new(
                 location: null,
                 new(exposedColumnName),
@@ -541,6 +547,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// GraphQL type.</exception>"
         public static string GetGraphQLTypeFromSystemType(Type type)
         {
+            // For array types (e.g., int[], string[]), resolve the element type.
+            // byte[] is excluded as it maps to the ByteArray scalar type.
+            if (type.IsArray && type != typeof(byte[]))
+            {
+                type = type.GetElementType()!;
+            }
+            else if (type == typeof(Array))
+            {
+                // Npgsql may report abstract System.Array for unresolved PostgreSQL array columns.
+                // Default to String if the element type hasn't been resolved yet.
+                return STRING_TYPE;
+            }
+
             return type.Name switch
             {
                 "String" => STRING_TYPE,

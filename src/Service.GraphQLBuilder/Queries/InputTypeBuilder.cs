@@ -50,6 +50,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             List<InputValueDefinitionNode> inputFields = new();
             foreach (FieldDefinitionNode field in node.Fields)
             {
+                // Skip array/list type fields (e.g., PostgreSQL array columns) - they cannot be ordered.
+                if (field.Type.IsListType())
+                {
+                    continue;
+                }
+
                 if (IsBuiltInType(field.Type))
                 {
                     inputFields.Add(
@@ -110,6 +116,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             List<InputValueDefinitionNode> inputFields = new();
             foreach (FieldDefinitionNode field in objectTypeDefinitionNode.Fields)
             {
+                // Skip array/list type fields (e.g., PostgreSQL array columns) - they cannot be filtered.
+                if (field.Type.IsListType())
+                {
+                    continue;
+                }
+
                 string fieldTypeName = field.Type.NamedType().Name.Value;
                 if (IsBuiltInType(field.Type))
                 {

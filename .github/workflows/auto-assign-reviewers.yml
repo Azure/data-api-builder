@@ -52,9 +52,11 @@ jobs:
             function isEligible(pr) {
               const labels = pr.labels.map((l) => l.name);
               if (!labels.includes("assign-for-review")) return false;
-              // if (pr.draft) return false;
-              const totalReviewers = (pr.requested_reviewers || []).length + (pr.requested_teams || []).length;
-              if (totalReviewers >= REQUIRED_REVIEWERS) return false;
+              if (pr.draft) return false;
+              // Only count reviewers from our configured list (ignore CODEOWNERS auto-assigns)
+              const configuredAssigned = (pr.requested_reviewers || [])
+                .filter((r) => reviewers.includes(r.login)).length;
+              if (configuredAssigned >= REQUIRED_REVIEWERS) return false;
               return true;
             }
 
@@ -74,16 +76,11 @@ jobs:
               load[r] = 0;
             }
 
-            // Debug: log all open PRs for diagnosis
             core.info(`Total open PRs fetched: ${allPRs.length}`);
-            for (const pr of allPRs) {
-              const labels = pr.labels.map((l) => l.name);
-              core.info(`  PR #${pr.number}: draft=${pr.draft}, labels=[${labels.join(", ")}]`);
-            }
 
             const loadRelevantPRs = allPRs.filter((pr) => {
               const labels = pr.labels.map((l) => l.name);
-              return labels.includes("assign-for-review");
+              return labels.includes("assign-for-review") && !pr.draft;
             });
 
             const eligiblePRs = allPRs.filter(isEligible);
@@ -107,13 +104,15 @@ jobs:
             // Assign reviewers to each eligible PR
             for (const pr of eligiblePRs) {
               const weight = getWeight(pr);
-              const assigned = (pr.requested_reviewers || []).map((r) => r.login);
-              const needed = REQUIRED_REVIEWERS - assigned.length;
+              // Only consider reviewers from our configured list
+              const allAssigned = (pr.requested_reviewers || []).map((r) => r.login);
+              const configuredAssigned = allAssigned.filter((r) => reviewers.includes(r));
+              const needed = REQUIRED_REVIEWERS - configuredAssigned.length;
 
-              core.info(`PR #${pr.number} — weight: ${weight}, existing reviewers: [${assigned.join(", ")}]`);
+              core.info(`PR #${pr.number} — weight: ${weight}, configured reviewers: [${configuredAssigned.join(", ")}], all reviewers: [${allAssigned.join(", ")}]`);
 
               if (needed <= 0) {
-                core.info(`PR #${pr.number} already has ${REQUIRED_REVIEWERS} reviewers, skipping.`);
+                core.info(`PR #${pr.number} already has ${REQUIRED_REVIEWERS} configured reviewers, skipping.`);
                 continue;
               }
 
@@ -121,7 +120,7 @@ jobs:
 
               // Build candidates: exclude author and already-assigned reviewers
               const candidates = reviewers
-                .filter((r) => r !== author && !assigned.includes(r));
+                .filter((r) => r !== author && !allAssigned.includes(r));
 
               if (candidates.length === 0) {
                 core.info(`PR #${pr.number} — no candidates after filtering.`);

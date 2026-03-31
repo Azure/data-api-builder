@@ -10,7 +10,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
     /// <summary>
     /// Tests for PostgreSQL array column support (read-only).
-    /// Verifies that array columns (int[], text[], boolean[], bigint[]) are correctly
+    /// Verifies that array columns (int[], text[], boolean[], bigint[], json[], jsonb[], money[]) are correctly
     /// returned as JSON arrays via GraphQL queries.
     /// </summary>
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
@@ -39,6 +39,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                     text_array_col
                     bool_array_col
                     long_array_col
+                    json_array_col
+                    jsonb_array_col
+                    money_array_col
                 }
             }";
 
@@ -79,6 +82,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             Assert.AreEqual("100", longArray[0].ToString());
             Assert.AreEqual("200", longArray[1].ToString());
             Assert.AreEqual("300", longArray[2].ToString());
+
+            // Verify json array
+            JsonElement jsonArray = actual.GetProperty("json_array_col");
+            Assert.AreEqual(JsonValueKind.Array, jsonArray.ValueKind, $"json_array_col actual: {jsonArray}");
+            Assert.AreEqual(2, jsonArray.GetArrayLength());
+            Assert.IsTrue(jsonArray[0].ToString().Contains("key"));
+            Assert.IsTrue(jsonArray[1].ToString().Contains("42"));
+
+            // Verify jsonb array
+            JsonElement jsonbArray = actual.GetProperty("jsonb_array_col");
+            Assert.AreEqual(JsonValueKind.Array, jsonbArray.ValueKind, $"jsonb_array_col actual: {jsonbArray}");
+            Assert.AreEqual(2, jsonbArray.GetArrayLength());
+            Assert.IsTrue(jsonbArray[0].ToString().Contains("key"));
+            Assert.IsTrue(jsonbArray[1].ToString().Contains("42"));
+
+            // Verify money array
+            JsonElement moneyArray = actual.GetProperty("money_array_col");
+            Assert.AreEqual(JsonValueKind.Array, moneyArray.ValueKind, $"money_array_col actual: {moneyArray}");
+            Assert.AreEqual(3, moneyArray.GetArrayLength());
         }
 
         /// <summary>
@@ -94,6 +116,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                     text_array_col
                     bool_array_col
                     long_array_col
+                    json_array_col
+                    jsonb_array_col
+                    money_array_col
                 }
             }";
 
@@ -104,6 +129,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             Assert.AreEqual(JsonValueKind.Null, actual.GetProperty("text_array_col").ValueKind);
             Assert.AreEqual(JsonValueKind.Null, actual.GetProperty("bool_array_col").ValueKind);
             Assert.AreEqual(JsonValueKind.Null, actual.GetProperty("long_array_col").ValueKind);
+            Assert.AreEqual(JsonValueKind.Null, actual.GetProperty("json_array_col").ValueKind);
+            Assert.AreEqual(JsonValueKind.Null, actual.GetProperty("jsonb_array_col").ValueKind);
+            Assert.AreEqual(JsonValueKind.Null, actual.GetProperty("money_array_col").ValueKind);
         }
 
         /// <summary>
@@ -118,6 +146,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                         id
                         int_array_col
                         text_array_col
+                        json_array_col
+                        jsonb_array_col
+                        money_array_col
                     }
                 }
             }";
@@ -130,12 +161,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             // First row
             Assert.AreEqual(1, items[0].GetProperty("id").GetInt32());
             Assert.AreEqual(3, items[0].GetProperty("int_array_col").GetArrayLength());
+            Assert.AreEqual(2, items[0].GetProperty("json_array_col").GetArrayLength());
+            Assert.AreEqual(2, items[0].GetProperty("jsonb_array_col").GetArrayLength());
+            Assert.AreEqual(3, items[0].GetProperty("money_array_col").GetArrayLength());
 
             // Second row
             Assert.AreEqual(2, items[1].GetProperty("id").GetInt32());
             Assert.AreEqual(2, items[1].GetProperty("int_array_col").GetArrayLength());
             Assert.AreEqual(3, items[1].GetProperty("text_array_col").GetArrayLength());
             Assert.AreEqual("foo", items[1].GetProperty("text_array_col")[0].ToString());
+            Assert.AreEqual(1, items[1].GetProperty("json_array_col").GetArrayLength());
+            Assert.AreEqual(1, items[1].GetProperty("jsonb_array_col").GetArrayLength());
+            Assert.AreEqual(2, items[1].GetProperty("money_array_col").GetArrayLength());
         }
     }
 }

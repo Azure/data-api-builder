@@ -98,6 +98,9 @@ namespace Azure.DataApiBuilder.Core.Services
             ["_uuid"] = typeof(Guid),
             ["_timestamp"] = typeof(DateTime),
             ["_timestamptz"] = typeof(DateTimeOffset),
+            ["_json"] = typeof(string),
+            ["_jsonb"] = typeof(string),
+            ["_money"] = typeof(decimal),
         };
 
         /// <summary>

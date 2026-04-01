@@ -50,8 +50,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             List<InputValueDefinitionNode> inputFields = new();
             foreach (FieldDefinitionNode field in node.Fields)
             {
-                // Skip array/list type fields (e.g., PostgreSQL array columns) - they cannot be ordered.
-                if (field.Type.IsListType())
+                // Skip scalar array fields (e.g., PostgreSQL int[], text[]) - they cannot be ordered.
+                // Non-scalar list types (e.g., Cosmos nested object arrays) are not skipped
+                // because they are handled as relationship navigations.
+                if (field.Type.IsListType() && IsBuiltInType(field.Type))
                 {
                     continue;
                 }
@@ -116,8 +118,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             List<InputValueDefinitionNode> inputFields = new();
             foreach (FieldDefinitionNode field in objectTypeDefinitionNode.Fields)
             {
-                // Skip array/list type fields (e.g., PostgreSQL array columns) - they cannot be filtered.
-                if (field.Type.IsListType())
+                // Skip scalar array fields (e.g., PostgreSQL int[], text[]) - they cannot be filtered.
+                // Non-scalar list types (e.g., Cosmos nested object arrays) are not skipped
+                // because they support filtering via JOIN-based queries.
+                if (field.Type.IsListType() && IsBuiltInType(field.Type))
                 {
                     continue;
                 }

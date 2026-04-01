@@ -280,6 +280,10 @@
               "description": "Allow enabling/disabling MCP requests for all entities.",
               "default": true
             },
+            "description": {
+              "type": "string",
+              "description": "Description of the MCP server, exposed as the 'instructions' field in the MCP initialize response to provide behavioral context to MCP clients and agents."
+            },
             "dml-tools": {
               "description": "Configuration for MCP Data Manipulation Language (DML) tools. Set to true/false to enable/disable all tools, or use an object to configure individual tools.",
               "oneOf": [

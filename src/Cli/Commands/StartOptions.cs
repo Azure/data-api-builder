@@ -17,8 +17,9 @@ namespace Cli.Commands
     [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
     public class StartOptions : Options
     {
-        private static LogBuffer _cliBuffer = new();
         private const string LOGLEVEL_HELPTEXT = "Specifies logging level as provided value. For possible values, see: https://go.microsoft.com/fwlink/?linkid=2263106";
+
+        public static LogBuffer CliBuffer = new();
 
         public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, bool mcpStdio, string? mcpRole, string config)
             : base(config)
@@ -49,13 +50,23 @@ namespace Cli.Commands
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            ConfigGenerator.SetBufferForCliConfigGenerator(_cliBuffer);
-            ConfigGenerator.SendLogToBufferOrLogger(Microsoft.Extensions.Logging.LogLevel.Information, $"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
+            ConfigGenerator.SendLogToBufferOrLogger(logger, CliBuffer, Microsoft.Extensions.Logging.LogLevel.Information, $"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
             bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(this, loader, fileSystem);
 
             if (!isSuccess)
             {
-                ConfigGenerator.SendLogToBufferOrLogger(Microsoft.Extensions.Logging.LogLevel.Error, $"Failed to start the engine{(McpStdio ? " in MCP stdio mode" : string.Empty)}.");
+                // Update loggers and flush buffers to ensure that all the logs are printed if the TryStartEngineWithOptions fails.
+                logger = Utils.LoggerFactoryForCli.CreateLogger<Program>();
+                CliBuffer.FlushToLogger(logger);
+
+                ILogger<Utils> utilsLogger = Utils.LoggerFactoryForCli.CreateLogger<Utils>();
+                Utils.CliBuffer.FlushToLogger(utilsLogger);
+
+                ILogger<ConfigGenerator> configGeneratorLogger = Utils.LoggerFactoryForCli.CreateLogger<ConfigGenerator>();
+                ConfigGenerator.CliBuffer.FlushToLogger(configGeneratorLogger);
+
+                logger.LogError("Failed to start the engine{mode}.",
+                    McpStdio ? " in MCP stdio mode" : string.Empty);
             }
 
             return isSuccess ? CliReturnCode.SUCCESS : CliReturnCode.GENERAL_ERROR;

@@ -540,10 +540,11 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 
     /// <summary>
     /// Flush all logs from the buffer after the log level is set from the RuntimeConfig.
+    /// Logger needs to be present, or else the logs will be lost.
     /// </summary>
     public void FlushLogBuffer()
     {
-        _logBuffer?.FlushToLogger(_logger);
+        _logBuffer?.FlushToLogger(_logger!);
     }
 
     /// <summary>

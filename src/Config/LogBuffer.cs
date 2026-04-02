@@ -31,13 +31,13 @@ namespace Azure.DataApiBuilder.Config
         /// <summary>
         /// Flushes all buffered logs to a single target logger.
         /// </summary>
-        public void FlushToLogger(ILogger? targetLogger)
+        public void FlushToLogger(ILogger targetLogger)
         {
             lock (_flushLock)
             {
                 while (_logBuffer.TryDequeue(out (LogLevel LogLevel, string Message, Exception? Exception) entry))
                 {
-                    targetLogger?.Log(entry.LogLevel, message: entry.Message, exception: entry.Exception);
+                    targetLogger.Log(entry.LogLevel, message: entry.Message, exception: entry.Exception);
                 }
             }
         }

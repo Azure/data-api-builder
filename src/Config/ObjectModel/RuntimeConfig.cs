@@ -520,7 +520,7 @@ public record RuntimeConfig
         if (!_autoentityNameToDataSourceName.TryGetValue(autoentityName, out string? autoentityDataSource))
         {
             throw new DataApiBuilderException(
-                message: $"{autoentityName} is not a valid autoentity.",
+                message: $"'{autoentityName}' is not a valid autoentities definition.",
                 statusCode: HttpStatusCode.NotFound,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }

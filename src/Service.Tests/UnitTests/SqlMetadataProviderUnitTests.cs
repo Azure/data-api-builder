@@ -634,7 +634,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Act
             MsSqlMetadataProvider metadataProvider = (MsSqlMetadataProvider)_sqlMetadataProvider;
-            JsonArray resultArray = await metadataProvider.QueryAutoentitiesAsync(autoentity);
+            JsonArray resultArray = await metadataProvider.QueryAutoentitiesAsync("autoentity", autoentity);
 
             // Assert
             Assert.IsNotNull(resultArray);

@@ -25,6 +25,8 @@ namespace Cli.Commands
             string? policyDatabase,
             string? cacheEnabled,
             string? cacheTtl,
+            string? cacheLevel,
+            string? healthEnabled,
             string? description,
             IEnumerable<string>? parametersNameCollection,
             IEnumerable<string>? parametersDescriptionCollection,
@@ -54,6 +56,8 @@ namespace Cli.Commands
             PolicyDatabase = policyDatabase;
             CacheEnabled = cacheEnabled;
             CacheTtl = cacheTtl;
+            CacheLevel = cacheLevel;
+            HealthEnabled = healthEnabled;
             Description = description;
             ParametersNameCollection = parametersNameCollection;
             ParametersDescriptionCollection = parametersDescriptionCollection;
@@ -107,8 +111,14 @@ namespace Cli.Commands
         [Option("cache.enabled", Required = false, HelpText = "Specify if caching is enabled for Entity, default value is false.")]
         public string? CacheEnabled { get; }
 
-        [Option("cache.ttl", Required = false, HelpText = "Specify time to live in seconds for cache entries for Entity.")]
+        [Option("cache.ttl-seconds", Required = false, HelpText = "Specify time to live in seconds for cache entries for Entity.")]
         public string? CacheTtl { get; }
+
+        [Option("cache.level", Required = false, HelpText = "Cache level for entity. Allowed values: L1, L1L2. Default: L1L2.")]
+        public string? CacheLevel { get; }
+
+        [Option("health.enabled", Required = false, HelpText = "Enable health checks for this entity. Default: true (boolean).")]
+        public string? HealthEnabled { get; }
 
         [Option("description", Required = false, HelpText = "Description of the entity.")]
         public string? Description { get; }

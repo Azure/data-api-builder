@@ -849,9 +849,9 @@ namespace Cli
         /// <param name="cacheEnabled">String value that defines if the cache is enabled.</param>
         /// <param name="cacheTtl">Int that gives time to live in seconds for cache.</param>
         /// <returns>EntityCacheOption if values are provided for cacheEnabled or cacheTtl, null otherwise.</returns>
-        public static EntityCacheOptions? ConstructCacheOptions(string? cacheEnabled, string? cacheTtl)
+        public static EntityCacheOptions? ConstructCacheOptions(string? cacheEnabled, string? cacheTtl, string? cacheLevel = null)
         {
-            if (cacheEnabled is null && cacheTtl is null)
+            if (cacheEnabled is null && cacheTtl is null && cacheLevel is null)
             {
                 return null;
             }
@@ -860,6 +860,7 @@ namespace Cli
             bool isEnabled = false;
             bool isCacheTtlUserProvided = false;
             int ttl = EntityCacheOptions.DEFAULT_TTL_SECONDS;
+            EntityCacheLevel? level = null;
 
             if (cacheEnabled is not null && !bool.TryParse(cacheEnabled, out isEnabled))
             {
@@ -868,7 +869,16 @@ namespace Cli
 
             if ((cacheTtl is not null && !int.TryParse(cacheTtl, out ttl)) || ttl < 0)
             {
-                _logger.LogError("Invalid format for --cache.ttl. Accepted values are any non-negative integer.");
+                _logger.LogError("Invalid format for --cache.ttl-seconds. Accepted values are any non-negative integer.");
+            }
+
+            if (cacheLevel is not null && !Enum.TryParse(cacheLevel, ignoreCase: true, out EntityCacheLevel parsedLevel))
+            {
+                _logger.LogError("Invalid format for --cache.level. Accepted values are L1, L1L2.");
+            }
+            else if (cacheLevel is not null)
+            {
+                level = Enum.Parse<EntityCacheLevel>(cacheLevel, ignoreCase: true);
             }
 
             // This is needed so the cacheTtl is correctly written to config.
@@ -882,15 +892,44 @@ namespace Cli
             // value.
             if (cacheEnabled is null)
             {
-                return cacheOptions with { TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
+                cacheOptions = cacheOptions with { TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
             }
-
-            if (cacheTtl is null)
+            else if (cacheTtl is null)
             {
-                return cacheOptions with { Enabled = isEnabled };
+                cacheOptions = cacheOptions with { Enabled = isEnabled };
+            }
+            else
+            {
+                cacheOptions = cacheOptions with { Enabled = isEnabled, TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
             }
 
-            return cacheOptions with { Enabled = isEnabled, TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
+            if (level is not null)
+            {
+                cacheOptions = cacheOptions with { Level = level };
+            }
+
+            return cacheOptions;
+        }
+
+        /// <summary>
+        /// Constructs EntityHealthCheckConfig for Add/Update.
+        /// </summary>
+        /// <param name="healthEnabled">String value that defines if health check is enabled for the entity.</param>
+        /// <returns>EntityHealthCheckConfig if a value is provided, null otherwise.</returns>
+        public static EntityHealthCheckConfig? ConstructEntityHealthOptions(string? healthEnabled)
+        {
+            if (healthEnabled is null)
+            {
+                return null;
+            }
+
+            if (!bool.TryParse(healthEnabled, out bool isEnabled))
+            {
+                _logger.LogError("Invalid format for --health.enabled. Accepted values are true/false.");
+                return null;
+            }
+
+            return new EntityHealthCheckConfig(enabled: isEnabled);
         }
 
         /// <summary>

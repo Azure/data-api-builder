@@ -93,10 +93,15 @@ public class RuntimeConfigLoaderTests
 
         FileSystemRuntimeConfigLoader loader = new(fs);
 
+        StringWriter sw = new();
+        Console.SetError(sw);
+
         loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
 
         Assert.IsTrue(loader.IsParseErrorEmitted,
             "IsParseErrorEmitted should be true when config parsing fails.");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(sw.ToString()),
+            "An error message should have been emitted to Console.Error.");
     }
 
     /// <summary>

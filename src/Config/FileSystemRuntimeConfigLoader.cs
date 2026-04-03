@@ -311,11 +311,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
                 RuntimeConfig = LastValidRuntimeConfig;
             }
 
-            IsParseErrorEmitted = parseError is not null;
-
             if (parseError is not null)
             {
                 Console.Error.WriteLine(parseError);
+                IsParseErrorEmitted = true;
             }
 
             config = null;

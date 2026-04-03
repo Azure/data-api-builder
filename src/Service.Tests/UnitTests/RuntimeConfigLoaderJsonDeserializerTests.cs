@@ -486,7 +486,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Method to validate that FileNotFoundException is thrown if sub-data source file is not found.
+        /// Method to validate that when a sub-data source file is not found, it is gracefully
+        /// skipped and the parent config loads successfully. Non-existent child files are
+        /// tolerated to support late-configured scenarios where data-source-files may reference
+        /// files not present on the host.
         /// </summary>
         [TestMethod]
         public void TestLoadRuntimeConfigSubFilesFails()

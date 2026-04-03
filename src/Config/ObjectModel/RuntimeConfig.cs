@@ -387,7 +387,7 @@ public record RuntimeConfig
                     // Non-existent files are skipped gracefully to support late-configured scenarios
                     // where data-source-files may reference files not present on the host.
                     throw new DataApiBuilderException(
-                        message: $"Failed to load datasource file: {dataSourceFile}. The file exists but contains invalid JSON or has other configuration errors.",
+                        message: $"Failed to load datasource file: {dataSourceFile}. Ensure the file is accessible and contains a valid DAB configuration.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }

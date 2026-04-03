@@ -257,10 +257,11 @@ public class RuntimeConfigLoaderTests
 
             TextWriter originalError = Console.Error;
             StringWriter sw = new();
-            Console.SetError(sw);
 
             try
             {
+                Console.SetError(sw);
+
                 bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
                 string error = sw.ToString();
 
@@ -270,6 +271,7 @@ public class RuntimeConfigLoaderTests
             finally
             {
                 Console.SetError(originalError);
+                sw.Dispose();
             }
         }
         finally

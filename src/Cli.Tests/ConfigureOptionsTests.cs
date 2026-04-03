@@ -1083,8 +1083,10 @@ namespace Cli.Tests
 
         /// <summary>
         /// Tests that running "dab configure --runtime.mcp.dml-tools.{tool} {value}" updates
-        /// the individual DML tool boolean in the runtime config. Each tool is a direct boolean
-        /// in the schema (e.g., "describe-entities": true), NOT a nested object with .enabled.
+        /// the individual DML tool boolean in the runtime config. Most tools are configured as
+        /// direct booleans in the schema (e.g., "describe-entities": true) rather than nested
+        /// objects with .enabled; "aggregate-records" additionally supports an object form
+        /// when specifying a query-timeout.
         /// </summary>
         [DataTestMethod]
         [DataRow(true, DisplayName = "Enable individual DML tool: describe-entities")]

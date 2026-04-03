@@ -2,7 +2,7 @@ name: PR Review Assignment Bot
 
 on:
   pull_request_target:
-    types: [opened, reopened, synchronize, labeled]
+    types: [opened, reopened, labeled]
 
   workflow_dispatch:
     inputs:
@@ -48,15 +48,31 @@ jobs:
               per_page: 100,
             });
 
-            // Determine if a PR is eligible
-            function isEligible(pr) {
+            // Fetch the set of configured reviewers who are requested OR have already submitted a review.
+            // GitHub removes reviewers from requested_reviewers once they submit, so we must check both.
+            async function getConfiguredReviewerSet(pr) {
+              const requested = (pr.requested_reviewers || [])
+                .map((r) => r.login)
+                .filter((r) => reviewers.includes(r));
+
+              const { data: reviews } = await github.rest.pulls.listReviews({
+                owner,
+                repo,
+                pull_number: pr.number,
+              });
+              const submitted = reviews
+                .map((r) => r.user.login)
+                .filter((r) => reviewers.includes(r));
+
+              return [...new Set([...requested, ...submitted])];
+            }
+
+            // Determine if a PR is eligible by labels and draft status.
+            // Reviewer count is checked later after fetching review data.
+            function isEligibleByLabels(pr) {
               const labels = pr.labels.map((l) => l.name);
               if (!labels.includes("assign-for-review")) return false;
               if (pr.draft) return false;
-              // Only count reviewers from our configured list (ignore CODEOWNERS auto-assigns)
-              const configuredAssigned = (pr.requested_reviewers || [])
-                .filter((r) => reviewers.includes(r.login)).length;
-              if (configuredAssigned >= REQUIRED_REVIEWERS) return false;
               return true;
             }
 
@@ -78,18 +94,21 @@ jobs:
 
             core.info(`Total open PRs fetched: ${allPRs.length}`);
 
-            const loadRelevantPRs = allPRs.filter((pr) => {
-              const labels = pr.labels.map((l) => l.name);
-              return labels.includes("assign-for-review") && !pr.draft;
-            });
+            const labelEligiblePRs = allPRs.filter(isEligibleByLabels);
+            core.info(`Label-eligible PRs (non-draft, has label): ${labelEligiblePRs.length}`);
 
-            const eligiblePRs = allPRs.filter(isEligible);
-            core.info(`Total eligible PRs: ${eligiblePRs.length}`);
+            // Fetch configured reviewer sets for all label-eligible PRs (used for load + eligibility)
+            const prReviewerMap = new Map();
+            for (const pr of labelEligiblePRs) {
+              const configuredSet = await getConfiguredReviewerSet(pr);
+              prReviewerMap.set(pr.number, configuredSet);
+            }
 
-            for (const pr of loadRelevantPRs) {
+            // Build load from all label-eligible PRs (includes fully-assigned ones)
+            for (const pr of labelEligiblePRs) {
               const weight = getWeight(pr);
-              const assigned = (pr.requested_reviewers || []).map((r) => r.login);
-              for (const reviewer of assigned) {
+              const configuredSet = prReviewerMap.get(pr.number);
+              for (const reviewer of configuredSet) {
                 if (reviewer in load) {
                   load[reviewer] += weight;
                 }
@@ -98,18 +117,22 @@ jobs:
 
             core.info(`Current load: ${JSON.stringify(load)}`);
 
+            // Filter to PRs that still need reviewers
+            const eligiblePRs = labelEligiblePRs.filter((pr) => {
+              return prReviewerMap.get(pr.number).length < REQUIRED_REVIEWERS;
+            });
+            core.info(`Total eligible PRs (need reviewers): ${eligiblePRs.length}`);
+
             // Sort eligible PRs by weight descending (prioritize large PRs)
             eligiblePRs.sort((a, b) => getWeight(b) - getWeight(a));
 
             // Assign reviewers to each eligible PR
             for (const pr of eligiblePRs) {
               const weight = getWeight(pr);
-              // Only consider reviewers from our configured list
-              const allAssigned = (pr.requested_reviewers || []).map((r) => r.login);
-              const configuredAssigned = allAssigned.filter((r) => reviewers.includes(r));
-              const needed = REQUIRED_REVIEWERS - configuredAssigned.length;
+              const configuredSet = prReviewerMap.get(pr.number);
+              const needed = REQUIRED_REVIEWERS - configuredSet.length;
 
-              core.info(`PR #${pr.number} — weight: ${weight}, configured reviewers: [${configuredAssigned.join(", ")}], all reviewers: [${allAssigned.join(", ")}]`);
+              core.info(`PR #${pr.number} — weight: ${weight}, configured reviewers (requested + submitted): [${configuredSet.join(", ")}]`);
 
               if (needed <= 0) {
                 core.info(`PR #${pr.number} already has ${REQUIRED_REVIEWERS} configured reviewers, skipping.`);
@@ -118,9 +141,9 @@ jobs:
 
               const author = pr.user.login;
 
-              // Build candidates: exclude author and already-assigned reviewers
+              // Build candidates: exclude author and already-assigned/reviewed reviewers
               const candidates = reviewers
-                .filter((r) => r !== author && !allAssigned.includes(r));
+                .filter((r) => r !== author && !configuredSet.includes(r));
 
               if (candidates.length === 0) {
                 core.info(`PR #${pr.number} — no candidates after filtering.`);

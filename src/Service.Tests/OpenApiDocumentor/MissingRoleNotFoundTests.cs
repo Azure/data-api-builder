@@ -63,25 +63,34 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             File.WriteAllText(CONFIG_FILE, testConfig.ToJson());
             string[] args = new[] { $"--ConfigFileName={CONFIG_FILE}" };
 
-            using TestServer server = new(Program.CreateWebHostBuilder(args));
-            using HttpClient client = server.CreateClient();
+            try
+            {
+                using TestServer server = new(Program.CreateWebHostBuilder(args));
+                using HttpClient client = server.CreateClient();
 
-            string missingRole = roleName;
-            HttpResponseMessage response = await client.GetAsync($"/api/openapi/{Uri.EscapeDataString(missingRole)}");
+                HttpResponseMessage response = await client.GetAsync($"/api/openapi/{Uri.EscapeDataString(roleName)}");
 
-            Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode, "Expected 404 for a role not in the configuration.");
+                Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode, "Expected 404 for a role not in the configuration.");
 
-            string responseBody = await response.Content.ReadAsStringAsync();
-            JsonDocument doc = JsonDocument.Parse(responseBody);
-            JsonElement root = doc.RootElement;
+                string responseBody = await response.Content.ReadAsStringAsync();
+                using JsonDocument doc = JsonDocument.Parse(responseBody);
+                JsonElement root = doc.RootElement;
 
-            Assert.AreEqual("Not Found", root.GetProperty("title").GetString(), "ProblemDetails title should be 'Not Found'.");
-            Assert.AreEqual(404, root.GetProperty("status").GetInt32(), "ProblemDetails status should be 404.");
-            Assert.IsTrue(root.TryGetProperty("type", out _), "ProblemDetails should contain a 'type' field.");
-            Assert.IsTrue(root.TryGetProperty("traceId", out _), "ProblemDetails should contain a 'traceId' field.");
+                Assert.AreEqual("Not Found", root.GetProperty("title").GetString(), "ProblemDetails title should be 'Not Found'.");
+                Assert.AreEqual(404, root.GetProperty("status").GetInt32(), "ProblemDetails status should be 404.");
+                Assert.IsTrue(root.TryGetProperty("type", out _), "ProblemDetails should contain a 'type' field.");
+                Assert.IsTrue(root.TryGetProperty("traceId", out _), "ProblemDetails should contain a 'traceId' field.");
 
-            string detail = root.GetProperty("detail").GetString();
-            Assert.IsTrue(detail.Contains(missingRole), $"Detail should contain the missing role name '{missingRole}'. Actual: {detail}");
+                string detail = root.GetProperty("detail").GetString();
+                Assert.IsTrue(detail.Contains(roleName), $"Detail should contain the role name '{roleName}'. Actual: {detail}");
+            }
+            finally
+            {
+                if (File.Exists(CONFIG_FILE))
+                {
+                    File.Delete(CONFIG_FILE);
+                }
+            }
 
             TestHelper.UnsetAllDABEnvironmentVariables();
         }

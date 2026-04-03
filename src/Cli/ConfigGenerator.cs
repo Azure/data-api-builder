@@ -2564,7 +2564,7 @@ namespace Cli
             // Replaces all the environment variables while deserializing when starting DAB.
             if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
             {
-                // When IsParseErrorEmitted is true, TryParseConfig already emitted the
+                // When IsParseErrorEmitted is true, TryLoadConfig already emitted the
                 // detailed error to Console.Error. Only log a generic message to avoid
                 // duplicate output (stderr + stdout).
                 if (!loader.IsParseErrorEmitted)
@@ -2652,7 +2652,7 @@ namespace Cli
 
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _))
             {
-                // When IsParseErrorEmitted is true, TryParseConfig already emitted the
+                // When IsParseErrorEmitted is true, TryLoadConfig already emitted the
                 // detailed error to Console.Error. Only log a generic message to avoid
                 // duplicate output (stderr + stdout).
                 if (!loader.IsParseErrorEmitted)
@@ -3288,7 +3288,7 @@ namespace Cli
 
             if (runtimeConfig.DataSource.DatabaseType != DatabaseType.MSSQL)
             {
-                _logger.LogError("Autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
+                _logger.LogError("The autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
                 return false;
             }
 
@@ -3380,7 +3380,7 @@ namespace Cli
         /// <param name="results">The simulation results keyed by filter (definition) name.</param>
         private static void WriteSimulationResultsToConsole(Dictionary<string, List<(string EntityName, string SchemaName, string ObjectName)>> results)
         {
-            Console.WriteLine("AutoEntities Simulation Results");
+            Console.WriteLine("Autoentities Simulation Results");
             Console.WriteLine();
 
             foreach ((string filterName, List<(string EntityName, string SchemaName, string ObjectName)> matches) in results)

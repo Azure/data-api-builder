@@ -1093,6 +1093,7 @@ public class EndToEndTests
         {
             output = await process.StandardError.ReadLineAsync();
             Assert.IsNotNull(output);
+            StringAssert.Contains(output, $"Deserialization of the configuration file failed.", StringComparison.Ordinal);
 
             output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);

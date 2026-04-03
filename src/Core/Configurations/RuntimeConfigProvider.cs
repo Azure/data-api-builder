@@ -270,7 +270,7 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, out string? _, replacementSettings))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, out _, replacementSettings))
         {
             _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {

@@ -269,6 +269,11 @@ public record RuntimeConfig
         return false;
     }
 
+    public bool RemoveGeneratedAutoentityNameFromDataSourceName(string entityName)
+    {
+        return _entityNameToDataSourceName.Remove(entityName);
+    }
+
     /// <summary>
     /// Constructor for runtimeConfig.
     /// To be used when setting up from cli json scenario.
@@ -502,7 +507,7 @@ public record RuntimeConfig
         if (!_autoentityNameToDataSourceName.TryGetValue(autoentityName, out string? autoentityDataSource))
         {
             throw new DataApiBuilderException(
-                message: $"{autoentityName} is not a valid autoentity.",
+                message: $"'{autoentityName}' is not a valid autoentities definition.",
                 statusCode: HttpStatusCode.NotFound,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }

@@ -266,16 +266,28 @@ namespace Cli
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
-                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
+                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.True ? true : false),
                     GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
-                    Mcp: new(mcpEnabled, mcpPath ?? McpRuntimeOptions.DEFAULT_PATH),
+                    Mcp: new(
+                        Enabled: mcpEnabled,
+                        Path: mcpPath ?? McpRuntimeOptions.DEFAULT_PATH,
+                        DmlTools: options.McpAggregateRecordsQueryTimeout is not null
+                            ? new DmlToolsConfig(aggregateRecordsQueryTimeout: options.McpAggregateRecordsQueryTimeout)
+                            : null),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
                             Provider: options.AuthenticationProvider,
                             Jwt: (options.Audience is null && options.Issuer is null) ? null : new(options.Audience, options.Issuer)),
                         Mode: options.HostMode),
-                    BaseRoute: runtimeBaseRoute
+                    BaseRoute: runtimeBaseRoute,
+                    Telemetry: new TelemetryOptions(
+                        OpenTelemetry: new OpenTelemetryOptions(
+                            Enabled: true,
+                            Endpoint: "@env('OTEL_EXPORTER_OTLP_ENDPOINT')",
+                            Headers: "@env('OTEL_EXPORTER_OTLP_HEADERS')",
+                            ExporterProtocol: null,
+                            ServiceName: "@env('OTEL_SERVICE_NAME')"))
                 ),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
 
@@ -589,6 +601,63 @@ namespace Cli
 
             return true;
         }
+
+        /// <summary>
+        /// Displays the effective permissions for all entities defined in the config, listed alphabetically by entity name.
+        /// Effective permissions include explicitly configured roles as well as inherited permissions:
+        /// - anonymous → authenticated (when authenticated is not explicitly configured)
+        /// - authenticated → any named role not explicitly configured for the entity
+        /// </summary>
+        /// <returns>True if the effective permissions were successfully displayed; otherwise, false.</returns>
+        public static bool TryShowEffectivePermissions(ConfigureOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            const string ROLE_ANONYMOUS = "anonymous";
+            const string ROLE_AUTHENTICATED = "authenticated";
+
+            // Iterate entities sorted a-z by name.
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Entity: {entityName}", entityName);
+
+                bool hasAnonymous = entity.Permissions.Any(p => p.Role.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase));
+                bool hasAuthenticated = entity.Permissions.Any(p => p.Role.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase));
+
+                foreach (EntityPermission permission in entity.Permissions.OrderBy(p => p.Role, StringComparer.OrdinalIgnoreCase))
+                {
+                    string actions = string.Join(", ", permission.Actions.Select(a => a.Action.ToString()));
+                    _logger.LogInformation("  Role: {role} | Actions: {actions}", permission.Role, actions);
+                }
+
+                // Show inherited authenticated permissions when authenticated is not explicitly configured.
+                if (hasAnonymous && !hasAuthenticated)
+                {
+                    EntityPermission anonPermission = entity.Permissions.First(p => p.Role.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase));
+                    string inheritedActions = string.Join(", ", anonPermission.Actions.Select(a => a.Action.ToString()));
+                    _logger.LogInformation("  Role: {role} | Actions: {actions} (inherited from: {source})", ROLE_AUTHENTICATED, inheritedActions, ROLE_ANONYMOUS);
+                }
+
+                // Show inheritance note for named roles.
+                string inheritSource = hasAuthenticated ? ROLE_AUTHENTICATED : (hasAnonymous ? ROLE_ANONYMOUS : string.Empty);
+                if (!string.IsNullOrEmpty(inheritSource))
+                {
+                    _logger.LogInformation("  Any unconfigured named role inherits from: {inheritSource}", inheritSource);
+                }
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// Tries to update the runtime settings based on the provided runtime options.
         /// </summary>
@@ -886,7 +955,9 @@ namespace Cli
                 options.RuntimeMcpDmlToolsReadRecordsEnabled != null ||
                 options.RuntimeMcpDmlToolsUpdateRecordEnabled != null ||
                 options.RuntimeMcpDmlToolsDeleteRecordEnabled != null ||
-                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null)
+                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null ||
+                options.RuntimeMcpDmlToolsAggregateRecordsEnabled != null ||
+                options.RuntimeMcpDmlToolsAggregateRecordsQueryTimeout != null)
             {
                 McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
                 bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
@@ -1185,6 +1256,8 @@ namespace Cli
                 bool? updateRecord = currentDmlTools?.UpdateRecord;
                 bool? deleteRecord = currentDmlTools?.DeleteRecord;
                 bool? executeEntity = currentDmlTools?.ExecuteEntity;
+                bool? aggregateRecords = currentDmlTools?.AggregateRecords;
+                int? aggregateRecordsQueryTimeout = currentDmlTools?.AggregateRecordsQueryTimeout;
 
                 updatedValue = options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
                 if (updatedValue != null)
@@ -1234,20 +1307,35 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.execute-entity as '{updatedValue}'", updatedValue);
                 }
 
+                updatedValue = options?.RuntimeMcpDmlToolsAggregateRecordsEnabled;
+                if (updatedValue != null)
+                {
+                    aggregateRecords = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.aggregate-records as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsAggregateRecordsQueryTimeout;
+                if (updatedValue != null)
+                {
+                    aggregateRecordsQueryTimeout = (int)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.aggregate-records.query-timeout as '{updatedValue}'", updatedValue);
+                }
+
                 if (hasToolUpdates)
                 {
                     updatedMcpOptions = updatedMcpOptions! with
                     {
-                        DmlTools = new DmlToolsConfig
-                        {
-                            AllToolsEnabled = false,
-                            DescribeEntities = describeEntities,
-                            CreateRecord = createRecord,
-                            ReadRecords = readRecord,
-                            UpdateRecord = updateRecord,
-                            DeleteRecord = deleteRecord,
-                            ExecuteEntity = executeEntity
-                        }
+                        DmlTools = new DmlToolsConfig(
+                            describeEntities: describeEntities,
+                            createRecord: createRecord,
+                            readRecords: readRecord,
+                            updateRecord: updateRecord,
+                            deleteRecord: deleteRecord,
+                            executeEntity: executeEntity,
+                            aggregateRecords: aggregateRecords,
+                            aggregateRecordsQueryTimeout: aggregateRecordsQueryTimeout)
                     };
                 }
 
@@ -1403,8 +1491,7 @@ namespace Cli
                 string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
                 if (updatedProviderValue != null)
                 {
-                    // Default to AppService when provider string is not provided
-                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.AppService);
+                    updatedValue = updatedProviderValue;
                     AuthenticationOptions AuthOptions;
                     if (updatedHostOptions?.Authentication == null)
                     {
@@ -2566,7 +2653,7 @@ namespace Cli
             {
                 if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
                 {
-                    bool mcpEnabled = config.Runtime?.Mcp?.Enabled == true;
+                    bool mcpEnabled = config.IsMcpEnabled;
                     if (mcpEnabled)
                     {
                         foreach (KeyValuePair<string, Entity> entity in config.Entities)
@@ -2576,6 +2663,22 @@ namespace Cli
                                 _logger.LogWarning($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled. " +
                                     "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
                             }
+                        }
+                    }
+
+                    // Warn if Unauthenticated provider is used with authenticated or custom roles
+                    if (config.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
+                    {
+                        bool hasNonAnonymousRoles = config.Entities
+                            .Where(e => e.Value.Permissions is not null)
+                            .SelectMany(e => e.Value.Permissions!)
+                            .Any(p => !p.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase));
+
+                        if (hasNonAnonymousRoles)
+                        {
+                            _logger.LogWarning(
+                                "Authentication provider is 'Unauthenticated' but some entities have permissions configured for non-anonymous roles. " +
+                                "All requests will be treated as anonymous.");
                         }
                     }
                 }
@@ -3165,7 +3268,7 @@ namespace Cli
 
             if (runtimeConfig.DataSource.DatabaseType != DatabaseType.MSSQL)
             {
-                _logger.LogError("Autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
+                _logger.LogError("The autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
                 return false;
             }
 
@@ -3257,7 +3360,7 @@ namespace Cli
         /// <param name="results">The simulation results keyed by filter (definition) name.</param>
         private static void WriteSimulationResultsToConsole(Dictionary<string, List<(string EntityName, string SchemaName, string ObjectName)>> results)
         {
-            Console.WriteLine("AutoEntities Simulation Results");
+            Console.WriteLine("Autoentities Simulation Results");
             Console.WriteLine();
 
             foreach ((string filterName, List<(string EntityName, string SchemaName, string ObjectName)> matches) in results)

@@ -3,6 +3,7 @@
 
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
@@ -498,26 +499,85 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
-            if (httpContext is null || !_dataSourceToSessionContextUsage[dataSourceName])
+            if (httpContext is null)
             {
                 return string.Empty;
             }
 
-            // Dictionary containing all the claims belonging to the user, to be used as session parameters.
-            Dictionary<string, string> sessionParams = AuthorizationResolver.GetProcessedUserClaims(httpContext);
+            bool isOboEnabled = _dataSourceUserDelegatedAuth.ContainsKey(dataSourceName);
+            bool isSessionContextEnabled = _dataSourceToSessionContextUsage[dataSourceName];
+
+            // If neither session context nor OBO is enabled, no session params needed.
+            if (!isSessionContextEnabled && !isOboEnabled)
+            {
+                return string.Empty;
+            }
 
             // Counter to generate different param name for each of the sessionParam.
             IncrementingInteger counter = new();
             const string SESSION_PARAM_NAME = $"{BaseQueryStructure.PARAM_NAME_PREFIX}session_param";
             StringBuilder sessionMapQuery = new();
 
-            foreach ((string claimType, string claimValue) in sessionParams)
+            // Only add user claims when set-session-context is enabled in config.
+            // This is the original behavior for customers who want to pass claims to the database.
+            if (isSessionContextEnabled)
             {
-                string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
-                parameters.Add(paramName, new(claimValue));
-                // Append statement to set read only param value - can be set only once for a connection.
-                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 0;";
-                sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
+                // Dictionary containing all the claims belonging to the user, to be used as session parameters.
+                Dictionary<string, string> sessionParams = AuthorizationResolver.GetProcessedUserClaims(httpContext);
+
+                foreach ((string claimType, string claimValue) in sessionParams)
+                {
+                    string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(paramName, new(claimValue));
+                    // Append statement to set read only param value - can be set only once for a connection.
+                    string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 0;";
+                    sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
+                }
+            }
+
+            // Add OBO-specific observability values when user-delegated auth is enabled.
+            // These values are added regardless of set-session-context setting since OBO
+            // observability is independent of the user claims forwarding feature.
+            // These values are for observability/auditing only and MUST NOT be used for authorization decisions.
+            // For row-level security, use database policies with the user's actual claims.
+            if (isOboEnabled)
+            {
+                // Add OpenTelemetry correlation values for observability.
+                // These allow correlating database queries with distributed traces.
+                Activity? currentActivity = Activity.Current;
+                if (currentActivity is not null)
+                {
+                    string traceIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(traceIdParamName, new(currentActivity.TraceId.ToString()));
+                    sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.trace_id', {traceIdParamName}, @read_only = 0;");
+
+                    string spanIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(spanIdParamName, new(currentActivity.SpanId.ToString()));
+                    sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.span_id', {spanIdParamName}, @read_only = 0;");
+                }
+
+                // Set auth type indicator for OBO requests
+                string authTypeParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                parameters.Add(authTypeParamName, new("obo"));
+                sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.auth_type', {authTypeParamName}, @read_only = 0;");
+
+                // Set user identifier (oid preferred, fallback to sub) for auditing/observability
+                string? userId = httpContext.User.FindFirst("oid")?.Value ?? httpContext.User.FindFirst("sub")?.Value;
+                if (!string.IsNullOrWhiteSpace(userId))
+                {
+                    string userIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(userIdParamName, new(userId));
+                    sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.user_id', {userIdParamName}, @read_only = 0;");
+                }
+
+                // Set tenant identifier for auditing/observability
+                string? tenantId = httpContext.User.FindFirst("tid")?.Value;
+                if (!string.IsNullOrWhiteSpace(tenantId))
+                {
+                    string tenantIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(tenantIdParamName, new(tenantId));
+                    sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.tenant_id', {tenantIdParamName}, @read_only = 0;");
+                }
             }
 
             return sessionMapQuery.ToString();
@@ -624,8 +684,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     SqlParameter parameter = cmd.CreateParameter();
                     parameter.ParameterName = parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
+                    parameter.Value = parameterEntry.Value?.Value ?? DBNull.Value;
+
                     PopulateDbTypeForParameter(parameterEntry, parameter);
+
+                    //if sqldbtype is varchar, nvarchar then set the length when explicitly provided
+                    if (parameter.SqlDbType is SqlDbType.VarChar or SqlDbType.NVarChar or SqlDbType.Char or SqlDbType.NChar
+                        && parameterEntry.Value?.Length is not null)
+                    {
+                        parameter.Size = parameterEntry.Value.Length.Value;
+                    }
+
                     cmd.Parameters.Add(parameter);
                 }
             }

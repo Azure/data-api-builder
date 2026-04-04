@@ -18,7 +18,7 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: AppService,
+        Provider: Unauthenticated,
         Jwt: {
           Audience: ,
           Issuer: 
@@ -44,7 +44,7 @@
         Cache: {
           Enabled: true,
           TtlSeconds: 1,
-          Level: L1L2,
+          Level: L1,
           UserProvidedLevelOptions: false
         }
       }

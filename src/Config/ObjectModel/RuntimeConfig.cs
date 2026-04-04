@@ -6,6 +6,7 @@ using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -95,9 +96,7 @@ public record RuntimeConfig
     /// <returns>True if the authentication provider is enabled for Static Web Apps, otherwise false.</returns>
     [JsonIgnore]
     public bool IsStaticWebAppsIdentityProvider =>
-        Runtime is null ||
-        Runtime.Host is null ||
-        Runtime.Host.Authentication is null ||
+        Runtime?.Host?.Authentication is not null &&
         EasyAuthType.StaticWebApps.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
@@ -106,10 +105,19 @@ public record RuntimeConfig
     /// <returns>True if the authentication provider is enabled for App Service, otherwise false.</returns>
     [JsonIgnore]
     public bool IsAppServiceIdentityProvider =>
+        Runtime?.Host?.Authentication is not null &&
+        EasyAuthType.AppService.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// A shorthand method to determine whether Unauthenticated is configured for the current authentication provider.
+    /// </summary>
+    /// <returns>True if the authentication provider is Unauthenticated (the default), otherwise false.</returns>
+    [JsonIgnore]
+    public bool IsUnauthenticatedIdentityProvider =>
         Runtime is null ||
         Runtime.Host is null ||
         Runtime.Host.Authentication is null ||
-        EasyAuthType.AppService.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
+        AuthenticationOptions.UNAUTHENTICATED_AUTHENTICATION.Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The path at which Rest APIs are available
@@ -262,6 +270,11 @@ public record RuntimeConfig
         return false;
     }
 
+    public bool RemoveGeneratedAutoentityNameFromDataSourceName(string entityName)
+    {
+        return _entityNameToDataSourceName.Remove(entityName);
+    }
+
     /// <summary>
     /// Constructor for runtimeConfig.
     /// To be used when setting up from cli json scenario.
@@ -343,8 +356,9 @@ public record RuntimeConfig
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-                // Use default replacement settings for environment variable replacement
-                DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+                // Use Ignore mode so missing env vars are left as literal @env() strings,
+                // consistent with how the parent config is loaded in TryLoadKnownConfig.
+                DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
 
                 if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replacementSettings: replacementSettings))
                 {
@@ -365,6 +379,17 @@ public record RuntimeConfig
                             DataApiBuilderException.SubStatusCodes.ConfigValidationError,
                             e.InnerException);
                     }
+                }
+                else if (fileSystem.File.Exists(dataSourceFile))
+                {
+                    // The file exists but failed to load (e.g. invalid JSON, deserialization error).
+                    // Throw to prevent silently skipping a broken child config.
+                    // Non-existent files are skipped gracefully to support late-configured scenarios
+                    // where data-source-files may reference files not present on the host.
+                    throw new DataApiBuilderException(
+                        message: $"Failed to load datasource file: {dataSourceFile}. Ensure the file is accessible and contains a valid DAB configuration.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
             }
 
@@ -495,7 +520,7 @@ public record RuntimeConfig
         if (!_autoentityNameToDataSourceName.TryGetValue(autoentityName, out string? autoentityDataSource))
         {
             throw new DataApiBuilderException(
-                message: $"{autoentityName} is not a valid autoentity.",
+                message: $"'{autoentityName}' is not a valid autoentities definition.",
                 statusCode: HttpStatusCode.NotFound,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
@@ -577,7 +602,33 @@ public record RuntimeConfig
             return entityConfig.Cache.Level.Value;
         }
 
-        return EntityCacheOptions.DEFAULT_LEVEL;
+        // GlobalCacheEntryLevel() returns null when runtime cache is not configured.
+        // Default to L1 to match EntityCacheOptions.DEFAULT_LEVEL.
+        return GlobalCacheEntryLevel() ?? EntityCacheOptions.DEFAULT_LEVEL;
+    }
+
+    /// <summary>
+    /// Returns the ttl-seconds value for the global cache entry.
+    /// If no value is explicitly set, returns the global default value.
+    /// </summary>
+    /// <returns>Number of seconds a cache entry should be valid before cache eviction.</returns>
+    public virtual int GlobalCacheEntryTtl()
+    {
+        return Runtime is not null && Runtime.IsCachingEnabled && Runtime.Cache.UserProvidedTtlOptions
+            ? Runtime.Cache.TtlSeconds.Value
+            : EntityCacheOptions.DEFAULT_TTL_SECONDS;
+    }
+
+    /// <summary>
+    /// Returns the cache level value for the global cache entry.
+    /// The level is inferred from the runtime cache Level2 configuration:
+    /// if Level2 is enabled, the level is L1L2; otherwise L1.
+    /// Returns null when runtime cache is not configured.
+    /// </summary>
+    /// <returns>Cache level for a cache entry, or null if runtime cache is not configured.</returns>
+    public virtual EntityCacheLevel? GlobalCacheEntryLevel()
+    {
+        return Runtime?.Cache?.InferredLevel;
     }
 
     /// <summary>
@@ -590,18 +641,6 @@ public record RuntimeConfig
     {
         bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
         return IsCachingEnabled && !setSessionContextEnabled;
-    }
-
-    /// <summary>
-    /// Returns the ttl-seconds value for the global cache entry.
-    /// If no value is explicitly set, returns the global default value.
-    /// </summary>
-    /// <returns>Number of seconds a cache entry should be valid before cache eviction.</returns>
-    public int GlobalCacheEntryTtl()
-    {
-        return Runtime is not null && Runtime.IsCachingEnabled && Runtime.Cache.UserProvidedTtlOptions
-            ? Runtime.Cache.TtlSeconds.Value
-            : EntityCacheOptions.DEFAULT_TTL_SECONDS;
     }
 
     private void CheckDataSourceNamePresent(string dataSourceName)
@@ -753,7 +792,6 @@ public record RuntimeConfig
     /// </summary>
     public LogLevel GetConfiguredLogLevel(string loggerFilter = "")
     {
-
         if (!IsLogLevelNull())
         {
             int max = 0;
@@ -774,7 +812,8 @@ public record RuntimeConfig
                 return (LogLevel)value;
             }
 
-            Runtime!.Telemetry!.LoggerLevel!.TryGetValue("default", out value);
+            value = Runtime!.Telemetry!.LoggerLevel!
+                .SingleOrDefault(kvp => kvp.Key.Equals("default", StringComparison.OrdinalIgnoreCase)).Value;
             if (value is not null)
             {
                 return (LogLevel)value;
@@ -794,4 +833,46 @@ public record RuntimeConfig
     /// </summary>
     [JsonIgnore]
     public DmlToolsConfig? McpDmlTools => Runtime?.Mcp?.DmlTools;
+
+    /// <summary>
+    /// Determines whether caching is enabled for a given entity, resolving inheritance lazily.
+    /// If the entity explicitly sets cache enabled/disabled, that value wins.
+    /// If the entity has a cache object but did not explicitly set enabled (UserProvidedEnabledOptions is false),
+    /// the global runtime cache enabled setting is inherited.
+    /// If the entity has no cache config at all, the global runtime cache enabled setting is inherited.
+    /// </summary>
+    /// <param name="entityName">Name of the entity to check cache configuration.</param>
+    /// <returns>Whether caching is enabled for the entity.</returns>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided.</exception>
+    public virtual bool IsEntityCachingEnabled(string entityName)
+    {
+        if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} is not a valid entity.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+        }
+
+        return IsEntityCachingEnabled(entityConfig);
+    }
+
+    /// <summary>
+    /// Determines whether caching is enabled for a given entity, resolving inheritance lazily.
+    /// If the entity explicitly sets cache enabled/disabled (UserProvidedEnabledOptions is true), that value wins.
+    /// Otherwise, inherits the global runtime cache enabled setting.
+    /// </summary>
+    /// <param name="entity">The entity to check cache configuration.</param>
+    /// <returns>Whether caching is enabled for the entity.</returns>
+    private bool IsEntityCachingEnabled(Entity entity)
+    {
+        // If entity has an explicit cache config with user-provided enabled value, use it.
+        if (entity.Cache is not null && entity.Cache.UserProvidedEnabledOptions)
+        {
+            return entity.IsCachingEnabled;
+        }
+
+        // Otherwise, inherit from the global runtime cache setting.
+        return IsCachingEnabled;
+    }
 }

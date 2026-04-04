@@ -11,6 +11,7 @@ using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
@@ -707,7 +708,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                    Mcp: new(),
                    Host: new(null, null)
                ),
-               Entities: new(new Dictionary<string, Entity>()));
+               Entities: new(new Dictionary<string, Entity>())
+           );
 
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
@@ -1012,6 +1014,564 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         #endregion
+
+        /// <summary>
+        /// Validates that when the CancellationToken from httpContext.RequestAborted times out
+        /// during a long-running query execution (simulating ExecuteReaderAsync being interrupted
+        /// by a token timeout), the resulting TaskCanceledException propagates through the Polly
+        /// retry policy without any retry attempts.
+        /// Unlike TestCancellationExceptionIsNotRetriedByRetryPolicy which throws immediately,
+        /// this test simulates a real timeout where the cancellation occurs asynchronously
+        /// after a delay.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestCancellationTokenTimeoutDuringQueryExecutionAsync()
+        {
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, "", new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Mcp: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader)
+            {
+                IsLateConfigured = true
+            };
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            HttpContext context = new DefaultHttpContext();
+            httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+            Mock<MsSqlQueryExecutor> queryExecutor
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null, null);
+
+            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+
+            queryExecutor.Setup(x => x.CreateConnection(
+               It.IsAny<string>())).CallBase();
+
+            // Set up a CancellationTokenSource that times out after a short delay,
+            // simulating httpContext.RequestAborted firing due to a client timeout.
+            CancellationTokenSource cts = new();
+            cts.CancelAfter(TimeSpan.FromMilliseconds(100));
+            context.RequestAborted = cts.Token;
+
+            // Mock ExecuteQueryAgainstDbAsync to simulate a long-running database query
+            // that is interrupted when the CancellationToken times out.
+            // Task.Delay with the cancellation token throws TaskCanceledException when the
+            // token fires, mimicking cmd.ExecuteReaderAsync being cancelled by a timed-out token.
+            // The Stopwatch + finally block mirrors the real ExecuteQueryAgainstDbAsync to verify
+            // that execution time is recorded even when a timeout occurs.
+            queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
+                It.IsAny<SqlConnection>(),
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<HttpContext>(),
+                provider.GetConfig().DefaultDataSourceName,
+                It.IsAny<List<string>>()))
+            .Returns(async () =>
+            {
+                Stopwatch timer = Stopwatch.StartNew();
+                try
+                {
+                    // Simulate a long-running query interrupted by token timeout.
+                    // Timeout.Infinite (-1) means "wait forever" — the only way this
+                    // completes is when cts.Token fires after ~100 ms, which causes
+                    // Task.Delay to throw TaskCanceledException.
+                    await Task.Delay(Timeout.Infinite, cts.Token);
+                    return (object)null;
+                }
+                finally
+                {
+                    timer.Stop();
+                    queryExecutor.Object.AddDbExecutionTimeToMiddlewareContext(timer.ElapsedMilliseconds);
+                }
+            });
+
+            // Call the actual ExecuteQueryAsync method (includes Polly retry policy).
+            queryExecutor.Setup(x => x.ExecuteQueryAsync(
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<string>(),
+                It.IsAny<HttpContext>(),
+                It.IsAny<List<string>>())).CallBase();
+
+            // Act & Assert: TaskCanceledException should propagate without retries.
+            await Assert.ThrowsExceptionAsync<TaskCanceledException>(async () =>
+            {
+                await queryExecutor.Object.ExecuteQueryAsync<object>(
+                    sqltext: string.Empty,
+                    parameters: new Dictionary<string, DbConnectionParam>(),
+                    dataReaderHandler: null,
+                    dataSourceName: String.Empty,
+                    httpContext: context,
+                    args: null);
+            });
+
+            // Verify that the underlying database execution is invoked exactly once,
+            // confirming that Polly does not perform any retries for TaskCanceledException.
+            queryExecutor.Verify(q => q.ExecuteQueryAgainstDbAsync(
+                    It.IsAny<SqlConnection>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                    It.IsAny<HttpContext>(),
+                    provider.GetConfig().DefaultDataSourceName,
+                    It.IsAny<List<string>>()),
+                Times.Once);
+
+            // Verify the finally block recorded execution time even though the token timed out.
+            Assert.IsTrue(
+                context.Items.ContainsKey(TOTAL_DB_EXECUTION_TIME),
+                "HttpContext must contain the total db execution time even when the request is cancelled.");
+        }
+
+        /// <summary>
+        /// Validates that when ExecuteQueryAgainstDbAsync throws OperationCanceledException
+        /// (e.g., due to client disconnect via httpContext.RequestAborted cancellation token),
+        /// the Polly retry policy does NOT retry and the exception propagates to the caller.
+        /// The retry policy is configured to only handle DbException, so OperationCanceledException
+        /// should be immediately re-thrown without any retry attempts.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestCancellationExceptionIsNotRetriedByRetryPolicy()
+        {
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, "", new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Mcp: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader)
+            {
+                IsLateConfigured = true
+            };
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+            Mock<MsSqlQueryExecutor> queryExecutor
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null, null);
+
+            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+
+            queryExecutor.Setup(x => x.CreateConnection(
+               It.IsAny<string>())).CallBase();
+
+            // Mock ExecuteQueryAgainstDbAsync to throw OperationCanceledException,
+            // simulating a cancelled CancellationToken from httpContext.RequestAborted.
+            queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
+                It.IsAny<SqlConnection>(),
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<HttpContext>(),
+                provider.GetConfig().DefaultDataSourceName,
+                It.IsAny<List<string>>()))
+            .ThrowsAsync(new OperationCanceledException("The operation was canceled."));
+
+            // Call the actual ExecuteQueryAsync method.
+            queryExecutor.Setup(x => x.ExecuteQueryAsync(
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<string>(),
+                It.IsAny<HttpContext>(),
+                It.IsAny<List<string>>())).CallBase();
+
+            // Act & Assert: OperationCanceledException should propagate without retries.
+            await Assert.ThrowsExceptionAsync<OperationCanceledException>(async () =>
+            {
+                await queryExecutor.Object.ExecuteQueryAsync<object>(
+                    sqltext: string.Empty,
+                    parameters: new Dictionary<string, DbConnectionParam>(),
+                    dataReaderHandler: null,
+                    dataSourceName: String.Empty,
+                    httpContext: null,
+                    args: null);
+            });
+
+            // Verify no retry log messages were emitted. Since IsLateConfigured is true,
+            // the debug log is skipped, and since Polly doesn't handle OperationCanceledException,
+            // no retry occurs → zero logger invocations.
+            Assert.AreEqual(0, queryExecutorLogger.Invocations.Count);
+        }
+
+        /// <summary>  
+        /// Validates that GetSessionParamsQuery includes all observability values:
+        /// - OpenTelemetry correlation values (dab.trace_id, dab.span_id) when an Activity is present
+        /// - OBO observability values (dab.auth_type, dab.user_id, dab.tenant_id) when user-delegated auth is enabled
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void GetSessionParamsQuery_IncludesAllObservabilityValues_WhenActivityAndOboEnabled()
+        {
+            // Arrange
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+
+            // Create runtime config with user-delegated-auth enabled and set-session-context
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(
+                    DatabaseType: DatabaseType.MSSQL,
+                    ConnectionString: "Server=localhost;Database=TestDb;",
+                    Options: new Dictionary<string, object> { { "set-session-context", true } })
+                {
+                    UserDelegatedAuth = new UserDelegatedAuthOptions(
+                        Enabled: true,
+                        Provider: "EntraId",
+                        DatabaseAudience: "https://database.windows.net/")
+                },
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null)),
+                Entities: new(new Dictionary<string, Entity>()));
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(runtimeConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+
+            MsSqlQueryExecutor msSqlQueryExecutor = new(
+                runtimeConfigProvider,
+                dbExceptionParser,
+                queryExecutorLogger.Object,
+                httpContextAccessor.Object);
+
+            // Create a mock HttpContext with OBO-specific claims (oid, tid, sub)
+            Mock<HttpContext> mockContext = new();
+            Mock<HttpRequest> mockRequest = new();
+            Mock<IHeaderDictionary> mockHeaders = new();
+
+            mockHeaders.Setup(h => h["Authorization"]).Returns("Bearer test-token");
+            mockRequest.Setup(r => r.Headers).Returns(mockHeaders.Object);
+            mockContext.Setup(c => c.Request).Returns(mockRequest.Object);
+
+            var identity = new System.Security.Claims.ClaimsIdentity(
+                new[]
+                {
+                    new System.Security.Claims.Claim("oid", "00000000-0000-0000-0000-000000000001"),
+                    new System.Security.Claims.Claim("tid", "11111111-1111-1111-1111-111111111111"),
+                    new System.Security.Claims.Claim("sub", "test-subject")
+                },
+                "TestAuth");
+            var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+            mockContext.Setup(c => c.User).Returns(principal);
+
+            Dictionary<string, DbConnectionParam> parameters = new();
+
+            // Act - Create an Activity to simulate OpenTelemetry tracing
+            using ActivitySource activitySource = new("TestActivitySource");
+            using ActivityListener listener = new()
+            {
+                ShouldListenTo = _ => true,
+                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+            };
+            ActivitySource.AddActivityListener(listener);
+
+            using Activity testActivity = activitySource.StartActivity("TestOperation")!;
+            Assert.IsNotNull(testActivity, "Activity should be created for test");
+
+            string sessionParamsQuery = msSqlQueryExecutor.GetSessionParamsQuery(
+                mockContext.Object,
+                parameters,
+                runtimeConfigProvider.GetConfig().DefaultDataSourceName);
+
+            // Assert
+            Assert.IsFalse(string.IsNullOrEmpty(sessionParamsQuery), "Session params query should not be empty");
+
+            // Verify OpenTelemetry correlation values are included
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.trace_id'"),
+                "Session params query should include dab.trace_id");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.span_id'"),
+                "Session params query should include dab.span_id");
+
+            // Verify the correlation values are in the parameters
+            Assert.IsTrue(
+                parameters.Values.Any(p => p.Value?.ToString() == testActivity.TraceId.ToString()),
+                $"Parameters should contain trace_id value: {testActivity.TraceId}");
+            Assert.IsTrue(
+                parameters.Values.Any(p => p.Value?.ToString() == testActivity.SpanId.ToString()),
+                $"Parameters should contain span_id value: {testActivity.SpanId}");
+
+            // Verify OBO-specific observability values are included
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.auth_type'"),
+                "Session params query should include dab.auth_type for OBO");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.user_id'"),
+                "Session params query should include dab.user_id for OBO");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.tenant_id'"),
+                "Session params query should include dab.tenant_id for OBO");
+
+            // Verify the OBO parameter values are correct
+            Assert.IsTrue(
+                parameters.Values.Any(p => p.Value?.ToString() == "obo"),
+                "Parameters should contain auth_type value: obo");
+            Assert.IsTrue(
+                parameters.Values.Any(p => p.Value?.ToString() == "00000000-0000-0000-0000-000000000001"),
+                "Parameters should contain user_id value (oid)");
+            Assert.IsTrue(
+                parameters.Values.Any(p => p.Value?.ToString() == "11111111-1111-1111-1111-111111111111"),
+                "Parameters should contain tenant_id value");
+        }
+
+        /// <summary>
+        /// Validates that GetSessionParamsQuery does NOT include trace_id and span_id
+        /// when no Activity is present, but still includes other OBO observability values.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void GetSessionParamsQuery_ExcludesCorrelationIds_WhenNoActivity()
+        {
+            // Arrange
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+
+            // Create runtime config with user-delegated-auth enabled
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(
+                    DatabaseType: DatabaseType.MSSQL,
+                    ConnectionString: "Server=localhost;Database=TestDb;",
+                    Options: new Dictionary<string, object> { { "set-session-context", true } })
+                {
+                    UserDelegatedAuth = new UserDelegatedAuthOptions(
+                        Enabled: true,
+                        Provider: "EntraId",
+                        DatabaseAudience: "https://database.windows.net/")
+                },
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null)),
+                Entities: new(new Dictionary<string, Entity>()));
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(runtimeConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+
+            MsSqlQueryExecutor msSqlQueryExecutor = new(
+                runtimeConfigProvider,
+                dbExceptionParser,
+                queryExecutorLogger.Object,
+                httpContextAccessor.Object);
+
+            // Create a mock HttpContext with OBO-specific claims
+            Mock<HttpContext> mockContext = new();
+            Mock<HttpRequest> mockRequest = new();
+            Mock<IHeaderDictionary> mockHeaders = new();
+
+            mockHeaders.Setup(h => h["Authorization"]).Returns("Bearer test-token");
+            mockRequest.Setup(r => r.Headers).Returns(mockHeaders.Object);
+            mockContext.Setup(c => c.Request).Returns(mockRequest.Object);
+
+            var identity = new System.Security.Claims.ClaimsIdentity(
+                new[]
+                {
+                    new System.Security.Claims.Claim("oid", "44444444-4444-4444-4444-444444444444"),
+                    new System.Security.Claims.Claim("tid", "55555555-5555-5555-5555-555555555555"),
+                    new System.Security.Claims.Claim("sub", "test-user-no-activity")
+                },
+                "TestAuth");
+            var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+            mockContext.Setup(c => c.User).Returns(principal);
+
+            Dictionary<string, DbConnectionParam> parameters = new();
+
+            // Act - Ensure no Activity is present (Activity.Current should be null)
+            // We don't start any activity here, so trace_id and span_id should NOT be included
+            string sessionParamsQuery = msSqlQueryExecutor.GetSessionParamsQuery(
+                mockContext.Object,
+                parameters,
+                runtimeConfigProvider.GetConfig().DefaultDataSourceName);
+
+            // Assert
+            Assert.IsFalse(string.IsNullOrEmpty(sessionParamsQuery), "Session params query should not be empty");
+
+            // Verify trace_id and span_id are NOT included when no Activity
+            Assert.IsFalse(
+                sessionParamsQuery.Contains("'dab.trace_id'"),
+                "Session params query should NOT include dab.trace_id when no Activity present");
+            Assert.IsFalse(
+                sessionParamsQuery.Contains("'dab.span_id'"),
+                "Session params query should NOT include dab.span_id when no Activity present");
+
+            // Verify other OBO observability values ARE still included (they don't depend on Activity)
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.auth_type'"),
+                "Session params query should include dab.auth_type even without Activity");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.user_id'"),
+                "Session params query should include dab.user_id even without Activity");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.tenant_id'"),
+                "Session params query should include dab.tenant_id even without Activity");
+        }
+
+        /// <summary>
+        /// Validates that GetSessionParamsQuery includes OBO observability values
+        /// even when set-session-context is FALSE.
+        /// OBO observability is independent of the set-session-context setting.
+        /// This addresses the concern that OBO session context should be set regardless
+        /// of whether user claims are forwarded via set-session-context.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void GetSessionParamsQuery_IncludesOboValues_WhenOboEnabledButSessionContextDisabled()
+        {
+            // Arrange
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+
+            // Create runtime config with user-delegated-auth enabled but set-session-context DISABLED
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(
+                    DatabaseType: DatabaseType.MSSQL,
+                    ConnectionString: "Server=localhost;Database=TestDb;",
+                    Options: new Dictionary<string, object> { { "set-session-context", false } })  // Explicitly disabled
+                {
+                    UserDelegatedAuth = new UserDelegatedAuthOptions(
+                        Enabled: true,
+                        Provider: "EntraId",
+                        DatabaseAudience: "https://database.windows.net/")
+                },
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null)),
+                Entities: new(new Dictionary<string, Entity>()));
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(runtimeConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+
+            MsSqlQueryExecutor msSqlQueryExecutor = new(
+                runtimeConfigProvider,
+                dbExceptionParser,
+                queryExecutorLogger.Object,
+                httpContextAccessor.Object);
+
+            // Create a mock HttpContext with OBO-specific claims (oid, tid, sub)
+            Mock<HttpContext> mockContext = new();
+            Mock<HttpRequest> mockRequest = new();
+            Mock<IHeaderDictionary> mockHeaders = new();
+
+            mockHeaders.Setup(h => h["Authorization"]).Returns("Bearer test-token");
+            mockRequest.Setup(r => r.Headers).Returns(mockHeaders.Object);
+            mockContext.Setup(c => c.Request).Returns(mockRequest.Object);
+
+            var identity = new System.Security.Claims.ClaimsIdentity(
+                new[]
+                {
+                    new System.Security.Claims.Claim("oid", "22222222-2222-2222-2222-222222222222"),
+                    new System.Security.Claims.Claim("tid", "33333333-3333-3333-3333-333333333333"),
+                    new System.Security.Claims.Claim("sub", "test-subject-obo"),
+                    new System.Security.Claims.Claim("roles", "admin")  // User claim that should NOT be included
+                },
+                "TestAuth");
+            var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+            mockContext.Setup(c => c.User).Returns(principal);
+
+            Dictionary<string, DbConnectionParam> parameters = new();
+
+            // Act - Create an Activity to simulate OpenTelemetry tracing
+            using ActivitySource activitySource = new("TestActivitySource");
+            using ActivityListener listener = new()
+            {
+                ShouldListenTo = _ => true,
+                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+            };
+            ActivitySource.AddActivityListener(listener);
+
+            using Activity testActivity = activitySource.StartActivity("TestOperation")!;
+            Assert.IsNotNull(testActivity, "Activity should be created for test");
+
+            string sessionParamsQuery = msSqlQueryExecutor.GetSessionParamsQuery(
+                mockContext.Object,
+                parameters,
+                runtimeConfigProvider.GetConfig().DefaultDataSourceName);
+
+            // Assert - OBO values should be present even with set-session-context=false
+            Assert.IsFalse(string.IsNullOrEmpty(sessionParamsQuery),
+                "Session params query should not be empty when OBO is enabled, even if set-session-context is false");
+
+            // Verify OBO-specific observability values ARE included
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.auth_type'"),
+                "Session params query should include dab.auth_type even when set-session-context is false");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.user_id'"),
+                "Session params query should include dab.user_id even when set-session-context is false");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.tenant_id'"),
+                "Session params query should include dab.tenant_id even when set-session-context is false");
+
+            // Verify OpenTelemetry correlation values ARE included (when OBO is enabled)
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.trace_id'"),
+                "Session params query should include dab.trace_id when OBO is enabled");
+            Assert.IsTrue(
+                sessionParamsQuery.Contains("'dab.span_id'"),
+                "Session params query should include dab.span_id when OBO is enabled");
+
+            // Verify the OBO parameter values are correct
+            Assert.IsTrue(
+                parameters.Values.Any(p => p.Value?.ToString() == "obo"),
+                "Parameters should contain auth_type value: obo");
+            Assert.IsTrue(
+                parameters.Values.Any(p => p.Value?.ToString() == "22222222-2222-2222-2222-222222222222"),
+                "Parameters should contain user_id value (oid)");
+            Assert.IsTrue(
+                parameters.Values.Any(p => p.Value?.ToString() == "33333333-3333-3333-3333-333333333333"),
+                "Parameters should contain tenant_id value");
+
+            // Verify that user claims (like 'roles') are NOT forwarded when set-session-context=false
+            Assert.IsFalse(
+                sessionParamsQuery.Contains("'roles'"),
+                "User claims should NOT be included when set-session-context is false");
+            Assert.IsFalse(
+                parameters.Values.Any(p => p.Value?.ToString() == "admin"),
+                "User claim values should NOT be in parameters when set-session-context is false");
+        }
 
         [TestCleanup]
         public void CleanupAfterEachTest()

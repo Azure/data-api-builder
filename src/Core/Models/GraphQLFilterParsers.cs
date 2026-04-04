@@ -420,10 +420,26 @@ public class GQLFilterParser
         predicatesForExistsQuery.Push(existsQueryFilterPredicate);
 
         // Add JoinPredicates to the subquery query structure so a predicate connecting
-        // the outer table is added to the where clause of subquery
-        existsQuery.AddJoinPredicatesForRelatedEntity(
-            targetEntityName: queryStructure.EntityName,
-            relatedSourceAlias: queryStructure.SourceAlias,
+        // the outer table is added to the where clause of subquery.
+        // For self-referencing relationships (e.g., parent/child hierarchy), we need to use
+        // the relationship name to look up the correct foreign key definition.
+        // The parent query (queryStructure) calls AddJoinPredicatesForRelationship which adds
+        // predicates to the subquery (existsQuery), connecting queryStructure.SourceAlias to existsQuery.SourceAlias.
+        string relationshipName = filterField.Name;
+        EntityRelationshipKey fkLookupKey = new(queryStructure.EntityName, relationshipName);
+
+        if (queryStructure is not BaseSqlQueryStructure sqlQueryStructure)
+        {
+            throw new DataApiBuilderException(
+                message: "Expected SQL query structure for nested filter processing.",
+                statusCode: HttpStatusCode.InternalServerError,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+        }
+
+        sqlQueryStructure.AddJoinPredicatesForRelationship(
+            fkLookupKey: fkLookupKey,
+            targetEntityName: nestedFilterEntityName,
+            subqueryTargetTableAlias: existsQuery.SourceAlias,
             subQuery: existsQuery);
 
         // The right operand is the SqlExistsQueryStructure.
@@ -483,7 +499,7 @@ public class GQLFilterParser
         string schemaName,
         string tableName,
         string tableAlias,
-        Func<object, string?, string> processLiterals,
+        Func<object, string?, bool, string> processLiterals,
         bool isListType = false)
     {
         Column column = new(schemaName, tableName, columnName: fieldName, tableAlias);
@@ -611,7 +627,7 @@ public static class FieldFilterParser
         IInputValueDefinition argumentSchema,
         Column column,
         List<ObjectFieldNode> fields,
-        Func<object, string?, string> processLiterals,
+        Func<object, string?, bool, string> processLiterals,
         bool isListType = false)
     {
         List<PredicateOperand> predicates = new();
@@ -626,6 +642,7 @@ public static class FieldFilterParser
                 variables: ctx.Variables);
 
             bool processLiteral = true;
+            bool lengthOverride = false;
 
             if (value is null)
             {
@@ -671,6 +688,7 @@ public static class FieldFilterParser
                     {
                         op = PredicateOperation.LIKE;
                         value = $"%{EscapeLikeString((string)value)}%";
+                        lengthOverride = true;
                     }
 
                     break;
@@ -683,16 +701,19 @@ public static class FieldFilterParser
                     {
                         op = PredicateOperation.NOT_LIKE;
                         value = $"%{EscapeLikeString((string)value)}%";
+                        lengthOverride = true;
                     }
 
                     break;
                 case "startsWith":
                     op = PredicateOperation.LIKE;
                     value = $"{EscapeLikeString((string)value)}%";
+                    lengthOverride = true;
                     break;
                 case "endsWith":
                     op = PredicateOperation.LIKE;
                     value = $"%{EscapeLikeString((string)value)}";
+                    lengthOverride = true;
                     break;
                 case "isNull":
                     processLiteral = false;
@@ -707,7 +728,7 @@ public static class FieldFilterParser
             predicates.Push(new PredicateOperand(new Predicate(
                 new PredicateOperand(column),
                 op,
-                GenerateRightOperand(ctx, argumentObject, name, processLiterals, value, processLiteral) // right operand
+                GenerateRightOperand(ctx, argumentObject, name, column, processLiterals, value, processLiteral, lengthOverride)
                 )));
         }
 
@@ -758,17 +779,21 @@ public static class FieldFilterParser
     /// <param name="ctx">The GraphQL middleware context, used to resolve variable values.</param>
     /// <param name="argumentObject">The input object type describing the argument schema.</param>
     /// <param name="operationName">The name of the filter operation (e.g., "eq", "in").</param>
+    /// <param name="column">The target column, used to derive parameter type/size metadata.</param>
     /// <param name="processLiterals">A function to encode or parameterize literal values for database queries.</param>
     /// <param name="value">The value to be used as the right operand in the predicate.</param>
     /// <param name="processLiteral">Indicates whether to process the value as a literal using processLiterals, or use its string representation directly.</param>
+    /// <param name="lengthOverride">When true, indicates the parameter length should not be constrained to the column length (used for LIKE operations).</param>
     /// <returns>A <see cref="PredicateOperand"/> representing the right operand for the predicate.</returns>
     private static PredicateOperand GenerateRightOperand(
     IMiddlewareContext ctx,
     InputObjectType argumentObject,
     string operationName,
-    Func<object, string?, string> processLiterals,
+    Column column,
+    Func<object, string?, bool, string> processLiterals,
     object value,
-    bool processLiteral)
+    bool processLiteral,
+    bool lengthOverride)
     {
         if (operationName.Equals("in", StringComparison.OrdinalIgnoreCase))
         {
@@ -778,13 +803,13 @@ public static class FieldFilterParser
                     argumentObject.Fields[operationName],
                     ctx.Variables))
                 .Where(inValue => inValue is not null)
-                .Select(inValue => processLiterals(inValue!, null))
+                .Select(inValue => processLiterals(inValue!, column.ColumnName, false))
                 .ToList();
 
             return new PredicateOperand("(" + string.Join(", ", encodedParams) + ")");
         }
 
-        return new PredicateOperand(processLiteral ? processLiterals(value, null) : value.ToString());
+        return new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName, lengthOverride)}" : value.ToString());
     }
 
     private static string EscapeLikeString(string input)

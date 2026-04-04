@@ -65,8 +65,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// </summary>
     private ILogger<FileSystemRuntimeConfigLoader>? _logger;
 
-    private LogBuffer? _logBuffer = new();
-
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";
     public const string ENVIRONMENT_PREFIX = "DAB_";
@@ -544,7 +542,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// </summary>
     public void FlushLogBuffer()
     {
-        _logBuffer?.FlushToLogger(_logger!);
+        _logBuffer.FlushToLogger(_logger!);
     }
 
     /// <summary>
@@ -557,7 +555,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     {
         if (_logger is null)
         {
-            _logBuffer?.BufferLog(logLevel, message);
+            _logBuffer.BufferLog(logLevel, message);
         }
         else
         {

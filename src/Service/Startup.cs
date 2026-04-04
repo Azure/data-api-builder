@@ -743,9 +743,23 @@ namespace Azure.DataApiBuilder.Service
                 runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (_, _) =>
                 {
                     isRuntimeReady = await PerformOnConfigChangeAsync(app);
+
+                    //Flush all logs that were buffered before setting the LogLevel.
+                    // Important: All logs set before this point should use _logBuffer.
+                    FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
+                    _logBuffer.FlushToLogger(_logger);
+                    configLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
+                    configLoader.FlushLogBuffer();
+
                     return isRuntimeReady;
                 });
             }
+
+            hostLifetime.StopApplication();
+            FileSystemRuntimeConfigLoader newConfigLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
+            _logBuffer.FlushToLogger(_logger);
+            newConfigLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
+            newConfigLoader.FlushLogBuffer();
 
             if (env.IsDevelopment())
             {

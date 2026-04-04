@@ -27,6 +27,8 @@ public abstract class RuntimeConfigLoader
     private HotReloadEventHandler<HotReloadEventArgs>? _handler;
     protected readonly string? _connectionString;
 
+    protected static LogBuffer _logBuffer = new();
+
     // Public to allow the RuntimeProvider and other users of class to set via out param.
     // May be candidate to refactor by changing all of the Parse/Load functions to save
     // state in place of using out params.
@@ -269,7 +271,7 @@ public abstract class RuntimeConfigLoader
             // logger can be null when called from CLI
             if (logger is null)
             {
-                Console.Error.WriteLine(errorMessage + $"\n" + $"Message:\n {ex.Message}\n" + $"Stack Trace:\n {ex.StackTrace}");
+                _logBuffer.BufferLog(LogLevel.Error, errorMessage, ex);
             }
             else
             {

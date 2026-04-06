@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(EntityActionOperation.Upsert));
+                EntityActionOperation.Upsert);
         }
 
         /// <summary>
@@ -181,7 +181,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(EntityActionOperation.UpsertIncremental));
+                EntityActionOperation.UpsertIncremental);
         }
 
         /// <summary>
@@ -204,6 +204,11 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
             try
             {
+                if (operationType is EntityActionOperation.Upsert or EntityActionOperation.UpsertIncremental)
+                {
+                    operationType = DeterminePatchPutSemantics(operationType);
+                }
+
                 TelemetryMetricsHelper.IncrementActiveRequests(ApiType.REST);
 
                 if (activity is not null)

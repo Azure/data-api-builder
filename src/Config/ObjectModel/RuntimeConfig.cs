@@ -19,7 +19,7 @@ public record RuntimeConfig
 
     public const string DEFAULT_CONFIG_SCHEMA_LINK = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
 
-    public DataSource DataSource { get; init; }
+    public DataSource? DataSource { get; init; }
 
     public RuntimeOptions? Runtime { get; init; }
 
@@ -31,6 +31,27 @@ public record RuntimeConfig
     public virtual RuntimeEntities Entities { get; init; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }
+
+    /// <summary>
+    /// Indicates whether this is a root config (top-level with child data-source-files).
+    /// A root config orchestrates child configs and may not have its own data source or entities.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsRootConfig => DataSourceFiles?.SourceFiles?.Any() == true;
+
+    /// <summary>
+    /// Tracks how many entities each autoentity definition resolved during metadata initialization.
+    /// Populated during autoentity expansion in metadata providers.
+    /// </summary>
+    [JsonIgnore]
+    public Dictionary<string, int> AutoentityResolutionCounts { get; } = new();
+
+    /// <summary>
+    /// Metadata captured from each child config loaded via data-source-files.
+    /// Used during validation to check each child independently with filename context.
+    /// </summary>
+    [JsonIgnore]
+    public List<ChildConfigMetadata> ChildConfigMetadataList { get; } = new();
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public bool CosmosDataSourceUsed { get; private set; }
@@ -73,7 +94,7 @@ public record RuntimeConfig
         (Runtime is null ||
          Runtime.Rest is null ||
          Runtime.Rest.Enabled) &&
-         DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL;
+         DataSource?.DatabaseType != DatabaseType.CosmosDB_NoSQL;
 
     /// <summary>
     /// Retrieves the value of runtime.mcp.enabled property if present, default is true.
@@ -302,43 +323,34 @@ public record RuntimeConfig
         this.Autoentities = Autoentities ?? new RuntimeAutoentities(new Dictionary<string, Autoentity>());
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
-        if (this.DataSource is null)
+        // Set up datasource mapping only when a data source is provided.
+        // Root configs (with data-source-files) may omit the data source.
+        _dataSourceNameToDataSource = new Dictionary<string, DataSource>();
+        if (this.DataSource is not null)
         {
-            throw new DataApiBuilderException(
-                message: "data-source is a mandatory property in DAB Config",
-                statusCode: HttpStatusCode.UnprocessableEntity,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            _dataSourceNameToDataSource.Add(this.DefaultDataSourceName, this.DataSource);
         }
-
-        // we will set them up with default values
-        _dataSourceNameToDataSource = new Dictionary<string, DataSource>
-        {
-            { this.DefaultDataSourceName, this.DataSource }
-        };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        if (Entities is null && this.Entities.Entities.Count == 0 &&
-            Autoentities is null && this.Autoentities.Autoentities.Count == 0)
-        {
-            throw new DataApiBuilderException(
-                message: "Configuration file should contain either at least the entities or autoentities property",
-                statusCode: HttpStatusCode.UnprocessableEntity,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-        }
 
-        if (Entities is not null)
+        // Map entities and autoentities to the default datasource when a datasource is available.
+        // Without a datasource, entity/autoentity mappings are not created since they cannot be resolved.
+        if (this.DataSource is not null)
         {
-            foreach (KeyValuePair<string, Entity> entity in Entities)
+            if (Entities is not null)
             {
-                _entityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
+                foreach (KeyValuePair<string, Entity> entity in Entities)
+                {
+                    _entityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
+                }
             }
-        }
 
-        if (Autoentities is not null)
-        {
-            foreach (KeyValuePair<string, Autoentity> autoentity in Autoentities)
+            if (Autoentities is not null)
             {
-                _autoentityNameToDataSourceName.TryAdd(autoentity.Key, this.DefaultDataSourceName);
+                foreach (KeyValuePair<string, Autoentity> autoentity in Autoentities)
+                {
+                    _autoentityNameToDataSourceName.TryAdd(autoentity.Key, this.DefaultDataSourceName);
+                }
             }
         }
 
@@ -364,6 +376,13 @@ public record RuntimeConfig
                 {
                     try
                     {
+                        // Capture child metadata before merging for per-child validation.
+                        ChildConfigMetadataList.Add(new ChildConfigMetadata(
+                            FileName: dataSourceFile,
+                            EntityNames: new HashSet<string>(config.Entities.Select(e => e.Key)),
+                            AutoentityDefinitionNames: new HashSet<string>(config.Autoentities.Select(a => a.Key)),
+                            HasDataSource: config.DataSource is not null));
+
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _autoentityNameToDataSourceName = _autoentityNameToDataSourceName.Concat(config._autoentityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -469,7 +488,7 @@ public record RuntimeConfig
     public void UpdateDefaultDataSourceName(string initialDefaultDataSourceName)
     {
         _dataSourceNameToDataSource.Remove(DefaultDataSourceName);
-        if (!_dataSourceNameToDataSource.TryAdd(initialDefaultDataSourceName, this.DataSource))
+        if (!_dataSourceNameToDataSource.TryAdd(initialDefaultDataSourceName, this.DataSource!))
         {
             // An exception here means that a default data source name was generated as a GUID that
             // matches the original default data source name. This should never happen but we add this
@@ -639,7 +658,7 @@ public record RuntimeConfig
     /// <returns>Whether cache operations should proceed.</returns>
     public virtual bool CanUseCache()
     {
-        bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
+        bool setSessionContextEnabled = DataSource?.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
         return IsCachingEnabled && !setSessionContextEnabled;
     }
 
@@ -694,7 +713,7 @@ public record RuntimeConfig
     /// </summary>
     public bool IsMultipleCreateOperationEnabled()
     {
-        return Enum.GetNames(typeof(MultipleCreateSupportingDatabaseType)).Any(x => x.Equals(DataSource.DatabaseType.ToString(), StringComparison.OrdinalIgnoreCase)) &&
+        return Enum.GetNames(typeof(MultipleCreateSupportingDatabaseType)).Any(x => x.Equals(DataSource?.DatabaseType.ToString(), StringComparison.OrdinalIgnoreCase)) &&
                (Runtime is not null &&
                Runtime.GraphQL is not null &&
                Runtime.GraphQL.MultipleMutationOptions is not null &&

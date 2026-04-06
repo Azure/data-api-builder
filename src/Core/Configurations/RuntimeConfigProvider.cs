@@ -192,7 +192,7 @@ public class RuntimeConfigProvider
         {
             _configLoader.RuntimeConfig = runtimeConfig;
 
-            if (string.IsNullOrEmpty(runtimeConfig.DataSource.ConnectionString))
+            if (string.IsNullOrEmpty(runtimeConfig.DataSource?.ConnectionString))
             {
                 throw new ArgumentException($"'{nameof(runtimeConfig.DataSource.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.DataSource.ConnectionString));
             }
@@ -271,13 +271,13 @@ public class RuntimeConfigProvider
 
         if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replacementSettings))
         {
-            _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
+            _configLoader.RuntimeConfig = runtimeConfig.DataSource?.DatabaseType switch
             {
                 DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
-                _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
+                _ => runtimeConfig with { DataSource = runtimeConfig.DataSource! with { ConnectionString = connectionString } }
             };
             ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
-            _configLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(_configLoader.RuntimeConfig.DefaultDataSourceName, _configLoader.RuntimeConfig.DataSource);
+            _configLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(_configLoader.RuntimeConfig.DefaultDataSourceName, _configLoader.RuntimeConfig.DataSource!);
 
             return await InvokeConfigLoadedHandlersAsync();
         }

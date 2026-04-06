@@ -329,6 +329,19 @@ public class RuntimeConfigValidator : IConfigValidator
         // Any exceptions caught during this process are added to the ConfigValidationExceptions list and logged at the end of this function.
         await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
 
+        // Validate entity configuration (root vs non-root rules, entity counts) after autoentity resolution.
+        // Only run when DB connection succeeded, since autoentity resolution requires DB access.
+        if (!ConfigValidationExceptions.Any(x => x.Message.StartsWith(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
+        {
+            // Re-read the config since autoentity resolution may have added new entities.
+            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? updatedConfig) && updatedConfig is not null)
+            {
+                runtimeConfig = updatedConfig;
+            }
+
+            ValidateDataSourceAndEntityPresence(runtimeConfig);
+        }
+
         if (validationResult.IsValid && !ConfigValidationExceptions.Any())
         {
             return true;
@@ -508,6 +521,153 @@ public class RuntimeConfigValidator : IConfigValidator
         if (!ConfigValidationExceptions.Any(x => x.Message.StartsWith(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
         {
             ValidateRelationships(runtimeConfig, metadataProviderFactory);
+        }
+    }
+
+    /// <summary>
+    /// Validates entity and data source configuration based on whether the config is a root (has children) or non-root.
+    ///
+    /// Root config (top-level with data-source-files):
+    ///   - Validates the root's own data source / entity relationship (if the root has a data source, it must have entities)
+    ///   - Validates each child config independently using captured metadata and filename context
+    ///
+    /// Non-root config (standalone, no children):
+    ///   - Must have a data source
+    ///   - Must have entities (ValidateHasEntities)
+    ///
+    /// This method should be called after autoentity resolution so that resolved entity counts are available.
+    /// It should be gated on no database connection errors.
+    /// </summary>
+    public void ValidateDataSourceAndEntityPresence(RuntimeConfig runtimeConfig)
+    {
+        bool hasDataSource = runtimeConfig.DataSource is not null;
+
+        if (runtimeConfig.IsRootConfig)
+        {
+            if (hasDataSource)
+            {
+                // Root has its own data source: check that the root itself contributes entities.
+                // We check the root's own entities only (not merged children) by looking at what's
+                // NOT from children. But since entities are merged, we check the total minus children.
+                ValidateHasEntities(runtimeConfig, configName: null);
+            }
+
+            // Validate each child config independently.
+            foreach (ChildConfigMetadata child in runtimeConfig.ChildConfigMetadataList)
+            {
+                ValidateChildConfig(child, runtimeConfig);
+            }
+        }
+        else
+        {
+            // Non-root config (standalone, no children): must have a data source.
+            if (!hasDataSource)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "A data source is required. Non-root configurations must define a data-source property.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+            else
+            {
+                // Non-root with a data source: entities must be present.
+                ValidateHasEntities(runtimeConfig, configName: null);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates a child config using its captured metadata.
+    /// Each child must have a data source and must have entities (manual or resolved from autoentities).
+    /// Error messages include the child's filename for clear diagnostics.
+    /// </summary>
+    private void ValidateChildConfig(ChildConfigMetadata child, RuntimeConfig runtimeConfig)
+    {
+        if (!child.HasDataSource)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"Child config '{child.FileName}': A data source is required.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            return;
+        }
+
+        // Check each of this child's autoentity definitions for resolution results.
+        foreach (string autoentityName in child.AutoentityDefinitionNames)
+        {
+            if (runtimeConfig.AutoentityResolutionCounts.TryGetValue(autoentityName, out int resolvedCount))
+            {
+                if (resolvedCount == 0)
+                {
+                    _logger.LogWarning("Child config '{fileName}': Autoentities definition '{definitionName}' found no entities.",
+                        child.FileName, autoentityName);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Child config '{fileName}': Autoentities definition '{definitionName}' was not processed. " +
+                    "Autoentities may not be supported for this database type.",
+                    child.FileName, autoentityName);
+            }
+        }
+
+        // Count this child's total entities: manual + resolved autoentities.
+        int resolvedAutoentityCount = child.AutoentityDefinitionNames
+            .Sum(name => runtimeConfig.AutoentityResolutionCounts.TryGetValue(name, out int count) ? count : 0);
+        int totalChildEntities = child.EntityNames.Count + resolvedAutoentityCount;
+
+        if (totalChildEntities == 0)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"Child config '{child.FileName}': Data source defined but no entities found. " +
+                    "At least one entity must be defined or generated from autoentities.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+    }
+
+    /// <summary>
+    /// Validates that a configuration with a data source has entities defined.
+    /// Checks each autoentity definition for resolution results and warns if none were found.
+    /// If the total entity count (manual + resolved autoentities) is zero, records an error.
+    /// </summary>
+    /// <param name="runtimeConfig">The runtime config to validate.</param>
+    /// <param name="configName">Optional name for error context (null for top-level/standalone).</param>
+    private void ValidateHasEntities(RuntimeConfig runtimeConfig, string? configName)
+    {
+        string prefix = configName is not null ? $"Config '{configName}': " : string.Empty;
+
+        // Check each autoentity definition for resolution results.
+        foreach (KeyValuePair<string, Autoentity> autoentityDef in runtimeConfig.Autoentities)
+        {
+            if (runtimeConfig.AutoentityResolutionCounts.TryGetValue(autoentityDef.Key, out int resolvedCount))
+            {
+                if (resolvedCount == 0)
+                {
+                    _logger.LogWarning("{prefix}Autoentities definition '{definitionName}' found no entities.",
+                        prefix, autoentityDef.Key);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("{prefix}Autoentities definition '{definitionName}' was not processed. " +
+                    "Autoentities may not be supported for this database type.",
+                    prefix, autoentityDef.Key);
+            }
+        }
+
+        // Count total entities: manual entities + resolved autoentities.
+        // After autoentity resolution, generated entities are merged into config.Entities
+        // and are marked with IsAutoentity=true.
+        int totalEntityCount = runtimeConfig.Entities.Entities.Count;
+
+        if (totalEntityCount == 0)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"{prefix}Data source defined but no entities found. " +
+                    "At least one entity must be defined or generated from autoentities when a data source is configured.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
     }
 
@@ -1614,7 +1774,7 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             ValidateEntityConfiguration(runtimeConfig);
 
-            if (runtimeConfig.IsGraphQLEnabled)
+            if (runtimeConfig.IsGraphQLEnabled && runtimeConfig.DataSource is not null)
             {
                 ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
             }

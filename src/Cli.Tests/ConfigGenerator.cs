@@ -402,7 +402,7 @@ namespace Cli
             // Try to get the source object as string or DatabaseObjectSource for new Entity
             if (!TryCreateSourceObjectForNewEntity(
                 options,
-                initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL,
+                initialRuntimeConfig.DataSource!.DatabaseType == DatabaseType.CosmosDB_NoSQL,
                 out EntitySource? source))
             {
                 _logger.LogError("Unable to create the source object.");
@@ -713,7 +713,7 @@ namespace Cli
             ConfigureOptions options,
             [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
         {
-            DatabaseType dbType = runtimeConfig.DataSource.DatabaseType;
+            DatabaseType dbType = runtimeConfig.DataSource!.DatabaseType;
             string dataSourceConnectionString = runtimeConfig.DataSource.ConnectionString;
             DatasourceHealthCheckConfig? datasourceHealthCheckConfig = runtimeConfig.DataSource.Health;
             UserDelegatedAuthOptions? userDelegatedAuthConfig = runtimeConfig.DataSource.UserDelegatedAuth;
@@ -1843,7 +1843,7 @@ namespace Cli
                 }
             }
 
-            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource!.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
             EntityPermission[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, EntityRelationship>? updatedRelationships = entity.Relationships;
@@ -2462,7 +2462,7 @@ namespace Cli
         public static bool VerifyCanUpdateRelationship(RuntimeConfig runtimeConfig, string? cardinality, string? targetEntity)
         {
             // CosmosDB doesn't support Relationship
-            if (runtimeConfig.DataSource.DatabaseType.Equals(DatabaseType.CosmosDB_NoSQL))
+            if (runtimeConfig.DataSource!.DatabaseType.Equals(DatabaseType.CosmosDB_NoSQL))
             {
                 _logger.LogError("Adding/updating Relationships is currently not supported in CosmosDB.");
                 return false;
@@ -2572,7 +2572,7 @@ namespace Cli
                 _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
             }
 
-            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
+            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource?.ConnectionString))
             {
                 _logger.LogError("Invalid connection-string provided in the config.");
                 return false;
@@ -2650,9 +2650,6 @@ namespace Cli
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
             {
-                // Run config-structure warnings regardless of validation outcome.
-                WarnIfNoEntitiesDefined(config);
-
                 // Additional validation: warn if fields are missing and MCP is enabled
                 if (isValid)
                 {
@@ -3269,9 +3266,9 @@ namespace Cli
                 return false;
             }
 
-            if (runtimeConfig.DataSource.DatabaseType != DatabaseType.MSSQL)
+            if (runtimeConfig.DataSource?.DatabaseType != DatabaseType.MSSQL)
             {
-                _logger.LogError("Autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
+                _logger.LogError("Autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource?.DatabaseType);
                 return false;
             }
 
@@ -3626,17 +3623,5 @@ namespace Cli
             return true;
         }
 
-        /// <summary>
-        /// Logs a warning if no entities, autoentities, or data-source-files are configured.
-        /// </summary>
-        internal static void WarnIfNoEntitiesDefined(RuntimeConfig config)
-        {
-            if (config.Entities.Entities.Count == 0
-                && config.Autoentities.Autoentities.Count == 0
-                && (config.DataSourceFiles?.SourceFiles is null || !config.DataSourceFiles.SourceFiles.Any()))
-            {
-                _logger.LogWarning("No entities are defined in this configuration.");
-            }
-        }
     }
 }

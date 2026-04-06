@@ -50,7 +50,7 @@ namespace Cli.Tests
             // Assert
             Assert.IsTrue(success);
             Assert.IsNotNull(config);
-            Assert.IsNotNull(config.DataSource.UserDelegatedAuth);
+            Assert.IsNotNull(config.DataSource!.UserDelegatedAuth);
             Assert.IsTrue(config.DataSource.UserDelegatedAuth.Enabled);
             Assert.AreEqual("https://database.windows.net", config.DataSource.UserDelegatedAuth.DatabaseAudience);
         }
@@ -95,7 +95,7 @@ namespace Cli.Tests
             // Assert
             Assert.IsTrue(success);
             Assert.IsNotNull(config);
-            Assert.IsNull(config.DataSource.UserDelegatedAuth);
+            Assert.IsNull(config.DataSource!.UserDelegatedAuth);
         }
     }
 }

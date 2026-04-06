@@ -4677,7 +4677,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             RuntimeConfig config = new(
                 Schema: baseConfig!.Schema,
-                DataSource: baseConfig.DataSource,
+                DataSource: baseConfig.DataSource!,
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),

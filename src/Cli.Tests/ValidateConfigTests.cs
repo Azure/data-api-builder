@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Serilog;
@@ -361,14 +364,14 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// Validates that IsConfigValid logs a warning when the config has
-    /// an empty entities collection and no autoentities or data-source-files.
-    /// Uses INVALID_INTIAL_CONFIG (empty connection string) so validation fails
-    /// before attempting a DB connection, while still triggering the warning.
+    /// Validates that a non-root config (has data-source but no data-source-files) with zero entities
+    /// and an invalid connection string gets a connection string validation error.
+    /// Entity validation is gated on successful DB connectivity, so no entity error fires.
+    /// The validation still returns false due to the connection string error.
     /// Regression test for https://github.com/Azure/data-api-builder/issues/3267
     /// </summary>
     [TestMethod]
-    public void TestValidateWarnsOnZeroEntities()
+    public void TestValidateNonRootZeroEntitiesWithInvalidConnectionString()
     {
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, INVALID_INTIAL_CONFIG);
         ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
@@ -376,15 +379,121 @@ public class ValidateConfigTests
         Mock<ILogger<ConfigGenerator>> mockLogger = new();
         SetLoggerForCliConfigGenerator(mockLogger.Object);
 
-        ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
+        bool isValid = ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
 
-        mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No entities are defined in this configuration.")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        // Validation should fail due to the empty connection string.
+        Assert.IsFalse(isValid);
+    }
+
+    /// <summary>
+    /// Validates that a root config (with data-source-files pointing to children)
+    /// that has no data-source and no entities is considered structurally valid
+    /// for parsing. The root config delegates entity requirements to children.
+    /// </summary>
+    [TestMethod]
+    public void TestRootConfigWithNoDataSourceAndNoEntitiesParses()
+    {
+        string rootConfig = @"
+        {
+            ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @""",
+            ""runtime"": {
+                ""rest"": { ""enabled"": true },
+                ""graphql"": { ""enabled"": true },
+                ""host"": { ""mode"": ""development"" }
+            },
+            ""data-source-files"": [""child1.json""],
+            ""entities"": {}
+        }";
+
+        // The root config should parse without error (no data-source required for root).
+        Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(rootConfig, out RuntimeConfig? config));
+        Assert.IsNotNull(config);
+        Assert.IsTrue(config.IsRootConfig);
+    }
+
+    /// <summary>
+    /// Validates that a non-root config with a data-source and no entities parses
+    /// successfully. Validation of entity presence happens during dab validate,
+    /// not during parsing.
+    /// </summary>
+    [TestMethod]
+    public void TestNonRootConfigWithDataSourceAndNoEntitiesParses()
+    {
+        Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
+        Assert.IsNotNull(config);
+        Assert.IsFalse(config.IsRootConfig);
+    }
+
+    /// <summary>
+    /// Validates that child config metadata is captured during root config loading.
+    /// When a root config references a child via data-source-files and the child file
+    /// exists on disk, the child's metadata (entity names, autoentity definition names,
+    /// datasource presence) is recorded for per-child validation.
+    /// Note: The RuntimeConfig constructor uses the real filesystem for child loading,
+    /// so this test writes temporary files to disk.
+    /// </summary>
+    [TestMethod]
+    public void TestChildConfigMetadataCapturedDuringLoad()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dab_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            string childPath = Path.Combine(tempDir, "child-db.json");
+            string rootPath = Path.Combine(tempDir, "dab-config.json");
+
+            string childConfig = @"
+            {
+                ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @""",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""Server=localhost;Database=testdb;""
+                },
+                ""entities"": {
+                    ""Book"": {
+                        ""source"": ""dbo.books"",
+                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""read""] }]
+                    }
+                }
+            }";
+
+            // Use absolute path for the child reference since the RuntimeConfig constructor
+            // resolves child paths relative to CWD, not the parent config directory.
+            string childPathEscaped = childPath.Replace("\\", "\\\\");
+
+            string rootConfig = @"
+            {
+                ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @""",
+                ""runtime"": {
+                    ""rest"": { ""enabled"": true },
+                    ""graphql"": { ""enabled"": true },
+                    ""host"": { ""mode"": ""development"" }
+                },
+                ""data-source-files"": [""" + childPathEscaped + @"""],
+                ""entities"": {}
+            }";
+
+            File.WriteAllText(childPath, childConfig);
+            File.WriteAllText(rootPath, rootConfig);
+
+            FileSystemRuntimeConfigLoader loader = new(new FileSystem());
+            Assert.IsTrue(loader.TryLoadConfig(rootPath, out RuntimeConfig? config));
+            Assert.IsNotNull(config);
+            Assert.IsTrue(config.IsRootConfig);
+            Assert.AreEqual(1, config.ChildConfigMetadataList.Count);
+
+            ChildConfigMetadata childMeta = config.ChildConfigMetadataList[0];
+            Assert.AreEqual(childPath, childMeta.FileName);
+            Assert.IsTrue(childMeta.HasDataSource);
+            Assert.IsTrue(childMeta.EntityNames.Contains("Book"));
+            Assert.AreEqual(0, childMeta.AutoentityDefinitionNames.Count);
+
+            // The child's entities should be merged into the root config.
+            Assert.IsTrue(config.Entities.ContainsKey("Book"));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
     }
 }

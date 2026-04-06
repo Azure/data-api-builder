@@ -1835,5 +1835,24 @@ namespace Cli.Tests
                 Assert.IsTrue(config.Runtime.Telemetry.LoggerLevel.ContainsKey(parts[0]));
             }
         }
+
+        /// <summary>
+        /// Tests that an empty namespace in log-level input is rejected.
+        /// Command: dab configure --runtime.telemetry.log-level ":Warning"
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureTelemetryLogLevelRejectsEmptyNamespace()
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeTelemetryLogLevel: new string[] { ":Warning" },
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsFalse(isSuccess);
+        }
     }
 }

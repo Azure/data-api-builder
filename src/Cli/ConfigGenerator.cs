@@ -1006,22 +1006,28 @@ namespace Cli
                 options.RuntimePaginationDefaultPageSize != null ||
                 options.RuntimePaginationNextLinkRelative != null)
             {
-                PaginationOptions updatedPaginationOptions = runtimeConfig?.Runtime?.Pagination ?? new();
+                PaginationOptions existing = runtimeConfig?.Runtime?.Pagination ?? new();
+                int? maxPageSize = options.RuntimePaginationMaxPageSize ?? (existing.UserProvidedMaxPageSize ? existing.MaxPageSize : null);
+                int? defaultPageSize = options.RuntimePaginationDefaultPageSize ?? (existing.UserProvidedDefaultPageSize ? existing.DefaultPageSize : null);
+                bool? nextLinkRelative = options.RuntimePaginationNextLinkRelative ?? existing.NextLinkRelative;
+
+                PaginationOptions updatedPaginationOptions = new(
+                    MaxPageSize: maxPageSize,
+                    DefaultPageSize: defaultPageSize,
+                    NextLinkRelative: nextLinkRelative);
+
                 if (options.RuntimePaginationMaxPageSize != null)
                 {
-                    updatedPaginationOptions = updatedPaginationOptions with { MaxPageSize = options.RuntimePaginationMaxPageSize };
                     _logger.LogInformation("Updated RuntimeConfig with runtime.pagination.max-page-size as '{value}'", options.RuntimePaginationMaxPageSize);
                 }
 
                 if (options.RuntimePaginationDefaultPageSize != null)
                 {
-                    updatedPaginationOptions = updatedPaginationOptions with { DefaultPageSize = options.RuntimePaginationDefaultPageSize };
                     _logger.LogInformation("Updated RuntimeConfig with runtime.pagination.default-page-size as '{value}'", options.RuntimePaginationDefaultPageSize);
                 }
 
                 if (options.RuntimePaginationNextLinkRelative != null)
                 {
-                    updatedPaginationOptions = updatedPaginationOptions with { NextLinkRelative = options.RuntimePaginationNextLinkRelative };
                     _logger.LogInformation("Updated RuntimeConfig with runtime.pagination.next-link-relative as '{value}'", options.RuntimePaginationNextLinkRelative);
                 }
 
@@ -1071,7 +1077,10 @@ namespace Cli
                 options.RuntimeHealthRoles != null)
             {
                 RuntimeHealthCheckConfig existingHealth = runtimeConfig?.Runtime?.Health ?? new();
-                bool? enabled = options.RuntimeHealthEnabled ?? (existingHealth.UserProvidedEnabled ? existingHealth.Enabled : null);
+                // If any health sub-option is provided without --runtime.health.enabled,
+                // auto-set enabled=true so the section persists in serialized config.
+                bool? enabled = options.RuntimeHealthEnabled
+                    ?? (existingHealth.UserProvidedEnabled ? existingHealth.Enabled : true);
                 int? cacheTtl = options.RuntimeHealthCacheTtlSeconds ?? (existingHealth.UserProvidedTtlOptions ? existingHealth.CacheTtlSeconds : null);
                 int? maxParallelism = options.RuntimeHealthMaxQueryParallelism ?? (existingHealth.UserProvidedMaxQueryParallelism ? existingHealth.MaxQueryParallelism : null);
                 HashSet<string>? roles = options.RuntimeHealthRoles is not null ? new HashSet<string>(options.RuntimeHealthRoles) : existingHealth.Roles;
@@ -1139,6 +1148,13 @@ namespace Cli
 
                     string ns = parts[0].Trim();
                     string levelStr = parts[1].Trim();
+
+                    if (string.IsNullOrEmpty(ns))
+                    {
+                        _logger.LogError("Invalid log-level entry: namespace cannot be empty. Use 'Default:Level' for the root filter.");
+                        return false;
+                    }
+
                     if (!Enum.TryParse(levelStr, ignoreCase: true, out LogLevel level))
                     {
                         _logger.LogError("Invalid log level '{level}'. Allowed values: trace, debug, information, warning, error, critical, none.", levelStr);
@@ -1148,11 +1164,11 @@ namespace Cli
                     logLevels[ns] = level;
                 }
 
-                // Merge with existing log levels
-                Dictionary<string, LogLevel?> existingLevels = runtimeConfig?.Runtime?.Telemetry?.LoggerLevel ?? new();
+                // Merge with existing log levels (create a new dictionary to avoid mutating the original)
+                Dictionary<string, LogLevel?> mergedLevels = new(runtimeConfig?.Runtime?.Telemetry?.LoggerLevel ?? new());
                 foreach (KeyValuePair<string, LogLevel?> kvp in logLevels)
                 {
-                    existingLevels[kvp.Key] = kvp.Value;
+                    mergedLevels[kvp.Key] = kvp.Value;
                 }
 
                 runtimeConfig = runtimeConfig! with
@@ -1160,8 +1176,8 @@ namespace Cli
                     Runtime = runtimeConfig.Runtime! with
                     {
                         Telemetry = runtimeConfig.Runtime!.Telemetry is not null
-                            ? runtimeConfig.Runtime!.Telemetry with { LoggerLevel = existingLevels }
-                            : new TelemetryOptions(LoggerLevel: existingLevels)
+                            ? runtimeConfig.Runtime!.Telemetry with { LoggerLevel = mergedLevels }
+                            : new TelemetryOptions(LoggerLevel: mergedLevels)
                     }
                 };
             }
@@ -1961,7 +1977,7 @@ namespace Cli
             Dictionary<string, string>? updatedMappings = entity.Mappings;
             EntityActionPolicy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
-            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl, options.CacheLevel);
+            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl, options.CacheLevel) ?? entity.Cache;
             EntityHealthCheckConfig? updatedEntityHealthOptions = ConstructEntityHealthOptions(options.HealthEnabled) ?? entity.Health;
 
             // Determine if the entity is or will be a stored procedure

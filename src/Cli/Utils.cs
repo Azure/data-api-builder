@@ -856,9 +856,7 @@ namespace Cli
                 return null;
             }
 
-            EntityCacheOptions cacheOptions = new();
             bool isEnabled = false;
-            bool isCacheTtlUserProvided = false;
             int ttl = EntityCacheOptions.DEFAULT_TTL_SECONDS;
             EntityCacheLevel? level = null;
 
@@ -881,34 +879,12 @@ namespace Cli
                 level = Enum.Parse<EntityCacheLevel>(cacheLevel, ignoreCase: true);
             }
 
-            // This is needed so the cacheTtl is correctly written to config.
-            if (cacheTtl is not null)
-            {
-                isCacheTtlUserProvided = true;
-            }
-
-            // Both cacheEnabled and cacheTtl can not be null here, so if either one
-            // is, the other is not, and we return the cacheOptions with just that other
-            // value.
-            if (cacheEnabled is null)
-            {
-                cacheOptions = cacheOptions with { TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
-            }
-            else if (cacheTtl is null)
-            {
-                cacheOptions = cacheOptions with { Enabled = isEnabled };
-            }
-            else
-            {
-                cacheOptions = cacheOptions with { Enabled = isEnabled, TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
-            }
-
-            if (level is not null)
-            {
-                cacheOptions = cacheOptions with { Level = level };
-            }
-
-            return cacheOptions;
+            // Use the constructor so UserProvided* flags are set automatically
+            // when a non-null value is passed.
+            return new EntityCacheOptions(
+                Enabled: cacheEnabled is not null ? isEnabled : null,
+                TtlSeconds: cacheTtl is not null ? ttl : null,
+                Level: level);
         }
 
         /// <summary>

@@ -210,6 +210,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 {
                     operationType = DeterminePatchPutSemantics(operationType);
                 }
+                
                 if (activity is not null)
                 {
                     activity.TrackMainControllerActivityStarted(

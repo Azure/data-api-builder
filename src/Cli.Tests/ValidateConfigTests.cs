@@ -361,19 +361,22 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// Validates that WarnIfNoEntitiesDefined logs a warning when the config has
+    /// Validates that IsConfigValid logs a warning when the config has
     /// an empty entities collection and no autoentities or data-source-files.
-    /// This calls the extracted method directly, avoiding any DB connection.
+    /// Uses INVALID_INTIAL_CONFIG (empty connection string) so validation fails
+    /// before attempting a DB connection, while still triggering the warning.
+    /// Regression test for https://github.com/Azure/data-api-builder/issues/3267
     /// </summary>
     [TestMethod]
     public void TestValidateWarnsOnZeroEntities()
     {
-        Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, INVALID_INTIAL_CONFIG);
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
 
         Mock<ILogger<ConfigGenerator>> mockLogger = new();
         SetLoggerForCliConfigGenerator(mockLogger.Object);
 
-        ConfigGenerator.WarnIfNoEntitiesDefined(config!);
+        ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
 
         mockLogger.Verify(
             x => x.Log(

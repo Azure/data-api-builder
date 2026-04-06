@@ -1,0 +1,3642 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using System.Collections.ObjectModel;
+using System.Data;
+using System.Diagnostics.CodeAnalysis;
+using System.IO.Abstractions;
+using System.Text;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.NamingPolicies;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Service;
+using Cli.Commands;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using static Cli.Utils;
+
+namespace Cli
+{
+    /// <summary>
+    /// Contains the methods for Initializing the config file and Adding/Updating Entities.
+    /// </summary>
+    public class ConfigGenerator
+    {
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        private static ILogger<ConfigGenerator> _logger;
+#pragma warning restore CS8618
+
+        public static void SetLoggerForCliConfigGenerator(
+            ILogger<ConfigGenerator> configGeneratorLoggerFactory)
+        {
+            _logger = configGeneratorLoggerFactory;
+        }
+
+        /// <summary>
+        /// This method will generate the initial config with databaseType and connection-string.
+        /// </summary>
+        public static bool TryGenerateConfig(InitOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            string runtimeConfigFile = FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
+            if (!string.IsNullOrWhiteSpace(options.Config))
+            {
+                _logger.LogInformation("Generating user provided config file with name: {configFileName}", options.Config);
+                runtimeConfigFile = options.Config;
+            }
+            else
+            {
+                string? environmentValue = Environment.GetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME);
+                if (!string.IsNullOrWhiteSpace(environmentValue))
+                {
+                    _logger.LogInformation("The environment variable {variableName} has a value of {variableValue}", FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+                    runtimeConfigFile = FileSystemRuntimeConfigLoader.GetEnvironmentFileName(FileSystemRuntimeConfigLoader.CONFIGFILE_NAME, environmentValue);
+                    _logger.LogInformation("Generating environment config file: {configPath}", fileSystem.Path.GetFullPath(runtimeConfigFile));
+                }
+                else
+                {
+                    _logger.LogInformation("Generating default config file: {config}", fileSystem.Path.GetFullPath(runtimeConfigFile));
+                }
+            }
+
+            // File existence checked to avoid overwriting the existing configuration.
+            if (fileSystem.File.Exists(runtimeConfigFile))
+            {
+                _logger.LogError("Config file: {runtimeConfigFile} already exists. Please provide a different name or remove the existing config file.",
+                    fileSystem.Path.GetFullPath(runtimeConfigFile));
+                return false;
+            }
+
+            // Creating a new json file with runtime configuration
+            if (!TryCreateRuntimeConfig(options, loader, fileSystem, out RuntimeConfig? runtimeConfig))
+            {
+                return false;
+            }
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Create a runtime config json string.
+        /// </summary>
+        /// <param name="options">Init options</param>
+        /// <param name="runtimeConfig">Output runtime config json.</param>
+        /// <returns>True on success. False otherwise.</returns>
+        public static bool TryCreateRuntimeConfig(InitOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem, [NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
+        {
+            runtimeConfig = null;
+
+            DatabaseType dbType = options.DatabaseType;
+            string? restPath = options.RestPath;
+            string graphQLPath = options.GraphQLPath;
+            string mcpPath = options.McpPath;
+            string? runtimeBaseRoute = options.RuntimeBaseRoute;
+            Dictionary<string, object?> dbOptions = new();
+
+            HyphenatedNamingPolicy namingPolicy = new();
+
+            // If --rest.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
+            if (options.RestDisabled is true)
+            {
+                _logger.LogWarning("The option --rest.disabled will be deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " We recommend that you use the --rest.enabled option instead.");
+            }
+
+            // If --graphql.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
+            if (options.GraphQLDisabled is true)
+            {
+                _logger.LogWarning("The option --graphql.disabled will be deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " We recommend that you use the --graphql.enabled option instead.");
+            }
+
+            bool restEnabled, graphQLEnabled, mcpEnabled;
+            if (!TryDetermineIfApiIsEnabled(options.RestDisabled, options.RestEnabled, ApiType.REST, out restEnabled) ||
+                !TryDetermineIfApiIsEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL, out graphQLEnabled) ||
+                !TryDetermineIfMcpIsEnabled(options.McpEnabled, out mcpEnabled))
+            {
+                return false;
+            }
+
+            bool isMultipleCreateEnabledForGraphQL;
+
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // a warning is logged.
+            // When multiple mutation operations are extended for other database types, this option should be honored.
+            // Tracked by issue #2001: https://github.com/Azure/data-api-builder/issues/2001.
+            if (dbType is not DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
+            {
+                _logger.LogWarning($"The option --graphql.multiple-create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
+            }
+
+            MultipleMutationOptions? multipleMutationOptions = null;
+
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // it is not honored.
+            if (dbType is DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
+            {
+                isMultipleCreateEnabledForGraphQL = IsMultipleCreateOperationEnabled(options.MultipleCreateOperationEnabled);
+                multipleMutationOptions = new(multipleCreateOptions: new MultipleCreateOptions(enabled: isMultipleCreateEnabledForGraphQL));
+            }
+
+            switch (dbType)
+            {
+                case DatabaseType.CosmosDB_NoSQL:
+                    // If cosmosdb_nosql is specified, rest is disabled.
+                    restEnabled = false;
+
+                    string? cosmosDatabase = options.CosmosNoSqlDatabase;
+                    string? cosmosContainer = options.CosmosNoSqlContainer;
+                    string? graphQLSchemaPath = options.GraphQLSchemaPath;
+                    if (string.IsNullOrEmpty(cosmosDatabase))
+                    {
+                        _logger.LogError("Missing mandatory configuration options for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
+                        return false;
+                    }
+
+                    if (string.IsNullOrEmpty(graphQLSchemaPath))
+                    {
+                        graphQLSchemaPath = "schema.gql"; // Default to schema.gql
+
+                        _logger.LogWarning("The GraphQL schema path, i.e. --graphql-schema, is not specified. Please either provide your schema or generate the schema using the `export` command before running `dab start`. For more detail, run 'dab export --help` ");
+                    }
+                    else if (!fileSystem.File.Exists(graphQLSchemaPath))
+                    {
+                        _logger.LogError("GraphQL Schema File: {graphQLSchemaPath} not found.", graphQLSchemaPath);
+                        return false;
+                    }
+
+                    // If the option --rest.path is specified for cosmosdb_nosql, log a warning because
+                    // rest is not supported for cosmosdb_nosql yet.
+                    if (!RestRuntimeOptions.DEFAULT_PATH.Equals(restPath))
+                    {
+                        _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
+                    }
+
+                    if (options.RestRequestBodyStrict is not CliBool.None)
+                    {
+                        _logger.LogWarning("Configuration option --rest.request-body-strict is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
+                    }
+
+                    restPath = null;
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), cosmosDatabase);
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), cosmosContainer);
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), graphQLSchemaPath);
+                    break;
+
+                case DatabaseType.DWSQL:
+                case DatabaseType.MSSQL:
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.SetSessionContext);
+
+                    break;
+                case DatabaseType.MySQL:
+                case DatabaseType.PostgreSQL:
+                case DatabaseType.CosmosDB_PostgreSQL:
+                    break;
+                default:
+                    throw new Exception($"DatabaseType: ${dbType} not supported.Please provide a valid database-type.");
+            }
+
+            // default value of connection-string should be used, i.e Empty-string
+            // if not explicitly provided by the user
+            DataSource dataSource = new(dbType, options.ConnectionString ?? string.Empty, dbOptions);
+
+            if (!ValidateAudienceAndIssuerForJwtProvider(options.AuthenticationProvider, options.Audience, options.Issuer))
+            {
+                return false;
+            }
+
+            if (!IsURIComponentValid(restPath))
+            {
+                _logger.LogError("{apiType} path {message}", ApiType.REST, RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
+                return false;
+            }
+
+            if (!IsURIComponentValid(options.GraphQLPath))
+            {
+                _logger.LogError("{apiType} path {message}", ApiType.GraphQL, RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
+                return false;
+            }
+
+            if (!IsURIComponentValid(runtimeBaseRoute))
+            {
+                _logger.LogError("Runtime base-route {message}", RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
+                return false;
+            }
+
+            if (runtimeBaseRoute is not null)
+            {
+                if (!Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType authMode) || authMode is not EasyAuthType.StaticWebApps)
+                {
+                    _logger.LogError("Runtime base-route can only be specified when the authentication provider is Static Web Apps.");
+                    return false;
+                }
+            }
+
+            if (options.RestDisabled && options.GraphQLDisabled)
+            {
+                _logger.LogError("Both Rest and GraphQL cannot be disabled together.");
+                return false;
+            }
+
+            string dabSchemaLink = loader.GetPublishedDraftSchemaLink();
+
+            // Prefix REST path with '/', if not already present.
+            if (restPath is not null && !restPath.StartsWith('/'))
+            {
+                restPath = "/" + restPath;
+            }
+
+            // Prefix base-route with '/', if not already present.
+            if (runtimeBaseRoute is not null && !runtimeBaseRoute.StartsWith('/'))
+            {
+                runtimeBaseRoute = "/" + runtimeBaseRoute;
+            }
+
+            // Prefix GraphQL path with '/', if not already present.
+            if (!graphQLPath.StartsWith('/'))
+            {
+                graphQLPath = "/" + graphQLPath;
+            }
+
+            runtimeConfig = new(
+                Schema: dabSchemaLink,
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.True ? true : false),
+                    GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
+                    Mcp: new(
+                        Enabled: mcpEnabled,
+                        Path: mcpPath ?? McpRuntimeOptions.DEFAULT_PATH,
+                        DmlTools: options.McpAggregateRecordsQueryTimeout is not null
+                            ? new DmlToolsConfig(aggregateRecordsQueryTimeout: options.McpAggregateRecordsQueryTimeout)
+                            : null),
+                    Host: new(
+                        Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
+                        Authentication: new(
+                            Provider: options.AuthenticationProvider,
+                            Jwt: (options.Audience is null && options.Issuer is null) ? null : new(options.Audience, options.Issuer)),
+                        Mode: options.HostMode),
+                    BaseRoute: runtimeBaseRoute,
+                    Telemetry: new TelemetryOptions(
+                        OpenTelemetry: new OpenTelemetryOptions(
+                            Enabled: true,
+                            Endpoint: "@env('OTEL_EXPORTER_OTLP_ENDPOINT')",
+                            Headers: "@env('OTEL_EXPORTER_OTLP_HEADERS')",
+                            ExporterProtocol: null,
+                            ServiceName: "@env('OTEL_SERVICE_NAME')"))
+                ),
+                Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
+
+            return true;
+        }
+
+        /// <summary>
+        /// Helper method to determine if the api is enabled or not based on the enabled/disabled options in the dab init command.
+        /// The method also validates that there is no mismatch in semantics of enabling/disabling the REST/GraphQL API(s)
+        /// based on the values supplied in the enabled/disabled options for the API in the init command.
+        /// </summary>
+        /// <param name="apiDisabledOptionValue">Value of disabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
+        /// <param name="apiEnabledOptionValue">Value of enabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
+        /// <param name="apiType">ApiType - REST/GraphQL.</param>
+        /// <param name="isApiEnabled">Boolean value indicating whether the API endpoint is enabled or not.</param>
+        private static bool TryDetermineIfApiIsEnabled(bool apiDisabledOptionValue, CliBool apiEnabledOptionValue, ApiType apiType, out bool isApiEnabled)
+        {
+            if (!apiDisabledOptionValue)
+            {
+                isApiEnabled = apiEnabledOptionValue == CliBool.False ? false : true;
+                // This indicates that the --api.disabled option was not included in the init command.
+                // In such a case, we honor the --api.enabled option.
+                return true;
+            }
+
+            if (apiEnabledOptionValue is CliBool.None)
+            {
+                // This means that the --api.enabled option was not included in the init command.
+                isApiEnabled = !apiDisabledOptionValue;
+                return true;
+            }
+
+            // We hit this code only when both --api.enabled and --api.disabled flags are included in the init command.
+            isApiEnabled = bool.Parse(apiEnabledOptionValue.ToString());
+            if (apiDisabledOptionValue == isApiEnabled)
+            {
+                string apiName = apiType.ToString().ToLower();
+                _logger.LogError($"Config generation failed due to mismatch in the semantics of enabling {apiType} API via " +
+                    $"--{apiName}.disabled and --{apiName}.enabled options");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Helper method to determine if the mcp api is enabled or not based on the enabled/disabled options in the dab init command.
+        /// </summary>
+        /// <param name="mcpEnabledOptionValue">True, if MCP is enabled</param>
+        /// <param name="isMcpEnabled">Out param isMcpEnabled</param>
+        /// <returns>True if MCP is enabled</returns>
+        private static bool TryDetermineIfMcpIsEnabled(CliBool mcpEnabledOptionValue, out bool isMcpEnabled)
+        {
+            return TryDetermineIfApiIsEnabled(false, mcpEnabledOptionValue, ApiType.MCP, out isMcpEnabled);
+        }
+
+        /// <summary>
+        /// Helper method to determine if the multiple create operation is enabled or not based on the inputs from dab init command.
+        /// </summary>
+        /// <param name="multipleCreateEnabledOptionValue">Input value for --graphql.multiple-create.enabled option of the init command</param>
+        /// <returns>True/False</returns>
+        private static bool IsMultipleCreateOperationEnabled(CliBool multipleCreateEnabledOptionValue)
+        {
+            return multipleCreateEnabledOptionValue is CliBool.True;
+        }
+
+        /// <summary>
+        /// This method will add a new Entity with the given REST and GraphQL endpoints, source, and permissions.
+        /// It also supports fields that needs to be included or excluded for a given role and operation.
+        /// </summary>
+        public static bool TryAddEntityToConfigWithOptions(AddOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (!TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig))
+            {
+                _logger.LogError("Failed to add a new entity.");
+                return false;
+            }
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, updatedRuntimeConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Add new entity to runtime config. This method will take the existing runtime config and add a new entity to it
+        /// and return a new instance of the runtime config.
+        /// </summary>
+        /// <param name="options">AddOptions.</param>
+        /// <param name="initialRuntimeConfig">The current instance of the <c>RuntimeConfig</c> that will be updated.</param>
+        /// <param name="updatedRuntimeConfig">The updated instance of the <c>RuntimeConfig</c>.</param>
+        /// <returns>True on success. False otherwise.</returns>
+        public static bool TryAddNewEntity(AddOptions options, RuntimeConfig initialRuntimeConfig, out RuntimeConfig updatedRuntimeConfig)
+        {
+            updatedRuntimeConfig = initialRuntimeConfig;
+            // If entity exists, we cannot add. Display warning
+            //
+            if (initialRuntimeConfig.Entities.ContainsKey(options.Entity))
+            {
+                _logger.LogWarning("Entity '{entityName}' is already present. No new changes are added to Config.", options.Entity);
+                return false;
+            }
+
+            // Try to get the source object as string or DatabaseObjectSource for new Entity
+            if (!TryCreateSourceObjectForNewEntity(
+                options,
+                initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL,
+                out EntitySource? source))
+            {
+                _logger.LogError("Unable to create the source object.");
+                return false;
+            }
+
+            EntityActionPolicy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
+            EntityActionFields? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
+
+            EntityPermission[]? permissionSettings = ParsePermission(options.Permissions, policy, field, source.Type);
+            if (permissionSettings is null)
+            {
+                _logger.LogError("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
+                return false;
+            }
+
+            bool isStoredProcedure = IsStoredProcedure(options);
+            // Validations to ensure that REST methods and GraphQL operations can be configured only
+            // for stored procedures
+            if (options.GraphQLOperationForStoredProcedure is not null && !isStoredProcedure)
+            {
+                _logger.LogError("--graphql.operation can be configured only for stored procedures.");
+                return false;
+            }
+
+            if ((options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
+                && !isStoredProcedure)
+            {
+                _logger.LogError("--rest.methods can be configured only for stored procedures.");
+                return false;
+            }
+
+            GraphQLOperation? graphQLOperationsForStoredProcedures = null;
+            SupportedHttpVerb[]? SupportedRestMethods = null;
+            if (isStoredProcedure)
+            {
+                if (CheckConflictingGraphQLConfigurationForStoredProcedures(options))
+                {
+                    _logger.LogError("Conflicting GraphQL configurations found.");
+                    return false;
+                }
+
+                if (!TryAddGraphQLOperationForStoredProcedure(options, out graphQLOperationsForStoredProcedures))
+                {
+                    return false;
+                }
+
+                if (CheckConflictingRestConfigurationForStoredProcedures(options))
+                {
+                    _logger.LogError("Conflicting Rest configurations found.");
+                    return false;
+                }
+
+                if (!TryAddSupportedRestMethodsForStoredProcedure(options, out SupportedRestMethods))
+                {
+                    return false;
+                }
+            }
+
+            EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+            EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
+            EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
+            EntityMcpOptions? mcpOptions = null;
+
+            if (options.McpDmlTools is not null || options.McpCustomTool is not null)
+            {
+                mcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
+
+                if (mcpOptions is null)
+                {
+                    _logger.LogError("Failed to construct MCP options.");
+                    return false;
+                }
+            }
+
+            // Create new entity.
+            Entity entity = new(
+                Source: source,
+                Fields: null,
+                Rest: restOptions,
+                GraphQL: graphqlOptions,
+                Permissions: permissionSettings,
+                Relationships: null,
+                Mappings: null,
+                Cache: cacheOptions,
+                Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description,
+                Mcp: mcpOptions);
+
+            // Add entity to existing runtime config.
+            IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialRuntimeConfig.Entities.Entities)
+            {
+                { options.Entity, entity }
+            };
+            updatedRuntimeConfig = initialRuntimeConfig with { Entities = new(new ReadOnlyDictionary<string, Entity>(entities)) };
+            return true;
+        }
+
+        /// <summary>
+        /// This method creates the source object for a new entity
+        /// if the given source fields specified by the user are valid.
+        /// Supports both old (dictionary) and new (ParameterMetadata list) parameter formats.
+        /// </summary>
+        public static bool TryCreateSourceObjectForNewEntity(
+            AddOptions options,
+            bool isCosmosDbNoSQL,
+            [NotNullWhen(true)] out EntitySource? sourceObject)
+        {
+            sourceObject = null;
+
+            // default entity type will be null if it's CosmosDB_NoSQL otherwise it will be Table
+            EntitySourceType? objectType = isCosmosDbNoSQL ? null : EntitySourceType.Table;
+
+            if (options.SourceType is not null)
+            {
+                // Try to Parse the SourceType
+                if (!EnumExtensions.TryDeserialize(options.SourceType, out EntitySourceType? et))
+                {
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<EntitySourceType>(options.SourceType));
+                    return false;
+                }
+
+                objectType = (EntitySourceType)et;
+            }
+
+            // Verify that parameter is provided with stored-procedure only
+            // and key fields with table/views.
+            if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+                    objectType,
+                    options.SourceParameters,
+                    options.ParametersNameCollection,
+                    options.SourceKeyFields))
+            {
+                return false;
+            }
+
+            // Check for both old and new parameter formats
+            bool hasOldParams = options.SourceParameters != null && options.SourceParameters.Any();
+            bool hasNewParams = options.ParametersNameCollection != null && options.ParametersNameCollection.Any();
+
+            if (hasOldParams && hasNewParams)
+            {
+                _logger.LogError("Cannot use both --source.params and --parameters.name/description/required/default together. Please use only one format.");
+                return false;
+            }
+
+            List<ParameterMetadata>? parameters = null;
+            if (hasNewParams)
+            {
+                // Parse new format
+                List<string> names = options.ParametersNameCollection != null ? options.ParametersNameCollection.ToList() : new List<string>();
+                List<string> descriptions = options.ParametersDescriptionCollection?.ToList() ?? new List<string>();
+                List<string> requiredFlags = options.ParametersRequiredCollection?.ToList() ?? new List<string>();
+                List<string> defaults = options.ParametersDefaultCollection?.ToList() ?? new List<string>();
+
+                parameters = [];
+                for (int i = 0; i < names.Count; i++)
+                {
+                    parameters.Add(new ParameterMetadata
+                    {
+                        Name = names[i],
+                        Description = descriptions.ElementAtOrDefault(i),
+                        Required = requiredFlags.ElementAtOrDefault(i)?.ToLower() == "true",
+                        Default = defaults.ElementAtOrDefault(i)
+                    });
+                }
+            }
+            else if (hasOldParams)
+            {
+                // Parse old format and convert to new type
+                if (!TryParseSourceParameterDictionary(options.SourceParameters, out parameters))
+                {
+                    return false;
+                }
+
+                _logger.LogWarning("The --source.params format is deprecated. Please use --parameters.name/description/required/default instead.");
+
+            }
+
+            string[]? sourceKeyFields = null;
+            if (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
+            {
+                sourceKeyFields = options.SourceKeyFields.ToArray();
+            }
+
+            // Try to get the source object as string or DatabaseObjectSource
+            if (!TryCreateSourceObject(
+                    options.Source,
+                    objectType,
+                    parameters,
+                    sourceKeyFields,
+                    out sourceObject))
+            {
+                _logger.LogError("Unable to parse the given source.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Displays the effective permissions for all entities defined in the config, listed alphabetically by entity name.
+        /// Effective permissions include explicitly configured roles as well as inherited permissions:
+        /// - anonymous → authenticated (when authenticated is not explicitly configured)
+        /// - authenticated → any named role not explicitly configured for the entity
+        /// </summary>
+        /// <returns>True if the effective permissions were successfully displayed; otherwise, false.</returns>
+        public static bool TryShowEffectivePermissions(ConfigureOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            const string ROLE_ANONYMOUS = "anonymous";
+            const string ROLE_AUTHENTICATED = "authenticated";
+
+            // Iterate entities sorted a-z by name.
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Entity: {entityName}", entityName);
+
+                bool hasAnonymous = entity.Permissions.Any(p => p.Role.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase));
+                bool hasAuthenticated = entity.Permissions.Any(p => p.Role.Equals(ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase));
+
+                foreach (EntityPermission permission in entity.Permissions.OrderBy(p => p.Role, StringComparer.OrdinalIgnoreCase))
+                {
+                    string actions = string.Join(", ", permission.Actions.Select(a => a.Action.ToString()));
+                    _logger.LogInformation("  Role: {role} | Actions: {actions}", permission.Role, actions);
+                }
+
+                // Show inherited authenticated permissions when authenticated is not explicitly configured.
+                if (hasAnonymous && !hasAuthenticated)
+                {
+                    EntityPermission anonPermission = entity.Permissions.First(p => p.Role.Equals(ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase));
+                    string inheritedActions = string.Join(", ", anonPermission.Actions.Select(a => a.Action.ToString()));
+                    _logger.LogInformation("  Role: {role} | Actions: {actions} (inherited from: {source})", ROLE_AUTHENTICATED, inheritedActions, ROLE_ANONYMOUS);
+                }
+
+                // Show inheritance note for named roles.
+                string inheritSource = hasAuthenticated ? ROLE_AUTHENTICATED : (hasAnonymous ? ROLE_ANONYMOUS : string.Empty);
+                if (!string.IsNullOrEmpty(inheritSource))
+                {
+                    _logger.LogInformation("  Any unconfigured named role inherits from: {inheritSource}", inheritSource);
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Tries to update the runtime settings based on the provided runtime options.
+        /// </summary>
+        /// <returns>True if the update was successful, false otherwise.</returns>
+        public static bool TryConfigureSettings(ConfigureOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (!TryUpdateConfiguredDataSourceOptions(options, ref runtimeConfig))
+            {
+                return false;
+            }
+
+            if (!TryUpdateConfiguredRuntimeOptions(options, ref runtimeConfig))
+            {
+                return false;
+            }
+
+            if (options.DepthLimit is not null && !TryUpdateDepthLimit(options, ref runtimeConfig))
+            {
+                return false;
+            }
+
+            if (!TryUpdateConfiguredAzureKeyVaultOptions(options, ref runtimeConfig))
+            {
+                return false;
+            }
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Configures the data source options for the runtimeconfig based on the provided options.
+        /// This method updates the database type, connection string, and other database-specific options in the config file.
+        /// It validates the provided database type and ensures that options specific to certain database types are correctly applied.
+        /// When validation fails, this function logs the validation errors and returns false.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="runtimeConfig">The runtime configuration to be updated. This parameter is passed by reference and must not be null if the method returns true.</param>
+        /// <returns>
+        /// True if the data source options were successfully configured and the runtime configuration was updated; otherwise, false.
+        /// </returns>
+        private static bool TryUpdateConfiguredDataSourceOptions(
+            ConfigureOptions options,
+            [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
+        {
+            DatabaseType dbType = runtimeConfig.DataSource.DatabaseType;
+            string dataSourceConnectionString = runtimeConfig.DataSource.ConnectionString;
+            DatasourceHealthCheckConfig? datasourceHealthCheckConfig = runtimeConfig.DataSource.Health;
+            UserDelegatedAuthOptions? userDelegatedAuthConfig = runtimeConfig.DataSource.UserDelegatedAuth;
+
+            if (options.DataSourceDatabaseType is not null)
+            {
+                if (!Enum.TryParse(options.DataSourceDatabaseType, ignoreCase: true, out dbType))
+                {
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<DatabaseType>(options.DataSourceDatabaseType));
+                    return false;
+                }
+            }
+
+            if (options.DataSourceConnectionString is not null)
+            {
+                dataSourceConnectionString = options.DataSourceConnectionString;
+            }
+
+            Dictionary<string, object?>? dbOptions = new();
+            HyphenatedNamingPolicy namingPolicy = new();
+
+            if (DatabaseType.CosmosDB_NoSQL.Equals(dbType))
+            {
+                AddCosmosDbOptions(dbOptions, options, namingPolicy);
+            }
+            else if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsDatabase)
+                    || !string.IsNullOrWhiteSpace(options.DataSourceOptionsContainer)
+                    || !string.IsNullOrWhiteSpace(options.DataSourceOptionsSchema))
+            {
+                _logger.LogError("Database, Container, and Schema options are only applicable for CosmosDB_NoSQL database type.");
+                return false;
+            }
+
+            if (options.DataSourceOptionsSetSessionContext is not null)
+            {
+                if (!(DatabaseType.MSSQL.Equals(dbType) || DatabaseType.DWSQL.Equals(dbType)))
+                {
+                    _logger.LogError("SetSessionContext option is only applicable for MSSQL/DWSQL database type.");
+                    return false;
+                }
+
+                dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
+            }
+
+            // Handle health.name option
+            if (options.DataSourceHealthName is not null)
+            {
+                // If there's no existing health config, create one with the name
+                // Note: Passing enabled: null results in Enabled = true at runtime (default behavior)
+                // but UserProvidedEnabled = false, so the enabled property won't be serialized to JSON.
+                // This ensures only the name property is written to the config file.
+                if (datasourceHealthCheckConfig is null)
+                {
+                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(enabled: null, name: options.DataSourceHealthName);
+                }
+                else
+                {
+                    // Update the existing health config with the new name while preserving other settings.
+                    // DatasourceHealthCheckConfig is a record (immutable), so we create a new instance.
+                    // Preserve threshold only if it was explicitly set by the user
+                    int? thresholdToPreserve = datasourceHealthCheckConfig.UserProvidedThresholdMs
+                        ? datasourceHealthCheckConfig.ThresholdMs
+                        : null;
+                    // Preserve enabled only if it was explicitly set by the user
+                    bool? enabledToPreserve = datasourceHealthCheckConfig.UserProvidedEnabled
+                        ? datasourceHealthCheckConfig.Enabled
+                        : null;
+                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
+                        enabled: enabledToPreserve,
+                        name: options.DataSourceHealthName,
+                        thresholdMs: thresholdToPreserve);
+                }
+            }
+
+            // Handle user-delegated-auth options
+            if (options.DataSourceUserDelegatedAuthEnabled is not null
+                || options.DataSourceUserDelegatedAuthDatabaseAudience is not null)
+            {
+                // Determine the enabled state: use new value if provided, otherwise preserve existing
+                bool enabled = options.DataSourceUserDelegatedAuthEnabled
+                    ?? userDelegatedAuthConfig?.Enabled
+                    ?? false;
+
+                // Validate that user-delegated-auth is only used with MSSQL when enabled=true
+                if (enabled && !DatabaseType.MSSQL.Equals(dbType))
+                {
+                    _logger.LogError("user-delegated-auth is only supported for database-type 'mssql'.");
+                    return false;
+                }
+
+                // Get database-audience: use new value if provided, otherwise preserve existing
+                string? databaseAudience = options.DataSourceUserDelegatedAuthDatabaseAudience
+                    ?? userDelegatedAuthConfig?.DatabaseAudience;
+
+                // Get provider: preserve existing or use default "EntraId"
+                string? provider = userDelegatedAuthConfig?.Provider ?? "EntraId";
+
+                // Create or update user-delegated-auth config
+                userDelegatedAuthConfig = new UserDelegatedAuthOptions(
+                    Enabled: enabled,
+                    Provider: provider,
+                    DatabaseAudience: databaseAudience);
+            }
+
+            dbOptions = EnumerableUtilities.IsNullOrEmpty(dbOptions) ? null : dbOptions;
+            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig)
+            {
+                UserDelegatedAuth = userDelegatedAuthConfig
+            };
+            runtimeConfig = runtimeConfig with { DataSource = dataSource };
+
+            return runtimeConfig != null;
+        }
+
+        /// <summary>
+        /// Adds CosmosDB-specific options to the provided database options dictionary.
+        /// This method checks if the CosmosDB-specific options (database, container, and schema) are provided in the
+        /// configuration options. If they are, it converts their names using the provided naming policy and adds them
+        /// to the database options dictionary.
+        /// </summary>
+        /// <param name="dbOptions">The dictionary to which the CosmosDB-specific options will be added.</param>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="namingPolicy">The naming policy used to convert option names to the desired format.</param>
+        private static void AddCosmosDbOptions(Dictionary<string, object?> dbOptions, ConfigureOptions options, HyphenatedNamingPolicy namingPolicy)
+        {
+            if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsDatabase))
+            {
+                dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), options.DataSourceOptionsDatabase);
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsContainer))
+            {
+                dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), options.DataSourceOptionsContainer);
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsSchema))
+            {
+                dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), options.DataSourceOptionsSchema);
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the depth limit in the GraphQL runtime settings based on the provided value.
+        /// Validates that any user-provided depth limit is an integer within the valid range of [1 to Int32.MaxValue] or -1.
+        /// A depth limit of -1 is considered a special case that disables the GraphQL depth limit.
+        /// [NOTE:] This method expects the provided depth limit to be not null.
+        /// </summary>
+        /// <param name="options">Options including the new depth limit.</param>
+        /// <param name="runtimeConfig">Current config, updated if method succeeds.</param>
+        /// <returns>True if the update was successful, false otherwise.</returns>
+        private static bool TryUpdateDepthLimit(
+            ConfigureOptions options,
+            [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
+        {
+            // check if depth limit is within the valid range of 1 to Int32.MaxValue
+            int? newDepthLimit = options.DepthLimit;
+            if (newDepthLimit < 1)
+            {
+                if (newDepthLimit == -1)
+                {
+                    _logger.LogWarning("Depth limit set to -1 removes the GraphQL query depth limit.");
+                }
+                else
+                {
+                    _logger.LogError("Invalid depth limit. Specify a depth limit > 0 or remove the existing depth limit by specifying -1.");
+                    return false;
+                }
+            }
+
+            // Try to update the depth limit in the runtime configuration
+            try
+            {
+                runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime! with { GraphQL = runtimeConfig.Runtime.GraphQL! with { DepthLimit = newDepthLimit, UserProvidedDepthLimit = true } } };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Failed to update the depth limit: {e}", e);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the runtime settings based on the provided value.
+        /// Performs the update on the runtimeConfig which is passed as reference
+        /// Returns true if the update has been performed, else false
+        /// Currently, used to update only GraphQL settings
+        /// </summary>
+        /// <param name="options">Options including the graphql runtime parameters.</param>
+        /// <param name="runtimeConfig">Current config, updated if method succeeds.</param>
+        /// <returns>True if the update was successful, false otherwise.</returns>
+        private static bool TryUpdateConfiguredRuntimeOptions(
+            ConfigureOptions options,
+            [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
+        {
+            // Rest: Enabled, Path, and Request.Body.Strict
+            if (options.RuntimeRestEnabled != null ||
+                options.RuntimeRestPath != null ||
+                options.RuntimeRestRequestBodyStrict != null)
+            {
+                RestRuntimeOptions? updatedRestOptions = runtimeConfig?.Runtime?.Rest ?? new();
+                bool status = TryUpdateConfiguredRestValues(options, ref updatedRestOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Rest = updatedRestOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // GraphQL: Enabled, Path, Allow-Introspection and Multiple-Mutations.Create.Enabled
+            if (options.RuntimeGraphQLEnabled != null ||
+                options.RuntimeGraphQLPath != null ||
+                options.RuntimeGraphQLAllowIntrospection != null ||
+                options.RuntimeGraphQLMultipleMutationsCreateEnabled != null)
+            {
+                GraphQLRuntimeOptions? updatedGraphQLOptions = runtimeConfig?.Runtime?.GraphQL ?? new();
+                bool status = TryUpdateConfiguredGraphQLValues(options, ref updatedGraphQLOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { GraphQL = updatedGraphQLOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // MCP: Enabled and Path
+            if (options.RuntimeMcpEnabled != null ||
+                options.RuntimeMcpPath != null ||
+                options.RuntimeMcpDescription != null ||
+                options.RuntimeMcpDmlToolsEnabled != null ||
+                options.RuntimeMcpDmlToolsDescribeEntitiesEnabled != null ||
+                options.RuntimeMcpDmlToolsCreateRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsReadRecordsEnabled != null ||
+                options.RuntimeMcpDmlToolsUpdateRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsDeleteRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null ||
+                options.RuntimeMcpDmlToolsAggregateRecordsEnabled != null ||
+                options.RuntimeMcpDmlToolsAggregateRecordsQueryTimeout != null)
+            {
+                McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
+                bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
+
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Mcp = updatedMcpOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // Cache: Enabled and TTL
+            if (options.RuntimeCacheEnabled != null ||
+                options.RuntimeCacheTTL != null)
+            {
+                RuntimeCacheOptions? updatedCacheOptions = runtimeConfig?.Runtime?.Cache ?? new();
+                bool status = TryUpdateConfiguredCacheValues(options, ref updatedCacheOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Cache = updatedCacheOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // Compression: Level
+            if (options.RuntimeCompressionLevel != null)
+            {
+                CompressionOptions updatedCompressionOptions = runtimeConfig?.Runtime?.Compression ?? new();
+                bool status = TryUpdateConfiguredCompressionValues(options, ref updatedCompressionOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Compression = updatedCompressionOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // Host: Mode, Cors.Origins, Cors.AllowCredentials, Authentication.Provider, Authentication.Jwt.Audience, Authentication.Jwt.Issuer
+            if (options.RuntimeHostMode != null ||
+                options.RuntimeHostCorsOrigins != null ||
+                options.RuntimeHostCorsAllowCredentials != null ||
+                options.RuntimeHostAuthenticationProvider != null ||
+                options.RuntimeHostAuthenticationJwtAudience != null ||
+                options.RuntimeHostAuthenticationJwtIssuer != null)
+            {
+                HostOptions? updatedHostOptions = runtimeConfig?.Runtime?.Host;
+                bool status = TryUpdateConfiguredHostValues(options, ref updatedHostOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Host = updatedHostOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // Telemetry: Azure Log Analytics
+            if (options.AzureLogAnalyticsEnabled is not null ||
+                options.AzureLogAnalyticsDabIdentifier is not null ||
+                options.AzureLogAnalyticsFlushIntervalSeconds is not null ||
+                options.AzureLogAnalyticsCustomTableName is not null ||
+                options.AzureLogAnalyticsDcrImmutableId is not null ||
+                options.AzureLogAnalyticsDceEndpoint is not null)
+            {
+                AzureLogAnalyticsOptions updatedAzureLogAnalyticsOptions = runtimeConfig?.Runtime?.Telemetry?.AzureLogAnalytics ?? new();
+                bool status = TryUpdateConfiguredAzureLogAnalyticsOptions(options, ref updatedAzureLogAnalyticsOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Telemetry = runtimeConfig.Runtime!.Telemetry is not null ? runtimeConfig.Runtime!.Telemetry with { AzureLogAnalytics = updatedAzureLogAnalyticsOptions } : new TelemetryOptions(AzureLogAnalytics: updatedAzureLogAnalyticsOptions) } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // Telemetry: File Sink
+            if (options.FileSinkEnabled is not null ||
+                options.FileSinkPath is not null ||
+                options.FileSinkRollingInterval is not null ||
+                options.FileSinkRetainedFileCountLimit is not null ||
+                options.FileSinkFileSizeLimitBytes is not null)
+            {
+                FileSinkOptions updatedFileSinkOptions = runtimeConfig?.Runtime?.Telemetry?.File ?? new();
+                bool status = TryUpdateConfiguredFileOptions(options, ref updatedFileSinkOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Telemetry = runtimeConfig.Runtime!.Telemetry is not null ? runtimeConfig.Runtime!.Telemetry with { File = updatedFileSinkOptions } : new TelemetryOptions(File: updatedFileSinkOptions) } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            return runtimeConfig != null;
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Rest runtime settings based on the provided value.
+        /// Validates that any user-provided values are valid and then returns true if the updated Rest options
+        /// need to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedRestOptions">updatedRestOptions.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredRestValues(ConfigureOptions options, ref RestRuntimeOptions? updatedRestOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.Rest.Enabled
+                updatedValue = options?.RuntimeRestEnabled;
+                if (updatedValue != null)
+                {
+                    updatedRestOptions = updatedRestOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Rest.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Rest.Path
+                updatedValue = options?.RuntimeRestPath;
+                if (updatedValue != null)
+                {
+                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
+                    if (status)
+                    {
+                        updatedRestOptions = updatedRestOptions! with { Path = (string)updatedValue };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.Rest.Path as '{updatedValue}'", updatedValue);
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to update RuntimeConfig with Runtime.Rest.Path " +
+                            $"as '{updatedValue}'. Error details: {exceptionMessage}", exceptionMessage);
+                        return false;
+                    }
+                }
+
+                // Runtime.Rest.Request-Body-Strict
+                updatedValue = options?.RuntimeRestRequestBodyStrict;
+                if (updatedValue != null)
+                {
+                    updatedRestOptions = updatedRestOptions! with { RequestBodyStrict = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Rest.Request-Body-Strict as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Rest with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the GraphQL runtime settings based on the provided value.
+        /// Validates that any user-provided parameter value is valid and then returns true if the updated GraphQL options
+        /// needs to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedGraphQLOptions">updatedGraphQLOptions.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredGraphQLValues(
+            ConfigureOptions options,
+            ref GraphQLRuntimeOptions? updatedGraphQLOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.GraphQL.Enabled
+                updatedValue = options?.RuntimeGraphQLEnabled;
+                if (updatedValue != null)
+                {
+                    updatedGraphQLOptions = updatedGraphQLOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.GraphQL.Path
+                updatedValue = options?.RuntimeGraphQLPath;
+                if (updatedValue != null)
+                {
+                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
+                    if (status)
+                    {
+                        updatedGraphQLOptions = updatedGraphQLOptions! with { Path = (string)updatedValue };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Path as '{updatedValue}'", updatedValue);
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to update Runtime.GraphQL.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
+                        return false;
+                    }
+                }
+
+                // Runtime.GraphQL.Allow-Introspection
+                updatedValue = options?.RuntimeGraphQLAllowIntrospection;
+                if (updatedValue != null)
+                {
+                    updatedGraphQLOptions = updatedGraphQLOptions! with { AllowIntrospection = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.AllowIntrospection as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.GraphQL.Multiple-mutations.Create.Enabled
+                updatedValue = options?.RuntimeGraphQLMultipleMutationsCreateEnabled;
+                if (updatedValue != null)
+                {
+                    MultipleCreateOptions multipleCreateOptions = new(enabled: (bool)updatedValue);
+                    updatedGraphQLOptions = updatedGraphQLOptions! with { MultipleMutationOptions = new(multipleCreateOptions) };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Multiple-Mutations.Create.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.GraphQL with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Mcp runtime settings based on the provided value.
+        /// Validates that any user-provided values are valid and then returns true if the updated Mcp options
+        /// need to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedMcpOptions">updatedMcpOptions</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredMcpValues(
+            ConfigureOptions options,
+            ref McpRuntimeOptions updatedMcpOptions)
+        {
+            object? updatedValue;
+
+            try
+            {
+                // Runtime.Mcp.Enabled
+                updatedValue = options?.RuntimeMcpEnabled;
+                if (updatedValue != null)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Mcp.Path
+                updatedValue = options?.RuntimeMcpPath;
+                if (updatedValue != null)
+                {
+                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
+                    if (status)
+                    {
+                        updatedMcpOptions = updatedMcpOptions! with { Path = (string)updatedValue };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Path as '{updatedValue}'", updatedValue);
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to update Runtime.Mcp.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
+                        return false;
+                    }
+                }
+
+                // Runtime.Mcp.Description
+                updatedValue = options?.RuntimeMcpDescription;
+                if (updatedValue != null)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with { Description = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Description as '{updatedValue}'", updatedValue);
+                }
+
+                // Handle DML tools configuration
+                bool hasToolUpdates = false;
+                DmlToolsConfig? currentDmlTools = updatedMcpOptions?.DmlTools;
+
+                // If setting all tools at once
+                updatedValue = options?.RuntimeMcpDmlToolsEnabled;
+                if (updatedValue != null)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = DmlToolsConfig.FromBoolean((bool)updatedValue) };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools as '{updatedValue}'", updatedValue);
+                    return true; // Return early since we're setting all tools at once
+                }
+
+                // Handle individual tool updates
+                bool? describeEntities = currentDmlTools?.DescribeEntities;
+                bool? createRecord = currentDmlTools?.CreateRecord;
+                bool? readRecord = currentDmlTools?.ReadRecords;
+                bool? updateRecord = currentDmlTools?.UpdateRecord;
+                bool? deleteRecord = currentDmlTools?.DeleteRecord;
+                bool? executeEntity = currentDmlTools?.ExecuteEntity;
+                bool? aggregateRecords = currentDmlTools?.AggregateRecords;
+                int? aggregateRecordsQueryTimeout = currentDmlTools?.AggregateRecordsQueryTimeout;
+
+                updatedValue = options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
+                if (updatedValue != null)
+                {
+                    describeEntities = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.describe-entities as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsCreateRecordEnabled;
+                if (updatedValue != null)
+                {
+                    createRecord = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.create-record as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsReadRecordsEnabled;
+                if (updatedValue != null)
+                {
+                    readRecord = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.read-records as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsUpdateRecordEnabled;
+                if (updatedValue != null)
+                {
+                    updateRecord = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.update-record as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsDeleteRecordEnabled;
+                if (updatedValue != null)
+                {
+                    deleteRecord = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.delete-record as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsExecuteEntityEnabled;
+                if (updatedValue != null)
+                {
+                    executeEntity = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.execute-entity as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsAggregateRecordsEnabled;
+                if (updatedValue != null)
+                {
+                    aggregateRecords = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.aggregate-records as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsAggregateRecordsQueryTimeout;
+                if (updatedValue != null)
+                {
+                    aggregateRecordsQueryTimeout = (int)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.aggregate-records.query-timeout as '{updatedValue}'", updatedValue);
+                }
+
+                if (hasToolUpdates)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with
+                    {
+                        DmlTools = new DmlToolsConfig(
+                            describeEntities: describeEntities,
+                            createRecord: createRecord,
+                            readRecords: readRecord,
+                            updateRecord: updateRecord,
+                            deleteRecord: deleteRecord,
+                            executeEntity: executeEntity,
+                            aggregateRecords: aggregateRecords,
+                            aggregateRecordsQueryTimeout: aggregateRecordsQueryTimeout)
+                    };
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Mcp with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Cache runtime settings based on the provided value.
+        /// Validates user-provided parameters and then returns true if the updated Cache options
+        /// need to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedCacheOptions">updatedCacheOptions.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredCacheValues(
+            ConfigureOptions options,
+            ref RuntimeCacheOptions? updatedCacheOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.Cache.Enabled
+                updatedValue = options?.RuntimeCacheEnabled;
+                if (updatedValue != null)
+                {
+                    updatedCacheOptions = updatedCacheOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Cache.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Cache.ttl-seconds
+                updatedValue = options?.RuntimeCacheTTL;
+                if (updatedValue != null)
+                {
+                    bool status = RuntimeConfigValidatorUtil.IsTTLValid(ttl: (int)updatedValue);
+                    if (status)
+                    {
+                        updatedCacheOptions = updatedCacheOptions! with { TtlSeconds = (int)updatedValue, UserProvidedTtlOptions = true };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.Cache.ttl-seconds as '{updatedValue}'", updatedValue);
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to update Runtime.Cache.ttl-seconds as '{updatedValue}' value in TTL is not valid.", updatedValue);
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Compression runtime settings based on the provided value.
+        /// Validates user-provided parameters and then returns true if the updated Compression options
+        /// need to be overwritten on the existing config parameters.
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedCompressionOptions">updatedCompressionOptions.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredCompressionValues(
+            ConfigureOptions options,
+            ref CompressionOptions updatedCompressionOptions)
+        {
+            try
+            {
+                // Runtime.Compression.Level
+                CompressionLevel? updatedValue = options?.RuntimeCompressionLevel;
+                if (updatedValue != null)
+                {
+                    updatedCompressionOptions = updatedCompressionOptions with { Level = updatedValue.Value, UserProvidedLevel = true };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Compression.Level as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to configure RuntimeConfig.Compression with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Host runtime settings based on the provided value.
+        /// Validates that any user-provided parameter value is valid and then returns true if the updated Host options
+        /// needs to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedHostOptions">updatedHostOptions.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredHostValues(
+            ConfigureOptions options,
+            ref HostOptions? updatedHostOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.Host.Mode
+                updatedValue = options?.RuntimeHostMode;
+                if (updatedValue != null)
+                {
+                    updatedHostOptions = updatedHostOptions! with { Mode = (HostMode)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Mode as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Cors.Origins
+                IEnumerable<string>? updatedCorsOrigins = options?.RuntimeHostCorsOrigins;
+                if (updatedCorsOrigins != null && updatedCorsOrigins.Any())
+                {
+                    CorsOptions corsOptions;
+                    if (updatedHostOptions?.Cors == null)
+                    {
+                        corsOptions = new(Origins: updatedCorsOrigins.ToArray());
+                    }
+                    else
+                    {
+                        corsOptions = updatedHostOptions.Cors! with { Origins = updatedCorsOrigins.ToArray() };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Cors = corsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Cors.Origins as '{updatedValue}'", updatedCorsOrigins);
+                }
+
+                // Runtime.Host.Cors.Allow-Credentials
+                updatedValue = options?.RuntimeHostCorsAllowCredentials;
+                if (updatedValue != null)
+                {
+                    CorsOptions corsOptions;
+                    if (updatedHostOptions?.Cors == null)
+                    {
+                        corsOptions = new(new string[] { }, AllowCredentials: (bool)updatedValue);
+                    }
+                    else
+                    {
+                        corsOptions = updatedHostOptions.Cors! with { AllowCredentials = (bool)updatedValue };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Cors = corsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Cors.Allow-Credentials as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Provider
+                string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
+                if (updatedProviderValue != null)
+                {
+                    updatedValue = updatedProviderValue;
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Provider: (string)updatedValue);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Provider = (string)updatedValue };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Provider as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Jwt.Audience
+                updatedValue = options?.RuntimeHostAuthenticationJwtAudience;
+                if (updatedValue != null)
+                {
+                    JwtOptions jwtOptions;
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null || updatedHostOptions.Authentication?.Jwt == null)
+                    {
+                        jwtOptions = new(Audience: (string)updatedValue, null);
+                    }
+                    else
+                    {
+                        jwtOptions = updatedHostOptions.Authentication.Jwt with { Audience = (string)updatedValue };
+                    }
+
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Jwt: jwtOptions);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Jwt = jwtOptions };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.Audience as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Jwt.Issuer
+                updatedValue = options?.RuntimeHostAuthenticationJwtIssuer;
+                if (updatedValue != null)
+                {
+                    JwtOptions jwtOptions;
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null || updatedHostOptions.Authentication?.Jwt == null)
+                    {
+                        jwtOptions = new(null, Issuer: (string)updatedValue);
+                    }
+                    else
+                    {
+                        jwtOptions = updatedHostOptions.Authentication.Jwt with { Issuer = (string)updatedValue };
+                    }
+
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Jwt: jwtOptions);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Jwt = jwtOptions };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.Issuer as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Host with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Azure Log Analytics configuration options based on the provided values.
+        /// Validates that any user-provided parameter value is valid and updates the runtime configuration accordingly.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="azureLogAnalyticsOptions">The Azure Log Analytics options to be updated.</param>
+        /// <returns>True if the Azure Log Analytics options were successfully configured; otherwise, false.</returns>
+        private static bool TryUpdateConfiguredAzureLogAnalyticsOptions(
+            ConfigureOptions options,
+            ref AzureLogAnalyticsOptions azureLogAnalyticsOptions)
+        {
+            try
+            {
+                AzureLogAnalyticsAuthOptions? updatedAuthOptions = azureLogAnalyticsOptions.Auth;
+
+                // Runtime.Telemetry.AzureLogAnalytics.Enabled
+                if (options.AzureLogAnalyticsEnabled is not null)
+                {
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Enabled = options.AzureLogAnalyticsEnabled is CliBool.True, UserProvidedEnabled = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.enabled as '{options.AzureLogAnalyticsEnabled}'");
+                }
+
+                // Runtime.Telemetry.AzureLogAnalytics.DabIdentifier
+                if (options.AzureLogAnalyticsDabIdentifier is not null)
+                {
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { DabIdentifier = options.AzureLogAnalyticsDabIdentifier, UserProvidedDabIdentifier = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.dab-identifier as '{options.AzureLogAnalyticsDabIdentifier}'");
+                }
+
+                // Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds
+                if (options.AzureLogAnalyticsFlushIntervalSeconds is not null)
+                {
+                    if (options.AzureLogAnalyticsFlushIntervalSeconds <= 0)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { FlushIntervalSeconds = options.AzureLogAnalyticsFlushIntervalSeconds, UserProvidedFlushIntervalSeconds = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds as '{options.AzureLogAnalyticsFlushIntervalSeconds}'");
+                }
+
+                // Runtime.Telemetry.AzureLogAnalytics.Auth.CustomTableName
+                if (options.AzureLogAnalyticsCustomTableName is not null)
+                {
+                    updatedAuthOptions = updatedAuthOptions is not null
+                        ? updatedAuthOptions with { CustomTableName = options.AzureLogAnalyticsCustomTableName, UserProvidedCustomTableName = true }
+                        : new AzureLogAnalyticsAuthOptions { CustomTableName = options.AzureLogAnalyticsCustomTableName, UserProvidedCustomTableName = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.custom-table-name as '{options.AzureLogAnalyticsCustomTableName}'");
+                }
+
+                // Runtime.Telemetry.AzureLogAnalytics.Auth.DcrImmutableId
+                if (options.AzureLogAnalyticsDcrImmutableId is not null)
+                {
+                    updatedAuthOptions = updatedAuthOptions is not null
+                        ? updatedAuthOptions with { DcrImmutableId = options.AzureLogAnalyticsDcrImmutableId, UserProvidedDcrImmutableId = true }
+                        : new AzureLogAnalyticsAuthOptions { DcrImmutableId = options.AzureLogAnalyticsDcrImmutableId, UserProvidedDcrImmutableId = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.dcr-immutable-id as '{options.AzureLogAnalyticsDcrImmutableId}'");
+                }
+
+                // Runtime.Telemetry.AzureLogAnalytics.Auth.DceEndpoint
+                if (options.AzureLogAnalyticsDceEndpoint is not null)
+                {
+                    updatedAuthOptions = updatedAuthOptions is not null
+                        ? updatedAuthOptions with { DceEndpoint = options.AzureLogAnalyticsDceEndpoint, UserProvidedDceEndpoint = true }
+                        : new AzureLogAnalyticsAuthOptions { DceEndpoint = options.AzureLogAnalyticsDceEndpoint, UserProvidedDceEndpoint = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.dce-endpoint as '{options.AzureLogAnalyticsDceEndpoint}'");
+                }
+
+                // Update Azure Log Analytics options with Auth options if it was modified
+                if (updatedAuthOptions is not null)
+                {
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Auth = updatedAuthOptions };
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to update configuration with runtime.telemetry.azure-log-analytics. Exception message: {ex.Message}.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Updates the file sink options in the configuration.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="fileOptions">The file sink options to be updated.</param>
+        /// <returns>True if the options were successfully updated; otherwise, false.</returns>
+        private static bool TryUpdateConfiguredFileOptions(
+            ConfigureOptions options,
+            ref FileSinkOptions fileOptions)
+        {
+            try
+            {
+                // Runtime.Telemetry.File.Enabled
+                if (options.FileSinkEnabled is not null)
+                {
+                    fileOptions = fileOptions with { Enabled = options.FileSinkEnabled is CliBool.True, UserProvidedEnabled = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.enabled as '{options.FileSinkEnabled}'");
+                }
+
+                // Runtime.Telemetry.File.Path
+                if (options.FileSinkPath is not null)
+                {
+                    fileOptions = fileOptions with { Path = options.FileSinkPath, UserProvidedPath = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.path as '{options.FileSinkPath}'");
+                }
+
+                // Runtime.Telemetry.File.RollingInterval
+                if (options.FileSinkRollingInterval is not null)
+                {
+                    fileOptions = fileOptions with { RollingInterval = ((RollingInterval)options.FileSinkRollingInterval).ToString(), UserProvidedRollingInterval = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.rolling-interval as '{options.FileSinkRollingInterval}'");
+                }
+
+                // Runtime.Telemetry.File.RetainedFileCountLimit
+                if (options.FileSinkRetainedFileCountLimit is not null)
+                {
+                    if (options.FileSinkRetainedFileCountLimit <= 0)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.file.retained-file-count-limit. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    fileOptions = fileOptions with { RetainedFileCountLimit = (int)options.FileSinkRetainedFileCountLimit, UserProvidedRetainedFileCountLimit = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.retained-file-count-limit as '{options.FileSinkRetainedFileCountLimit}'");
+                }
+
+                // Runtime.Telemetry.File.FileSizeLimitBytes
+                if (options.FileSinkFileSizeLimitBytes is not null)
+                {
+                    if (options.FileSinkFileSizeLimitBytes <= 0)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.file.file-size-limit-bytes. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    fileOptions = fileOptions with { FileSizeLimitBytes = (long)options.FileSinkFileSizeLimitBytes, UserProvidedFileSizeLimitBytes = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.file-size-limit-bytes as '{options.FileSinkFileSizeLimitBytes}'");
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to update configuration with runtime.telemetry.file. Exception message: {ex.Message}.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Parse permission string to create PermissionSetting array.
+        /// </summary>
+        /// <param name="permissions">Permission input string as IEnumerable.</param>
+        /// <param name="policy">policy to add for this permission.</param>
+        /// <param name="fields">fields to include and exclude for this permission.</param>
+        /// <param name="sourceType">type of source object.</param>
+        /// <returns></returns>
+        public static EntityPermission[]? ParsePermission(
+            IEnumerable<string> permissions,
+            EntityActionPolicy? policy,
+            EntityActionFields? fields,
+            EntitySourceType? sourceType)
+        {
+            // Getting Role and Operations from permission string
+            string? role, operations;
+            if (!TryGetRoleAndOperationFromPermission(permissions, out role, out operations))
+            {
+                _logger.LogError("Failed to fetch the role and operation from the given permission string: {permissions}.", string.Join(SEPARATOR, permissions));
+                return null;
+            }
+
+            // Check if provided operations are valid
+            if (!VerifyOperations(operations!.Split(","), sourceType))
+            {
+                return null;
+            }
+
+            EntityPermission[] permissionSettings = new[]
+            {
+                CreatePermissions(role!, operations!, policy, fields)
+            };
+
+            return permissionSettings;
+        }
+
+        /// <summary>
+        /// This method will update an existing Entity with the given REST and GraphQL endpoints, source, and permissions.
+        /// It also supports updating fields that need to be included or excluded for a given role and operation.
+        /// </summary>
+        public static bool TryUpdateEntityWithOptions(UpdateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (!TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedConfig))
+            {
+                _logger.LogError("Failed to update the Entity: {entityName}.", options.Entity);
+                return false;
+            }
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, updatedConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Update an existing entity in the runtime config. This method will receive the existing runtime config
+        /// and update the entity before returning a new instance of the runtime config.
+        /// </summary>
+        /// <param name="options">UpdateOptions.</param>
+        /// <param name="initialConfig">The initial <c>RuntimeConfig</c>.</param>
+        /// <param name="updatedConfig">The updated <c>RuntimeConfig</c>.</param>
+        /// <returns>True on success. False otherwise.</returns>
+        public static bool TryUpdateExistingEntity(UpdateOptions options, RuntimeConfig initialConfig, out RuntimeConfig updatedConfig)
+        {
+            updatedConfig = initialConfig;
+            // Check if Entity is present
+            if (!initialConfig.Entities.TryGetValue(options.Entity, out Entity? entity))
+            {
+                _logger.LogError("Entity: '{entityName}' not found. Please add the entity first.", options.Entity);
+                return false;
+            }
+
+            if (!TryGetUpdatedSourceObjectWithOptions(options, entity, out EntitySource? updatedSource))
+            {
+                _logger.LogError("Failed to update the source object.");
+                return false;
+            }
+
+            bool isCurrentEntityStoredProcedure = IsStoredProcedure(entity);
+            bool doOptionsRepresentStoredProcedure = options.SourceType is not null && IsStoredProcedure(options);
+
+            // Validations to ensure that REST methods and GraphQL operations can be configured only
+            // for stored procedures
+            if (options.GraphQLOperationForStoredProcedure is not null &&
+                !(isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure))
+            {
+                _logger.LogError("--graphql.operation can be configured only for stored procedures.");
+                return false;
+            }
+
+            if ((options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
+                && !(isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure))
+            {
+                _logger.LogError("--rest.methods can be configured only for stored procedures.");
+                return false;
+            }
+
+            if (isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure)
+            {
+                if (CheckConflictingGraphQLConfigurationForStoredProcedures(options))
+                {
+                    _logger.LogError("Conflicting GraphQL configurations found.");
+                    return false;
+                }
+
+                if (CheckConflictingRestConfigurationForStoredProcedures(options))
+                {
+                    _logger.LogError("Conflicting Rest configurations found.");
+                    return false;
+                }
+            }
+
+            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+            EntityGraphQLOptions updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
+            EntityPermission[]? updatedPermissions = entity!.Permissions;
+            Dictionary<string, EntityRelationship>? updatedRelationships = entity.Relationships;
+            Dictionary<string, string>? updatedMappings = entity.Mappings;
+            EntityActionPolicy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
+            EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
+            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
+
+            // Determine if the entity is or will be a stored procedure
+            bool isStoredProcedureAfterUpdate = doOptionsRepresentStoredProcedure || (isCurrentEntityStoredProcedure && options.SourceType is null);
+
+            // Construct and validate MCP options if provided
+            EntityMcpOptions? updatedMcpOptions = null;
+            if (options.McpDmlTools is not null || options.McpCustomTool is not null)
+            {
+                updatedMcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedureAfterUpdate);
+                if (updatedMcpOptions is null)
+                {
+                    _logger.LogError("Failed to construct MCP options.");
+                    return false;
+                }
+            }
+            else
+            {
+                // Keep existing MCP options if no updates provided
+                updatedMcpOptions = entity.Mcp;
+            }
+
+            if (!updatedGraphQLDetails.Enabled)
+            {
+                _logger.LogWarning("Disabling GraphQL for this entity will restrict its usage in relationships");
+            }
+
+            EntitySourceType? updatedSourceType = updatedSource.Type;
+
+            if (options.Permissions is not null && options.Permissions.Any())
+            {
+                // Get the Updated Permission Settings
+                updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, updatedPolicy, updatedFields, updatedSourceType);
+
+                if (updatedPermissions is null)
+                {
+                    _logger.LogError("Failed to update permissions.");
+                    return false;
+                }
+            }
+            else
+            {
+
+                if (options.FieldsToInclude is not null && options.FieldsToInclude.Any()
+                    || options.FieldsToExclude is not null && options.FieldsToExclude.Any())
+                {
+                    _logger.LogInformation("--permissions is mandatory with --fields.include and --fields.exclude.");
+                    return false;
+                }
+
+                if (options.PolicyRequest is not null || options.PolicyDatabase is not null)
+                {
+                    _logger.LogInformation("--permissions is mandatory with --policy-request and --policy-database.");
+                    return false;
+                }
+
+                if (updatedSourceType is EntitySourceType.StoredProcedure &&
+                    !VerifyPermissionOperationsForStoredProcedures(entity.Permissions))
+                {
+                    return false;
+                }
+            }
+
+            if (options.Relationship is not null)
+            {
+                if (!VerifyCanUpdateRelationship(initialConfig, options.Cardinality, options.TargetEntity))
+                {
+                    return false;
+                }
+
+                if (updatedRelationships is null)
+                {
+                    updatedRelationships = new();
+                }
+
+                EntityRelationship? new_relationship = CreateNewRelationshipWithUpdateOptions(options);
+                if (new_relationship is null)
+                {
+                    return false;
+                }
+
+                updatedRelationships[options.Relationship] = new_relationship;
+            }
+
+            bool hasFields = options.FieldsNameCollection != null && options.FieldsNameCollection.Count() > 0;
+            bool hasMappings = options.Map != null && options.Map.Any();
+            bool hasKeyFields = options.SourceKeyFields != null && options.SourceKeyFields.Any();
+
+            List<FieldMetadata>? fields;
+            if (hasFields)
+            {
+                if (hasMappings && hasKeyFields)
+                {
+                    _logger.LogError("Entity cannot define 'fields', 'mappings', and 'key-fields' together. Please use only one.");
+                    return false;
+                }
+
+                if (hasMappings)
+                {
+                    _logger.LogError("Entity cannot define both 'fields' and 'mappings'. Please use only one.");
+                    return false;
+                }
+
+                if (hasKeyFields)
+                {
+                    _logger.LogError("Entity cannot define both 'fields' and 'key-fields'. Please use only one.");
+                    return false;
+                }
+
+                // Merge updated fields with existing fields
+                List<FieldMetadata> existingFields = entity.Fields?.ToList() ?? [];
+                List<FieldMetadata> updatedFieldsList = ComposeFieldsFromOptions(options);
+                Dictionary<string, FieldMetadata> updatedFieldsDict = updatedFieldsList.ToDictionary(f => f.Name, f => f);
+                List<FieldMetadata> mergedFields = [];
+                bool primaryKeyOptionProvided = options.FieldsPrimaryKeyCollection?.Any() == true;
+
+                foreach (FieldMetadata field in existingFields)
+                {
+                    if (updatedFieldsDict.TryGetValue(field.Name, out FieldMetadata? updatedField))
+                    {
+                        mergedFields.Add(new FieldMetadata
+                        {
+                            Name = updatedField.Name,
+                            Alias = updatedField.Alias ?? field.Alias,
+                            Description = updatedField.Description ?? field.Description,
+                            // If --fields.primary-key was not provided at all,
+                            // keep the existing primary-key flag. Otherwise,
+                            // use the value coming from updatedField.
+                            PrimaryKey = primaryKeyOptionProvided ? updatedField.PrimaryKey : field.PrimaryKey
+                        });
+                        updatedFieldsDict.Remove(field.Name); // Remove so only new fields remain
+                    }
+                    else
+                    {
+                        mergedFields.Add(field); // Keep existing field
+                    }
+                }
+
+                // Add any new fields that didn't exist before
+                mergedFields.AddRange(updatedFieldsDict.Values);
+
+                fields = mergedFields;
+
+                // If user didn't mark any PK in fields, carry over existing source key-fields
+                if (!fields.Any(f => f.PrimaryKey) && updatedSource.KeyFields is { Length: > 0 })
+                {
+                    foreach (string k in updatedSource.KeyFields)
+                    {
+                        FieldMetadata? f = fields.FirstOrDefault(f => string.Equals(f.Name, k, StringComparison.OrdinalIgnoreCase));
+                        if (f is not null)
+                        {
+                            f.PrimaryKey = true;
+                        }
+                        else
+                        {
+                            fields.Add(new FieldMetadata { Name = k, PrimaryKey = true });
+                        }
+                    }
+                }
+
+                // Remove legacy props if fields present
+                updatedSource = updatedSource with { KeyFields = null };
+                updatedMappings = null;
+            }
+            else if (hasMappings || hasKeyFields)
+            {
+                // If mappings or key-fields are provided, convert them to fields and remove legacy props
+                // Start with existing fields
+                List<FieldMetadata> existingFields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
+
+                // Build a dictionary for quick lookup and merging
+                Dictionary<string, FieldMetadata> fieldDict = existingFields
+                    .ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
+
+                // Parse mappings from options
+                if (hasMappings)
+                {
+                    if (options.Map is null || !TryParseMappingDictionary(options.Map, out updatedMappings))
+                    {
+                        _logger.LogError("Failed to parse mappings from --map option.");
+                        return false;
+                    }
+
+                    foreach (KeyValuePair<string, string> mapping in updatedMappings)
+                    {
+                        if (fieldDict.TryGetValue(mapping.Key, out FieldMetadata? existing) && existing != null)
+                        {
+                            // Update alias, preserve PK and description
+                            existing.Alias = mapping.Value ?? existing.Alias;
+                        }
+                        else
+                        {
+                            // New field from mapping
+                            fieldDict[mapping.Key] = new FieldMetadata
+                            {
+                                Name = mapping.Key,
+                                Alias = mapping.Value
+                            };
+                        }
+                    }
+                }
+
+                // Always carry over existing PKs on the entity/update, not only when the user re-supplies --source.key-fields.
+                string[]? existingKeys = updatedSource.KeyFields;
+                if (existingKeys is not null && existingKeys.Length > 0)
+                {
+                    foreach (string key in existingKeys)
+                    {
+                        if (fieldDict.TryGetValue(key, out FieldMetadata? pkField) && pkField != null)
+                        {
+                            pkField.PrimaryKey = true;
+                        }
+                        else
+                        {
+                            fieldDict[key] = new FieldMetadata { Name = key, PrimaryKey = true };
+                        }
+                    }
+                }
+
+                // Final merged list, no duplicates
+                fields = fieldDict.Values.ToList();
+
+                // Remove legacy props only after we have safely embedded PKs into fields.
+                updatedSource = updatedSource with { KeyFields = null };
+                updatedMappings = null;
+            }
+            else if (!hasFields && !hasMappings && !hasKeyFields && entity.Source.KeyFields?.Length > 0)
+            {
+                // If no fields, mappings, or key-fields are provided with update command, use the entity's key-fields added using add command.
+                fields = entity.Source.KeyFields.Select(k => new FieldMetadata
+                {
+                    Name = k,
+                    PrimaryKey = true
+                }).ToList();
+
+                updatedSource = updatedSource with { KeyFields = null };
+                updatedMappings = null;
+            }
+            else
+            {
+                fields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
+                if (entity.Mappings is not null || entity.Source?.KeyFields is not null)
+                {
+                    _logger.LogWarning("Using legacy 'mappings' and 'key-fields' properties. Consider using 'fields' for new entities.");
+                }
+            }
+
+            if (!ValidateFields(fields, out string errorMessage))
+            {
+                _logger.LogError(errorMessage);
+                return false;
+            }
+
+            Entity updatedEntity = new(
+                Source: updatedSource,
+                Fields: fields,
+                Rest: updatedRestDetails,
+                GraphQL: updatedGraphQLDetails,
+                Permissions: updatedPermissions,
+                Relationships: updatedRelationships,
+                Mappings: updatedMappings,
+                Cache: updatedCacheOptions,
+                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description,
+                Mcp: updatedMcpOptions
+                );
+            IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
+            {
+                [options.Entity] = updatedEntity
+            };
+            updatedConfig = initialConfig with { Entities = new(new ReadOnlyDictionary<string, Entity>(entities)) };
+            return true;
+        }
+
+        /// <summary>
+        /// Get an array of PermissionSetting by merging the existing permissions of an entity with new permissions.
+        /// If a role has existing permission and user updates permission of that role,
+        /// the old permission will be overwritten. Otherwise, a new permission of the role will be added.
+        /// </summary>
+        /// <param name="entityToUpdate">entity whose permission needs to be updated</param>
+        /// <param name="permissions">New permission to be applied.</param>
+        /// <param name="policy">policy to added for this permission</param>
+        /// <param name="fields">fields to be included and excluded from the operation permission.</param>
+        /// <param name="sourceType">Type of Source object.</param>
+        /// <returns> On failure, returns null. Else updated PermissionSettings array will be returned.</returns>
+        private static EntityPermission[]? GetUpdatedPermissionSettings(Entity entityToUpdate,
+                                                                        IEnumerable<string> permissions,
+                                                                        EntityActionPolicy? policy,
+                                                                        EntityActionFields? fields,
+                                                                        EntitySourceType? sourceType)
+        {
+
+            // Parse role and operations from the permissions string
+            //
+            if (!TryGetRoleAndOperationFromPermission(permissions, out string? newRole, out string? newOperations))
+            {
+                _logger.LogError("Failed to fetch the role and operation from the given permission string: {permissions}.", permissions);
+                return null;
+            }
+
+            List<EntityPermission> updatedPermissionsList = new();
+            string[] newOperationArray = newOperations.Split(",");
+
+            // Verifies that the list of operations declared are valid for the specified sourceType.
+            // Example: Stored-procedure can only have 1 operation.
+            if (!VerifyOperations(newOperationArray, sourceType))
+            {
+                return null;
+            }
+
+            bool role_found = false;
+            // Loop through the current permissions
+            foreach (EntityPermission permission in entityToUpdate.Permissions)
+            {
+                // Find the role that needs to be updated
+                if (permission.Role.Equals(newRole))
+                {
+                    role_found = true;
+                    if (sourceType is EntitySourceType.StoredProcedure)
+                    {
+                        // Since, Stored-Procedures can have only 1 CRUD action. So, when update is requested with new action, we simply replace it.
+                        updatedPermissionsList.Add(CreatePermissions(newRole, newOperationArray.First(), policy: null, fields: null));
+                    }
+                    else if (newOperationArray.Length is 1 && WILDCARD.Equals(newOperationArray[0]))
+                    {
+                        // If the user inputs WILDCARD as operation, we overwrite the existing operations.
+                        updatedPermissionsList.Add(CreatePermissions(newRole!, WILDCARD, policy, fields));
+                    }
+                    else
+                    {
+                        // User didn't use WILDCARD, and wants to update some of the operations.
+                        IDictionary<EntityActionOperation, EntityAction> existingOperations = ConvertOperationArrayToIEnumerable(permission.Actions, entityToUpdate.Source.Type);
+
+                        // Merge existing operations with new operations
+                        EntityAction[] updatedOperationArray = GetUpdatedOperationArray(newOperationArray, policy, fields, existingOperations);
+
+                        updatedPermissionsList.Add(new EntityPermission(newRole, updatedOperationArray));
+                    }
+                }
+                else
+                {
+                    updatedPermissionsList.Add(permission);
+                }
+            }
+
+            // If the role we are trying to update is not found, we create a new one
+            // and add it to permissionSettings list.
+            if (!role_found)
+            {
+                updatedPermissionsList.Add(CreatePermissions(newRole, newOperations, policy, fields));
+            }
+
+            return updatedPermissionsList.ToArray();
+        }
+
+        /// <summary>
+        /// Merge old and new operations into a new list. Take all new updated operations.
+        /// Only add existing operations to the merged list if there is no update.
+        /// </summary>
+        /// <param name="newOperations">operation items to update received from user.</param>
+        /// <param name="fieldsToInclude">fields that are included for the operation permission</param>
+        /// <param name="fieldsToExclude">fields that are excluded from the operation permission.</param>
+        /// <param name="existingOperations">operation items present in the config.</param>
+        /// <returns>Array of updated operation objects</returns>
+        private static EntityAction[] GetUpdatedOperationArray(string[] newOperations,
+                                                        EntityActionPolicy? newPolicy,
+                                                        EntityActionFields? newFields,
+                                                        IDictionary<EntityActionOperation, EntityAction> existingOperations)
+        {
+            Dictionary<EntityActionOperation, EntityAction> updatedOperations = new();
+
+            EntityActionPolicy? existingPolicy = null;
+            EntityActionFields? existingFields = null;
+
+            // Adding the new operations in the updatedOperationList
+            foreach (string operation in newOperations)
+            {
+                // Getting existing Policy and Fields
+                if (EnumExtensions.TryDeserialize(operation, out EntityActionOperation? op))
+                {
+                    if (existingOperations.ContainsKey((EntityActionOperation)op))
+                    {
+                        existingPolicy = existingOperations[(EntityActionOperation)op].Policy;
+                        existingFields = existingOperations[(EntityActionOperation)op].Fields;
+                    }
+
+                    // Checking if Policy and Field update is required
+                    EntityActionPolicy? updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
+                    EntityActionFields? updatedFields = newFields is null ? existingFields : newFields;
+
+                    updatedOperations.Add((EntityActionOperation)op, new EntityAction((EntityActionOperation)op, updatedFields, updatedPolicy));
+                }
+            }
+
+            // Looping through existing operations
+            foreach ((EntityActionOperation op, EntityAction act) in existingOperations)
+            {
+                // If any existing operation doesn't require update, it is added as it is.
+                if (!updatedOperations.ContainsKey(op))
+                {
+                    updatedOperations.Add(op, act);
+                }
+            }
+
+            return updatedOperations.Values.ToArray();
+        }
+
+        /// <summary>
+        /// Parses updated options and uses them to create a new sourceObject
+        /// for the given entity.
+        /// Verifies if the given combination of fields is valid for update
+        /// and then it updates it, else it fails.
+        /// </summary>
+        private static bool TryGetUpdatedSourceObjectWithOptions(
+            UpdateOptions options,
+            Entity entity,
+            [NotNullWhen(true)] out EntitySource? updatedSourceObject)
+        {
+            updatedSourceObject = null;
+            string updatedSourceName = options.Source ?? entity.Source.Object;
+            string[]? updatedKeyFields = entity.Source.KeyFields;
+            EntitySourceType? updatedSourceType = entity.Source.Type;
+
+            // Support for new parameter format
+            bool hasOldParams = options.SourceParameters is not null && options.SourceParameters.Any();
+            bool hasNewParams = options.ParametersNameCollection is not null && options.ParametersNameCollection.Any();
+
+            // If SourceType provided by user is not null, update type
+            if (options.SourceType is not null)
+            {
+                if (!EnumExtensions.TryDeserialize(options.SourceType, out EntitySourceType? deserializedEntityType))
+                {
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<EntitySourceType>(options.SourceType));
+                    return false;
+                }
+
+                updatedSourceType = (EntitySourceType)deserializedEntityType;
+                if (IsStoredProcedureConvertedToOtherTypes(entity, options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
+                {
+                    _logger.LogWarning(
+                        "Stored procedures can be configured only with '{storedProcedureAction}' action whereas tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.",
+                        EntityActionOperation.Execute);
+                }
+            }
+
+            // Validate correct pairing of parameters and key fields
+            if ((options.SourceType is not null
+                || hasOldParams
+                || (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
+                || hasNewParams)
+                && !VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+                    updatedSourceType,
+                    options.SourceParameters,
+                    options.ParametersNameCollection,
+                    options.SourceKeyFields))
+            {
+                return false;
+            }
+
+            // Changing source object from stored-procedure to table/view
+            // should automatically update the parameters to be null.
+            // Similarly from table/view to stored-procedure, key-fields should be marked null.
+            if (EntitySourceType.StoredProcedure.Equals(updatedSourceType))
+            {
+                updatedKeyFields = null;
+            }
+            else
+            {
+                hasOldParams = false;
+                hasNewParams = false;
+            }
+
+            // Warn and error if both formats are provided
+            if (hasOldParams && hasNewParams)
+            {
+                _logger.LogError("Cannot use both --source.params and --parameters.name/description/required/default together. Please use only one format.");
+                return false;
+            }
+
+            List<ParameterMetadata>? parameters = null;
+
+            if (hasNewParams)
+            {
+                // Parse new format
+                List<string> names = options.ParametersNameCollection != null ? options.ParametersNameCollection.ToList() : new List<string>();
+                List<string> descriptions = options.ParametersDescriptionCollection?.ToList() ?? new List<string>();
+                List<string> requiredFlags = options.ParametersRequiredCollection?.ToList() ?? new List<string>();
+                List<string> defaults = options.ParametersDefaultCollection?.ToList() ?? new List<string>();
+
+                parameters = [];
+                for (int i = 0; i < names.Count; i++)
+                {
+                    parameters.Add(new ParameterMetadata
+                    {
+                        Name = names[i],
+                        Description = descriptions.ElementAtOrDefault(i),
+                        Required = requiredFlags.ElementAtOrDefault(i)?.ToLower() == "true",
+                        Default = defaults.ElementAtOrDefault(i)
+                    });
+                }
+            }
+            else if (hasOldParams)
+            {
+                // Parse old format and convert to new type
+                if (!TryParseSourceParameterDictionary(options.SourceParameters, out parameters))
+                {
+                    return false;
+                }
+
+                _logger.LogWarning("The --source.params format is deprecated. Please use --parameters.name/description/required/default instead.");
+            }
+
+            // In TryGetUpdatedSourceObjectWithOptions, before TryCreateSourceObject:
+            if (parameters == null && EntitySourceType.StoredProcedure.Equals(updatedSourceType))
+            {
+                parameters = entity.Source.Parameters?.ToList();
+            }
+
+            if (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
+            {
+                updatedKeyFields = options.SourceKeyFields.ToArray();
+            }
+
+            if (hasNewParams && EntitySourceType.StoredProcedure.Equals(updatedSourceType))
+            {
+                List<ParameterMetadata> existingParams;
+                if (entity.Source.Parameters != null)
+                {
+                    existingParams = entity.Source.Parameters.ToList();
+                }
+                else
+                {
+                    existingParams = new List<ParameterMetadata>();
+                }
+
+                List<ParameterMetadata> mergedParams = new();
+
+                if (parameters != null)
+                {
+                    foreach (ParameterMetadata newParam in parameters)
+                    {
+                        ParameterMetadata? match = null;
+                        foreach (ParameterMetadata p in existingParams)
+                        {
+                            if (p.Name == newParam.Name)
+                            {
+                                match = p;
+                                break;
+                            }
+                        }
+
+                        if (match != null)
+                        {
+                            mergedParams.Add(new ParameterMetadata
+                            {
+                                Name = newParam.Name,
+                                Description = newParam.Description != null ? newParam.Description : match.Description,
+                                Required = newParam.Required,
+                                Default = newParam.Default != null ? newParam.Default : match.Default
+                            });
+                        }
+                        else
+                        {
+                            mergedParams.Add(newParam);
+                        }
+                    }
+                }
+
+                foreach (ParameterMetadata param in existingParams)
+                {
+                    bool found = false;
+                    foreach (ParameterMetadata p in mergedParams)
+                    {
+                        if (p.Name == param.Name)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        mergedParams.Add(param);
+                    }
+                }
+
+                parameters = mergedParams;
+            }
+
+            // Try Creating Source Object with the updated values.
+            if (!TryCreateSourceObject(
+                    updatedSourceName,
+                    updatedSourceType,
+                    parameters,
+                    updatedKeyFields,
+                    out updatedSourceObject))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// This Method will verify the params required to update relationship info of an entity.
+        /// </summary>
+        /// <param name="runtimeConfig">runtime config object</param>
+        /// <param name="cardinality">cardinality provided by user for update</param>
+        /// <param name="targetEntity">name of the target entity for relationship</param>
+        /// <returns>Boolean value specifying if given params for update is possible</returns>
+        public static bool VerifyCanUpdateRelationship(RuntimeConfig runtimeConfig, string? cardinality, string? targetEntity)
+        {
+            // CosmosDB doesn't support Relationship
+            if (runtimeConfig.DataSource.DatabaseType.Equals(DatabaseType.CosmosDB_NoSQL))
+            {
+                _logger.LogError("Adding/updating Relationships is currently not supported in CosmosDB.");
+                return false;
+            }
+
+            // Checking if both cardinality and targetEntity is provided.
+            if (cardinality is null || targetEntity is null)
+            {
+                _logger.LogError("Missing mandatory fields (cardinality and targetEntity) required to configure a relationship.");
+                return false;
+            }
+
+            // Add/Update of relationship is not allowed when GraphQL is disabled in Global Runtime Settings
+            if (!runtimeConfig.IsGraphQLEnabled)
+            {
+                _logger.LogError("Cannot add/update relationship as GraphQL is disabled in the global runtime settings of the config.");
+                return false;
+            }
+
+            // Both the source entity and target entity needs to present in config to establish relationship.
+            if (!runtimeConfig.Entities.ContainsKey(targetEntity))
+            {
+                _logger.LogError("Entity: '{targetEntity}' is not present. Relationship cannot be added.", targetEntity);
+                return false;
+            }
+
+            // Check if provided value of cardinality is present in the enum.
+            if (!string.Equals(cardinality, Cardinality.One.ToString(), StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(cardinality, Cardinality.Many.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogError("Failed to parse the given cardinality :'{cardinality}'. Supported values are 'one' or 'many'.", cardinality);
+                return false;
+            }
+
+            // If GraphQL is disabled, entity cannot be used in relationship
+            if (!runtimeConfig.Entities[targetEntity].GraphQL.Enabled)
+            {
+                _logger.LogError("Entity: '{targetEntity}' cannot be used in relationship as it is disabled for GraphQL.", targetEntity);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// This Method will create a new Relationship Object based on the given UpdateOptions.
+        /// </summary>
+        /// <param name="options">update options </param>
+        /// <returns>Returns a Relationship Object</returns>
+        public static EntityRelationship? CreateNewRelationshipWithUpdateOptions(UpdateOptions options)
+        {
+            string[]? updatedSourceFields = null;
+            string[]? updatedTargetFields = null;
+            string[]? updatedLinkingSourceFields = options.LinkingSourceFields is null || !options.LinkingSourceFields.Any() ? null : options.LinkingSourceFields.ToArray();
+            string[]? updatedLinkingTargetFields = options.LinkingTargetFields is null || !options.LinkingTargetFields.Any() ? null : options.LinkingTargetFields.ToArray();
+
+            Cardinality updatedCardinality = EnumExtensions.Deserialize<Cardinality>(options.Cardinality!);
+
+            if (options.RelationshipFields is not null && options.RelationshipFields.Any())
+            {
+                // Getting source and target fields from mapping fields
+                //
+                if (options.RelationshipFields.Count() != 2)
+                {
+                    _logger.LogError("Please provide the --relationship.fields in the correct format using ':' between source and target fields.");
+                    return null;
+                }
+
+                updatedSourceFields = options.RelationshipFields.ElementAt(0).Split(",");
+                updatedTargetFields = options.RelationshipFields.ElementAt(1).Split(",");
+            }
+
+            return new EntityRelationship(
+                Cardinality: updatedCardinality,
+                TargetEntity: options.TargetEntity!,
+                SourceFields: updatedSourceFields ?? Array.Empty<string>(),
+                TargetFields: updatedTargetFields ?? Array.Empty<string>(),
+                LinkingObject: options.LinkingObject,
+                LinkingSourceFields: updatedLinkingSourceFields ?? Array.Empty<string>(),
+                LinkingTargetFields: updatedLinkingTargetFields ?? Array.Empty<string>());
+        }
+
+        /// <summary>
+        /// This method will try starting the engine.
+        /// It will use the config provided by the user, else based on the environment value
+        /// it will either merge the config if base config and environmentConfig is present
+        /// else it will choose a single config based on precedence (left to right) of
+        /// overrides > environmentConfig > defaultConfig
+        /// Also preforms validation to check connection string is not null or empty.
+        /// </summary>
+        public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            // Validates that config file has data and follows the correct json schema
+            // Replaces all the environment variables while deserializing when starting DAB.
+            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
+            {
+                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+            else
+            {
+                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
+            }
+
+            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
+            {
+                _logger.LogError("Invalid connection-string provided in the config.");
+                return false;
+            }
+
+            /// This will add arguments to start the runtime engine with the config file.
+            List<string> args = new()
+            { "--ConfigFileName", runtimeConfigFile };
+
+            /// Add arguments for LogLevel. Checks if LogLevel is overridden with option `--LogLevel`.
+            /// If not provided, Default minimum LogLevel is Debug for Development mode and Error for Production mode.
+            LogLevel minimumLogLevel;
+            if (options.LogLevel is not null)
+            {
+                if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
+                {
+                    _logger.LogError(
+                        "LogLevel's valid range is 0 to 6, your value: {logLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel",
+                        options.LogLevel);
+                    return false;
+                }
+
+                minimumLogLevel = (LogLevel)options.LogLevel;
+                _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
+            }
+            else
+            {
+                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
+                HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
+
+                _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.", minimumLogLevel, hostModeType);
+            }
+
+            args.Add("--LogLevel");
+            args.Add(minimumLogLevel.ToString());
+
+            // This will add args to disable automatic redirects to https if specified by user
+            if (options.IsHttpsRedirectionDisabled)
+            {
+                args.Add(Startup.NO_HTTPS_REDIRECT_FLAG);
+            }
+
+            // If MCP stdio was requested, append the stdio-specific switches.
+            if (options.McpStdio)
+            {
+                string effectiveRole = string.IsNullOrWhiteSpace(options.McpRole)
+                    ? "anonymous"
+                    : options.McpRole;
+
+                args.Add("--mcp-stdio");
+                args.Add(effectiveRole);
+            }
+
+            return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
+        }
+
+        /// <summary>
+        /// Runs all the validations on the config file and returns true if the config is valid.
+        /// </summary>
+        public static bool IsConfigValid(ValidateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
+
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
+            RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
+
+            bool isValid = runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
+
+            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
+            {
+                // Run config-structure warnings regardless of validation outcome.
+                WarnIfNoEntitiesDefined(config);
+
+                // Additional validation: warn if fields are missing and MCP is enabled
+                if (isValid)
+                {
+                    bool mcpEnabled = config.Runtime?.Mcp?.Enabled == true;
+                    if (mcpEnabled)
+                    {
+                        foreach (KeyValuePair<string, Entity> entity in config.Entities)
+                        {
+                            if (entity.Value.Fields == null || !entity.Value.Fields.Any())
+                            {
+                                _logger.LogWarning($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled. " +
+                                    "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
+                            }
+                        }
+                    }
+
+                    // Warn if Unauthenticated provider is used with authenticated or custom roles
+                    if (config.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
+                    {
+                        bool hasNonAnonymousRoles = config.Entities
+                            .Where(e => e.Value.Permissions is not null)
+                            .SelectMany(e => e.Value.Permissions!)
+                            .Any(p => !p.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase));
+
+                        if (hasNonAnonymousRoles)
+                        {
+                            _logger.LogWarning(
+                                "Authentication provider is 'Unauthenticated' but some entities have permissions configured for non-anonymous roles. " +
+                                "All requests will be treated as anonymous.");
+                        }
+                    }
+                }
+            }
+
+            return isValid;
+        }
+
+        /// <summary>
+        /// Tries to fetch the config file based on the precedence.
+        /// If config provided by the user, it will be the final config used, else will check based on the environment variable.
+        /// Returns true if the config file is found, else false.
+        /// </summary>
+        public static bool TryGetConfigForRuntimeEngine(
+            string? configToBeUsed,
+            FileSystemRuntimeConfigLoader loader,
+            IFileSystem fileSystem,
+            out string runtimeConfigFile)
+        {
+            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
+            {
+                _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
+            }
+
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile))
+            {
+                _logger.LogError("Config not provided and default config file doesn't exist.");
+                return false;
+            }
+
+            loader.UpdateConfigFilePath(runtimeConfigFile);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Returns an array of SupportedRestMethods resolved from command line input (EntityOptions).
+        /// When no methods are specified, the default "POST" is returned.
+        /// </summary>
+        /// <param name="options">Entity configuration options received from command line input.</param>
+        /// <param name="SupportedRestMethods">Rest methods to enable for stored procedure.</param>
+        /// <returns>True when the default (POST) or user provided stored procedure REST methods are supplied.
+        /// Returns false and an empty array when an invalid REST method is provided.</returns>
+        private static bool TryAddSupportedRestMethodsForStoredProcedure(EntityOptions options, [NotNullWhen(true)] out SupportedHttpVerb[] SupportedRestMethods)
+        {
+            if (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())
+            {
+                SupportedRestMethods = new[] { SupportedHttpVerb.Post };
+            }
+            else
+            {
+                SupportedRestMethods = CreateRestMethods(options.RestMethodsForStoredProcedure);
+            }
+
+            return SupportedRestMethods.Length > 0;
+        }
+
+        /// <summary>
+        /// Identifies the graphQL operations configured for the stored procedure from add command.
+        /// When no value is specified, the stored procedure is configured with a mutation operation.
+        /// Returns true/false corresponding to a successful/unsuccessful conversion of the operations.
+        /// </summary>
+        /// <param name="options">GraphQL operations configured for the Stored Procedure using add command</param>
+        /// <param name="graphQLOperationForStoredProcedure">GraphQL Operations as Enum type</param>
+        /// <returns>True when a user declared GraphQL operation on a stored procedure backed entity is supported. False, otherwise.</returns>
+        private static bool TryAddGraphQLOperationForStoredProcedure(EntityOptions options, [NotNullWhen(true)] out GraphQLOperation? graphQLOperationForStoredProcedure)
+        {
+            if (options.GraphQLOperationForStoredProcedure is null)
+            {
+                graphQLOperationForStoredProcedure = GraphQLOperation.Mutation;
+            }
+            else
+            {
+                if (!TryConvertGraphQLOperationNameToGraphQLOperation(options.GraphQLOperationForStoredProcedure, out GraphQLOperation operation))
+                {
+                    graphQLOperationForStoredProcedure = null;
+                    return false;
+                }
+
+                graphQLOperationForStoredProcedure = operation;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Constructs the updated REST settings based on the input from update command and
+        /// existing REST configuration for an entity
+        /// </summary>
+        /// <param name="entity">Entity for which the REST settings are updated</param>
+        /// <param name="options">Input from update command</param>
+        /// <returns>Boolean -> when the entity's REST configuration is true/false.
+        /// RestEntitySettings -> when a non stored procedure entity is configured with granular REST settings (Path).
+        /// RestStoredProcedureEntitySettings -> when a stored procedure entity is configured with explicit SupportedRestMethods.
+        /// RestStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit SupportedRestMethods and Path settings.</returns>
+        private static EntityRestOptions ConstructUpdatedRestDetails(Entity entity, EntityOptions options, bool isCosmosDbNoSql)
+        {
+            // Updated REST Route details
+            EntityRestOptions restPath = (options.RestRoute is not null) ? ConstructRestOptions(restRoute: options.RestRoute, supportedHttpVerbs: null, isCosmosDbNoSql: isCosmosDbNoSql) : entity.Rest;
+
+            // Updated REST Methods info for stored procedures
+            SupportedHttpVerb[]? SupportedRestMethods;
+            if (!IsStoredProcedureConvertedToOtherTypes(entity, options)
+                && (IsStoredProcedure(entity) || IsStoredProcedure(options)))
+            {
+                if (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())
+                {
+                    SupportedRestMethods = entity.Rest.Methods;
+                }
+                else
+                {
+                    SupportedRestMethods = CreateRestMethods(options.RestMethodsForStoredProcedure);
+                }
+            }
+            else
+            {
+                SupportedRestMethods = null;
+            }
+
+            if (!restPath.Enabled)
+            {
+                // Non-stored procedure scenario when the REST endpoint is disabled for the entity.
+                if (options.RestRoute is not null)
+                {
+                    SupportedRestMethods = null;
+                }
+                else
+                {
+                    if (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
+                    {
+                        restPath = restPath with { Enabled = false };
+                    }
+                }
+            }
+
+            if (IsEntityBeingConvertedToStoredProcedure(entity, options)
+               && (SupportedRestMethods is null || SupportedRestMethods.Length == 0))
+            {
+                SupportedRestMethods = new SupportedHttpVerb[] { SupportedHttpVerb.Post };
+            }
+
+            return restPath with { Methods = SupportedRestMethods };
+        }
+
+        /// <summary>
+        /// Constructs the updated GraphQL settings based on the input from update command and
+        /// existing graphQL configuration for an entity
+        /// </summary>
+        /// <param name="entity">Entity for which GraphQL settings are updated</param>
+        /// <param name="options">Input from update command</param>
+        /// <returns>Boolean -> when the entity's GraphQL configuration is true/false.
+        /// GraphQLEntitySettings -> when a non stored procedure entity is configured with granular GraphQL settings (Type/Singular/Plural).
+        /// GraphQLStoredProcedureEntitySettings -> when a stored procedure entity is configured with an explicit operation.
+        /// GraphQLStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit operation and type settings.</returns>
+        private static EntityGraphQLOptions ConstructUpdatedGraphQLDetails(Entity entity, EntityOptions options)
+        {
+            //Updated GraphQL Type
+            EntityGraphQLOptions graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType, null) : entity.GraphQL;
+            GraphQLOperation? graphQLOperation;
+
+            if (!IsStoredProcedureConvertedToOtherTypes(entity, options)
+                && (IsStoredProcedure(entity) || IsStoredProcedure(options)))
+            {
+                if (options.GraphQLOperationForStoredProcedure is not null)
+                {
+                    GraphQLOperation operation;
+                    if (TryConvertGraphQLOperationNameToGraphQLOperation(options.GraphQLOperationForStoredProcedure, out operation))
+                    {
+                        graphQLOperation = operation;
+                    }
+                    else
+                    {
+                        graphQLOperation = null;
+                    }
+                }
+                else
+                {
+                    // When the GraphQL operation for a SP entity has not been specified in the update command,
+                    // assign the existing GraphQL operation.
+                    graphQLOperation = entity.GraphQL.Operation;
+                }
+            }
+            else
+            {
+                graphQLOperation = null;
+            }
+
+            if (!graphQLType.Enabled)
+            {
+                if (options.GraphQLType is not null)
+                {
+                    graphQLOperation = null;
+                }
+                else
+                {
+                    if (options.GraphQLOperationForStoredProcedure is null)
+                    {
+                        graphQLOperation = null;
+                    }
+                    else
+                    {
+                        graphQLType = graphQLType with { Enabled = false };
+                    }
+                }
+            }
+
+            if (IsEntityBeingConvertedToStoredProcedure(entity, options) && graphQLOperation is null)
+            {
+                graphQLOperation = GraphQLOperation.Mutation;
+            }
+
+            return graphQLType with { Operation = graphQLOperation };
+        }
+
+        /// <summary>
+        /// This method will add the telemetry options to the config file. If the config file already has telemetry options,
+        /// it will overwrite the existing options.
+        /// Data API builder consumes the config file with provided telemetry options to send telemetry to Application Insights.
+        /// </summary>
+        public static bool TryAddTelemetry(AddTelemetryOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (runtimeConfig.Runtime is null)
+            {
+                _logger.LogError("Invalid or missing 'runtime' section in config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (options.AppInsightsEnabled is CliBool.True && string.IsNullOrWhiteSpace(options.AppInsightsConnString))
+            {
+                _logger.LogError("Invalid Application Insights connection string provided.");
+                return false;
+            }
+
+            if (options.OpenTelemetryEnabled is CliBool.True && string.IsNullOrWhiteSpace(options.OpenTelemetryEndpoint))
+            {
+                _logger.LogError("Invalid OTEL endpoint provided.");
+                return false;
+            }
+
+            ApplicationInsightsOptions applicationInsightsOptions = new(
+                Enabled: options.AppInsightsEnabled is CliBool.True ? true : false,
+                ConnectionString: options.AppInsightsConnString
+            );
+
+            OpenTelemetryOptions openTelemetryOptions = new(
+                Enabled: options.OpenTelemetryEnabled is CliBool.True ? true : false,
+                Endpoint: options.OpenTelemetryEndpoint,
+                Headers: options.OpenTelemetryHeaders,
+                ExporterProtocol: options.OpenTelemetryExportProtocol,
+                ServiceName: options.OpenTelemetryServiceName
+            );
+
+            runtimeConfig = runtimeConfig with
+            {
+                Runtime = runtimeConfig.Runtime with
+                {
+                    Telemetry = runtimeConfig.Runtime.Telemetry is null
+                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions, OpenTelemetry: openTelemetryOptions)
+                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions, OpenTelemetry = openTelemetryOptions }
+                }
+            };
+            runtimeConfig = runtimeConfig with
+            {
+                Runtime = runtimeConfig.Runtime with
+                {
+                    Telemetry = runtimeConfig.Runtime.Telemetry is null
+                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions)
+                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions }
+                }
+            };
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Configures an autoentities definition in the runtime config.
+        /// This method updates or creates an autoentities definition with the specified patterns, template, and permissions.
+        /// </summary>
+        /// <param name="options">The autoentities configuration options provided by the user.</param>
+        /// <param name="loader">The config loader to read the existing config.</param>
+        /// <param name="fileSystem">The filesystem used for reading and writing the config file.</param>
+        /// <returns>True if the autoentities definition was successfully configured; otherwise, false.</returns>
+        public static bool TryConfigureAutoentities(AutoConfigOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            // Get existing autoentities or create new collection
+            Dictionary<string, Autoentity> autoEntitiesDictionary = runtimeConfig.Autoentities?.Autoentities != null
+                ? new Dictionary<string, Autoentity>(runtimeConfig.Autoentities.Autoentities)
+                : new Dictionary<string, Autoentity>();
+
+            // Get existing autoentity definition or create a new one
+            Autoentity? existingAutoentity = null;
+            if (autoEntitiesDictionary.TryGetValue(options.DefinitionName, out Autoentity? value))
+            {
+                existingAutoentity = value;
+            }
+
+            // Build patterns
+            AutoentityPatterns patterns = BuildAutoentityPatterns(options, existingAutoentity);
+
+            // Build template
+            AutoentityTemplate? template = BuildAutoentityTemplate(options, existingAutoentity);
+            if (template is null)
+            {
+                return false;
+            }
+
+            // Build permissions
+            EntityPermission[]? permissions = BuildAutoentityPermissions(options, existingAutoentity);
+
+            // Check if permissions parsing failed (non-empty input but failed to parse)
+            if (permissions is null && options.Permissions is not null && options.Permissions.Count() > 0)
+            {
+                _logger.LogError("Failed to parse permissions.");
+                return false;
+            }
+
+            // Create updated autoentity
+            Autoentity updatedAutoentity = new(
+                Patterns: patterns,
+                Template: template,
+                Permissions: permissions ?? existingAutoentity?.Permissions
+            );
+
+            // Update the dictionary
+            autoEntitiesDictionary[options.DefinitionName] = updatedAutoentity;
+
+            // Update runtime config
+            runtimeConfig = runtimeConfig with
+            {
+                Autoentities = new RuntimeAutoentities(autoEntitiesDictionary)
+            };
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Builds the AutoentityPatterns object from the provided options and existing autoentity.
+        /// </summary>
+        private static AutoentityPatterns BuildAutoentityPatterns(AutoConfigOptions options, Autoentity? existingAutoentity)
+        {
+            string[]? include = null;
+            string[]? exclude = null;
+            string? name = null;
+            bool userProvidedInclude = false;
+            bool userProvidedExclude = false;
+            bool userProvidedName = false;
+
+            // Start with existing values
+            if (existingAutoentity is not null)
+            {
+                include = existingAutoentity.Patterns.Include;
+                exclude = existingAutoentity.Patterns.Exclude;
+                name = existingAutoentity.Patterns.Name;
+                userProvidedInclude = existingAutoentity.Patterns.UserProvidedIncludeOptions;
+                userProvidedExclude = existingAutoentity.Patterns.UserProvidedExcludeOptions;
+                userProvidedName = existingAutoentity.Patterns.UserProvidedNameOptions;
+            }
+
+            // Override with new values if provided
+            if (options.PatternsInclude is not null && options.PatternsInclude.Any())
+            {
+                include = options.PatternsInclude.ToArray();
+                userProvidedInclude = true;
+                _logger.LogInformation("Updated patterns.include for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            if (options.PatternsExclude is not null && options.PatternsExclude.Any())
+            {
+                exclude = options.PatternsExclude.ToArray();
+                userProvidedExclude = true;
+                _logger.LogInformation("Updated patterns.exclude for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.PatternsName))
+            {
+                name = options.PatternsName;
+                userProvidedName = true;
+                _logger.LogInformation("Updated patterns.name for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            return new AutoentityPatterns(Include: include, Exclude: exclude, Name: name)
+            {
+                UserProvidedIncludeOptions = userProvidedInclude,
+                UserProvidedExcludeOptions = userProvidedExclude,
+                UserProvidedNameOptions = userProvidedName
+            };
+        }
+
+        /// <summary>
+        /// Builds the AutoentityTemplate object from the provided options and existing autoentity.
+        /// Returns null if validation fails.
+        /// </summary>
+        private static AutoentityTemplate? BuildAutoentityTemplate(AutoConfigOptions options, Autoentity? existingAutoentity)
+        {
+            // Start with existing values or defaults
+            EntityMcpOptions? mcp = existingAutoentity?.Template.Mcp;
+            EntityRestOptions rest = existingAutoentity?.Template.Rest ?? new EntityRestOptions();
+            EntityGraphQLOptions graphQL = existingAutoentity?.Template.GraphQL ?? new EntityGraphQLOptions(string.Empty, string.Empty);
+            EntityHealthCheckConfig health = existingAutoentity?.Template.Health ?? new EntityHealthCheckConfig();
+            EntityCacheOptions cache = existingAutoentity?.Template.Cache ?? new EntityCacheOptions();
+
+            bool userProvidedMcp = existingAutoentity?.Template.UserProvidedMcpOptions ?? false;
+            bool userProvidedRest = existingAutoentity?.Template.UserProvidedRestOptions ?? false;
+            bool userProvidedGraphQL = existingAutoentity?.Template.UserProvidedGraphQLOptions ?? false;
+            bool userProvidedHealth = existingAutoentity?.Template.UserProvidedHealthOptions ?? false;
+            bool userProvidedCache = existingAutoentity?.Template.UserProvidedCacheOptions ?? false;
+
+            // Update MCP options
+            if (!string.IsNullOrWhiteSpace(options.TemplateMcpDmlTool))
+            {
+                if (!bool.TryParse(options.TemplateMcpDmlTool, out bool mcpDmlToolValue))
+                {
+                    _logger.LogError("Invalid value for template.mcp.dml-tool: {value}. Valid values are: true, false", options.TemplateMcpDmlTool);
+                    return null;
+                }
+
+                // TODO: Task #2949. Once autoentities is able to support stored procedures, we will need to change this in order to allow the CLI to edit the custom tool section.
+                bool? customToolEnabled = mcp?.UserProvidedCustomToolEnabled == true ? mcp.CustomToolEnabled : null;
+                bool? dmlToolValue = mcpDmlToolValue;
+                mcp = new EntityMcpOptions(customToolEnabled: customToolEnabled, dmlToolsEnabled: dmlToolValue);
+                userProvidedMcp = true;
+                _logger.LogInformation("Updated template.mcp.dml-tool for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            // Update REST options
+            if (options.TemplateRestEnabled is not null)
+            {
+                rest = rest with { Enabled = options.TemplateRestEnabled.Value };
+                userProvidedRest = true;
+                _logger.LogInformation("Updated template.rest.enabled for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            // Update GraphQL options
+            if (options.TemplateGraphqlEnabled is not null)
+            {
+                graphQL = graphQL with { Enabled = options.TemplateGraphqlEnabled.Value };
+                userProvidedGraphQL = true;
+                _logger.LogInformation("Updated template.graphql.enabled for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            // Update Health options
+            if (options.TemplateHealthEnabled is not null)
+            {
+                health = new EntityHealthCheckConfig(
+                    enabled: options.TemplateHealthEnabled.Value,
+                    first: health.UserProvidedFirst ? health.First : null,
+                    thresholdMs: health.UserProvidedThresholdMs ? health.ThresholdMs : null
+                );
+                userProvidedHealth = true;
+                _logger.LogInformation("Updated template.health.enabled for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            // Update Cache options
+            bool cacheUpdated = false;
+            bool? cacheEnabled = cache.Enabled;
+            int? cacheTtl = cache.UserProvidedTtlOptions ? cache.TtlSeconds : null;
+            EntityCacheLevel? cacheLevel = cache.UserProvidedLevelOptions ? cache.Level : null;
+
+            if (options.TemplateCacheEnabled is not null)
+            {
+                cacheEnabled = options.TemplateCacheEnabled.Value;
+                cacheUpdated = true;
+                _logger.LogInformation("Updated template.cache.enabled for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            if (options.TemplateCacheTtlSeconds is not null)
+            {
+                cacheTtl = options.TemplateCacheTtlSeconds.Value;
+                bool status = RuntimeConfigValidatorUtil.IsTTLValid(ttl: (int)cacheTtl);
+                cacheUpdated = true;
+                if (status)
+                {
+                    _logger.LogInformation("Updated template.cache.ttl-seconds for definition '{DefinitionName}'", options.DefinitionName);
+                }
+                else
+                {
+                    _logger.LogError("Failed to update Runtime.Cache.ttl-seconds as '{updatedValue}' value in TTL is not valid.", cacheTtl);
+                    return null;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.TemplateCacheLevel))
+            {
+                if (!Enum.TryParse<EntityCacheLevel>(options.TemplateCacheLevel, ignoreCase: true, out EntityCacheLevel cacheLevelValue))
+                {
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<EntityCacheLevel>(options.TemplateCacheLevel));
+                    return null;
+                }
+
+                cacheLevel = cacheLevelValue;
+                cacheUpdated = true;
+                _logger.LogInformation("Updated template.cache.level for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            if (cacheUpdated)
+            {
+                cache = new EntityCacheOptions(Enabled: cacheEnabled, TtlSeconds: cacheTtl, Level: cacheLevel);
+                userProvidedCache = true;
+            }
+
+            return new AutoentityTemplate(
+                Rest: rest,
+                GraphQL: graphQL,
+                Mcp: mcp,
+                Health: health,
+                Cache: cache
+            )
+            {
+                UserProvidedMcpOptions = userProvidedMcp,
+                UserProvidedRestOptions = userProvidedRest,
+                UserProvidedGraphQLOptions = userProvidedGraphQL,
+                UserProvidedHealthOptions = userProvidedHealth,
+                UserProvidedCacheOptions = userProvidedCache
+            };
+        }
+
+        /// <summary>
+        /// Builds the permissions array from the provided options and existing autoentity.
+        /// </summary>
+        private static EntityPermission[]? BuildAutoentityPermissions(AutoConfigOptions options, Autoentity? existingAutoentity)
+        {
+            if (options.Permissions is null || !options.Permissions.Any())
+            {
+                return existingAutoentity?.Permissions;
+            }
+
+            // Parse the permissions
+            EntityPermission[]? parsedPermissions = ParsePermission(options.Permissions, null, null, null);
+            if (parsedPermissions is not null)
+            {
+                _logger.LogInformation("Updated permissions for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            return parsedPermissions;
+        }
+
+        // Column names returned by the autoentities SQL query.
+        private const string AUTOENTITIES_COLUMN_ENTITY_NAME = "entity_name";
+        private const string AUTOENTITIES_COLUMN_OBJECT = "object";
+        private const string AUTOENTITIES_COLUMN_SCHEMA = "schema";
+
+        /// <summary>
+        /// Simulates the autoentities generation by querying the database and displaying
+        /// which entities would be created for each autoentities filter definition.
+        /// When an output file path is provided, results are written as CSV; otherwise they are printed to the console.
+        /// </summary>
+        /// <param name="options">The simulate options provided by the user.</param>
+        /// <param name="loader">The config loader to read the existing config.</param>
+        /// <param name="fileSystem">The filesystem used for reading the config file and writing output.</param>
+        /// <returns>True if the simulation completed successfully; otherwise, false.</returns>
+        public static bool TrySimulateAutoentities(AutoConfigSimulateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            // Load config with env var replacement so the connection string is fully resolved.
+            DeserializationVariableReplacementSettings replacementSettings = new(doReplaceEnvVar: true);
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (runtimeConfig.DataSource.DatabaseType != DatabaseType.MSSQL)
+            {
+                _logger.LogError("Autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
+                return false;
+            }
+
+            if (runtimeConfig.Autoentities?.Autoentities is null || runtimeConfig.Autoentities.Autoentities.Count == 0)
+            {
+                _logger.LogError("No autoentities definitions found in the config file.");
+                return false;
+            }
+
+            string connectionString = runtimeConfig.DataSource.ConnectionString;
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                _logger.LogError("Connection string is missing or empty in config file.");
+                return false;
+            }
+
+            MsSqlQueryBuilder queryBuilder = new();
+            string query = queryBuilder.BuildGetAutoentitiesQuery();
+
+            Dictionary<string, List<(string EntityName, string SchemaName, string ObjectName)>> results = new();
+
+            try
+            {
+                using SqlConnection connection = new(connectionString);
+                connection.Open();
+
+                foreach ((string filterName, Autoentity autoentity) in runtimeConfig.Autoentities.Autoentities)
+                {
+                    string include = string.Join(",", autoentity.Patterns.Include);
+                    string exclude = string.Join(",", autoentity.Patterns.Exclude);
+                    string namePattern = autoentity.Patterns.Name;
+
+                    List<(string EntityName, string SchemaName, string ObjectName)> filterResults = new();
+
+                    using SqlCommand command = new(query, connection);
+                    SqlParameter includeParameter = new("@include_pattern", SqlDbType.NVarChar)
+                    {
+                        Value = include
+                    };
+                    SqlParameter excludeParameter = new("@exclude_pattern", SqlDbType.NVarChar)
+                    {
+                        Value = exclude
+                    };
+                    SqlParameter namePatternParameter = new("@name_pattern", SqlDbType.NVarChar)
+                    {
+                        Value = namePattern
+                    };
+
+                    command.Parameters.Add(includeParameter);
+                    command.Parameters.Add(excludeParameter);
+                    command.Parameters.Add(namePatternParameter);
+                    using SqlDataReader reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        string entityName = reader[AUTOENTITIES_COLUMN_ENTITY_NAME]?.ToString() ?? string.Empty;
+                        string objectName = reader[AUTOENTITIES_COLUMN_OBJECT]?.ToString() ?? string.Empty;
+                        string schemaName = reader[AUTOENTITIES_COLUMN_SCHEMA]?.ToString() ?? string.Empty;
+
+                        if (!string.IsNullOrWhiteSpace(entityName) && !string.IsNullOrWhiteSpace(objectName))
+                        {
+                            filterResults.Add((entityName, schemaName, objectName));
+                        }
+                    }
+
+                    results[filterName] = filterResults;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to query the database: {Message}", ex.Message);
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.Output))
+            {
+                return WriteSimulationResultsToCsvFile(options.Output, results, fileSystem);
+            }
+            else
+            {
+                WriteSimulationResultsToConsole(results);
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Writes the autoentities simulation results to the console in a human-readable format.
+        /// Results are grouped by filter name with entity-to-database-object mappings.
+        /// </summary>
+        /// <param name="results">The simulation results keyed by filter (definition) name.</param>
+        private static void WriteSimulationResultsToConsole(Dictionary<string, List<(string EntityName, string SchemaName, string ObjectName)>> results)
+        {
+            Console.WriteLine("AutoEntities Simulation Results");
+            Console.WriteLine();
+
+            foreach ((string filterName, List<(string EntityName, string SchemaName, string ObjectName)> matches) in results)
+            {
+                Console.WriteLine($"Filter: {filterName}");
+                Console.WriteLine($"Matches: {matches.Count}");
+                Console.WriteLine();
+
+                if (matches.Count == 0)
+                {
+                    Console.WriteLine("(no matches)");
+                }
+                else
+                {
+                    int maxEntityNameLength = matches.Max(m => m.EntityName.Length);
+                    foreach ((string entityName, string schemaName, string objectName) in matches)
+                    {
+                        Console.WriteLine($"{entityName.PadRight(maxEntityNameLength)} -> {schemaName}.{objectName}");
+                    }
+                }
+
+                Console.WriteLine();
+            }
+        }
+
+        /// <summary>
+        /// Writes the autoentities simulation results to a CSV file.
+        /// The file includes a header row followed by one row per matched entity.
+        /// If the file already exists it is overwritten.
+        /// </summary>
+        /// <param name="outputPath">The file path to write the CSV output to.</param>
+        /// <param name="results">The simulation results keyed by filter (definition) name.</param>
+        /// <param name="fileSystem">The filesystem abstraction used for writing the file.</param>
+        /// <returns>True if the file was written successfully; otherwise, false.</returns>
+        private static bool WriteSimulationResultsToCsvFile(
+            string outputPath,
+            Dictionary<string, List<(string EntityName, string SchemaName, string ObjectName)>> results,
+            IFileSystem fileSystem)
+        {
+            try
+            {
+                StringBuilder sb = new();
+                sb.AppendLine("filter_name,entity_name,database_object");
+
+                foreach ((string filterName, List<(string EntityName, string SchemaName, string ObjectName)> matches) in results)
+                {
+                    foreach ((string entityName, string schemaName, string objectName) in matches)
+                    {
+                        sb.AppendLine($"{QuoteCsvValue(filterName)},{QuoteCsvValue(entityName)},{QuoteCsvValue($"{schemaName}.{objectName}")}");
+                    }
+                }
+
+                fileSystem.File.WriteAllText(outputPath, sb.ToString());
+                _logger.LogInformation("Simulation results written to {outputPath}.", outputPath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to write output file: {Message}", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Quotes a value for inclusion in a CSV field.
+        /// If the value contains a comma, double-quote, or newline, it is wrapped in double-quotes
+        /// and any embedded double-quotes are escaped by doubling them.
+        /// </summary>
+        /// <param name="value">The value to quote.</param>
+        /// <returns>A properly escaped CSV field value.</returns>
+        private static string QuoteCsvValue(string value)
+        {
+            if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
+            {
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            }
+
+            return value;
+        }
+
+        /// <summary>
+        /// Attempts to update the Azure Key Vault configuration options based on the provided values.
+        /// Validates that any user-provided parameter value is valid and updates the runtime configuration accordingly.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="runtimeConfig">The runtime configuration to be updated.</param>
+        /// <returns>True if the Azure Key Vault options were successfully configured; otherwise, false.</returns>
+        private static bool TryUpdateConfiguredAzureKeyVaultOptions(
+            ConfigureOptions options,
+            [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
+        {
+            try
+            {
+                AzureKeyVaultOptions? updatedAzureKeyVaultOptions = runtimeConfig.AzureKeyVault;
+                AKVRetryPolicyOptions? updatedRetryPolicyOptions = updatedAzureKeyVaultOptions?.RetryPolicy;
+
+                // Azure Key Vault Endpoint
+                if (options.AzureKeyVaultEndpoint is not null)
+                {
+                    // Ensure endpoint flag is marked user provided so converter writes it.
+                    updatedAzureKeyVaultOptions = updatedAzureKeyVaultOptions is not null
+                        ? updatedAzureKeyVaultOptions with { Endpoint = options.AzureKeyVaultEndpoint, UserProvidedEndpoint = true }
+                        : new AzureKeyVaultOptions(endpoint: options.AzureKeyVaultEndpoint);
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.endpoint as '{endpoint}'", options.AzureKeyVaultEndpoint);
+                }
+
+                // Retry Policy Mode
+                if (options.AzureKeyVaultRetryPolicyMode is not null)
+                {
+                    updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
+                        ? updatedRetryPolicyOptions with { Mode = options.AzureKeyVaultRetryPolicyMode.Value, UserProvidedMode = true }
+                        : new AKVRetryPolicyOptions(mode: options.AzureKeyVaultRetryPolicyMode.Value);
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.mode as '{mode}'", options.AzureKeyVaultRetryPolicyMode.Value);
+                }
+
+                // Retry Policy Max Count
+                if (options.AzureKeyVaultRetryPolicyMaxCount is not null)
+                {
+                    if (options.AzureKeyVaultRetryPolicyMaxCount.Value < 1)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.max-count. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
+                        ? updatedRetryPolicyOptions with { MaxCount = options.AzureKeyVaultRetryPolicyMaxCount.Value, UserProvidedMaxCount = true }
+                        : new AKVRetryPolicyOptions(maxCount: options.AzureKeyVaultRetryPolicyMaxCount.Value);
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.max-count as '{maxCount}'", options.AzureKeyVaultRetryPolicyMaxCount.Value);
+                }
+
+                // Retry Policy Delay Seconds
+                if (options.AzureKeyVaultRetryPolicyDelaySeconds is not null)
+                {
+                    if (options.AzureKeyVaultRetryPolicyDelaySeconds.Value < 1)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.delay-seconds. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
+                        ? updatedRetryPolicyOptions with { DelaySeconds = options.AzureKeyVaultRetryPolicyDelaySeconds.Value, UserProvidedDelaySeconds = true }
+                        : new AKVRetryPolicyOptions(delaySeconds: options.AzureKeyVaultRetryPolicyDelaySeconds.Value);
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.delay-seconds as '{delaySeconds}'", options.AzureKeyVaultRetryPolicyDelaySeconds.Value);
+                }
+
+                // Retry Policy Max Delay Seconds
+                if (options.AzureKeyVaultRetryPolicyMaxDelaySeconds is not null)
+                {
+                    if (options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value < 1)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.max-delay-seconds. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
+                        ? updatedRetryPolicyOptions with { MaxDelaySeconds = options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value, UserProvidedMaxDelaySeconds = true }
+                        : new AKVRetryPolicyOptions(maxDelaySeconds: options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value);
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.max-delay-seconds as '{maxDelaySeconds}'", options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value);
+                }
+
+                // Retry Policy Network Timeout Seconds
+                if (options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds is not null)
+                {
+                    if (options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value < 1)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.network-timeout-seconds. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
+                        ? updatedRetryPolicyOptions with { NetworkTimeoutSeconds = options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value, UserProvidedNetworkTimeoutSeconds = true }
+                        : new AKVRetryPolicyOptions(networkTimeoutSeconds: options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value);
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.network-timeout-seconds as '{networkTimeoutSeconds}'", options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value);
+                }
+
+                // Update Azure Key Vault options with retry policy if modified
+                if (updatedRetryPolicyOptions is not null)
+                {
+                    // Ensure outer AKV object marks retry policy as user provided so it serializes.
+                    updatedAzureKeyVaultOptions = updatedAzureKeyVaultOptions is not null
+                        ? updatedAzureKeyVaultOptions with { RetryPolicy = updatedRetryPolicyOptions, UserProvidedRetryPolicy = true }
+                        : new AzureKeyVaultOptions(retryPolicy: updatedRetryPolicyOptions);
+                }
+
+                // Update runtime config if Azure Key Vault options were modified
+                if (updatedAzureKeyVaultOptions is not null)
+                {
+                    runtimeConfig = runtimeConfig with { AzureKeyVault = updatedAzureKeyVaultOptions };
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.AzureKeyVault with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Helper to build a list of FieldMetadata from UpdateOptions.
+        /// </summary>
+        private static List<FieldMetadata> ComposeFieldsFromOptions(UpdateOptions options)
+        {
+            List<FieldMetadata> fields = [];
+            if (options.FieldsNameCollection != null)
+            {
+                List<string> names = options.FieldsNameCollection.ToList();
+                List<string> aliases = options.FieldsAliasCollection?.ToList() ?? [];
+                List<string> descriptions = options.FieldsDescriptionCollection?.ToList() ?? [];
+                List<bool> keys = options.FieldsPrimaryKeyCollection?.ToList() ?? [];
+
+                for (int i = 0; i < names.Count; i++)
+                {
+                    fields.Add(new FieldMetadata
+                    {
+                        Name = names[i],
+                        Alias = aliases.Count > i ? aliases[i] : null,
+                        Description = descriptions.Count > i ? descriptions[i] : null,
+                        PrimaryKey = keys.Count > i && keys[i],
+                    });
+                }
+            }
+
+            return fields;
+        }
+
+        /// <summary>
+        /// Validates that the provided fields are valid against the database columns and constraints.
+        /// </summary>
+        private static bool ValidateFields(
+            List<FieldMetadata> fields,
+            out string errorMessage)
+        {
+            errorMessage = string.Empty;
+            HashSet<string> aliases = [];
+            HashSet<string> keys = [];
+
+            foreach (FieldMetadata field in fields)
+            {
+                if (!string.IsNullOrEmpty(field.Alias))
+                {
+                    if (!aliases.Add(field.Alias))
+                    {
+                        errorMessage = $"Alias '{field.Alias}' is not unique within the entity.";
+                        return false;
+                    }
+                }
+
+                if (field.PrimaryKey)
+                {
+                    if (!keys.Add(field.Name))
+                    {
+                        errorMessage = $"Duplicate key field '{field.Name}' detected.";
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Logs a warning if no entities, autoentities, or data-source-files are configured.
+        /// </summary>
+        internal static void WarnIfNoEntitiesDefined(RuntimeConfig config)
+        {
+            if (config.Entities.Entities.Count == 0
+                && config.Autoentities.Autoentities.Count == 0
+                && (config.DataSourceFiles?.SourceFiles is null || !config.DataSourceFiles.SourceFiles.Any()))
+            {
+                _logger.LogWarning("No entities are defined in this configuration.");
+            }
+        }
+    }
+}

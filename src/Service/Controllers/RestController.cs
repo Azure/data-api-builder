@@ -204,13 +204,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
             try
             {
+                TelemetryMetricsHelper.IncrementActiveRequests(ApiType.REST);
+
                 if (operationType is EntityActionOperation.Upsert or EntityActionOperation.UpsertIncremental)
                 {
                     operationType = DeterminePatchPutSemantics(operationType);
                 }
-
-                TelemetryMetricsHelper.IncrementActiveRequests(ApiType.REST);
-
                 if (activity is not null)
                 {
                     activity.TrackMainControllerActivityStarted(

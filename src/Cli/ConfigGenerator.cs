@@ -2646,45 +2646,63 @@ namespace Cli
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
 
-            bool isValid = runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
-
-            // Additional validation: warn if fields are missing and MCP is enabled
-            if (isValid)
+            bool isValid = false;
+            try
             {
-                if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
+                isValid = runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
+
+                // Additional validation: warn if fields are missing and MCP is enabled
+                if (isValid)
                 {
-                    bool mcpEnabled = config.IsMcpEnabled;
-                    if (mcpEnabled)
+                    if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
                     {
-                        foreach (KeyValuePair<string, Entity> entity in config.Entities)
+                        bool mcpEnabled = config.IsMcpEnabled;
+                        if (mcpEnabled)
                         {
-                            if (entity.Value.Fields == null || !entity.Value.Fields.Any())
+                            foreach (KeyValuePair<string, Entity> entity in config.Entities)
                             {
-                                _logger.LogWarning($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled. " +
-                                    "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
+                                if (entity.Value.Fields == null || !entity.Value.Fields.Any())
+                                {
+                                    _logger.LogWarning($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled. " +
+                                        "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
+                                }
+                            }
+                        }
+
+                        // Warn if Unauthenticated provider is used with authenticated or custom roles
+                        if (config.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
+                        {
+                            bool hasNonAnonymousRoles = config.Entities
+                                .Where(e => e.Value.Permissions is not null)
+                                .SelectMany(e => e.Value.Permissions!)
+                                .Any(p => !p.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase));
+
+                            if (hasNonAnonymousRoles)
+                            {
+                                _logger.LogWarning(
+                                    "Authentication provider is 'Unauthenticated' but some entities have permissions configured for non-anonymous roles. " +
+                                    "All requests will be treated as anonymous.");
                             }
                         }
                     }
-
-                    // Warn if Unauthenticated provider is used with authenticated or custom roles
-                    if (config.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
-                    {
-                        bool hasNonAnonymousRoles = config.Entities
-                            .Where(e => e.Value.Permissions is not null)
-                            .SelectMany(e => e.Value.Permissions!)
-                            .Any(p => !p.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase));
-
-                        if (hasNonAnonymousRoles)
-                        {
-                            _logger.LogWarning(
-                                "Authentication provider is 'Unauthenticated' but some entities have permissions configured for non-anonymous roles. " +
-                                "All requests will be treated as anonymous.");
-                        }
-                    }
                 }
-            }
 
-            return isValid;
+                return isValid;
+            }
+            catch (AggregateException ex)
+            {
+                foreach (Exception exception in ex.InnerExceptions)
+                {
+                    _logger.LogError(exception, exception.Message);
+                }
+
+                return isValid;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                return isValid;
+            }
         }
 
         /// <summary>

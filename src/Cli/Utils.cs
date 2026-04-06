@@ -870,7 +870,7 @@ namespace Cli
                 _logger.LogError("Invalid format for --cache.ttl-seconds. Accepted values are any non-negative integer.");
             }
 
-            if (cacheLevel is not null && !Enum.TryParse(cacheLevel, ignoreCase: true, out EntityCacheLevel parsedLevel))
+            if (cacheLevel is not null && !Enum.TryParse(cacheLevel, ignoreCase: true, out EntityCacheLevel _))
             {
                 _logger.LogError("Invalid format for --cache.level. Accepted values are L1, L1L2.");
             }

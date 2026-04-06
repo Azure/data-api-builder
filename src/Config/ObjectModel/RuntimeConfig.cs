@@ -6,6 +6,7 @@ using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -269,6 +270,11 @@ public record RuntimeConfig
         return false;
     }
 
+    public bool RemoveGeneratedAutoentityNameFromDataSourceName(string entityName)
+    {
+        return _entityNameToDataSourceName.Remove(entityName);
+    }
+
     /// <summary>
     /// Constructor for runtimeConfig.
     /// To be used when setting up from cli json scenario.
@@ -350,8 +356,9 @@ public record RuntimeConfig
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-                // Use default replacement settings for environment variable replacement
-                DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+                // Use Ignore mode so missing env vars are left as literal @env() strings,
+                // consistent with how the parent config is loaded in TryLoadKnownConfig.
+                DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
 
                 if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replacementSettings: replacementSettings))
                 {
@@ -372,6 +379,17 @@ public record RuntimeConfig
                             DataApiBuilderException.SubStatusCodes.ConfigValidationError,
                             e.InnerException);
                     }
+                }
+                else if (fileSystem.File.Exists(dataSourceFile))
+                {
+                    // The file exists but failed to load (e.g. invalid JSON, deserialization error).
+                    // Throw to prevent silently skipping a broken child config.
+                    // Non-existent files are skipped gracefully to support late-configured scenarios
+                    // where data-source-files may reference files not present on the host.
+                    throw new DataApiBuilderException(
+                        message: $"Failed to load datasource file: {dataSourceFile}. Ensure the file is accessible and contains a valid DAB configuration.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
             }
 
@@ -502,7 +520,7 @@ public record RuntimeConfig
         if (!_autoentityNameToDataSourceName.TryGetValue(autoentityName, out string? autoentityDataSource))
         {
             throw new DataApiBuilderException(
-                message: $"{autoentityName} is not a valid autoentity.",
+                message: $"'{autoentityName}' is not a valid autoentities definition.",
                 statusCode: HttpStatusCode.NotFound,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }

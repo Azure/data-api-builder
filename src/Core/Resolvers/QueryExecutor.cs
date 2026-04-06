@@ -293,8 +293,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 TResult? result = default(TResult);
                 try
                 {
-                    using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
-                        await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess) : await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+                    CommandBehavior commandBehavior = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ? CommandBehavior.SequentialAccess : CommandBehavior.CloseConnection;
+                    // CancellationToken is passed to ExecuteReaderAsync to ensure that if the client times out while the query is executing, the execution will be cancelled and resources will be freed up.
+                    CancellationToken cancellationToken = httpContext?.RequestAborted ?? CancellationToken.None;
+                    using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(commandBehavior, cancellationToken);
+
                     if (dataReaderHandler is not null && dbDataReader is not null)
                     {
                         result = await dataReaderHandler(dbDataReader, args);

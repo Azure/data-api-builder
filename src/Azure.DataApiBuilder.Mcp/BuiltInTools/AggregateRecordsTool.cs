@@ -45,13 +45,24 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             Name = "aggregate_records",
             Description = "Computes aggregations (count, avg, sum, min, max) on entity data. "
-                + "WORKFLOW: 1) Call describe_entities first to get entity names and field names. "
-                + "2) Call this tool with entity, function, and field from step 1. "
-                + "RULES: field '*' is ONLY valid with count. "
-                + "orderby, having, first, and after ONLY apply when groupby is provided. "
-                + "RESPONSE: Result is aliased as '{function}_{field}' (e.g. avg_unitPrice). "
-                + "For count(*), the alias is 'count'. "
-                + "With groupby and first, response includes items, endCursor, and hasNextPage for pagination.",
+                + "Prerequisite: 1) Call describe_entities in the current session to discover valid entity names and field names. "
+                + "2) Call this tool using only names returned by that call. "
+                + "Do not use entity or field names from memory, prior conversations, or assumptions. "
+                + "count supports field * to count all rows. "
+                + "avg, sum, min, and max must reference a field with a numeric data type as returned by describe_entities. "
+                + "distinct removes duplicate values before aggregation and is not valid with field *. "
+                + "filter applies an OData WHERE clause before aggregation. Supported operators: eq, ne, gt, ge, lt, le, and, or, not. "
+                + "String pattern operators such as startswith, endswith, contains, and regex are NOT supported. "
+                + "Use groupby to compute aggregated rows per group. All groupby fields must exist on the entity and must be discovered through describe_entities. "
+                + "Grouped results include the groupby fields and the aggregated value. "
+                + "orderby, having, first, and after apply only when groupby is present. "
+                + "orderby controls the sort direction of groups based on the aggregation result value. Allowed values are 'asc' and 'desc'; if omitted, 'desc' is used. It cannot sort by entity fields. "
+                + "having filters groups based on the aggregated value produced by the function. Supported operators: eq, neq, gt, gte, lt, lte, in. "
+                + "When groupby and first are used together, the response includes items, endCursor, and hasNextPage. "
+                + "To retrieve the next page, pass the returned endCursor value as the after parameter in a subsequent call with the same inputs. "
+                + "Aggregated values are aliased as {function}_{field} (example: avg_unitPrice). "
+                + "count(*) is the sole exception to this pattern and returns the alias 'count', not count_*. "
+                + "If the call fails due to an unrecognized entity or field name, call describe_entities again to verify valid names, then retry with corrected inputs.",
             InputSchema = JsonSerializer.Deserialize<JsonElement>(
                 @"{
                     ""type"": ""object"",
@@ -67,32 +78,32 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         },
                         ""field"": {
                             ""type"": ""string"",
-                            ""description"": ""Field name to aggregate, or '*' with count to count all rows.""
+                            ""description"": ""Field name to aggregate, or * with count to count all rows.""
                         },
                         ""distinct"": {
                             ""type"": ""boolean"",
-                            ""description"": ""Remove duplicate values before aggregating. Not valid with field '*'."",
+                            ""description"": ""Remove duplicate values before aggregating. Not valid with field *."",
                             ""default"": false
                         },
                         ""filter"": {
                             ""type"": ""string"",
-                            ""description"": ""OData WHERE clause applied before aggregating. Operators: eq, ne, gt, ge, lt, le, and, or, not. Example: 'unitPrice lt 10'."",
+                            ""description"": ""OData WHERE clause applied before aggregating. Operators: eq, ne, gt, ge, lt, le, and, or, not. String pattern operators such as startswith, endswith, contains, and regex are not supported. Example: unitPrice lt 10."",
                             ""default"": """"
                         },
                         ""groupby"": {
                             ""type"": ""array"",
                             ""items"": { ""type"": ""string"" },
-                            ""description"": ""Field names to group by. Each unique combination produces one aggregated row. Enables orderby, having, first, and after."",
+                            ""description"": ""Field names to group by. Each unique combination produces one aggregated row that includes the group fields and the aggregated value. Enables orderby, having, first, and after."",
                             ""default"": []
                         },
                         ""orderby"": {
                             ""type"": ""string"",
                             ""enum"": [""asc"", ""desc""],
-                            ""description"": ""Sort direction for grouped results by the aggregated value. Only applies when groupby is provided; ignored otherwise.""
+                            ""description"": ""Sort direction for grouped results by the aggregated value (ascending or descending). Requires groupby. Cannot sort by entity fields. If omitted, the default sort direction is used.""
                         },
                         ""having"": {
                             ""type"": ""object"",
-                            ""description"": ""Filter groups by the aggregated value (HAVING clause). Requires groupby. Multiple operators are AND-ed."",
+                            ""description"": ""Filter groups by the aggregated value (HAVING clause). Supported operators: eq, neq, gt, gte, lt, lte, in. Requires groupby. Multiple operators are AND-ed."",
                             ""properties"": {
                                 ""eq"":  { ""type"": ""number"", ""description"": ""Equals."" },
                                 ""neq"": { ""type"": ""number"", ""description"": ""Not equals."" },
@@ -109,7 +120,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         },
                         ""first"": {
                             ""type"": ""integer"",
-                            ""description"": ""Max grouped results to return. Requires groupby. Enables paginated response with endCursor and hasNextPage."",
+                            ""description"": ""Max grouped results to return. Requires groupby. Enables cursor pagination with endCursor and hasNextPage."",
                             ""minimum"": 1
                         },
                         ""after"": {

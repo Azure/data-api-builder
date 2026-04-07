@@ -36,7 +36,7 @@ public record RuntimeConfig
     /// Indicates whether this config was loaded as a child via another config's data-source-files.
     /// </summary>
     [JsonIgnore]
-    public bool IsChildConfig { get; internal set; }
+    public bool IsChildConfig { get; set; }
 
     /// <summary>
     /// Indicates whether this is the root config — the top-level config that has child data-source-files.

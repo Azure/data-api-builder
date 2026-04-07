@@ -425,74 +425,189 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// Validates that child config references are stored during root config loading.
-    /// When a root config references a child via data-source-files and the child file
-    /// exists on disk, the child RuntimeConfig is retained for per-child validation.
-    /// Note: The RuntimeConfig constructor uses the real filesystem for child loading,
-    /// so this test writes temporary files to disk.
+    /// Validates that a non-root config with a data source but no entities
+    /// produces a validation error from ValidateDataSourceAndEntityPresence.
     /// </summary>
     [TestMethod]
-    public void TestChildConfigsStoredDuringLoad()
+    public void TestNonRootWithDataSourceAndNoEntitiesProducesError()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"dab_test_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-        try
+        RuntimeConfig config = BuildTestConfig(
+            hasDataSource: true,
+            entities: new Dictionary<string, Entity>());
+
+        RuntimeConfigValidator validator = BuildValidator(config);
+        validator.ValidateDataSourceAndEntityPresence(config);
+
+        Assert.AreEqual(1, validator.ConfigValidationExceptions.Count);
+        Assert.IsTrue(validator.ConfigValidationExceptions[0].Message.Contains("no entities found"));
+    }
+
+    /// <summary>
+    /// Validates that a non-root config with no data source
+    /// produces a validation error requiring a data source.
+    /// </summary>
+    [TestMethod]
+    public void TestNonRootWithNoDataSourceProducesError()
+    {
+        RuntimeConfig config = BuildTestConfig(
+            hasDataSource: false,
+            entities: new Dictionary<string, Entity>());
+
+        RuntimeConfigValidator validator = BuildValidator(config);
+        validator.ValidateDataSourceAndEntityPresence(config);
+
+        Assert.AreEqual(1, validator.ConfigValidationExceptions.Count);
+        Assert.IsTrue(validator.ConfigValidationExceptions[0].Message.Contains("data source is required"));
+    }
+
+    /// <summary>
+    /// Validates that a non-root config with a data source and entities passes validation.
+    /// </summary>
+    [TestMethod]
+    public void TestNonRootWithDataSourceAndEntitiesIsValid()
+    {
+        Dictionary<string, Entity> entities = new()
         {
-            string childPath = Path.Combine(tempDir, "child-db.json");
-            string rootPath = Path.Combine(tempDir, "dab-config.json");
+            { "Book", BuildSimpleEntity("dbo.books") }
+        };
 
-            string childConfig = @"
+        RuntimeConfig config = BuildTestConfig(hasDataSource: true, entities: entities);
+
+        RuntimeConfigValidator validator = BuildValidator(config);
+        validator.ValidateDataSourceAndEntityPresence(config);
+
+        Assert.AreEqual(0, validator.ConfigValidationExceptions.Count);
+    }
+
+    /// <summary>
+    /// Validates that a root config with no data source and no entities is valid
+    /// (children carry the load).
+    /// </summary>
+    [TestMethod]
+    public void TestRootWithNoDataSourceAndNoEntitiesIsValid()
+    {
+        // Build a child config with a data source and entity.
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new Dictionary<string, Entity>
             {
-                ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @""",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""Server=localhost;Database=testdb;""
-                },
-                ""entities"": {
-                    ""Book"": {
-                        ""source"": ""dbo.books"",
-                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""read""] }]
-                    }
-                }
-            }";
+                { "Book", BuildSimpleEntity("dbo.books") }
+            });
+        childConfig.IsChildConfig = true;
 
-            // Use absolute path for the child reference since the RuntimeConfig constructor
-            // resolves child paths relative to CWD, not the parent config directory.
-            string childPathEscaped = childPath.Replace("\\", "\\\\");
+        // Build a root config with no data source, pointing to the child.
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: false,
+            entities: new Dictionary<string, Entity>(),
+            dataSourceFiles: new DataSourceFiles(new[] { "child.json" }));
+        rootConfig.ChildConfigs.Add(("child.json", childConfig));
 
-            string rootConfig = @"
-            {
-                ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @""",
-                ""runtime"": {
-                    ""rest"": { ""enabled"": true },
-                    ""graphql"": { ""enabled"": true },
-                    ""host"": { ""mode"": ""development"" }
-                },
-                ""data-source-files"": [""" + childPathEscaped + @"""],
-                ""entities"": {}
-            }";
+        RuntimeConfigValidator validator = BuildValidator(rootConfig);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
 
-            File.WriteAllText(childPath, childConfig);
-            File.WriteAllText(rootPath, rootConfig);
+        Assert.AreEqual(0, validator.ConfigValidationExceptions.Count);
+    }
 
-            FileSystemRuntimeConfigLoader loader = new(new FileSystem());
-            Assert.IsTrue(loader.TryLoadConfig(rootPath, out RuntimeConfig? config));
-            Assert.IsNotNull(config);
-            Assert.IsTrue(config.IsRootConfig);
-            Assert.AreEqual(1, config.ChildConfigs.Count);
+    /// <summary>
+    /// Validates that a child config with a data source but no entities produces
+    /// an error that names the child file.
+    /// </summary>
+    [TestMethod]
+    public void TestChildWithDataSourceAndNoEntitiesProducesNamedError()
+    {
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new Dictionary<string, Entity>());
+        childConfig.IsChildConfig = true;
 
-            (string fileName, RuntimeConfig loadedChild) = config.ChildConfigs[0];
-            Assert.AreEqual(childPath, fileName);
-            Assert.IsNotNull(loadedChild.DataSource);
-            Assert.IsTrue(loadedChild.Entities.ContainsKey("Book"));
-            Assert.AreEqual(0, loadedChild.Autoentities.Autoentities.Count);
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: false,
+            entities: new Dictionary<string, Entity>(),
+            dataSourceFiles: new DataSourceFiles(new[] { "child-db.json" }));
+        rootConfig.ChildConfigs.Add(("child-db.json", childConfig));
 
-            // The child's entities should be merged into the root config.
-            Assert.IsTrue(config.Entities.ContainsKey("Book"));
-        }
-        finally
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        RuntimeConfigValidator validator = BuildValidator(rootConfig);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
+
+        Assert.AreEqual(1, validator.ConfigValidationExceptions.Count);
+        Assert.IsTrue(validator.ConfigValidationExceptions[0].Message.Contains("child-db.json"));
+        Assert.IsTrue(validator.ConfigValidationExceptions[0].Message.Contains("no entities found"));
+    }
+
+    /// <summary>
+    /// Validates that a child config with no data source produces
+    /// an error that names the child file.
+    /// </summary>
+    [TestMethod]
+    public void TestChildWithNoDataSourceProducesNamedError()
+    {
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: false,
+            entities: new Dictionary<string, Entity>());
+        childConfig.IsChildConfig = true;
+
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: false,
+            entities: new Dictionary<string, Entity>(),
+            dataSourceFiles: new DataSourceFiles(new[] { "child-db.json" }));
+        rootConfig.ChildConfigs.Add(("child-db.json", childConfig));
+
+        RuntimeConfigValidator validator = BuildValidator(rootConfig);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
+
+        Assert.AreEqual(1, validator.ConfigValidationExceptions.Count);
+        Assert.IsTrue(validator.ConfigValidationExceptions[0].Message.Contains("child-db.json"));
+        Assert.IsTrue(validator.ConfigValidationExceptions[0].Message.Contains("data source is required"));
+    }
+
+    /// <summary>
+    /// Helper: builds a RuntimeConfigValidator in validate-only mode over the given config.
+    /// </summary>
+    private static RuntimeConfigValidator BuildValidator(RuntimeConfig config)
+    {
+        MockFileSystem fs = new();
+        FileSystemRuntimeConfigLoader loader = new(fs);
+        loader.RuntimeConfig = config;
+        RuntimeConfigProvider provider = new(loader);
+        return new RuntimeConfigValidator(provider, fs, new Mock<ILogger<RuntimeConfigValidator>>().Object, isValidateOnly: true);
+    }
+
+    /// <summary>
+    /// Helper: builds a minimal RuntimeConfig for testing.
+    /// </summary>
+    private static RuntimeConfig BuildTestConfig(
+        bool hasDataSource,
+        Dictionary<string, Entity> entities,
+        DataSourceFiles? dataSourceFiles = null)
+    {
+        DataSource? ds = hasDataSource
+            ? new DataSource(DatabaseType.MSSQL, "Server=localhost;Database=test;", Options: null)
+            : null;
+
+        return new RuntimeConfig(
+            Schema: null,
+            DataSource: ds,
+            Runtime: new(
+                Rest: new(),
+                GraphQL: new(),
+                Mcp: new(),
+                Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)),
+            Entities: new RuntimeEntities(entities),
+            DataSourceFiles: dataSourceFiles);
+    }
+
+    /// <summary>
+    /// Helper: builds a simple entity for testing.
+    /// </summary>
+    private static Entity BuildSimpleEntity(string source)
+    {
+        return new Entity(
+            Source: new EntitySource(Object: source, Type: EntitySourceType.Table, Parameters: null, KeyFields: null),
+            GraphQL: new(Singular: null, Plural: null),
+            Fields: null,
+            Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+            Permissions: new[] { new EntityPermission("anonymous", new[] { new EntityAction(EntityActionOperation.Read, null, null) }) },
+            Relationships: null,
+            Mappings: null);
     }
 }

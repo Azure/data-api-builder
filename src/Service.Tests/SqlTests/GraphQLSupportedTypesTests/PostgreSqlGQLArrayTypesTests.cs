@@ -135,6 +135,90 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
+        /// Query a row where array columns contain NULL elements (e.g., '{1,NULL,3}')
+        /// and verify that null values within arrays are correctly returned.
+        /// This validates that the EDM element type is marked as nullable (isNullable: true),
+        /// which is required because PostgreSQL arrays can contain NULL elements.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryArrayColumnsWithNullElements()
+        {
+            string gqlQuery = @"{
+                arrayType_by_pk(id: 4) {
+                    id
+                    int_array_col
+                    text_array_col
+                    bool_array_col
+                    long_array_col
+                    json_array_col
+                    jsonb_array_col
+                    money_array_col
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, "arrayType_by_pk", isAuthenticated: false);
+
+            Assert.AreEqual(4, actual.GetProperty("id").GetInt32());
+
+            // Note: The GraphQL pipeline serializes array elements as strings via JsonSerializer.
+            // Null elements within arrays are serialized as JSON null values.
+            // This test verifies that arrays with null elements are returned successfully,
+            // which requires the EDM element type to be nullable (isNullable: true).
+
+            // Verify int array contains null element
+            JsonElement intArray = actual.GetProperty("int_array_col");
+            Assert.AreEqual(JsonValueKind.Array, intArray.ValueKind);
+            Assert.AreEqual(3, intArray.GetArrayLength());
+            Assert.AreEqual("1", intArray[0].ToString());
+            Assert.IsTrue(intArray[1].ValueKind == JsonValueKind.Null || intArray[1].ToString() == "", "Expected null element inside int array");
+            Assert.AreEqual("3", intArray[2].ToString());
+
+            // Verify text array contains null element
+            JsonElement textArray = actual.GetProperty("text_array_col");
+            Assert.AreEqual(JsonValueKind.Array, textArray.ValueKind);
+            Assert.AreEqual(3, textArray.GetArrayLength());
+            Assert.AreEqual("hello", textArray[0].ToString());
+            Assert.IsTrue(textArray[1].ValueKind == JsonValueKind.Null || textArray[1].ToString() == "", "Expected null element inside text array");
+            Assert.AreEqual("world", textArray[2].ToString());
+
+            // Verify boolean array contains null element
+            JsonElement boolArray = actual.GetProperty("bool_array_col");
+            Assert.AreEqual(JsonValueKind.Array, boolArray.ValueKind);
+            Assert.AreEqual(3, boolArray.GetArrayLength());
+            Assert.AreEqual("true", boolArray[0].ToString().ToLowerInvariant());
+            Assert.IsTrue(boolArray[1].ValueKind == JsonValueKind.Null || boolArray[1].ToString() == "", "Expected null element inside bool array");
+            Assert.AreEqual("false", boolArray[2].ToString().ToLowerInvariant());
+
+            // Verify long array contains null element
+            JsonElement longArray = actual.GetProperty("long_array_col");
+            Assert.AreEqual(JsonValueKind.Array, longArray.ValueKind);
+            Assert.AreEqual(3, longArray.GetArrayLength());
+            Assert.AreEqual("100", longArray[0].ToString());
+            Assert.IsTrue(longArray[1].ValueKind == JsonValueKind.Null || longArray[1].ToString() == "", "Expected null element inside long array");
+            Assert.AreEqual("300", longArray[2].ToString());
+
+            // Verify json array contains null element
+            JsonElement jsonArray = actual.GetProperty("json_array_col");
+            Assert.AreEqual(JsonValueKind.Array, jsonArray.ValueKind);
+            Assert.AreEqual(2, jsonArray.GetArrayLength());
+            Assert.IsTrue(jsonArray[0].ToString().Contains("key"));
+            Assert.IsTrue(jsonArray[1].ValueKind == JsonValueKind.Null || jsonArray[1].ToString() == "", "Expected null element inside json array");
+
+            // Verify jsonb array contains null element
+            JsonElement jsonbArray = actual.GetProperty("jsonb_array_col");
+            Assert.AreEqual(JsonValueKind.Array, jsonbArray.ValueKind);
+            Assert.AreEqual(2, jsonbArray.GetArrayLength());
+            Assert.IsTrue(jsonbArray[0].ToString().Contains("key"));
+            Assert.IsTrue(jsonbArray[1].ValueKind == JsonValueKind.Null || jsonbArray[1].ToString() == "", "Expected null element inside jsonb array");
+
+            // Verify money array contains null element
+            JsonElement moneyArray = actual.GetProperty("money_array_col");
+            Assert.AreEqual(JsonValueKind.Array, moneyArray.ValueKind);
+            Assert.AreEqual(3, moneyArray.GetArrayLength());
+            Assert.IsTrue(moneyArray[1].ValueKind == JsonValueKind.Null || moneyArray[1].ToString() == "", "Expected null element inside money array");
+        }
+
+        /// <summary>
         /// Query multiple rows with array columns and verify the list result.
         /// </summary>
         [TestMethod]

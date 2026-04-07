@@ -427,7 +427,8 @@ INSERT INTO type_table(id, uuid_types) values(10, 'D1D021A8-47B4-4AE4-B718-98E89
 INSERT INTO array_type_table(id, int_array_col, text_array_col, bool_array_col, long_array_col, json_array_col, jsonb_array_col, money_array_col) VALUES
     (1, '{1,2,3}', '{hello,world}', '{true,false}', '{100,200,300}', ARRAY['{"key":"value"}'::json, '{"num":42}'::json], ARRAY['{"key":"value"}'::jsonb, '{"num":42}'::jsonb], '{10.50,20.75,30.25}'),
     (2, '{10,20}', '{foo,bar,baz}', '{true,true}', '{999}', ARRAY['{"id":1}'::json], ARRAY['{"id":1}'::jsonb], '{5.00,15.00}'),
-    (3, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    (3, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+    (4, '{1,NULL,3}', '{hello,NULL,world}', '{true,NULL,false}', '{100,NULL,300}', ARRAY['{"key":"value"}'::json, null], ARRAY['{"key":"value"}'::jsonb, null], '{10.50,NULL,30.25}');
 INSERT INTO trees("treeId", species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO trees("treeId", species, region, height) VALUES (4, 'test', 'Pacific Northwest', '0m');
 INSERT INTO fungi(speciesid, region, habitat) VALUES (1, 'northeast', 'forest'), (2, 'southwest', 'sand');

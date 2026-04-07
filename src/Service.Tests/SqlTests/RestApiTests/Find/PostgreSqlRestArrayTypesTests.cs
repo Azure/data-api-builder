@@ -104,6 +104,54 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// GET /api/ArrayType/id/4 - Verify that arrays containing NULL elements are returned correctly.
+        /// PostgreSQL arrays can contain NULL elements (e.g., '{1,NULL,3}').
+        /// This validates that the EDM element type is marked as nullable (isNullable: true).
+        /// </summary>
+        [TestMethod]
+        public async Task GetArrayTypeWithNullElementsInsideArrays()
+        {
+            HttpResponseMessage response = await HttpClient.GetAsync($"{ARRAY_TYPE_REST_PATH}/id/4");
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+            string body = await response.Content.ReadAsStringAsync();
+            JsonElement root = JsonDocument.Parse(body).RootElement;
+            JsonElement value = root.GetProperty("value")[0];
+
+            Assert.AreEqual(4, value.GetProperty("id").GetInt32());
+
+            // Verify int array has null element at index 1
+            JsonElement intArray = value.GetProperty("int_array_col");
+            Assert.AreEqual(JsonValueKind.Array, intArray.ValueKind);
+            Assert.AreEqual(3, intArray.GetArrayLength());
+            Assert.AreEqual(JsonValueKind.Null, intArray[1].ValueKind, "Expected null element inside int array");
+
+            // Verify text array has null element at index 1
+            JsonElement textArray = value.GetProperty("text_array_col");
+            Assert.AreEqual(JsonValueKind.Array, textArray.ValueKind);
+            Assert.AreEqual(3, textArray.GetArrayLength());
+            Assert.AreEqual(JsonValueKind.Null, textArray[1].ValueKind, "Expected null element inside text array");
+
+            // Verify boolean array has null element at index 1
+            JsonElement boolArray = value.GetProperty("bool_array_col");
+            Assert.AreEqual(JsonValueKind.Array, boolArray.ValueKind);
+            Assert.AreEqual(3, boolArray.GetArrayLength());
+            Assert.AreEqual(JsonValueKind.Null, boolArray[1].ValueKind, "Expected null element inside bool array");
+
+            // Verify long array has null element at index 1
+            JsonElement longArray = value.GetProperty("long_array_col");
+            Assert.AreEqual(JsonValueKind.Array, longArray.ValueKind);
+            Assert.AreEqual(3, longArray.GetArrayLength());
+            Assert.AreEqual(JsonValueKind.Null, longArray[1].ValueKind, "Expected null element inside long array");
+
+            // Verify money array has null element at index 1
+            JsonElement moneyArray = value.GetProperty("money_array_col");
+            Assert.AreEqual(JsonValueKind.Array, moneyArray.ValueKind);
+            Assert.AreEqual(3, moneyArray.GetArrayLength());
+            Assert.AreEqual(JsonValueKind.Null, moneyArray[1].ValueKind, "Expected null element inside money array");
+        }
+
+        /// <summary>
         /// GET /api/ArrayType/id/3 - Verify that null array columns are returned as JSON null.
         /// </summary>
         [TestMethod]

@@ -119,6 +119,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                         // The mapped (aliased) field name defined in the runtime config is used to create a representative
                         // OData StructuralProperty. The created property is then added to the EdmEntityType.
                         // StructuralProperty objects representing database primary keys are added as a 'keyProperties' to the EdmEntityType.
+                        // Array columns are represented as collection-typed StructuralProperties (e.g., Collection(Edm.Int32) for int[]).
                         // Otherwise, the StructuralProperty object is added as a generic StructuralProperty of the EdmEntityType.
                         string exposedColumnName;
                         if (sourceDefinition.PrimaryKey.Contains(column))

@@ -341,7 +341,7 @@
                             "enabled": {
                               "$ref": "#/$defs/boolean-or-string",
                               "description": "Enable/disable the aggregate-records tool.",
-                              "default": true
+                              "default": false
                             },
                             "query-timeout": {
                               "type": "integer",

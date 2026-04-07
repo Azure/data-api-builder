@@ -1,9 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.IO.Abstractions;
-using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Serilog;
@@ -566,8 +563,10 @@ public class ValidateConfigTests
     private static RuntimeConfigValidator BuildValidator(RuntimeConfig config)
     {
         MockFileSystem fs = new();
-        FileSystemRuntimeConfigLoader loader = new(fs);
-        loader.RuntimeConfig = config;
+        FileSystemRuntimeConfigLoader loader = new(fs)
+        {
+            RuntimeConfig = config
+        };
         RuntimeConfigProvider provider = new(loader);
         return new RuntimeConfigValidator(provider, fs, new Mock<ILogger<RuntimeConfigValidator>>().Object, isValidateOnly: true);
     }

@@ -425,15 +425,14 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// Validates that child config metadata is captured during root config loading.
+    /// Validates that child config references are stored during root config loading.
     /// When a root config references a child via data-source-files and the child file
-    /// exists on disk, the child's metadata (entity names, autoentity definition names,
-    /// datasource presence) is recorded for per-child validation.
+    /// exists on disk, the child RuntimeConfig is retained for per-child validation.
     /// Note: The RuntimeConfig constructor uses the real filesystem for child loading,
     /// so this test writes temporary files to disk.
     /// </summary>
     [TestMethod]
-    public void TestChildConfigMetadataCapturedDuringLoad()
+    public void TestChildConfigsStoredDuringLoad()
     {
         string tempDir = Path.Combine(Path.GetTempPath(), $"dab_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
@@ -480,13 +479,13 @@ public class ValidateConfigTests
             Assert.IsTrue(loader.TryLoadConfig(rootPath, out RuntimeConfig? config));
             Assert.IsNotNull(config);
             Assert.IsTrue(config.IsRootConfig);
-            Assert.AreEqual(1, config.ChildConfigMetadataList.Count);
+            Assert.AreEqual(1, config.ChildConfigs.Count);
 
-            ChildConfigMetadata childMeta = config.ChildConfigMetadataList[0];
-            Assert.AreEqual(childPath, childMeta.FileName);
-            Assert.IsTrue(childMeta.HasDataSource);
-            Assert.IsTrue(childMeta.EntityNames.Contains("Book"));
-            Assert.AreEqual(0, childMeta.AutoentityDefinitionNames.Count);
+            (string fileName, RuntimeConfig loadedChild) = config.ChildConfigs[0];
+            Assert.AreEqual(childPath, fileName);
+            Assert.IsNotNull(loadedChild.DataSource);
+            Assert.IsTrue(loadedChild.Entities.ContainsKey("Book"));
+            Assert.AreEqual(0, loadedChild.Autoentities.Autoentities.Count);
 
             // The child's entities should be merged into the root config.
             Assert.IsTrue(config.Entities.ContainsKey("Book"));

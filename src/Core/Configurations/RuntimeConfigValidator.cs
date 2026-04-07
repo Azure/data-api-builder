@@ -553,9 +553,9 @@ public class RuntimeConfigValidator : IConfigValidator
             }
 
             // Validate each child config independently.
-            foreach (ChildConfigMetadata child in runtimeConfig.ChildConfigMetadataList)
+            foreach ((string fileName, RuntimeConfig childConfig) in runtimeConfig.ChildConfigs)
             {
-                ValidateChildConfig(child, runtimeConfig);
+                ValidateChildConfig(fileName, childConfig, runtimeConfig);
             }
         }
         else
@@ -577,49 +577,52 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
-    /// Validates a child config using its captured metadata.
+    /// Validates a child config against its original (pre-merge) state.
     /// Each child must have a data source and must have entities (manual or resolved from autoentities).
     /// Error messages include the child's filename for clear diagnostics.
     /// </summary>
-    private void ValidateChildConfig(ChildConfigMetadata child, RuntimeConfig runtimeConfig)
+    /// <param name="fileName">The child config file path.</param>
+    /// <param name="childConfig">The original child RuntimeConfig before merge.</param>
+    /// <param name="parentConfig">The parent config, used to look up autoentity resolution counts.</param>
+    private void ValidateChildConfig(string fileName, RuntimeConfig childConfig, RuntimeConfig parentConfig)
     {
-        if (!child.HasDataSource)
+        if (childConfig.DataSource is null)
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"Child config '{child.FileName}': A data source is required.",
+                message: $"Child config '{fileName}': A data source is required.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             return;
         }
 
         // Check each of this child's autoentity definitions for resolution results.
-        foreach (string autoentityName in child.AutoentityDefinitionNames)
+        foreach (KeyValuePair<string, Autoentity> autoentityDef in childConfig.Autoentities)
         {
-            if (runtimeConfig.AutoentityResolutionCounts.TryGetValue(autoentityName, out int resolvedCount))
+            if (parentConfig.AutoentityResolutionCounts.TryGetValue(autoentityDef.Key, out int resolvedCount))
             {
                 if (resolvedCount == 0)
                 {
                     _logger.LogWarning("Child config '{fileName}': Autoentities definition '{definitionName}' found no entities.",
-                        child.FileName, autoentityName);
+                        fileName, autoentityDef.Key);
                 }
             }
             else
             {
                 _logger.LogWarning("Child config '{fileName}': Autoentities definition '{definitionName}' was not processed. " +
                     "Autoentities may not be supported for this database type.",
-                    child.FileName, autoentityName);
+                    fileName, autoentityDef.Key);
             }
         }
 
         // Count this child's total entities: manual + resolved autoentities.
-        int resolvedAutoentityCount = child.AutoentityDefinitionNames
-            .Sum(name => runtimeConfig.AutoentityResolutionCounts.TryGetValue(name, out int count) ? count : 0);
-        int totalChildEntities = child.EntityNames.Count + resolvedAutoentityCount;
+        int resolvedAutoentityCount = childConfig.Autoentities
+            .Sum(a => parentConfig.AutoentityResolutionCounts.TryGetValue(a.Key, out int count) ? count : 0);
+        int totalChildEntities = childConfig.Entities.Entities.Count + resolvedAutoentityCount;
 
         if (totalChildEntities == 0)
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"Child config '{child.FileName}': Data source defined but no entities found. " +
+                message: $"Child config '{fileName}': Data source defined but no entities found. " +
                     "At least one entity must be defined or generated from autoentities.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));

@@ -33,11 +33,17 @@ public record RuntimeConfig
     public DataSourceFiles? DataSourceFiles { get; init; }
 
     /// <summary>
-    /// Indicates whether this is a root config (top-level with child data-source-files).
-    /// A root config orchestrates child configs and may not have its own data source or entities.
+    /// Indicates whether this config was loaded as a child via another config's data-source-files.
     /// </summary>
     [JsonIgnore]
-    public bool IsRootConfig => DataSourceFiles?.SourceFiles?.Any() == true;
+    public bool IsChildConfig { get; internal set; }
+
+    /// <summary>
+    /// Indicates whether this is the root config — the top-level config that has child data-source-files.
+    /// A child config that itself has data-source-files is NOT a root; only the top-level config is.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsRootConfig => DataSourceFiles?.SourceFiles?.Any() == true && !IsChildConfig;
 
     /// <summary>
     /// Tracks how many entities each autoentity definition resolved during metadata initialization.
@@ -47,11 +53,12 @@ public record RuntimeConfig
     public Dictionary<string, int> AutoentityResolutionCounts { get; } = new();
 
     /// <summary>
-    /// Metadata captured from each child config loaded via data-source-files.
-    /// Used during validation to check each child independently with filename context.
+    /// Child configs loaded via data-source-files, stored with their filenames.
+    /// Retained for per-child validation after merge. These are the original child configs
+    /// before their entities were merged into the parent.
     /// </summary>
     [JsonIgnore]
-    public List<ChildConfigMetadata> ChildConfigMetadataList { get; } = new();
+    public List<(string FileName, RuntimeConfig Config)> ChildConfigs { get; } = new();
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public bool CosmosDataSourceUsed { get; private set; }
@@ -376,12 +383,11 @@ public record RuntimeConfig
                 {
                     try
                     {
-                        // Capture child metadata before merging for per-child validation.
-                        ChildConfigMetadataList.Add(new ChildConfigMetadata(
-                            FileName: dataSourceFile,
-                            EntityNames: new HashSet<string>(config.Entities.Select(e => e.Key)),
-                            AutoentityDefinitionNames: new HashSet<string>(config.Autoentities.Select(a => a.Key)),
-                            HasDataSource: config.DataSource is not null));
+                        // Mark the child so it's not treated as a root during validation.
+                        config.IsChildConfig = true;
+
+                        // Store the child config reference for per-child validation.
+                        ChildConfigs.Add((dataSourceFile, config));
 
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);

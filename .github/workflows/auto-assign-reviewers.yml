@@ -90,7 +90,9 @@ jobs:
 
             // Assigns reviewers to a single PR, mutating load/activeCount in place.
             async function assignReviewers(pr, load, activeCount) {
-              const assigned = getPoolAssignees(pr);
+              const author = pr.user.login;
+              // Exclude the author from assigned count — they can't review their own PR.
+              const assigned = getPoolAssignees(pr).filter((a) => a !== author);
               const needed = REQUIRED_REVIEWERS - assigned.length;
               const weight = getWeight(pr);
 
@@ -153,8 +155,9 @@ jobs:
                 return;
               }
               const assigned = getPoolAssignees(triggerPR);
-              if (assigned.length >= REQUIRED_REVIEWERS) {
-                core.info(`Triggering PR #${triggerPR.number} already has ${assigned.length} pool assignees. Exiting.`);
+              const author = triggerPR.user.login;
+              if (assigned.filter((a) => a !== author).length >= REQUIRED_REVIEWERS) {
+                core.info(`Triggering PR #${triggerPR.number} already has ${assigned.length} pool assignees (excl. author). Exiting.`);
                 return;
               }
               core.info(`Triggering PR #${triggerPR.number} needs reviewers. Proceeding with load calculation.`);
@@ -200,7 +203,10 @@ jobs:
             } else {
               // Full-scan mode (workflow_dispatch / schedule): process all eligible PRs that need reviewers.
               const needsReviewers = eligiblePRs
-                .filter((pr) => getPoolAssignees(pr).length < REQUIRED_REVIEWERS)
+                .filter((pr) => {
+                  const assigned = getPoolAssignees(pr).filter((a) => a !== pr.user.login);
+                  return assigned.length < REQUIRED_REVIEWERS;
+                })
                 .sort((a, b) => getWeight(b) - getWeight(a));
 
               core.info(`PRs needing reviewers: ${needsReviewers.length}`);

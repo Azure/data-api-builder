@@ -101,7 +101,6 @@ jobs:
                 return;
               }
 
-              const author = pr.user.login;
               const candidates = REVIEWERS.filter((r) => r !== author && !assigned.includes(r));
               if (candidates.length === 0) {
                 core.info(`PR #${pr.number} — no candidates after filtering.`);

@@ -24,7 +24,7 @@ namespace Cli.Commands
             IEnumerable<string>? patternsInclude = null,
             IEnumerable<string>? patternsExclude = null,
             string? patternsName = null,
-            string? templateMcpDmlTool = null,
+            string? templateMcpDmlTools = null,
             bool? templateRestEnabled = null,
             bool? templateGraphqlEnabled = null,
             bool? templateCacheEnabled = null,
@@ -39,7 +39,7 @@ namespace Cli.Commands
             PatternsInclude = patternsInclude;
             PatternsExclude = patternsExclude;
             PatternsName = patternsName;
-            TemplateMcpDmlTools = templateMcpDmlTool;
+            TemplateMcpDmlTools = templateMcpDmlTools;
             TemplateRestEnabled = templateRestEnabled;
             TemplateGraphqlEnabled = templateGraphqlEnabled;
             TemplateCacheEnabled = templateCacheEnabled;

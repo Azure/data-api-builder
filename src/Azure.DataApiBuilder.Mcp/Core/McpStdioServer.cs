@@ -6,6 +6,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
@@ -131,6 +132,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 WriteResult(id, new { ok = true });
                                 break;
 
+                            case "logging/setLevel":
+                                HandleSetLogLevel(id, root);
+                                break;
+
                             case "shutdown":
                                 WriteResult(id, new { ok = true });
                                 return;
@@ -226,6 +231,71 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             WriteResult(id, new { tools = toolsWire });
+        }
+
+        /// <summary>
+        /// Handles the "logging/setLevel" JSON-RPC method by updating the runtime log level.
+        /// </summary>
+        /// <param name="id">The request identifier extracted from the incoming JSON-RPC request.</param>
+        /// <param name="root">The root JSON element of the incoming JSON-RPC request.</param>
+        /// <remarks>
+        /// Log level precedence (highest to lowest):
+        /// 1. CLI --LogLevel flag - cannot be overridden
+        /// 2. Config runtime.telemetry.log-level - cannot be overridden by MCP
+        /// 3. MCP logging/setLevel - only works if neither CLI nor Config explicitly set a level
+        /// 
+        /// If CLI or Config set the log level, this method accepts the request but silently ignores it.
+        /// The client won't get an error, but CLI/Config wins.
+        /// </remarks>
+        private void HandleSetLogLevel(JsonElement? id, JsonElement root)
+        {
+            // Extract the level parameter from the request
+            string? level = null;
+            if (root.TryGetProperty("params", out JsonElement paramsEl) &&
+                paramsEl.TryGetProperty("level", out JsonElement levelEl) &&
+                levelEl.ValueKind == JsonValueKind.String)
+            {
+                level = levelEl.GetString();
+            }
+
+            if (string.IsNullOrWhiteSpace(level))
+            {
+                WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing or invalid 'level' parameter");
+                return;
+            }
+
+            // Get the ILogLevelController from service provider
+            ILogLevelController? logLevelController = _serviceProvider.GetService<ILogLevelController>();
+            if (logLevelController is null)
+            {
+                // Log level controller not available - still accept request per MCP spec
+                Console.Error.WriteLine("[MCP DEBUG] ILogLevelController not available, logging/setLevel ignored.");
+                WriteResult(id, new { });
+                return;
+            }
+
+            // Attempt to update the log level
+            // If CLI or Config overrode, this returns false but we still return success to the client
+            bool changed = logLevelController.UpdateFromMcp(level);
+            if (changed)
+            {
+                Console.Error.WriteLine($"[MCP DEBUG] Log level changed to: {level}");
+            }
+            else if (logLevelController.IsCliOverridden)
+            {
+                Console.Error.WriteLine($"[MCP DEBUG] Log level not changed (CLI override active), requested: {level}");
+            }
+            else if (logLevelController.IsConfigOverridden)
+            {
+                Console.Error.WriteLine($"[MCP DEBUG] Log level not changed (Config override active), requested: {level}");
+            }
+            else
+            {
+                Console.Error.WriteLine($"[MCP DEBUG] Log level not changed, invalid level: {level}");
+            }
+
+            // Always return success (empty result object) per MCP spec
+            WriteResult(id, new { });
         }
 
         /// <summary>

@@ -618,14 +618,20 @@ public class RuntimeConfigValidator : IConfigValidator
         int resolvedAutoentityCount = childConfig.Autoentities
             .Sum(a => parentConfig.AutoentityResolutionCounts.TryGetValue(a.Key, out int count) ? count : 0);
         int totalChildEntities = childConfig.Entities.Entities.Count + resolvedAutoentityCount;
+        bool childHasAutoentityDefinitions = childConfig.Autoentities.Autoentities.Count > 0;
 
-        if (totalChildEntities == 0)
+        if (totalChildEntities == 0 && !childHasAutoentityDefinitions)
         {
             HandleOrRecordException(new DataApiBuilderException(
                 message: $"Child config '{fileName}': Data source defined but no entities found. " +
-                    "At least one entity must be defined or generated from autoentities.",
+                    "At least one entity must be defined or an autoentities definition must be configured.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+        else if (totalChildEntities == 0 && childHasAutoentityDefinitions)
+        {
+            _logger.LogWarning("Child config '{fileName}': Autoentities are configured but no entities were resolved. " +
+                "Verify that autoentity patterns match database objects.", fileName);
         }
     }
 
@@ -663,14 +669,23 @@ public class RuntimeConfigValidator : IConfigValidator
         // After autoentity resolution, generated entities are merged into config.Entities
         // and are marked with IsAutoentity=true.
         int totalEntityCount = runtimeConfig.Entities.Entities.Count;
+        bool hasAutoentityDefinitions = runtimeConfig.Autoentities.Autoentities.Count > 0;
 
-        if (totalEntityCount == 0)
+        if (totalEntityCount == 0 && !hasAutoentityDefinitions)
         {
+            // No entities and no autoentity definitions at all — nothing configured.
             HandleOrRecordException(new DataApiBuilderException(
                 message: $"{prefix}Data source defined but no entities found. " +
-                    "At least one entity must be defined or generated from autoentities when a data source is configured.",
+                    "At least one entity must be defined or an autoentities definition must be configured when a data source is present.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+        else if (totalEntityCount == 0 && hasAutoentityDefinitions)
+        {
+            // Autoentity definitions exist but resolved zero entities — warn, don't error.
+            // The user configured autoentities but patterns didn't match anything.
+            _logger.LogWarning("{prefix}Autoentities are configured but no entities were resolved. " +
+                "Verify that autoentity patterns match database objects.", prefix);
         }
     }
 

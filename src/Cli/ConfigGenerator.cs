@@ -2718,7 +2718,8 @@ namespace Cli
             List<string> args = new()
             { "--ConfigFileName", runtimeConfigFile };
 
-            /// Add arguments for LogLevel. Checks if LogLevel is overridden with option `--LogLevel`.
+            /// Add arguments for LogLevel. Only pass --LogLevel when user explicitly specified it,
+            /// so that MCP logging/setLevel can still adjust the level when no CLI override is present.
             /// If not provided, Default minimum LogLevel is Debug for Development mode and Error for Production mode.
             LogLevel minimumLogLevel;
             if (options.LogLevel is not null)
@@ -2732,6 +2733,8 @@ namespace Cli
                 }
 
                 minimumLogLevel = (LogLevel)options.LogLevel;
+                // Only add --LogLevel when user explicitly specified it via CLI.
+                // This allows MCP logging/setLevel to work when no CLI override is present.
                 args.Add("--LogLevel");
                 args.Add(minimumLogLevel.ToString());
                 _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);

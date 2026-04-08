@@ -464,7 +464,7 @@ namespace Cli
 
             EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
-            EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl, options.CacheLevel);
+            EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtlSeconds, options.CacheLevel);
             EntityHealthCheckConfig? entityHealthOptions = ConstructEntityHealthOptions(options.HealthEnabled);
             EntityMcpOptions? mcpOptions = null;
 
@@ -1006,10 +1006,10 @@ namespace Cli
                 options.RuntimePaginationDefaultPageSize != null ||
                 options.RuntimePaginationNextLinkRelative != null)
             {
-                PaginationOptions existing = runtimeConfig?.Runtime?.Pagination ?? new();
-                int? maxPageSize = options.RuntimePaginationMaxPageSize ?? (existing.UserProvidedMaxPageSize ? existing.MaxPageSize : null);
-                int? defaultPageSize = options.RuntimePaginationDefaultPageSize ?? (existing.UserProvidedDefaultPageSize ? existing.DefaultPageSize : null);
-                bool? nextLinkRelative = options.RuntimePaginationNextLinkRelative ?? existing.NextLinkRelative;
+                PaginationOptions currentPagination = runtimeConfig?.Runtime?.Pagination ?? new();
+                int? maxPageSize = options.RuntimePaginationMaxPageSize ?? (currentPagination.UserProvidedMaxPageSize ? currentPagination.MaxPageSize : null);
+                int? defaultPageSize = options.RuntimePaginationDefaultPageSize ?? (currentPagination.UserProvidedDefaultPageSize ? currentPagination.DefaultPageSize : null);
+                bool? nextLinkRelative = options.RuntimePaginationNextLinkRelative ?? currentPagination.NextLinkRelative;
 
                 PaginationOptions updatedPaginationOptions = new(
                     MaxPageSize: maxPageSize,
@@ -1977,7 +1977,7 @@ namespace Cli
             Dictionary<string, string>? updatedMappings = entity.Mappings;
             EntityActionPolicy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
-            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl, options.CacheLevel) ?? entity.Cache;
+            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtlSeconds, options.CacheLevel) ?? entity.Cache;
             EntityHealthCheckConfig? updatedEntityHealthOptions = ConstructEntityHealthOptions(options.HealthEnabled) ?? entity.Health;
 
             // Determine if the entity is or will be a stored procedure

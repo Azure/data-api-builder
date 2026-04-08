@@ -24,7 +24,7 @@ namespace Cli.Commands
             string? policyRequest,
             string? policyDatabase,
             string? cacheEnabled,
-            string? cacheTtl,
+            string? cacheTtlSeconds,
             string? cacheLevel,
             string? healthEnabled,
             string? description,
@@ -55,7 +55,7 @@ namespace Cli.Commands
             PolicyRequest = policyRequest;
             PolicyDatabase = policyDatabase;
             CacheEnabled = cacheEnabled;
-            CacheTtl = cacheTtl;
+            CacheTtlSeconds = cacheTtlSeconds;
             CacheLevel = cacheLevel;
             HealthEnabled = healthEnabled;
             Description = description;
@@ -112,7 +112,7 @@ namespace Cli.Commands
         public string? CacheEnabled { get; }
 
         [Option("cache.ttl-seconds", Required = false, HelpText = "Specify time to live in seconds for cache entries for Entity.")]
-        public string? CacheTtl { get; }
+        public string? CacheTtlSeconds { get; }
 
         [Option("cache.level", Required = false, HelpText = "Cache level for entity. Allowed values: L1, L1L2. Default: L1L2.")]
         public string? CacheLevel { get; }

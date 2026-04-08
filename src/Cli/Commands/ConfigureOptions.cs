@@ -178,7 +178,7 @@ namespace Cli.Commands
             ShowEffectivePermissions = showEffectivePermissions;
         }
 
-        [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, CosmosDB_PostgreSQL, MySQL.")]
+        [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
         public string? DataSourceDatabaseType { get; }
 
         [Option("data-source.connection-string", Required = false, HelpText = "Connection string for the data source.")]

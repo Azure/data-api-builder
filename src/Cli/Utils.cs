@@ -847,11 +847,11 @@ namespace Cli
         /// Constructs the EntityCacheOption for Add/Update.
         /// </summary>
         /// <param name="cacheEnabled">String value that defines if the cache is enabled.</param>
-        /// <param name="cacheTtl">Int that gives time to live in seconds for cache.</param>
-        /// <returns>EntityCacheOption if values are provided for cacheEnabled or cacheTtl, null otherwise.</returns>
-        public static EntityCacheOptions? ConstructCacheOptions(string? cacheEnabled, string? cacheTtl, string? cacheLevel = null)
+        /// <param name="cacheTtlSeconds">Int that gives time to live in seconds for cache.</param>
+        /// <returns>EntityCacheOption if values are provided for cacheEnabled or cacheTtlSeconds, null otherwise.</returns>
+        public static EntityCacheOptions? ConstructCacheOptions(string? cacheEnabled, string? cacheTtlSeconds, string? cacheLevel = null)
         {
-            if (cacheEnabled is null && cacheTtl is null && cacheLevel is null)
+            if (cacheEnabled is null && cacheTtlSeconds is null && cacheLevel is null)
             {
                 return null;
             }
@@ -865,7 +865,7 @@ namespace Cli
                 _logger.LogError("Invalid format for --cache.enabled. Accepted values are true/false.");
             }
 
-            if ((cacheTtl is not null && !int.TryParse(cacheTtl, out ttl)) || ttl < 0)
+            if ((cacheTtlSeconds is not null && !int.TryParse(cacheTtlSeconds, out ttl)) || ttl < 0)
             {
                 _logger.LogError("Invalid format for --cache.ttl-seconds. Accepted values are any non-negative integer.");
             }
@@ -883,7 +883,7 @@ namespace Cli
             // when a non-null value is passed.
             return new EntityCacheOptions(
                 Enabled: cacheEnabled is not null ? isEnabled : null,
-                TtlSeconds: cacheTtl is not null ? ttl : null,
+                TtlSeconds: cacheTtlSeconds is not null ? ttl : null,
                 Level: level);
         }
 

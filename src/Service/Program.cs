@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
@@ -110,6 +111,7 @@ namespace Azure.DataApiBuilder.Service
                 .ConfigureServices((context, services) =>
                 {
                     services.AddSingleton(LogLevelProvider);
+                    services.AddSingleton<ILogLevelController>(LogLevelProvider);
                 })
                 .ConfigureLogging(logging =>
                 {

@@ -2606,13 +2606,38 @@ namespace Cli
             }
             else
             {
-                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
-                HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
+                // When --mcp-stdio is used without explicit --LogLevel:
+                // 1. Check if config has log-level set - use that (Config has priority 2)
+                // 2. Otherwise default to None for clean MCP stdio output
+                if (options.McpStdio)
+                {
+                    // Check if config explicitly sets a log level
+                    if (!deserializedRuntimeConfig.IsLogLevelNull())
+                    {
+                        minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
+                        _logger.LogInformation("MCP stdio mode: Using config log-level: {minimumLogLevel}.", minimumLogLevel);
+                        // Pass --LogLevel to Service with special marker to indicate it's from config, not CLI.
+                        // This allows MCP logging/setLevel to be blocked by config override.
+                        args.Add("--LogLevel");
+                        args.Add(minimumLogLevel.ToString());
+                        args.Add("--LogLevelFromConfig");
+                    }
+                    else
+                    {
+                        _logger.LogInformation("MCP stdio mode: Defaulting to LogLevel.None (no config override).");
+                        // Don't add --LogLevel to args - let Service handle the default.
+                    }
+                }
+                else
+                {
+                    minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
+                    HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
 
-                _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.", minimumLogLevel, hostModeType);
+                    _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.", minimumLogLevel, hostModeType);
 
-                // Don't add --LogLevel arg since user didn't explicitly set it.
-                // Service will determine default log level based on config or host mode.
+                    // Don't add --LogLevel arg since user didn't explicitly set it.
+                    // Service will determine default log level based on config or host mode.
+                }
             }
 
             // This will add args to disable automatic redirects to https if specified by user

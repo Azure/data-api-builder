@@ -26,6 +26,9 @@ namespace Cli
             // Load environment variables from .env file if present.
             DotNetEnv.Env.Load();
 
+            // Check if MCP stdio mode is requested - suppress CLI logging to keep stdout clean for JSON-RPC.
+            Utils.IsMcpStdioMode = args.Any(a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
+
             // Logger setup and configuration
             ILoggerFactory loggerFactory = Utils.LoggerFactoryForCli;
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();

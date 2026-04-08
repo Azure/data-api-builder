@@ -23,6 +23,11 @@ namespace Cli
         public const string WILDCARD = "*";
         public static readonly string SEPARATOR = ":";
 
+        /// <summary>
+        /// When true, CLI logging to stdout is suppressed to keep the MCP stdio channel clean.
+        /// </summary>
+        public static bool IsMcpStdioMode { get; set; }
+
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private static ILogger<Utils> _logger;
 #pragma warning restore CS8618

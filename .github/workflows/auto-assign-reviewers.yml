@@ -20,6 +20,7 @@ on:
 
 permissions:
   pull-requests: write
+  issues: write
   contents: read
 
 concurrency:
@@ -34,149 +35,163 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const reviewers = ["souvikghosh04", "Aniruddh25", "aaronburtle", "anushakolan", "RubenCerna2079", "JerryNixon"];
+            // ── Configuration ──
+            const REVIEWERS = ["souvikghosh04", "Aniruddh25", "aaronburtle", "anushakolan", "RubenCerna2079"];
             const REQUIRED_REVIEWERS = 2;
-            const DRY_RUN = '${{ github.event.inputs.dry_run || 'true' }}' === 'true';
+            const STALE_DAYS = 90;
+            const DRY_RUN = context.eventName === "workflow_dispatch"
+              ? '${{ github.event.inputs.dry_run }}' === 'true'
+              : true;
 
             const { owner, repo } = context.repo;
+            const staleCutoff = new Date();
+            staleCutoff.setDate(staleCutoff.getDate() - STALE_DAYS);
 
-            // Fetch all open PRs (paginated)
-            const allPRs = await github.paginate(github.rest.pulls.list, {
-              owner,
-              repo,
-              state: "open",
-              per_page: 100,
-            });
+            // ── Helper functions ──
 
-            // Fetch the set of configured reviewers who are requested OR have already submitted a review.
-            // GitHub removes reviewers from requested_reviewers once they submit, so we must check both.
-            async function getConfiguredReviewerSet(pr) {
-              const requested = (pr.requested_reviewers || [])
-                .map((r) => r.login)
-                .filter((r) => reviewers.includes(r));
-
-              const { data: reviews } = await github.rest.pulls.listReviews({
-                owner,
-                repo,
-                pull_number: pr.number,
-              });
-              const submitted = reviews
-                .map((r) => r.user.login)
-                .filter((r) => reviewers.includes(r));
-
-              return [...new Set([...requested, ...submitted])];
+            function getPoolAssignees(pr) {
+              return (pr.assignees || [])
+                .map((a) => a.login)
+                .filter((a) => REVIEWERS.includes(a));
             }
 
-            // Determine if a PR is eligible by labels and draft status.
-            // Reviewer count is checked later after fetching review data.
-            function isEligibleByLabels(pr) {
-              const labels = pr.labels.map((l) => l.name);
-              if (!labels.includes("assign-for-review")) return false;
+            function isEligible(pr) {
               if (pr.draft) return false;
+              if (!pr.labels.some((l) => l.name === "assign-for-review")) return false;
+              if (new Date(pr.updated_at) < staleCutoff) return false;
               return true;
             }
 
-            // Calculate PR weight from labels
             function getWeight(pr) {
               const labels = pr.labels.map((l) => l.name);
-              let weight = 1;
-              if (labels.includes("size-medium")) weight = 2;
-              else if (labels.includes("size-large")) weight = 3;
-              if (labels.includes("priority-high")) weight += 1;
-              return weight;
+              let w = 1;
+              if (labels.includes("size-medium")) w = 2;
+              else if (labels.includes("size-large")) w = 3;
+              if (labels.includes("priority-high")) w += 1;
+              return w;
             }
 
-            // Build load map from all load-relevant PRs (assigned + unassigned)
-            const load = {};
-            for (const r of reviewers) {
-              load[r] = 0;
+            async function getActiveReviewers(pr) {
+              const assigned = getPoolAssignees(pr);
+              if (assigned.length === 0) return [];
+              const { data: reviews } = await github.rest.pulls.listReviews({
+                owner, repo, pull_number: pr.number,
+              });
+              const submitted = new Set(
+                reviews.map((r) => r.user.login).filter((r) => REVIEWERS.includes(r))
+              );
+              return assigned.filter((r) => !submitted.has(r));
             }
 
-            core.info(`Total open PRs fetched: ${allPRs.length}`);
-
-            const labelEligiblePRs = allPRs.filter(isEligibleByLabels);
-            core.info(`Label-eligible PRs (non-draft, has label): ${labelEligiblePRs.length}`);
-
-            // Fetch configured reviewer sets for all label-eligible PRs (used for load + eligibility)
-            const prReviewerMap = new Map();
-            for (const pr of labelEligiblePRs) {
-              const configuredSet = await getConfiguredReviewerSet(pr);
-              prReviewerMap.set(pr.number, configuredSet);
-            }
-
-            // Build load from all label-eligible PRs (includes fully-assigned ones)
-            for (const pr of labelEligiblePRs) {
+            // Assigns reviewers to a single PR, mutating load/activeCount in place.
+            async function assignReviewers(pr, load, activeCount) {
+              const assigned = getPoolAssignees(pr);
+              const needed = REQUIRED_REVIEWERS - assigned.length;
               const weight = getWeight(pr);
-              const configuredSet = prReviewerMap.get(pr.number);
-              for (const reviewer of configuredSet) {
-                if (reviewer in load) {
-                  load[reviewer] += weight;
-                }
-              }
-            }
-
-            core.info(`Current load: ${JSON.stringify(load)}`);
-
-            // Filter to PRs that still need reviewers
-            const eligiblePRs = labelEligiblePRs.filter((pr) => {
-              return prReviewerMap.get(pr.number).length < REQUIRED_REVIEWERS;
-            });
-            core.info(`Total eligible PRs (need reviewers): ${eligiblePRs.length}`);
-
-            // Sort eligible PRs by weight descending (prioritize large PRs)
-            eligiblePRs.sort((a, b) => getWeight(b) - getWeight(a));
-
-            // Assign reviewers to each eligible PR
-            for (const pr of eligiblePRs) {
-              const weight = getWeight(pr);
-              const configuredSet = prReviewerMap.get(pr.number);
-              const needed = REQUIRED_REVIEWERS - configuredSet.length;
-
-              core.info(`PR #${pr.number} — weight: ${weight}, configured reviewers (requested + submitted): [${configuredSet.join(", ")}]`);
 
               if (needed <= 0) {
-                core.info(`PR #${pr.number} already has ${REQUIRED_REVIEWERS} configured reviewers, skipping.`);
-                continue;
+                core.info(`PR #${pr.number} — already has ${assigned.length} pool assignees, skipping.`);
+                return;
               }
 
               const author = pr.user.login;
-
-              // Build candidates: exclude author and already-assigned/reviewed reviewers
-              const candidates = reviewers
-                .filter((r) => r !== author && !configuredSet.includes(r));
-
+              const candidates = REVIEWERS.filter((r) => r !== author && !assigned.includes(r));
               if (candidates.length === 0) {
                 core.info(`PR #${pr.number} — no candidates after filtering.`);
-                continue;
+                return;
               }
 
+              // Sort: prefer unblocked → then lowest load → then alphabetical.
               candidates.sort((a, b) => {
+                const aBlocked = activeCount[a] > 0 ? 1 : 0;
+                const bBlocked = activeCount[b] > 0 ? 1 : 0;
+                if (aBlocked !== bBlocked) return aBlocked - bBlocked;
                 if (load[a] !== load[b]) return load[a] - load[b];
                 return a.localeCompare(b);
               });
 
-              core.info(`PR #${pr.number} candidates: ${JSON.stringify(candidates)}`);
-
               const selected = candidates.slice(0, needed);
+              core.info(`PR #${pr.number} — weight: ${weight}, assigned: [${assigned}], candidates: ${JSON.stringify(candidates.map((c) => `${c}(active:${activeCount[c]},load:${load[c]})`))}, selected: [${selected}]`);
 
               if (DRY_RUN) {
-                core.info(`[DRY RUN] Would assign [${selected.join(", ")}] to PR #${pr.number}`);
+                core.info(`[DRY RUN] Would assign [${selected}] to PR #${pr.number}`);
               } else {
-                await github.rest.pulls.requestReviewers({
-                  owner,
-                  repo,
-                  pull_number: pr.number,
-                  reviewers: selected,
+                await github.rest.issues.addAssignees({
+                  owner, repo, issue_number: pr.number, assignees: selected,
                 });
-                core.info(`Assigned [${selected.join(", ")}] to PR #${pr.number}`);
+                core.info(`Assigned [${selected}] to PR #${pr.number}`);
               }
 
-              // Update load in-memory
-              for (const reviewer of selected) {
-                load[reviewer] += weight;
+              for (const r of selected) {
+                load[r] += weight;
+                activeCount[r] += 1;
               }
+            }
 
-              core.info(`Updated load: ${JSON.stringify(load)}`);
+            // ── Main logic ──
+
+            // For pull_request_target events, early-exit if the triggering PR isn't eligible.
+            if (context.eventName === "pull_request_target") {
+              const triggerPR = context.payload.pull_request;
+              if (!isEligible(triggerPR)) {
+                core.info(`Triggering PR #${triggerPR.number} is not eligible (draft, missing label, or stale). Exiting.`);
+                return;
+              }
+              const assigned = getPoolAssignees(triggerPR);
+              if (assigned.length >= REQUIRED_REVIEWERS) {
+                core.info(`Triggering PR #${triggerPR.number} already has ${assigned.length} pool assignees. Exiting.`);
+                return;
+              }
+              core.info(`Triggering PR #${triggerPR.number} needs reviewers. Proceeding with load calculation.`);
+            }
+
+            // Fetch all open PRs (sorted by most recently updated, skip stale).
+            const allPRs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: "open", sort: "updated", direction: "desc", per_page: 100,
+            });
+            const freshPRs = allPRs.filter((pr) => new Date(pr.updated_at) >= staleCutoff);
+            const eligiblePRs = freshPRs.filter(isEligible);
+
+            core.info(`Open PRs: ${allPRs.length}, fresh (≤${STALE_DAYS}d): ${freshPRs.length}, eligible: ${eligiblePRs.length}`);
+
+            // Build load map from active reviews across all eligible PRs.
+            const load = {};
+            const activeCount = {};
+            for (const r of REVIEWERS) { load[r] = 0; activeCount[r] = 0; }
+
+            for (const pr of eligiblePRs) {
+              const assigned = getPoolAssignees(pr);
+              // Only call listReviews if this PR has pool assignees (saves API calls).
+              if (assigned.length === 0) continue;
+              const active = await getActiveReviewers(pr);
+              const weight = getWeight(pr);
+              for (const r of active) {
+                load[r] += weight;
+                activeCount[r] += 1;
+              }
+            }
+            core.info(`Active load: ${JSON.stringify(load)}`);
+            core.info(`Active counts: ${JSON.stringify(activeCount)}`);
+
+            // Determine which PRs to process.
+            if (context.eventName === "pull_request_target") {
+              // Single-PR mode: only assign the triggering PR.
+              const triggerPR = context.payload.pull_request;
+              // Re-fetch full PR object to get latest assignees.
+              const { data: freshPR } = await github.rest.pulls.get({
+                owner, repo, pull_number: triggerPR.number,
+              });
+              await assignReviewers(freshPR, load, activeCount);
+            } else {
+              // Full-scan mode (workflow_dispatch / schedule): process all eligible PRs that need reviewers.
+              const needsReviewers = eligiblePRs
+                .filter((pr) => getPoolAssignees(pr).length < REQUIRED_REVIEWERS)
+                .sort((a, b) => getWeight(b) - getWeight(a));
+
+              core.info(`PRs needing reviewers: ${needsReviewers.length}`);
+              for (const pr of needsReviewers) {
+                await assignReviewers(pr, load, activeCount);
+              }
             }
 
             core.info("Review assignment complete.");

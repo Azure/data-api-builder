@@ -74,8 +74,8 @@ jobs:
             async function getActiveReviewers(pr) {
               const assigned = getPoolAssignees(pr);
               if (assigned.length === 0) return [];
-              const { data: reviews } = await github.rest.pulls.listReviews({
-                owner, repo, pull_number: pr.number,
+              const reviews = await github.paginate(github.rest.pulls.listReviews, {
+                owner, repo, pull_number: pr.number, per_page: 100,
               });
               const submitted = new Set(
                 reviews.map((r) => r.user.login).filter((r) => REVIEWERS.includes(r))
@@ -120,6 +120,16 @@ jobs:
                   owner, repo, issue_number: pr.number, assignees: selected,
                 });
                 core.info(`Assigned [${selected}] to PR #${pr.number}`);
+
+                // Remove the label once reviewers are fully assigned so the bot
+                // doesn't re-process this PR on subsequent runs.
+                const newAssignedCount = assigned.length + selected.length;
+                if (newAssignedCount >= REQUIRED_REVIEWERS) {
+                  await github.rest.issues.removeLabel({
+                    owner, repo, issue_number: pr.number, name: "assign-for-review",
+                  }).catch((e) => core.warning(`Could not remove label from PR #${pr.number}: ${e.message}`));
+                  core.info(`Removed 'assign-for-review' label from PR #${pr.number}`);
+                }
               }
 
               for (const r of selected) {

@@ -2804,6 +2804,44 @@ type Moon {
             }
         }
 
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestMcpInitializeIncludesInstructionsFromRuntimeDescription()
+        {
+            const string MCP_INSTRUCTIONS = "Use SQL tools to query the database.";
+            const string CUSTOM_CONFIG = "custom-config-mcp-instructions.json";
+
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: true, Description: MCP_INSTRUCTIONS);
+
+            SqlConnectionStringBuilder connectionStringBuilder = new(GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL))
+            {
+                TrustServerCertificate = true
+            };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                connectionStringBuilder.ConnectionString, Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions);
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+
+            JsonElement initializeResponse = await GetMcpInitializeResponse(client, configuration.Runtime.Mcp);
+            JsonElement result = initializeResponse.GetProperty("result");
+
+            Assert.AreEqual(MCP_INSTRUCTIONS, result.GetProperty("instructions").GetString(), "MCP initialize response should include instructions from runtime.mcp.description.");
+        }
+
         /// <summary>
         /// For mutation operations, both the respective operation(create/update/delete) + read permissions are needed to receive a valid response.
         /// In this test, Anonymous role is configured with only create permission.
@@ -6282,6 +6320,83 @@ type Planet @model(name:""PlanetAlias"") {
             }
 
             return responseCode;
+        }
+
+        /// <summary>
+        /// Executes MCP initialize over HTTP and returns the parsed JSON response.
+        /// </summary>
+        public static async Task<JsonElement> GetMcpInitializeResponse(HttpClient httpClient, McpRuntimeOptions mcp)
+        {
+            int retryCount = 0;
+            HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
+            string responseBody = string.Empty;
+
+            while (retryCount < RETRY_COUNT)
+            {
+                object payload = new
+                {
+                    jsonrpc = "2.0",
+                    id = 1,
+                    method = "initialize",
+                    @params = new
+                    {
+                        protocolVersion = "2025-03-26",
+                        capabilities = new { },
+                        clientInfo = new { name = "dab-test", version = "1.0.0" }
+                    }
+                };
+
+                HttpRequestMessage mcpRequest = new(HttpMethod.Post, mcp.Path)
+                {
+                    Content = JsonContent.Create(payload)
+                };
+                mcpRequest.Headers.Add("Accept", "application/json, text/event-stream");
+
+                HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
+                responseCode = mcpResponse.StatusCode;
+                responseBody = await mcpResponse.Content.ReadAsStringAsync();
+
+                if (responseCode == HttpStatusCode.ServiceUnavailable || responseCode == HttpStatusCode.NotFound)
+                {
+                    retryCount++;
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(RETRY_WAIT_SECONDS, retryCount)));
+                    continue;
+                }
+
+                break;
+            }
+
+            Assert.AreEqual(HttpStatusCode.OK, responseCode, "MCP initialize should return HTTP 200.");
+            Assert.IsFalse(string.IsNullOrWhiteSpace(responseBody), "MCP initialize response body should not be empty.");
+
+            // Depending on transport/content negotiation, initialize can return plain JSON
+            // or SSE-formatted text where JSON payload is carried in a data: line.
+            string payloadToParse = responseBody.TrimStart().StartsWith('{')
+                ? responseBody
+                : ExtractJsonFromSsePayload(responseBody);
+
+            Assert.IsFalse(string.IsNullOrWhiteSpace(payloadToParse), "MCP initialize response did not contain a JSON payload.");
+
+            using JsonDocument responseDocument = JsonDocument.Parse(payloadToParse);
+            return responseDocument.RootElement.Clone();
+        }
+
+        private static string ExtractJsonFromSsePayload(string ssePayload)
+        {
+            foreach (string line in ssePayload.Split('\n'))
+            {
+                string trimmed = line.Trim();
+                if (trimmed.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    string data = trimmed.Substring("data:".Length).Trim();
+                    if (!string.IsNullOrWhiteSpace(data) && data.StartsWith('{'))
+                    {
+                        return data;
+                    }
+                }
+            }
+
+            return string.Empty;
         }
 
         /// <summary>

@@ -747,6 +747,30 @@
                   "minimum": 1
                 }
               }
+            },
+            "chunking": {
+              "type": "object",
+              "description": "Chunking configuration for text processing before embedding. Used to split large text inputs into smaller chunks.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether chunking is enabled. Defaults to false.",
+                  "default": false
+                },
+                "size-chars": {
+                  "type": "integer",
+                  "description": "The size of each chunk in characters.",
+                  "default": 800,
+                  "minimum": 1
+                },
+                "overlap-chars": {
+                  "type": "integer",
+                  "description": "The number of characters to overlap between consecutive chunks. Overlap helps maintain context across chunk boundaries.",
+                  "default": 100,
+                  "minimum": 0
+                }
+              }
             }
           },
           "required": ["provider", "base-url", "api-key"],

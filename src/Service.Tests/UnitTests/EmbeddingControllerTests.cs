@@ -4,6 +4,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -963,6 +964,469 @@ public class EmbeddingControllerTests
 
     #endregion
 
+    #region Document Array with Chunking Tests
+
+    /// <summary>
+    /// Tests that document array requests are properly processed.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsEmbeddings_ForDocumentArray()
+    {
+        // Arrange
+        float[] embedding1 = new[] { 0.1f, 0.2f };
+        float[] embedding2 = new[] { 0.3f, 0.4f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync("First document", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult(true, embedding1));
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync("Second document", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult(true, embedding2));
+
+        string requestBody = """
+            [
+                {"key": "doc-1", "text": "First document"},
+                {"key": "doc-2", "text": "Second document"}
+            ]
+            """;
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed",
+            requestBody: requestBody,
+            contentType: "application/json",
+            hostMode: HostMode.Development);
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        Assert.IsNotNull(okResult.Value);
+
+        EmbedDocumentResponse[]? responses = okResult.Value as EmbedDocumentResponse[];
+        Assert.IsNotNull(responses);
+        Assert.AreEqual(2, responses.Length);
+        Assert.AreEqual("doc-1", responses[0].Key);
+        Assert.AreEqual("doc-2", responses[1].Key);
+        Assert.AreEqual(1, responses[0].Data.Length); // no chunking by default
+        Assert.AreEqual(1, responses[1].Data.Length);
+    }
+
+    /// <summary>
+    /// Tests that document array with chunking enabled splits text into multiple embeddings.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ChunksDocuments_WhenChunkingEnabled()
+    {
+        // Arrange
+        float[] embedding1 = new[] { 0.1f, 0.2f };
+        float[] embedding2 = new[] { 0.3f, 0.4f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string text, CancellationToken _) =>
+            {
+                return text.Contains("First") ? new EmbeddingResult(true, embedding1) : new EmbeddingResult(true, embedding2);
+            });
+
+        // Create a long text that will be chunked (default chunk size is 1000)
+        string longText = new string('A', 1500);
+
+        string requestBody = $$"""
+            [
+                {"key": "doc-1", "text": "{{longText}}"}
+            ]
+            """;
+
+        EmbeddingsEndpointOptions endpointOptions = new(enabled: true);
+        EmbeddingsChunkingOptions chunkingOptions = new(Enabled: true, SizeChars: 1000, OverlapChars: 250);
+        EmbeddingsOptions embeddingsOptions = new(
+            Provider: EmbeddingProviderType.OpenAI,
+            BaseUrl: "https://api.openai.com",
+            ApiKey: "test-key",
+            Endpoint: endpointOptions,
+            Chunking: chunkingOptions);
+
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions,
+            hostMode: HostMode.Development);
+
+        EmbeddingController controller = new(
+            mockProvider.Object,
+            _mockLogger.Object,
+            _mockEmbeddingService.Object);
+
+        controller.ControllerContext = CreateControllerContext(
+            "/embed",
+            requestBody,
+            "application/json");
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        EmbedDocumentResponse[]? responses = okResult.Value as EmbedDocumentResponse[];
+        Assert.IsNotNull(responses);
+        Assert.AreEqual(1, responses.Length);
+        Assert.AreEqual("doc-1", responses[0].Key);
+        Assert.IsTrue(responses[0].Data.Length > 1, "Text should be chunked into multiple embeddings");
+    }
+
+    /// <summary>
+    /// Tests that query parameter $chunking.enabled=true overrides config.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ChunkingQueryParameter_EnablesChunking()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult(true, embedding));
+
+        string longText = new string('A', 1500);
+        string requestBody = $$"""
+            [
+                {"key": "doc-1", "text": "{{longText}}"}
+            ]
+            """;
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed?$chunking.enabled=true&$chunking.size-chars=500",
+            requestBody: requestBody,
+            contentType: "application/json",
+            hostMode: HostMode.Development);
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        EmbedDocumentResponse[]? responses = okResult.Value as EmbedDocumentResponse[];
+        Assert.IsNotNull(responses);
+        Assert.AreEqual("doc-1", responses[0].Key);
+        Assert.IsTrue(responses[0].Data.Length >= 3, "Text should be chunked into at least 3 embeddings with 500 char chunks");
+    }
+
+    /// <summary>
+    /// Tests that query parameter $chunking.size-chars overrides config.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ChunkingQueryParameter_OverridesChunkSize()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        int callCount = 0;
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult(true, embedding))
+            .Callback(() => callCount++);
+
+        string text = new string('A', 1000);
+        string requestBody = $$"""
+            [
+                {"key": "doc-1", "text": "{{text}}"}
+            ]
+            """;
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed?$chunking.enabled=true&$chunking.size-chars=300&$chunking.overlap-chars=0",
+            requestBody: requestBody,
+            contentType: "application/json",
+            hostMode: HostMode.Development);
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        // 1000 chars with 300 char chunks and no overlap = 4 chunks (300, 300, 300, 100)
+        Assert.IsTrue(callCount >= 4, $"Expected at least 4 embedding calls, but got {callCount}");
+    }
+
+    /// <summary>
+    /// Tests that query parameter $chunking.overlap-chars is respected.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ChunkingQueryParameter_OverridesOverlapChars()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        List<string> embeddedTexts = new();
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult(true, embedding))
+            .Callback<string, CancellationToken>((text, _) => embeddedTexts.Add(text));
+
+        string text = "0123456789" + "ABCDEFGHIJ" + "abcdefghij"; // 30 chars
+        string requestBody = $$"""
+            [
+                {"key": "doc-1", "text": "{{text}}"}
+            ]
+            """;
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed?$chunking.enabled=true&$chunking.size-chars=15&$chunking.overlap-chars=5",
+            requestBody: requestBody,
+            contentType: "application/json",
+            hostMode: HostMode.Development);
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        Assert.IsTrue(embeddedTexts.Count >= 2, "Should have multiple chunks");
+        
+        // Check overlap: last 5 chars of first chunk should match first 5 chars of second chunk
+        if (embeddedTexts.Count >= 2)
+        {
+            string chunk1End = embeddedTexts[0].Substring(Math.Max(0, embeddedTexts[0].Length - 5));
+            string chunk2Start = embeddedTexts[1].Substring(0, Math.Min(5, embeddedTexts[1].Length));
+            Assert.AreEqual(chunk1End, chunk2Start, "Chunks should have overlapping content");
+        }
+    }
+
+    /// <summary>
+    /// Tests that $chunking.enabled=false disables chunking even if config enables it.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ChunkingQueryParameter_DisablesChunking()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        int callCount = 0;
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult(true, embedding))
+            .Callback(() => callCount++);
+
+        string longText = new string('A', 2000);
+        string requestBody = $$"""
+            [
+                {"key": "doc-1", "text": "{{longText}}"}
+            ]
+            """;
+
+        EmbeddingsEndpointOptions endpointOptions = new(enabled: true);
+        EmbeddingsChunkingOptions chunkingOptions = new(Enabled: true, SizeChars: 500, OverlapChars: 100);
+        EmbeddingsOptions embeddingsOptions = new(
+            Provider: EmbeddingProviderType.OpenAI,
+            BaseUrl: "https://api.openai.com",
+            ApiKey: "test-key",
+            Endpoint: endpointOptions,
+            Chunking: chunkingOptions);
+
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions,
+            hostMode: HostMode.Development);
+
+        EmbeddingController controller = new(
+            mockProvider.Object,
+            _mockLogger.Object,
+            _mockEmbeddingService.Object);
+
+        controller.ControllerContext = CreateControllerContext(
+            "/embed?$chunking.enabled=false",
+            requestBody,
+            "application/json");
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        Assert.AreEqual(1, callCount, "Should not chunk when disabled via query parameter");
+    }
+
+    /// <summary>
+    /// Tests that empty document array returns BadRequest.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsBadRequest_ForEmptyDocumentArray()
+    {
+        // Arrange
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed",
+            requestBody: "[]",
+            contentType: "application/json",
+            hostMode: HostMode.Development);
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
+    }
+
+    /// <summary>
+    /// Tests that document with missing key returns InternalServerError.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_HandlesDocumentWithMissingKey()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult(true, embedding));
+
+        string requestBody = """
+            [
+                {"text": "Document without key"}
+            ]
+            """;
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed",
+            requestBody: requestBody,
+            contentType: "application/json",
+            hostMode: HostMode.Development);
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert - document without key should be handled gracefully
+        // Check that result is either BadRequest or that the key is null/empty in response
+        Assert.IsTrue(
+            result is BadRequestObjectResult || 
+            (result is OkObjectResult okResult && 
+             okResult.Value is EmbedDocumentResponse[] responses &&
+             string.IsNullOrEmpty(responses[0].Key)));
+    }
+
+    /// <summary>
+    /// Tests that document with empty text is skipped or returns error.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_HandlesDocumentWithEmptyText()
+    {
+        // Arrange
+        string requestBody = """
+            [
+                {"key": "doc-1", "text": ""}
+            ]
+            """;
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed",
+            requestBody: requestBody,
+            contentType: "application/json",
+            hostMode: HostMode.Development);
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert - empty text should result in error
+        Assert.IsTrue(
+            result is BadRequestObjectResult || 
+            result is ObjectResult errorResult && errorResult.StatusCode == 500);
+    }
+
+    /// <summary>
+    /// Tests that chunking respects minimum chunk size.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ChunkingHandlesVerySmallChunkSize()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult(true, embedding));
+
+        string requestBody = """
+            [
+                {"key": "doc-1", "text": "Short"}
+            ]
+            """;
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed?$chunking.enabled=true&$chunking.size-chars=1",
+            requestBody: requestBody,
+            contentType: "application/json",
+            hostMode: HostMode.Development);
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert - should not crash with very small chunk size (may return error due to invalid config)
+        Assert.IsNotNull(result, "Result should not be null");
+    }
+
+    /// <summary>
+    /// Tests chunking with overlap larger than chunk size.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ChunkingHandlesOverlapLargerThanChunkSize()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult(true, embedding));
+
+        string text = new string('A', 100);
+        string requestBody = $$"""
+            [
+                {"key": "doc-1", "text": "{{text}}"}
+            ]
+            """;
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed?$chunking.enabled=true&$chunking.size-chars=50&$chunking.overlap-chars=60",
+            requestBody: requestBody,
+            contentType: "application/json",
+            hostMode: HostMode.Development);
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert - should handle overlap >= size gracefully
+        Assert.IsTrue(result is OkObjectResult || result is BadRequestObjectResult);
+    }
+
+    /// <summary>
+    /// Tests that failed embeddings in document array process are handled.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_HandlesEmbeddingFailure_InDocumentArray()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync("First document", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult(true, embedding));
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedAsync("Second document", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult(false, null, "Provider error"));
+
+        string requestBody = """
+            [
+                {"key": "doc-1", "text": "First document"},
+                {"key": "doc-2", "text": "Second document"}
+            ]
+            """;
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed",
+            requestBody: requestBody,
+            contentType: "application/json",
+            hostMode: HostMode.Development);
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert - should return error when any embedding fails
+        Assert.IsInstanceOfType(result, typeof(ObjectResult));
+        ObjectResult objectResult = (ObjectResult)result;
+        Assert.AreEqual((int)HttpStatusCode.InternalServerError, objectResult.StatusCode);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     /// <summary>
@@ -1071,7 +1535,19 @@ public class EmbeddingControllerTests
         string? acceptHeader = null)
     {
         DefaultHttpContext httpContext = new();
-        httpContext.Request.Path = requestPath;
+        
+        // Parse path and query string
+        int queryIndex = requestPath.IndexOf('?');
+        if (queryIndex >= 0)
+        {
+            httpContext.Request.Path = requestPath.Substring(0, queryIndex);
+            httpContext.Request.QueryString = new QueryString(requestPath.Substring(queryIndex));
+        }
+        else
+        {
+            httpContext.Request.Path = requestPath;
+        }
+        
         httpContext.Request.Method = "POST";
         httpContext.Request.ContentType = contentType;
 

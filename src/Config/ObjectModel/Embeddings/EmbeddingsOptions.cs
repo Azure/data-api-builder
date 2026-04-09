@@ -101,6 +101,12 @@ public record EmbeddingsOptions
     public EmbeddingsHealthCheckConfig? Health { get; init; }
 
     /// <summary>
+    /// Chunking configuration for text processing before embedding.
+    /// </summary>
+    [JsonPropertyName("chunking")]
+    public EmbeddingsChunkingOptions? Chunking { get; init; }
+
+    /// <summary>
     /// Flag which informs whether the user provided a custom timeout value.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
@@ -159,6 +165,12 @@ public record EmbeddingsOptions
     [JsonIgnore]
     public bool IsEndpointEnabled => Endpoint?.Enabled ?? false;
 
+    /// <summary>
+    /// Returns true if chunking is enabled.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsChunkingEnabled => Chunking?.Enabled ?? false;
+
     [JsonConstructor]
     public EmbeddingsOptions(
         EmbeddingProviderType Provider,
@@ -170,13 +182,15 @@ public record EmbeddingsOptions
         int? Dimensions = null,
         int? TimeoutMs = null,
         EmbeddingsEndpointOptions? Endpoint = null,
-        EmbeddingsHealthCheckConfig? Health = null)
+        EmbeddingsHealthCheckConfig? Health = null,
+        EmbeddingsChunkingOptions? Chunking = null)
     {
         this.Provider = Provider;
         this.BaseUrl = BaseUrl;
         this.ApiKey = ApiKey;
         this.Endpoint = Endpoint;
         this.Health = Health;
+        this.Chunking = Chunking;
 
         if (Enabled.HasValue)
         {

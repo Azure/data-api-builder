@@ -27,7 +27,6 @@ namespace Cli
         private static ILogger<Utils> _logger;
 #pragma warning restore CS8618
 
-        public static LogBuffer CliBuffer = new();
         public static ILoggerFactory LoggerFactoryForCli = GetLoggerFactoryForCli();
         public static void SetCliUtilsLogger(ILogger<Utils> cliUtilsLogger)
         {
@@ -311,20 +310,19 @@ namespace Cli
             FileSystemRuntimeConfigLoader loader,
             string? userProvidedConfigFile,
             out string runtimeConfigFile,
-            bool useLogger = true)
+            LogBuffer? logBuffer = null)
         {
-            LogBuffer? logBuffer = useLogger ? null : CliBuffer;
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 /// The existence of user provided config file is not checked here.
-                ConfigGenerator.SendLogToBufferOrLogger(_logger, logBuffer, LogLevel.Information, $"User provided config file: {userProvidedConfigFile}");
+                ConfigGenerator.SendLogToBufferOrLogger(logBuffer, LogLevel.Information, $"User provided config file: {userProvidedConfigFile}");
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
             }
             else
             {
-                ConfigGenerator.SendLogToBufferOrLogger(_logger, logBuffer, LogLevel.Information, "Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
-                ConfigGenerator.SendLogToBufferOrLogger(_logger, logBuffer, LogLevel.Information, $"Environment variable DAB_ENVIRONMENT is {Environment.GetEnvironmentVariable("DAB_ENVIRONMENT")}");
+                ConfigGenerator.SendLogToBufferOrLogger(logBuffer, LogLevel.Information, "Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                ConfigGenerator.SendLogToBufferOrLogger(logBuffer, LogLevel.Information, $"Environment variable DAB_ENVIRONMENT is {Environment.GetEnvironmentVariable("DAB_ENVIRONMENT")}");
                 runtimeConfigFile = loader.GetFileNameForEnvironment(null, considerOverrides: false);
             }
 

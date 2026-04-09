@@ -755,12 +755,6 @@ namespace Azure.DataApiBuilder.Service
                 });
             }
 
-            hostLifetime.StopApplication();
-            FileSystemRuntimeConfigLoader newConfigLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
-            _logBuffer.FlushToLogger(_logger);
-            newConfigLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
-            newConfigLoader.FlushLogBuffer();
-
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();

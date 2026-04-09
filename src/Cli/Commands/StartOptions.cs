@@ -19,7 +19,7 @@ namespace Cli.Commands
     {
         private const string LOGLEVEL_HELPTEXT = "Specifies logging level as provided value. For possible values, see: https://go.microsoft.com/fwlink/?linkid=2263106";
 
-        public LogBuffer CliBuffer = new();
+        public LogBuffer CliBuffer { get; }
 
         public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, bool mcpStdio, string? mcpRole, string config)
             : base(config)
@@ -29,6 +29,7 @@ namespace Cli.Commands
             IsHttpsRedirectionDisabled = isHttpsRedirectionDisabled;
             McpStdio = mcpStdio;
             McpRole = mcpRole;
+            CliBuffer = new LogBuffer();
         }
 
         // SetName defines mutually exclusive sets, ie: can not have

@@ -54,6 +54,7 @@ body:
       options:
         - REST
         - GraphQL
+        - MCP 
   - type: textarea
     id: logs
     attributes:

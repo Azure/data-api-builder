@@ -123,18 +123,18 @@ namespace Cli
 
             bool isMultipleCreateEnabledForGraphQL;
 
-            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-mutations.create.enabled is specified for other database types,
             // a warning is logged.
             // When multiple mutation operations are extended for other database types, this option should be honored.
             // Tracked by issue #2001: https://github.com/Azure/data-api-builder/issues/2001.
             if (dbType is not DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
             {
-                _logger.LogWarning($"The option --graphql.multiple-create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
+                _logger.LogWarning($"The option --graphql.multiple-mutations.create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
             }
 
             MultipleMutationOptions? multipleMutationOptions = null;
 
-            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-mutations.create.enabled is specified for other database types,
             // it is not honored.
             if (dbType is DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
             {
@@ -347,7 +347,7 @@ namespace Cli
         /// <summary>
         /// Helper method to determine if the multiple create operation is enabled or not based on the inputs from dab init command.
         /// </summary>
-        /// <param name="multipleCreateEnabledOptionValue">Input value for --graphql.multiple-create.enabled option of the init command</param>
+        /// <param name="multipleCreateEnabledOptionValue">Input value for --graphql.multiple-mutations.create.enabled option of the init command</param>
         /// <returns>True/False</returns>
         private static bool IsMultipleCreateOperationEnabled(CliBool multipleCreateEnabledOptionValue)
         {
@@ -3268,7 +3268,7 @@ namespace Cli
 
             if (runtimeConfig.DataSource.DatabaseType != DatabaseType.MSSQL)
             {
-                _logger.LogError("Autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
+                _logger.LogError("The autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
                 return false;
             }
 
@@ -3360,7 +3360,7 @@ namespace Cli
         /// <param name="results">The simulation results keyed by filter (definition) name.</param>
         private static void WriteSimulationResultsToConsole(Dictionary<string, List<(string EntityName, string SchemaName, string ObjectName)>> results)
         {
-            Console.WriteLine("AutoEntities Simulation Results");
+            Console.WriteLine("Autoentities Simulation Results");
             Console.WriteLine();
 
             foreach ((string filterName, List<(string EntityName, string SchemaName, string ObjectName)> matches) in results)

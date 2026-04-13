@@ -19,6 +19,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         private static Dictionary<string, string> _queryMap = new()
         {
             {
+                "PutOne_Insert_KeylessWithAutoGenPK_Test",
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'My New Book' " +
+                $"AND [publisher_id] = 1234 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Update_KeylessWithPKInBody_ExistingRow_Test",
+                $"SELECT [id], [title], [issue_number] FROM [foo].{ _integration_NonAutoGenPK_TableName } " +
+                $"WHERE [id] = 1 AND [title] = 'Updated Vogue' " +
+                $"AND [issue_number] = 9999 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOne_Insert_KeylessWithPKInBody_NewRow_Test",
+                $"SELECT [id], [title], [issue_number] FROM [foo].{ _integration_NonAutoGenPK_TableName } " +
+                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'Brand New Magazine' " +
+                $"AND [issue_number] = 42 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PutOne_Update_Test",
                 $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
                 $"WHERE id = 7 AND [title] = 'The Hobbit Returns to The Shire' " +

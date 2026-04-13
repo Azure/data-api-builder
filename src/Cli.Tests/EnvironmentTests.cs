@@ -165,8 +165,7 @@ public class EnvironmentTests
         string? output = await process.StandardError.ReadLineAsync();
         Assert.AreEqual("Deserialization of the configuration file failed during a post-processing step.", output);
         output = await process.StandardError.ReadToEndAsync();
-        StringAssert.Contains(output, "Environmental Variable, "
-            + expectedEnvVarName + ", not found.", StringComparison.Ordinal);
+        StringAssert.Contains(output, "A valid Connection String should be provided.", StringComparison.Ordinal);
         process.Kill();
     }
 

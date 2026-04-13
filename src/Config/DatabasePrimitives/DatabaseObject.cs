@@ -43,13 +43,15 @@ public abstract class DatabaseObject
     public bool Equals(DatabaseObject? other)
     {
         return other is not null &&
-               SchemaName.Equals(other.SchemaName) &&
-               Name.Equals(other.Name);
+               string.Equals(SchemaName, other.SchemaName, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase);
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(SchemaName, Name);
+        return HashCode.Combine(
+            SchemaName is null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(SchemaName),
+            Name is null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(Name));
     }
 
     /// <summary>
@@ -233,6 +235,16 @@ public class SourceDefinition
 
         return null;
     }
+
+    public virtual int? GetLengthForParam(string paramName)
+    {
+        if (Columns.TryGetValue(paramName, out ColumnDefinition? columnDefinition))
+        {
+            return columnDefinition.Length;
+        }
+
+        return null;
+    }
 }
 
 /// <summary>
@@ -268,6 +280,7 @@ public class ColumnDefinition
     public bool IsNullable { get; set; }
     public bool IsReadOnly { get; set; }
     public object? DefaultValue { get; set; }
+    public int? Length { get; set; }
 
     public ColumnDefinition() { }
 

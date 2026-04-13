@@ -33,11 +33,12 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public MsSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
+            RuntimeConfigValidator runtimeConfigValidator,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,
             bool isValidateOnly = false)
-            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly)
+            : base(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
         }
@@ -292,12 +293,97 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        protected override async Task GenerateAutoentitiesIntoEntities()
+        protected override async Task GenerateAutoentitiesIntoEntities(IReadOnlyDictionary<string, Autoentity>? autoentities)
         {
-            await Task.CompletedTask;
+            if (autoentities is null)
+            {
+                return;
+            }
+
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            Dictionary<string, Entity> entities = new();
+            foreach ((string autoentityName, Autoentity autoentity) in autoentities)
+            {
+                int addedEntities = 0;
+                JsonArray? resultArray = await QueryAutoentitiesAsync(autoentityName, autoentity);
+                if (resultArray is null)
+                {
+                    continue;
+                }
+
+                foreach (JsonObject? resultObject in resultArray)
+                {
+                    if (resultObject is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Cannot create new entity from autoentities definition '{autoentityName}' due to an internal error.",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
+                    // Extract the entity name, schema, and database object name from the query result.
+                    // The SQL query returns these values with placeholders already replaced.
+                    string? entityName = resultObject["entity_name"]?.ToString();
+                    string? objectName = resultObject["object"]?.ToString();
+                    string? schemaName = resultObject["schema"]?.ToString();
+
+                    if (string.IsNullOrWhiteSpace(entityName) || string.IsNullOrWhiteSpace(objectName) || string.IsNullOrWhiteSpace(schemaName))
+                    {
+                        _logger.LogError("Skipping autoentity generation: 'entity_name', 'object', or 'schema' is null or empty for autoentities definition '{autoentityName}'.", autoentityName);
+                        continue;
+                    }
+
+                    // Create the entity using the template settings and permissions from the autoentity configuration.
+                    // Currently the source type is always Table for auto-generated entities from database objects.
+                    Entity generatedEntity = new(
+                        Source: new EntitySource(
+                            Object: objectName,
+                            Type: EntitySourceType.Table,
+                            Parameters: null,
+                            KeyFields: null),
+                        GraphQL: autoentity.Template.GraphQL,
+                        Rest: autoentity.Template.Rest,
+                        Mcp: autoentity.Template.Mcp,
+                        Permissions: autoentity.Permissions,
+                        Cache: autoentity.Template.Cache,
+                        Health: autoentity.Template.Health,
+                        Fields: null,
+                        Relationships: null,
+                        Mappings: new(),
+                        IsAutoentity: true);
+
+                    // Add the generated entity to the linking entities dictionary.
+                    // This allows the entity to be processed later during metadata population.
+                    if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddGeneratedAutoentityNameToDataSourceName(entityName, autoentityName))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Entity with name '{entityName}' already exists. Cannot create new entity from autoentities definition '{autoentityName}'.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
+                    if (runtimeConfig.IsRestEnabled)
+                    {
+                        _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, entityName);
+                    }
+                    else
+                    {
+                        _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
+                    }
+
+                    addedEntities++;
+                }
+
+                if (addedEntities == 0)
+                {
+                    _logger.LogWarning("No new entities were generated from the autoentities definition '{autoentityName}'.", autoentityName);
+                }
+            }
+
+            _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);
         }
 
-        public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)
+        public async Task<JsonArray?> QueryAutoentitiesAsync(string autoentityName, Autoentity autoentity)
         {
             string include = string.Join(",", autoentity.Patterns.Include);
             string exclude = string.Join(",", autoentity.Patterns.Exclude);
@@ -310,10 +396,10 @@ namespace Azure.DataApiBuilder.Core.Services
                 { $"{BaseQueryStructure.PARAM_NAME_PREFIX}name_pattern", new(namePattern, null, SqlDbType.NVarChar) }
             };
 
-            _logger.LogInformation("Query for Autoentities is being executed with the following parameters.");
-            _logger.LogInformation($"Autoentities include pattern: {include}");
-            _logger.LogInformation($"Autoentities exclude pattern: {exclude}");
-            _logger.LogInformation($"Autoentities name pattern: {namePattern}");
+            _logger.LogDebug("Query for autoentities is being executed with the following parameters.");
+            _logger.LogDebug("The autoentities definition '{autoentityName}' include pattern: {include}", autoentityName, include);
+            _logger.LogDebug("The autoentities definition '{autoentityName}' exclude pattern: {exclude}", autoentityName, exclude);
+            _logger.LogDebug("The autoentities definition '{autoentityName}' name pattern: {namePattern}", autoentityName, namePattern);
 
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: getAutoentitiesQuery,

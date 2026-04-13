@@ -3,7 +3,9 @@
 
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Net;
+using System.Security.Claims;
 using System.Text;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
@@ -11,6 +13,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
@@ -62,6 +65,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private Dictionary<string, bool> _dataSourceToSessionContextUsage;
 
+        /// <summary>
+        /// DatasourceName to UserDelegatedAuthOptions for user-delegated authentication.
+        /// Only populated for data sources with user-delegated-auth enabled.
+        /// </summary>
+        private Dictionary<string, UserDelegatedAuthOptions> _dataSourceUserDelegatedAuth;
+
+        /// <summary>
+        /// DatasourceName to base Application Name for OBO per-user pooling.
+        /// Only populated for data sources with user-delegated-auth enabled.
+        /// Used as a prefix when constructing user-specific Application Names.
+        /// </summary>
+        private Dictionary<string, string> _dataSourceBaseAppName;
+
+        /// <summary>
+        /// Optional OBO token provider for user-delegated authentication.
+        /// </summary>
+        private readonly IOboTokenProvider? _oboTokenProvider;
+
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         private const string QUERYIDHEADER = "QueryIdentifyingIds";
@@ -71,7 +92,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor,
-            HotReloadEventHandler<HotReloadEventArgs>? handler = null)
+            HotReloadEventHandler<HotReloadEventArgs>? handler = null,
+            IOboTokenProvider? oboTokenProvider = null)
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
@@ -80,8 +102,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
+            _dataSourceUserDelegatedAuth = new Dictionary<string, UserDelegatedAuthOptions>();
+            _dataSourceBaseAppName = new Dictionary<string, string>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _oboTokenProvider = oboTokenProvider;
             ConfigureMsSqlQueryExecutor();
         }
 
@@ -99,9 +124,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
 
+            string connectionString = GetConnectionStringForCurrentUser(dataSourceName);
+
             SqlConnection conn = new()
             {
-                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
+                ConnectionString = connectionString,
             };
 
             // Extract info message from SQLConnection
@@ -136,6 +163,136 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Gets the connection string for the current user. For OBO-enabled data sources,
+        /// this returns a connection string with a user-specific Application Name to isolate
+        /// connection pools per user identity.
+        /// </summary>
+        /// <param name="dataSourceName">The name of the data source.</param>
+        /// <returns>The connection string to use for the current request.</returns>
+        private string GetConnectionStringForCurrentUser(string dataSourceName)
+        {
+            string baseConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString;
+
+            // Per-user pooling is automatic when OBO is enabled.
+            // _dataSourceBaseAppName is only populated for data sources with user-delegated-auth enabled.
+            if (!_dataSourceBaseAppName.TryGetValue(dataSourceName, out string? baseAppName))
+            {
+                // OBO not enabled for this data source, use the standard connection string
+                return baseConnectionString;
+            }
+
+            // Extract user pool key from current HTTP context (prefers oid, falls back to sub)
+            string? poolKeyHash = GetUserPoolKeyHash(dataSourceName);
+            if (string.IsNullOrEmpty(poolKeyHash))
+            {
+                // For OBO-enabled data sources, we must have a user context for actual requests.
+                // Null poolKeyHash is only acceptable during startup/metadata phase when there's no HttpContext.
+                // If we have an HttpContext with a User but missing required claims, fail-safe to prevent
+                // potential cross-user connection pool contamination.
+                if (HttpContextAccessor?.HttpContext?.User?.Identity?.IsAuthenticated == true)
+                {
+                    throw new DataApiBuilderException(
+                        message: "User-delegated authentication requires 'iss' and user identifier (oid/sub) claims for connection pool isolation.",
+                        statusCode: System.Net.HttpStatusCode.Unauthorized,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure);
+                }
+
+                // No user context (startup/metadata phase), use base connection string
+                return baseConnectionString;
+            }
+
+            // Create a user-specific connection string with per-user pool isolation.
+            // Format: {hash}|{user-custom-appname} where hash is placed FIRST to ensure it's never truncated.
+            // SQL Server limits Application Name to 128 characters. By placing the hash first, we guarantee
+            // per-user pool isolation even if the user's custom app name gets truncated.
+            // The hash is a URL-safe Base64-encoded SHA256 hash (16 bytes = ~22 chars).
+            const int maxApplicationNameLength = 128;
+            string hashPrefix = $"{poolKeyHash}|";
+            int allowedBaseAppNameLength = Math.Max(0, maxApplicationNameLength - hashPrefix.Length);
+            string effectiveBaseAppName = baseAppName.Length > allowedBaseAppNameLength
+                ? baseAppName[..allowedBaseAppNameLength]
+                : baseAppName;
+
+            SqlConnectionStringBuilder userBuilder = new(baseConnectionString)
+            {
+                ApplicationName = $"{hashPrefix}{effectiveBaseAppName}"
+            };
+
+            return userBuilder.ConnectionString;
+        }
+
+        /// <summary>
+        /// Generates a pool key hash from the current user's claims for OBO per-user pooling.
+        /// Uses iss|(oid||sub) to ensure each unique user identity gets its own connection pool.
+        /// Prefers 'oid' (stable GUID) but falls back to 'sub' for guest/B2B users.
+        /// </summary>
+        /// <param name="dataSourceName">The data source name for logging purposes.</param>
+        /// <returns>A URL-safe Base64-encoded hash, or null if no user context is available.</returns>
+        private string? GetUserPoolKeyHash(string dataSourceName)
+        {
+            if (HttpContextAccessor?.HttpContext?.User is null)
+            {
+                QueryExecutorLogger.LogDebug(
+                    "Cannot create per-user pool key for data source {DataSourceName}: no HTTP context or user available.",
+                    dataSourceName);
+                return null;
+            }
+
+            ClaimsPrincipal user = HttpContextAccessor.HttpContext.User;
+
+            // Extract issuer claim - required for tenant isolation and connection pool security.
+            // The "iss" claim must be present along with a user identifier (oid/sub) for per-user pooling.
+            // Callers are responsible for enforcing fail-safe behavior when claims are missing.
+            string? iss = user.FindFirst("iss")?.Value;
+
+            // User identifier claim resolution (in priority order):
+            // 1. "oid" - Short claim name for object ID, used in Entra ID v2.0 tokens
+            // 2. Full URI form - "http://schemas.microsoft.com/identity/claims/objectidentifier"
+            //    Used in Entra ID v1.0 tokens and some SAML-based flows
+            // 3. "sub" - Subject claim, unique per user per application. Used as fallback for
+            //    guest/B2B users where oid may not be present or stable across tenants
+            // 4. ClaimTypes.NameIdentifier - .NET standard claim type (maps to various underlying claims)
+            //    Acts as a last-resort fallback for non-Entra identity providers
+            string? userKey = user.FindFirst("oid")?.Value
+                ?? user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
+                ?? user.FindFirst("sub")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(iss) || string.IsNullOrEmpty(userKey))
+            {
+                // Cannot create a pool key without both claims
+                QueryExecutorLogger.LogDebug(
+                    "Cannot create per-user pool key for data source {DataSourceName}: missing {MissingClaim} claim.",
+                    dataSourceName,
+                    string.IsNullOrEmpty(iss) ? "iss" : "user identifier (oid/sub)");
+                return null;
+            }
+
+            // Create the pool key as iss|userKey and hash it to keep connection string small
+            string poolKey = $"{iss}|{userKey}";
+            return HashPoolKey(poolKey);
+        }
+
+        /// <summary>
+        /// Hashes the pool key using SHA256 truncated to 16 bytes for a compact, URL-safe identifier.
+        /// Uses SHA256 (SHA-2 family) with 128-bit truncation per Microsoft security requirements.
+        /// This produces a ~22 character hash (16 bytes Base64-encoded) that fits well within SQL Server's
+        /// 128-char Application Name limit while providing sufficient collision resistance.
+        /// </summary>
+        /// <param name="key">The pool key to hash (format: iss|oid or iss|sub).</param>
+        /// <returns>A URL-safe Base64-encoded hash of the key (~22 characters).</returns>
+        private static string HashPoolKey(string key)
+        {
+            byte[] fullHash = System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(key));
+            // Truncate to 16 bytes (128 bits) per MS security requirements for SHA-2 family
+            return Convert.ToBase64String(fullHash, 0, 16)
+                .TrimEnd('=')
+                .Replace('+', '-')
+                .Replace('/', '_');
+        }
+
+        /// <summary>
         /// Configure during construction or a hot-reload scenario.
         /// </summary>
         private void ConfigureMsSqlQueryExecutor()
@@ -156,11 +313,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
                 _dataSourceToSessionContextUsage[dataSourceName] = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
                 _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
+
+                // Track user-delegated authentication settings
+                if (dataSource.IsUserDelegatedAuthEnabled)
+                {
+                    _dataSourceUserDelegatedAuth[dataSourceName] = dataSource.UserDelegatedAuth!;
+
+                    // Per-user pooling: Store the base Application Name for hash prefixing at connection time.
+                    // We'll prepend the user's iss|oid (or iss|sub) hash to create isolated pools per user.
+                    // Note: ApplicationName is typically already set by RuntimeConfigLoader (e.g., "CustomerApp,dab_oss_2.0.0")
+                    // but we use GetDataApiBuilderUserAgent() as fallback for consistency.
+                    // We respect the user's Pooling setting from the connection string.
+                    _dataSourceBaseAppName[dataSourceName] = builder.ApplicationName ?? ProductInfo.GetDataApiBuilderUserAgent();
+                }
             }
         }
 
         /// <summary>
-        /// Modifies the properties of the supplied connection to support managed identity access.
+        /// Modifies the properties of the supplied connection to support managed identity access
+        /// or user-delegated (OBO) authentication.
         /// In the case of MsSql, gets access token if deemed necessary and sets it on the connection.
         /// The supplied connection is assumed to already have the same connection string
         /// provided in the runtime configuration.
@@ -175,13 +346,44 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
+            SqlConnection sqlConn = (SqlConnection)conn;
+
+            // Check if user-delegated authentication is enabled for this data source
+            if (_dataSourceUserDelegatedAuth.TryGetValue(dataSourceName, out UserDelegatedAuthOptions? userDelegatedAuth))
+            {
+                // Check if we're in an HTTP request context (not startup/metadata phase)
+                bool isInRequestContext = HttpContextAccessor?.HttpContext is not null;
+
+                if (isInRequestContext)
+                {
+                    // At runtime with an HTTP request - attempt OBO flow
+                    // Note: DatabaseAudience is validated at startup by RuntimeConfigValidator
+                    string? oboToken = await GetOboAccessTokenAsync(userDelegatedAuth.DatabaseAudience!);
+                    if (oboToken is not null)
+                    {
+                        sqlConn.AccessToken = oboToken;
+                        return;
+                    }
+
+                    // OBO is enabled but we couldn't get a token (e.g., missing Bearer token in request)
+                    // This is an error during request processing - we must not fall back to managed identity
+                    throw new DataApiBuilderException(
+                        message: DataApiBuilderException.OBO_MISSING_USER_CONTEXT,
+                        statusCode: HttpStatusCode.Unauthorized,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure);
+                }
+
+                // At startup/metadata phase (no HTTP context) - fall through to use the configured
+                // connection string authentication (e.g., Managed Identity, SQL credentials, etc.)
+                // This allows DAB to read schema metadata at startup, while OBO is used for actual requests.
+                QueryExecutorLogger.LogDebug("No HTTP context available - using configured connection string authentication for startup/metadata operations.");
+            }
+
             _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);
 
             // Only attempt to get the access token if the connection string is in the appropriate format
             if (setAccessToken)
             {
-                SqlConnection sqlConn = (SqlConnection)conn;
-
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
@@ -196,6 +398,37 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     sqlConn.AccessToken = accessToken;
                 }
             }
+        }
+
+        /// <summary>
+        /// Acquires an access token using On-Behalf-Of (OBO) flow for user-delegated authentication.
+        /// </summary>
+        /// <param name="databaseAudience">The target database audience.</param>
+        /// <returns>The OBO access token, or null if OBO cannot be performed.</returns>
+        private async Task<string?> GetOboAccessTokenAsync(string databaseAudience)
+        {
+            if (_oboTokenProvider is null || HttpContextAccessor?.HttpContext is null)
+            {
+                return null;
+            }
+
+            HttpContext httpContext = HttpContextAccessor.HttpContext;
+            ClaimsPrincipal? principal = httpContext.User;
+
+            // Extract the incoming JWT assertion from the Authorization header
+            string? authHeader = httpContext.Request.Headers["Authorization"].FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                QueryExecutorLogger.LogWarning(DataApiBuilderException.OBO_MISSING_USER_CONTEXT);
+                return null;
+            }
+
+            string incomingJwt = authHeader.Substring("Bearer ".Length).Trim();
+
+            return await _oboTokenProvider.GetAccessTokenOnBehalfOfAsync(
+                principal!,
+                incomingJwt,
+                databaseAudience);
         }
 
         /// <summary>
@@ -266,26 +499,85 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
-            if (httpContext is null || !_dataSourceToSessionContextUsage[dataSourceName])
+            if (httpContext is null)
             {
                 return string.Empty;
             }
 
-            // Dictionary containing all the claims belonging to the user, to be used as session parameters.
-            Dictionary<string, string> sessionParams = AuthorizationResolver.GetProcessedUserClaims(httpContext);
+            bool isOboEnabled = _dataSourceUserDelegatedAuth.ContainsKey(dataSourceName);
+            bool isSessionContextEnabled = _dataSourceToSessionContextUsage[dataSourceName];
+
+            // If neither session context nor OBO is enabled, no session params needed.
+            if (!isSessionContextEnabled && !isOboEnabled)
+            {
+                return string.Empty;
+            }
 
             // Counter to generate different param name for each of the sessionParam.
             IncrementingInteger counter = new();
             const string SESSION_PARAM_NAME = $"{BaseQueryStructure.PARAM_NAME_PREFIX}session_param";
             StringBuilder sessionMapQuery = new();
 
-            foreach ((string claimType, string claimValue) in sessionParams)
+            // Only add user claims when set-session-context is enabled in config.
+            // This is the original behavior for customers who want to pass claims to the database.
+            if (isSessionContextEnabled)
             {
-                string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
-                parameters.Add(paramName, new(claimValue));
-                // Append statement to set read only param value - can be set only once for a connection.
-                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 0;";
-                sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
+                // Dictionary containing all the claims belonging to the user, to be used as session parameters.
+                Dictionary<string, string> sessionParams = AuthorizationResolver.GetProcessedUserClaims(httpContext);
+
+                foreach ((string claimType, string claimValue) in sessionParams)
+                {
+                    string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(paramName, new(claimValue));
+                    // Append statement to set read only param value - can be set only once for a connection.
+                    string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 0;";
+                    sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
+                }
+            }
+
+            // Add OBO-specific observability values when user-delegated auth is enabled.
+            // These values are added regardless of set-session-context setting since OBO
+            // observability is independent of the user claims forwarding feature.
+            // These values are for observability/auditing only and MUST NOT be used for authorization decisions.
+            // For row-level security, use database policies with the user's actual claims.
+            if (isOboEnabled)
+            {
+                // Add OpenTelemetry correlation values for observability.
+                // These allow correlating database queries with distributed traces.
+                Activity? currentActivity = Activity.Current;
+                if (currentActivity is not null)
+                {
+                    string traceIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(traceIdParamName, new(currentActivity.TraceId.ToString()));
+                    sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.trace_id', {traceIdParamName}, @read_only = 0;");
+
+                    string spanIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(spanIdParamName, new(currentActivity.SpanId.ToString()));
+                    sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.span_id', {spanIdParamName}, @read_only = 0;");
+                }
+
+                // Set auth type indicator for OBO requests
+                string authTypeParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                parameters.Add(authTypeParamName, new("obo"));
+                sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.auth_type', {authTypeParamName}, @read_only = 0;");
+
+                // Set user identifier (oid preferred, fallback to sub) for auditing/observability
+                string? userId = httpContext.User.FindFirst("oid")?.Value ?? httpContext.User.FindFirst("sub")?.Value;
+                if (!string.IsNullOrWhiteSpace(userId))
+                {
+                    string userIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(userIdParamName, new(userId));
+                    sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.user_id', {userIdParamName}, @read_only = 0;");
+                }
+
+                // Set tenant identifier for auditing/observability
+                string? tenantId = httpContext.User.FindFirst("tid")?.Value;
+                if (!string.IsNullOrWhiteSpace(tenantId))
+                {
+                    string tenantIdParamName = $"{SESSION_PARAM_NAME}{counter.Next()}";
+                    parameters.Add(tenantIdParamName, new(tenantId));
+                    sessionMapQuery.Append($"EXEC sp_set_session_context 'dab.tenant_id', {tenantIdParamName}, @read_only = 0;");
+                }
             }
 
             return sessionMapQuery.ToString();
@@ -392,8 +684,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     SqlParameter parameter = cmd.CreateParameter();
                     parameter.ParameterName = parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
+                    parameter.Value = parameterEntry.Value?.Value ?? DBNull.Value;
+
                     PopulateDbTypeForParameter(parameterEntry, parameter);
+
+                    //if sqldbtype is varchar, nvarchar then set the length when explicitly provided
+                    if (parameter.SqlDbType is SqlDbType.VarChar or SqlDbType.NVarChar or SqlDbType.Char or SqlDbType.NChar
+                        && parameterEntry.Value?.Length is not null)
+                    {
+                        parameter.Size = parameterEntry.Value.Length.Value;
+                    }
+
                     cmd.Parameters.Add(parameter);
                 }
             }

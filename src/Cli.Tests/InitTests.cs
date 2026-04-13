@@ -49,7 +49,7 @@ namespace Cli.Tests
                 setSessionContext: true,
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -71,7 +71,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 restPath: "/rest-endpoint",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -94,7 +94,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);
@@ -118,7 +118,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Production,
                 corsOrigin: null,
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);
@@ -245,7 +245,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Production,
                 corsOrigin: null,
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);
@@ -301,6 +301,7 @@ namespace Cli.Tests
         [DataRow("StaticWebApps", null, null, DisplayName = "StaticWebApps with no audience and no issuer specified.")]
         [DataRow("AppService", null, null, DisplayName = "AppService with no audience and no issuer specified.")]
         [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
+        [DataRow("Unauthenticated", null, null, DisplayName = "Unauthenticated with no audience and no issuer specified.")]
         [DataRow("AzureAD", "aud-xxx", "issuer-xxx", DisplayName = "AzureAD with both audience and issuer specified.")]
         [DataRow("EntraID", "aud-xxx", "issuer-xxx", DisplayName = "EntraID with both audience and issuer specified.")]
         public Task EnsureCorrectConfigGenerationWithDifferentAuthenticationProviders(
@@ -384,7 +385,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Production,
                 corsOrigin: null,
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 restPath: "abc",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -403,7 +404,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostMode.Production,
                 corsOrigin: null,
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 graphQLPath: "abc",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -411,13 +412,13 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to validate the contents of the config file generated when init command is used with --graphql.multiple-create.enabled flag option for different database types.
+        /// Test to validate the contents of the config file generated when init command is used with --graphql.multiple-mutations.create.enabled flag option for different database types.
         ///
         /// 1. For database types other than MsSQL:
-        ///      - Irrespective of whether the --graphql.multiple-create.enabled option is used or not, fields related to multiple-create will NOT be written to the config file.
+        ///      - Irrespective of whether the --graphql.multiple-mutations.create.enabled option is used or not, fields related to multiple-create will NOT be written to the config file.
         ///
         /// 2. For MsSQL database type:
-        ///      a. When --graphql.multiple-create.enabled option is used
+        ///      a. When --graphql.multiple-mutations.create.enabled option is used
         ///           - In this case, the fields related to multiple mutation and multiple create operations will be written to the config file.
         ///                "multiple-mutations": {
         ///                    "create": {
@@ -425,29 +426,29 @@ namespace Cli.Tests
         ///                    }
         ///                }
         ///
-        ///      b. When --graphql.multiple-create.enabled option is not used
+        ///      b. When --graphql.multiple-mutations.create.enabled option is not used
         ///           - In this case, fields related to multiple mutation and multiple create operations will NOT be written to the config file.
         ///
         /// </summary>
         [DataTestMethod]
-        [DataRow(DatabaseType.MSSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MsSQL database type")]
-        [DataRow(DatabaseType.MSSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MsSQL database type")]
-        [DataRow(DatabaseType.MSSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MsSQL database type")]
-        [DataRow(DatabaseType.PostgreSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for PostgreSQL database type")]
-        [DataRow(DatabaseType.PostgreSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for PostgreSQL database type")]
-        [DataRow(DatabaseType.PostgreSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for PostgreSQL database type")]
-        [DataRow(DatabaseType.MySQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MySQL database type")]
-        [DataRow(DatabaseType.MySQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MySQL database type")]
-        [DataRow(DatabaseType.MySQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MySQL database type")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for CosmosDB_NoSQL database type")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for CosmosDB_NoSQL database type")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for CosmosDB_NoSQL database type")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for CosmosDB_PostgreSQL database type")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for CosmosDB_PostgreSQL database type")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for CosmosDB_PostgreSQL database type")]
-        [DataRow(DatabaseType.DWSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for DWSQL database type")]
-        [DataRow(DatabaseType.DWSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for DWSQL database type")]
-        [DataRow(DatabaseType.DWSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for DWSQL database type")]
+        [DataRow(DatabaseType.MSSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for MsSQL database type")]
+        [DataRow(DatabaseType.MSSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for MsSQL database type")]
+        [DataRow(DatabaseType.MSSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for MsSQL database type")]
+        [DataRow(DatabaseType.PostgreSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for PostgreSQL database type")]
+        [DataRow(DatabaseType.PostgreSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for PostgreSQL database type")]
+        [DataRow(DatabaseType.PostgreSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for PostgreSQL database type")]
+        [DataRow(DatabaseType.MySQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for MySQL database type")]
+        [DataRow(DatabaseType.MySQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for MySQL database type")]
+        [DataRow(DatabaseType.MySQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for MySQL database type")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for CosmosDB_NoSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for CosmosDB_NoSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for CosmosDB_NoSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for CosmosDB_PostgreSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for CosmosDB_PostgreSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for CosmosDB_PostgreSQL database type")]
+        [DataRow(DatabaseType.DWSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for DWSQL database type")]
+        [DataRow(DatabaseType.DWSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for DWSQL database type")]
+        [DataRow(DatabaseType.DWSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for DWSQL database type")]
         public Task VerifyCorrectConfigGenerationWithMultipleMutationOptions(DatabaseType databaseType, CliBool isMultipleCreateEnabled)
         {
             InitOptions options;
@@ -466,7 +467,7 @@ namespace Cli.Tests
                 setSessionContext: true,
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE,
                 multipleCreateOperationEnabled: isMultipleCreateEnabled);
@@ -482,7 +483,7 @@ namespace Cli.Tests
                 setSessionContext: true,
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                authenticationProvider: EasyAuthType.AppService.ToString(),
+                authenticationProvider: "Unauthenticated",
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE,
                 multipleCreateOperationEnabled: isMultipleCreateEnabled);
@@ -491,6 +492,74 @@ namespace Cli.Tests
             VerifySettings verifySettings = new();
             verifySettings.UseHashedParameters(databaseType, isMultipleCreateEnabled);
             return ExecuteVerifyTest(options, verifySettings);
+        }
+
+        /// <summary>
+        /// Test that init with/without --mcp.aggregate-records.query-timeout produces a config
+        /// with the correct aggregate-records query-timeout in the DmlTools section.
+        /// When null (not specified), defaults to 30 seconds. When provided, the config reflects the value.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, false, DmlToolsConfig.DEFAULT_QUERY_TIMEOUT_SECONDS, DisplayName = "Init without query-timeout uses default 30s")]
+        [DataRow(1, true, 1, DisplayName = "Init with query-timeout 1s (minimum)")]
+        [DataRow(120, true, 120, DisplayName = "Init with query-timeout 120s")]
+        [DataRow(600, true, 600, DisplayName = "Init with query-timeout 600s (maximum)")]
+        public void InitWithAggregateRecordsQueryTimeout_SetsOrDefaultsTimeout(int? inputTimeout, bool expectedUserProvided, int expectedEffectiveTimeout)
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.MSSQL,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostMode.Development,
+                corsOrigin: null,
+                authenticationProvider: EasyAuthType.AppService.ToString(),
+                mcpAggregateRecordsQueryTimeout: inputTimeout,
+                config: TEST_RUNTIME_CONFIG_FILE);
+
+            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig?.Runtime?.Mcp?.DmlTools);
+            Assert.AreEqual(inputTimeout, runtimeConfig.Runtime.Mcp.DmlTools.AggregateRecordsQueryTimeout);
+            Assert.AreEqual(expectedUserProvided, runtimeConfig.Runtime.Mcp.DmlTools.UserProvidedAggregateRecordsQueryTimeout);
+            Assert.AreEqual(expectedEffectiveTimeout, runtimeConfig.Runtime.Mcp.DmlTools.EffectiveAggregateRecordsQueryTimeoutSeconds);
+        }
+
+        /// <summary>
+        /// Test that init with --mcp.aggregate-records.query-timeout produces valid JSON
+        /// that round-trips correctly through serialization/deserialization.
+        /// </summary>
+        [TestMethod]
+        public void InitWithAggregateRecordsQueryTimeout_RoundTripsCorrectly()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.MSSQL,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostMode.Development,
+                corsOrigin: null,
+                authenticationProvider: EasyAuthType.AppService.ToString(),
+                mcpAggregateRecordsQueryTimeout: 90,
+                config: TEST_RUNTIME_CONFIG_FILE);
+
+            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
+
+            // Serialize to JSON and deserialize back
+            JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions();
+            string json = JsonSerializer.Serialize(runtimeConfig, serializerOptions);
+            RuntimeConfig? deserialized = JsonSerializer.Deserialize<RuntimeConfig>(json, serializerOptions);
+
+            Assert.IsNotNull(deserialized?.Runtime?.Mcp?.DmlTools);
+            Assert.AreEqual(90, deserialized.Runtime.Mcp.DmlTools.AggregateRecordsQueryTimeout);
+            Assert.AreEqual(90, deserialized.Runtime.Mcp.DmlTools.EffectiveAggregateRecordsQueryTimeoutSeconds);
+
+            // Verify the JSON contains the object format for aggregate-records
+            Assert.IsTrue(json.Contains("\"query-timeout\""), $"Expected 'query-timeout' in serialized JSON. Got: {json}");
+            Assert.IsTrue(json.Contains("90"), $"Expected timeout value 90 in serialized JSON. Got: {json}");
         }
 
         private Task ExecuteVerifyTest(InitOptions options, VerifySettings? settings = null)

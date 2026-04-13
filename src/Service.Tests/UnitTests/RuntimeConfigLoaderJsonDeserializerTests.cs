@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     /// we throw the right exception when environment
     /// variable names are not found.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
+    [TestClass]
     public class RuntimeConfigLoaderJsonDeserializerTests
     {
         #region Positive Tests
@@ -486,7 +486,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Method to validate that FileNotFoundException is thrown if sub-data source file is not found.
+        /// Method to validate that when a sub-data source file is not found, it is gracefully
+        /// skipped and the parent config loads successfully. Non-existent child files are
+        /// tolerated to support late-configured scenarios where data-source-files may reference
+        /// files not present on the host.
         /// </summary>
         [TestMethod]
         public void TestLoadRuntimeConfigSubFilesFails()
@@ -792,7 +795,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(McpRuntimeOptions.DEFAULT_PATH, parsedConfig.McpPath);
             Assert.IsTrue(parsedConfig.AllowIntrospection);
             Assert.IsFalse(parsedConfig.IsDevelopmentMode());
-            Assert.IsTrue(parsedConfig.IsAppServiceIdentityProvider);
+            Assert.IsTrue(parsedConfig.IsUnauthenticatedIdentityProvider);
             Assert.IsTrue(parsedConfig.IsRequestBodyStrict);
             Assert.IsTrue(parsedConfig.IsLogLevelNull());
             Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.ApplicationInsights is null

@@ -369,21 +369,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string locationHeaderURL = string.Empty;
             using JsonDocument emptyResponseJsonDocument = JsonDocument.Parse("[]");
 
-            // For PUT and PATCH API requests, the users are aware of the Pks as it is required to be passed in the request URL.
-            // In case of tables with auto-gen PKs, PUT or PATCH will not result in an insert but error out. Seeing that Location Header does not provide users with
-            // any additional information, it is set as an empty string always.
-            // For POST API requests, the primary key route calculated will be an empty string in the following scenarions.
+            // For PUT/PATCH requests where PKs are in the URL, the caller passes operationType as Upsert
+            // and primaryKeyRoute as empty, so the Location header is not populated (the client already knows the URL).
+            // For keyless PUT/PATCH requests that result in an insert, the caller passes operationType as Insert
+            // with a non-empty primaryKeyRoute so the client can discover the newly created resource's location.
+            // For POST requests, the primary key route will be empty in the following scenarios:
             // 1. When read action is not configured for the role.
             // 2. When the read action for the role does not have access to one or more PKs.
-            // When the computed primaryKeyRoute is non-empty, the location header is calculated.
-            // Location is made up of three parts, the first being constructed from the Host property found in the HttpContext.Request.
-            // The second part being the base route configured in the config file.
-            // The third part is the computed primary key route.
+            // When the computed primaryKeyRoute is non-empty and operationType is Insert, the Location header is populated.
+            // Location is made up of three parts: the scheme/host from the request, the base route from config,
+            // and the computed primary key route.
             if (operationType is EntityActionOperation.Insert && !string.IsNullOrEmpty(primaryKeyRoute))
             {
+                // Use scheme/host from X-Forwarded-* headers if present, else fallback to request values
+                string scheme = SqlPaginationUtil.ResolveRequestScheme(httpContext.Request);
+                string host = SqlPaginationUtil.ResolveRequestHost(httpContext.Request);
                 locationHeaderURL = UriHelper.BuildAbsolute(
-                                        scheme: httpContext.Request.Scheme,
-                                        host: httpContext.Request.Host,
+                                        scheme: scheme,
+                                        host: new HostString(host),
                                         pathBase: baseRoute,
                                         path: httpContext.Request.Path);
 

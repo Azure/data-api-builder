@@ -33,6 +33,7 @@ namespace Azure.DataApiBuilder.Service
     public class Program
     {
         public static bool IsHttpsRedirectionDisabled { get; private set; }
+        public static DynamicLogLevelProvider LogLevelProvider = new();
 
         public static void Main(string[] args)
         {
@@ -59,7 +60,6 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool StartEngine(string[] args, bool runMcpStdio, string? mcpRole)
         {
-            Console.WriteLine("Starting the runtime engine...");
             try
             {
                 IHost host = CreateHostBuilder(args, runMcpStdio, mcpRole).Build();
@@ -107,9 +107,19 @@ namespace Azure.DataApiBuilder.Service
                         McpStdioHelper.ConfigureMcpStdio(builder, mcpRole);
                     }
                 })
+                .ConfigureServices((context, services) =>
+                {
+                    services.AddSingleton(LogLevelProvider);
+                })
+                .ConfigureLogging(logging =>
+                {
+                    logging.AddFilter("Microsoft", logLevel => LogLevelProvider.ShouldLog(logLevel));
+                    logging.AddFilter("Microsoft.Hosting.Lifetime", logLevel => LogLevelProvider.ShouldLog(logLevel));
+                })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
+                    LogLevelProvider.SetInitialLogLevel(Startup.MinimumLogLevel, Startup.IsLogLevelOverriddenByCli);
                     ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel, stdio: runMcpStdio);
                     ILogger<Startup> startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
@@ -185,9 +195,9 @@ namespace Azure.DataApiBuilder.Service
                     // "Azure.DataApiBuilder.Service"
                     if (logLevelInitializer is null)
                     {
-                        builder.AddFilter(category: "Microsoft", logLevel);
-                        builder.AddFilter(category: "Azure", logLevel);
-                        builder.AddFilter(category: "Default", logLevel);
+                        builder.AddFilter(category: "Microsoft", logLevel => LogLevelProvider.ShouldLog(logLevel));
+                        builder.AddFilter(category: "Azure", logLevel => LogLevelProvider.ShouldLog(logLevel));
+                        builder.AddFilter(category: "Default", logLevel => LogLevelProvider.ShouldLog(logLevel));
                     }
                     else
                     {
@@ -220,7 +230,8 @@ namespace Azure.DataApiBuilder.Service
                         }
                     }
 
-                    if (Startup.OpenTelemetryOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.OpenTelemetryOptions.Endpoint))
+                    if (Startup.OpenTelemetryOptions.Enabled
+                        && Uri.TryCreate(Startup.OpenTelemetryOptions.Endpoint, UriKind.Absolute, out Uri? otlpEndpoint))
                     {
                         builder.AddOpenTelemetry(logging =>
                         {
@@ -229,7 +240,7 @@ namespace Azure.DataApiBuilder.Service
                             logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Startup.OpenTelemetryOptions.ServiceName!));
                             logging.AddOtlpExporter(configure =>
                             {
-                                configure.Endpoint = new Uri(Startup.OpenTelemetryOptions.Endpoint);
+                                configure.Endpoint = otlpEndpoint;
                                 configure.Headers = Startup.OpenTelemetryOptions.Headers;
                                 configure.Protocol = OtlpExportProtocol.Grpc;
                             });

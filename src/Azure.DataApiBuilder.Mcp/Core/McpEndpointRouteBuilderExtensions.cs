@@ -22,7 +22,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
             RuntimeConfigProvider runtimeConfigProvider,
             [StringSyntax("Route")] string pattern = "")
         {
-            if (!TryGetMcpOptions(runtimeConfigProvider, out McpRuntimeOptions? mcpOptions) || mcpOptions == null || !mcpOptions.Enabled)
+            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+            {
+                return endpoints;
+            }
+
+            McpRuntimeOptions mcpOptions = runtimeConfig?.Runtime?.Mcp ?? new McpRuntimeOptions();
+
+            if (!mcpOptions.Enabled)
             {
                 return endpoints;
             }
@@ -33,25 +40,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
             endpoints.MapMcp(mcpPath);
 
             return endpoints;
-        }
-
-        /// <summary>
-        /// Gets MCP options from the runtime configuration
-        /// </summary>
-        /// <param name="runtimeConfigProvider">Runtime config provider</param>
-        /// <param name="mcpOptions">MCP options</param>
-        /// <returns>True if MCP options were found, false otherwise</returns>
-        private static bool TryGetMcpOptions(RuntimeConfigProvider runtimeConfigProvider, out McpRuntimeOptions? mcpOptions)
-        {
-            mcpOptions = null;
-
-            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
-            {
-                return false;
-            }
-
-            mcpOptions = runtimeConfig?.Runtime?.Mcp;
-            return mcpOptions != null;
         }
     }
 }

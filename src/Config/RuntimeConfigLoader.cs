@@ -502,4 +502,9 @@ public abstract class RuntimeConfigLoader
             RuntimeConfig = runtimeConfigCopy;
         }
     }
+
+    public void EditRuntimeConfig(RuntimeConfig newRuntimeConfig)
+    {
+        RuntimeConfig = newRuntimeConfig;
+    }
 }

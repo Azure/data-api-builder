@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
@@ -38,13 +39,16 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private readonly DatabaseType _databaseType;
 
-        // Represents the entities exposed in the runtime config.
-        private IReadOnlyDictionary<string, Entity> _entities;
-
         // Represents the linking entities created by DAB to support multiple mutations for entities having an M:N relationship between them.
         protected Dictionary<string, Entity> _linkingEntities = new();
 
         protected readonly string _dataSourceName;
+
+        // Represents the entities exposed in the runtime config.
+        private IReadOnlyDictionary<string, Entity> Entities => new ReadOnlyDictionary<string, Entity>(_runtimeConfigProvider.GetConfig().Entities.Where(x => string.Equals(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(x.Key), _dataSourceName, StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key, x => x.Value));
+
+        // Represents the autoentities exposed in the runtime config.
+        private IReadOnlyDictionary<string, Autoentity> Autoentities => new ReadOnlyDictionary<string, Autoentity>(_runtimeConfigProvider.GetConfig().Autoentities.Where(x => string.Equals(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromAutoentityName(x.Key), _dataSourceName, StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key, x => x.Value));
 
         // Dictionary containing mapping of graphQL stored procedure exposed query/mutation name
         // to their corresponding entity names defined in the config.
@@ -72,6 +76,8 @@ namespace Azure.DataApiBuilder.Core.Services
         protected DataSet EntitiesDataSet { get; init; }
 
         private RuntimeConfigProvider _runtimeConfigProvider;
+
+        private RuntimeConfigValidator _runtimeConfigValidator;
 
         private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
@@ -104,6 +110,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
+            RuntimeConfigValidator runtimeConfigValidator,
             IAbstractQueryManagerFactory engineFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,
@@ -111,12 +118,12 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             _runtimeConfigProvider = runtimeConfigProvider;
+            _runtimeConfigValidator = runtimeConfigValidator;
             _dataSourceName = dataSourceName;
             _databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
-            _entities = runtimeConfig.Entities.Where(x => string.Equals(runtimeConfig.GetDataSourceNameFromEntityName(x.Key), _dataSourceName, StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key, x => x.Value);
             _logger = logger;
             _isValidateOnly = isValidateOnly;
-            foreach ((string entityName, Entity entityMetatdata) in _entities)
+            foreach ((string entityName, Entity entityMetatdata) in Entities)
             {
                 if (runtimeConfig.IsRestEnabled)
                 {
@@ -227,7 +234,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 return true;
             }
 
-            if (_entities.TryGetValue(entityName, out Entity? entityDefinition) && entityDefinition.Fields is not null)
+            if (Entities.TryGetValue(entityName, out Entity? entityDefinition) && entityDefinition.Fields is not null)
             {
                 // Find the field by backing name and use its Alias if present.
                 FieldMetadata? matched = entityDefinition
@@ -260,7 +267,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 return true;
             }
 
-            if (_entities.TryGetValue(entityName, out Entity? entityDefinition) && entityDefinition.Fields is not null)
+            if (Entities.TryGetValue(entityName, out Entity? entityDefinition) && entityDefinition.Fields is not null)
             {
                 FieldMetadata? matchedField = entityDefinition.Fields.FirstOrDefault(f =>
                         f.Alias != null && f.Alias.Equals(field, StringComparison.OrdinalIgnoreCase));
@@ -284,12 +291,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc />
         public string GetEntityName(string graphQLType)
         {
-            if (_entities.ContainsKey(graphQLType))
+            if (Entities.ContainsKey(graphQLType))
             {
                 return graphQLType;
             }
 
-            foreach ((string entityName, Entity entity) in _entities)
+            foreach ((string entityName, Entity entity) in Entities)
             {
                 if (entity.GraphQL.Singular == graphQLType)
                 {
@@ -307,12 +314,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-            if (GetDatabaseType() == DatabaseType.MSSQL)
-            {
-                await GenerateAutoentitiesIntoEntities();
-            }
 
-            GenerateDatabaseObjectForEntities();
             if (_isValidateOnly)
             {
                 // Currently Validate mode only support single datasource,
@@ -329,8 +331,20 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
+            if (GetDatabaseType() == DatabaseType.MSSQL)
+            {
+                await GenerateAutoentitiesIntoEntities(Autoentities);
+            }
+
+            // Running these entity validations only in development mode to ensure
+            // fast startup of engine in production mode.
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            _runtimeConfigValidator.ValidateEntityAndAutoentityConfigurations(runtimeConfig);
+
+            GenerateDatabaseObjectForEntities();
             await PopulateObjectDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
+
             // When IsLateConfigured is true we are in a hosted scenario and do not reveal primary key information.
             if (!_runtimeConfigProvider.IsLateConfigured)
             {
@@ -339,6 +353,12 @@ namespace Azure.DataApiBuilder.Core.Services
 
             GenerateRestPathToEntityMap();
             InitODataParser();
+
+            if (_isValidateOnly)
+            {
+                RemoveGeneratedAutoentities();
+            }
+
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
@@ -389,7 +409,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private void LogPrimaryKeys()
         {
             ColumnDefinition column;
-            foreach ((string entityName, Entity _) in _entities)
+            foreach ((string entityName, Entity _) in Entities)
             {
                 try
                 {
@@ -553,7 +573,7 @@ namespace Azure.DataApiBuilder.Core.Services
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             string graphQLGlobalPath = runtimeConfig.GraphQLPath;
 
-            foreach ((string entityName, Entity entity) in _entities)
+            foreach ((string entityName, Entity entity) in Entities)
             {
                 try
                 {
@@ -685,7 +705,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private void GenerateDatabaseObjectForEntities()
         {
             Dictionary<string, DatabaseObject> sourceObjects = new();
-            foreach ((string entityName, Entity entity) in _entities)
+            foreach ((string entityName, Entity entity) in Entities)
             {
                 PopulateDatabaseObjectForEntity(entity, entityName, sourceObjects);
             }
@@ -695,9 +715,18 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Creates entities for each table that is found, based on the autoentity configuration.
         /// This method is only called for tables in MsSql.
         /// </summary>
-        protected virtual Task GenerateAutoentitiesIntoEntities()
+        protected virtual Task GenerateAutoentitiesIntoEntities(IReadOnlyDictionary<string, Autoentity>? autoentities)
         {
-            throw new NotSupportedException($"{GetType().Name} does not support Autoentities yet.");
+            throw new NotSupportedException($"{GetType().Name} does not support autoentities yet.");
+        }
+
+        /// <summary>
+        /// Removes the entities that were generated from the autoentities property.
+        /// This should only be done when we only want to validate the entities.
+        /// </summary>
+        private void RemoveGeneratedAutoentities()
+        {
+            _runtimeConfigProvider.RemoveGeneratedAutoentitiesFromConfig();
         }
 
         protected void PopulateDatabaseObjectForEntity(
@@ -824,7 +853,7 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
             {
                 string targetEntityName = relationship.TargetEntity;
-                if (!_entities.TryGetValue(targetEntityName, out Entity? targetEntity))
+                if (!Entities.TryGetValue(targetEntityName, out Entity? targetEntity))
                 {
                     throw new InvalidOperationException($"Target Entity {targetEntityName} should be one of the exposed entities.");
                 }
@@ -1106,7 +1135,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         private async Task PopulateObjectDefinitionForEntities()
         {
-            foreach ((string entityName, Entity entity) in _entities)
+            foreach ((string entityName, Entity entity) in Entities)
             {
                 await PopulateObjectDefinitionForEntity(entityName, entity);
             }
@@ -1305,7 +1334,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         private void GenerateExposedToBackingColumnMapsForEntities()
         {
-            foreach ((string entityName, Entity _) in _entities)
+            foreach ((string entityName, Entity _) in Entities)
             {
                 GenerateExposedToBackingColumnMapUtil(entityName);
             }
@@ -1330,7 +1359,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 Dictionary<string, string> exposedToBack = new(StringComparer.OrdinalIgnoreCase);
 
                 // Pull definitions.
-                _entities.TryGetValue(entityName, out Entity? entity);
+                Entities.TryGetValue(entityName, out Entity? entity);
                 SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
 
                 // 1) Prefer new-style fields (backing = f.Name, exposed = f.Alias ?? f.Name)
@@ -1426,7 +1455,7 @@ namespace Azure.DataApiBuilder.Core.Services
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            _entities.TryGetValue(entityName, out Entity? entity);
+            Entities.TryGetValue(entityName, out Entity? entity);
             if (GetDatabaseType() is DatabaseType.MSSQL && entity is not null && entity.Source.Type is EntitySourceType.Table)
             {
                 await PopulateTriggerMetadataForTable(entityName, schemaName, tableName, sourceDefinition);

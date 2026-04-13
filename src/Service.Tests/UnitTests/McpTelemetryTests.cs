@@ -17,7 +17,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
-
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     /// <summary>
@@ -104,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             return new CallToolResult
             {
-                Content = new List<ContentBlock> { new TextContentBlock { Type = "text", Text = text } },
+                Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
                 IsError = isError
             };
         }
@@ -335,6 +334,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             ActivityEvent? exceptionEvent = recorded.Events.FirstOrDefault(e => e.Name == "exception");
             Assert.IsNotNull(exceptionEvent, "Exception event should be recorded");
+        }
+
+        /// <summary>
+        /// Test that aggregate_records tool name maps to "aggregate" operation.
+        /// </summary>
+        [TestMethod]
+        public void InferOperationFromTool_AggregateRecords_ReturnsAggregate()
+        {
+            CallToolResult dummyResult = CreateToolResult("ok");
+            IMcpTool tool = new MockMcpTool(dummyResult, ToolType.BuiltIn);
+
+            string operation = McpTelemetryHelper.InferOperationFromTool(tool, "aggregate_records");
+
+            Assert.AreEqual("aggregate", operation);
         }
 
         #endregion

@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Data;
 using System.Data.Common;
 using System.Net;
 using System.Text.Json;
@@ -397,9 +396,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 case EntityActionOperation.Insert:
 
                     HttpContext httpContext = GetHttpContext();
+                    // Use scheme/host from X-Forwarded-* headers if present, else fallback to request values
+                    string scheme = SqlPaginationUtil.ResolveRequestScheme(httpContext.Request);
+                    string host = SqlPaginationUtil.ResolveRequestHost(httpContext.Request);
                     string locationHeaderURL = UriHelper.BuildAbsolute(
-                            scheme: httpContext.Request.Scheme,
-                            host: httpContext.Request.Host,
+                            scheme: scheme,
+                            host: new HostString(host),
                             pathBase: GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()),
                             path: httpContext.Request.Path);
 
@@ -539,7 +541,58 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 try
                 {
-                    if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
+                    // When the URL path has no primary key route but the request body contains
+                    // ALL PK columns, promote those values into PrimaryKeyValuePairs so the upsert
+                    // path can build a proper UPDATE ... WHERE pk = value (with INSERT fallback)
+                    // instead of blindly inserting and failing on a PK violation.
+                    // Every PK column must be present — including auto-generated ones — because
+                    // a partial composite key cannot uniquely identify a row for UPDATE.
+                    if ((context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
+                        && context.PrimaryKeyValuePairs.Count == 0)
+                    {
+                        SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(context.EntityName);
+                        bool allPKsInBody = true;
+                        List<string> pkExposedNames = new();
+
+                        foreach (string pk in sourceDefinition.PrimaryKey)
+                        {
+                            if (!sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, pk, out string? exposedName))
+                            {
+                                allPKsInBody = false;
+                                break;
+                            }
+
+                            if (!context.FieldValuePairsInBody.ContainsKey(exposedName))
+                            {
+                                allPKsInBody = false;
+                                break;
+                            }
+
+                            pkExposedNames.Add(exposedName);
+                        }
+
+                        if (allPKsInBody)
+                        {
+                            // Populate PrimaryKeyValuePairs from the body so the upsert path
+                            // generates an UPDATE with the correct WHERE clause.
+                            foreach (string exposedName in pkExposedNames)
+                            {
+                                if (context.FieldValuePairsInBody.TryGetValue(exposedName, out object? value))
+                                {
+                                    context.PrimaryKeyValuePairs[exposedName] = value!;
+                                }
+                            }
+                        }
+                    }
+
+                    // When an upsert still has no primary key values after checking the body,
+                    // it degenerates to a pure INSERT. Fall through to the shared insert/update
+                    // handling so the mutation engine generates a correct INSERT statement instead
+                    // of an UPDATE with an empty WHERE clause (WHERE 1 = 1) that would match every row.
+                    bool isKeylessUpsert = (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
+                        && context.PrimaryKeyValuePairs.Count == 0;
+
+                    if (!isKeylessUpsert && (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental))
                     {
                         DbResultSet? upsertOperationResult;
                         DbResultSetRow upsertOperationResultSetRow;
@@ -642,7 +695,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else
                     {
-                        // This code block gets executed when the operation type is one among Insert, Update or UpdateIncremental.
+                        // This code block handles Insert, Update, UpdateIncremental,
+                        // and keyless upsert (which degenerates to Insert).
+                        EntityActionOperation effectiveOperationType = isKeylessUpsert
+                            ? EntityActionOperation.Insert
+                            : context.OperationType;
+
                         DbResultSetRow? mutationResultRow = null;
 
                         try
@@ -653,13 +711,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 mutationResultRow =
                                         await PerformMutationOperation(
                                             entityName: context.EntityName,
-                                            operationType: context.OperationType,
+                                            operationType: effectiveOperationType,
                                             parameters: parameters,
                                             sqlMetadataProvider: sqlMetadataProvider);
 
                                 if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
                                 {
-                                    if (context.OperationType is EntityActionOperation.Insert)
+                                    if (effectiveOperationType is EntityActionOperation.Insert)
                                     {
                                         if (mutationResultRow is null)
                                         {
@@ -746,17 +804,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         string primaryKeyRouteForLocationHeader = isReadPermissionConfiguredForRole ? SqlResponseHelpers.ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider)
                                                                                                     : string.Empty;
 
-                        if (context.OperationType is EntityActionOperation.Insert)
+                        if (effectiveOperationType is EntityActionOperation.Insert)
                         {
                             // Location Header is made up of the Base URL of the request and the primary key of the item created.
-                            // For POST requests, the primary key info would not be available in the URL and needs to be appended. So, the primary key of the newly created item
-                            // which is stored in the primaryKeyRoute is used to construct the Location Header.
-                            return SqlResponseHelpers.ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
+                            // For POST requests and keyless PUT/PATCH requests, the primary key info would not be available
+                            // in the URL and needs to be appended. So, the primary key of the newly created item which is
+                            // stored in the primaryKeyRoute is used to construct the Location Header.
+                            // effectiveOperationType (Insert) is passed so that ConstructCreatedResultResponse populates
+                            // the Location header for both true POST inserts and keyless upserts that result in an insert.
+                            return SqlResponseHelpers.ConstructCreatedResultResponse(
+                                mutationResultRow!.Columns,
+                                selectOperationResponse,
+                                primaryKeyRouteForLocationHeader,
+                                isReadPermissionConfiguredForRole,
+                                isDatabasePolicyDefinedForReadAction,
+                                effectiveOperationType,
+                                GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()),
+                                GetHttpContext());
                         }
 
-                        if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
+                        if (effectiveOperationType is EntityActionOperation.Update || effectiveOperationType is EntityActionOperation.UpdateIncremental)
                         {
-                            return SqlResponseHelpers.ConstructOkMutationResponse(mutationResultRow!.Columns, selectOperationResponse, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
+                            return SqlResponseHelpers.ConstructOkMutationResponse(
+                                mutationResultRow!.Columns,
+                                selectOperationResponse,
+                                isReadPermissionConfiguredForRole,
+                                isDatabasePolicyDefinedForReadAction);
                         }
                     }
 

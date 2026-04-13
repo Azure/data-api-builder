@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Product;
 using Cli.Constants;
 using Microsoft.Data.SqlClient;
@@ -116,7 +117,7 @@ public class EndToEndTests
         string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.enabled", "false", "--graphql.path", "/graphql-api" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
-        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
             TEST_RUNTIME_CONFIG_FILE,
             out RuntimeConfig? runtimeConfig,
@@ -135,14 +136,14 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate the usage of --graphql.multiple-create.enabled option of the init command for all database types.
+    /// Test to validate the usage of --graphql.multiple-mutations.create.enabled option of the init command for all database types.
     ///
     /// 1. Behavior for database types other than MsSQL:
-    ///      - Irrespective of whether the --graphql.multiple-create.enabled option is used or not, fields related to multiple-create will NOT be written to the config file.
+    ///      - Irrespective of whether the --graphql.multiple-mutations.create.enabled option is used or not, fields related to multiple-create will NOT be written to the config file.
     ///      - As a result, after deserialization of such a config file, the Runtime.GraphQL.MultipleMutationOptions is expected to be null.
     /// 2. Behavior for MsSQL database type:
     ///
-    ///      a. When --graphql.multiple-create.enabled option is used
+    ///      a. When --graphql.multiple-mutations.create.enabled option is used
     ///           - In this case, the fields related to multiple mutation and multiple create operations will be written to the config file.
     ///                "multiple-mutations": {
     ///                    "create": {
@@ -151,32 +152,32 @@ public class EndToEndTests
     ///                }
     ///         After deserializing such a config file, the Runtime.GraphQL.MultipleMutationOptions is expected to be non-null and the value of the "enabled" field is expected to be the same as the value passed in the init command.
     ///
-    ///      b. When --graphql.multiple-create.enabled option is not used
+    ///      b. When --graphql.multiple-mutations.create.enabled option is not used
     ///           - In this case, fields related to multiple mutation and multiple create operations will NOT be written to the config file.
     ///           - As a result, after deserialization of such a config file, the Runtime.GraphQL.MultipleMutationOptions is expected to be null.
     ///
     /// </summary>
-    /// <param name="isMultipleCreateEnabled">Value interpreted by the CLI for '--graphql.multiple-create.enabled' option of the init command.
+    /// <param name="isMultipleCreateEnabled">Value interpreted by the CLI for '--graphql.multiple-mutations.create.enabled' option of the init command.
     ///    When not used, CLI interprets the value for the option as CliBool.None
     ///    When used with true/false, CLI interprets the value as CliBool.True/CliBool.False respectively.
     /// </param>
     /// <param name="expectedValueForMultipleCreateEnabledFlag"> Expected value for the multiple create enabled flag in the config file.</param>
     [DataTestMethod]
-    [DataRow(CliBool.True, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MsSql database type")]
-    [DataRow(CliBool.False, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MsSql database type")]
-    [DataRow(CliBool.None, "mssql", DatabaseType.MSSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MsSql database type")]
-    [DataRow(CliBool.True, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MySql database type")]
-    [DataRow(CliBool.False, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MySql database type")]
-    [DataRow(CliBool.None, "mysql", DatabaseType.MySQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MySql database type")]
-    [DataRow(CliBool.True, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for PostgreSql database type")]
-    [DataRow(CliBool.False, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for PostgreSql database type")]
-    [DataRow(CliBool.None, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for PostgreSql database type")]
-    [DataRow(CliBool.True, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for dwsql database type")]
-    [DataRow(CliBool.False, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for dwsql database type")]
-    [DataRow(CliBool.None, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for dwsql database type")]
-    [DataRow(CliBool.True, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for cosmosdb_nosql database type")]
-    [DataRow(CliBool.False, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for cosmosdb_nosql database type")]
-    [DataRow(CliBool.None, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for cosmosdb_nosql database type")]
+    [DataRow(CliBool.True, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for MsSql database type")]
+    [DataRow(CliBool.False, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for MsSql database type")]
+    [DataRow(CliBool.None, "mssql", DatabaseType.MSSQL, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for MsSql database type")]
+    [DataRow(CliBool.True, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for MySql database type")]
+    [DataRow(CliBool.False, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for MySql database type")]
+    [DataRow(CliBool.None, "mysql", DatabaseType.MySQL, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for MySql database type")]
+    [DataRow(CliBool.True, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for PostgreSql database type")]
+    [DataRow(CliBool.False, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for PostgreSql database type")]
+    [DataRow(CliBool.None, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for PostgreSql database type")]
+    [DataRow(CliBool.True, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for dwsql database type")]
+    [DataRow(CliBool.False, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for dwsql database type")]
+    [DataRow(CliBool.None, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for dwsql database type")]
+    [DataRow(CliBool.True, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for cosmosdb_nosql database type")]
+    [DataRow(CliBool.False, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for cosmosdb_nosql database type")]
+    [DataRow(CliBool.None, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for cosmosdb_nosql database type")]
     public void TestEnablingMultipleCreateOperation(CliBool isMultipleCreateEnabled, string dbType, DatabaseType expectedDbType)
     {
         List<string> args = new() { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", dbType == "postgresql" ? SAMPLE_TEST_PGSQL_CONN_STRING : SAMPLE_TEST_CONN_STRING, "--database-type", dbType };
@@ -190,13 +191,13 @@ public class EndToEndTests
 
         if (isMultipleCreateEnabled is not CliBool.None)
         {
-            args.Add("--graphql.multiple-create.enabled");
+            args.Add("--graphql.multiple-mutations.create.enabled");
             args.Add(isMultipleCreateEnabled.ToString()!);
         }
 
         Program.Execute(args.ToArray(), _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
-        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
             TEST_RUNTIME_CONFIG_FILE,
             out RuntimeConfig? runtimeConfig,
@@ -215,7 +216,7 @@ public class EndToEndTests
         }
         else
         {
-            Assert.IsNull(runtimeConfig.Runtime.GraphQL.MultipleMutationOptions, message: "MultipleMutationOptions is expected to be null because a) DB type is not MsSQL or b) Either --graphql.multiple-create.enabled option was not used or no value was provided.");
+            Assert.IsNull(runtimeConfig.Runtime.GraphQL.MultipleMutationOptions, message: "MultipleMutationOptions is expected to be null because a) DB type is not MsSQL or b) Either --graphql.multiple-mutations.create.enabled option was not used or no value was provided.");
         }
     }
 
@@ -273,7 +274,7 @@ public class EndToEndTests
         // Perform assertions on various properties.
         Assert.IsNotNull(runtimeConfig);
         Assert.IsNotNull(runtimeConfig.Runtime);
-        Assert.IsNull(runtimeConfig.Runtime.Telemetry);
+        Assert.IsNotNull(runtimeConfig.Runtime.Telemetry);
 
         string[] addTelemetryArgs;
         if (appInsightsEnabled is null)
@@ -1087,10 +1088,6 @@ public class EndToEndTests
             output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);
             StringAssert.Contains(output, $"Setting default minimum LogLevel:", StringComparison.Ordinal);
-
-            output = await process.StandardOutput.ReadLineAsync();
-            Assert.IsNotNull(output);
-            StringAssert.Contains(output, "Starting the runtime engine...", StringComparison.Ordinal);
         }
         else
         {
@@ -1121,12 +1118,15 @@ public class EndToEndTests
     [DataRow("AppService", true)]
     [DataRow("AzureAD", true)]
     [DataRow("EntraID", true)]
+    [DataRow("Unauthenticated", true)]
     public void TestBaseRouteIsConfigurableForSWA(string authProvider, bool isExceptionExpected)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
             "--connection-string", SAMPLE_TEST_CONN_STRING, "--auth.provider", authProvider, "--runtime.base-route", "base-route" };
 
-        if (!Enum.TryParse(authProvider, ignoreCase: true, out EasyAuthType _))
+        if (!Enum.TryParse(authProvider, ignoreCase: true, out EasyAuthType _) &&
+            !authProvider.Equals("Unauthenticated", StringComparison.OrdinalIgnoreCase) &&
+            !authProvider.Equals("Simulator", StringComparison.OrdinalIgnoreCase))
         {
             string[] audIssuers = { "--auth.audience", "aud-xxx", "--auth.issuer", "issuer-xxx" };
             initArgs = initArgs.Concat(audIssuers).ToArray();
@@ -1223,7 +1223,7 @@ public class EndToEndTests
     [DataTestMethod]
     [DataRow(true, false, DisplayName = "dab init command specifies --rest.request-body-strict as false - REST request body allows extraneous fields.")]
     [DataRow(true, true, DisplayName = "dab init command specifies --rest.request-body-strict as true - REST request body doesn't allow extraneous fields.")]
-    [DataRow(false, true, DisplayName = "dab init command does not include --rest.request-body-strict flag. The default behavior is followed - REST request body doesn't allow extraneous fields.")]
+    [DataRow(false, false, DisplayName = "dab init command does not include --rest.request-body-strict flag. The default behavior is followed - REST request body allows extraneous fields.")]
     public void TestRestRequestBodyStrictMode(bool includeRestRequestBodyStrictFlag, bool isRequestBodyStrict)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",

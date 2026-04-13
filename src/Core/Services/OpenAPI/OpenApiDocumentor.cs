@@ -43,6 +43,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private const string GETONE_DESCRIPTION = "Returns an entity.";
         private const string POST_DESCRIPTION = "Create entity.";
         private const string PUT_DESCRIPTION = "Replace or create entity.";
+        private const string PUT_PATCH_KEYLESS_DESCRIPTION = "Create entity (keyless). For entities with auto-generated primary keys, creates a new record without requiring the key in the URL.";
         private const string PATCH_DESCRIPTION = "Update or create entity.";
         private const string DELETE_DESCRIPTION = "Delete entity.";
         private const string SP_EXECUTE_DESCRIPTION = "Executes a stored procedure.";
@@ -200,7 +201,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 Schemas = CreateComponentSchemas(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, role, isRequestBodyStrict: runtimeConfig.IsRequestBodyStrict)
             };
 
-            List<OpenApiTag> globalTags = new();
+            // Store tags in a dictionary keyed by normalized REST path to ensure we can
+            // reuse the same tag instances in BuildPaths, preventing duplicate groups in Swagger UI.
+            Dictionary<string, OpenApiTag> globalTagsDict = new();
             foreach (KeyValuePair<string, Entity> kvp in runtimeConfig.Entities)
             {
                 Entity entity = kvp.Value;
@@ -209,8 +212,12 @@ namespace Azure.DataApiBuilder.Core.Services
                     continue;
                 }
 
-                string restPath = entity.Rest?.Path ?? kvp.Key;
-                globalTags.Add(new OpenApiTag
+                // Use GetEntityRestPath to ensure consistent path normalization (with leading slash trimmed)
+                // matching the same computation used in BuildPaths.
+                string restPath = GetEntityRestPath(entity.Rest, kvp.Key);
+
+                // First entity's description wins when multiple entities share the same REST path.
+                globalTagsDict.TryAdd(restPath, new OpenApiTag
                 {
                     Name = restPath,
                     Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
@@ -228,9 +235,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     new() { Url = url }
                 },
-                Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, role),
+                Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, globalTagsDict, role),
                 Components = components,
-                Tags = globalTags
+                Tags = globalTagsDict.Values.ToList()
             };
         }
 
@@ -290,9 +297,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// A path with no primary key nor parameter representing the primary key value:
         /// "/EntityName"
         /// </example>
+        /// <param name="globalTags">Dictionary of global tags keyed by normalized REST path for reuse.</param>
         /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
         /// <returns>All possible paths in the DAB engine's REST API endpoint.</returns>
-        private OpenApiPaths BuildPaths(RuntimeEntities entities, string defaultDataSourceName, string? role = null)
+        private OpenApiPaths BuildPaths(RuntimeEntities entities, string defaultDataSourceName, Dictionary<string, OpenApiTag> globalTags, string? role = null)
         {
             OpenApiPaths pathsCollection = new();
 
@@ -300,53 +308,47 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
             {
                 string entityName = entityDbMetadataMap.Key;
-                if (!entities.ContainsKey(entityName))
+                if (!entities.TryGetValue(entityName, out Entity? entity) || entity is null)
                 {
                     // This can happen for linking entities which are not present in runtime config.
                     continue;
                 }
 
-                string entityRestPath = GetEntityRestPath(entities[entityName].Rest, entityName);
+                // Entities which disable their REST endpoint must not be included in
+                // the OpenAPI description document.
+                if (!entity.Rest.Enabled)
+                {
+                    continue;
+                }
+
+                string entityRestPath = GetEntityRestPath(entity.Rest, entityName);
                 string entityBasePathComponent = $"/{entityRestPath}";
 
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
                 SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
 
-                // Entities which disable their REST endpoint must not be included in
-                // the OpenAPI description document.
-                if (entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
-                {
-                    if (!entity.Rest.Enabled)
-                    {
-                        continue;
-                    }
-                }
-                else
-                {
-                    continue;
-                }
-
-                // Set the tag's Description property to the entity's semantic description if present.
-                OpenApiTag openApiTag = new()
-                {
-                    Name = entityRestPath,
-                    Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
-                };
-
-                // The OpenApiTag will categorize all paths created using the entity's name or overridden REST path value.
-                // The tag categorization will instruct OpenAPI document visualization tooling to display all generated paths together.
-                List<OpenApiTag> tags = new()
-                {
-                    openApiTag
-                };
-
                 Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject, role);
 
-                // Skip entities with no available operations
+                // Skip entities with no available operations before looking up the tag.
+                // This prevents noisy warnings for entities that are legitimately excluded from
+                // the global tags dictionary due to role-based permission filtering.
                 if (!configuredRestOperations.ContainsValue(true))
                 {
                     continue;
                 }
+
+                // Reuse the existing tag from the global tags dictionary instead of creating a new instance.
+                // This ensures Swagger UI displays only one group per entity by using the same object reference.
+                if (!globalTags.TryGetValue(entityRestPath, out OpenApiTag? existingTag))
+                {
+                    _logger.LogWarning("Tag for REST path '{EntityRestPath}' not found in global tags dictionary. This indicates a key mismatch between BuildOpenApiDocument and BuildPaths.", entityRestPath);
+                    continue;
+                }
+
+                List<OpenApiTag> tags = new()
+                {
+                    existingTag
+                };
 
                 if (dbObject.SourceType is EntitySourceType.StoredProcedure)
                 {
@@ -500,6 +502,31 @@ namespace Azure.DataApiBuilder.Core.Services
                     postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
                     postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
                     openApiPathItemOperations.Add(OperationType.Post, postOperation);
+                }
+
+                // For entities with auto-generated primary keys, add keyless PUT and PATCH operations.
+                // These routes allow creating records without specifying the primary key in the URL,
+                // which is useful for entities with identity/auto-generated keys.
+                if (DoesSourceContainAutogeneratedPrimaryKey(sourceDefinition))
+                {
+                    string keylessBodySchemaReferenceId = $"{entityName}_NoAutoPK";
+                    bool keylessRequestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true);
+
+                    if (configuredRestOperations[OperationType.Put])
+                    {
+                        OpenApiOperation putKeylessOperation = CreateBaseOperation(description: PUT_PATCH_KEYLESS_DESCRIPTION, tags: tags);
+                        putKeylessOperation.RequestBody = CreateOpenApiRequestBodyPayload(keylessBodySchemaReferenceId, keylessRequestBodyRequired);
+                        putKeylessOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                        openApiPathItemOperations.Add(OperationType.Put, putKeylessOperation);
+                    }
+
+                    if (configuredRestOperations[OperationType.Patch])
+                    {
+                        OpenApiOperation patchKeylessOperation = CreateBaseOperation(description: PUT_PATCH_KEYLESS_DESCRIPTION, tags: tags);
+                        patchKeylessOperation.RequestBody = CreateOpenApiRequestBodyPayload(keylessBodySchemaReferenceId, keylessRequestBodyRequired);
+                        patchKeylessOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                        openApiPathItemOperations.Add(OperationType.Patch, patchKeylessOperation);
+                    }
                 }
 
                 return openApiPathItemOperations;

@@ -70,6 +70,16 @@ namespace Azure.DataApiBuilder.Core.Services
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
+            QueryString? query = GetHttpContext().Request.QueryString;
+            string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
+
+            // Read the request body early so it can be used for downstream processing.
+            string requestBody = string.Empty;
+            using (StreamReader reader = new(GetHttpContext().Request.Body))
+            {
+                requestBody = await reader.ReadToEndAsync();
+            }
+
             if (dbObject.SourceType is not EntitySourceType.StoredProcedure)
             {
                 await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
@@ -77,15 +87,6 @@ namespace Azure.DataApiBuilder.Core.Services
             else
             {
                 await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new StoredProcedurePermissionsRequirement());
-            }
-
-            QueryString? query = GetHttpContext().Request.QueryString;
-            string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
-
-            string requestBody = string.Empty;
-            using (StreamReader reader = new(GetHttpContext().Request.Body))
-            {
-                requestBody = await reader.ReadToEndAsync();
             }
 
             RestRequestContext context;
@@ -144,7 +145,21 @@ namespace Azure.DataApiBuilder.Core.Services
                     case EntityActionOperation.UpdateIncremental:
                     case EntityActionOperation.Upsert:
                     case EntityActionOperation.UpsertIncremental:
-                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        // For Upsert/UpsertIncremental, a keyless URL is allowed. When the
+                        // primary key route is absent, ValidateUpsertRequestContext checks that
+                        // the body contains all non-auto-generated PK columns so the mutation
+                        // engine can resolve the target row (or insert a new one).
+                        // Update/UpdateIncremental always require the PK in the URL.
+                        if (!string.IsNullOrEmpty(primaryKeyRoute))
+                        {
+                            RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        }
+                        else if (operationType is not EntityActionOperation.Upsert and
+                                 not EntityActionOperation.UpsertIncremental)
+                        {
+                            RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        }
+
                         JsonElement upsertPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                         context = new UpsertRequestContext(
                             entityName,
@@ -153,7 +168,9 @@ namespace Azure.DataApiBuilder.Core.Services
                             operationType);
                         if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
-                            _requestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context);
+                            _requestValidator.ValidateUpsertRequestContext(
+                                (UpsertRequestContext)context,
+                                isPrimaryKeyInUrl: !string.IsNullOrEmpty(primaryKeyRoute));
                         }
 
                         break;
@@ -174,6 +191,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (!string.IsNullOrWhiteSpace(queryString))
                 {
+                    context.RawQueryString = queryString;
                     context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                     RequestParser.ParseQueryString(context, sqlMetadataProvider);
                 }
@@ -277,6 +295,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // So, $filter will be treated as any other parameter (inevitably will raise a Bad Request)
                     if (!string.IsNullOrWhiteSpace(queryString))
                     {
+                        context.RawQueryString = queryString;
                         context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                     }
 
@@ -383,7 +402,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// does not match the configured REST path or the global REST endpoint is disabled.</exception>
         public string GetRouteAfterPathBase(string route)
         {
-            string configuredRestPathBase = _runtimeConfigProvider.GetConfig().RestPath;
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            string configuredRestPathBase = runtimeConfig.RestPath;
 
             // Strip the leading '/' from the REST path provided in the runtime configuration
             // because the input argument 'route' has no starting '/'.
@@ -391,7 +411,8 @@ namespace Azure.DataApiBuilder.Core.Services
             // forward slash '/'.
             configuredRestPathBase = configuredRestPathBase.Substring(1);
 
-            if (route.Equals(_runtimeConfigProvider.GetConfig().McpPath.Substring(1)))
+            if (route.Equals(runtimeConfig.McpPath.Substring(1))
+                && !runtimeConfig.IsMcpEnabled)
             {
                 throw new DataApiBuilderException(
                     message: $"Route {route} was not found.",

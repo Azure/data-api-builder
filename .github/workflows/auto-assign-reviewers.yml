@@ -4,11 +4,6 @@ on:
   pull_request_target:
     types: [opened, reopened, labeled]
 
-  # TODO: Remove before merging — temporary trigger for testing from PR branch.
-  push:
-    branches:
-      - 'Usr/sogh/prreviewbot'
-
   workflow_dispatch:
     inputs:
       dry_run:
@@ -46,7 +41,7 @@ jobs:
             const STALE_DAYS = 90;
             const DRY_RUN = context.eventName === "workflow_dispatch"
               ? '${{ github.event.inputs.dry_run }}' === 'true'
-              : false;
+              : true;
 
             const { owner, repo } = context.repo;
             const staleCutoff = new Date();

@@ -2610,11 +2610,11 @@ namespace Cli
                 // Check if we set the minimum LogLevel from the config file or if it is based on the host mode.
                 if (isValueFromDefault)
                 {
-                    _logger.LogInformation($"Using default minimum LogLevel: {minimumLogLevel} from the 'Default' namespace in config file.", minimumLogLevel, hostModeType);
+                    _logger.LogInformation("Using default minimum LogLevel: {minimumLogLevel} from the 'Default' namespace in config file.", minimumLogLevel);
                 }
                 else
                 {
-                    _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.", minimumLogLevel, hostModeType);
+                    _logger.LogInformation("Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.", minimumLogLevel, hostModeType);
                 }
             }
 

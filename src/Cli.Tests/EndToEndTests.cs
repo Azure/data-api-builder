@@ -868,8 +868,8 @@ public class EndToEndTests
     /// <param name="cliLogLevel">The --LogLevel CLI flag value, or null to omit the flag.</param>
     /// <param name="expectedIsOverridden">Expected value of Startup.IsLogLevelOverriddenByCli.</param>
     [DataTestMethod]
-    [DataRow(null, false, DisplayName = "No CLI flag => IsLogLevelOverriddenByCli is false, log level resolved from config file.")]
-    [DataRow(LogLevel.Error, true, DisplayName = "CLI --LogLevel flag provided => IsLogLevelOverriddenByCli is true.")]
+    [DataRow(null, false, DisplayName = "IsLogLevelOverriddenByCli is false")]
+    [DataRow(LogLevel.Error, true, DisplayName = "IsLogLevelOverriddenByCli is true")]
     public async Task TestStartCommandResolvesLogLevelFromConfigOrFlag(
         LogLevel? cliLogLevel,
         bool expectedIsOverridden)
@@ -927,7 +927,7 @@ public class EndToEndTests
             TryStartEngineWithOptions(options, _runtimeConfigLoader!, _fileSystem!));
 
         // Wait for the engine to finish loading the config.
-        await Task.WhenAny(engineTask, Task.Delay(TimeSpan.FromSeconds(5)));
+        await Task.Delay(TimeSpan.FromSeconds(5));
 
         Assert.AreEqual(expectedIsOverridden, Startup.IsLogLevelOverriddenByCli);
     }

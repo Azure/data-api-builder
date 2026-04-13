@@ -863,19 +863,17 @@ public class EndToEndTests
     /// based on whether the --LogLevel CLI flag is provided.
     ///
     /// When the --LogLevel flag is provided, IsLogLevelOverriddenByCli should be true.
-    /// When the --LogLevel flag is omitted (log level comes from the config file),
-    /// IsLogLevelOverriddenByCli should be false.
+    /// When the --LogLevel flag is omitted (log level comes from the config file), IsLogLevelOverriddenByCli should be false.
     /// </summary>
     /// <param name="cliLogLevel">The --LogLevel CLI flag value, or null to omit the flag.</param>
     /// <param name="expectedIsOverridden">Expected value of Startup.IsLogLevelOverriddenByCli.</param>
     [DataTestMethod]
     [DataRow(null, false, DisplayName = "No CLI flag => IsLogLevelOverriddenByCli is false, log level resolved from config file.")]
     [DataRow(LogLevel.Error, true, DisplayName = "CLI --LogLevel flag provided => IsLogLevelOverriddenByCli is true.")]
-    public void TestStartCommandResolvesLogLevelFromConfigOrFlag(
+    public async Task TestStartCommandResolvesLogLevelFromConfigOrFlag(
         LogLevel? cliLogLevel,
         bool expectedIsOverridden)
     {
-        // Build a base config with a log-level property in the telemetry section and empty entities.
         string baseConfig = @"
         {
             ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @""",
@@ -924,9 +922,12 @@ public class EndToEndTests
             mcpRole: null,
             config: TEST_RUNTIME_CONFIG_FILE);
 
-        // TryStartEngineWithOptions will fail because the connection string is invalid,
-        // but Startup.IsLogLevelOverriddenByCli is set before the engine attempts to start.
-        TryStartEngineWithOptions(options, _runtimeConfigLoader!, _fileSystem!);
+        // Run TryStartEngineWithOptions on a background task because StartEngine blocks until the host shuts down.
+        Task engineTask = Task.Run(() =>
+            TryStartEngineWithOptions(options, _runtimeConfigLoader!, _fileSystem!));
+
+        // Wait for the engine to finish loading the config.
+        await Task.WhenAny(engineTask, Task.Delay(TimeSpan.FromSeconds(5)));
 
         Assert.AreEqual(expectedIsOverridden, Startup.IsLogLevelOverriddenByCli);
     }

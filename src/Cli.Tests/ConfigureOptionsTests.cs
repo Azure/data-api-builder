@@ -1646,6 +1646,7 @@ namespace Cli.Tests
         [DataRow(true, 30, null, null, DisplayName = "Enable health with custom cache-ttl")]
         [DataRow(true, null, 8, null, DisplayName = "Enable health with custom max-query-parallelism")]
         [DataRow(true, null, null, new string[] { "admin" }, DisplayName = "Enable health with roles")]
+        [DataRow(null, 20, null, null, DisplayName = "Null enabled with cache-ttl auto-enables health")]
         public void TestConfigureRuntimeHealthOptions(bool? enabled, int? cacheTtlSeconds, int? maxQueryParallelism, string[]? roles)
         {
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
@@ -1669,6 +1670,11 @@ namespace Cli.Tests
             if (enabled.HasValue)
             {
                 Assert.AreEqual(enabled.Value, config.Runtime.Health.Enabled);
+            }
+            else
+            {
+                // When enabled is null but sub-options are set, health is auto-enabled.
+                Assert.IsTrue(config.Runtime.Health.Enabled);
             }
 
             if (cacheTtlSeconds.HasValue)

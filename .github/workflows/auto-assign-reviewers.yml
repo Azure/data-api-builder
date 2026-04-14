@@ -41,7 +41,7 @@ jobs:
             const STALE_DAYS = 90;
             const DRY_RUN = context.eventName === "workflow_dispatch"
               ? '${{ github.event.inputs.dry_run }}' === 'true'
-              : true;
+              : false;
 
             const { owner, repo } = context.repo;
             const staleCutoff = new Date();

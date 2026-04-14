@@ -436,7 +436,7 @@
                       "description": "Unauthenticated provider where all operations run as anonymous. Use when Data API builder is behind an app gateway or APIM where authentication is handled externally."
                     }
                   ],
-                  "default": "AppService"
+                  "default": "Unauthenticated"
                 },
                 "jwt": {
                   "type": "object",

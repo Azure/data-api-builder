@@ -61,7 +61,7 @@ namespace Cli.Commands
         public string? OpenTelemetryHeaders { get; }
 
         // Specify the Open Telemetry protocol. This flag is optional and default value is grpc.
-        [Option("otel-protocol", Default = OtlpExportProtocol.Grpc, Required = false, HelpText = "Accepted: grpc/httpprotobuf.")]
+        [Option("otel-protocol", Default = OtlpExportProtocol.Grpc, Required = false, HelpText = "Accepted: grpc, httpprotobuf.")]
         public OtlpExportProtocol? OpenTelemetryExportProtocol { get; }
 
         // Service Name for the Open Telemetry resource to which telemetry data should be sent. This flag is optional and default value is dab.

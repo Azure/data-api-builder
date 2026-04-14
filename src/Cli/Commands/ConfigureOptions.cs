@@ -176,7 +176,7 @@ namespace Cli.Commands
         [Option("data-source.user-delegated-auth.database-audience", Required = false, HelpText = "Database resource identifier for token acquisition (e.g., https://database.windows.net for Azure SQL).")]
         public string? DataSourceUserDelegatedAuthDatabaseAudience { get; }
 
-        [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of a nested query. Allowed values: (0,2147483647] inclusive. Default: null (no limit). Use -1 to remove limit.")]
+        [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of a nested query. Allowed values: -1 (no limit) or 1..2147483647. Default: null (no limit).")]
         public int? DepthLimit { get; }
 
         [Option("runtime.graphql.enabled", Required = false, HelpText = "Enable DAB's GraphQL endpoint. Default: true (boolean).")]
@@ -245,7 +245,7 @@ namespace Cli.Commands
         [Option("runtime.compression.level", Required = false, HelpText = "Set the response compression level. Allowed values: optimal (default), fastest, none.")]
         public CompressionLevel? RuntimeCompressionLevel { get; }
 
-        [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: production.")]
+        [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: Production.")]
         public HostMode? RuntimeHostMode { get; }
 
         [Option("runtime.host.cors.origins", Required = false, HelpText = "Overwrite Allowed Origins in CORS. Default: [] (Space separated array of strings).")]

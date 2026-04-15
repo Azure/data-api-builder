@@ -2596,27 +2596,17 @@ namespace Cli
                 }
 
                 minimumLogLevel = (LogLevel)options.LogLevel;
-                _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
                 args.Add("--LogLevel");
                 args.Add(minimumLogLevel.ToString());
             }
             else
             {
+                // GetConfiguredLogLevel will only return the 'Default' LogLevel value from the config file.
+                // If it doesn't exist, it will return the default LogLevel based on the environment (Debug for Development and Error for Production).
                 minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
-                HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
-                bool isValueFromDefault = !deserializedRuntimeConfig.IsLogLevelNull() && deserializedRuntimeConfig.Runtime!.Telemetry!.LoggerLevel!
-                    .SingleOrDefault(kvp => kvp.Key.Equals("default", StringComparison.OrdinalIgnoreCase)).Value != null;
-
-                // Check if we set the minimum LogLevel from the config file or if it is based on the host mode.
-                if (isValueFromDefault)
-                {
-                    _logger.LogInformation("Using default minimum LogLevel: {minimumLogLevel} from the 'Default' namespace in config file.", minimumLogLevel);
-                }
-                else
-                {
-                    _logger.LogInformation("Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.", minimumLogLevel, hostModeType);
-                }
             }
+
+            _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
 
             // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)

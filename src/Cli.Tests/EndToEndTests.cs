@@ -903,6 +903,9 @@ public class EndToEndTests
                 },
                 ""telemetry"": {
                     ""log-level"": {
+                        ""Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider"": ""Information"",
+                        ""Azure.DataApiBuilder.Core"": ""Debug"",
+                        ""Azure.DataApiBuilder.Service.Controllers.RestController"": ""Error"",
                         ""default"": ""Warning""
                     }
                 }

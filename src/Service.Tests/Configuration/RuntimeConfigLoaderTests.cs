@@ -283,4 +283,159 @@ public class RuntimeConfigLoaderTests
             }
         }
     }
+
+    /// <summary>
+    /// Tests that EnableAggregation returns true by default when runtime.graphql section is absent.
+    /// This is a regression test for the bug where EnableAggregation returned false (disabled)
+    /// when Runtime.GraphQL was null, even though the default value for EnableAggregation is true.
+    /// </summary>
+    [TestMethod]
+    public void EnableAggregation_WhenGraphQLSectionAbsent_DefaultsToTrue()
+    {
+        // Arrange: a minimal config with no runtime.graphql section
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=tcp:127.0.0.1,1433;""
+            },
+            ""runtime"": {
+                ""host"": {
+                    ""authentication"": { ""provider"": ""StaticWebApps"" }
+                }
+            },
+            ""entities"": {}
+        }";
+
+        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
+        {
+            { "dab-config.json", new MockFileData(configJson) }
+        });
+
+        FileSystemRuntimeConfigLoader loader = new(fs);
+
+        // Act
+        bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig);
+
+        // Assert
+        Assert.IsTrue(loaded, "Config should load successfully.");
+        Assert.IsNull(runtimeConfig.Runtime?.GraphQL, "GraphQL section should be null for this config.");
+        Assert.IsTrue(runtimeConfig.EnableAggregation,
+            "EnableAggregation should default to true when runtime.graphql section is absent.");
+    }
+
+    /// <summary>
+    /// Tests that EnableAggregation returns true by default when runtime section is absent.
+    /// </summary>
+    [TestMethod]
+    public void EnableAggregation_WhenRuntimeSectionAbsent_DefaultsToTrue()
+    {
+        // Arrange: a minimal config with no runtime section at all
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=tcp:127.0.0.1,1433;""
+            },
+            ""entities"": {}
+        }";
+
+        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
+        {
+            { "dab-config.json", new MockFileData(configJson) }
+        });
+
+        FileSystemRuntimeConfigLoader loader = new(fs);
+
+        // Act
+        bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig);
+
+        // Assert
+        Assert.IsTrue(loaded, "Config should load successfully.");
+        Assert.IsNull(runtimeConfig.Runtime, "Runtime section should be null for this config.");
+        Assert.IsTrue(runtimeConfig.EnableAggregation,
+            "EnableAggregation should default to true when runtime section is absent.");
+    }
+
+    /// <summary>
+    /// Tests that EnableAggregation returns false when explicitly disabled in config.
+    /// </summary>
+    [TestMethod]
+    public void EnableAggregation_WhenExplicitlyDisabled_ReturnsFalse()
+    {
+        // Arrange: a config with enable-aggregation explicitly set to false
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=tcp:127.0.0.1,1433;""
+            },
+            ""runtime"": {
+                ""graphql"": {
+                    ""enabled"": true,
+                    ""enable-aggregation"": false
+                },
+                ""host"": {
+                    ""authentication"": { ""provider"": ""StaticWebApps"" }
+                }
+            },
+            ""entities"": {}
+        }";
+
+        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
+        {
+            { "dab-config.json", new MockFileData(configJson) }
+        });
+
+        FileSystemRuntimeConfigLoader loader = new(fs);
+
+        // Act
+        bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig);
+
+        // Assert
+        Assert.IsTrue(loaded, "Config should load successfully.");
+        Assert.IsFalse(runtimeConfig.EnableAggregation,
+            "EnableAggregation should be false when explicitly set to false in config.");
+    }
+
+    /// <summary>
+    /// Tests that EnableAggregation returns true when explicitly enabled in config.
+    /// </summary>
+    [TestMethod]
+    public void EnableAggregation_WhenExplicitlyEnabled_ReturnsTrue()
+    {
+        // Arrange: a config with enable-aggregation explicitly set to true
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=tcp:127.0.0.1,1433;""
+            },
+            ""runtime"": {
+                ""graphql"": {
+                    ""enabled"": true,
+                    ""enable-aggregation"": true
+                },
+                ""host"": {
+                    ""authentication"": { ""provider"": ""StaticWebApps"" }
+                }
+            },
+            ""entities"": {}
+        }";
+
+        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
+        {
+            { "dab-config.json", new MockFileData(configJson) }
+        });
+
+        FileSystemRuntimeConfigLoader loader = new(fs);
+
+        // Act
+        bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig);
+
+        // Assert
+        Assert.IsTrue(loaded, "Config should load successfully.");
+        Assert.IsTrue(runtimeConfig.EnableAggregation,
+            "EnableAggregation should be true when explicitly set to true in config.");
+    }
 }

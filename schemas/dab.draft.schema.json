@@ -244,6 +244,11 @@
               "description": "Maximum allowed depth of a GraphQL query.",
               "default": null
             },
+            "enable-aggregation": {
+              "$ref": "#/$defs/boolean-or-string",
+              "description": "Allow enabling/disabling aggregation (groupBy, sum, avg, min, max, count) for supported database types (MSSQL, DWSQL).",
+              "default": true
+            },
             "multiple-mutations": {
               "type": "object",
               "description": "Configuration properties for multiple mutation operations",

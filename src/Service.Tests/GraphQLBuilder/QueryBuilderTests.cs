@@ -538,6 +538,119 @@ type Table @model(name: ""table"") {
             Assert.AreEqual("BookGroupBy", groupByType.Name.Value, "should return GroupBy type");
         }
 
+        /// <summary>
+        /// Tests that the return type does NOT include the groupBy field when aggregation is disabled.
+        /// </summary>
+        [TestMethod]
+        [TestCategory("Query Builder - Return Type")]
+        public void GenerateReturnType_ExcludesGroupByField_WhenAggregationDisabled()
+        {
+            // Arrange
+            NameNode entityName = new("Book");
+
+            // Act
+            ObjectTypeDefinitionNode returnType = QueryBuilder.GenerateReturnType(entityName, isAggregationEnabled: false);
+
+            // Assert
+            FieldDefinitionNode groupByField = returnType.Fields.FirstOrDefault(f => f.Name.Value == "groupBy");
+            Assert.IsNull(groupByField, "groupBy field should NOT exist when aggregation is disabled");
+        }
+
+        /// <summary>
+        /// Tests that QueryBuilder.Build adds a groupBy field to the connection type
+        /// for MSSQL entities when aggregation is enabled. This verifies the fix for the
+        /// regression where aggregation features were not accessible in the schema.
+        /// </summary>
+        [TestMethod]
+        [TestCategory("Query Builder - Aggregation")]
+        public void Build_WithMssqlAndAggregationEnabled_AddsGroupByToConnectionType()
+        {
+            // Arrange
+            string gql = @"
+type Book @model(name:""Book"") {
+    id: ID!
+    price: Float!
+    title: String
+}";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Book", DatabaseType.MSSQL }
+            };
+
+            Dictionary<string, EntityMetadata> bookPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                new string[] { "Book" },
+                new EntityActionOperation[] { EntityActionOperation.Read },
+                new string[] { "anonymous" });
+
+            // Act
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                entityNameToDatabaseType,
+                new(new Dictionary<string, Entity> { { "Book", GraphQLTestHelpers.GenerateEmptyEntity() } }),
+                inputTypes: new(),
+                entityPermissionsMap: bookPermissions,
+                _isAggregationEnabled: true
+            );
+
+            // Assert: find BookConnection type
+            ObjectTypeDefinitionNode bookConnection = queryRoot.Definitions
+                .OfType<ObjectTypeDefinitionNode>()
+                .FirstOrDefault(d => d.Name.Value == "BookConnection");
+            Assert.IsNotNull(bookConnection, "BookConnection type should exist");
+
+            FieldDefinitionNode groupByField = bookConnection.Fields.FirstOrDefault(f => f.Name.Value == "groupBy");
+            Assert.IsNotNull(groupByField, "groupBy field should exist on BookConnection when aggregation is enabled for MSSQL");
+        }
+
+        /// <summary>
+        /// Tests that QueryBuilder.Build does NOT add a groupBy field to the connection type
+        /// for PostgreSQL entities, since aggregation is only enabled for MSSQL and DWSQL.
+        /// </summary>
+        [TestMethod]
+        [TestCategory("Query Builder - Aggregation")]
+        public void Build_WithPostgreSqlAndAggregationEnabled_DoesNotAddGroupByToConnectionType()
+        {
+            // Arrange
+            string gql = @"
+type Book @model(name:""Book"") {
+    id: ID!
+    price: Float!
+    title: String
+}";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Book", DatabaseType.PostgreSQL }
+            };
+
+            Dictionary<string, EntityMetadata> bookPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                new string[] { "Book" },
+                new EntityActionOperation[] { EntityActionOperation.Read },
+                new string[] { "anonymous" });
+
+            // Act
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                entityNameToDatabaseType,
+                new(new Dictionary<string, Entity> { { "Book", GraphQLTestHelpers.GenerateEmptyEntity() } }),
+                inputTypes: new(),
+                entityPermissionsMap: bookPermissions,
+                _isAggregationEnabled: true
+            );
+
+            // Assert: find BookConnection type
+            ObjectTypeDefinitionNode bookConnection = queryRoot.Definitions
+                .OfType<ObjectTypeDefinitionNode>()
+                .FirstOrDefault(d => d.Name.Value == "BookConnection");
+            Assert.IsNotNull(bookConnection, "BookConnection type should exist");
+
+            FieldDefinitionNode groupByField = bookConnection.Fields.FirstOrDefault(f => f.Name.Value == "groupBy");
+            Assert.IsNull(groupByField, "groupBy field should NOT exist on BookConnection for PostgreSQL (not in AggregationEnabledDatabaseTypes)");
+        }
+
         public static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)
         {
             return (ObjectTypeDefinitionNode)queryRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Query");

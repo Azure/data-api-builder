@@ -2714,12 +2714,27 @@ namespace Cli
         {
             if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, logBuffer, out configToBeUsed))
             {
-                SendLogToBufferOrLogger(logBuffer, LogLevel.Information, $"Using merged config file based on environment: {configToBeUsed}.");
+                if (logBuffer is null)
+                {
+                    _logger.LogInformation("Using merged config file based on environment,: {configToBeUsed}.", {configToBeUsed});
+                }
+                else
+                {
+                    logBuffer.BufferLog(LogLevel.Information, $"Merged config file based on environment is available: {configToBeUsed}.");
+                }
             }
 
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile, logBuffer))
             {
-                SendLogToBufferOrLogger(logBuffer, LogLevel.Error, "Config not provided and default config file doesn't exist.");
+                if (logBuffer is null)
+                {
+                    _logger.LogError("Config not provided and default config file doesn't exist.");
+                }
+                else
+                {
+                    logBuffer.BufferLog(LogLevel.Error, "Config not provided and default config file doesn't exist.");
+                }
+
                 return false;
             }
 

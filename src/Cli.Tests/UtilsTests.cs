@@ -253,7 +253,7 @@ public class UtilsTests
 
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-        LogBuffer? logBuffer = null;
+        LogBuffer logBuffer = new();
 
         Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
 
@@ -308,10 +308,11 @@ public class UtilsTests
         }
 
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
+        LogBuffer logBuffer = new();
 
         Assert.AreEqual(
             expectedIsMergedConfigAvailable,
-            ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), null, out string? mergedConfigFile),
+            ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), logBuffer, out string? mergedConfigFile),
             "Availability of merge config should match");
         Assert.AreEqual(expectedMergedConfigFileName, mergedConfigFile, "Merge config file name should match expected");
 

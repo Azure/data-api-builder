@@ -32,16 +32,42 @@ public static class ConfigMerger
                     string overrideConfigJson = fileSystem.File.ReadAllText(environmentBasedConfigFile);
 
                     string currentDir = fileSystem.Directory.GetCurrentDirectory();
-                    ConfigGenerator.SendLogToBufferOrLogger(cliBuffer, LogLevel.Information, $"Merging {Path.Combine(currentDir, baseConfigFile)} and {Path.Combine(currentDir, environmentBasedConfigFile)}");
+
+                    if (cliBuffer is null)
+                    {
+                        logger.LogInformation("Merging {baseFilePath} and {envFilePath}", Path.Combine(currentDir, baseConfigFile), Path.Combine(currentDir, environmentBasedConfigFile));
+                    }
+                    else
+                    {
+                        cliBuffer.BufferLog(LogLevel.Information, $"Merging {Path.Combine(currentDir, baseConfigFile)} and {Path.Combine(currentDir, environmentBasedConfigFile)}");
+                    }
+
                     string mergedConfigJson = MergeJsonProvider.Merge(baseConfigJson, overrideConfigJson);
                     mergedConfigFile = FileSystemRuntimeConfigLoader.GetMergedFileNameForEnvironment(FileSystemRuntimeConfigLoader.CONFIGFILE_NAME, environmentValue);
                     fileSystem.File.WriteAllText(mergedConfigFile, mergedConfigJson);
-                    ConfigGenerator.SendLogToBufferOrLogger(cliBuffer, LogLevel.Information, $"Generated merged config file: {Path.Combine(currentDir, mergedConfigFile)}");
+
+                    if (cliBuffer is null)
+                    {
+                        logger.LogInformation("Generated merged config file: {mergedFile}", Path.Combine(currentDir, mergedConfigFile));
+                    }
+                    else
+                    {
+                        cliBuffer.BufferLog(LogLevel.Information, $"Generated merged config file: {Path.Combine(currentDir, mergedConfigFile)}");
+                    }
+
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    ConfigGenerator.SendLogToBufferOrLogger(cliBuffer, LogLevel.Error, "Failed to merge the config files.", ex);
+                    if (cliBuffer is null)
+                    {
+                        logger.LogError(ex, "Failed to merge the config files.");
+                    }
+                    else
+                    {
+                        cliBuffer.BufferLog(LogLevel.Error, "Failed to merge the config files.", ex);
+                    }
+
                     mergedConfigFile = null;
                     return false;
                 }

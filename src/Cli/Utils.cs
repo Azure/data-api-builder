@@ -315,14 +315,31 @@ namespace Cli
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 /// The existence of user provided config file is not checked here.
-                ConfigGenerator.SendLogToBufferOrLogger(logBuffer, LogLevel.Information, $"User provided config file: {userProvidedConfigFile}");
+                if (logBuffer is null)
+                {
+                    _logger.LogInformation("User provided config file: {userProvidedConfigFile}", userProvidedConfigFile);
+                }
+                else
+                {
+                    logBuffer.BufferLog(LogLevel.Information, $"User provided config file: {userProvidedConfigFile}");
+                }
+
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
             }
             else
             {
-                ConfigGenerator.SendLogToBufferOrLogger(logBuffer, LogLevel.Information, "Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
-                ConfigGenerator.SendLogToBufferOrLogger(logBuffer, LogLevel.Information, $"Environment variable DAB_ENVIRONMENT is {Environment.GetEnvironmentVariable("DAB_ENVIRONMENT")}");
+                if (logBuffer is null)
+                {
+                    _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                    _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {environment}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
+                }
+                else
+                {
+                    logBuffer.BufferLog(LogLevel.Information, "Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                    logBuffer.BufferLog(LogLevel.Information, $"Environment variable DAB_ENVIRONMENT is {Environment.GetEnvironmentVariable("DAB_ENVIRONMENT")}");
+                }
+
                 runtimeConfigFile = loader.GetFileNameForEnvironment(null, considerOverrides: false);
             }
 

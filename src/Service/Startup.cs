@@ -701,58 +701,72 @@ namespace Azure.DataApiBuilder.Service
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider, IHostApplicationLifetime hostLifetime)
         {
             bool isRuntimeReady = false;
+            RuntimeConfig? runtimeConfig = null;
 
-            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+            try
             {
-                // Create log level initializer for Startup, which allows it to respond to runtime config changes and update the log level accordingly.
-                LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(Startup).FullName, runtimeConfigProvider, _hotReloadEventHandler);
-
-                // Set LogLevel based on RuntimeConfig
-                DynamicLogLevelProvider logLevelProvider = app.ApplicationServices.GetRequiredService<DynamicLogLevelProvider>();
-                logLevelProvider.UpdateFromRuntimeConfig(runtimeConfig);
-                FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
-
-                // Configure Telemetry
-                // TODO: Issue #3239. Refactor this methods so that they are all called before creating the new logger factory.
-                ConfigureApplicationInsightsTelemetry(app, runtimeConfig, logLevelInit);
-                ConfigureOpenTelemetry(app, runtimeConfig, logLevelInit);
-                ConfigureAzureLogAnalytics(app, runtimeConfig, logLevelInit);
-                ConfigureFileSink(app, runtimeConfig, logLevelInit);
-
-                //Flush all logs that were buffered before setting the LogLevel.
-                // Important: All logs set before this point should use _logBuffer.
-                _logBuffer.FlushToLogger(_logger);
-                configLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
-                configLoader.FlushLogBuffer();
-
-                // Config provided before starting the engine.
-                isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
-
-                if (!isRuntimeReady)
+                if (runtimeConfigProvider.TryGetConfig(out runtimeConfig))
                 {
-                    _logger.LogError(
-                        message: "Could not initialize the engine with the runtime config file: {configFilePath}",
-                        runtimeConfigProvider.ConfigFilePath);
-                    hostLifetime.StopApplication();
-                }
-            }
-            else
-            {
-                // Config provided during runtime.
-                runtimeConfigProvider.IsLateConfigured = true;
-                runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (_, _) =>
-                {
-                    isRuntimeReady = await PerformOnConfigChangeAsync(app);
+                    // Create log level initializer for Startup, which allows it to respond to runtime config changes and update the log level accordingly.
+                    LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(Startup).FullName, runtimeConfigProvider, _hotReloadEventHandler);
+
+                    // Set LogLevel based on RuntimeConfig
+                    DynamicLogLevelProvider logLevelProvider = app.ApplicationServices.GetRequiredService<DynamicLogLevelProvider>();
+                    logLevelProvider.UpdateFromRuntimeConfig(runtimeConfig);
+
+                    // Configure Telemetry
+                    // TODO: Issue #3239. Refactor this methods so that they are all called before creating the new logger factory.
+                    ConfigureApplicationInsightsTelemetry(app, runtimeConfig, logLevelInit);
+                    ConfigureOpenTelemetry(app, runtimeConfig, logLevelInit);
+                    ConfigureAzureLogAnalytics(app, runtimeConfig, logLevelInit);
+                    ConfigureFileSink(app, runtimeConfig, logLevelInit);
 
                     //Flush all logs that were buffered before setting the LogLevel.
                     // Important: All logs set before this point should use _logBuffer.
-                    FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
-                    _logBuffer.FlushToLogger(_logger);
-                    configLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
-                    configLoader.FlushLogBuffer();
+                    FlushAllLogs(app);
+                    
+                    // Config provided before starting the engine.
+                    isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
 
-                    return isRuntimeReady;
-                });
+                    if (!isRuntimeReady)
+                    {
+                        _logger.LogError(
+                            message: "Could not initialize the engine with the runtime config file: {configFilePath}",
+                            runtimeConfigProvider.ConfigFilePath);
+                        hostLifetime.StopApplication();
+                    }
+                }
+                else
+                {
+                    // Config provided during runtime.
+                    runtimeConfigProvider.IsLateConfigured = true;
+                    runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (_, _) =>
+                    {
+                        // This section will only run if the runtime config is provided during runtime. E.g. IsLateConfigured is true.
+                        // Set LogLevel based on RuntimeConfig
+                        RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
+                        RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+                        DynamicLogLevelProvider logLevelProvider = app.ApplicationServices.GetRequiredService<DynamicLogLevelProvider>();
+                        logLevelProvider.UpdateFromRuntimeConfig(runtimeConfig);
+
+                        //Flush all logs that were buffered before setting the LogLevel.
+                        // Important: All logs set before this point should use _logBuffer.
+                        FlushAllLogs(app);
+
+                        isRuntimeReady = await PerformOnConfigChangeAsync(app);
+
+                        return isRuntimeReady;
+                    });
+                }
+            }
+            finally
+            {
+                // Attempt one final flush in case there was any exception that caused the
+                // previous section to throw an error before flushing the logs.
+                if (!runtimeConfigProvider.IsLateConfigured)
+                {
+                    FlushAllLogs(app);
+                }
             }
 
             if (env.IsDevelopment())
@@ -1376,6 +1390,19 @@ namespace Azure.DataApiBuilder.Service
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.CustomTableName)
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DcrImmutableId)
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DceEndpoint);
+        }
+
+        /// <summary>
+        /// Helper function that sets the logger for FileSystemRuntimeConfigLoader and flushes the buffered logs to the logger.
+        /// </summary>
+        /// <param name="app">Contains all the services needed to set the logger.</param>
+        private void FlushAllLogs(IApplicationBuilder app)
+        {
+            FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
+            configLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
+
+            _logBuffer.FlushToLogger(_logger);
+            configLoader.FlushLogBuffer();
         }
     }
 }

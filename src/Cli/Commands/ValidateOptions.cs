@@ -38,7 +38,7 @@ namespace Cli.Commands
             }
             else
             {
-                logger.LogError("Config is invalid. Check above logs for details.");
+                logger.LogError("Config is invalid.");
             }
 
             return isValidConfig ? CliReturnCode.SUCCESS : CliReturnCode.GENERAL_ERROR;

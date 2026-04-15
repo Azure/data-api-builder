@@ -486,6 +486,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
+        /// Tests that a PATCH request with an invalid If-Match header value
+        /// (anything other than "*") returns a 400 Bad Request response
+        /// because ETags are not supported.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_InvalidIfMatchHeader_Returns400_Test()
+        {
+            Dictionary<string, StringValues> headerDictionary = new();
+            headerDictionary.Add("If-Match", "\"abc123\"");
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: string.Empty,
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    headers: new HeaderDictionary(headerDictionary),
+                    requestBody: requestBody,
+                    exceptionExpected: true,
+                    expectedErrorMessage: "Etags not supported, use '*'",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
         /// Test to validate successful execution of PATCH operation which satisfies the database policy for the update operation it resolves into.
         /// </summary>
         [TestMethod]

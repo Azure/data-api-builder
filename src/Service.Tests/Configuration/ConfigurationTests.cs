@@ -5590,7 +5590,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow("publishers", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", "Entity with name 'publishers' already exists. Cannot create new entity from autoentities definition 'PublisherAutoEntity'.", DisplayName = "Autoentities fail due to entity name")]
+        [DataRow("publishers", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", "Entity 'publishers' conflicts with autoentity pattern 'PublisherAutoEntity'. Use --patterns.exclude to skip it.", DisplayName = "Autoentities fail due to entity name")]
         [DataRow("UniquePublisher", "publishers", "uniquePluralPublishers", "/unique/publisher", "Entity publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql singular type")]
         [DataRow("UniquePublisher", "uniqueSingularPublisher", "publishers", "/unique/publisher", "Entity publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql plural type")]
         [DataRow("UniquePublisher", "uniqueSingularPublisher", "uniquePluralPublishers", "/publishers", "The rest path: publishers specified for entity: publishers is already used by another entity.", DisplayName = "Autoentities fail due to rest path")]

@@ -14,9 +14,7 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -325,28 +323,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     ""entities"": { }
                 }";
 
-            // Arrange
-            Mock<ILogger> mockLogger = new();
-
             // Act
             bool isParsed = RuntimeConfigLoader.TryParseConfig(
                 configJson,
                 out RuntimeConfig runtimeConfig,
+                out string parseError,
                 replacementSettings: new DeserializationVariableReplacementSettings(
                     azureKeyVaultOptions: null,
                     doReplaceEnvVar: true,
-                    doReplaceAkvVar: false),
-                logger: mockLogger.Object);
+                    doReplaceAkvVar: false));
 
             // Assert
             Assert.IsFalse(isParsed);
             Assert.IsNull(runtimeConfig);
-
-            Assert.AreEqual(1, mockLogger.Invocations.Count, "Should raise 1 exception");
-            Assert.AreEqual(5, mockLogger.Invocations[0].Arguments.Count, "Log should have 4 arguments");
-            var ConfigException = mockLogger.Invocations[0].Arguments[3] as JsonException;
-            Assert.IsInstanceOfType(ConfigException, typeof(JsonException), "Should have raised a Json Exception");
-            Assert.AreEqual(message, ConfigException.Message);
+            Assert.IsNotNull(parseError, "parseError should be set when parsing fails.");
+            StringAssert.Contains(parseError, message, "parseError should contain the expected error message.");
         }
 
         /// <summary>

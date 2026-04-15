@@ -18,6 +18,16 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
     {
         private const int NUMBER_OF_ARGUMENTS = 4;
 
+        /// <summary>
+        /// GQL schema for a Book entity with numeric fields, used for aggregation tests.
+        /// </summary>
+        private const string BOOK_WITH_NUMERIC_FIELDS_GQL = @"
+type Book @model(name:""Book"") {
+    id: ID!
+    price: Float!
+    title: String
+}";
+
         private Dictionary<string, EntityMetadata> _entityPermissions;
 
         /// <summary>
@@ -35,6 +45,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                     new EntityActionOperation[] { EntityActionOperation.Read },
                     new string[] { "anonymous", "authenticated" }
                     );
+        }
+
+        private static Dictionary<string, EntityMetadata> CreateBookEntityPermissions()
+        {
+            return GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                new string[] { "Book" },
+                new EntityActionOperation[] { EntityActionOperation.Read },
+                new string[] { "anonymous" });
         }
 
         [DataTestMethod]
@@ -566,23 +584,11 @@ type Table @model(name: ""table"") {
         public void Build_WithMssqlAndAggregationEnabled_AddsGroupByToConnectionType()
         {
             // Arrange
-            string gql = @"
-type Book @model(name:""Book"") {
-    id: ID!
-    price: Float!
-    title: String
-}";
-
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            DocumentNode root = Utf8GraphQLParser.Parse(BOOK_WITH_NUMERIC_FIELDS_GQL);
             Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
             {
                 { "Book", DatabaseType.MSSQL }
             };
-
-            Dictionary<string, EntityMetadata> bookPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                new string[] { "Book" },
-                new EntityActionOperation[] { EntityActionOperation.Read },
-                new string[] { "anonymous" });
 
             // Act
             DocumentNode queryRoot = QueryBuilder.Build(
@@ -590,7 +596,7 @@ type Book @model(name:""Book"") {
                 entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Book", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
-                entityPermissionsMap: bookPermissions,
+                entityPermissionsMap: CreateBookEntityPermissions(),
                 _isAggregationEnabled: true
             );
 
@@ -613,23 +619,11 @@ type Book @model(name:""Book"") {
         public void Build_WithPostgreSqlAndAggregationEnabled_DoesNotAddGroupByToConnectionType()
         {
             // Arrange
-            string gql = @"
-type Book @model(name:""Book"") {
-    id: ID!
-    price: Float!
-    title: String
-}";
-
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            DocumentNode root = Utf8GraphQLParser.Parse(BOOK_WITH_NUMERIC_FIELDS_GQL);
             Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
             {
                 { "Book", DatabaseType.PostgreSQL }
             };
-
-            Dictionary<string, EntityMetadata> bookPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                new string[] { "Book" },
-                new EntityActionOperation[] { EntityActionOperation.Read },
-                new string[] { "anonymous" });
 
             // Act
             DocumentNode queryRoot = QueryBuilder.Build(
@@ -637,7 +631,7 @@ type Book @model(name:""Book"") {
                 entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Book", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
-                entityPermissionsMap: bookPermissions,
+                entityPermissionsMap: CreateBookEntityPermissions(),
                 _isAggregationEnabled: true
             );
 

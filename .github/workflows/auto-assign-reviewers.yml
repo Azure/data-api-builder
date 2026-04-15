@@ -1,0 +1,212 @@
+name: PR Review Assignment Bot
+
+on:
+  pull_request_target:
+    types: [opened, reopened, labeled]
+
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no actual assignments)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+  # schedule:
+  #   - cron: "*/10 * * * *"
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
+concurrency:
+  group: pr-review-assignment
+  cancel-in-progress: false
+
+jobs:
+  assign-reviewers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign reviewers to eligible PRs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // ── Configuration ──
+            const REVIEWERS = ["souvikghosh04", "Aniruddh25", "aaronburtle", "anushakolan", "RubenCerna2079"];
+            const REQUIRED_REVIEWERS = 2;
+            const STALE_DAYS = 90;
+            const DRY_RUN = context.eventName === "workflow_dispatch"
+              ? '${{ github.event.inputs.dry_run }}' === 'true'
+              : false;
+
+            const { owner, repo } = context.repo;
+            const staleCutoff = new Date();
+            staleCutoff.setDate(staleCutoff.getDate() - STALE_DAYS);
+
+            // ── Helper functions ──
+
+            function getPoolAssignees(pr) {
+              return (pr.assignees || [])
+                .map((a) => a.login)
+                .filter((a) => REVIEWERS.includes(a));
+            }
+
+            function isEligible(pr) {
+              if (pr.draft) return false;
+              if (!pr.labels.some((l) => l.name === "assign-for-review")) return false;
+              if (new Date(pr.updated_at) < staleCutoff) return false;
+              return true;
+            }
+
+            function getWeight(pr) {
+              const labels = pr.labels.map((l) => l.name);
+              let w = 1;
+              if (labels.includes("size-medium")) w = 2;
+              else if (labels.includes("size-large")) w = 3;
+              if (labels.includes("priority-high")) w += 1;
+              return w;
+            }
+
+            async function getActiveReviewers(pr) {
+              const assigned = getPoolAssignees(pr);
+              if (assigned.length === 0) return [];
+              const reviews = await github.paginate(github.rest.pulls.listReviews, {
+                owner, repo, pull_number: pr.number, per_page: 100,
+              });
+              const submitted = new Set(
+                reviews.map((r) => r.user.login).filter((r) => REVIEWERS.includes(r))
+              );
+              return assigned.filter((r) => !submitted.has(r));
+            }
+
+            // Assigns reviewers to a single PR, mutating load/activeCount in place.
+            async function assignReviewers(pr, load, activeCount) {
+              const author = pr.user.login;
+              // Exclude the author from assigned count — they can't review their own PR.
+              const assigned = getPoolAssignees(pr).filter((a) => a !== author);
+              const needed = REQUIRED_REVIEWERS - assigned.length;
+              const weight = getWeight(pr);
+
+              if (needed <= 0) {
+                core.info(`PR #${pr.number} — already has ${assigned.length} pool assignees, skipping.`);
+                return;
+              }
+
+              const candidates = REVIEWERS.filter((r) => r !== author && !assigned.includes(r));
+              if (candidates.length === 0) {
+                core.info(`PR #${pr.number} — no candidates after filtering.`);
+                return;
+              }
+
+              // Sort: prefer unblocked → then lowest load → then random tiebreak.
+              candidates.sort((a, b) => {
+                const aBlocked = activeCount[a] > 0 ? 1 : 0;
+                const bBlocked = activeCount[b] > 0 ? 1 : 0;
+                if (aBlocked !== bBlocked) return aBlocked - bBlocked;
+                if (load[a] !== load[b]) return load[a] - load[b];
+                return Math.random() - 0.5;
+              });
+
+              const selected = candidates.slice(0, needed);
+              core.info(`PR #${pr.number} — weight: ${weight}, assigned: [${assigned}], candidates: ${JSON.stringify(candidates.map((c) => `${c}(active:${activeCount[c]},load:${load[c]})`))}, selected: [${selected}]`);
+
+              if (DRY_RUN) {
+                core.info(`[DRY RUN] Would assign [${selected}] to PR #${pr.number}`);
+              } else {
+                await github.rest.issues.addAssignees({
+                  owner, repo, issue_number: pr.number, assignees: selected,
+                });
+                core.info(`Assigned [${selected}] to PR #${pr.number}`);
+
+                // Remove the label once reviewers are fully assigned so the bot
+                // doesn't re-process this PR on subsequent runs.
+                const newAssignedCount = assigned.length + selected.length;
+                if (newAssignedCount >= REQUIRED_REVIEWERS) {
+                  await github.rest.issues.removeLabel({
+                    owner, repo, issue_number: pr.number, name: "assign-for-review",
+                  }).catch((e) => core.warning(`Could not remove label from PR #${pr.number}: ${e.message}`));
+                  core.info(`Removed 'assign-for-review' label from PR #${pr.number}`);
+                }
+              }
+
+              for (const r of selected) {
+                load[r] += weight;
+                activeCount[r] += 1;
+              }
+            }
+
+            // ── Main logic ──
+
+            // For pull_request_target events, early-exit if the triggering PR isn't eligible.
+            if (context.eventName === "pull_request_target") {
+              const triggerPR = context.payload.pull_request;
+              if (!isEligible(triggerPR)) {
+                core.info(`Triggering PR #${triggerPR.number} is not eligible (draft, missing label, or stale). Exiting.`);
+                return;
+              }
+              const assigned = getPoolAssignees(triggerPR);
+              const author = triggerPR.user.login;
+              if (assigned.filter((a) => a !== author).length >= REQUIRED_REVIEWERS) {
+                core.info(`Triggering PR #${triggerPR.number} already has ${assigned.length} pool assignees (excl. author). Exiting.`);
+                return;
+              }
+              core.info(`Triggering PR #${triggerPR.number} needs reviewers. Proceeding with load calculation.`);
+            }
+
+            // Fetch all open PRs (sorted by most recently updated, skip stale).
+            const allPRs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: "open", sort: "updated", direction: "desc", per_page: 100,
+            });
+            const freshPRs = allPRs.filter((pr) => new Date(pr.updated_at) >= staleCutoff);
+            const eligiblePRs = freshPRs.filter(isEligible);
+
+            core.info(`Open PRs: ${allPRs.length}, fresh (≤${STALE_DAYS}d): ${freshPRs.length}, eligible: ${eligiblePRs.length}`);
+
+            // Build load map from active reviews across all eligible PRs.
+            const load = {};
+            const activeCount = {};
+            for (const r of REVIEWERS) { load[r] = 0; activeCount[r] = 0; }
+
+            for (const pr of eligiblePRs) {
+              const assigned = getPoolAssignees(pr);
+              // Only call listReviews if this PR has pool assignees (saves API calls).
+              if (assigned.length === 0) continue;
+              const active = await getActiveReviewers(pr);
+              const weight = getWeight(pr);
+              for (const r of active) {
+                load[r] += weight;
+                activeCount[r] += 1;
+              }
+            }
+            core.info(`Active load: ${JSON.stringify(load)}`);
+            core.info(`Active counts: ${JSON.stringify(activeCount)}`);
+
+            // Determine which PRs to process.
+            if (context.eventName === "pull_request_target") {
+              // Single-PR mode: only assign the triggering PR.
+              const triggerPR = context.payload.pull_request;
+              // Re-fetch full PR object to get latest assignees.
+              const { data: freshPR } = await github.rest.pulls.get({
+                owner, repo, pull_number: triggerPR.number,
+              });
+              await assignReviewers(freshPR, load, activeCount);
+            } else {
+              // Full-scan mode (workflow_dispatch / schedule): process all eligible PRs that need reviewers.
+              const needsReviewers = eligiblePRs
+                .filter((pr) => {
+                  const assigned = getPoolAssignees(pr).filter((a) => a !== pr.user.login);
+                  return assigned.length < REQUIRED_REVIEWERS;
+                })
+                .sort((a, b) => getWeight(b) - getWeight(a));
+
+              core.info(`PRs needing reviewers: ${needsReviewers.length}`);
+              for (const pr of needsReviewers) {
+                await assignReviewers(pr, load, activeCount);
+              }
+            }
+
+            core.info("Review assignment complete.");

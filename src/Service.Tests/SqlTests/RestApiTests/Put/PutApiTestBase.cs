@@ -1115,6 +1115,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests that a PUT request with an invalid If-Match header value
+        /// (anything other than "*") returns a 400 Bad Request response
+        /// because ETags are not supported.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Update_InvalidIfMatchHeader_Returns400_Test()
+        {
+            Dictionary<string, StringValues> headerDictionary = new();
+            headerDictionary.Add("If-Match", "\"abc123\"");
+            string requestBody = @"
+            {
+                ""title"": ""The Return of the King"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: string.Empty,
+                    operationType: EntityActionOperation.Upsert,
+                    headers: new HeaderDictionary(headerDictionary),
+                    requestBody: requestBody,
+                    exceptionExpected: true,
+                    expectedErrorMessage: "Etags not supported, use '*'",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
         /// Tests that a PUT request with If-Match header (strict update semantics)
         /// still requires a primary key route. When If-Match is present, the operation
         /// becomes Update (not Upsert), so it cannot be converted to Insert.

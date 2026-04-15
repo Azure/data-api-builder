@@ -123,18 +123,18 @@ namespace Cli
 
             bool isMultipleCreateEnabledForGraphQL;
 
-            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-mutations.create.enabled is specified for other database types,
             // a warning is logged.
             // When multiple mutation operations are extended for other database types, this option should be honored.
             // Tracked by issue #2001: https://github.com/Azure/data-api-builder/issues/2001.
             if (dbType is not DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
             {
-                _logger.LogWarning($"The option --graphql.multiple-create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
+                _logger.LogWarning($"The option --graphql.multiple-mutations.create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
             }
 
             MultipleMutationOptions? multipleMutationOptions = null;
 
-            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-mutations.create.enabled is specified for other database types,
             // it is not honored.
             if (dbType is DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
             {
@@ -347,7 +347,7 @@ namespace Cli
         /// <summary>
         /// Helper method to determine if the multiple create operation is enabled or not based on the inputs from dab init command.
         /// </summary>
-        /// <param name="multipleCreateEnabledOptionValue">Input value for --graphql.multiple-create.enabled option of the init command</param>
+        /// <param name="multipleCreateEnabledOptionValue">Input value for --graphql.multiple-mutations.create.enabled option of the init command</param>
         /// <returns>True/False</returns>
         private static bool IsMultipleCreateOperationEnabled(CliBool multipleCreateEnabledOptionValue)
         {
@@ -3129,11 +3129,11 @@ namespace Cli
             bool userProvidedCache = existingAutoentity?.Template.UserProvidedCacheOptions ?? false;
 
             // Update MCP options
-            if (!string.IsNullOrWhiteSpace(options.TemplateMcpDmlTool))
+            if (!string.IsNullOrWhiteSpace(options.TemplateMcpDmlTools))
             {
-                if (!bool.TryParse(options.TemplateMcpDmlTool, out bool mcpDmlToolValue))
+                if (!bool.TryParse(options.TemplateMcpDmlTools, out bool mcpDmlToolValue))
                 {
-                    _logger.LogError("Invalid value for template.mcp.dml-tool: {value}. Valid values are: true, false", options.TemplateMcpDmlTool);
+                    _logger.LogError("Invalid value for template.mcp.dml-tools: {value}. Valid values are: true, false", options.TemplateMcpDmlTools);
                     return null;
                 }
 
@@ -3142,7 +3142,7 @@ namespace Cli
                 bool? dmlToolValue = mcpDmlToolValue;
                 mcp = new EntityMcpOptions(customToolEnabled: customToolEnabled, dmlToolsEnabled: dmlToolValue);
                 userProvidedMcp = true;
-                _logger.LogInformation("Updated template.mcp.dml-tool for definition '{DefinitionName}'", options.DefinitionName);
+                _logger.LogInformation("Updated template.mcp.dml-tools for definition '{DefinitionName}'", options.DefinitionName);
             }
 
             // Update REST options

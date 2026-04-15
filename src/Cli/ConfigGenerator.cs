@@ -2716,7 +2716,7 @@ namespace Cli
             {
                 if (logBuffer is null)
                 {
-                    _logger.LogInformation("Using merged config file based on environment,: {configToBeUsed}.", {configToBeUsed});
+                    _logger.LogInformation("Using merged config file based on environment,: {configToBeUsed}.", configToBeUsed);
                 }
                 else
                 {
@@ -3650,27 +3650,6 @@ namespace Cli
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Helper method that sends the log to the buffer if the buffer has being set up.
-        /// Else, it will send the log to the logger.
-        /// </summary>
-        /// <param name="logger">Logger instance to which the logs will be sent if the buffer is not set up.</param>
-        /// <param name="cliBuffer">Optional log buffer to which the logs will be sent if set up.</param>
-        /// <param name="logLevel">LogLevel of the log.</param>
-        /// <param name="message">Message that will be printed in the log.</param>
-        /// <param name="ex">Exception associated with the log.</param>
-        public static void SendLogToBufferOrLogger(LogBuffer? cliBuffer, LogLevel logLevel, string message, Exception? ex = null)
-        {
-            if (cliBuffer is not null)
-            {
-                cliBuffer.BufferLog(logLevel, message, ex);
-            }
-            else
-            {
-                _logger.Log(logLevel, ex, message);
-            }
         }
     }
 }

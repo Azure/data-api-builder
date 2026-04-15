@@ -721,10 +721,10 @@ namespace Azure.DataApiBuilder.Service
                     ConfigureAzureLogAnalytics(app, runtimeConfig, logLevelInit);
                     ConfigureFileSink(app, runtimeConfig, logLevelInit);
 
-                    //Flush all logs that were buffered before setting the LogLevel.
+                    // Flush all logs that were buffered before setting the LogLevel.
                     // Important: All logs set before this point should use _logBuffer.
                     FlushAllLogs(app);
-                    
+
                     // Config provided before starting the engine.
                     isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
 

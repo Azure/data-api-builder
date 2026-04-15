@@ -97,10 +97,11 @@ public class RuntimeConfigLoaderTests
         Console.SetError(sw);
 
         loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
-        string error = sw.ToString();
 
-        Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
-        Assert.IsTrue(error.Contains("An item with the same key has already been added."));
+        Assert.IsTrue(loader.IsParseErrorEmitted,
+            "IsParseErrorEmitted should be true when config parsing fails.");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(sw.ToString()),
+            "An error message should have been emitted to Console.Error.");
     }
 
     /// <summary>

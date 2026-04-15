@@ -721,7 +721,7 @@ namespace Azure.DataApiBuilder.Service
                     ConfigureAzureLogAnalytics(app, runtimeConfig, logLevelInit);
                     ConfigureFileSink(app, runtimeConfig, logLevelInit);
 
-                    // Flush all logs that were buffered before setting the LogLevel.
+                    //Flush all logs that were buffered before setting the LogLevel.
                     // Important: All logs set before this point should use _logBuffer.
                     FlushAllLogs(app);
 
@@ -763,10 +763,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Attempt one final flush in case there was any exception that caused the
                 // previous section to throw an error before flushing the logs.
-                if (!runtimeConfigProvider.IsLateConfigured)
-                {
-                    FlushAllLogs(app);
-                }
+                FlushAllLogs(app);
             }
 
             if (env.IsDevelopment())
@@ -1377,6 +1374,7 @@ namespace Azure.DataApiBuilder.Service
             LoggerFilters.AddFilter(typeof(ConfigurationController).FullName);
             LoggerFilters.AddFilter(typeof(IAuthorizationHandler).FullName);
             LoggerFilters.AddFilter(typeof(IAuthorizationResolver).FullName);
+            LoggerFilters.AddFilter(typeof(FileSystemRuntimeConfigLoader).FullName);
             LoggerFilters.AddFilter("default");
         }
 

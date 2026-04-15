@@ -84,6 +84,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     public string ConfigFilePath { get; internal set; }
 
+    /// <summary>
+    /// Indicates whether the most recent TryLoadConfig call encountered a parse error
+    /// that was already emitted to Console.Error.
+    /// </summary>
+    public bool IsParseErrorEmitted { get; private set; }
+
     public FileSystemRuntimeConfigLoader(
         IFileSystem fileSystem,
         HotReloadEventHandler<HotReloadEventArgs>? handler = null,
@@ -205,6 +211,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         bool? isDevMode = null,
         DeserializationVariableReplacementSettings? replacementSettings = null)
     {
+        IsParseErrorEmitted = false;
         if (_fileSystem.File.Exists(path))
         {
             SendLogToBufferOrLogger(LogLevel.Information, $"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
@@ -241,11 +248,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             // Use default replacement settings if none provided
             replacementSettings ??= new DeserializationVariableReplacementSettings();
 
+            string? parseError = null;
             if (!string.IsNullOrEmpty(json) && TryParseConfig(
                 json,
                 out RuntimeConfig,
+                out parseError,
                 replacementSettings,
-                logger: null,
                 connectionString: _connectionString))
             {
                 if (TrySetupConfigFileWatcher())
@@ -279,6 +287,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             if (LastValidRuntimeConfig is not null)
             {
                 RuntimeConfig = LastValidRuntimeConfig;
+            }
+
+            if (parseError is not null)
+            {
+                Console.Error.WriteLine(parseError);
+                IsParseErrorEmitted = true;
             }
 
             config = null;

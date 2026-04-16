@@ -2605,7 +2605,7 @@ namespace Cli
             }
             else
             {
-                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();    
+                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
             }
 
             options.CliBuffer.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");

@@ -2564,7 +2564,14 @@ namespace Cli
             // Replaces all the environment variables while deserializing when starting DAB.
             if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
             {
-                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                // When IsParseErrorEmitted is true, TryLoadConfig already emitted the
+                // detailed error to Console.Error. Only log a generic message to avoid
+                // duplicate output (stderr + stdout).
+                if (!loader.IsParseErrorEmitted)
+                {
+                    _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                }
+
                 return false;
             }
             else
@@ -2642,6 +2649,19 @@ namespace Cli
             _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
 
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _))
+            {
+                // When IsParseErrorEmitted is true, TryLoadConfig already emitted the
+                // detailed error to Console.Error. Only log a generic message to avoid
+                // duplicate output (stderr + stdout).
+                if (!loader.IsParseErrorEmitted)
+                {
+                    _logger.LogError("Failed to parse the config file.");
+                }
+
+                return false;
+            }
 
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);

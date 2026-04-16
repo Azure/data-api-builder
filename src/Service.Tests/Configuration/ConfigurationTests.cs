@@ -2521,8 +2521,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());
             string[] args = new[]
@@ -2609,8 +2608,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());
             string[] args = new[]
@@ -3640,8 +3638,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, deserializedConfig.ToJson());
             string[] args = new[]

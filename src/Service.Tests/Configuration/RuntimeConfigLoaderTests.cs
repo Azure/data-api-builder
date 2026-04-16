@@ -135,6 +135,227 @@ public class RuntimeConfigLoaderTests
     }
 
     /// <summary>
+    /// Validates that when a parent config has azure-key-vault options configured,
+    /// child configs can resolve @akv('...') references using the parent's AKV configuration.
+    /// Uses a local .akv file to simulate Azure Key Vault without requiring a real vault.
+    /// Regression test for https://github.com/Azure/data-api-builder/issues/3322
+    /// </summary>
+    [TestMethod]
+    public async Task ChildConfigResolvesAkvReferencesFromParentAkvOptions()
+    {
+        string akvFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".akv");
+        string childFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".json");
+
+        try
+        {
+            // Create a local .akv secrets file with test secrets.
+            await File.WriteAllTextAsync(akvFilePath, "my-connection-secret=Server=tcp:127.0.0.1,1433;Trusted_Connection=True;\n");
+
+            // Parent config with azure-key-vault pointing to the local .akv file.
+            string parentConfig = $@"{{
+                ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                ""data-source"": {{
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
+                }},
+                ""azure-key-vault"": {{
+                    ""endpoint"": ""{akvFilePath.Replace("\\", "\\\\")}""
+                }},
+                ""data-source-files"": [""{childFilePath.Replace("\\", "\\\\")}""],
+                ""runtime"": {{
+                    ""rest"": {{ ""enabled"": true }},
+                    ""graphql"": {{ ""enabled"": true }},
+                    ""host"": {{
+                        ""cors"": {{ ""origins"": [] }},
+                        ""authentication"": {{ ""provider"": ""StaticWebApps"" }}
+                    }}
+                }},
+                ""entities"": {{}}
+            }}";
+
+            // Child config with @akv('...') reference in its connection string.
+            string childConfig = @"{
+                ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""@akv('my-connection-secret')""
+                },
+                ""runtime"": {
+                    ""rest"": { ""enabled"": true },
+                    ""graphql"": { ""enabled"": true },
+                    ""host"": {
+                        ""cors"": { ""origins"": [] },
+                        ""authentication"": { ""provider"": ""StaticWebApps"" }
+                    }
+                },
+                ""entities"": {
+                    ""AkvChildEntity"": {
+                        ""source"": ""dbo.AkvTable"",
+                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""read""] }]
+                    }
+                }
+            }";
+
+            await File.WriteAllTextAsync(childFilePath, childConfig);
+
+            MockFileSystem fs = new(new Dictionary<string, MockFileData>()
+            {
+                { "dab-config.json", new MockFileData(parentConfig) }
+            });
+
+            FileSystemRuntimeConfigLoader loader = new(fs);
+
+            DeserializationVariableReplacementSettings replacementSettings = new(
+                azureKeyVaultOptions: new AzureKeyVaultOptions() { Endpoint = akvFilePath, UserProvidedEndpoint = true },
+                doReplaceEnvVar: true,
+                doReplaceAkvVar: true,
+                envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
+
+            Assert.IsTrue(
+                loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig, replacementSettings: replacementSettings),
+                "Config should load successfully when child config has @akv() references resolvable via parent AKV options.");
+
+            Assert.IsTrue(runtimeConfig.Entities.ContainsKey("AkvChildEntity"), "Child config entity should be merged into the parent config.");
+
+            // Verify the child's connection string was resolved from the .akv file.
+            string childDataSourceName = runtimeConfig.GetDataSourceNameFromEntityName("AkvChildEntity");
+            DataSource childDataSource = runtimeConfig.GetDataSourceFromDataSourceName(childDataSourceName);
+            Assert.IsTrue(
+                childDataSource.ConnectionString.Contains("127.0.0.1"),
+                "Child config connection string should have the AKV secret resolved.");
+        }
+        finally
+        {
+            if (File.Exists(akvFilePath))
+            {
+                File.Delete(akvFilePath);
+            }
+
+            if (File.Exists(childFilePath))
+            {
+                File.Delete(childFilePath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates that when both the parent and child configs define azure-key-vault options,
+    /// the child's AKV settings take precedence over the parent's.
+    /// The child config references a secret that only exists in the child's .akv file,
+    /// proving the child's AKV endpoint was used instead of the parent's.
+    /// </summary>
+    [TestMethod]
+    public async Task ChildAkvOptionsOverrideParentAkvOptions()
+    {
+        string parentAkvFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".akv");
+        string childAkvFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".akv");
+        string childFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".json");
+
+        try
+        {
+            // Parent's .akv file does NOT contain the secret the child references.
+            await File.WriteAllTextAsync(parentAkvFilePath, "parent-only-secret=ParentValue\n");
+
+            // Child's .akv file contains the secret the child references.
+            await File.WriteAllTextAsync(childAkvFilePath, "child-connection-secret=Server=tcp:10.0.0.1,1433;Trusted_Connection=True;\n");
+
+            // Parent config with azure-key-vault pointing to the parent's .akv file.
+            string parentConfig = $@"{{
+                ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                ""data-source"": {{
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
+                }},
+                ""azure-key-vault"": {{
+                    ""endpoint"": ""{parentAkvFilePath.Replace("\\", "\\\\")}""
+                }},
+                ""data-source-files"": [""{childFilePath.Replace("\\", "\\\\")}""],
+                ""runtime"": {{
+                    ""rest"": {{ ""enabled"": true }},
+                    ""graphql"": {{ ""enabled"": true }},
+                    ""host"": {{
+                        ""cors"": {{ ""origins"": [] }},
+                        ""authentication"": {{ ""provider"": ""StaticWebApps"" }}
+                    }}
+                }},
+                ""entities"": {{}}
+            }}";
+
+            // Child config with its own azure-key-vault pointing to the child's .akv file,
+            // and a connection string referencing a secret only in the child's vault.
+            string childConfig = $@"{{
+                ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                ""data-source"": {{
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""@akv('child-connection-secret')""
+                }},
+                ""azure-key-vault"": {{
+                    ""endpoint"": ""{childAkvFilePath.Replace("\\", "\\\\")}""
+                }},
+                ""runtime"": {{
+                    ""rest"": {{ ""enabled"": true }},
+                    ""graphql"": {{ ""enabled"": true }},
+                    ""host"": {{
+                        ""cors"": {{ ""origins"": [] }},
+                        ""authentication"": {{ ""provider"": ""StaticWebApps"" }}
+                    }}
+                }},
+                ""entities"": {{
+                    ""ChildOverrideEntity"": {{
+                        ""source"": ""dbo.ChildTable"",
+                        ""permissions"": [{{ ""role"": ""anonymous"", ""actions"": [""read""] }}]
+                    }}
+                }}
+            }}";
+
+            await File.WriteAllTextAsync(childFilePath, childConfig);
+
+            MockFileSystem fs = new(new Dictionary<string, MockFileData>()
+            {
+                { "dab-config.json", new MockFileData(parentConfig) }
+            });
+
+            FileSystemRuntimeConfigLoader loader = new(fs);
+
+            DeserializationVariableReplacementSettings replacementSettings = new(
+                azureKeyVaultOptions: new AzureKeyVaultOptions() { Endpoint = parentAkvFilePath, UserProvidedEndpoint = true },
+                doReplaceEnvVar: true,
+                doReplaceAkvVar: true,
+                envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
+
+            Assert.IsTrue(
+                loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig, replacementSettings: replacementSettings),
+                "Config should load successfully when child config has its own AKV options.");
+
+            Assert.IsTrue(runtimeConfig.Entities.ContainsKey("ChildOverrideEntity"), "Child config entity should be merged into the parent config.");
+
+            // Verify the child's connection string was resolved using the child's AKV file, not the parent's.
+            string childDataSourceName = runtimeConfig.GetDataSourceNameFromEntityName("ChildOverrideEntity");
+            DataSource childDataSource = runtimeConfig.GetDataSourceFromDataSourceName(childDataSourceName);
+            Assert.IsTrue(
+                childDataSource.ConnectionString.Contains("10.0.0.1"),
+                "Child config connection string should be resolved from the child's own AKV file, not the parent's.");
+        }
+        finally
+        {
+            if (File.Exists(parentAkvFilePath))
+            {
+                File.Delete(parentAkvFilePath);
+            }
+
+            if (File.Exists(childAkvFilePath))
+            {
+                File.Delete(childAkvFilePath);
+            }
+
+            if (File.Exists(childFilePath))
+            {
+                File.Delete(childFilePath);
+            }
+        }
+    }
+
+    /// <summary>
     /// Validates that when a child config contains @env('...') references to environment variables
     /// that do not exist, the config still loads successfully because the child config uses
     /// EnvironmentVariableReplacementFailureMode.Ignore (matching the parent config behavior).

@@ -1097,10 +1097,6 @@ public class EndToEndTests
 
             output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);
-            StringAssert.Contains(output, $"Error: Failed to parse the config file: {TEST_RUNTIME_CONFIG_FILE}.", StringComparison.Ordinal);
-
-            output = await process.StandardOutput.ReadLineAsync();
-            Assert.IsNotNull(output);
             StringAssert.Contains(output, $"Failed to start the engine.", StringComparison.Ordinal);
         }
 

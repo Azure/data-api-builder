@@ -2605,15 +2605,8 @@ namespace Cli
                 minimumLogLevel = (LogLevel)options.LogLevel;
                 args.Add("--LogLevel");
                 args.Add(minimumLogLevel.ToString());
+                _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
             }
-            else
-            {
-                // GetConfiguredLogLevel will only return the 'Default' LogLevel value from the config file.
-                // If it doesn't exist, it will return the default LogLevel based on the environment (Debug for Development and Error for Production).
-                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
-            }
-
-            _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
 
             // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)

@@ -1303,5 +1303,22 @@ public class EndToEndTests
         Assert.AreEqual(0, exitCode);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedConfig));
         Assert.IsNotNull(updatedConfig?.Runtime?.Mcp?.DmlTools);
+
+        // Assert: Verify the correct property was set to the expected value.
+        bool expectedValue = bool.Parse(value);
+        DmlToolsConfig dmlTools = updatedConfig!.Runtime!.Mcp!.DmlTools!;
+        bool? actualValue = optionName switch
+        {
+            "--runtime.mcp.dml-tools.describe-entities" => dmlTools.DescribeEntities,
+            "--runtime.mcp.dml-tools.create-record" => dmlTools.CreateRecord,
+            "--runtime.mcp.dml-tools.read-records" => dmlTools.ReadRecords,
+            "--runtime.mcp.dml-tools.update-record" => dmlTools.UpdateRecord,
+            "--runtime.mcp.dml-tools.delete-record" => dmlTools.DeleteRecord,
+            "--runtime.mcp.dml-tools.execute-entity" => dmlTools.ExecuteEntity,
+            "--runtime.mcp.dml-tools.aggregate-records" => dmlTools.AggregateRecords,
+            _ => throw new ArgumentException($"Unknown option: {optionName}")
+        };
+
+        Assert.AreEqual(expectedValue, actualValue, $"Expected {optionName} to be {expectedValue} but was {actualValue}.");
     }
 }

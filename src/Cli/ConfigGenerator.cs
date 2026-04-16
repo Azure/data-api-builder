@@ -2602,15 +2602,13 @@ namespace Cli
                 }
 
                 minimumLogLevel = (LogLevel)options.LogLevel;
-                options.CliBuffer.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");
             }
             else
             {
-                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
-                HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
-
-                options.CliBuffer.BufferLog(LogLevel.Information, $"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.");
+                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();    
             }
+
+            options.CliBuffer.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");
 
             Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli(minimumLogLevel);
 

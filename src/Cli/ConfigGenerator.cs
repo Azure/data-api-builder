@@ -2614,7 +2614,8 @@ namespace Cli
 
             Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli(minimumLogLevel);
 
-            // Update logger for StartOptions
+            // Update logger for StartOptions and
+            // flush all current logs saved in LogBuffer
             ILogger<Program> programLogger = Utils.LoggerFactoryForCli.CreateLogger<Program>();
             options.CliBuffer.FlushToLogger(programLogger);
 

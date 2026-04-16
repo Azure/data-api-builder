@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Product;
+using Azure.DataApiBuilder.Service;
 using Cli.Constants;
 using CommandLine;
 using Microsoft.Extensions.Logging;
@@ -58,7 +59,10 @@ namespace Cli.Commands
             {
                 // Update loggers and flush buffers to ensure that all the logs are printed if the TryStartEngineWithOptions fails.
                 logger = Utils.LoggerFactoryForCli.CreateLogger<Program>();
+                loader.SetLogger(Utils.LoggerFactoryForCli.CreateLogger<FileSystemRuntimeConfigLoader>());
+
                 CliBuffer.FlushToLogger(logger);
+                loader.FlushLogBuffer();
 
                 logger.LogError("Failed to start the engine{mode}.",
                     McpStdio ? " in MCP stdio mode" : string.Empty);

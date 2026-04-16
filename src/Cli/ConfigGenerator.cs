@@ -3109,11 +3109,11 @@ namespace Cli
             bool userProvidedCache = existingAutoentity?.Template.UserProvidedCacheOptions ?? false;
 
             // Update MCP options
-            if (!string.IsNullOrWhiteSpace(options.TemplateMcpDmlTool))
+            if (!string.IsNullOrWhiteSpace(options.TemplateMcpDmlTools))
             {
-                if (!bool.TryParse(options.TemplateMcpDmlTool, out bool mcpDmlToolValue))
+                if (!bool.TryParse(options.TemplateMcpDmlTools, out bool mcpDmlToolValue))
                 {
-                    _logger.LogError("Invalid value for template.mcp.dml-tool: {value}. Valid values are: true, false", options.TemplateMcpDmlTool);
+                    _logger.LogError("Invalid value for template.mcp.dml-tools: {value}. Valid values are: true, false", options.TemplateMcpDmlTools);
                     return null;
                 }
 
@@ -3122,7 +3122,7 @@ namespace Cli
                 bool? dmlToolValue = mcpDmlToolValue;
                 mcp = new EntityMcpOptions(customToolEnabled: customToolEnabled, dmlToolsEnabled: dmlToolValue);
                 userProvidedMcp = true;
-                _logger.LogInformation("Updated template.mcp.dml-tool for definition '{DefinitionName}'", options.DefinitionName);
+                _logger.LogInformation("Updated template.mcp.dml-tools for definition '{DefinitionName}'", options.DefinitionName);
             }
 
             // Update REST options

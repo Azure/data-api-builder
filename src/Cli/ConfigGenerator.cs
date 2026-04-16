@@ -2564,7 +2564,14 @@ namespace Cli
             // Replaces all the environment variables while deserializing when starting DAB.
             if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
             {
-                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                // When IsParseErrorEmitted is true, TryLoadConfig already emitted the
+                // detailed error to Console.Error. Only log a generic message to avoid
+                // duplicate output (stderr + stdout).
+                if (!loader.IsParseErrorEmitted)
+                {
+                    _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                }
+
                 return false;
             }
             else
@@ -2642,6 +2649,19 @@ namespace Cli
             _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
 
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _))
+            {
+                // When IsParseErrorEmitted is true, TryLoadConfig already emitted the
+                // detailed error to Console.Error. Only log a generic message to avoid
+                // duplicate output (stderr + stdout).
+                if (!loader.IsParseErrorEmitted)
+                {
+                    _logger.LogError("Failed to parse the config file.");
+                }
+
+                return false;
+            }
 
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
@@ -3109,11 +3129,11 @@ namespace Cli
             bool userProvidedCache = existingAutoentity?.Template.UserProvidedCacheOptions ?? false;
 
             // Update MCP options
-            if (!string.IsNullOrWhiteSpace(options.TemplateMcpDmlTool))
+            if (!string.IsNullOrWhiteSpace(options.TemplateMcpDmlTools))
             {
-                if (!bool.TryParse(options.TemplateMcpDmlTool, out bool mcpDmlToolValue))
+                if (!bool.TryParse(options.TemplateMcpDmlTools, out bool mcpDmlToolValue))
                 {
-                    _logger.LogError("Invalid value for template.mcp.dml-tool: {value}. Valid values are: true, false", options.TemplateMcpDmlTool);
+                    _logger.LogError("Invalid value for template.mcp.dml-tools: {value}. Valid values are: true, false", options.TemplateMcpDmlTools);
                     return null;
                 }
 
@@ -3122,7 +3142,7 @@ namespace Cli
                 bool? dmlToolValue = mcpDmlToolValue;
                 mcp = new EntityMcpOptions(customToolEnabled: customToolEnabled, dmlToolsEnabled: dmlToolValue);
                 userProvidedMcp = true;
-                _logger.LogInformation("Updated template.mcp.dml-tool for definition '{DefinitionName}'", options.DefinitionName);
+                _logger.LogInformation("Updated template.mcp.dml-tools for definition '{DefinitionName}'", options.DefinitionName);
             }
 
             // Update REST options

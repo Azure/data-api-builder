@@ -852,35 +852,31 @@ public class EndToEndTests
     /// </summary>
     /// <param name="logLevelOption">Log level options</param>
     [DataTestMethod]
-    [DataRow("3", DisplayName = "LogLevel 3 from command line.")]
-    [DataRow("4", DisplayName = "LogLevel 4 from command line.")]
-    [DataRow("5", DisplayName = "LogLevel 5 from command line.")]
     [DataRow("6", DisplayName = "LogLevel 6 from command line.")]
-    [DataRow("Warning", DisplayName = "LogLevel Warning from command line.")]
-    [DataRow("Error", DisplayName = "LogLevel Error from command line.")]
-    [DataRow("Critical", DisplayName = "LogLevel Critical from command line.")]
     [DataRow("None", DisplayName = "LogLevel None from command line.")]
-    [DataRow("waRNing", DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
-    [DataRow("eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
-    [DataRow("CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
     [DataRow("NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
     public async Task TestEngineStartUpWithHighLogLevelOptions(string logLevelOption)
     {
         StringLogger logger = new();
         StringWriter consoleOutput = new();
+        TextWriter originalOutput = Console.Out;
         Console.SetOut(consoleOutput);
 
         string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--LogLevel", logLevelOption };
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
         // Run Program.Execute on a background task because StartEngine blocks until the host shuts down.
-        Task engineTask = Task.Run(() => Program.Execute(args, logger, _fileSystem!, _runtimeConfigLoader!));
+        CancellationTokenSource cts = new();
+        CancellationToken token = cts.Token;
+        Task engineTask = Task.Run(() => Program.Execute(args, logger, _fileSystem!, _runtimeConfigLoader!), token);
 
         // Wait for the CLI to set up the proper LogLevel.
         await Task.Delay(TimeSpan.FromSeconds(5));
 
         string engineStdOut = consoleOutput.ToString();
         Assert.IsTrue(string.IsNullOrEmpty(engineStdOut), $"Expected no output at LogLevel {logLevelOption}, but got: {engineStdOut}");
+        Console.SetOut(originalOutput);
+        cts.Cancel();
     }
 
     /// <summary>

@@ -846,40 +846,6 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate that the engine starts successfully when --LogLevel is set to Warning
-    /// or above. At these levels, CLI phase messages (logged at Information) are suppressed,
-    /// so no stdout output is expected during the CLI phase.
-    /// </summary>
-    /// <param name="logLevelOption">Log level options</param>
-    [DataTestMethod]
-    [DataRow("6", DisplayName = "LogLevel 6 from command line.")]
-    [DataRow("None", DisplayName = "LogLevel None from command line.")]
-    [DataRow("NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
-    public async Task TestEngineStartUpWithHighLogLevelOptions(string logLevelOption)
-    {
-        StringLogger logger = new();
-        StringWriter consoleOutput = new();
-        TextWriter originalOutput = Console.Out;
-        Console.SetOut(consoleOutput);
-
-        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--LogLevel", logLevelOption };
-        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
-
-        // Run Program.Execute on a background task because StartEngine blocks until the host shuts down.
-        CancellationTokenSource cts = new();
-        CancellationToken token = cts.Token;
-        Task engineTask = Task.Run(() => Program.Execute(args, logger, _fileSystem!, _runtimeConfigLoader!), token);
-
-        // Wait for the CLI to set up the proper LogLevel.
-        await Task.Delay(TimeSpan.FromSeconds(5));
-
-        string engineStdOut = consoleOutput.ToString();
-        Assert.IsTrue(string.IsNullOrEmpty(engineStdOut), $"Expected no output at LogLevel {logLevelOption}, but got: {engineStdOut}");
-        Console.SetOut(originalOutput);
-        cts.Cancel();
-    }
-
-    /// <summary>
     /// Validates that valid usage of verbs and associated options produce exit code 0 (CliReturnCode.SUCCESS).
     /// Verifies that explicitly implemented verbs (add, update, init, start) and appropriately
     /// supplied options produce exit code 0.

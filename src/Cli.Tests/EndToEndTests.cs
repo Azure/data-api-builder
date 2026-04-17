@@ -865,7 +865,7 @@ public class EndToEndTests
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
         // Run Program.Execute on a background task because StartEngine blocks until the host shuts down.
-        Task engineTask = Task.Run(() => Program.Execute(args, logger, _fileSystem!, _runtimeConfigLoader!), token);
+        Task engineTask = Task.Run(() => Program.Execute(args, logger, _fileSystem!, _runtimeConfigLoader!));
 
         // Wait for the CLI to set up the proper LogLevel.
         await Task.Delay(TimeSpan.FromSeconds(5));

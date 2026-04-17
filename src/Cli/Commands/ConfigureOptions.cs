@@ -212,25 +212,25 @@ namespace Cli.Commands
         [Option("runtime.mcp.dml-tools.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools endpoint. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.describe-entities.enabled", Required = false, HelpText = "Enable DAB's MCP describe entities tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.describe-entities", Required = false, HelpText = "Enable DAB's MCP describe entities tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsDescribeEntitiesEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.create-record.enabled", Required = false, HelpText = "Enable DAB's MCP create record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.create-record", Required = false, HelpText = "Enable DAB's MCP create record tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsCreateRecordEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.read-records.enabled", Required = false, HelpText = "Enable DAB's MCP read record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.read-records", Required = false, HelpText = "Enable DAB's MCP read record tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsReadRecordsEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.update-record.enabled", Required = false, HelpText = "Enable DAB's MCP update record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.update-record", Required = false, HelpText = "Enable DAB's MCP update record tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsUpdateRecordEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.delete-record.enabled", Required = false, HelpText = "Enable DAB's MCP delete record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.delete-record", Required = false, HelpText = "Enable DAB's MCP delete record tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsDeleteRecordEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.execute-entity.enabled", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.execute-entity", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsExecuteEntityEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.aggregate-records.enabled", Required = false, HelpText = "Enable DAB's MCP aggregate records tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.aggregate-records", Required = false, HelpText = "Enable DAB's MCP aggregate records tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsAggregateRecordsEnabled { get; }
 
         [Option("runtime.mcp.dml-tools.aggregate-records.query-timeout", Required = false, HelpText = "Set the execution timeout in seconds for the aggregate-records MCP tool. Default: 30 (integer). Range: 1-600.")]

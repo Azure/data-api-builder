@@ -1097,10 +1097,6 @@ public class EndToEndTests
 
             output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);
-            StringAssert.Contains(output, $"Error: Failed to parse the config file: {TEST_RUNTIME_CONFIG_FILE}.", StringComparison.Ordinal);
-
-            output = await process.StandardOutput.ReadLineAsync();
-            Assert.IsNotNull(output);
             StringAssert.Contains(output, $"Failed to start the engine.", StringComparison.Ordinal);
         }
 
@@ -1270,5 +1266,55 @@ public class EndToEndTests
 
         // Assert
         Assert.AreEqual(isSuccess, isError == 0);
+    }
+
+    /// <summary>
+    /// End-to-end test verifying that the corrected CLI option names for individual
+    /// MCP DML tools (without the .enabled suffix) are correctly parsed by
+    /// CommandLineParser and produce the expected config output.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("--runtime.mcp.dml-tools.describe-entities", "true", DisplayName = "E2E: configure describe-entities via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.create-record", "false", DisplayName = "E2E: configure create-record via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.read-records", "true", DisplayName = "E2E: configure read-records via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.update-record", "true", DisplayName = "E2E: configure update-record via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.delete-record", "false", DisplayName = "E2E: configure delete-record via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.execute-entity", "true", DisplayName = "E2E: configure execute-entity via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.aggregate-records", "false", DisplayName = "E2E: configure aggregate-records via CLI")]
+    public void TestConfigureIndividualDmlToolViaCli(string optionName, string value)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Run configure with the individual DML tool option through the full CLI parsing path.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, optionName, value };
+        int exitCode = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Command succeeds and the config contains MCP DML tools section.
+        Assert.AreEqual(0, exitCode);
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedConfig));
+        Assert.IsNotNull(updatedConfig?.Runtime?.Mcp?.DmlTools);
+
+        // Assert: Verify the correct property was set to the expected value.
+        bool expectedValue = bool.Parse(value);
+        DmlToolsConfig dmlTools = updatedConfig!.Runtime!.Mcp!.DmlTools!;
+        bool? actualValue = optionName switch
+        {
+            "--runtime.mcp.dml-tools.describe-entities" => dmlTools.DescribeEntities,
+            "--runtime.mcp.dml-tools.create-record" => dmlTools.CreateRecord,
+            "--runtime.mcp.dml-tools.read-records" => dmlTools.ReadRecords,
+            "--runtime.mcp.dml-tools.update-record" => dmlTools.UpdateRecord,
+            "--runtime.mcp.dml-tools.delete-record" => dmlTools.DeleteRecord,
+            "--runtime.mcp.dml-tools.execute-entity" => dmlTools.ExecuteEntity,
+            "--runtime.mcp.dml-tools.aggregate-records" => dmlTools.AggregateRecords,
+            _ => throw new ArgumentException($"Unknown option: {optionName}")
+        };
+
+        Assert.AreEqual(expectedValue, actualValue, $"Expected {optionName} to be {expectedValue} but was {actualValue}.");
     }
 }

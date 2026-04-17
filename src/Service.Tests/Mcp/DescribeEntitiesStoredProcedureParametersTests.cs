@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(2, parameters.GetArrayLength());
 
             JsonElement idParam = parameters.EnumerateArray().Single(p => p.GetProperty("name").GetString() == "id");
-            Assert.IsTrue(idParam.GetProperty("required").GetBoolean(), "Config required value should override DB metadata.");
+            Assert.IsFalse(idParam.GetProperty("required").GetBoolean(), "DB required metadata should be preferred when config cannot indicate whether 'required' was explicitly set.");
             Assert.AreEqual("Config description", idParam.GetProperty("description").GetString(), "Config description should override DB metadata.");
             Assert.AreEqual("42", idParam.GetProperty("default").ToString(), "Config default should override DB metadata.");
 

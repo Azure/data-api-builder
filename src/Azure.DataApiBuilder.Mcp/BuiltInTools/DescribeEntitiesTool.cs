@@ -7,7 +7,6 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -449,12 +448,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 return null;
             }
 
-            IMetadataProviderFactory? metadataProviderFactory = serviceProvider.GetService<IMetadataProviderFactory>();
-            if (metadataProviderFactory is null)
-            {
-                return null;
-            }
-
             if (McpMetadataHelper.TryResolveMetadata(
                     entityName,
                     runtimeConfig,
@@ -518,14 +511,23 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (databaseObject is DatabaseStoredProcedure storedProcedure)
             {
-                foreach ((string parameterName, ParameterDefinition parameterDefinition) in storedProcedure.StoredProcedureDefinition.Parameters)
+                IReadOnlyDictionary<string, ParameterDefinition>? storedProcedureParameters =
+                    storedProcedure.StoredProcedureDefinition?.Parameters;
+
+                if (storedProcedureParameters is null || storedProcedureParameters.Count == 0)
+                {
+                    // No runtime metadata available for this stored procedure. Fall back to config-only parameters.
+                    return BuildParameterMetadataInfo(parameters, databaseObject: null);
+                }
+
+                foreach ((string parameterName, ParameterDefinition parameterDefinition) in storedProcedureParameters)
                 {
                     configParameters.TryGetValue(parameterName, out ParameterMetadata? configParameter);
 
                     Dictionary<string, object?> paramInfo = new()
                     {
                         ["name"] = configParameter?.Name ?? parameterName,
-                        ["required"] = configParameter?.Required ?? parameterDefinition.Required ?? false,
+                        ["required"] = parameterDefinition.Required ?? configParameter?.Required ?? false,
                         ["default"] = configParameter?.Default ?? parameterDefinition.Default,
                         ["description"] = configParameter?.Description ?? parameterDefinition.Description ?? string.Empty
                     };
@@ -536,7 +538,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // Preserve config-only parameters if metadata is not available for a configured name.
                 foreach (ParameterMetadata configParameter in configParameters.Values)
                 {
-                    if (!storedProcedure.StoredProcedureDefinition.Parameters.ContainsKey(configParameter.Name))
+                    if (!storedProcedureParameters.ContainsKey(configParameter.Name) &&
+                        !storedProcedureParameters.Keys.Any(k => string.Equals(k, configParameter.Name, StringComparison.OrdinalIgnoreCase)))
                     {
                         Dictionary<string, object?> paramInfo = new()
                         {

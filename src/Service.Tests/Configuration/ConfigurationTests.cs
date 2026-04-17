@@ -2775,7 +2775,7 @@ type Moon {
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode, "The REST response is different from the expected result.");
 
                 // MCP request
-                HttpStatusCode mcpResponseCode = await GetMcpResponse(client, configuration.Runtime.Mcp);
+                (HttpStatusCode mcpResponseCode, _) = await GetMcpResponse(client, configuration.Runtime.Mcp);
                 Assert.AreEqual(expectedStatusCodeForMcp, mcpResponseCode, "The MCP response is different from the expected result.");
             }
 
@@ -6264,13 +6264,13 @@ type Planet @model(name:""PlanetAlias"") {
             return responseCode;
         }
 
-        /// <summary>	
-        /// Executing MCP POST requests against the engine until a non-503 error is received.	
-        /// </summary>	
-        /// <param name="httpClient">Client used for request execution.</param>	
-        /// <returns>ServiceUnavailable if service is not successfully hydrated with config,	
-        /// else the response code from the MCP request</returns>	
-        public static async Task<HttpStatusCode> GetMcpResponse(HttpClient httpClient, McpRuntimeOptions mcp)
+        /// <summary>
+        /// Executing MCP POST requests against the engine until a non-503 error is received.
+        /// </summary>
+        /// <param name="httpClient">Client used for request execution.</param>
+        /// <param name="mcp">MCP runtime options containing path configuration.</param>
+        /// <returns>A tuple containing the HTTP status code and response body.</returns>
+        public static async Task<(HttpStatusCode StatusCode, string ResponseBody)> GetMcpResponse(HttpClient httpClient, McpRuntimeOptions mcp)
         {
             // Retry request RETRY_COUNT times in exponential increments to allow
             // required services time to instantiate and hydrate permissions because
@@ -6280,6 +6280,8 @@ type Planet @model(name:""PlanetAlias"") {
             // but it is highly unlikely to be the case.
             int retryCount = 0;
             HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
+            string responseBody = string.Empty;
+
             while (retryCount < RETRY_COUNT)
             {
                 // Minimal MCP request (initialize) - valid JSON-RPC request.
@@ -6297,59 +6299,14 @@ type Planet @model(name:""PlanetAlias"") {
                         clientInfo = new { name = "dab-test", version = "1.0.0" }
                     }
                 };
-                HttpRequestMessage mcpRequest = new(HttpMethod.Post, mcp.Path)
+
+                using HttpRequestMessage mcpRequest = new(HttpMethod.Post, mcp.Path)
                 {
                     Content = JsonContent.Create(payload)
                 };
                 mcpRequest.Headers.Add("Accept", "application/json, text/event-stream");
 
-                HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
-                responseCode = mcpResponse.StatusCode;
-
-                if (responseCode == HttpStatusCode.ServiceUnavailable || responseCode == HttpStatusCode.NotFound)
-                {
-                    retryCount++;
-                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(RETRY_WAIT_SECONDS, retryCount)));
-                    continue;
-                }
-
-                break;
-            }
-
-            return responseCode;
-        }
-
-        /// <summary>
-        /// Executes MCP initialize over HTTP and returns the parsed JSON response.
-        /// </summary>
-        public static async Task<JsonElement> GetMcpInitializeResponse(HttpClient httpClient, McpRuntimeOptions mcp)
-        {
-            int retryCount = 0;
-            HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
-            string responseBody = string.Empty;
-
-            while (retryCount < RETRY_COUNT)
-            {
-                object payload = new
-                {
-                    jsonrpc = "2.0",
-                    id = 1,
-                    method = "initialize",
-                    @params = new
-                    {
-                        protocolVersion = "2025-03-26",
-                        capabilities = new { },
-                        clientInfo = new { name = "dab-test", version = "1.0.0" }
-                    }
-                };
-
-                HttpRequestMessage mcpRequest = new(HttpMethod.Post, mcp.Path)
-                {
-                    Content = JsonContent.Create(payload)
-                };
-                mcpRequest.Headers.Add("Accept", "application/json, text/event-stream");
-
-                HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
+                using HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
                 responseCode = mcpResponse.StatusCode;
                 responseBody = await mcpResponse.Content.ReadAsStringAsync();
 
@@ -6362,6 +6319,17 @@ type Planet @model(name:""PlanetAlias"") {
 
                 break;
             }
+
+            return (responseCode, responseBody);
+        }
+
+        /// <summary>
+        /// Executes MCP initialize over HTTP and returns the parsed JSON response.
+        /// Reuses the core request/retry logic from GetMcpResponse.
+        /// </summary>
+        public static async Task<JsonElement> GetMcpInitializeResponse(HttpClient httpClient, McpRuntimeOptions mcp)
+        {
+            (HttpStatusCode responseCode, string responseBody) = await GetMcpResponse(httpClient, mcp);
 
             Assert.AreEqual(HttpStatusCode.OK, responseCode, "MCP initialize should return HTTP 200.");
             Assert.IsFalse(string.IsNullOrWhiteSpace(responseBody), "MCP initialize response body should not be empty.");
@@ -6378,22 +6346,59 @@ type Planet @model(name:""PlanetAlias"") {
             return responseDocument.RootElement.Clone();
         }
 
+        /// <summary>
+        /// Extracts JSON payload from SSE-formatted text.
+        /// SSE events can split JSON across multiple data: lines which should be concatenated.
+        /// </summary>
         private static string ExtractJsonFromSsePayload(string ssePayload)
         {
-            foreach (string line in ssePayload.Split('\n'))
+            List<string> eventDataLines = new();
+
+            static string GetJsonPayload(List<string> dataLines)
             {
-                string trimmed = line.Trim();
-                if (trimmed.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                if (dataLines.Count == 0)
                 {
-                    string data = trimmed.Substring("data:".Length).Trim();
-                    if (!string.IsNullOrWhiteSpace(data) && data.StartsWith('{'))
+                    return string.Empty;
+                }
+
+                string combinedPayload = string.Join("\n", dataLines);
+                return !string.IsNullOrWhiteSpace(combinedPayload) && combinedPayload.TrimStart().StartsWith('{')
+                    ? combinedPayload
+                    : string.Empty;
+            }
+
+            foreach (string rawLine in ssePayload.Split('\n'))
+            {
+                string line = rawLine.TrimEnd('\r');
+
+                // Empty line signals end of an SSE event
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    string jsonPayload = GetJsonPayload(eventDataLines);
+                    if (!string.IsNullOrEmpty(jsonPayload))
                     {
-                        return data;
+                        return jsonPayload;
                     }
+
+                    eventDataLines.Clear();
+                    continue;
+                }
+
+                if (line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    string data = line.Substring("data:".Length);
+                    // SSE spec: if data starts with a space, strip one leading space
+                    if (data.StartsWith(' '))
+                    {
+                        data = data.Substring(1);
+                    }
+
+                    eventDataLines.Add(data);
                 }
             }
 
-            return string.Empty;
+            // Handle case where payload doesn't end with empty line
+            return GetJsonPayload(eventDataLines);
         }
 
         /// <summary>

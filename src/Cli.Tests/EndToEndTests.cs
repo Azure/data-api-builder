@@ -855,7 +855,7 @@ public class EndToEndTests
     [DataRow("6", DisplayName = "LogLevel 6 from command line.")]
     [DataRow("None", DisplayName = "LogLevel None from command line.")]
     [DataRow("NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
-    public async Task TestEngineStartUpWithHighLogLevelOptions(string logLevelOption)
+    public async Task TestEngineStartUpWithLogLevelNone(string logLevelOption)
     {
         StringLogger logger = new();
         StringWriter consoleOutput = new();

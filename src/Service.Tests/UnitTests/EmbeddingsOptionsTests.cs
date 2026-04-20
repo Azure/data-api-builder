@@ -296,4 +296,329 @@ public class EmbeddingsOptionsTests
             Environment.SetEnvironmentVariable("EMBEDDINGS_MODEL", null);
         }
     }
+
+    /// <summary>
+    /// Tests that chunking configuration deserializes correctly.
+    /// </summary>
+    [TestMethod]
+    public void TestEmbeddingsOptionsWithChunkingDeserialization()
+    {
+        // Arrange
+        string config = @"
+        {
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=test;Database=test;""
+            },
+            ""runtime"": {
+                ""embeddings"": {
+                    ""provider"": ""azure-openai"",
+                    ""base-url"": ""https://test.openai.azure.com"",
+                    ""api-key"": ""test-key"",
+                    ""model"": ""test-model"",
+                    ""chunking"": {
+                        ""enabled"": true,
+                        ""size-chars"": 1000,
+                        ""overlap-chars"": 250
+                    }
+                }
+            },
+            ""entities"": {}
+        }";
+
+        // Act
+        bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig);
+
+        // Assert
+        Assert.IsTrue(success);
+        Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
+
+        EmbeddingsOptions embeddings = runtimeConfig.Runtime.Embeddings;
+        Assert.IsNotNull(embeddings.Chunking);
+        Assert.IsTrue(embeddings.Chunking.Enabled);
+        Assert.AreEqual(1000, embeddings.Chunking.SizeChars);
+        Assert.AreEqual(250, embeddings.Chunking.OverlapChars);
+    }
+
+    /// <summary>
+    /// Tests that chunking property is preserved during serialization.
+    /// </summary>
+    [TestMethod]
+    public void TestEmbeddingsOptionsSerializationWithChunking()
+    {
+        // Arrange
+        EmbeddingsChunkingOptions chunkingOptions = new(
+            enabled: true,
+            sizeChars: 1000,
+            overlapChars: 250);
+
+        EmbeddingsOptions options = new(
+            Provider: EmbeddingProviderType.AzureOpenAI,
+            BaseUrl: "https://test.openai.azure.com",
+            ApiKey: "test-key",
+            Model: "test-model",
+            Chunking: chunkingOptions);
+
+        // Act
+        JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions(replacementSettings: null);
+        string json = JsonSerializer.Serialize(options, serializerOptions);
+
+        // Normalize json for comparison
+        string normalizedJson = json.Replace(" ", "").Replace("\n", "").Replace("\r", "");
+
+        // Assert
+        Assert.IsTrue(normalizedJson.Contains("\"chunking\":{"), $"Expected chunking object in JSON: {json}");
+        Assert.IsTrue(normalizedJson.Contains("\"enabled\":true"), $"Expected chunking.enabled in JSON: {json}");
+        Assert.IsTrue(normalizedJson.Contains("\"size-chars\":1000"), $"Expected chunking.size-chars in JSON: {json}");
+        Assert.IsTrue(normalizedJson.Contains("\"overlap-chars\":250"), $"Expected chunking.overlap-chars in JSON: {json}");
+    }
+
+    /// <summary>
+    /// Tests round-trip serialization preserves all properties including chunking.
+    /// </summary>
+    [TestMethod]
+    public void TestEmbeddingsOptionsRoundTripSerialization()
+    {
+        // Arrange
+        string config = @"
+        {
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=test;Database=test;""
+            },
+            ""runtime"": {
+                ""embeddings"": {
+                    ""enabled"": true,
+                    ""provider"": ""azure-openai"",
+                    ""base-url"": ""https://test.openai.azure.com"",
+                    ""api-key"": ""test-key"",
+                    ""model"": ""test-model"",
+                    ""api-version"": ""2024-02-01"",
+                    ""dimensions"": 1536,
+                    ""timeout-ms"": 30000,
+                    ""endpoint"": {
+                        ""enabled"": true,
+                        ""roles"": [""authenticated"", ""anonymous""]
+                    },
+                    ""health"": {
+                        ""enabled"": true,
+                        ""threshold-ms"": 5000,
+                        ""test-text"": ""test embedding"",
+                        ""expected-dimensions"": 1536
+                    },
+                    ""chunking"": {
+                        ""enabled"": true,
+                        ""size-chars"": 1000,
+                        ""overlap-chars"": 250
+                    }
+                }
+            },
+            ""entities"": {}
+        }";
+
+        // Act - First deserialization
+        bool success1 = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig1);
+        Assert.IsTrue(success1);
+        Assert.IsNotNull(runtimeConfig1?.Runtime?.Embeddings);
+
+        // Serialize
+        JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions(replacementSettings: null);
+        string serializedJson = JsonSerializer.Serialize(runtimeConfig1, serializerOptions);
+
+        // Second deserialization
+        bool success2 = RuntimeConfigLoader.TryParseConfig(serializedJson, out RuntimeConfig? runtimeConfig2);
+        Assert.IsTrue(success2);
+        Assert.IsNotNull(runtimeConfig2?.Runtime?.Embeddings);
+
+        // Assert - Verify all properties match
+        EmbeddingsOptions original = runtimeConfig1.Runtime.Embeddings;
+        EmbeddingsOptions roundTripped = runtimeConfig2.Runtime.Embeddings;
+
+        Assert.AreEqual(original.Enabled, roundTripped.Enabled);
+        Assert.AreEqual(original.Provider, roundTripped.Provider);
+        Assert.AreEqual(original.BaseUrl, roundTripped.BaseUrl);
+        Assert.AreEqual(original.ApiKey, roundTripped.ApiKey);
+        Assert.AreEqual(original.Model, roundTripped.Model);
+        Assert.AreEqual(original.ApiVersion, roundTripped.ApiVersion);
+        Assert.AreEqual(original.Dimensions, roundTripped.Dimensions);
+        Assert.AreEqual(original.TimeoutMs, roundTripped.TimeoutMs);
+
+        // Verify endpoint
+        Assert.IsNotNull(roundTripped.Endpoint);
+        Assert.AreEqual(original.Endpoint!.Enabled, roundTripped.Endpoint.Enabled);
+        CollectionAssert.AreEqual(original.Endpoint.Roles, roundTripped.Endpoint.Roles);
+
+        // Verify health
+        Assert.IsNotNull(roundTripped.Health);
+        Assert.AreEqual(original.Health!.Enabled, roundTripped.Health.Enabled);
+        Assert.AreEqual(original.Health.ThresholdMs, roundTripped.Health.ThresholdMs);
+        Assert.AreEqual(original.Health.TestText, roundTripped.Health.TestText);
+        Assert.AreEqual(original.Health.ExpectedDimensions, roundTripped.Health.ExpectedDimensions);
+
+        // Verify chunking (THIS IS THE CRITICAL TEST THAT WAS MISSING)
+        Assert.IsNotNull(roundTripped.Chunking, "Chunking should not be null after round-trip");
+        Assert.AreEqual(original.Chunking!.Enabled, roundTripped.Chunking.Enabled);
+        Assert.AreEqual(original.Chunking.SizeChars, roundTripped.Chunking.SizeChars);
+        Assert.AreEqual(original.Chunking.OverlapChars, roundTripped.Chunking.OverlapChars);
+    }
+
+    /// <summary>
+    /// Tests that null chunking property is handled correctly.
+    /// </summary>
+    [TestMethod]
+    public void TestEmbeddingsOptionsWithNullChunking()
+    {
+        // Arrange
+        string config = @"
+        {
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=test;Database=test;""
+            },
+            ""runtime"": {
+                ""embeddings"": {
+                    ""provider"": ""azure-openai"",
+                    ""base-url"": ""https://test.openai.azure.com"",
+                    ""api-key"": ""test-key"",
+                    ""model"": ""test-model""
+                }
+            },
+            ""entities"": {}
+        }";
+
+        // Act
+        bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig);
+
+        // Assert
+        Assert.IsTrue(success);
+        Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
+
+        EmbeddingsOptions embeddings = runtimeConfig.Runtime.Embeddings;
+        // Chunking should be null when not specified
+        Assert.IsNull(embeddings.Chunking);
+    }
+
+    /// <summary>
+    /// Tests serialization when chunking is null.
+    /// </summary>
+    [TestMethod]
+    public void TestEmbeddingsOptionsSerializationWithNullChunking()
+    {
+        // Arrange
+        EmbeddingsOptions options = new(
+            Provider: EmbeddingProviderType.AzureOpenAI,
+            BaseUrl: "https://test.openai.azure.com",
+            ApiKey: "test-key",
+            Model: "test-model",
+            Chunking: null);
+
+        // Act
+        JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions(replacementSettings: null);
+        string json = JsonSerializer.Serialize(options, serializerOptions);
+
+        // Assert - chunking should not be in the output when null
+        Assert.IsFalse(json.Contains("\"chunking\""), $"Chunking should not appear in JSON when null: {json}");
+    }
+
+    /// <summary>
+    /// Tests that endpoint and health properties are preserved during serialization.
+    /// </summary>
+    [TestMethod]
+    public void TestEmbeddingsOptionsSerializationWithAllNestedProperties()
+    {
+        // Arrange
+        EmbeddingsEndpointOptions endpointOptions = new(
+            enabled: true,
+            roles: new[] { "authenticated", "anonymous" });
+
+        EmbeddingsHealthCheckConfig healthOptions = new(
+            enabled: true,
+            thresholdMs: 5000,
+            testText: "test",
+            expectedDimensions: 1536);
+
+        EmbeddingsChunkingOptions chunkingOptions = new(
+            enabled: false,
+            sizeChars: 800,
+            overlapChars: 100);
+
+        EmbeddingsOptions options = new(
+            Provider: EmbeddingProviderType.OpenAI,
+            BaseUrl: "https://api.openai.com",
+            ApiKey: "sk-test",
+            Endpoint: endpointOptions,
+            Health: healthOptions,
+            Chunking: chunkingOptions);
+
+        // Act
+        JsonSerializerOptions serializerOptions = RuntimeConfigLoader.GetSerializationOptions(replacementSettings: null);
+        string json = JsonSerializer.Serialize(options, serializerOptions);
+
+        // Deserialize back
+        EmbeddingsOptions? deserialized = JsonSerializer.Deserialize<EmbeddingsOptions>(json, serializerOptions);
+
+        // Assert
+        Assert.IsNotNull(deserialized);
+        Assert.IsNotNull(deserialized.Endpoint);
+        Assert.IsNotNull(deserialized.Health);
+        Assert.IsNotNull(deserialized.Chunking);
+
+        Assert.AreEqual(endpointOptions.Enabled, deserialized.Endpoint.Enabled);
+        CollectionAssert.AreEqual(endpointOptions.Roles, deserialized.Endpoint.Roles);
+
+        Assert.AreEqual(healthOptions.Enabled, deserialized.Health.Enabled);
+        Assert.AreEqual(healthOptions.ThresholdMs, deserialized.Health.ThresholdMs);
+        Assert.AreEqual(healthOptions.TestText, deserialized.Health.TestText);
+        Assert.AreEqual(healthOptions.ExpectedDimensions, deserialized.Health.ExpectedDimensions);
+
+        Assert.AreEqual(chunkingOptions.Enabled, deserialized.Chunking.Enabled);
+        Assert.AreEqual(chunkingOptions.SizeChars, deserialized.Chunking.SizeChars);
+        Assert.AreEqual(chunkingOptions.OverlapChars, deserialized.Chunking.OverlapChars);
+    }
+
+    /// <summary>
+    /// Tests that disabled chunking is handled correctly.
+    /// </summary>
+    [TestMethod]
+    public void TestEmbeddingsOptionsWithDisabledChunking()
+    {
+        // Arrange
+        string config = @"
+        {
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=test;Database=test;""
+            },
+            ""runtime"": {
+                ""embeddings"": {
+                    ""provider"": ""azure-openai"",
+                    ""base-url"": ""https://test.openai.azure.com"",
+                    ""api-key"": ""test-key"",
+                    ""model"": ""test-model"",
+                    ""chunking"": {
+                        ""enabled"": false
+                    }
+                }
+            },
+            ""entities"": {}
+        }";
+
+        // Act
+        bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig);
+
+        // Assert
+        Assert.IsTrue(success);
+        Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
+
+        EmbeddingsOptions embeddings = runtimeConfig.Runtime.Embeddings;
+        Assert.IsNotNull(embeddings.Chunking);
+        Assert.IsFalse(embeddings.Chunking.Enabled);
+        // Should use default values for size and overlap when not specified
+        Assert.AreEqual(EmbeddingsChunkingOptions.DEFAULT_SIZE_CHARS, embeddings.Chunking.SizeChars);
+        Assert.AreEqual(EmbeddingsChunkingOptions.DEFAULT_OVERLAP_CHARS, embeddings.Chunking.OverlapChars);
+    }
 }

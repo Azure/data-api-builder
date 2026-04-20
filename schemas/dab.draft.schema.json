@@ -869,13 +869,13 @@
                 "size-chars": {
                   "type": "integer",
                   "description": "The size of each chunk in characters.",
-                  "default": 800,
+                  "default": 1000,
                   "minimum": 1
                 },
                 "overlap-chars": {
                   "type": "integer",
                   "description": "The number of characters to overlap between consecutive chunks. Overlap helps maintain context across chunk boundaries.",
-                  "default": 100,
+                  "default": 250,
                   "minimum": 0
                 }
               }

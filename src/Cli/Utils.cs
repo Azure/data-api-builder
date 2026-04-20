@@ -602,7 +602,7 @@ namespace Cli
         {
             if (!Enum.TryParse(method, ignoreCase: true, out restMethod))
             {
-                _logger.LogError("Invalid REST Method. Supported methods are {restMethods}.", string.Join(", ", Enum.GetNames<SupportedHttpVerb>()));
+                _logger.LogError("Invalid REST Method. Supported methods are {restMethods}.", string.Join(", ", Enum.GetNames<SupportedHttpVerb>().Select(n => n.ToLowerInvariant())));
                 return false;
             }
 
@@ -652,8 +652,8 @@ namespace Cli
             {
                 _logger.LogError(
                     "Invalid GraphQL Operation. Supported operations are {queryName} and {mutationName}.",
-                    GraphQLOperation.Query,
-                    GraphQLOperation.Mutation);
+                    nameof(GraphQLOperation.Query).ToLowerInvariant(),
+                    nameof(GraphQLOperation.Mutation).ToLowerInvariant());
                 return false;
             }
 

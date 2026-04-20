@@ -195,6 +195,7 @@ public class RuntimeConfigProvider : IDisposable
         if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig,
+                out _,
                 replacementSettings: null))
         {
             _configLoader.RuntimeConfig = runtimeConfig;
@@ -276,7 +277,7 @@ public class RuntimeConfigProvider : IDisposable
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replacementSettings))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, out _, replacementSettings))
         {
             _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {

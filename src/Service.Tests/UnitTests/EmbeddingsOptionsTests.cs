@@ -296,4 +296,90 @@ public class EmbeddingsOptionsTests
             Environment.SetEnvironmentVariable("EMBEDDINGS_MODEL", null);
         }
     }
+
+    /// <summary>
+    /// Tests that Enabled defaults to false when not present in config JSON.
+    /// </summary>
+    [TestMethod]
+    public void TestEmbeddingsEnabled_DefaultsToFalse_WhenNotSpecified()
+    {
+        // Act
+        bool success = RuntimeConfigLoader.TryParseConfig(OPENAI_CONFIG, out RuntimeConfig? runtimeConfig);
+
+        // Assert
+        Assert.IsTrue(success);
+        Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
+        Assert.IsFalse(runtimeConfig.Runtime.Embeddings.Enabled,
+            "Enabled should default to false when not specified in config.");
+    }
+
+    /// <summary>
+    /// Tests that Enabled: true deserializes correctly.
+    /// </summary>
+    [TestMethod]
+    public void TestEmbeddingsEnabled_TrueDeserializesCorrectly()
+    {
+        // Arrange
+        string config = @"
+        {
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=test;Database=test;""
+            },
+            ""runtime"": {
+                ""embeddings"": {
+                    ""provider"": ""openai"",
+                    ""base-url"": ""https://api.openai.com"",
+                    ""api-key"": ""sk-test"",
+                    ""enabled"": true
+                }
+            },
+            ""entities"": {}
+        }";
+
+        // Act
+        bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig);
+
+        // Assert
+        Assert.IsTrue(success);
+        Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
+        Assert.IsTrue(runtimeConfig.Runtime.Embeddings.Enabled,
+            "Enabled should be true when explicitly set to true in config.");
+    }
+
+    /// <summary>
+    /// Tests that Enabled: false deserializes correctly and results in false.
+    /// </summary>
+    [TestMethod]
+    public void TestEmbeddingsEnabled_FalseDeserializesCorrectly()
+    {
+        // Arrange
+        string config = @"
+        {
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=test;Database=test;""
+            },
+            ""runtime"": {
+                ""embeddings"": {
+                    ""provider"": ""openai"",
+                    ""base-url"": ""https://api.openai.com"",
+                    ""api-key"": ""sk-test"",
+                    ""enabled"": false
+                }
+            },
+            ""entities"": {}
+        }";
+
+        // Act
+        bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig);
+
+        // Assert
+        Assert.IsTrue(success);
+        Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
+        Assert.IsFalse(runtimeConfig.Runtime.Embeddings.Enabled,
+            "Enabled should be false when explicitly set to false in config.");
+    }
 }

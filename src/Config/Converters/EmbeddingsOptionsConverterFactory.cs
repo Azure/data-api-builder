@@ -50,6 +50,7 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
             int? timeoutMs = null;
             EmbeddingsEndpointOptions? endpoint = null;
             EmbeddingsHealthCheckConfig? health = null;
+            EmbeddingsChunkingOptions? chunking = null;
 
             while (reader.Read())
             {
@@ -107,6 +108,9 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                     case "health":
                         health = ReadHealthCheckConfig(ref reader, options);
                         break;
+                    case "chunking":
+                        chunking = ReadChunkingOptions(ref reader, options);
+                        break;
                     default:
                         reader.Skip();
                         break;
@@ -138,7 +142,8 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                 Dimensions: dimensions,
                 TimeoutMs: timeoutMs,
                 Endpoint: endpoint,
-                Health: health);
+                Health: health,
+                Chunking: chunking);
         }
 
         /// <summary>
@@ -186,6 +191,57 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
             }
 
             throw new JsonException("Failed to read the EmbeddingsEndpointOptions.");
+        }
+
+        /// <summary>
+        /// Manually deserializes EmbeddingsChunkingOptions to handle the type mismatch
+        /// between nullable constructor parameters and non-nullable properties.
+        /// Follows the same pattern as FileSinkConverter.
+        /// </summary>
+        private static EmbeddingsChunkingOptions ReadChunkingOptions(ref Utf8JsonReader reader, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject)
+            {
+                throw new JsonException("Expected start of object for chunking.");
+            }
+
+            bool? enabled = null;
+            int? sizeChars = null;
+            int? overlapChars = null;
+
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                {
+                    return new EmbeddingsChunkingOptions(Enabled: enabled, SizeChars: sizeChars, OverlapChars: overlapChars);
+                }
+
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                {
+                    throw new JsonException("Expected property name in chunking.");
+                }
+
+                string? propName = reader.GetString()?.ToLowerInvariant();
+                reader.Read();
+
+                switch (propName)
+                {
+                    case "enabled":
+                        enabled = reader.TokenType == JsonTokenType.Null ? null : reader.GetBoolean();
+                        break;
+                    case "size-chars":
+                        sizeChars = reader.TokenType == JsonTokenType.Null ? null : reader.GetInt32();
+                        break;
+                    case "overlap-chars":
+                        overlapChars = reader.TokenType == JsonTokenType.Null ? null : reader.GetInt32();
+                        break;
+                    default:
+                        reader.Skip();
+                        break;
+                }
+            }
+
+            throw new JsonException("Failed to read the EmbeddingsChunkingOptions.");
         }
 
         /// <summary>
@@ -291,6 +347,12 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
             {
                 writer.WritePropertyName("health");
                 JsonSerializer.Serialize(writer, value.Health, options);
+            }
+
+            if (value.Chunking is not null)
+            {
+                writer.WritePropertyName("chunking");
+                JsonSerializer.Serialize(writer, value.Chunking, options);
             }
 
             writer.WriteEndObject();

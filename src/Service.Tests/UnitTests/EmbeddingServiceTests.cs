@@ -848,6 +848,7 @@ public class EmbeddingServiceTests
             Provider: EmbeddingProviderType.AzureOpenAI,
             BaseUrl: "https://myservice.openai.azure.com",
             ApiKey: "test-key",
+            Enabled: true,
             Model: "my-deployment",
             ApiVersion: "2024-06-01");
 
@@ -978,6 +979,7 @@ public class EmbeddingServiceTests
             Provider: EmbeddingProviderType.OpenAI,
             BaseUrl: "https://api.openai.com",
             ApiKey: "test-key",
+            Enabled: true,
             Model: "text-embedding-3-large");
         using IFusionCache cache = new FusionCache(new FusionCacheOptions());
         EmbeddingService service = new(httpClient, options, _mockLogger.Object, cache);
@@ -1065,6 +1067,7 @@ public class EmbeddingServiceTests
             Provider: EmbeddingProviderType.OpenAI,
             BaseUrl: "https://api.openai.com",
             ApiKey: "test-key",
+            Enabled: true,
             Dimensions: 256);
         using IFusionCache cache = new FusionCache(new FusionCacheOptions());
         EmbeddingService service = new(httpClient, options, _mockLogger.Object, cache);
@@ -1411,6 +1414,7 @@ public class EmbeddingServiceTests
             Provider: EmbeddingProviderType.AzureOpenAI,
             BaseUrl: "https://test.openai.azure.com",
             ApiKey: "test-api-key",
+            Enabled: true,
             Model: "text-embedding-ada-002");
     }
 
@@ -1419,7 +1423,8 @@ public class EmbeddingServiceTests
         return new EmbeddingsOptions(
             Provider: EmbeddingProviderType.OpenAI,
             BaseUrl: "https://api.openai.com",
-            ApiKey: "test-api-key");
+            ApiKey: "test-api-key",
+            Enabled: true);
     }
 
     /// <summary>

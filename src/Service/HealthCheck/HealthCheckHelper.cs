@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="roleHeader">The effective role header for the current request.</param>
         /// <param name="roleToken">The bearer token for the current request.</param>
         /// <returns>This function returns the comprehensive health report after calculating the response time of each datasource, rest and graphql health queries.</returns>
-        public async Task<ComprehensiveHealthCheckReport> GetHealthCheckResponseAsync(RuntimeConfig runtimeConfig, string roleHeader, string roleToken)
+        public async Task<ComprehensiveHealthCheckReport> GetHealthCheckResponseAsync(RuntimeConfig runtimeConfig, string roleHeader = "", string roleToken = "")
         {
             // Create a JSON response for the comprehensive health check endpoint using the provided basic health report.
             // If the response has already been created, it will be reused.

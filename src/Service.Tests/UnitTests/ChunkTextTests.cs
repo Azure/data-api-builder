@@ -3,7 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
+using Azure.DataApiBuilder.Service.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
@@ -313,37 +315,11 @@ public class ChunkTextTests
     }
 
     /// <summary>
-    /// Helper method that invokes the ChunkText logic from EmbeddingController.
-    /// This uses reflection or a test-friendly approach to access the private method.
-    /// Since ChunkText is private, we'll test it through the public API by checking chunk behavior.
+    /// Helper method that delegates to the production <see cref="TextChunker.ChunkText(string, int, int)"/>
+    /// implementation so tests exercise real controller logic rather than a local re-implementation.
     /// </summary>
     private static List<string> ChunkText(string text, int chunkSize, int overlap)
     {
-        // Simulate the ChunkText algorithm as implemented in EmbeddingController
-        List<string> chunks = new();
-
-        if (string.IsNullOrEmpty(text))
-        {
-            return chunks;
-        }
-
-        int position = 0;
-        while (position < text.Length)
-        {
-            int actualChunkSize = Math.Min(chunkSize, text.Length - position);
-            string chunk = text.Substring(position, actualChunkSize);
-            chunks.Add(chunk);
-
-            // Move position forward
-            int step = chunkSize - overlap;
-            if (step <= 0)
-            {
-                // Prevent infinite loop: if overlap >= chunkSize, move forward by at least 1
-                step = Math.Max(1, chunkSize);
-            }
-            position += step;
-        }
-
-        return chunks;
+        return TextChunker.ChunkText(text, chunkSize, overlap).ToList();
     }
 }

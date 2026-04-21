@@ -137,10 +137,10 @@ public class EmbeddingsChunkingOptionsTests
     }
 
     /// <summary>
-    /// Tests that negative overlap defaults to zero.
+    /// Tests that negative overlap is clamped to zero.
     /// </summary>
     [TestMethod]
-    public void Constructor_NegativeOverlapDefaultsToZero()
+    public void Constructor_NegativeOverlapClampedToZero()
     {
         // Arrange & Act
         EmbeddingsChunkingOptions options = new(
@@ -148,9 +148,8 @@ public class EmbeddingsChunkingOptionsTests
             SizeChars: 1000,
             OverlapChars: -50);
 
-        // Assert
-        // Overlap should be clamped or use default behavior
-        Assert.IsTrue(options.OverlapChars >= 0 || options.OverlapChars == -50);
+        // Assert: negative overlap must be clamped to 0
+        Assert.AreEqual(0, options.OverlapChars);
     }
 
     /// <summary>

@@ -448,37 +448,34 @@ public class EmbeddingControllerTests
     }
 
     /// <summary>
-    /// Tests that invalid JSON body is treated as plain text.
+    /// Tests that an application/json body that is neither a string nor a document array returns BadRequest.
     /// </summary>
     [TestMethod]
-    public async Task PostAsync_TreatsInvalidJsonAsPlainText()
+    public async Task PostAsync_ReturnsBadRequest_ForInvalidJsonBody()
     {
-        // Arrange
-        string rawBody = "not valid json {[";
-        float[] embedding = new[] { 0.6f, 0.7f };
-        _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync(rawBody, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult(true, embedding));
+        // Arrange — a JSON object is not a valid string or document array
+        string rawBody = "{\"foo\":\"bar\"}";
 
         EmbeddingController controller = CreateController(
             requestPath: "/embed",
             requestBody: rawBody,
             contentType: "application/json",
-            hostMode: HostMode.Development,
-            acceptHeader: "text/plain");
+            hostMode: HostMode.Development);
 
         // Act
         IActionResult result = await controller.PostAsync();
 
-        // Assert
-        Assert.IsInstanceOfType(result, typeof(ContentResult));
-        ContentResult contentResult = (ContentResult)result;
-        Assert.AreEqual("0.6,0.7", contentResult.Content);
+        // Assert — controller must reject the body with a descriptive message
+        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
+        BadRequestObjectResult badRequest = (BadRequestObjectResult)result;
+        Assert.IsTrue(
+            badRequest.Value?.ToString()?.Contains("application/json") == true,
+            "Error message should mention 'application/json'.");
 
-        // Verify the service was called with the raw body (since JSON deserialization failed)
+        // Embedding service must NOT be called
         _mockEmbeddingService.Verify(
-            s => s.TryEmbedAsync(rawBody, It.IsAny<CancellationToken>()),
-            Times.Once());
+            s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never());
     }
 
     #endregion
@@ -972,15 +969,19 @@ public class EmbeddingControllerTests
     [TestMethod]
     public async Task PostAsync_ReturnsEmbeddings_ForDocumentArray()
     {
-        // Arrange
+        // Arrange — controller uses TryEmbedBatchAsync per document
         float[] embedding1 = new[] { 0.1f, 0.2f };
         float[] embedding2 = new[] { 0.3f, 0.4f };
         _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync("First document", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult(true, embedding1));
+            .Setup(s => s.TryEmbedBatchAsync(
+                It.Is<string[]>(texts => texts.Length == 1 && texts[0] == "First document"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingBatchResult(true, new[] { embedding1 }));
         _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync("Second document", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult(true, embedding2));
+            .Setup(s => s.TryEmbedBatchAsync(
+                It.Is<string[]>(texts => texts.Length == 1 && texts[0] == "Second document"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingBatchResult(true, new[] { embedding2 }));
 
         string requestBody = """
             [
@@ -1022,11 +1023,9 @@ public class EmbeddingControllerTests
         float[] embedding1 = new[] { 0.1f, 0.2f };
         float[] embedding2 = new[] { 0.3f, 0.4f };
         _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string text, CancellationToken _) =>
-            {
-                return text.Contains("First") ? new EmbeddingResult(true, embedding1) : new EmbeddingResult(true, embedding2);
-            });
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding1).ToArray()));
 
         // Create a long text that will be chunked (default chunk size is 1000)
         string longText = new string('A', 1500);
@@ -1043,6 +1042,7 @@ public class EmbeddingControllerTests
             Provider: EmbeddingProviderType.OpenAI,
             BaseUrl: "https://api.openai.com",
             ApiKey: "test-key",
+            Enabled: true,
             Endpoint: endpointOptions,
             Chunking: chunkingOptions);
 
@@ -1079,11 +1079,12 @@ public class EmbeddingControllerTests
     [TestMethod]
     public async Task PostAsync_ChunkingQueryParameter_EnablesChunking()
     {
-        // Arrange
+        // Arrange — controller calls TryEmbedBatchAsync (not TryEmbedAsync) for document arrays
         float[] embedding = new[] { 0.1f, 0.2f };
         _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult(true, embedding));
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
 
         string longText = new string('A', 1500);
         string requestBody = $$"""
@@ -1116,13 +1117,12 @@ public class EmbeddingControllerTests
     [TestMethod]
     public async Task PostAsync_ChunkingQueryParameter_OverridesChunkSize()
     {
-        // Arrange
+        // Arrange — controller sends all chunks as a single batch per document
         float[] embedding = new[] { 0.1f, 0.2f };
-        int callCount = 0;
         _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult(true, embedding))
-            .Callback(() => callCount++);
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
 
         string text = new string('A', 1000);
         string requestBody = $$"""
@@ -1142,8 +1142,11 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
-        // 1000 chars with 300 char chunks and no overlap = 4 chunks (300, 300, 300, 100)
-        Assert.IsTrue(callCount >= 4, $"Expected at least 4 embedding calls, but got {callCount}");
+        OkObjectResult okResult = (OkObjectResult)result;
+        EmbedDocumentResponse[]? responses = okResult.Value as EmbedDocumentResponse[];
+        Assert.IsNotNull(responses);
+        // 1000 chars with 300-char chunks and no overlap = 4 chunks (300, 300, 300, 100)
+        Assert.IsTrue(responses[0].Data.Length >= 4, $"Expected at least 4 chunks, but got {responses[0].Data.Length}");
     }
 
     /// <summary>
@@ -1152,13 +1155,14 @@ public class EmbeddingControllerTests
     [TestMethod]
     public async Task PostAsync_ChunkingQueryParameter_OverridesOverlapChars()
     {
-        // Arrange
+        // Arrange — capture the chunks batch to verify overlap
         float[] embedding = new[] { 0.1f, 0.2f };
-        List<string> embeddedTexts = new();
+        List<string[]> capturedBatches = new();
         _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult(true, embedding))
-            .Callback<string, CancellationToken>((text, _) => embeddedTexts.Add(text));
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()))
+            .Callback<string[], CancellationToken>((texts, _) => capturedBatches.Add(texts));
 
         string text = "0123456789" + "ABCDEFGHIJ" + "abcdefghij"; // 30 chars
         string requestBody = $$"""
@@ -1178,13 +1182,15 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
-        Assert.IsTrue(embeddedTexts.Count >= 2, "Should have multiple chunks");
-        
-        // Check overlap: last 5 chars of first chunk should match first 5 chars of second chunk
-        if (embeddedTexts.Count >= 2)
+        Assert.IsTrue(capturedBatches.Count > 0, "TryEmbedBatchAsync should be called");
+        string[] chunks = capturedBatches[0];
+        Assert.IsTrue(chunks.Length >= 2, "Should have multiple chunks");
+
+        // Check overlap: last 5 chars of chunk[i] should match first 5 chars of chunk[i+1]
+        if (chunks.Length >= 2)
         {
-            string chunk1End = embeddedTexts[0].Substring(Math.Max(0, embeddedTexts[0].Length - 5));
-            string chunk2Start = embeddedTexts[1].Substring(0, Math.Min(5, embeddedTexts[1].Length));
+            string chunk1End = chunks[0].Substring(Math.Max(0, chunks[0].Length - 5));
+            string chunk2Start = chunks[1].Substring(0, Math.Min(5, chunks[1].Length));
             Assert.AreEqual(chunk1End, chunk2Start, "Chunks should have overlapping content");
         }
     }
@@ -1195,13 +1201,12 @@ public class EmbeddingControllerTests
     [TestMethod]
     public async Task PostAsync_ChunkingQueryParameter_DisablesChunking()
     {
-        // Arrange
+        // Arrange — controller calls TryEmbedBatchAsync; with chunking disabled the batch has 1 element
         float[] embedding = new[] { 0.1f, 0.2f };
-        int callCount = 0;
         _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult(true, embedding))
-            .Callback(() => callCount++);
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
 
         string longText = new string('A', 2000);
         string requestBody = $$"""
@@ -1216,6 +1221,7 @@ public class EmbeddingControllerTests
             Provider: EmbeddingProviderType.OpenAI,
             BaseUrl: "https://api.openai.com",
             ApiKey: "test-key",
+            Enabled: true,
             Endpoint: endpointOptions,
             Chunking: chunkingOptions);
 
@@ -1238,7 +1244,10 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
-        Assert.AreEqual(1, callCount, "Should not chunk when disabled via query parameter");
+        OkObjectResult okResult = (OkObjectResult)result;
+        EmbedDocumentResponse[]? responses = okResult.Value as EmbedDocumentResponse[];
+        Assert.IsNotNull(responses);
+        Assert.AreEqual(1, responses[0].Data.Length, "Should not chunk when disabled via query parameter");
     }
 
     /// <summary>
@@ -1334,8 +1343,9 @@ public class EmbeddingControllerTests
         // Arrange
         float[] embedding = new[] { 0.1f, 0.2f };
         _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult(true, embedding));
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
 
         string requestBody = """
             [
@@ -1352,8 +1362,9 @@ public class EmbeddingControllerTests
         // Act
         IActionResult result = await controller.PostAsync();
 
-        // Assert - should not crash with very small chunk size (may return error due to invalid config)
+        // Assert — size=1 produces one chunk per character; must not crash
         Assert.IsNotNull(result, "Result should not be null");
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     /// <summary>
@@ -1362,11 +1373,12 @@ public class EmbeddingControllerTests
     [TestMethod]
     public async Task PostAsync_ChunkingHandlesOverlapLargerThanChunkSize()
     {
-        // Arrange
+        // Arrange — EffectiveSizeChars clamps to overlap+1, so chunking terminates safely
         float[] embedding = new[] { 0.1f, 0.2f };
         _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult(true, embedding));
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
 
         string text = new string('A', 100);
         string requestBody = $$"""
@@ -1384,8 +1396,8 @@ public class EmbeddingControllerTests
         // Act
         IActionResult result = await controller.PostAsync();
 
-        // Assert - should handle overlap >= size gracefully
-        Assert.IsTrue(result is OkObjectResult || result is BadRequestObjectResult);
+        // Assert — overlap clamped via EffectiveSizeChars; result must be Ok
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     /// <summary>
@@ -1394,14 +1406,12 @@ public class EmbeddingControllerTests
     [TestMethod]
     public async Task PostAsync_HandlesEmbeddingFailure_InDocumentArray()
     {
-        // Arrange
+        // Arrange — first doc succeeds, second fails; controller uses TryEmbedBatchAsync per doc
         float[] embedding = new[] { 0.1f, 0.2f };
         _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync("First document", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult(true, embedding));
-        _mockEmbeddingService
-            .Setup(s => s.TryEmbedAsync("Second document", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EmbeddingResult(false, null, "Provider error"));
+            .SetupSequence(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingBatchResult(true, new[] { embedding }))
+            .ReturnsAsync(new EmbeddingBatchResult(false, null, "Provider error"));
 
         string requestBody = """
             [
@@ -1423,6 +1433,135 @@ public class EmbeddingControllerTests
         Assert.IsInstanceOfType(result, typeof(ObjectResult));
         ObjectResult objectResult = (ObjectResult)result;
         Assert.AreEqual((int)HttpStatusCode.InternalServerError, objectResult.StatusCode);
+    }
+
+    #endregion
+
+    #region Invalid Query Parameter Tests
+
+    /// <summary>
+    /// Tests that an invalid $chunking.enabled value returns BadRequest.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsBadRequest_ForInvalidChunkingEnabled()
+    {
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed?$chunking.enabled=notabool",
+            requestBody: "test",
+            hostMode: HostMode.Development);
+
+        IActionResult result = await controller.PostAsync();
+
+        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
+        BadRequestObjectResult bad = (BadRequestObjectResult)result;
+        Assert.IsTrue(bad.Value?.ToString()?.Contains("$chunking.enabled") == true);
+    }
+
+    /// <summary>
+    /// Tests that a non-positive $chunking.size-chars returns BadRequest.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsBadRequest_ForNonPositiveChunkSize()
+    {
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed?$chunking.size-chars=0",
+            requestBody: "test",
+            hostMode: HostMode.Development);
+
+        IActionResult result = await controller.PostAsync();
+
+        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
+        BadRequestObjectResult bad = (BadRequestObjectResult)result;
+        Assert.IsTrue(bad.Value?.ToString()?.Contains("$chunking.size-chars") == true);
+    }
+
+    /// <summary>
+    /// Tests that a negative $chunking.overlap-chars returns BadRequest.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsBadRequest_ForNegativeOverlapChars()
+    {
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed?$chunking.overlap-chars=-1",
+            requestBody: "test",
+            hostMode: HostMode.Development);
+
+        IActionResult result = await controller.PostAsync();
+
+        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
+        BadRequestObjectResult bad = (BadRequestObjectResult)result;
+        Assert.IsTrue(bad.Value?.ToString()?.Contains("$chunking.overlap-chars") == true);
+    }
+
+    #endregion
+
+    #region Single Text with Chunking Tests
+
+    /// <summary>
+    /// Tests that a plain-text body with chunking enabled is routed through the
+    /// document-array path and returns multiple embeddings.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_SingleText_WithChunkingEnabled_ReturnsDocumentResponse()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
+
+        string longText = new string('X', 1500);
+
+        EmbeddingsEndpointOptions endpointOptions = new(enabled: true);
+        EmbeddingsChunkingOptions chunkingOptions = new(Enabled: true, SizeChars: 1000, OverlapChars: 250);
+        EmbeddingsOptions embeddingsOptions = new(
+            Provider: EmbeddingProviderType.OpenAI,
+            BaseUrl: "https://api.openai.com",
+            ApiKey: "test-key",
+            Enabled: true,
+            Endpoint: endpointOptions,
+            Chunking: chunkingOptions);
+
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions,
+            hostMode: HostMode.Development);
+
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object);
+        controller.ControllerContext = CreateControllerContext("/embed", longText, "text/plain");
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert — chunking routes through document-array path; returns EmbedDocumentResponse[]
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        EmbedDocumentResponse[]? responses = okResult.Value as EmbedDocumentResponse[];
+        Assert.IsNotNull(responses, "Chunked single-text should return EmbedDocumentResponse[]");
+        Assert.AreEqual("input", responses[0].Key);
+        Assert.IsTrue(responses[0].Data.Length > 1, "Text should be split into multiple chunks");
+    }
+
+    /// <summary>
+    /// Tests that a plain-text body with chunking disabled returns the legacy EmbeddingResponse.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_SingleText_WithChunkingDisabled_ReturnsEmbeddingResponse()
+    {
+        float[] embedding = new[] { 0.1f, 0.2f };
+        SetupSuccessfulEmbedding(embedding);
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed",
+            requestBody: "hello world",
+            contentType: "text/plain",
+            hostMode: HostMode.Development);
+
+        IActionResult result = await controller.PostAsync();
+
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        Assert.IsInstanceOfType(okResult.Value, typeof(EmbeddingResponse));
     }
 
     #endregion
@@ -1461,6 +1600,7 @@ public class EmbeddingControllerTests
             Provider: EmbeddingProviderType.OpenAI,
             BaseUrl: "https://api.openai.com",
             ApiKey: "test-key",
+            Enabled: true,
             Endpoint: endpointOptions);
 
         Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(

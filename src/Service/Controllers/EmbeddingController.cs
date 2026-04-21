@@ -9,12 +9,14 @@ using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.Embeddings;
+using Azure.DataApiBuilder.Service.Helpers;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -95,7 +97,11 @@ public class EmbeddingController : ControllerBase
         }
 
         // Parse query parameters for chunking options
-        EmbeddingsChunkingOptions? queryChunkingOptions = ParseChunkingOptionsFromQuery();
+        EmbeddingsChunkingOptions? queryChunkingOptions = ParseChunkingOptionsFromQuery(out string? paramValidationError);
+        if (paramValidationError is not null)
+        {
+            return BadRequest(paramValidationError);
+        }
 
         // Read request body
         string requestBody;
@@ -115,6 +121,8 @@ public class EmbeddingController : ControllerBase
             return BadRequest("Request body cannot be empty.");
         }
 
+        CancellationToken cancellationToken = HttpContext.RequestAborted;
+
         // Try to parse as document array first (if JSON content type)
         if (Request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
         {
@@ -125,7 +133,7 @@ public class EmbeddingController : ControllerBase
                 if (documents is not null && documents.Length > 0)
                 {
                     // Handle as document array
-                    return await ProcessDocumentArrayAsync(documents, embeddingsOptions, queryChunkingOptions);
+                    return await ProcessDocumentArrayAsync(documents, embeddingsOptions, queryChunkingOptions, cancellationToken);
                 }
                 else if (documents is not null && documents.Length == 0)
                 {
@@ -147,25 +155,31 @@ public class EmbeddingController : ControllerBase
                 {
                     requestBody = jsonString;
                 }
+                else
+                {
+                    return BadRequest("JSON request body must be a non-null string or a document array.");
+                }
             }
             catch (JsonException)
             {
-                // Not a JSON string, use requestBody as-is
-                _logger.LogDebug("Request body is not a JSON string, using as plain text.");
+                // Body is application/json but neither an array nor a string (e.g. {"foo":"bar"})
+                return BadRequest("Request body with content type 'application/json' must be a JSON string or a document array.");
             }
         }
 
-        // Handle as single text (backward compatible)
-        return await ProcessSingleTextAsync(requestBody);
+        // Handle as single text, applying chunking when enabled
+        return await ProcessSingleTextAsync(requestBody, embeddingsOptions, queryChunkingOptions, cancellationToken);
     }
 
     /// <summary>
     /// Processes a document array request and returns embeddings for each document.
+    /// Uses batch embedding (TryEmbedBatchAsync) per document to reduce round-trips.
     /// </summary>
     private async Task<IActionResult> ProcessDocumentArrayAsync(
         EmbedDocumentRequest[] documents,
         EmbeddingsOptions embeddingsOptions,
-        EmbeddingsChunkingOptions? queryChunkingOptions)
+        EmbeddingsChunkingOptions? queryChunkingOptions,
+        CancellationToken cancellationToken)
     {
         List<EmbedDocumentResponse> responses = new();
 
@@ -178,7 +192,7 @@ public class EmbeddingController : ControllerBase
 
             if (string.IsNullOrEmpty(doc.Text))
             {
-                return BadRequest($"Document with key '{doc.Key}' has empty text.");
+                return BadRequest($"Document with key has empty text.");
             }
 
             try
@@ -187,33 +201,27 @@ public class EmbeddingController : ControllerBase
                 EmbeddingsChunkingOptions? effectiveChunking = queryChunkingOptions ?? embeddingsOptions.Chunking;
 
                 // Chunk the text if chunking is enabled
-                string[] chunks = ChunkText(doc.Text, effectiveChunking);
+                string[] chunks = TextChunker.ChunkText(doc.Text, effectiveChunking);
 
-                // Embed all chunks
-                List<float[]> embeddings = new();
-                foreach (string chunk in chunks)
+                // Batch-embed all chunks for this document in a single request
+                EmbeddingBatchResult batchResult = await _embeddingService!.TryEmbedBatchAsync(chunks, cancellationToken);
+
+                if (!batchResult.Success || batchResult.Embeddings is null)
                 {
-                    EmbeddingResult result = await _embeddingService!.TryEmbedAsync(chunk);
-
-                    if (!result.Success || result.Embedding is null)
-                    {
-                        _logger.LogError("Failed to embed chunk for document key '{Key}': {Error}", doc.Key, result.ErrorMessage);
-                        return StatusCode(
-                            (int)HttpStatusCode.InternalServerError,
-                            $"Failed to generate embedding for document '{doc.Key}': {result.ErrorMessage}");
-                    }
-
-                    embeddings.Add(result.Embedding);
+                    _logger.LogError("Failed to embed document chunks: {Error}", batchResult.ErrorMessage);
+                    return StatusCode(
+                        (int)HttpStatusCode.InternalServerError,
+                        batchResult.ErrorMessage ?? "Failed to generate embeddings.");
                 }
 
-                responses.Add(new EmbedDocumentResponse(doc.Key, embeddings.ToArray()));
+                responses.Add(new EmbedDocumentResponse(doc.Key, batchResult.Embeddings));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing document with key '{Key}'", doc.Key);
+                _logger.LogError(ex, "Error processing document.");
                 return StatusCode(
                     (int)HttpStatusCode.InternalServerError,
-                    $"Error processing document '{doc.Key}': {ex.Message}");
+                    $"Error processing document: {ex.Message}");
             }
         }
 
@@ -221,9 +229,34 @@ public class EmbeddingController : ControllerBase
     }
 
     /// <summary>
-    /// Processes a single text request and returns embedding (backward compatible).
+    /// Routes a single-text request through chunking when enabled, falling back to the
+    /// legacy single-embedding response for backward compatibility when not chunked.
     /// </summary>
-    private async Task<IActionResult> ProcessSingleTextAsync(string text)
+    private async Task<IActionResult> ProcessSingleTextAsync(
+        string text,
+        EmbeddingsOptions embeddingsOptions,
+        EmbeddingsChunkingOptions? queryChunkingOptions,
+        CancellationToken cancellationToken)
+    {
+        EmbeddingsChunkingOptions? effectiveChunking = queryChunkingOptions ?? embeddingsOptions.Chunking;
+
+        if (effectiveChunking is not null && effectiveChunking.Enabled)
+        {
+            // Route through document-array path to produce a multi-chunk response
+            EmbedDocumentRequest[] documents =
+            [
+                new EmbedDocumentRequest { Key = "input", Text = text }
+            ];
+            return await ProcessDocumentArrayAsync(documents, embeddingsOptions, effectiveChunking, cancellationToken);
+        }
+
+        return await ProcessSingleTextAsync(text, cancellationToken);
+    }
+
+    /// <summary>
+    /// Processes a single text request and returns embedding (backward compatible, no chunking).
+    /// </summary>
+    private async Task<IActionResult> ProcessSingleTextAsync(string text, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -231,7 +264,7 @@ public class EmbeddingController : ControllerBase
         }
 
         // Generate embedding
-        EmbeddingResult result = await _embeddingService!.TryEmbedAsync(text);
+        EmbeddingResult result = await _embeddingService!.TryEmbedAsync(text, cancellationToken);
 
         if (!result.Success)
         {
@@ -259,9 +292,11 @@ public class EmbeddingController : ControllerBase
     /// <summary>
     /// Parses query parameters and creates EmbeddingsChunkingOptions.
     /// Returns null if no query parameters are provided (use config defaults).
+    /// Sets <paramref name="validationError"/> to a non-null message if any provided param is invalid.
     /// </summary>
-    private EmbeddingsChunkingOptions? ParseChunkingOptionsFromQuery()
+    private EmbeddingsChunkingOptions? ParseChunkingOptionsFromQuery(out string? validationError)
     {
+        validationError = null;
         bool? enabled = null;
         int? sizeChars = null;
         int? overlapChars = null;
@@ -272,6 +307,11 @@ public class EmbeddingController : ControllerBase
             {
                 enabled = parsedEnabled;
             }
+            else
+            {
+                validationError = $"Invalid value for '$chunking.enabled': must be 'true' or 'false'.";
+                return null;
+            }
         }
 
         if (Request.Query.TryGetValue("$chunking.size-chars", out StringValues sizeValue))
@@ -280,6 +320,11 @@ public class EmbeddingController : ControllerBase
             {
                 sizeChars = size;
             }
+            else
+            {
+                validationError = $"Invalid value for '$chunking.size-chars': must be a positive integer.";
+                return null;
+            }
         }
 
         if (Request.Query.TryGetValue("$chunking.overlap-chars", out StringValues overlapValue))
@@ -287,6 +332,11 @@ public class EmbeddingController : ControllerBase
             if (int.TryParse(overlapValue, out int overlap) && overlap >= 0)
             {
                 overlapChars = overlap;
+            }
+            else
+            {
+                validationError = $"Invalid value for '$chunking.overlap-chars': must be a non-negative integer.";
+                return null;
             }
         }
 
@@ -298,50 +348,6 @@ public class EmbeddingController : ControllerBase
 
         // Create new options with query parameters (using defaults for unspecified values)
         return new EmbeddingsChunkingOptions(enabled, sizeChars, overlapChars);
-    }
-
-    /// <summary>
-    /// Splits text into chunks if chunking is enabled and text exceeds chunk size.
-    /// </summary>
-    private string[] ChunkText(string text, EmbeddingsChunkingOptions? chunkingOptions)
-    {
-        // If chunking is disabled or options are null, return text as single chunk
-        if (chunkingOptions is null || !chunkingOptions.Enabled)
-        {
-            return new[] { text };
-        }
-
-        int chunkSize = chunkingOptions.SizeChars;
-        int overlap = chunkingOptions.OverlapChars;
-
-        // If text fits in one chunk, return as single item
-        if (text.Length <= chunkSize)
-        {
-            return new[] { text };
-        }
-
-        List<string> chunks = new();
-        int position = 0;
-
-        while (position < text.Length)
-        {
-            int remainingLength = text.Length - position;
-            int currentChunkSize = Math.Min(chunkSize, remainingLength);
-
-            chunks.Add(text.Substring(position, currentChunkSize));
-
-            // Move position forward by (chunkSize - overlap) to create overlapping chunks
-            position += chunkSize - overlap;
-
-            // Prevent infinite loop if overlap >= chunkSize
-            if (overlap >= chunkSize && remainingLength > chunkSize)
-            {
-                _logger.LogWarning("Chunking configuration invalid: overlap ({Overlap}) >= chunkSize ({ChunkSize}). Using non-overlapping chunks.", overlap, chunkSize);
-                position = chunks.Count * chunkSize;
-            }
-        }
-
-        return chunks.ToArray();
     }
 
     /// <summary>

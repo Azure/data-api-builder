@@ -2732,18 +2732,10 @@ namespace Cli
                 }
 
                 minimumLogLevel = (LogLevel)options.LogLevel;
+                args.Add("--LogLevel");
+                args.Add(minimumLogLevel.ToString());
                 _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
             }
-            else
-            {
-                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
-                HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
-
-                _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.", minimumLogLevel, hostModeType);
-            }
-
-            args.Add("--LogLevel");
-            args.Add(minimumLogLevel.ToString());
 
             // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)

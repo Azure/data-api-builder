@@ -436,7 +436,7 @@
                       "description": "Unauthenticated provider where all operations run as anonymous. Use when Data API builder is behind an app gateway or APIM where authentication is handled externally."
                     }
                   ],
-                  "default": "AppService"
+                  "default": "Unauthenticated"
                 },
                 "jwt": {
                   "type": "object",
@@ -1243,7 +1243,7 @@
                       },
                       "description": "DEPRECATED. Use the 'fields' array and set 'primary-key: true' on each key field instead. List of fields to be used as primary keys."
                     },
-                    "object-description": {
+                    "description": {
                       "type": "string",
                       "description": "Human-readable description of the database object, used for MCP tool discovery and documentation."
                     }

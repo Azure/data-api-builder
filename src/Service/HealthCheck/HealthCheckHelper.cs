@@ -170,7 +170,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             comprehensiveHealthCheckReport.Checks = new List<HealthCheckResultEntry>();
             await UpdateDataSourceHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig);
-            await UpdateEntityHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig);
+            await UpdateEntityHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig, roleHeader, roleToken);
             await UpdateEmbeddingsHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig);
         }
 

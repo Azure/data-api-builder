@@ -256,7 +256,7 @@ public static class EmbeddingTelemetryHelper
         if (activity.IsAllDataRequested)
         {
             activity.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity.RecordException(ex);
+            activity.AddException(ex);
             activity.SetTag("error.type", ex.GetType().Name);
             activity.SetTag("error.message", ex.Message);
         }

@@ -1440,6 +1440,159 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// A simple ILogger implementation that records all log messages to a list,
+        /// enabling tests to assert on log output without redirecting console streams.
+        /// </summary>
+        private sealed class ListLogger<T> : ILogger<T>
+        {
+            private readonly List<string> _messages;
+
+            public ListLogger(List<string> messages)
+            {
+                _messages = messages;
+            }
+
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                _messages.Add(formatter(state, exception));
+            }
+        }
+
+         /// <summary>
+        /// Tests adding user-delegated-auth configuration options individually or together.
+        /// Verifies that enabled and database-audience properties can be set independently or combined.
+        /// Also verifies default values for properties not explicitly set.
+        /// Commands:
+        /// - dab configure --data-source.user-delegated-auth.enabled true
+        /// - dab configure --data-source.user-delegated-auth.database-audience "https://database.windows.net"
+        /// - dab configure --data-source.user-delegated-auth.enabled true --data-source.user-delegated-auth.database-audience "https://database.windows.net"
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, null, DisplayName = "Set enabled=true only")]
+        [DataRow(null, "https://database.windows.net", DisplayName = "Set database-audience only")]
+        [DataRow(true, "https://database.windows.net", DisplayName = "Set both enabled and database-audience")]
+        public void TestAddUserDelegatedAuthConfiguration(bool? enabledValue, string? audienceValue)
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceUserDelegatedAuthEnabled: enabledValue,
+                dataSourceUserDelegatedAuthDatabaseAudience: audienceValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.UserDelegatedAuth);
+
+            // Verify enabled value (if set, use provided value; otherwise defaults to false)
+            if (enabledValue.HasValue)
+            {
+                Assert.AreEqual(enabledValue.Value, config.DataSource.UserDelegatedAuth.Enabled);
+            }
+            else
+            {
+                Assert.IsFalse(config.DataSource.UserDelegatedAuth.Enabled);
+            }
+
+            // Verify database-audience value
+            if (audienceValue is not null)
+            {
+                Assert.AreEqual(audienceValue, config.DataSource.UserDelegatedAuth.DatabaseAudience);
+            }
+            else
+            {
+                Assert.IsNull(config.DataSource.UserDelegatedAuth.DatabaseAudience);
+            }
+
+            // Verify provider is set to default
+            Assert.AreEqual("EntraId", config.DataSource.UserDelegatedAuth.Provider);
+        }
+
+        /// <summary>
+        /// Tests that enabling user-delegated-auth on a non-MSSQL database fails.
+        /// This method verifies that user-delegated-auth is only allowed for MSSQL database type.
+        /// Command: dab configure --data-source.database-type postgresql --data-source.user-delegated-auth.enabled true
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("postgresql", DisplayName = "Fail when enabling user-delegated-auth on PostgreSQL")]
+        [DataRow("mysql", DisplayName = "Fail when enabling user-delegated-auth on MySQL")]
+        [DataRow("cosmosdb_nosql", DisplayName = "Fail when enabling user-delegated-auth on CosmosDB")]
+        public void TestFailureWhenEnablingUserDelegatedAuthOnNonMSSQLDatabase(string dbType)
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceDatabaseType: dbType,
+                dataSourceUserDelegatedAuthEnabled: true,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Tests updating existing user-delegated-auth configuration by changing the database-audience.
+        /// Verifies that the database-audience can be updated while preserving the enabled setting.
+        /// Also validates JSON structure: verifies user-delegated-auth is correctly nested under data-source
+        /// with proper JSON property names (enabled, provider, database-audience).
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateUserDelegatedAuthDatabaseAudience()
+        {
+            // Arrange - Config with existing user-delegated-auth section
+            SetupFileSystemWithInitialConfig(TestHelper.CONFIG_WITH_USER_DELEGATED_AUTH);
+
+            string newAudience = "https://database.usgovcloudapi.net";
+            ConfigureOptions options = new(
+                dataSourceUserDelegatedAuthDatabaseAudience: newAudience,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.UserDelegatedAuth);
+            Assert.IsTrue(config.DataSource.UserDelegatedAuth.Enabled);
+            Assert.AreEqual(newAudience, config.DataSource.UserDelegatedAuth.DatabaseAudience);
+            Assert.AreEqual("EntraId", config.DataSource.UserDelegatedAuth.Provider);
+
+            // Verify JSON structure using JObject to ensure correct nesting
+            JObject configJson = JObject.Parse(updatedConfig);
+            JToken? userDelegatedAuthSection = configJson["data-source"]?["user-delegated-auth"];
+            Assert.IsNotNull(userDelegatedAuthSection);
+            Assert.AreEqual(newAudience, (string?)userDelegatedAuthSection["database-audience"]);
+            Assert.AreEqual(true, (bool?)userDelegatedAuthSection["enabled"]);
+            Assert.AreEqual("EntraId", (string?)userDelegatedAuthSection["provider"]);
+        }
+
+        /// <summary>
         /// Tests that running "dab configure" with embeddings endpoint options on a config with existing embeddings
         /// results in the endpoint options being added to the embeddings configuration.
         /// </summary>
@@ -1696,6 +1849,274 @@ namespace Cli.Tests
             Assert.IsFalse(isSuccess);
         }
 
-        // Endpoint path is fixed to /embed and no longer configurable via dab configure.
+        /// <summary>
+        /// Tests adding pagination options to a config that doesn't have a pagination section.
+        /// Command: dab configure --runtime.pagination.max-page-size 500 --runtime.pagination.default-page-size 50 --runtime.pagination.next-link-relative true
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(500, 50, true, DisplayName = "Set all pagination options")]
+        [DataRow(1000, null, null, DisplayName = "Set only max-page-size")]
+        [DataRow(null, 25, null, DisplayName = "Set only default-page-size")]
+        [DataRow(null, null, true, DisplayName = "Set only next-link-relative")]
+        public void TestConfigurePaginationOptions(int? maxPageSize, int? defaultPageSize, bool? nextLinkRelative)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimePaginationMaxPageSize: maxPageSize,
+                runtimePaginationDefaultPageSize: defaultPageSize,
+                runtimePaginationNextLinkRelative: nextLinkRelative,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Pagination);
+
+            if (maxPageSize.HasValue)
+            {
+                Assert.AreEqual(maxPageSize.Value, config.Runtime.Pagination.MaxPageSize);
+            }
+
+            if (defaultPageSize.HasValue)
+            {
+                Assert.AreEqual(defaultPageSize.Value, config.Runtime.Pagination.DefaultPageSize);
+            }
+
+            if (nextLinkRelative.HasValue)
+            {
+                Assert.AreEqual(nextLinkRelative.Value, config.Runtime.Pagination.NextLinkRelative);
+            }
+        }
+
+        /// <summary>
+        /// Tests adding runtime health options to a config that doesn't have a health section.
+        /// The enabled flag must be explicitly set for health options to persist in config.
+        /// Command: dab configure --runtime.health.enabled true --runtime.health.cache-ttl-seconds 10 --runtime.health.max-query-parallelism 2 --runtime.health.roles "admin,monitor"
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, 10, 2, new string[] { "admin", "monitor" }, DisplayName = "Set all runtime health options")]
+        [DataRow(false, null, null, null, DisplayName = "Disable runtime health")]
+        [DataRow(true, 30, null, null, DisplayName = "Enable health with custom cache-ttl")]
+        [DataRow(true, null, 8, null, DisplayName = "Enable health with custom max-query-parallelism")]
+        [DataRow(true, null, null, new string[] { "admin" }, DisplayName = "Enable health with roles")]
+        [DataRow(null, 20, null, null, DisplayName = "Null enabled with cache-ttl auto-enables health")]
+        public void TestConfigureRuntimeHealthOptions(bool? enabled, int? cacheTtlSeconds, int? maxQueryParallelism, string[]? roles)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeHealthEnabled: enabled,
+                runtimeHealthCacheTtlSeconds: cacheTtlSeconds,
+                runtimeHealthMaxQueryParallelism: maxQueryParallelism,
+                runtimeHealthRoles: roles,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Health);
+
+            if (enabled.HasValue)
+            {
+                Assert.AreEqual(enabled.Value, config.Runtime.Health.Enabled);
+            }
+            else
+            {
+                // When enabled is null but sub-options are set, health is auto-enabled.
+                Assert.IsTrue(config.Runtime.Health.Enabled);
+            }
+
+            if (cacheTtlSeconds.HasValue)
+            {
+                Assert.AreEqual(cacheTtlSeconds.Value, config.Runtime.Health.CacheTtlSeconds);
+            }
+
+            if (maxQueryParallelism.HasValue)
+            {
+                Assert.AreEqual(maxQueryParallelism.Value, config.Runtime.Health.MaxQueryParallelism);
+            }
+
+            if (roles is not null)
+            {
+                Assert.IsNotNull(config.Runtime.Health.Roles);
+                CollectionAssert.AreEquivalent(roles, config.Runtime.Health.Roles.ToArray());
+            }
+        }
+
+        /// <summary>
+        /// Tests adding host max-response-size-mb to a config.
+        /// Command: dab configure --runtime.host.max-response-size-mb 50
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(50, DisplayName = "Set max-response-size-mb to 50")]
+        [DataRow(1, DisplayName = "Set max-response-size-mb to 1")]
+        [DataRow(-1, DisplayName = "Set max-response-size-mb to -1 (engine max)")]
+        public void TestConfigureHostMaxResponseSizeMb(int maxResponseSizeMb)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeHostMaxResponseSizeMb: maxResponseSizeMb,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Host);
+            Assert.IsNotNull(config.Runtime.Host.MaxResponseSizeMB);
+            Assert.IsTrue(config.Runtime.Host.UserProvidedMaxResponseSizeMB);
+        }
+
+        /// <summary>
+        /// Tests adding data-source-files to a config.
+        /// Command: dab configure --data-source-files "config1.json,config2.json"
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureDataSourceFiles()
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            string[] files = new[] { "config1.json", "config2.json" };
+            ConfigureOptions options = new(
+                dataSourceFiles: files,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSourceFiles);
+            Assert.IsNotNull(config.DataSourceFiles.SourceFiles);
+            CollectionAssert.AreEquivalent(files, config.DataSourceFiles.SourceFiles.ToArray());
+        }
+
+        /// <summary>
+        /// Tests adding data-source.health.enabled and data-source.health.threshold-ms to a config.
+        /// Command: dab configure --data-source.health.enabled false --data-source.health.threshold-ms 2000
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(false, 2000, DisplayName = "Disable data source health with custom threshold")]
+        [DataRow(true, null, DisplayName = "Enable data source health with default threshold")]
+        [DataRow(null, 500, DisplayName = "Set only threshold-ms")]
+        public void TestConfigureDataSourceHealthOptions(bool? enabled, int? thresholdMs)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceHealthEnabled: enabled,
+                dataSourceHealthThresholdMs: thresholdMs,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.Health);
+
+            if (enabled.HasValue)
+            {
+                Assert.AreEqual(enabled.Value, config.DataSource.Health.Enabled);
+            }
+
+            if (thresholdMs.HasValue)
+            {
+                Assert.AreEqual(thresholdMs.Value, config.DataSource.Health.ThresholdMs);
+            }
+        }
+
+        /// <summary>
+        /// Tests adding data-source.user-delegated-auth.provider to a config.
+        /// Command: dab configure --data-source.user-delegated-auth.provider "EntraId"
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureUserDelegatedAuthProvider()
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceUserDelegatedAuthEnabled: true,
+                dataSourceUserDelegatedAuthProvider: "EntraId",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.UserDelegatedAuth);
+            Assert.AreEqual("EntraId", config.DataSource.UserDelegatedAuth.Provider);
+            Assert.IsTrue(config.DataSource.UserDelegatedAuth.Enabled);
+        }
+
+        /// <summary>
+        /// Tests adding telemetry log-level configuration.
+        /// Command: dab configure --runtime.telemetry.log-level "Microsoft.AspNetCore:Warning,Default:Information"
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[] { "Microsoft.AspNetCore:Warning" }, DisplayName = "Set single log level")]
+        [DataRow(new string[] { "Microsoft.AspNetCore:Warning", "Default:Information" }, DisplayName = "Set multiple log levels")]
+        public void TestConfigureTelemetryLogLevel(string[] logLevels)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeTelemetryLogLevel: logLevels,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Telemetry);
+            Assert.IsNotNull(config.Runtime.Telemetry.LoggerLevel);
+
+            foreach (string entry in logLevels)
+            {
+                string[] parts = entry.Split(':');
+                Assert.IsTrue(config.Runtime.Telemetry.LoggerLevel.ContainsKey(parts[0]));
+            }
+        }
+
+        /// <summary>
+        /// Tests that an empty namespace in log-level input is rejected.
+        /// Command: dab configure --runtime.telemetry.log-level ":Warning"
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureTelemetryLogLevelRejectsEmptyNamespace()
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeTelemetryLogLevel: new string[] { ":Warning" },
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsFalse(isSuccess);
+        }
     }
 }

@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ExtractRawQueryParameter_PreservesEncoding(string queryString, string parameterName, string expectedValue)
         {
             // Call the internal method directly (no reflection needed)
-            string? result = RequestParser.ExtractRawQueryParameter(queryString, parameterName);
+            string result = RequestParser.ExtractRawQueryParameter(queryString, parameterName);
 
             Assert.AreEqual(expectedValue, result,
                 $"Expected '{expectedValue}' but got '{result}' for parameter '{parameterName}' in query '{queryString}'");
@@ -49,10 +49,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("", "$filter", DisplayName = "Empty query string")]
         [DataRow(null, "$filter", DisplayName = "Null query string")]
         [DataRow("?otherParam=value", "$filter", DisplayName = "Different parameter")]
-        public void ExtractRawQueryParameter_ReturnsNull_WhenParameterNotFound(string? queryString, string parameterName)
+        public void ExtractRawQueryParameter_ReturnsNull_WhenParameterNotFound(string queryString, string parameterName)
         {
             // Call the internal method directly (no reflection needed)
-            string? result = RequestParser.ExtractRawQueryParameter(queryString, parameterName);
+            string result = RequestParser.ExtractRawQueryParameter(queryString, parameterName);
 
             Assert.IsNull(result,
                 $"Expected null but got '{result}' for parameter '{parameterName}' in query '{queryString}'");
@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ExtractRawQueryParameter_HandlesEdgeCases(string queryString, string parameterName, string expectedValue)
         {
             // Call the internal method directly (no reflection needed)
-            string? result = RequestParser.ExtractRawQueryParameter(queryString, parameterName);
+            string result = RequestParser.ExtractRawQueryParameter(queryString, parameterName);
 
             Assert.AreEqual(expectedValue, result,
                 $"Expected '{expectedValue}' but got '{result}' for parameter '{parameterName}' in query '{queryString}'");

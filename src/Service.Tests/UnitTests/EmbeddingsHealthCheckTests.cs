@@ -82,7 +82,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         HealthCheckResultEntry embeddingCheck = GetEmbeddingCheck(report);
@@ -115,7 +115,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         HealthCheckResultEntry embeddingCheck = GetEmbeddingCheck(report);
@@ -138,7 +138,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         Assert.AreEqual(HealthStatus.Healthy, report.Status);
@@ -166,7 +166,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         HealthCheckResultEntry embeddingCheck = GetEmbeddingCheck(report);
@@ -190,7 +190,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         Assert.AreEqual(HealthStatus.Unhealthy, report.Status);
@@ -220,7 +220,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         HealthCheckResultEntry embeddingCheck = GetEmbeddingCheck(report);
@@ -257,7 +257,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         HealthCheckResultEntry embeddingCheck = GetEmbeddingCheck(report);
@@ -289,7 +289,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         HealthCheckResultEntry embeddingCheck = GetEmbeddingCheck(report);
@@ -316,7 +316,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         HealthCheckResultEntry embeddingCheck = GetEmbeddingCheck(report);
@@ -347,7 +347,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         HealthCheckResultEntry embeddingCheck = GetEmbeddingCheck(report);
@@ -373,7 +373,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         Assert.IsFalse(HasEmbeddingCheck(report));
@@ -394,7 +394,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         Assert.IsFalse(HasEmbeddingCheck(report));
@@ -412,7 +412,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         Assert.IsFalse(HasEmbeddingCheck(report));
@@ -432,7 +432,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         Assert.IsFalse(HasEmbeddingCheck(report));
@@ -452,7 +452,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = new(_mockLogger.Object, _httpUtilities, embeddingService: null);
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         Assert.IsFalse(HasEmbeddingCheck(report));
@@ -483,7 +483,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        await helper.GetHealthCheckResponseAsync(config);
+        await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         _mockEmbeddingService.Verify(
@@ -508,7 +508,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        await helper.GetHealthCheckResponseAsync(config);
+        await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         _mockEmbeddingService.Verify(
@@ -535,7 +535,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         HealthCheckResultEntry embeddingCheck = GetEmbeddingCheck(report);
@@ -561,7 +561,7 @@ public class EmbeddingsHealthCheckTests
         HealthCheckHelper helper = CreateHealthCheckHelper();
 
         // Act
-        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config);
+        ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");
 
         // Assert
         HealthCheckResultEntry embeddingCheck = GetEmbeddingCheck(report);

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Runtime.CompilerServices;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Product;
 using Cli.Constants;
@@ -848,6 +849,44 @@ public class EndToEndTests
     /// <summary>
     /// Test to validate that the engine starts successfully when --LogLevel is set to Warning
     /// or above. At these levels, CLI phase messages (logged at Information) are suppressed,
+    /// so no stdout output with message 'info' is expected during the CLI phase.
+    /// </summary>
+    /// <param name="logLevelOption">Log level options</param>
+    [DataTestMethod]
+    [DataRow("3", DisplayName = "LogLevel 3 from command line.")]
+    [DataRow("4", DisplayName = "LogLevel 4 from command line.")]
+    [DataRow("5", DisplayName = "LogLevel 5 from command line.")]
+    [DataRow("Warning", DisplayName = "LogLevel Warning from command line.")]
+    [DataRow("Error", DisplayName = "LogLevel Error from command line.")]
+    [DataRow("Critical", DisplayName = "LogLevel Critical from command line.")]
+    [DataRow("waRNing", DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
+    [DataRow("eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
+    [DataRow("CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
+    public async Task TestEngineStartUpWithHighLogLevelOptions(string logLevelOption)
+    {
+        StringLogger logger = new();
+        StringWriter consoleOutput = new();
+        Console.SetOut(consoleOutput);
+
+        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--LogLevel", logLevelOption };
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
+
+        // Run Program.Execute on a background task because StartEngine blocks until the host shuts down.
+        Task engineTask = Task.Run(() => Program.Execute(args, logger, _fileSystem!, _runtimeConfigLoader!));
+
+        // Wait for the CLI to set up the proper LogLevel.
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
+        string engineStdOut = consoleOutput.ToString();
+        Assert.IsNotNull(engineStdOut);
+        Assert.IsFalse(engineStdOut.Contains("info"), $"Expected no 'info' outputs at LogLevel {logLevelOption}, but got: {engineStdOut}");
+
+        Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
+    }
+
+    /// <summary>
+    /// Test to validate that the engine starts successfully when --LogLevel is set to None.
+    /// At these levels, CLI phase messages (logged at Information) are suppressed,
     /// so no stdout output is expected during the CLI phase.
     /// </summary>
     /// <param name="logLevelOption">Log level options</param>
@@ -872,6 +911,8 @@ public class EndToEndTests
 
         string engineStdOut = consoleOutput.ToString();
         Assert.IsTrue(string.IsNullOrEmpty(engineStdOut), $"Expected no output at LogLevel {logLevelOption}, but got: {engineStdOut}");
+
+        Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
     }
 
     /// <summary>

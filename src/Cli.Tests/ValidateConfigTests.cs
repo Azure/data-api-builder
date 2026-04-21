@@ -75,7 +75,6 @@ public class ValidateConfigTests
         Console.SetOut(writer);
 
         // Act
-        Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
         ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
         string errorMessage = writer.ToString();
 
@@ -294,7 +293,6 @@ public class ValidateConfigTests
         ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
 
         // Act
-        Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
         ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
 
         // Assert

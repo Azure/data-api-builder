@@ -182,7 +182,7 @@ public class ParameterValidationTests
         Assert.IsTrue(operation.Parameters.Any(param =>
             param.In is ParameterLocation.Query
             && param.Name.Equals("id")
-            && param.Schema.Type.Equals("number")
+            && param.Schema.Type.Equals("integer")
             && param.Required is false));
 
         // Parameter with default value will be an optional query parameter.

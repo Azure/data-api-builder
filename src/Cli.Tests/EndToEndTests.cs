@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Runtime.CompilerServices;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Product;
 using Cli.Constants;

@@ -84,6 +84,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 NpgsqlConnectionStringBuilder builder = new(dataSource.ConnectionString);
 
+                if (string.IsNullOrEmpty(builder.Timezone))
+                {
+                    builder.Timezone = "UTC";
+                }
+
                 if (_runtimeConfigProvider.IsLateConfigured)
                 {
                     builder.SslMode = SslMode.VerifyFull;

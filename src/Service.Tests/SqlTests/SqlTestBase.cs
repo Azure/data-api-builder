@@ -178,7 +178,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     builder.ConfigureTestServices(services =>
                     {
                         services.AddHttpContextAccessor();
-                        services.AddSingleton(runtimeConfigProvider);
+                        services.AddSingleton<RuntimeConfigProvider>(sp => runtimeConfigProvider);
                         services.AddSingleton(_gqlFilterParser);
                         services.AddSingleton<IQueryEngine>(implementationFactory: serviceProvider =>
                         {

@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 /// Service implementation for text embedding/vectorization.
 /// Supports both OpenAI and Azure OpenAI providers.
 /// Caches embeddings using FusionCache L1 memory cache.
-/// L2/distributed cache is optional globally and is used by this service when configured.
+// L2/distributed cache is optional globally and is used by this service when configured.
 /// </summary>
 public class EmbeddingService : IEmbeddingService
 {

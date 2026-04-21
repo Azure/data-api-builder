@@ -30,14 +30,14 @@ public record EmbeddingsChunkingOptions
 
     /// <summary>
     /// The size of each chunk in characters.
-    /// Defaults to 1000 characters.
+    /// Defaults to 800 characters.
     /// </summary>
     [JsonPropertyName("size-chars")]
     public int SizeChars { get; init; }
 
     /// <summary>
     /// The number of characters to overlap between consecutive chunks.
-    /// Defaults to 250 characters.
+    /// Defaults to 100 characters.
     /// Overlap helps maintain context across chunk boundaries.
     /// </summary>
     [JsonPropertyName("overlap-chars")]

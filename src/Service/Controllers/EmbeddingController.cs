@@ -9,7 +9,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
@@ -51,18 +50,17 @@ public class EmbeddingController : ControllerBase
 
     /// <summary>
     /// POST endpoint for generating embeddings.
-    /// Accepts JSON string or array of documents with key/text pairs.
+    /// Accepts plain text, JSON string, or array of documents with key/text pairs.
     /// Supports query parameters to override chunking settings.
     /// Default response is JSON: { "embedding": [...], "dimensions": N } for single text,
     /// or [{ "key": "...", "data": [[...], [...]] }] for document arrays.
     /// </summary>
-    /// <param name="cancellationToken">Cancellation token for the async operation.</param>
     /// <returns>Embedding vector(s) as JSON, or an error response.</returns>
     [HttpPost]
     [Route("embed")]
-    [Consumes("application/json")]
+    [Consumes("text/plain", "application/json")]
     [Produces("application/json", "text/plain")]
-    public async Task<IActionResult> PostAsync(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> PostAsync()
     {
         // Get embeddings configuration
         EmbeddingsOptions? embeddingsOptions = _runtimeConfigProvider.GetConfig()?.Runtime?.Embeddings;
@@ -117,127 +115,48 @@ public class EmbeddingController : ControllerBase
             return BadRequest("Request body cannot be empty.");
         }
 
-        // Try to parse as document array first
-        try
+        // Try to parse as document array first (if JSON content type)
+        if (Request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
         {
-            EmbedDocumentRequest[]? documents = JsonSerializer.Deserialize<EmbedDocumentRequest[]>(requestBody);
-
-            if (documents is not null && documents.Length > 0)
-            {
-                // Handle as document array
-                return await ProcessDocumentArrayAsync(documents, embeddingsOptions, queryChunkingOptions, cancellationToken);
-            }
-            else if (documents is not null && documents.Length == 0)
-            {
-                // Empty document array
-                return BadRequest("Document array cannot be empty.");
-            }
-        }
-        catch (JsonException jsonEx)
-        {
-            // Not a document array, try as single text
-            _logger.LogDebug(jsonEx, "Request body is not a document array, trying as single text.");
-        }
-
-        // Try to parse as single JSON string
-        try
-        {
-            string? jsonString = JsonSerializer.Deserialize<string>(requestBody);
-            if (jsonString is not null)
-            {
-                // Handle as single text. Apply chunking if enabled.
-                return await ProcessSingleTextAsync(jsonString, embeddingsOptions, queryChunkingOptions, cancellationToken);
-            }
-            else
-            {
-                // null value is not valid
-                return BadRequest("Invalid JSON: null value is not accepted.");
-            }
-        }
-        catch (JsonException ex)
-        {
-            // Not a valid JSON string either - check if it's an object (invalid format)
             try
             {
-                using JsonDocument doc = JsonDocument.Parse(requestBody);
-                if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                EmbedDocumentRequest[]? documents = JsonSerializer.Deserialize<EmbedDocumentRequest[]>(requestBody);
+
+                if (documents is not null && documents.Length > 0)
                 {
-                    // It's a JSON object but not a valid format
-                    return BadRequest("Invalid JSON format. Expected a text string or document array.");
+                    // Handle as document array
+                    return await ProcessDocumentArrayAsync(documents, embeddingsOptions, queryChunkingOptions);
+                }
+                else if (documents is not null && documents.Length == 0)
+                {
+                    // Empty document array
+                    return BadRequest("Document array cannot be empty.");
                 }
             }
             catch (JsonException)
             {
-                // Not valid JSON at all
-                _logger.LogError(ex, "Invalid JSON in request body.");
-                return BadRequest("Invalid JSON format. Request body must be valid JSON.");
+                // Not a document array, try as single text
+                _logger.LogDebug("Request body is not a document array, trying as single text.");
             }
 
-            // Valid JSON but unexpected type
-            return BadRequest("Invalid JSON format. Expected a text string or document array.");
-        }
-    }
-
-    /// <summary>
-    /// Processes a single text request. When chunking is enabled, the request is
-    /// routed through the document-array path so the response can represent
-    /// multiple chunks. When chunking is not enabled, the legacy single-vector
-    /// response is preserved for backward compatibility.
-    /// </summary>
-    private async Task<IActionResult> ProcessSingleTextAsync(
-        string text,
-        EmbeddingsOptions embeddingsOptions,
-        EmbeddingsChunkingOptions? queryChunkingOptions,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return BadRequest("Request body cannot be empty.");
-        }
-
-        // Determine effective chunking options
-        EmbeddingsChunkingOptions? effectiveChunkingOptions = queryChunkingOptions ?? embeddingsOptions.Chunking;
-
-        // If chunking is enabled, use document array processing for consistent response format
-        if (effectiveChunkingOptions is not null && effectiveChunkingOptions.Enabled)
-        {
-            EmbedDocumentRequest[] documents =
-            [
-                new EmbedDocumentRequest
+            // Try to parse as single JSON string
+            try
+            {
+                string? jsonString = JsonSerializer.Deserialize<string>(requestBody);
+                if (jsonString is not null)
                 {
-                    Key = "input",
-                    Text = text
+                    requestBody = jsonString;
                 }
-            ];
-
-            return await ProcessDocumentArrayAsync(documents, embeddingsOptions, effectiveChunkingOptions, cancellationToken);
+            }
+            catch (JsonException)
+            {
+                // Not a JSON string, use requestBody as-is
+                _logger.LogDebug("Request body is not a JSON string, using as plain text.");
+            }
         }
 
-        // No chunking - preserve legacy single-embedding response
-        EmbeddingResult result = await _embeddingService!.TryEmbedAsync(text, cancellationToken);
-
-        if (!result.Success)
-        {
-            string errorMessage = result.ErrorMessage ?? "Failed to generate embedding.";
-            _logger.LogError("Embedding request failed: {Error}", errorMessage);
-            return StatusCode((int)HttpStatusCode.InternalServerError, errorMessage);
-        }
-
-        if (result.Embedding is null || result.Embedding.Length == 0)
-        {
-            _logger.LogError("Embedding request returned empty result.");
-            return StatusCode((int)HttpStatusCode.InternalServerError, "Failed to generate embedding.");
-        }
-
-        // Return embedding as plain text (comma-separated floats) when explicitly requested via Accept header.
-        if (ClientAcceptsTextPlain())
-        {
-            string embeddingText = string.Join(",", result.Embedding.Select(f => f.ToString("G", CultureInfo.InvariantCulture)));
-            return Content(embeddingText, MediaTypeNames.Text.Plain);
-        }
-
-        // Default: return structured JSON response.
-        return Ok(new EmbeddingResponse(result.Embedding));
+        // Handle as single text (backward compatible)
+        return await ProcessSingleTextAsync(requestBody);
     }
 
     /// <summary>
@@ -246,8 +165,7 @@ public class EmbeddingController : ControllerBase
     private async Task<IActionResult> ProcessDocumentArrayAsync(
         EmbedDocumentRequest[] documents,
         EmbeddingsOptions embeddingsOptions,
-        EmbeddingsChunkingOptions? queryChunkingOptions,
-        CancellationToken cancellationToken)
+        EmbeddingsChunkingOptions? queryChunkingOptions)
     {
         List<EmbedDocumentResponse> responses = new();
 
@@ -271,19 +189,24 @@ public class EmbeddingController : ControllerBase
                 // Chunk the text if chunking is enabled
                 string[] chunks = ChunkText(doc.Text, effectiveChunking);
 
-                // Embed all chunks using batch API for better performance
-                EmbeddingBatchResult batchResult = await _embeddingService!.TryEmbedBatchAsync(chunks, cancellationToken);
-
-                if (!batchResult.Success || batchResult.Embeddings is null || batchResult.Embeddings.Length == 0)
+                // Embed all chunks
+                List<float[]> embeddings = new();
+                foreach (string chunk in chunks)
                 {
-                    string errorMessage = batchResult.ErrorMessage ?? "Unknown error";
-                    _logger.LogError("Failed to embed chunks for document key '{Key}': {Error}", doc.Key, errorMessage);
-                    return StatusCode(
-                        (int)HttpStatusCode.InternalServerError,
-                        $"Failed to generate embeddings for document '{doc.Key}': {errorMessage}");
+                    EmbeddingResult result = await _embeddingService!.TryEmbedAsync(chunk);
+
+                    if (!result.Success || result.Embedding is null)
+                    {
+                        _logger.LogError("Failed to embed chunk for document key '{Key}': {Error}", doc.Key, result.ErrorMessage);
+                        return StatusCode(
+                            (int)HttpStatusCode.InternalServerError,
+                            $"Failed to generate embedding for document '{doc.Key}': {result.ErrorMessage}");
+                    }
+
+                    embeddings.Add(result.Embedding);
                 }
 
-                responses.Add(new EmbedDocumentResponse(doc.Key, batchResult.Embeddings));
+                responses.Add(new EmbedDocumentResponse(doc.Key, embeddings.ToArray()));
             }
             catch (Exception ex)
             {
@@ -295,6 +218,42 @@ public class EmbeddingController : ControllerBase
         }
 
         return Ok(responses.ToArray());
+    }
+
+    /// <summary>
+    /// Processes a single text request and returns embedding (backward compatible).
+    /// </summary>
+    private async Task<IActionResult> ProcessSingleTextAsync(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return BadRequest("Request body cannot be empty.");
+        }
+
+        // Generate embedding
+        EmbeddingResult result = await _embeddingService!.TryEmbedAsync(text);
+
+        if (!result.Success)
+        {
+            _logger.LogError("Embedding request failed: {Error}", result.ErrorMessage);
+            return StatusCode((int)HttpStatusCode.InternalServerError, result.ErrorMessage ?? "Failed to generate embedding.");
+        }
+
+        if (result.Embedding is null || result.Embedding.Length == 0)
+        {
+            _logger.LogError("Embedding request returned empty result.");
+            return StatusCode((int)HttpStatusCode.InternalServerError, "Failed to generate embedding.");
+        }
+
+        // Return embedding as plain text (comma-separated floats) when explicitly requested via Accept header.
+        if (ClientAcceptsTextPlain())
+        {
+            string embeddingText = string.Join(",", result.Embedding.Select(f => f.ToString("G", CultureInfo.InvariantCulture)));
+            return Content(embeddingText, MediaTypeNames.Text.Plain);
+        }
+
+        // Default: return structured JSON response.
+        return Ok(new EmbeddingResponse(result.Embedding));
     }
 
     /// <summary>
@@ -343,9 +302,8 @@ public class EmbeddingController : ControllerBase
 
     /// <summary>
     /// Splits text into chunks if chunking is enabled and text exceeds chunk size.
-    /// Uses EffectiveSizeChars to ensure chunk size is always valid.
     /// </summary>
-    private static string[] ChunkText(string text, EmbeddingsChunkingOptions? chunkingOptions)
+    private string[] ChunkText(string text, EmbeddingsChunkingOptions? chunkingOptions)
     {
         // If chunking is disabled or options are null, return text as single chunk
         if (chunkingOptions is null || !chunkingOptions.Enabled)
@@ -353,8 +311,7 @@ public class EmbeddingController : ControllerBase
             return new[] { text };
         }
 
-        // Use EffectiveSizeChars to ensure chunk size is at least overlap + 1
-        int chunkSize = chunkingOptions.EffectiveSizeChars;
+        int chunkSize = chunkingOptions.SizeChars;
         int overlap = chunkingOptions.OverlapChars;
 
         // If text fits in one chunk, return as single item
@@ -366,9 +323,6 @@ public class EmbeddingController : ControllerBase
         List<string> chunks = new();
         int position = 0;
 
-        // Calculate step size to guarantee forward progress
-        int step = Math.Max(1, chunkSize - overlap);
-
         while (position < text.Length)
         {
             int remainingLength = text.Length - position;
@@ -376,8 +330,15 @@ public class EmbeddingController : ControllerBase
 
             chunks.Add(text.Substring(position, currentChunkSize));
 
-            // Always move forward by at least 1 to prevent infinite loops
-            position += step;
+            // Move position forward by (chunkSize - overlap) to create overlapping chunks
+            position += chunkSize - overlap;
+
+            // Prevent infinite loop if overlap >= chunkSize
+            if (overlap >= chunkSize && remainingLength > chunkSize)
+            {
+                _logger.LogWarning("Chunking configuration invalid: overlap ({Overlap}) >= chunkSize ({ChunkSize}). Using non-overlapping chunks.", overlap, chunkSize);
+                position = chunks.Count * chunkSize;
+            }
         }
 
         return chunks.ToArray();

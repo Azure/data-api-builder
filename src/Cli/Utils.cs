@@ -620,7 +620,7 @@ namespace Cli
         {
             if (!Enum.TryParse(method, ignoreCase: true, out restMethod))
             {
-                _logger.LogError("Invalid REST Method. Supported methods are {restMethods}.", string.Join(", ", Enum.GetNames<SupportedHttpVerb>()));
+                _logger.LogError("Invalid REST Method. Supported methods are {restMethods}.", string.Join(", ", Enum.GetNames<SupportedHttpVerb>().Select(n => n.ToLowerInvariant())));
                 return false;
             }
 
@@ -670,8 +670,8 @@ namespace Cli
             {
                 _logger.LogError(
                     "Invalid GraphQL Operation. Supported operations are {queryName} and {mutationName}.",
-                    GraphQLOperation.Query,
-                    GraphQLOperation.Mutation);
+                    nameof(GraphQLOperation.Query).ToLowerInvariant(),
+                    nameof(GraphQLOperation.Mutation).ToLowerInvariant());
                 return false;
             }
 
@@ -865,50 +865,65 @@ namespace Cli
         /// Constructs the EntityCacheOption for Add/Update.
         /// </summary>
         /// <param name="cacheEnabled">String value that defines if the cache is enabled.</param>
-        /// <param name="cacheTtl">Int that gives time to live in seconds for cache.</param>
-        /// <returns>EntityCacheOption if values are provided for cacheEnabled or cacheTtl, null otherwise.</returns>
-        public static EntityCacheOptions? ConstructCacheOptions(string? cacheEnabled, string? cacheTtl)
+        /// <param name="cacheTtlSeconds">Int that gives time to live in seconds for cache.</param>
+        /// <returns>EntityCacheOption if values are provided for cacheEnabled or cacheTtlSeconds, null otherwise.</returns>
+        public static EntityCacheOptions? ConstructCacheOptions(string? cacheEnabled, string? cacheTtlSeconds, string? cacheLevel = null)
         {
-            if (cacheEnabled is null && cacheTtl is null)
+            if (cacheEnabled is null && cacheTtlSeconds is null && cacheLevel is null)
             {
                 return null;
             }
 
-            EntityCacheOptions cacheOptions = new();
             bool isEnabled = false;
-            bool isCacheTtlUserProvided = false;
             int ttl = EntityCacheOptions.DEFAULT_TTL_SECONDS;
+            EntityCacheLevel? level = null;
 
             if (cacheEnabled is not null && !bool.TryParse(cacheEnabled, out isEnabled))
             {
                 _logger.LogError("Invalid format for --cache.enabled. Accepted values are true/false.");
             }
 
-            if ((cacheTtl is not null && !int.TryParse(cacheTtl, out ttl)) || ttl < 0)
+            if ((cacheTtlSeconds is not null && !int.TryParse(cacheTtlSeconds, out ttl)) || ttl < 0)
             {
-                _logger.LogError("Invalid format for --cache.ttl. Accepted values are any non-negative integer.");
+                _logger.LogError("Invalid format for --cache.ttl-seconds. Accepted values are any non-negative integer.");
             }
 
-            // This is needed so the cacheTtl is correctly written to config.
-            if (cacheTtl is not null)
+            if (cacheLevel is not null && !Enum.TryParse(cacheLevel, ignoreCase: true, out EntityCacheLevel _))
             {
-                isCacheTtlUserProvided = true;
+                _logger.LogError("Invalid format for --cache.level. Accepted values are L1, L1L2.");
+            }
+            else if (cacheLevel is not null)
+            {
+                level = Enum.Parse<EntityCacheLevel>(cacheLevel, ignoreCase: true);
             }
 
-            // Both cacheEnabled and cacheTtl can not be null here, so if either one
-            // is, the other is not, and we return the cacheOptions with just that other
-            // value.
-            if (cacheEnabled is null)
+            // Use the constructor so UserProvided* flags are set automatically
+            // when a non-null value is passed.
+            return new EntityCacheOptions(
+                Enabled: cacheEnabled is not null ? isEnabled : null,
+                TtlSeconds: cacheTtlSeconds is not null ? ttl : null,
+                Level: level);
+        }
+
+        /// <summary>
+        /// Constructs EntityHealthCheckConfig for Add/Update.
+        /// </summary>
+        /// <param name="healthEnabled">String value that defines if health check is enabled for the entity.</param>
+        /// <returns>EntityHealthCheckConfig if a value is provided, null otherwise.</returns>
+        public static EntityHealthCheckConfig? ConstructEntityHealthOptions(string? healthEnabled)
+        {
+            if (healthEnabled is null)
             {
-                return cacheOptions with { TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
+                return null;
             }
 
-            if (cacheTtl is null)
+            if (!bool.TryParse(healthEnabled, out bool isEnabled))
             {
-                return cacheOptions with { Enabled = isEnabled };
+                _logger.LogError("Invalid format for --health.enabled. Accepted values are true/false.");
+                return null;
             }
 
-            return cacheOptions with { Enabled = isEnabled, TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
+            return new EntityHealthCheckConfig(enabled: isEnabled);
         }
 
         /// <summary>

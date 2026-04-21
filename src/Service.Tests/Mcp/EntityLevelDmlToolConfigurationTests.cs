@@ -447,7 +447,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             ServiceCollection services = new();
 
             RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
-            services.AddSingleton(configProvider);
+            services.AddSingleton<RuntimeConfigProvider>(sp => configProvider);
 
             Mock<IAuthorizationResolver> mockAuthResolver = new();
             mockAuthResolver.Setup(x => x.IsValidRoleContext(It.IsAny<HttpContext>())).Returns(true);

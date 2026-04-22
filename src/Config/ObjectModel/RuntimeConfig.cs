@@ -356,11 +356,14 @@ public record RuntimeConfig
             // This loader is not used as a part of hot reload and therefore does not need a handler.
             FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
+            // Pass the parent's AKV options so @akv() references in child configs can
+            // be resolved using the parent's Key Vault configuration.
+            // If a child config defines its own azure-key-vault section, TryParseConfig's
+            // ExtractAzureKeyVaultOptions will detect it and override these parent options.
+            DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: this.AzureKeyVault, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
+
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-                // Use Ignore mode so missing env vars are left as literal @env() strings,
-                // consistent with how the parent config is loaded in TryLoadKnownConfig.
-                DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
 
                 if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replacementSettings: replacementSettings))
                 {

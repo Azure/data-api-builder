@@ -174,8 +174,8 @@ type PlanetAgain @model {
                 _ = builder.ConfigureTestServices(services =>
                 {
                     services.AddSingleton<IFileSystem>(fileSystem);
-                    services.AddSingleton(loader);
-                    services.AddSingleton(provider);
+                    services.AddSingleton<FileSystemRuntimeConfigLoader>(sp => loader);
+                    services.AddSingleton<RuntimeConfigProvider>(sp => provider);
                     services.AddSingleton(authorizationResolverCosmos);
                 });
             });

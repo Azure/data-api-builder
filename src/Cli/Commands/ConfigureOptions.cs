@@ -31,6 +31,10 @@ namespace Cli.Commands
             string? dataSourceHealthName = null,
             bool? dataSourceUserDelegatedAuthEnabled = null,
             string? dataSourceUserDelegatedAuthDatabaseAudience = null,
+            string? dataSourceUserDelegatedAuthProvider = null,
+            bool? dataSourceHealthEnabled = null,
+            int? dataSourceHealthThresholdMs = null,
+            IEnumerable<string>? dataSourceFiles = null,
             int? depthLimit = null,
             bool? runtimeGraphQLEnabled = null,
             string? runtimeGraphQLPath = null,
@@ -53,13 +57,21 @@ namespace Cli.Commands
             int? runtimeMcpDmlToolsAggregateRecordsQueryTimeout = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
+            int? runtimePaginationMaxPageSize = null,
+            int? runtimePaginationDefaultPageSize = null,
+            bool? runtimePaginationNextLinkRelative = null,
             CompressionLevel? runtimeCompressionLevel = null,
+            bool? runtimeHealthEnabled = null,
+            int? runtimeHealthCacheTtlSeconds = null,
+            int? runtimeHealthMaxQueryParallelism = null,
+            IEnumerable<string>? runtimeHealthRoles = null,
             HostMode? runtimeHostMode = null,
             IEnumerable<string>? runtimeHostCorsOrigins = null,
             bool? runtimeHostCorsAllowCredentials = null,
             string? runtimeHostAuthenticationProvider = null,
             string? runtimeHostAuthenticationJwtAudience = null,
             string? runtimeHostAuthenticationJwtIssuer = null,
+            int? runtimeHostMaxResponseSizeMb = null,
             string? azureKeyVaultEndpoint = null,
             AKVRetryPolicyMode? azureKeyVaultRetryPolicyMode = null,
             int? azureKeyVaultRetryPolicyMaxCount = null,
@@ -77,6 +89,7 @@ namespace Cli.Commands
             RollingInterval? fileSinkRollingInterval = null,
             int? fileSinkRetainedFileCountLimit = null,
             long? fileSinkFileSizeLimitBytes = null,
+            IEnumerable<string>? runtimeTelemetryLogLevel = null,
             bool showEffectivePermissions = false,
             string? config = null)
             : base(config)
@@ -91,6 +104,10 @@ namespace Cli.Commands
             DataSourceHealthName = dataSourceHealthName;
             DataSourceUserDelegatedAuthEnabled = dataSourceUserDelegatedAuthEnabled;
             DataSourceUserDelegatedAuthDatabaseAudience = dataSourceUserDelegatedAuthDatabaseAudience;
+            DataSourceUserDelegatedAuthProvider = dataSourceUserDelegatedAuthProvider;
+            DataSourceHealthEnabled = dataSourceHealthEnabled;
+            DataSourceHealthThresholdMs = dataSourceHealthThresholdMs;
+            DataSourceFiles = dataSourceFiles;
             // GraphQL
             DepthLimit = depthLimit;
             RuntimeGraphQLEnabled = runtimeGraphQLEnabled;
@@ -117,8 +134,17 @@ namespace Cli.Commands
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
+            // Pagination
+            RuntimePaginationMaxPageSize = runtimePaginationMaxPageSize;
+            RuntimePaginationDefaultPageSize = runtimePaginationDefaultPageSize;
+            RuntimePaginationNextLinkRelative = runtimePaginationNextLinkRelative;
             // Compression
             RuntimeCompressionLevel = runtimeCompressionLevel;
+            // Health
+            RuntimeHealthEnabled = runtimeHealthEnabled;
+            RuntimeHealthCacheTtlSeconds = runtimeHealthCacheTtlSeconds;
+            RuntimeHealthMaxQueryParallelism = runtimeHealthMaxQueryParallelism;
+            RuntimeHealthRoles = runtimeHealthRoles;
             // Host
             RuntimeHostMode = runtimeHostMode;
             RuntimeHostCorsOrigins = runtimeHostCorsOrigins;
@@ -126,6 +152,7 @@ namespace Cli.Commands
             RuntimeHostAuthenticationProvider = runtimeHostAuthenticationProvider;
             RuntimeHostAuthenticationJwtAudience = runtimeHostAuthenticationJwtAudience;
             RuntimeHostAuthenticationJwtIssuer = runtimeHostAuthenticationJwtIssuer;
+            RuntimeHostMaxResponseSizeMb = runtimeHostMaxResponseSizeMb;
             // Azure Key Vault
             AzureKeyVaultEndpoint = azureKeyVaultEndpoint;
             AzureKeyVaultRetryPolicyMode = azureKeyVaultRetryPolicyMode;
@@ -146,6 +173,8 @@ namespace Cli.Commands
             FileSinkRollingInterval = fileSinkRollingInterval;
             FileSinkRetainedFileCountLimit = fileSinkRetainedFileCountLimit;
             FileSinkFileSizeLimitBytes = fileSinkFileSizeLimitBytes;
+            // Telemetry Log Level
+            RuntimeTelemetryLogLevel = runtimeTelemetryLogLevel;
             ShowEffectivePermissions = showEffectivePermissions;
         }
 
@@ -175,6 +204,18 @@ namespace Cli.Commands
 
         [Option("data-source.user-delegated-auth.database-audience", Required = false, HelpText = "Database resource identifier for token acquisition (e.g., https://database.windows.net for Azure SQL).")]
         public string? DataSourceUserDelegatedAuthDatabaseAudience { get; }
+
+        [Option("data-source.user-delegated-auth.provider", Required = false, HelpText = "Authentication provider for user-delegated auth. Allowed values: EntraId. Default: EntraId.")]
+        public string? DataSourceUserDelegatedAuthProvider { get; }
+
+        [Option("data-source.health.enabled", Required = false, HelpText = "Enable health check for this data source. Default: true (boolean).")]
+        public bool? DataSourceHealthEnabled { get; }
+
+        [Option("data-source.health.threshold-ms", Required = false, HelpText = "Health check response time threshold in milliseconds. Default: 1000. Range: 1-2147483647.")]
+        public int? DataSourceHealthThresholdMs { get; }
+
+        [Option("data-source-files", Required = false, Separator = ',', HelpText = "Comma-separated list of additional runtime config files for multi-database scenarios.")]
+        public IEnumerable<string>? DataSourceFiles { get; }
 
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of a nested query. Allowed values: 1..2147483647, or -1 to remove a previously set limit. Default: no limit.")]
         public int? DepthLimit { get; }
@@ -212,25 +253,25 @@ namespace Cli.Commands
         [Option("runtime.mcp.dml-tools.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools endpoint. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.describe-entities.enabled", Required = false, HelpText = "Enable DAB's MCP describe entities tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.describe-entities", Required = false, HelpText = "Enable DAB's MCP describe entities tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsDescribeEntitiesEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.create-record.enabled", Required = false, HelpText = "Enable DAB's MCP create record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.create-record", Required = false, HelpText = "Enable DAB's MCP create record tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsCreateRecordEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.read-records.enabled", Required = false, HelpText = "Enable DAB's MCP read record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.read-records", Required = false, HelpText = "Enable DAB's MCP read record tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsReadRecordsEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.update-record.enabled", Required = false, HelpText = "Enable DAB's MCP update record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.update-record", Required = false, HelpText = "Enable DAB's MCP update record tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsUpdateRecordEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.delete-record.enabled", Required = false, HelpText = "Enable DAB's MCP delete record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.delete-record", Required = false, HelpText = "Enable DAB's MCP delete record tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsDeleteRecordEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.execute-entity.enabled", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.execute-entity", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsExecuteEntityEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.aggregate-records.enabled", Required = false, HelpText = "Enable DAB's MCP aggregate records tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.aggregate-records", Required = false, HelpText = "Enable DAB's MCP aggregate records tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsAggregateRecordsEnabled { get; }
 
         [Option("runtime.mcp.dml-tools.aggregate-records.query-timeout", Required = false, HelpText = "Set the execution timeout in seconds for the aggregate-records MCP tool. Default: 30 (integer). Range: 1-600.")]
@@ -242,8 +283,29 @@ namespace Cli.Commands
         [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize the DAB cache's global default time to live in seconds. Default: 5 seconds (Integer).")]
         public int? RuntimeCacheTTL { get; }
 
+        [Option("runtime.pagination.max-page-size", Required = false, HelpText = "Maximum page size for paginated results. Default: 100000. Minimum: 1.")]
+        public int? RuntimePaginationMaxPageSize { get; }
+
+        [Option("runtime.pagination.default-page-size", Required = false, HelpText = "Default page size for paginated results. Default: 100. Minimum: 1.")]
+        public int? RuntimePaginationDefaultPageSize { get; }
+
+        [Option("runtime.pagination.next-link-relative", Required = false, HelpText = "Use relative URLs for pagination next links. Default: false (boolean).")]
+        public bool? RuntimePaginationNextLinkRelative { get; }
+
         [Option("runtime.compression.level", Required = false, HelpText = "Set the response compression level. Allowed values: optimal (default), fastest, none.")]
         public CompressionLevel? RuntimeCompressionLevel { get; }
+
+        [Option("runtime.health.enabled", Required = false, HelpText = "Enable runtime health checks. Default: true (boolean).")]
+        public bool? RuntimeHealthEnabled { get; }
+
+        [Option("runtime.health.cache-ttl-seconds", Required = false, HelpText = "Time to live in seconds for cached health check results. Default: 5.")]
+        public int? RuntimeHealthCacheTtlSeconds { get; }
+
+        [Option("runtime.health.max-query-parallelism", Required = false, HelpText = "Maximum number of parallel health check queries. Default: 4. Range: 1-8.")]
+        public int? RuntimeHealthMaxQueryParallelism { get; }
+
+        [Option("runtime.health.roles", Required = false, Separator = ',', HelpText = "Comma-separated list of roles allowed to access health check details.")]
+        public IEnumerable<string>? RuntimeHealthRoles { get; }
 
         [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: Production.")]
         public HostMode? RuntimeHostMode { get; }
@@ -262,6 +324,9 @@ namespace Cli.Commands
 
         [Option("runtime.host.authentication.jwt.issuer", Required = false, HelpText = "Configure the entity that issued the Jwt Token.")]
         public string? RuntimeHostAuthenticationJwtIssuer { get; }
+
+        [Option("runtime.host.max-response-size-mb", Required = false, HelpText = "Maximum response size in megabytes. Use -1 for maximum engine limit. Default: 158.")]
+        public int? RuntimeHostMaxResponseSizeMb { get; }
 
         [Option("azure-key-vault.endpoint", Required = false, HelpText = "Configure the Azure Key Vault endpoint URL.")]
         public string? AzureKeyVaultEndpoint { get; }
@@ -313,6 +378,9 @@ namespace Cli.Commands
 
         [Option("runtime.telemetry.file.file-size-limit-bytes", Required = false, HelpText = "Configure maximum file size limit in bytes. Default: 1048576")]
         public long? FileSinkFileSizeLimitBytes { get; }
+
+        [Option("runtime.telemetry.log-level", Required = false, Separator = ',', HelpText = "Configure log levels by namespace. Format: 'Namespace:Level,...'. Allowed levels: trace, debug, information, warning, error, critical, none.")]
+        public IEnumerable<string>? RuntimeTelemetryLogLevel { get; }
 
         [Option("show-effective-permissions", Required = false, HelpText = "Display effective permissions for all entities, including inherited permissions. Entities are listed in alphabetical order.")]
         public bool ShowEffectivePermissions { get; }

@@ -165,7 +165,7 @@ public class EmbeddingService : IEmbeddingService
             activity?.SetEmbeddingActivityError(ex);
             EmbeddingTelemetryHelper.TrackError(_providerName, ex.GetType().Name);
 
-            return new EmbeddingResult(false, null, ex.Message);
+            return new EmbeddingResult(false, null, "Failed to generate embedding.");
         }
     }
 
@@ -224,7 +224,7 @@ public class EmbeddingService : IEmbeddingService
             activity?.SetEmbeddingActivityError(ex);
             EmbeddingTelemetryHelper.TrackError(_providerName, ex.GetType().Name);
 
-            return new EmbeddingBatchResult(false, null, ex.Message);
+            return new EmbeddingBatchResult(false, null, "Failed to generate embeddings.");
         }
     }
 
@@ -293,6 +293,7 @@ public class EmbeddingService : IEmbeddingService
         // If all texts were cached, return immediately
         if (uncachedIndices.Count == 0)
         {
+            _logger.LogDebug("All {Count} texts were cache hits, returning cached embeddings", texts.Length);
             return results!;
         }
 
@@ -417,7 +418,7 @@ public class EmbeddingService : IEmbeddingService
             _logger.LogError("Embedding request failed with status {StatusCode}: {ErrorContent}",
                 response.StatusCode, errorContent);
             throw new HttpRequestException(
-                $"Embedding request failed with status code {response.StatusCode}: {errorContent}");
+                $"Embedding request failed with status code {(int)response.StatusCode}.");
         }
 
         string responseJson = await response.Content.ReadAsStringAsync(cancellationToken);

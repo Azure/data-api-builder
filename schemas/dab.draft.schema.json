@@ -24,7 +24,8 @@
             "postgresql",
             "mysql",
             "cosmosdb_nosql",
-            "cosmosdb_postgresql"
+            "cosmosdb_postgresql",
+            "dwsql"
           ]
         },
         "connection-string": {
@@ -124,7 +125,7 @@
           "if": {
             "properties": {
               "database-type": {
-                "const": "mssql"
+                "enum": ["mssql", "dwsql"]
               }
             }
           },

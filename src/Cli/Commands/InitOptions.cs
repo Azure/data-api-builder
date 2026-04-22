@@ -72,7 +72,7 @@ namespace Cli.Commands
             McpAggregateRecordsQueryTimeout = mcpAggregateRecordsQueryTimeout;
         }
 
-        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
+        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql, dwsql")]
         public DatabaseType DatabaseType { get; }
 
         [Option("connection-string", Required = false, HelpText = "(Default: '') Connection details to connect to the database.")]
@@ -136,7 +136,7 @@ namespace Cli.Commands
         public CliBool McpEnabled { get; }
 
         // When true, DAB rejects extraneous/unmapped fields in the REST request body (strict mode). When false, extraneous fields are allowed and ignored.
-        [Option("rest.request-body-strict", Required = false, HelpText = "When true, rejects extraneous/unmapped fields in the REST request body. When false, allows and ignores them.")]
+        [Option("rest.request-body-strict", Required = false, HelpText = "(Default: true) When true, rejects extraneous/unmapped fields in the REST request body. When false, allows and ignores them.")]
         public CliBool RestRequestBodyStrict { get; }
 
         [Option("graphql.multiple-mutations.create.enabled", Required = false, HelpText = "(Default: false) Enables multiple create operation for GraphQL. Supported values: true, false.")]

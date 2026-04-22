@@ -184,6 +184,12 @@ public class EmbeddingService : IEmbeddingService
             return new EmbeddingBatchResult(false, null, "Texts array cannot be null or empty.");
         }
 
+        if (texts.Any(string.IsNullOrEmpty))
+        {
+            _logger.LogWarning("TryEmbedBatchAsync called with one or more null or empty texts");
+            return new EmbeddingBatchResult(false, null, "Texts array must not contain null or empty entries.");
+        }
+
         if (texts.Length > MAX_BATCH_TEXT_COUNT)
         {
             _logger.LogWarning(
@@ -256,6 +262,11 @@ public class EmbeddingService : IEmbeddingService
         if (texts is null || texts.Length == 0)
         {
             throw new ArgumentException("Texts cannot be null or empty.", nameof(texts));
+        }
+
+        if (texts.Any(string.IsNullOrEmpty))
+        {
+            throw new ArgumentException("Texts array must not contain null or empty entries.", nameof(texts));
         }
 
         if (texts.Length > MAX_BATCH_TEXT_COUNT)

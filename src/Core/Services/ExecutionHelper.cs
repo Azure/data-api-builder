@@ -429,7 +429,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     if (DateTimeOffset.TryParse(
                         s,
                         CultureInfo.InvariantCulture,
-                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                        DateTimeStyles.AssumeUniversal,
                         out DateTimeOffset parsedDto))
                     {
                         return parsedDto.UtcDateTime;

@@ -309,7 +309,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 
             if (parseError is not null)
             {
-                Console.Error.WriteLine(parseError);
+                SendLogToBufferOrLogger(LogLevel.Error, parseError);
                 IsParseErrorEmitted = true;
             }
 

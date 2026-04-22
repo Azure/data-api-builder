@@ -83,7 +83,11 @@ public class EmbeddingController : ControllerBase
         if (_embeddingService is null || !_embeddingService.IsEnabled)
         {
             _logger.LogWarning("Embedding endpoint called but embedding service is not available or disabled.");
-            return StatusCode((int)HttpStatusCode.ServiceUnavailable, "Embedding service is not available.");
+            Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+            return RestController.ErrorResponse(
+                "UnexpectedError",
+                "Embedding service is not available.",
+                HttpStatusCode.ServiceUnavailable);
         }
 
         // Check authorization
@@ -93,14 +97,19 @@ public class EmbeddingController : ControllerBase
         if (!endpointOptions.IsRoleAllowed(clientRole, isDevelopmentMode))
         {
             _logger.LogWarning("Embedding endpoint access denied for role: {Role}", clientRole);
-            return StatusCode((int)HttpStatusCode.Forbidden, "Access denied. Role not authorized.");
+            Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            return RestController.ErrorResponse(
+                "AuthorizationCheckFailed",
+                "Access denied.",
+                HttpStatusCode.Forbidden);
         }
 
         // Parse query parameters for chunking options
         EmbeddingsChunkingOptions? queryChunkingOptions = ParseChunkingOptionsFromQuery(out string? paramValidationError);
         if (paramValidationError is not null)
         {
-            return BadRequest(paramValidationError);
+            Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return RestController.ErrorResponse("BadRequest", paramValidationError, HttpStatusCode.BadRequest);
         }
 
         // Read request body
@@ -113,12 +122,14 @@ public class EmbeddingController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to read request body for embedding.");
-            return BadRequest("Failed to read request body.");
+            Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return RestController.ErrorResponse("BadRequest", "Failed to read request body.", HttpStatusCode.BadRequest);
         }
 
         if (string.IsNullOrWhiteSpace(requestBody))
         {
-            return BadRequest("Request body cannot be empty.");
+            Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return RestController.ErrorResponse("BadRequest", "Request body cannot be empty.", HttpStatusCode.BadRequest);
         }
 
         CancellationToken cancellationToken = HttpContext.RequestAborted;
@@ -138,7 +149,8 @@ public class EmbeddingController : ControllerBase
                 else if (documents is not null && documents.Length == 0)
                 {
                     // Empty document array
-                    return BadRequest("Document array cannot be empty.");
+                    Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return RestController.ErrorResponse("BadRequest", "Document array cannot be empty.", HttpStatusCode.BadRequest);
                 }
             }
             catch (JsonException)
@@ -157,13 +169,15 @@ public class EmbeddingController : ControllerBase
                 }
                 else
                 {
-                    return BadRequest("JSON request body must be a non-null string or a document array.");
+                    Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return RestController.ErrorResponse("BadRequest", "JSON request body must be a non-null string or a document array.", HttpStatusCode.BadRequest);
                 }
             }
             catch (JsonException)
             {
                 // Body is application/json but neither an array nor a string (e.g. {"foo":"bar"})
-                return BadRequest("Request body with content type 'application/json' must be a JSON string or a document array.");
+                Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return RestController.ErrorResponse("BadRequest", "Request body with content type 'application/json' must be a JSON string or a document array.", HttpStatusCode.BadRequest);
             }
         }
 
@@ -187,12 +201,14 @@ public class EmbeddingController : ControllerBase
         {
             if (string.IsNullOrEmpty(doc.Key))
             {
-                return BadRequest("Each document must have a non-empty key.");
+                Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return RestController.ErrorResponse("BadRequest", "Each document must have a non-empty key.", HttpStatusCode.BadRequest);
             }
 
             if (string.IsNullOrEmpty(doc.Text))
             {
-                return BadRequest($"Document with key has empty text.");
+                Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return RestController.ErrorResponse("BadRequest", "Document with key has empty text.", HttpStatusCode.BadRequest);
             }
 
             try
@@ -209,9 +225,11 @@ public class EmbeddingController : ControllerBase
                 if (!batchResult.Success || batchResult.Embeddings is null)
                 {
                     _logger.LogError("Failed to embed document chunks: {Error}", batchResult.ErrorMessage);
-                    return StatusCode(
-                        (int)HttpStatusCode.InternalServerError,
-                        batchResult.ErrorMessage ?? "Failed to generate embeddings.");
+                    Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    return RestController.ErrorResponse(
+                        "UnexpectedError",
+                        "Failed to generate embeddings.",
+                        HttpStatusCode.InternalServerError);
                 }
 
                 responses.Add(new EmbedDocumentResponse(doc.Key, batchResult.Embeddings));
@@ -219,9 +237,11 @@ public class EmbeddingController : ControllerBase
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing document.");
-                return StatusCode(
-                    (int)HttpStatusCode.InternalServerError,
-                    $"Error processing document: {ex.Message}");
+                Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                return RestController.ErrorResponse(
+                    "UnexpectedError",
+                    "Failed to generate embeddings.",
+                    HttpStatusCode.InternalServerError);
             }
         }
 
@@ -260,7 +280,8 @@ public class EmbeddingController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            return BadRequest("Request body cannot be empty.");
+            Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return RestController.ErrorResponse("BadRequest", "Request body cannot be empty.", HttpStatusCode.BadRequest);
         }
 
         // Generate embedding
@@ -269,13 +290,21 @@ public class EmbeddingController : ControllerBase
         if (!result.Success)
         {
             _logger.LogError("Embedding request failed: {Error}", result.ErrorMessage);
-            return StatusCode((int)HttpStatusCode.InternalServerError, result.ErrorMessage ?? "Failed to generate embedding.");
+            Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            return RestController.ErrorResponse(
+                "UnexpectedError",
+                "Failed to generate embedding.",
+                HttpStatusCode.InternalServerError);
         }
 
         if (result.Embedding is null || result.Embedding.Length == 0)
         {
             _logger.LogError("Embedding request returned empty result.");
-            return StatusCode((int)HttpStatusCode.InternalServerError, "Failed to generate embedding.");
+            Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            return RestController.ErrorResponse(
+                "UnexpectedError",
+                "Failed to generate embedding.",
+                HttpStatusCode.InternalServerError);
         }
 
         // Return embedding as plain text (comma-separated floats) when explicitly requested via Accept header.

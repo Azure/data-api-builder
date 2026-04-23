@@ -207,7 +207,9 @@ public class EmbeddingControllerTests
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
         JsonResult jsonResult = (JsonResult)result;
-        Assert.AreEqual((int)HttpStatusCode.ServiceUnavailable, jsonResult.StatusCode);
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.ServiceUnavailable, (int)value!.error.status);
     }
 
     /// <summary>
@@ -231,7 +233,10 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.ServiceUnavailable, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.ServiceUnavailable, (int)value!.error.status);
     }
 
     #endregion
@@ -282,7 +287,10 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.Forbidden, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, (int)value!.error.status);
     }
 
     /// <summary>
@@ -304,7 +312,10 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.Forbidden, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, (int)value!.error.status);
     }
 
     /// <summary>
@@ -465,7 +476,9 @@ public class EmbeddingControllerTests
         // Assert — controller must reject the body with a descriptive message
         Assert.IsInstanceOfType(result, typeof(JsonResult));
         JsonResult jsonResult = (JsonResult)result;
-        Assert.AreEqual((int)HttpStatusCode.BadRequest, jsonResult.StatusCode);
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, (int)value!.error.status);
         Assert.IsTrue(
             jsonResult.Value?.ToString()?.Contains("application/json") == true,
             "Error message should mention 'application/json'.");
@@ -497,7 +510,10 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.BadRequest, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, (int)value!.error.status);
     }
 
     /// <summary>
@@ -517,7 +533,10 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.BadRequest, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, (int)value!.error.status);
     }
 
     #endregion
@@ -546,7 +565,9 @@ public class EmbeddingControllerTests
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
         JsonResult jsonResult = (JsonResult)result;
-        Assert.AreEqual((int)HttpStatusCode.InternalServerError, jsonResult.StatusCode);
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.InternalServerError, (int)value!.error.status);
         // Error message must NOT expose internal provider details
         Assert.IsFalse(
             jsonResult.Value?.ToString()?.Contains("Provider returned an error.") == true,
@@ -574,7 +595,10 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.InternalServerError, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.InternalServerError, (int)value!.error.status);
     }
 
     /// <summary>
@@ -598,7 +622,10 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.InternalServerError, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.InternalServerError, (int)value!.error.status);
     }
 
     /// <summary>
@@ -623,7 +650,9 @@ public class EmbeddingControllerTests
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
         JsonResult jsonResult = (JsonResult)result;
-        Assert.AreEqual((int)HttpStatusCode.InternalServerError, jsonResult.StatusCode);
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.InternalServerError, (int)value!.error.status);
         // The generic error message should be returned, not internal details
         Assert.IsTrue(jsonResult.Value?.ToString()?.Contains("Failed to generate embedding.") == true);
     }
@@ -799,7 +828,10 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.Forbidden, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, (int)value!.error.status);
     }
 
     /// <summary>
@@ -1269,7 +1301,10 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.BadRequest, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, (int)value!.error.status);
     }
 
     /// <summary>
@@ -1301,7 +1336,10 @@ public class EmbeddingControllerTests
 
         // Assert - document without key should be rejected with 400
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.BadRequest, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, (int)value!.error.status);
     }
 
     /// <summary>
@@ -1328,7 +1366,10 @@ public class EmbeddingControllerTests
 
         // Assert - empty text should result in a 400 error
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.BadRequest, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, (int)value!.error.status);
     }
 
     /// <summary>
@@ -1428,7 +1469,10 @@ public class EmbeddingControllerTests
 
         // Assert - should return error when any embedding fails
         Assert.IsInstanceOfType(result, typeof(JsonResult));
-        Assert.AreEqual((int)HttpStatusCode.InternalServerError, ((JsonResult)result).StatusCode);
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.InternalServerError, (int)value!.error.status);
     }
 
     #endregion
@@ -1450,7 +1494,9 @@ public class EmbeddingControllerTests
 
         Assert.IsInstanceOfType(result, typeof(JsonResult));
         JsonResult bad = (JsonResult)result;
-        Assert.AreEqual((int)HttpStatusCode.BadRequest, bad.StatusCode);
+        dynamic? value = bad.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, (int)value!.error.status);
         Assert.IsTrue(bad.Value?.ToString()?.Contains("$chunking.enabled") == true);
     }
 
@@ -1469,7 +1515,9 @@ public class EmbeddingControllerTests
 
         Assert.IsInstanceOfType(result, typeof(JsonResult));
         JsonResult bad = (JsonResult)result;
-        Assert.AreEqual((int)HttpStatusCode.BadRequest, bad.StatusCode);
+        dynamic? value = bad.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, (int)value!.error.status);
         Assert.IsTrue(bad.Value?.ToString()?.Contains("$chunking.size-chars") == true);
     }
 
@@ -1488,7 +1536,9 @@ public class EmbeddingControllerTests
 
         Assert.IsInstanceOfType(result, typeof(JsonResult));
         JsonResult bad = (JsonResult)result;
-        Assert.AreEqual((int)HttpStatusCode.BadRequest, bad.StatusCode);
+        dynamic? value = bad.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, (int)value!.error.status);
         Assert.IsTrue(bad.Value?.ToString()?.Contains("$chunking.overlap-chars") == true);
     }
 
@@ -1906,3 +1956,4 @@ public class EmbeddingControllerTests
 
     #endregion
 }
+

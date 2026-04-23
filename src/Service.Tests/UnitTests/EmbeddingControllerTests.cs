@@ -205,9 +205,9 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ObjectResult));
-        ObjectResult objectResult = (ObjectResult)result;
-        Assert.AreEqual((int)HttpStatusCode.ServiceUnavailable, objectResult.StatusCode);
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.AreEqual((int)HttpStatusCode.ServiceUnavailable, jsonResult.StatusCode);
     }
 
     /// <summary>
@@ -230,9 +230,8 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ObjectResult));
-        ObjectResult objectResult = (ObjectResult)result;
-        Assert.AreEqual((int)HttpStatusCode.ServiceUnavailable, objectResult.StatusCode);
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.ServiceUnavailable, ((JsonResult)result).StatusCode);
     }
 
     #endregion
@@ -282,9 +281,8 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ObjectResult));
-        ObjectResult objectResult = (ObjectResult)result;
-        Assert.AreEqual((int)HttpStatusCode.Forbidden, objectResult.StatusCode);
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, ((JsonResult)result).StatusCode);
     }
 
     /// <summary>
@@ -305,9 +303,8 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ObjectResult));
-        ObjectResult objectResult = (ObjectResult)result;
-        Assert.AreEqual((int)HttpStatusCode.Forbidden, objectResult.StatusCode);
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, ((JsonResult)result).StatusCode);
     }
 
     /// <summary>
@@ -466,10 +463,11 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert — controller must reject the body with a descriptive message
-        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
-        BadRequestObjectResult badRequest = (BadRequestObjectResult)result;
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, jsonResult.StatusCode);
         Assert.IsTrue(
-            badRequest.Value?.ToString()?.Contains("application/json") == true,
+            jsonResult.Value?.ToString()?.Contains("application/json") == true,
             "Error message should mention 'application/json'.");
 
         // Embedding service must NOT be called
@@ -498,7 +496,8 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, ((JsonResult)result).StatusCode);
     }
 
     /// <summary>
@@ -517,7 +516,8 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, ((JsonResult)result).StatusCode);
     }
 
     #endregion
@@ -544,10 +544,13 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ObjectResult));
-        ObjectResult objectResult = (ObjectResult)result;
-        Assert.AreEqual((int)HttpStatusCode.InternalServerError, objectResult.StatusCode);
-        Assert.IsTrue(objectResult.Value?.ToString()?.Contains("Provider returned an error."));
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.AreEqual((int)HttpStatusCode.InternalServerError, jsonResult.StatusCode);
+        // Error message must NOT expose internal provider details
+        Assert.IsFalse(
+            jsonResult.Value?.ToString()?.Contains("Provider returned an error.") == true,
+            "Internal error details must not be exposed to the client.");
     }
 
     /// <summary>
@@ -570,9 +573,8 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ObjectResult));
-        ObjectResult objectResult = (ObjectResult)result;
-        Assert.AreEqual((int)HttpStatusCode.InternalServerError, objectResult.StatusCode);
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.InternalServerError, ((JsonResult)result).StatusCode);
     }
 
     /// <summary>
@@ -595,9 +597,8 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ObjectResult));
-        ObjectResult objectResult = (ObjectResult)result;
-        Assert.AreEqual((int)HttpStatusCode.InternalServerError, objectResult.StatusCode);
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.InternalServerError, ((JsonResult)result).StatusCode);
     }
 
     /// <summary>
@@ -620,10 +621,11 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ObjectResult));
-        ObjectResult objectResult = (ObjectResult)result;
-        Assert.AreEqual((int)HttpStatusCode.InternalServerError, objectResult.StatusCode);
-        Assert.AreEqual("Failed to generate embedding.", objectResult.Value?.ToString());
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.AreEqual((int)HttpStatusCode.InternalServerError, jsonResult.StatusCode);
+        // The generic error message should be returned, not internal details
+        Assert.IsTrue(jsonResult.Value?.ToString()?.Contains("Failed to generate embedding.") == true);
     }
 
     #endregion
@@ -796,9 +798,8 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ObjectResult));
-        ObjectResult objectResult = (ObjectResult)result;
-        Assert.AreEqual((int)HttpStatusCode.Forbidden, objectResult.StatusCode);
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, ((JsonResult)result).StatusCode);
     }
 
     /// <summary>
@@ -1267,7 +1268,8 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, ((JsonResult)result).StatusCode);
     }
 
     /// <summary>
@@ -1297,13 +1299,9 @@ public class EmbeddingControllerTests
         // Act
         IActionResult result = await controller.PostAsync();
 
-        // Assert - document without key should be handled gracefully
-        // Check that result is either BadRequest or that the key is null/empty in response
-        Assert.IsTrue(
-            result is BadRequestObjectResult || 
-            (result is OkObjectResult okResult && 
-             okResult.Value is EmbedDocumentResponse[] responses &&
-             string.IsNullOrEmpty(responses[0].Key)));
+        // Assert - document without key should be rejected with 400
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, ((JsonResult)result).StatusCode);
     }
 
     /// <summary>
@@ -1328,10 +1326,9 @@ public class EmbeddingControllerTests
         // Act
         IActionResult result = await controller.PostAsync();
 
-        // Assert - empty text should result in error
-        Assert.IsTrue(
-            result is BadRequestObjectResult || 
-            result is ObjectResult errorResult && errorResult.StatusCode == 500);
+        // Assert - empty text should result in a 400 error
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, ((JsonResult)result).StatusCode);
     }
 
     /// <summary>
@@ -1430,9 +1427,8 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync();
 
         // Assert - should return error when any embedding fails
-        Assert.IsInstanceOfType(result, typeof(ObjectResult));
-        ObjectResult objectResult = (ObjectResult)result;
-        Assert.AreEqual((int)HttpStatusCode.InternalServerError, objectResult.StatusCode);
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        Assert.AreEqual((int)HttpStatusCode.InternalServerError, ((JsonResult)result).StatusCode);
     }
 
     #endregion
@@ -1452,8 +1448,9 @@ public class EmbeddingControllerTests
 
         IActionResult result = await controller.PostAsync();
 
-        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
-        BadRequestObjectResult bad = (BadRequestObjectResult)result;
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult bad = (JsonResult)result;
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, bad.StatusCode);
         Assert.IsTrue(bad.Value?.ToString()?.Contains("$chunking.enabled") == true);
     }
 
@@ -1470,8 +1467,9 @@ public class EmbeddingControllerTests
 
         IActionResult result = await controller.PostAsync();
 
-        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
-        BadRequestObjectResult bad = (BadRequestObjectResult)result;
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult bad = (JsonResult)result;
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, bad.StatusCode);
         Assert.IsTrue(bad.Value?.ToString()?.Contains("$chunking.size-chars") == true);
     }
 
@@ -1488,8 +1486,9 @@ public class EmbeddingControllerTests
 
         IActionResult result = await controller.PostAsync();
 
-        Assert.IsInstanceOfType(result, typeof(BadRequestObjectResult));
-        BadRequestObjectResult bad = (BadRequestObjectResult)result;
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult bad = (JsonResult)result;
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, bad.StatusCode);
         Assert.IsTrue(bad.Value?.ToString()?.Contains("$chunking.overlap-chars") == true);
     }
 
@@ -1562,6 +1561,193 @@ public class EmbeddingControllerTests
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
         OkObjectResult okResult = (OkObjectResult)result;
         Assert.IsInstanceOfType(okResult.Value, typeof(EmbeddingResponse));
+    }
+
+    #endregion
+
+    #region Accept: text/plain Consistency with Chunking Tests
+
+    /// <summary>
+    /// Single text + chunking enabled + Accept: text/plain must return ContentResult (not JSON),
+    /// with one line per chunk where each line is comma-separated floats.
+    /// This validates that the Accept header is honoured consistently regardless of whether
+    /// chunking routes through the document-array path.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_SingleText_ChunkingEnabled_AcceptTextPlain_ReturnsPlainTextLines()
+    {
+        // Arrange — a 1500-char text with 1000-char chunks and no overlap produces exactly 2 chunks
+        float[] embedding = new[] { 0.1f, 0.2f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
+
+        EmbeddingController controller = CreateControllerWithChunking(
+            requestBody: new string('X', 1500),
+            acceptHeader: "text/plain");
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert — ContentResult, not OkObjectResult
+        Assert.IsInstanceOfType(result, typeof(ContentResult));
+        ContentResult contentResult = (ContentResult)result;
+        Assert.AreEqual("text/plain", contentResult.ContentType);
+        Assert.IsNotNull(contentResult.Content);
+
+        // Two chunks → two newline-separated lines
+        string[] lines = contentResult.Content!.Split('\n');
+        Assert.AreEqual(2, lines.Length, "Each chunk produces one line.");
+        foreach (string line in lines)
+        {
+            Assert.IsTrue(line.Contains(','), "Each line must contain comma-separated floats.");
+        }
+    }
+
+    /// <summary>
+    /// Validates the exact text/plain format for a chunked single-text request:
+    /// line N contains the comma-separated floats of chunk N's embedding vector.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_SingleText_ChunkingEnabled_AcceptTextPlain_ExactLineFormat()
+    {
+        // Arrange — deterministic embeddings: chunk 0 → [0.1, 0.2, 0.3], chunk 1 → [0.4, 0.5, 0.6]
+        float[] chunkEmbedding1 = new[] { 0.1f, 0.2f, 0.3f };
+        float[] chunkEmbedding2 = new[] { 0.4f, 0.5f, 0.6f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedBatchAsync(
+                It.Is<string[]>(t => t.Length == 2),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingBatchResult(true, new[] { chunkEmbedding1, chunkEmbedding2 }));
+
+        // 1500 chars, 1000-char chunk size, 0 overlap → exactly 2 chunks sent as one batch
+        EmbeddingController controller = CreateControllerWithChunking(
+            requestBody: new string('X', 1500),
+            acceptHeader: "text/plain");
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(ContentResult));
+        ContentResult contentResult = (ContentResult)result;
+        string[] lines = contentResult.Content!.Split('\n');
+        Assert.AreEqual(2, lines.Length);
+        Assert.AreEqual("0.1,0.2,0.3", lines[0]);
+        Assert.AreEqual("0.4,0.5,0.6", lines[1]);
+    }
+
+    /// <summary>
+    /// Single text + chunking enabled + no Accept header must return JSON (OkObjectResult),
+    /// preserving the default JSON behaviour even when chunking is active.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_SingleText_ChunkingEnabled_NoAcceptHeader_ReturnsJson()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
+
+        EmbeddingController controller = CreateControllerWithChunking(
+            requestBody: new string('X', 1500),
+            acceptHeader: null);
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert — no Accept header → JSON (EmbedDocumentResponse[])
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        Assert.IsInstanceOfType(okResult.Value, typeof(EmbedDocumentResponse[]));
+    }
+
+    /// <summary>
+    /// Single text + chunking enabled + Accept: application/json must return JSON,
+    /// consistent with the non-chunked path where JSON wins over text/plain.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_SingleText_ChunkingEnabled_AcceptJson_ReturnsJson()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
+
+        EmbeddingController controller = CreateControllerWithChunking(
+            requestBody: new string('X', 1500),
+            acceptHeader: "application/json");
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        Assert.IsInstanceOfType(okResult.Value, typeof(EmbedDocumentResponse[]));
+    }
+
+    /// <summary>
+    /// Single text + chunking enabled + Accept: text/plain, application/json → JSON wins,
+    /// matching the same precedence rule applied in the non-chunked single-text path.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_SingleText_ChunkingEnabled_AcceptBothJsonAndTextPlain_JsonWins()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        _mockEmbeddingService
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string[] texts, CancellationToken _) =>
+                new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
+
+        EmbeddingController controller = CreateControllerWithChunking(
+            requestBody: new string('X', 1500),
+            acceptHeader: "text/plain, application/json");
+
+        // Act
+        IActionResult result = await controller.PostAsync();
+
+        // Assert — JSON takes precedence
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        Assert.IsInstanceOfType(okResult.Value, typeof(EmbedDocumentResponse[]));
+    }
+
+    /// <summary>
+    /// Helper: creates a controller wired with chunking enabled (1000-char chunks, no overlap)
+    /// and the class-level mock embedding service.
+    /// </summary>
+    private EmbeddingController CreateControllerWithChunking(
+        string requestBody,
+        string? acceptHeader,
+        int sizeChars = 1000,
+        int overlapChars = 0)
+    {
+        EmbeddingsOptions embeddingsOptions = new(
+            Provider: EmbeddingProviderType.OpenAI,
+            BaseUrl: "https://api.openai.com",
+            ApiKey: "test-key",
+            Enabled: true,
+            Endpoint: new EmbeddingsEndpointOptions(enabled: true),
+            Chunking: new EmbeddingsChunkingOptions(Enabled: true, SizeChars: sizeChars, OverlapChars: overlapChars));
+
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions,
+            hostMode: HostMode.Development);
+
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object);
+        controller.ControllerContext = CreateControllerContext(
+            "/embed",
+            requestBody,
+            contentType: "text/plain",
+            acceptHeader: acceptHeader);
+        return controller;
     }
 
     #endregion
@@ -1675,7 +1861,7 @@ public class EmbeddingControllerTests
         string? acceptHeader = null)
     {
         DefaultHttpContext httpContext = new();
-        
+
         // Parse path and query string
         int queryIndex = requestPath.IndexOf('?');
         if (queryIndex >= 0)
@@ -1687,7 +1873,7 @@ public class EmbeddingControllerTests
         {
             httpContext.Request.Path = requestPath;
         }
-        
+
         httpContext.Request.Method = "POST";
         httpContext.Request.ContentType = contentType;
 

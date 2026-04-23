@@ -304,11 +304,9 @@ public class EmbeddingServiceTests
         Assert.IsFalse(result.Success);
         Assert.IsNull(result.Embedding);
         Assert.IsNotNull(result.ErrorMessage);
-        // The error message contains the StatusCode enum name (e.g., "BadRequest") and the error body
-        Assert.IsTrue(result.ErrorMessage.Contains(statusCode.ToString()),
-            $"Error message should contain status code name '{statusCode}'. Actual: {result.ErrorMessage}");
-        Assert.IsTrue(result.ErrorMessage.Contains(errorBody),
-            $"Error message should contain error body '{errorBody}'. Actual: {result.ErrorMessage}");
+        // The error message is a generic message when the service encounters any error
+        Assert.AreEqual("Failed to generate embedding.", result.ErrorMessage,
+            $"Error message should be the generic failure message. Actual: {result.ErrorMessage}");
     }
 
     /// <summary>

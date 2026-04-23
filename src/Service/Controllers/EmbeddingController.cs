@@ -267,7 +267,19 @@ public class EmbeddingController : ControllerBase
             [
                 new EmbedDocumentRequest { Key = "input", Text = text }
             ];
-            return await ProcessDocumentArrayAsync(documents, embeddingsOptions, effectiveChunking, cancellationToken);
+            IActionResult result = await ProcessDocumentArrayAsync(documents, embeddingsOptions, effectiveChunking, cancellationToken);
+
+            // Apply text/plain format when requested, consistent with the non-chunked path.
+            // Each chunk's embedding is output as one line of comma-separated floats.
+            if (ClientAcceptsTextPlain() && result is OkObjectResult okResult && okResult.Value is EmbedDocumentResponse[] docResponses)
+            {
+                IEnumerable<string> lines = docResponses
+                    .SelectMany(d => d.Data)
+                    .Select(embedding => string.Join(",", embedding.Select(f => f.ToString("G", CultureInfo.InvariantCulture))));
+                return Content(string.Join("\n", lines), MediaTypeNames.Text.Plain);
+            }
+
+            return result;
         }
 
         return await ProcessSingleTextAsync(text, cancellationToken);

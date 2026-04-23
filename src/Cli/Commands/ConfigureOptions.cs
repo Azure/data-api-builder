@@ -178,7 +178,7 @@ namespace Cli.Commands
             ShowEffectivePermissions = showEffectivePermissions;
         }
 
-        [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: mssql, postgresql, cosmosdb_nosql, cosmosdb_postgresql, mysql, dwsql.")]
+        [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: mssql, postgresql, cosmosdb_nosql, mysql, dwsql.")]
         public string? DataSourceDatabaseType { get; }
 
         [Option("data-source.connection-string", Required = false, HelpText = "Connection string for the data source.")]
@@ -217,7 +217,7 @@ namespace Cli.Commands
         [Option("data-source-files", Required = false, Separator = ',', HelpText = "Comma-separated list of additional runtime config files for multi-database scenarios.")]
         public IEnumerable<string>? DataSourceFiles { get; }
 
-        [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of a nested query. Allowed values: 1..2147483647, or -1 to remove a previously set limit. Default: no limit.")]
+        [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of a nested query. Allowed values: 1-2147483647, or -1 to remove a previously set limit. Default: -1.")]
         public int? DepthLimit { get; }
 
         [Option("runtime.graphql.enabled", Required = false, HelpText = "Enable DAB's GraphQL endpoint. Default: true (boolean).")]

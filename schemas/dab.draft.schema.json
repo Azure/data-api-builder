@@ -218,7 +218,7 @@
             "request-body-strict": {
               "$ref": "#/$defs/boolean-or-string",
               "description": "Does not allow extraneous fields in request body when set to true.",
-              "default": true
+              "default": false
             }
           }
         },

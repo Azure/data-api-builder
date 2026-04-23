@@ -86,6 +86,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await QueryTypeColumnFilterAndOrderBy(type, "in", sqlValue, gqlValue, "IN");
         }
 
+        /// <summary>
+        /// PostgreSQL datetime filter tests with timezone offsets.
+        /// Verifies that GraphQL datetime arguments are normalized to UTC before filtering.
+        /// </summary>
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08T05:23:54-05:00\"", "=",
+            DisplayName = "DateTime filter eq converts -05:00 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "gte", "'1999-01-08 10:23:54'", "\"1999-01-08T05:23:54-05:00\"", ">=",
+            DisplayName = "DateTime filter gte converts -05:00 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08T15:53:54+05:30\"", "=",
+            DisplayName = "DateTime filter eq converts +05:30 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08T10:23:54Z\"", "=",
+            DisplayName = "DateTime filter eq preserves UTC input.")]
+        [DataTestMethod]
+        public async Task PGSQL_real_graphql_datetime_filter_offset_expectedValues(
+            string type,
+            string filterOperator,
+            string sqlValue,
+            string gqlValue,
+            string queryOperator)
+        {
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
+        }
+
         protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)
         {
             return MakeQueryOnTypeTable(queryFields, filterValue: id.ToString(), filterField: "id");

@@ -47,8 +47,10 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             {
                 CurrentLogLevel = runtimeConfig.GetConfiguredLogLevel();
 
-                // Track if config explicitly set a log level (not just using defaults)
-                IsConfigOverridden = !runtimeConfig.IsLogLevelNull();
+                // Track if config explicitly set a non-null log level value.
+                // This ensures MCP logging/setLevel is only blocked when config
+                // actually pins a log level, not just when the dictionary exists.
+                IsConfigOverridden = runtimeConfig.HasExplicitLogLevel();
             }
         }
 

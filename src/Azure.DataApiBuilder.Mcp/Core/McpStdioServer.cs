@@ -47,8 +47,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task RunAsync(CancellationToken cancellationToken)
         {
-            Console.Error.WriteLine("[MCP DEBUG] MCP stdio server started.");
-
             // Use UTF-8 WITHOUT BOM
             UTF8Encoding utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
@@ -78,15 +76,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 {
                     doc = JsonDocument.Parse(line);
                 }
-                catch (JsonException jsonEx)
+                catch (JsonException)
                 {
-                    Console.Error.WriteLine($"[MCP DEBUG] JSON parse error: {jsonEx.Message}");
                     WriteError(id: null, code: McpStdioJsonRpcErrorCodes.PARSE_ERROR, message: "Parse error");
                     continue;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Console.Error.WriteLine($"[MCP DEBUG] Unexpected error parsing request: {ex.Message}");
                     WriteError(id: null, code: McpStdioJsonRpcErrorCodes.INTERNAL_ERROR, message: "Internal error");
                     continue;
                 }
@@ -176,10 +172,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
                     instructions = runtimeConfig.Runtime?.Mcp?.Description;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    // Log to stderr for diagnostics and rethrow to avoid masking configuration errors
-                    Console.Error.WriteLine($"[MCP WARNING] Failed to retrieve MCP description from config: {ex.Message}");
+                    // Rethrow to avoid masking configuration errors
                     throw;
                 }
             }
@@ -269,30 +264,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
             if (logLevelController is null)
             {
                 // Log level controller not available - still accept request per MCP spec
-                Console.Error.WriteLine("[MCP DEBUG] ILogLevelController not available, logging/setLevel ignored.");
                 WriteResult(id, new { });
                 return;
             }
 
             // Attempt to update the log level
             // If CLI or Config overrode, this returns false but we still return success to the client
-            bool changed = logLevelController.UpdateFromMcp(level);
-            if (changed)
-            {
-                Console.Error.WriteLine($"[MCP DEBUG] Log level changed to: {level}");
-            }
-            else if (logLevelController.IsCliOverridden)
-            {
-                Console.Error.WriteLine($"[MCP DEBUG] Log level not changed (CLI override active), requested: {level}");
-            }
-            else if (logLevelController.IsConfigOverridden)
-            {
-                Console.Error.WriteLine($"[MCP DEBUG] Log level not changed (Config override active), requested: {level}");
-            }
-            else
-            {
-                Console.Error.WriteLine($"[MCP DEBUG] Log level not changed, invalid level: {level}");
-            }
+            logLevelController.UpdateFromMcp(level);
 
             // Always return success (empty result object) per MCP spec
             WriteResult(id, new { });
@@ -329,14 +307,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             if (string.IsNullOrWhiteSpace(toolName))
             {
-                Console.Error.WriteLine("[MCP DEBUG] callTool → missing tool name.");
                 WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing tool name");
                 return;
             }
 
             if (!_toolRegistry.TryGetTool(toolName!, out IMcpTool? tool) || tool is null)
             {
-                Console.Error.WriteLine($"[MCP DEBUG] callTool → tool not found: {toolName}");
                 WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, $"Tool not found: {toolName}");
                 return;
             }
@@ -346,13 +322,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             {
                 if (@params.TryGetProperty("arguments", out JsonElement argsEl) && argsEl.ValueKind == JsonValueKind.Object)
                 {
-                    string rawArgs = argsEl.GetRawText();
-                    Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: {rawArgs}");
-                    argsDoc = JsonDocument.Parse(rawArgs);
-                }
-                else
-                {
-                    Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: <none>");
+                    argsDoc = JsonDocument.Parse(argsEl.GetRawText());
                 }
 
                 // Execute the tool with telemetry.

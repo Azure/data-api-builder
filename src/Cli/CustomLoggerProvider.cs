@@ -71,9 +71,16 @@ public class CustomLoggerProvider : ILoggerProvider
 
         /// <summary>
         /// Creates Log message by setting console message color based on LogLevel.
+        /// Skips logging when in MCP stdio mode to keep stdout clean for JSON-RPC protocol.
         /// </summary>
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
+            // In MCP stdio mode, suppress all CLI logging to keep stdout clean for JSON-RPC.
+            if (Cli.Utils.IsMcpStdioMode)
+            {
+                return;
+            }
+
             if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
             {
                 return;

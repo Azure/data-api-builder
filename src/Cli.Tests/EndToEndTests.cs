@@ -880,6 +880,7 @@ public class EndToEndTests
         Assert.IsNotNull(engineStdOut);
         Assert.IsFalse(engineStdOut.Contains("info"), $"Expected no 'info' outputs at LogLevel {logLevelOption}, but got: {engineStdOut}");
 
+        // Reset the LoggerFactoryForCli to avoid impacting other tests.
         Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
     }
 
@@ -911,6 +912,7 @@ public class EndToEndTests
         string engineStdOut = consoleOutput.ToString();
         Assert.IsTrue(string.IsNullOrEmpty(engineStdOut), $"Expected no output at LogLevel {logLevelOption}, but got: {engineStdOut}");
 
+        // Reset the LoggerFactoryForCli to avoid impacting other tests.
         Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
     }
 

@@ -130,7 +130,7 @@ public class EmbeddingsOptionsTests
         Assert.IsNull(embeddings.Model);
         Assert.AreEqual(EmbeddingsOptions.DEFAULT_OPENAI_MODEL, embeddings.EffectiveModel);
         Assert.IsNull(embeddings.ApiVersion);
-        Assert.IsNull(embeddings.Dimensions);
+        Assert.AreEqual(EmbeddingsOptions.DEFAULT_DIMENSIONS, embeddings.Dimensions);
         Assert.IsNull(embeddings.TimeoutMs);
         Assert.AreEqual(EmbeddingsOptions.DEFAULT_TIMEOUT_MS, embeddings.EffectiveTimeoutMs);
     }
@@ -298,10 +298,10 @@ public class EmbeddingsOptionsTests
     }
 
     /// <summary>
-    /// Tests that Enabled defaults to false when not present in config JSON.
+    /// Tests that Enabled defaults to true when not present in config JSON.
     /// </summary>
     [TestMethod]
-    public void TestEmbeddingsEnabled_DefaultsToFalse_WhenNotSpecified()
+    public void TestEmbeddingsEnabled_DefaultsToTrue_WhenNotSpecified()
     {
         // Act
         bool success = RuntimeConfigLoader.TryParseConfig(OPENAI_CONFIG, out RuntimeConfig? runtimeConfig);
@@ -309,8 +309,8 @@ public class EmbeddingsOptionsTests
         // Assert
         Assert.IsTrue(success);
         Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
-        Assert.IsFalse(runtimeConfig.Runtime.Embeddings.Enabled,
-            "Enabled should default to false when not specified in config.");
+        Assert.IsTrue(runtimeConfig.Runtime.Embeddings.Enabled,
+            "Enabled should default to true when not specified in config.");
     }
 
     /// <summary>

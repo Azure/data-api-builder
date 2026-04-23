@@ -18,9 +18,14 @@ public record EmbeddingsOptions
     public const int DEFAULT_TIMEOUT_MS = 30000;
 
     /// <summary>
+    /// Default dimensions for embedding vectors.
+    /// </summary>
+    public const int DEFAULT_DIMENSIONS = 1536;
+
+    /// <summary>
     /// Default API version for Azure OpenAI.
     /// </summary>
-    public const string DEFAULT_AZURE_API_VERSION = "2024-02-01";
+    public const string DEFAULT_AZURE_API_VERSION = "2023-05-15";
 
     /// <summary>
     /// Default model for OpenAI embeddings.
@@ -199,7 +204,7 @@ public record EmbeddingsOptions
         }
         else
         {
-            this.Enabled = false; // Default to disabled
+            this.Enabled = true; // Default to enabled
         }
 
         if (Model is not null)
@@ -214,10 +219,14 @@ public record EmbeddingsOptions
             UserProvidedApiVersion = true;
         }
 
-        if (Dimensions is not null)
+        if (Dimensions.HasValue)
         {
-            this.Dimensions = Dimensions;
+            this.Dimensions = Dimensions.Value;
             UserProvidedDimensions = true;
+        }
+        else
+        {
+            this.Dimensions = DEFAULT_DIMENSIONS;
         }
 
         if (TimeoutMs is not null)

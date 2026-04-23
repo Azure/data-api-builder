@@ -771,8 +771,8 @@
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Whether the embedding service is enabled. Defaults to false.",
-              "default": false
+              "description": "Whether the embedding service is enabled. Defaults to true.",
+              "default": true
             },
             "provider": {
               "type": "string",
@@ -794,11 +794,12 @@
             "api-version": {
               "type": "string",
               "description": "Azure API version. Only used for Azure OpenAI provider.",
-              "default": "2024-02-01"
+              "default": "2023-05-15"
             },
             "dimensions": {
               "type": "integer",
-              "description": "Output vector dimensions. Optional, uses model default if not specified. Useful for Redis schema alignment.",
+              "description": "Output vector dimensions. Defaults to 1536 if not specified. Useful for Redis schema alignment.",
+              "default": 1536,
               "minimum": 1
             },
             "timeout-ms": {
@@ -818,9 +819,15 @@
                   "description": "Whether the /embed REST endpoint is enabled. Defaults to false.",
                   "default": false
                 },
+                "path": {
+                  "type": "string",
+                  "description": "The URL path for the embedding endpoint. Defaults to '/embed'.",
+                  "default": "/embed"
+                },
                 "roles": {
                   "type": "array",
-                  "description": "The roles allowed to access the embedding endpoint. In development mode, defaults to ['anonymous'].",
+                  "description": "The roles allowed to access the embedding endpoint. Defaults to ['authenticated'].",
+                  "default": ["authenticated"],
                   "items": {
                     "type": "string"
                   }
@@ -834,13 +841,13 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "description": "Whether health checks are enabled for embeddings. Defaults to true.",
-                  "default": true
+                  "description": "Whether health checks are enabled for embeddings. Defaults to false.",
+                  "default": false
                 },
                 "threshold-ms": {
                   "type": "integer",
                   "description": "The maximum response time in milliseconds to be considered healthy.",
-                  "default": 5000,
+                  "default": 1000,
                   "minimum": 1,
                   "maximum": 300000
                 },
@@ -856,6 +863,30 @@
                 }
               }
             },
+            "cache": {
+              "type": "object",
+              "description": "Cache configuration for embedding results.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether caching is enabled for embeddings. Defaults to true.",
+                  "default": true
+                },
+                "level": {
+                  "type": "string",
+                  "description": "Cache level (L1 for in-memory only, L1L2 for in-memory + distributed). Defaults to L1.",
+                  "enum": ["L1", "L1L2"],
+                  "default": "L1"
+                },
+                "ttl-seconds": {
+                  "type": "integer",
+                  "description": "Time-to-live for cached embeddings in seconds. Defaults to 86400 (24 hours).",
+                  "default": 86400,
+                  "minimum": 1
+                }
+              }
+            },
             "chunking": {
               "type": "object",
               "description": "Chunking configuration for text processing before embedding. Used to split large text inputs into smaller chunks.",
@@ -863,19 +894,19 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "description": "Whether chunking is enabled. Defaults to false.",
-                  "default": false
+                  "description": "Whether chunking is enabled. Defaults to true.",
+                  "default": true
                 },
                 "size-chars": {
                   "type": "integer",
                   "description": "The size of each chunk in characters.",
-                  "default": 1000,
+                  "default": 800,
                   "minimum": 1
                 },
                 "overlap-chars": {
                   "type": "integer",
                   "description": "The number of characters to overlap between consecutive chunks. Overlap helps maintain context across chunk boundaries.",
-                  "default": 250,
+                  "default": 100,
                   "minimum": 0
                 }
               }

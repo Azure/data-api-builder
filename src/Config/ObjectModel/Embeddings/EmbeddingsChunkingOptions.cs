@@ -14,15 +14,15 @@ public record EmbeddingsChunkingOptions
     /// <summary>
     /// Default chunk size in characters.
     /// </summary>
-    public const int DEFAULT_SIZE_CHARS = 1000;
+    public const int DEFAULT_SIZE_CHARS = 800;
 
     /// <summary>
     /// Default overlap size in characters between consecutive chunks.
     /// </summary>
-    public const int DEFAULT_OVERLAP_CHARS = 250;
+    public const int DEFAULT_OVERLAP_CHARS = 100;
 
     /// <summary>
-    /// Whether chunking is enabled. Defaults to false.
+    /// Whether chunking is enabled. Defaults to true.
     /// When enabled, text inputs will be split into smaller chunks before embedding.
     /// </summary>
     [JsonPropertyName("enabled")]
@@ -30,14 +30,14 @@ public record EmbeddingsChunkingOptions
 
     /// <summary>
     /// The size of each chunk in characters.
-    /// Defaults to 1000 characters.
+    /// Defaults to 800 characters.
     /// </summary>
     [JsonPropertyName("size-chars")]
     public int SizeChars { get; init; }
 
     /// <summary>
     /// The number of characters to overlap between consecutive chunks.
-    /// Defaults to 250 characters.
+    /// Defaults to 100 characters.
     /// Overlap helps maintain context across chunk boundaries.
     /// </summary>
     [JsonPropertyName("overlap-chars")]
@@ -49,7 +49,7 @@ public record EmbeddingsChunkingOptions
         int? SizeChars = null,
         int? OverlapChars = null)
     {
-        this.Enabled = Enabled ?? false;
+        this.Enabled = Enabled ?? true;
         this.SizeChars = SizeChars ?? DEFAULT_SIZE_CHARS;
         this.OverlapChars = Math.Max(0, OverlapChars ?? DEFAULT_OVERLAP_CHARS);
     }

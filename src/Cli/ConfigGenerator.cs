@@ -2596,18 +2596,10 @@ namespace Cli
                 }
 
                 minimumLogLevel = (LogLevel)options.LogLevel;
+                args.Add("--LogLevel");
+                args.Add(minimumLogLevel.ToString());
                 _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
             }
-            else
-            {
-                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
-                HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
-
-                _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.", minimumLogLevel, hostModeType);
-            }
-
-            args.Add("--LogLevel");
-            args.Add(minimumLogLevel.ToString());
 
             // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)
@@ -3109,11 +3101,11 @@ namespace Cli
             bool userProvidedCache = existingAutoentity?.Template.UserProvidedCacheOptions ?? false;
 
             // Update MCP options
-            if (!string.IsNullOrWhiteSpace(options.TemplateMcpDmlTool))
+            if (!string.IsNullOrWhiteSpace(options.TemplateMcpDmlTools))
             {
-                if (!bool.TryParse(options.TemplateMcpDmlTool, out bool mcpDmlToolValue))
+                if (!bool.TryParse(options.TemplateMcpDmlTools, out bool mcpDmlToolValue))
                 {
-                    _logger.LogError("Invalid value for template.mcp.dml-tool: {value}. Valid values are: true, false", options.TemplateMcpDmlTool);
+                    _logger.LogError("Invalid value for template.mcp.dml-tools: {value}. Valid values are: true, false", options.TemplateMcpDmlTools);
                     return null;
                 }
 
@@ -3122,7 +3114,7 @@ namespace Cli
                 bool? dmlToolValue = mcpDmlToolValue;
                 mcp = new EntityMcpOptions(customToolEnabled: customToolEnabled, dmlToolsEnabled: dmlToolValue);
                 userProvidedMcp = true;
-                _logger.LogInformation("Updated template.mcp.dml-tool for definition '{DefinitionName}'", options.DefinitionName);
+                _logger.LogInformation("Updated template.mcp.dml-tools for definition '{DefinitionName}'", options.DefinitionName);
             }
 
             // Update REST options
@@ -3268,7 +3260,7 @@ namespace Cli
 
             if (runtimeConfig.DataSource.DatabaseType != DatabaseType.MSSQL)
             {
-                _logger.LogError("Autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
+                _logger.LogError("The autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
                 return false;
             }
 
@@ -3360,7 +3352,7 @@ namespace Cli
         /// <param name="results">The simulation results keyed by filter (definition) name.</param>
         private static void WriteSimulationResultsToConsole(Dictionary<string, List<(string EntityName, string SchemaName, string ObjectName)>> results)
         {
-            Console.WriteLine("AutoEntities Simulation Results");
+            Console.WriteLine("Autoentities Simulation Results");
             Console.WriteLine();
 
             foreach ((string filterName, List<(string EntityName, string SchemaName, string ObjectName)> matches) in results)

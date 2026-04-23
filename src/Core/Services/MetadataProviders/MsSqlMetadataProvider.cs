@@ -305,7 +305,7 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach ((string autoentityName, Autoentity autoentity) in autoentities)
             {
                 int addedEntities = 0;
-                JsonArray? resultArray = await QueryAutoentitiesAsync(autoentity);
+                JsonArray? resultArray = await QueryAutoentitiesAsync(autoentityName, autoentity);
                 if (resultArray is null)
                 {
                     continue;
@@ -316,7 +316,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     if (resultObject is null)
                     {
                         throw new DataApiBuilderException(
-                            message: $"Cannot create new entity from autoentity pattern due to an internal error.",
+                            message: $"Cannot create new entity from autoentities definition '{autoentityName}' due to an internal error.",
                             statusCode: HttpStatusCode.InternalServerError,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
@@ -329,7 +329,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     if (string.IsNullOrWhiteSpace(entityName) || string.IsNullOrWhiteSpace(objectName) || string.IsNullOrWhiteSpace(schemaName))
                     {
-                        _logger.LogError("Skipping autoentity generation: entity_name or object is null or empty for autoentity pattern '{AutoentityName}'.", autoentityName);
+                        _logger.LogError("Skipping autoentity generation: 'entity_name', 'object', or 'schema' is null or empty for autoentities definition '{autoentityName}'.", autoentityName);
                         continue;
                     }
 
@@ -349,14 +349,15 @@ namespace Azure.DataApiBuilder.Core.Services
                         Health: autoentity.Template.Health,
                         Fields: null,
                         Relationships: null,
-                        Mappings: new());
+                        Mappings: new(),
+                        IsAutoentity: true);
 
                     // Add the generated entity to the linking entities dictionary.
                     // This allows the entity to be processed later during metadata population.
                     if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddGeneratedAutoentityNameToDataSourceName(entityName, autoentityName))
                     {
                         throw new DataApiBuilderException(
-                            message: $"Entity with name '{entityName}' already exists. Cannot create new entity from autoentity pattern with definition-name '{autoentityName}'.",
+                            message: $"Entity '{entityName}' conflicts with autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
@@ -375,14 +376,14 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (addedEntities == 0)
                 {
-                    _logger.LogWarning("No new entities were generated from the autoentity {autoentityName} defined in the configuration.", autoentityName);
+                    _logger.LogWarning("No new entities were generated from the autoentities definition '{autoentityName}'.", autoentityName);
                 }
             }
 
             _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);
         }
 
-        public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)
+        public async Task<JsonArray?> QueryAutoentitiesAsync(string autoentityName, Autoentity autoentity)
         {
             string include = string.Join(",", autoentity.Patterns.Include);
             string exclude = string.Join(",", autoentity.Patterns.Exclude);
@@ -395,10 +396,10 @@ namespace Azure.DataApiBuilder.Core.Services
                 { $"{BaseQueryStructure.PARAM_NAME_PREFIX}name_pattern", new(namePattern, null, SqlDbType.NVarChar) }
             };
 
-            _logger.LogInformation("Query for Autoentities is being executed with the following parameters.");
-            _logger.LogInformation($"Autoentities include pattern: {include}");
-            _logger.LogInformation($"Autoentities exclude pattern: {exclude}");
-            _logger.LogInformation($"Autoentities name pattern: {namePattern}");
+            _logger.LogDebug("Query for autoentities is being executed with the following parameters.");
+            _logger.LogDebug("The autoentities definition '{autoentityName}' include pattern: {include}", autoentityName, include);
+            _logger.LogDebug("The autoentities definition '{autoentityName}' exclude pattern: {exclude}", autoentityName, exclude);
+            _logger.LogDebug("The autoentities definition '{autoentityName}' name pattern: {namePattern}", autoentityName, namePattern);
 
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: getAutoentitiesQuery,

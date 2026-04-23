@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Product;
+using Azure.DataApiBuilder.Service;
 using Cli.Constants;
 using Microsoft.Data.SqlClient;
 
@@ -914,6 +915,82 @@ public class EndToEndTests
 
         // Reset the LoggerFactoryForCli to avoid impacting other tests.
         Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
+    }
+
+    /// Validates that `dab start` correctly sets <see cref="Startup.IsLogLevelOverriddenByCli"/>
+    /// based on whether the --LogLevel CLI flag is provided.
+    ///
+    /// When the --LogLevel flag is provided, IsLogLevelOverriddenByCli should be true.
+    /// When the --LogLevel flag is omitted (log level comes from the config file), IsLogLevelOverriddenByCli should be false.
+    /// </summary>
+    /// <param name="cliLogLevel">The --LogLevel CLI flag value, or null to omit the flag.</param>
+    /// <param name="expectedIsOverridden">Expected value of Startup.IsLogLevelOverriddenByCli.</param>
+    [DataTestMethod]
+    [DataRow(null, false, DisplayName = "IsLogLevelOverriddenByCli is false")]
+    [DataRow(LogLevel.Error, true, DisplayName = "IsLogLevelOverriddenByCli is true")]
+    public async Task TestStartCommandResolvesLogLevelFromConfigOrFlag(
+        LogLevel? cliLogLevel,
+        bool expectedIsOverridden)
+    {
+        string baseConfig = @"
+        {
+            ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @""",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
+            },
+            ""runtime"": {
+                ""rest"": {
+                    ""path"": ""/api"",
+                    ""enabled"": true
+                },
+                ""graphql"": {
+                    ""path"": ""/graphql"",
+                    ""enabled"": true,
+                    ""allow-introspection"": true
+                },
+                ""host"": {
+                    ""mode"": ""development"",
+                    ""cors"": {
+                        ""origins"": [],
+                        ""allow-credentials"": false
+                    },
+                    ""authentication"": {
+                        ""provider"": ""Unauthenticated""
+                    }
+                },
+                ""telemetry"": {
+                    ""log-level"": {
+                        ""Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider"": ""Information"",
+                        ""Azure.DataApiBuilder.Core"": ""Debug"",
+                        ""Azure.DataApiBuilder.Service.Controllers.RestController"": ""Error"",
+                        ""default"": ""Warning""
+                    }
+                }
+            },
+            ""entities"": {}
+        }";
+
+        // Merge in an entity so the config is not rejected for having an empty entities section.
+        string configWithLogLevel = AddPropertiesToJson(baseConfig, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, configWithLogLevel);
+
+        StartOptions options = new(
+            verbose: false,
+            logLevel: cliLogLevel,
+            isHttpsRedirectionDisabled: false,
+            mcpStdio: false,
+            mcpRole: null,
+            config: TEST_RUNTIME_CONFIG_FILE);
+
+        // Run TryStartEngineWithOptions on a background task because StartEngine blocks until the host shuts down.
+        Task engineTask = Task.Run(() =>
+            TryStartEngineWithOptions(options, _runtimeConfigLoader!, _fileSystem!));
+
+        // Wait for the engine to finish loading the config.
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
+        Assert.AreEqual(expectedIsOverridden, Startup.IsLogLevelOverriddenByCli);
     }
 
     /// <summary>

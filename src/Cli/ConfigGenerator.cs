@@ -2731,6 +2731,8 @@ namespace Cli
                 }
 
                 minimumLogLevel = (LogLevel)options.LogLevel;
+                args.Add("--LogLevel");
+                args.Add(minimumLogLevel.ToString());
             }
             else
             {
@@ -2753,9 +2755,6 @@ namespace Cli
             // Update logger for ConfigGenerator
             ILogger<ConfigGenerator> configGeneratorLogger = Utils.LoggerFactoryForCli.CreateLogger<ConfigGenerator>();
             SetLoggerForCliConfigGenerator(configGeneratorLogger);
-
-            args.Add("--LogLevel");
-            args.Add(minimumLogLevel.ToString());
 
             // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)

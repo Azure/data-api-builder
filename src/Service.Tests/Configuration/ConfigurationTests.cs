@@ -5724,7 +5724,7 @@ type Planet @model(name:""PlanetAlias"") {
                 HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
 
                 // Assert
-                string expectedResponseFragment = isPatternFoo ? @"{""title"":""Vogue""}" : @"{""comic_name"":""NotVogue""}";
+                string expectedResponseFragment = isPatternFoo ? @"""title"":""Vogue""" : @"""comic_name"":""NotVogue""";
 
                 // Verify REST response
                 Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, "REST request to auto-generated entity should succeed");

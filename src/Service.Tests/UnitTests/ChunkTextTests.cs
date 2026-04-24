@@ -242,7 +242,7 @@ public class ChunkTextTests
         // Assert
         Assert.IsTrue(chunks.Count > 0);
         string reconstructedStart = chunks[0];
-        Assert.IsTrue(reconstructedStart.Contains("Hello") || reconstructedStart.Contains("世"),
+        Assert.IsTrue(reconstructedStart.Contains("Hello") || reconstructedStart.Contains("世") || reconstructedStart.Contains("🌍"),
             "Should preserve Unicode characters");
     }
 

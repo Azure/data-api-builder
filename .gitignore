@@ -16,6 +16,7 @@ dab-config*.json
 !dab-config.*reference.json
 !dab-config.*.example.json
 !/dab-config.json
+!samples/azure/container-apps-entra-mcp/dab-config.template.json
 
 *.cd
 
@@ -36,6 +37,7 @@ dab-config*.json
 
 # Local-Only files
 .env
+samples/azure/container-apps-entra-mcp/deployment.outputs.json
 
 # Verify test files
 *.received.*

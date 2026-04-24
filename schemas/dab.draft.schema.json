@@ -24,7 +24,6 @@
             "postgresql",
             "mysql",
             "cosmosdb_nosql",
-            "cosmosdb_postgresql",
             "dwsql"
           ]
         },

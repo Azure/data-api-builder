@@ -5703,7 +5703,6 @@ type Planet @model(name:""PlanetAlias"") {
             using (HttpClient client = server.CreateClient())
             {
                 // Act
-                RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
                 using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/magazines");
                 using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 

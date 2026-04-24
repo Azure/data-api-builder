@@ -16,6 +16,11 @@ public record EmbeddingsEndpointOptions
     public const string DEFAULT_PATH = "/embed";
 
     /// <summary>
+    /// Default roles for the embedding endpoint.
+    /// </summary>
+    public static readonly string[] DEFAULT_ROLES = new[] { "authenticated" };
+
+    /// <summary>
     /// Anonymous role constant.
     /// </summary>
     public const string ANONYMOUS_ROLE = "anonymous";
@@ -34,24 +39,17 @@ public record EmbeddingsEndpointOptions
 
     /// <summary>
     /// The roles allowed to access the embedding endpoint.
-    /// In development mode, defaults to ["anonymous"].
-    /// In production mode, must be explicitly configured.
+    /// When null, GetEffectiveRoles returns ["authenticated"] by default.
+    /// In production mode, must be explicitly configured (cannot be null).
     /// </summary>
     [JsonPropertyName("roles")]
     public string[]? Roles { get; init; }
 
     /// <summary>
-    /// Flag indicating whether the user provided roles.
+    /// Gets the effective roles.
+    /// Returns configured roles if specified, otherwise defaults to ["authenticated"].
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    public bool UserProvidedRoles { get; init; }
-
-    /// <summary>
-    /// Gets the effective roles based on host mode.
-    /// In development mode, returns ["anonymous"] if no roles specified.
-    /// In production mode, returns the configured roles or empty array.
-    /// </summary>
-    /// <param name="isDevelopmentMode">Whether the host is in development mode.</param>
+    /// <param name="isDevelopmentMode">Whether the host is in development mode (kept for API compatibility).</param>
     /// <returns>Array of allowed roles.</returns>
     public string[] GetEffectiveRoles(bool isDevelopmentMode)
     {
@@ -60,14 +58,7 @@ public record EmbeddingsEndpointOptions
             return Roles;
         }
 
-        // In development mode, default to anonymous access
-        if (isDevelopmentMode)
-        {
-            return new[] { ANONYMOUS_ROLE };
-        }
-
-        // In production mode with no roles specified, return empty (no access)
-        return Array.Empty<string>();
+        return DEFAULT_ROLES;
     }
 
     /// <summary>
@@ -108,10 +99,8 @@ public record EmbeddingsEndpointOptions
             Enabled = false;
         }
 
-        if (roles is not null)
-        {
-            Roles = roles;
-            UserProvidedRoles = true;
-        }
+        // Keep roles as-is (null if not provided) so validation can check it
+        // GetEffectiveRoles() will provide the default when needed
+        Roles = roles;
     }
 }

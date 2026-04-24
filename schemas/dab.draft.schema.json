@@ -930,7 +930,7 @@
                   "api-version": {
                     "type": "string",
                     "description": "Azure API version. Required for Azure OpenAI provider.",
-                    "default": "2024-02-01"
+                    "default": "2023-05-15"
                   }
                 }
               }

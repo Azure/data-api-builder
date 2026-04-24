@@ -269,7 +269,7 @@ public class EmbeddingControllerTests
     }
 
     /// <summary>
-    /// Tests that anonymous access is denied in production mode when no roles are configured.
+    /// Tests that anonymous access is denied when default authenticated role is used.
     /// </summary>
     [TestMethod]
     public async Task PostAsync_ReturnsForbidden_InProductionMode_WithNoRolesConfigured()
@@ -279,7 +279,7 @@ public class EmbeddingControllerTests
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Production,
-            endpointRoles: null,  // no roles configured — production returns empty
+            endpointRoles: UseConfigDefault,  // use config default ["authenticated"]
             clientRole: null);
 
         // Act
@@ -799,18 +799,18 @@ public class EmbeddingControllerTests
             requestPath: "/embed",
             requestBody: "test",
             hostMode: HostMode.Development,
-            endpointRoles: null,
+            endpointRoles: new[] { "anonymous" },  // explicitly allow anonymous
             clientRole: null);
 
         // Act
         IActionResult result = await controller.PostAsync();
 
-        // Assert - should succeed because dev mode defaults to anonymous access
+        // Assert - should succeed because anonymous is explicitly allowed
         Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     /// <summary>
-    /// Tests that production mode denies access by default when no roles are configured.
+    /// Tests that production mode requires authenticated role when using default.
     /// </summary>
     [TestMethod]
     public async Task PostAsync_ProductionMode_DeniesAccessByDefault()
@@ -820,8 +820,8 @@ public class EmbeddingControllerTests
             requestPath: "/embed",
             requestBody: "test",
             hostMode: HostMode.Production,
-            endpointRoles: null,
-            clientRole: null);
+            endpointRoles: UseConfigDefault,  // use config default ["authenticated"]
+            clientRole: null);  // anonymous - not allowed
 
         // Act
         IActionResult result = await controller.PostAsync();
@@ -1069,7 +1069,7 @@ public class EmbeddingControllerTests
             ]
             """;
 
-        EmbeddingsEndpointOptions endpointOptions = new(enabled: true);
+        EmbeddingsEndpointOptions endpointOptions = new(enabled: true, roles: new[] { "anonymous" });
         EmbeddingsChunkingOptions chunkingOptions = new(Enabled: true, SizeChars: 1000, OverlapChars: 250);
         EmbeddingsOptions embeddingsOptions = new(
             Provider: EmbeddingProviderType.OpenAI,
@@ -1248,7 +1248,7 @@ public class EmbeddingControllerTests
             ]
             """;
 
-        EmbeddingsEndpointOptions endpointOptions = new(enabled: true);
+        EmbeddingsEndpointOptions endpointOptions = new(enabled: true, roles: new[] { "anonymous" });
         EmbeddingsChunkingOptions chunkingOptions = new(Enabled: true, SizeChars: 500, OverlapChars: 100);
         EmbeddingsOptions embeddingsOptions = new(
             Provider: EmbeddingProviderType.OpenAI,
@@ -1562,7 +1562,7 @@ public class EmbeddingControllerTests
 
         string longText = new string('X', 1500);
 
-        EmbeddingsEndpointOptions endpointOptions = new(enabled: true);
+        EmbeddingsEndpointOptions endpointOptions = new(enabled: true, roles: new[] { "anonymous" });
         EmbeddingsChunkingOptions chunkingOptions = new(Enabled: true, SizeChars: 1000, OverlapChars: 250);
         EmbeddingsOptions embeddingsOptions = new(
             Provider: EmbeddingProviderType.OpenAI,
@@ -1784,7 +1784,7 @@ public class EmbeddingControllerTests
             BaseUrl: "https://api.openai.com",
             ApiKey: "test-key",
             Enabled: true,
-            Endpoint: new EmbeddingsEndpointOptions(enabled: true),
+            Endpoint: new EmbeddingsEndpointOptions(enabled: true, roles: new[] { "anonymous" }),
             Chunking: new EmbeddingsChunkingOptions(Enabled: true, SizeChars: sizeChars, OverlapChars: overlapChars));
 
         Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
@@ -1815,6 +1815,12 @@ public class EmbeddingControllerTests
     }
 
     /// <summary>
+    /// Sentinel array to indicate the test wants to use config defaults (not test defaults).
+    /// Use this in tests that explicitly want to test the default role behavior.
+    /// </summary>
+    private static readonly string[] UseConfigDefault = Array.Empty<string>();
+
+    /// <summary>
     /// Creates an EmbeddingController with all the necessary mocks wired up.
     /// </summary>
     private EmbeddingController CreateController(
@@ -1828,9 +1834,23 @@ public class EmbeddingControllerTests
         bool useClassMockService = true,
         string? acceptHeader = null)
     {
+        // Determine roles to use:
+        // - If UseConfigDefault sentinel: pass null to use actual config defaults
+        // - If null: default to anonymous for test convenience
+        // - Otherwise: use provided roles
+        string[]? rolesToUse;
+        if (ReferenceEquals(endpointRoles, UseConfigDefault))
+        {
+            rolesToUse = null;  // Will use config default ["authenticated"]
+        }
+        else
+        {
+            rolesToUse = endpointRoles ?? new[] { "anonymous" };  // Test default for convenience
+        }
+
         EmbeddingsEndpointOptions endpointOptions = new(
             enabled: true,
-            roles: endpointRoles);
+            roles: rolesToUse);
 
         EmbeddingsOptions embeddingsOptions = new(
             Provider: EmbeddingProviderType.OpenAI,

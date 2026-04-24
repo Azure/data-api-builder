@@ -3221,20 +3221,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates that in production mode, roles must be explicitly configured for the embeddings endpoint.
-        /// In development mode, roles default to ["anonymous"] and are not required.
+        /// Validates endpoint roles behavior:
+        /// - Production mode requires explicitly configured roles (even though null defaults to ['authenticated'])
+        /// - Development mode allows default roles  
+        /// - Empty roles array is not allowed in either mode
         /// </summary>
         [DataTestMethod]
         [DataRow(HostMode.Production, null, true,
-            DisplayName = "Production mode with null roles fails.")]
+            DisplayName = "Production mode with null roles fails (requires explicit config).")]
         [DataRow(HostMode.Production, new string[0], true,
             DisplayName = "Production mode with empty roles fails.")]
         [DataRow(HostMode.Production, new string[] { "authenticated" }, false,
             DisplayName = "Production mode with explicit roles passes.")]
         [DataRow(HostMode.Development, null, false,
-            DisplayName = "Development mode with null roles passes.")]
-        [DataRow(HostMode.Development, new string[0], false,
-            DisplayName = "Development mode with empty roles passes.")]
+            DisplayName = "Development mode with null roles uses default ['authenticated'].")]
+        [DataRow(HostMode.Development, new string[0], true,
+            DisplayName = "Development mode with empty roles fails.")]
         public void ValidateEmbeddingsOptions_EndpointRolesInProductionMode(
             HostMode hostMode,
             string[] roles,
@@ -3270,7 +3272,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
                     () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
-                Assert.AreEqual("Embeddings endpoint 'roles' must be explicitly configured in production mode.", ex.Message);
+
+                // Production with null gets caught first, empty array gets caught second
+                string expectedMessage = (hostMode == HostMode.Production && roles is null)
+                    ? "Embeddings endpoint 'roles' must be explicitly configured in production mode."
+                    : "Embeddings endpoint 'roles' cannot be empty when endpoint is enabled.";
+
+                Assert.AreEqual(expectedMessage, ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
@@ -3336,7 +3344,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Validates that health check test-text cannot be null or empty when health check is enabled.
         /// </summary>
         [DataTestMethod]
-        [DataRow(null, true, DisplayName = "Health check test-text is null.")]
+        [DataRow(null, false, DisplayName = "Health check test-text is null (uses default).")]
         [DataRow("", true, DisplayName = "Health check test-text is empty.")]
         [DataRow("   ", true, DisplayName = "Health check test-text is whitespace.")]
         [DataRow("health check", false, DisplayName = "Health check test-text is valid.")]

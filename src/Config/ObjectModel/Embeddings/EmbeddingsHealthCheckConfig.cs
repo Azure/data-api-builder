@@ -14,7 +14,7 @@ public record EmbeddingsHealthCheckConfig : HealthCheckConfig
     /// <summary>
     /// Default threshold for embedding health check in milliseconds.
     /// </summary>
-    public const int DEFAULT_THRESHOLD_MS = 5000;
+    public const int DEFAULT_THRESHOLD_MS = 1000;
 
     /// <summary>
     /// Default test text used for health check validation.
@@ -25,7 +25,7 @@ public record EmbeddingsHealthCheckConfig : HealthCheckConfig
     /// The expected milliseconds the embedding request should complete within to be considered healthy.
     /// If the request takes longer than this value, the health check will be considered unhealthy.
     /// Requests completing at exactly the threshold are considered healthy.
-    /// Default: 5000ms (5 seconds)
+    /// Default: 1000ms (1 second)
     /// </summary>
     [JsonPropertyName("threshold-ms")]
     public int ThresholdMs { get; init; }

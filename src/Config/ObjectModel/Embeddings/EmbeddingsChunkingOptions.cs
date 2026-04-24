@@ -26,7 +26,7 @@ public record EmbeddingsChunkingOptions
     /// When enabled, text inputs will be split into smaller chunks before embedding.
     /// </summary>
     [JsonPropertyName("enabled")]
-    public bool Enabled { get; init; } = false;
+    public bool Enabled { get; init; } = true;
 
     /// <summary>
     /// The size of each chunk in characters.

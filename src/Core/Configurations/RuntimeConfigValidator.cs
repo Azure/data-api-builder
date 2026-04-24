@@ -386,12 +386,21 @@ public class RuntimeConfigValidator : IConfigValidator
         // Validate endpoint configuration.
         if (embeddingsOptions.Endpoint is not null && embeddingsOptions.Endpoint.Enabled)
         {
-            // In production mode, roles must be explicitly configured.
+            // In production mode, roles must be explicitly configured (cannot be null).
             if (!runtimeConfig.IsDevelopmentMode() &&
-                (embeddingsOptions.Endpoint.Roles is null || embeddingsOptions.Endpoint.Roles.Length == 0))
+                embeddingsOptions.Endpoint.Roles is null)
             {
                 HandleOrRecordException(new DataApiBuilderException(
                     message: "Embeddings endpoint 'roles' must be explicitly configured in production mode.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            // Empty roles array is not allowed (checked after production null check)
+            if (embeddingsOptions.Endpoint.Roles is not null && embeddingsOptions.Endpoint.Roles.Length == 0)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Embeddings endpoint 'roles' cannot be empty when endpoint is enabled.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }

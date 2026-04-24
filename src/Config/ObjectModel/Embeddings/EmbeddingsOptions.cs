@@ -33,11 +33,11 @@ public record EmbeddingsOptions
     public const string DEFAULT_OPENAI_MODEL = "text-embedding-3-small";
 
     /// <summary>
-    /// Whether the embedding service is enabled. Defaults to false.
+    /// Whether the embedding service is enabled. Defaults to true.
     /// When false, the embedding service will not be used.
     /// </summary>
     [JsonPropertyName("enabled")]
-    public bool Enabled { get; init; } = false;
+    public bool Enabled { get; init; } = true;
 
     /// <summary>
     /// Flag indicating whether the user provided the enabled setting.

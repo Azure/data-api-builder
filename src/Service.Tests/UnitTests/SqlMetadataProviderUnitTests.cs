@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Net;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -241,7 +242,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 // may contain the connection string errors this function expects to exist.
                 string consoleMessages = sw is not null ? sw.ToString() : string.Empty;
                 string allErrorMessages = ex.Message + " " + consoleMessages;
-                Assert.IsTrue(allErrorMessages.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
+                Assert.IsTrue(allErrorMessages.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE),
+                    $"Current message does not contain the expected connection string error message: {allErrorMessages}");
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             }

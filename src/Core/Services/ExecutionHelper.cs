@@ -386,9 +386,6 @@ namespace Azure.DataApiBuilder.Service.Services
                 return value.Value;
             }
 
-            // TODO: Look into why there is no support for SupportedHotChocolateTypes.DATETIMEOFFSET_TYPE translation in argumentSchema.
-            // This is more of a semantic issue than a logical one because we can still do appropriate parsing even if every date/time
-            // (with offset or not) is treated as SupportedHotChocolateTypes.DATETIME_TYPE but it is worth looking into regardless.
             return argumentSchema.Type.TypeName() switch
             {
                 SupportedHotChocolateTypes.BYTE_TYPE => ((IntValueNode)value).ToByte(),

@@ -525,166 +525,138 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
-    /// Validates entity and data source configuration based on whether the config is a root (has children) or non-root.
+    /// Validates entity and data source configuration based on whether the config is a root or not.
     ///
-    /// Root config (top-level with data-source-files):
-    ///   - Validates the root's own data source / entity relationship (if the root has a data source, it must have entities)
-    ///   - Validates each child config independently using captured metadata and filename context
+    /// Root config (top-level with children via data-source-files):
+    ///   - Does not need a data source (children provide their own)
+    ///   - Must NOT have entities if it has no data source (entities need a data source)
+    ///   - If it HAS a data source, normal entity rules apply (must have at least 1 entity)
+    ///   - Each child is validated independently
     ///
-    /// Non-root config (standalone, no children):
+    /// Non-root config (standalone or child):
     ///   - Must have a data source
-    ///   - Must have entities (ValidateHasEntities)
+    ///   - Must have at least 1 real entity (manual or resolved from autoentities)
+    ///   - If autoentities property exists but discovers no entities, warn
+    ///   - If autoentities discovers no entities but manual entities exist, warn (not error)
+    ///   - If neither manual entities nor autoentity discoveries produce any entities, error
     ///
     /// This method should be called after autoentity resolution so that resolved entity counts are available.
     /// It should be gated on no database connection errors.
     /// </summary>
     public void ValidateDataSourceAndEntityPresence(RuntimeConfig runtimeConfig)
     {
-        bool hasDataSource = runtimeConfig.DataSource is not null;
-
         if (runtimeConfig.IsRootConfig)
         {
-            if (hasDataSource)
-            {
-                // Root has its own data source: check that the root itself contributes entities.
-                // We check the root's own entities only (not merged children) by looking at what's
-                // NOT from children. But since entities are merged, we check the total minus children.
-                ValidateHasEntities(runtimeConfig, configName: null);
-            }
-
-            // Validate each child config independently.
-            foreach ((string fileName, RuntimeConfig childConfig) in runtimeConfig.ChildConfigs)
-            {
-                ValidateChildConfig(fileName, childConfig, runtimeConfig);
-            }
+            ValidateRootConfig(runtimeConfig);
         }
         else
         {
-            // Non-root config (standalone, no children): must have a data source.
-            if (!hasDataSource)
-            {
-                HandleOrRecordException(new DataApiBuilderException(
-                    message: "A data source is required. Non-root configurations must define a data-source property.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-            }
-            else
-            {
-                // Non-root with a data source: entities must be present.
-                ValidateHasEntities(runtimeConfig, configName: null);
-            }
+            ValidateNonRootConfig(runtimeConfig, configName: null);
         }
     }
 
     /// <summary>
-    /// Validates a child config against its original (pre-merge) state.
-    /// Each child must have a data source and must have entities (manual or resolved from autoentities).
-    /// Error messages include the child's filename for clear diagnostics.
+    /// Validates a root config (top-level with children).
+    /// If the root has a data source, it must have entities (same as non-root).
+    /// If the root has no data source, it must NOT have entities or autoentities (they'd have no data source).
+    /// Each child config is validated independently.
     /// </summary>
-    /// <param name="fileName">The child config file path.</param>
-    /// <param name="childConfig">The original child RuntimeConfig before merge.</param>
-    /// <param name="parentConfig">The parent config, used to look up autoentity resolution counts.</param>
-    private void ValidateChildConfig(string fileName, RuntimeConfig childConfig, RuntimeConfig parentConfig)
+    private void ValidateRootConfig(RuntimeConfig runtimeConfig)
     {
-        if (childConfig.DataSource is null)
+        bool hasDataSource = runtimeConfig.DataSource is not null;
+        bool hasEntities = runtimeConfig.Entities.Entities.Count > 0;
+        bool hasAutoentities = runtimeConfig.Autoentities.Autoentities.Count > 0;
+
+        if (hasDataSource)
+        {
+            // Root with its own data source follows normal entity rules.
+            ValidateEntityPresence(runtimeConfig, configName: null);
+        }
+        else if (hasEntities || hasAutoentities)
+        {
+            // Root without a data source but with entities/autoentities — invalid.
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "Entities or autoentities are defined in the root config but no data source is configured. " +
+                    "A root config without a data source must not define entities or autoentities.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        // Validate each child config independently.
+        foreach ((string fileName, RuntimeConfig childConfig) in runtimeConfig.ChildConfigs)
+        {
+            ValidateNonRootConfig(childConfig, configName: fileName);
+        }
+    }
+
+    /// <summary>
+    /// Validates a non-root config (standalone or child).
+    /// Must have a data source. Must have at least 1 real entity.
+    /// </summary>
+    /// <param name="config">The config to validate.</param>
+    /// <param name="configName">Filename for error context (null for top-level standalone).</param>
+    private void ValidateNonRootConfig(RuntimeConfig config, string? configName)
+    {
+        string prefix = configName is not null ? $"Config '{configName}': " : string.Empty;
+
+        if (config.DataSource is null)
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"Child config '{fileName}': A data source is required.",
+                message: $"{prefix}A data source is required.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             return;
         }
 
-        // Check each of this child's autoentity definitions for resolution results.
-        foreach (KeyValuePair<string, Autoentity> autoentityDef in childConfig.Autoentities)
-        {
-            if (parentConfig.AutoentityResolutionCounts.TryGetValue(autoentityDef.Key, out int resolvedCount))
-            {
-                if (resolvedCount == 0)
-                {
-                    _logger.LogWarning("Child config '{fileName}': Autoentities definition '{definitionName}' found no entities.",
-                        fileName, autoentityDef.Key);
-                }
-            }
-            else
-            {
-                _logger.LogWarning("Child config '{fileName}': Autoentities definition '{definitionName}' was not processed. " +
-                    "Autoentities may not be supported for this database type.",
-                    fileName, autoentityDef.Key);
-            }
-        }
-
-        // Count this child's total entities: manual + resolved autoentities.
-        int resolvedAutoentityCount = childConfig.Autoentities
-            .Sum(a => parentConfig.AutoentityResolutionCounts.TryGetValue(a.Key, out int count) ? count : 0);
-        int totalChildEntities = childConfig.Entities.Entities.Count + resolvedAutoentityCount;
-        bool childHasAutoentityDefinitions = childConfig.Autoentities.Autoentities.Count > 0;
-
-        if (totalChildEntities == 0 && !childHasAutoentityDefinitions)
-        {
-            HandleOrRecordException(new DataApiBuilderException(
-                message: $"Child config '{fileName}': Data source defined but no entities found. " +
-                    "At least one entity must be defined or an autoentities definition must be configured.",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-        }
-        else if (totalChildEntities == 0 && childHasAutoentityDefinitions)
-        {
-            _logger.LogWarning("Child config '{fileName}': Autoentities are configured but no entities were resolved. " +
-                "Verify that autoentity patterns match database objects.", fileName);
-        }
+        ValidateEntityPresence(config, configName);
     }
 
     /// <summary>
-    /// Validates that a configuration with a data source has entities defined.
-    /// Checks each autoentity definition for resolution results and warns if none were found.
-    /// If the total entity count (manual + resolved autoentities) is zero, records an error.
+    /// Validates that a config with a data source has at least 1 real entity.
+    ///
+    /// Rules:
+    /// - If the autoentities property exists (even if empty/no definitions) and no entities
+    ///   were discovered through it, warn.
+    /// - If total real entities (manual + discovered) is 0, error.
+    /// - If manual entities exist but autoentities discovered nothing, warn (not error).
     /// </summary>
-    /// <param name="runtimeConfig">The runtime config to validate.</param>
-    /// <param name="configName">Optional name for error context (null for top-level/standalone).</param>
-    private void ValidateHasEntities(RuntimeConfig runtimeConfig, string? configName)
+    /// <param name="config">The config to validate (must have a data source).</param>
+    /// <param name="configName">Filename for error context (null for top-level).</param>
+    private void ValidateEntityPresence(RuntimeConfig config, string? configName)
     {
         string prefix = configName is not null ? $"Config '{configName}': " : string.Empty;
 
-        // Check each autoentity definition for resolution results.
-        foreach (KeyValuePair<string, Autoentity> autoentityDef in runtimeConfig.Autoentities)
+        // Check autoentities: if the property exists, report on discovery results.
+        bool autoentitiesPropertyExists = config.Autoentities.Autoentities.Count > 0;
+        int resolvedAutoentityCount = 0;
+
+        if (autoentitiesPropertyExists)
         {
-            if (runtimeConfig.AutoentityResolutionCounts.TryGetValue(autoentityDef.Key, out int resolvedCount))
+            foreach (KeyValuePair<string, Autoentity> autoentityDef in config.Autoentities)
             {
-                if (resolvedCount == 0)
+                if (config.AutoentityResolutionCounts.TryGetValue(autoentityDef.Key, out int resolvedCount))
                 {
-                    _logger.LogWarning("{prefix}Autoentities definition '{definitionName}' found no entities.",
-                        prefix, autoentityDef.Key);
+                    resolvedAutoentityCount += resolvedCount;
                 }
-            }
-            else
-            {
-                _logger.LogWarning("{prefix}Autoentities definition '{definitionName}' was not processed. " +
-                    "Autoentities may not be supported for this database type.",
-                    prefix, autoentityDef.Key);
             }
         }
 
-        // Count total entities: manual entities + resolved autoentities.
-        // After autoentity resolution, generated entities are merged into config.Entities
-        // and are marked with IsAutoentity=true.
-        int totalEntityCount = runtimeConfig.Entities.Entities.Count;
-        bool hasAutoentityDefinitions = runtimeConfig.Autoentities.Autoentities.Count > 0;
+        // Count total real entities: manual entities + resolved autoentities.
+        int totalEntityCount = config.Entities.Entities.Count + resolvedAutoentityCount;
 
-        if (totalEntityCount == 0 && !hasAutoentityDefinitions)
+        if (totalEntityCount == 0)
         {
-            // No entities and no autoentity definitions at all — nothing configured.
+            // Error — nothing to serve. Don't also warn about autoentities; the error covers it.
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"{prefix}Data source defined but no entities found. " +
-                    "At least one entity must be defined or an autoentities definition must be configured when a data source is present.",
+                message: $"{prefix}No entities found. At least one entity must be defined or discovered " +
+                    "from autoentities when a data source is configured.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
-        else if (totalEntityCount == 0 && hasAutoentityDefinitions)
+        else if (autoentitiesPropertyExists && resolvedAutoentityCount == 0)
         {
-            // Autoentity definitions exist but resolved zero entities — warn, don't error.
-            // The user configured autoentities but patterns didn't match anything.
-            _logger.LogWarning("{prefix}Autoentities are configured but no entities were resolved. " +
+            // Manual entities exist so we're not erroring, but autoentities discovered nothing — warn.
+            _logger.LogWarning("{prefix}Autoentities are configured but no entities were discovered. " +
                 "Verify that autoentity patterns match database objects.", prefix);
         }
     }

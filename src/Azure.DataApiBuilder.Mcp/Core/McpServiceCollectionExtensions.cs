@@ -41,8 +41,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // Register custom tools from configuration
             RegisterCustomTools(services, runtimeConfig);
 
-            // Configure MCP server
-            services.ConfigureMcpServer();
+            // Configure MCP server and propagate runtime description to MCP initialize instructions.
+            services.ConfigureMcpServer(runtimeConfig.Runtime?.Mcp?.Description);
 
             return services;
         }

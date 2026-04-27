@@ -5598,6 +5598,113 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// This test validates that multiple autoentities with the same object name
+        /// but different schemas can be generated and accessed properly with the
+        /// default 'property.name' which should generate entities named '{schema}_{object}'.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod]
+        public async Task TestAutoentitiesWithSameObjectDifferentSchemas()
+        {
+            // Arrange
+            Dictionary<string, Autoentity> autoentityMap = new()
+            {
+                {
+                    "PublisherAutoEntity", new Autoentity(
+                        Patterns: new AutoentityPatterns(
+                            Include: null,
+                            Exclude: null,
+                            Name: null
+                        ),
+                        Template: new AutoentityTemplate(
+                            Rest: new EntityRestOptions(Enabled: true),
+                            GraphQL: new EntityGraphQLOptions(
+                                Singular: string.Empty,
+                                Plural: string.Empty,
+                                Enabled: true
+                            ),
+                            Health: null,
+                            Cache: null
+                        ),
+                        Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) }
+                    )
+                }
+            };
+
+            // Create DataSource for MSSQL connection
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            // Build complete runtime configuration with autoentities
+            RuntimeConfig configuration = new(
+                Schema: "TestAutoentitiesSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: false),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new Config.ObjectModel.AuthenticationOptions(
+                            Provider: nameof(EasyAuthType.StaticWebApps),
+                            Jwt: null
+                        )
+                    )
+                ),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new RuntimeAutoentities(autoentityMap)
+            );
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Act
+                RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
+
+                using HttpRequestMessage restFooRequest = new(HttpMethod.Get, "/api/foo_magazines");
+                using HttpResponseMessage restFooResponse = await client.SendAsync(restFooRequest);
+
+                using HttpRequestMessage restBarRequest = new(HttpMethod.Get, "/api/bar_magazines");
+                using HttpResponseMessage restBarResponse = await client.SendAsync(restBarRequest);
+
+                string graphqlQuery = @"
+                {
+                    foo_magazines {
+                        items {
+                            id
+                            issue_number
+                        }
+                    }
+                    bar_magazines {
+                        items {
+                            comic_name
+                            issue
+                        }
+                    }
+                }";
+
+                object graphqlPayload = new { query = graphqlQuery };
+                HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(graphqlPayload)
+                };
+                HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
+
+                // Assert
+                // Verify REST response
+                Assert.AreEqual(HttpStatusCode.OK, restFooResponse.StatusCode, "REST request to auto-generated entity 'foo_magazines' should succeed");
+                Assert.AreEqual(HttpStatusCode.OK, restBarResponse.StatusCode, "REST request to auto-generated entity 'bar_magazines' should succeed");
+
+                // Verify GraphQL response
+                Assert.AreEqual(HttpStatusCode.OK, graphqlResponse.StatusCode, "GraphQL request to auto-generated entity should succeed");
+            }
+        }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <param name="entityName"></param>

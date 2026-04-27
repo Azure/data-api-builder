@@ -5592,12 +5592,12 @@ type Planet @model(name:""PlanetAlias"") {
             {
                 // Act
                 RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
-                using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/publishers");
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/dbo_publishers");
                 using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 
                 string graphqlQuery = @"
                 {
-                    publishers {
+                    dbo_publishers {
                         items {
                             id
                             name
@@ -5701,8 +5701,6 @@ type Planet @model(name:""PlanetAlias"") {
             using (HttpClient client = server.CreateClient())
             {
                 // Act
-                RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
-
                 using HttpRequestMessage restFooRequest = new(HttpMethod.Get, "/api/foo_magazines");
                 using HttpResponseMessage restFooResponse = await client.SendAsync(restFooRequest);
 

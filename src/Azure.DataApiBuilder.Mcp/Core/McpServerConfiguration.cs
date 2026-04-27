@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <summary>
         /// Configures the MCP server with tool capabilities.
         /// </summary>
-        internal static IServiceCollection ConfigureMcpServer(this IServiceCollection services)
+        internal static IServiceCollection ConfigureMcpServer(this IServiceCollection services, string? instructions)
         {
             services.AddMcpServer()
             .WithListToolsHandler((RequestContext<ListToolsRequestParams> request, CancellationToken ct) =>
@@ -93,6 +93,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 options.ServerInfo = new() { Name = McpProtocolDefaults.MCP_SERVER_NAME, Version = McpProtocolDefaults.MCP_SERVER_VERSION };
                 options.Capabilities ??= new();
                 options.Capabilities.Tools ??= new();
+                options.ServerInstructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null;
             });
 
             return services;

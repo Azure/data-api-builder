@@ -18,9 +18,9 @@
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://go.microsoft.com/fwlink/?linkid=2224253</PackageProjectUrl>
-    <PackageTags>microsoft rest graphql api azure sql mssql mysql pgsql postgresql azure-sql sqlserver nosql cosmosdb dataApiBuilder</PackageTags>
+    <PackageTags>microsoft rest graphql mcp api azure sql mssql mysql pgsql postgresql azure-sql sqlserver nosql cosmosdb dataApiBuilder</PackageTags>
     <AssemblyName>Microsoft.DataApiBuilder</AssemblyName>
-    <Description>Data API builder for Azure Databases provides modern REST and GraphQL endpoints to your Azure Databases.</Description>
+    <Description>Data API builder for Azure Databases provides modern REST, GraphQL, and MCP endpoints to your Azure Databases.</Description>
     <PackageIcon>nuget_icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>

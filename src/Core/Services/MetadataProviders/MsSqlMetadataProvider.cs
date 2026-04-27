@@ -357,7 +357,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddGeneratedAutoentityNameToDataSourceName(entityName, autoentityName))
                     {
                         throw new DataApiBuilderException(
-                            message: $"Entity with name '{entityName}' already exists. Cannot create new entity from autoentities definition '{autoentityName}'.",
+                            message: $"Entity '{entityName}' conflicts with autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }

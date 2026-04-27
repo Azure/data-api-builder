@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Product;
+using Azure.DataApiBuilder.Service;
 using Cli.Constants;
 using Microsoft.Data.SqlClient;
 
@@ -136,14 +137,14 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate the usage of --graphql.multiple-create.enabled option of the init command for all database types.
+    /// Test to validate the usage of --graphql.multiple-mutations.create.enabled option of the init command for all database types.
     ///
     /// 1. Behavior for database types other than MsSQL:
-    ///      - Irrespective of whether the --graphql.multiple-create.enabled option is used or not, fields related to multiple-create will NOT be written to the config file.
+    ///      - Irrespective of whether the --graphql.multiple-mutations.create.enabled option is used or not, fields related to multiple-create will NOT be written to the config file.
     ///      - As a result, after deserialization of such a config file, the Runtime.GraphQL.MultipleMutationOptions is expected to be null.
     /// 2. Behavior for MsSQL database type:
     ///
-    ///      a. When --graphql.multiple-create.enabled option is used
+    ///      a. When --graphql.multiple-mutations.create.enabled option is used
     ///           - In this case, the fields related to multiple mutation and multiple create operations will be written to the config file.
     ///                "multiple-mutations": {
     ///                    "create": {
@@ -152,32 +153,32 @@ public class EndToEndTests
     ///                }
     ///         After deserializing such a config file, the Runtime.GraphQL.MultipleMutationOptions is expected to be non-null and the value of the "enabled" field is expected to be the same as the value passed in the init command.
     ///
-    ///      b. When --graphql.multiple-create.enabled option is not used
+    ///      b. When --graphql.multiple-mutations.create.enabled option is not used
     ///           - In this case, fields related to multiple mutation and multiple create operations will NOT be written to the config file.
     ///           - As a result, after deserialization of such a config file, the Runtime.GraphQL.MultipleMutationOptions is expected to be null.
     ///
     /// </summary>
-    /// <param name="isMultipleCreateEnabled">Value interpreted by the CLI for '--graphql.multiple-create.enabled' option of the init command.
+    /// <param name="isMultipleCreateEnabled">Value interpreted by the CLI for '--graphql.multiple-mutations.create.enabled' option of the init command.
     ///    When not used, CLI interprets the value for the option as CliBool.None
     ///    When used with true/false, CLI interprets the value as CliBool.True/CliBool.False respectively.
     /// </param>
     /// <param name="expectedValueForMultipleCreateEnabledFlag"> Expected value for the multiple create enabled flag in the config file.</param>
     [DataTestMethod]
-    [DataRow(CliBool.True, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MsSql database type")]
-    [DataRow(CliBool.False, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MsSql database type")]
-    [DataRow(CliBool.None, "mssql", DatabaseType.MSSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MsSql database type")]
-    [DataRow(CliBool.True, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MySql database type")]
-    [DataRow(CliBool.False, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MySql database type")]
-    [DataRow(CliBool.None, "mysql", DatabaseType.MySQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MySql database type")]
-    [DataRow(CliBool.True, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for PostgreSql database type")]
-    [DataRow(CliBool.False, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for PostgreSql database type")]
-    [DataRow(CliBool.None, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for PostgreSql database type")]
-    [DataRow(CliBool.True, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for dwsql database type")]
-    [DataRow(CliBool.False, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for dwsql database type")]
-    [DataRow(CliBool.None, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for dwsql database type")]
-    [DataRow(CliBool.True, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for cosmosdb_nosql database type")]
-    [DataRow(CliBool.False, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for cosmosdb_nosql database type")]
-    [DataRow(CliBool.None, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for cosmosdb_nosql database type")]
+    [DataRow(CliBool.True, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for MsSql database type")]
+    [DataRow(CliBool.False, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for MsSql database type")]
+    [DataRow(CliBool.None, "mssql", DatabaseType.MSSQL, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for MsSql database type")]
+    [DataRow(CliBool.True, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for MySql database type")]
+    [DataRow(CliBool.False, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for MySql database type")]
+    [DataRow(CliBool.None, "mysql", DatabaseType.MySQL, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for MySql database type")]
+    [DataRow(CliBool.True, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for PostgreSql database type")]
+    [DataRow(CliBool.False, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for PostgreSql database type")]
+    [DataRow(CliBool.None, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for PostgreSql database type")]
+    [DataRow(CliBool.True, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for dwsql database type")]
+    [DataRow(CliBool.False, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for dwsql database type")]
+    [DataRow(CliBool.None, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for dwsql database type")]
+    [DataRow(CliBool.True, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled true' for cosmosdb_nosql database type")]
+    [DataRow(CliBool.False, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.multiple-mutations.create.enabled false' for cosmosdb_nosql database type")]
+    [DataRow(CliBool.None, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command without '--graphql.multiple-mutations.create.enabled' option for cosmosdb_nosql database type")]
     public void TestEnablingMultipleCreateOperation(CliBool isMultipleCreateEnabled, string dbType, DatabaseType expectedDbType)
     {
         List<string> args = new() { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", dbType == "postgresql" ? SAMPLE_TEST_PGSQL_CONN_STRING : SAMPLE_TEST_CONN_STRING, "--database-type", dbType };
@@ -191,7 +192,7 @@ public class EndToEndTests
 
         if (isMultipleCreateEnabled is not CliBool.None)
         {
-            args.Add("--graphql.multiple-create.enabled");
+            args.Add("--graphql.multiple-mutations.create.enabled");
             args.Add(isMultipleCreateEnabled.ToString()!);
         }
 
@@ -216,7 +217,7 @@ public class EndToEndTests
         }
         else
         {
-            Assert.IsNull(runtimeConfig.Runtime.GraphQL.MultipleMutationOptions, message: "MultipleMutationOptions is expected to be null because a) DB type is not MsSQL or b) Either --graphql.multiple-create.enabled option was not used or no value was provided.");
+            Assert.IsNull(runtimeConfig.Runtime.GraphQL.MultipleMutationOptions, message: "MultipleMutationOptions is expected to be null because a) DB type is not MsSQL or b) Either --graphql.multiple-mutations.create.enabled option was not used or no value was provided.");
         }
     }
 
@@ -858,6 +859,83 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Validates that `dab start` correctly sets <see cref="Startup.IsLogLevelOverriddenByCli"/>
+    /// based on whether the --LogLevel CLI flag is provided.
+    ///
+    /// When the --LogLevel flag is provided, IsLogLevelOverriddenByCli should be true.
+    /// When the --LogLevel flag is omitted (log level comes from the config file), IsLogLevelOverriddenByCli should be false.
+    /// </summary>
+    /// <param name="cliLogLevel">The --LogLevel CLI flag value, or null to omit the flag.</param>
+    /// <param name="expectedIsOverridden">Expected value of Startup.IsLogLevelOverriddenByCli.</param>
+    [DataTestMethod]
+    [DataRow(null, false, DisplayName = "IsLogLevelOverriddenByCli is false")]
+    [DataRow(LogLevel.Error, true, DisplayName = "IsLogLevelOverriddenByCli is true")]
+    public async Task TestStartCommandResolvesLogLevelFromConfigOrFlag(
+        LogLevel? cliLogLevel,
+        bool expectedIsOverridden)
+    {
+        string baseConfig = @"
+        {
+            ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @""",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
+            },
+            ""runtime"": {
+                ""rest"": {
+                    ""path"": ""/api"",
+                    ""enabled"": true
+                },
+                ""graphql"": {
+                    ""path"": ""/graphql"",
+                    ""enabled"": true,
+                    ""allow-introspection"": true
+                },
+                ""host"": {
+                    ""mode"": ""development"",
+                    ""cors"": {
+                        ""origins"": [],
+                        ""allow-credentials"": false
+                    },
+                    ""authentication"": {
+                        ""provider"": ""Unauthenticated""
+                    }
+                },
+                ""telemetry"": {
+                    ""log-level"": {
+                        ""Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider"": ""Information"",
+                        ""Azure.DataApiBuilder.Core"": ""Debug"",
+                        ""Azure.DataApiBuilder.Service.Controllers.RestController"": ""Error"",
+                        ""default"": ""Warning""
+                    }
+                }
+            },
+            ""entities"": {}
+        }";
+
+        // Merge in an entity so the config is not rejected for having an empty entities section.
+        string configWithLogLevel = AddPropertiesToJson(baseConfig, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, configWithLogLevel);
+
+        StartOptions options = new(
+            verbose: false,
+            logLevel: cliLogLevel,
+            isHttpsRedirectionDisabled: false,
+            mcpStdio: false,
+            mcpRole: null,
+            config: TEST_RUNTIME_CONFIG_FILE);
+
+        // Run TryStartEngineWithOptions on a background task because StartEngine blocks until the host shuts down.
+        Task engineTask = Task.Run(() =>
+            TryStartEngineWithOptions(options, _runtimeConfigLoader!, _fileSystem!));
+
+        // Wait for the engine to finish loading the config.
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
+        Assert.AreEqual(expectedIsOverridden, Startup.IsLogLevelOverriddenByCli);
+    }
+
+    /// <summary>
     /// Validates that valid usage of verbs and associated options produce exit code 0 (CliReturnCode.SUCCESS).
     /// Verifies that explicitly implemented verbs (add, update, init, start) and appropriately
     /// supplied options produce exit code 0.
@@ -1097,10 +1175,6 @@ public class EndToEndTests
 
             output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);
-            StringAssert.Contains(output, $"Error: Failed to parse the config file: {TEST_RUNTIME_CONFIG_FILE}.", StringComparison.Ordinal);
-
-            output = await process.StandardOutput.ReadLineAsync();
-            Assert.IsNotNull(output);
             StringAssert.Contains(output, $"Failed to start the engine.", StringComparison.Ordinal);
         }
 
@@ -1270,5 +1344,55 @@ public class EndToEndTests
 
         // Assert
         Assert.AreEqual(isSuccess, isError == 0);
+    }
+
+    /// <summary>
+    /// End-to-end test verifying that the corrected CLI option names for individual
+    /// MCP DML tools (without the .enabled suffix) are correctly parsed by
+    /// CommandLineParser and produce the expected config output.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("--runtime.mcp.dml-tools.describe-entities", "true", DisplayName = "E2E: configure describe-entities via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.create-record", "false", DisplayName = "E2E: configure create-record via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.read-records", "true", DisplayName = "E2E: configure read-records via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.update-record", "true", DisplayName = "E2E: configure update-record via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.delete-record", "false", DisplayName = "E2E: configure delete-record via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.execute-entity", "true", DisplayName = "E2E: configure execute-entity via CLI")]
+    [DataRow("--runtime.mcp.dml-tools.aggregate-records", "false", DisplayName = "E2E: configure aggregate-records via CLI")]
+    public void TestConfigureIndividualDmlToolViaCli(string optionName, string value)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Run configure with the individual DML tool option through the full CLI parsing path.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, optionName, value };
+        int exitCode = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Command succeeds and the config contains MCP DML tools section.
+        Assert.AreEqual(0, exitCode);
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedConfig));
+        Assert.IsNotNull(updatedConfig?.Runtime?.Mcp?.DmlTools);
+
+        // Assert: Verify the correct property was set to the expected value.
+        bool expectedValue = bool.Parse(value);
+        DmlToolsConfig dmlTools = updatedConfig!.Runtime!.Mcp!.DmlTools!;
+        bool? actualValue = optionName switch
+        {
+            "--runtime.mcp.dml-tools.describe-entities" => dmlTools.DescribeEntities,
+            "--runtime.mcp.dml-tools.create-record" => dmlTools.CreateRecord,
+            "--runtime.mcp.dml-tools.read-records" => dmlTools.ReadRecords,
+            "--runtime.mcp.dml-tools.update-record" => dmlTools.UpdateRecord,
+            "--runtime.mcp.dml-tools.delete-record" => dmlTools.DeleteRecord,
+            "--runtime.mcp.dml-tools.execute-entity" => dmlTools.ExecuteEntity,
+            "--runtime.mcp.dml-tools.aggregate-records" => dmlTools.AggregateRecords,
+            _ => throw new ArgumentException($"Unknown option: {optionName}")
+        };
+
+        Assert.AreEqual(expectedValue, actualValue, $"Expected {optionName} to be {expectedValue} but was {actualValue}.");
     }
 }

@@ -57,14 +57,14 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         private static Dictionary<Type, JsonDataType> _systemTypeToJsonDataTypeMap = new()
         {
-            [typeof(byte)] = JsonDataType.String,
-            [typeof(sbyte)] = JsonDataType.String,
-            [typeof(short)] = JsonDataType.Number,
-            [typeof(ushort)] = JsonDataType.Number,
-            [typeof(int)] = JsonDataType.Number,
-            [typeof(uint)] = JsonDataType.Number,
-            [typeof(long)] = JsonDataType.Number,
-            [typeof(ulong)] = JsonDataType.Number,
+            [typeof(byte)] = JsonDataType.Integer,
+            [typeof(sbyte)] = JsonDataType.Integer,
+            [typeof(short)] = JsonDataType.Integer,
+            [typeof(ushort)] = JsonDataType.Integer,
+            [typeof(int)] = JsonDataType.Integer,
+            [typeof(uint)] = JsonDataType.Integer,
+            [typeof(long)] = JsonDataType.Integer,
+            [typeof(ulong)] = JsonDataType.Integer,
             [typeof(float)] = JsonDataType.Number,
             [typeof(double)] = JsonDataType.Number,
             [typeof(decimal)] = JsonDataType.Number,

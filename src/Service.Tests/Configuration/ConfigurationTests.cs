@@ -2521,8 +2521,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());
             string[] args = new[]
@@ -2609,8 +2608,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());
             string[] args = new[]
@@ -2777,7 +2775,7 @@ type Moon {
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode, "The REST response is different from the expected result.");
 
                 // MCP request
-                HttpStatusCode mcpResponseCode = await GetMcpResponse(client, configuration.Runtime.Mcp);
+                (HttpStatusCode mcpResponseCode, _) = await GetMcpResponse(client, configuration.Runtime.Mcp);
                 Assert.AreEqual(expectedStatusCodeForMcp, mcpResponseCode, "The MCP response is different from the expected result.");
             }
 
@@ -2802,6 +2800,44 @@ type Moon {
                 // HttpStatusCode mcpResponseCode = await GetMcpResponse(client, configuration.Runtime.Mcp);
                 // Assert.AreEqual(expected: expectedStatusCodeForMcp, actual: mcpResponseCode, "The MCP hydration post-response is different from the expected result.");
             }
+        }
+
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestMcpInitializeIncludesInstructionsFromRuntimeDescription()
+        {
+            const string MCP_INSTRUCTIONS = "Use SQL tools to query the database.";
+            const string CUSTOM_CONFIG = "custom-config-mcp-instructions.json";
+
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: true, Description: MCP_INSTRUCTIONS);
+
+            SqlConnectionStringBuilder connectionStringBuilder = new(GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL))
+            {
+                TrustServerCertificate = true
+            };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                connectionStringBuilder.ConnectionString, Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions);
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+
+            JsonElement initializeResponse = await GetMcpInitializeResponse(client, configuration.Runtime.Mcp);
+            JsonElement result = initializeResponse.GetProperty("result");
+
+            Assert.AreEqual(MCP_INSTRUCTIONS, result.GetProperty("instructions").GetString(), "MCP initialize response should include instructions from runtime.mcp.description.");
         }
 
         /// <summary>
@@ -3640,8 +3676,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, deserializedConfig.ToJson());
             string[] args = new[]
@@ -5611,7 +5646,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow("publishers", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", "Entity with name 'publishers' already exists. Cannot create new entity from autoentities definition 'PublisherAutoEntity'.", DisplayName = "Autoentities fail due to entity name")]
+        [DataRow("publishers", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", "Entity 'publishers' conflicts with autoentity pattern 'PublisherAutoEntity'. Use --patterns.exclude to skip it.", DisplayName = "Autoentities fail due to entity name")]
         [DataRow("UniquePublisher", "publishers", "uniquePluralPublishers", "/unique/publisher", "Entity publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql singular type")]
         [DataRow("UniquePublisher", "uniqueSingularPublisher", "publishers", "/unique/publisher", "Entity publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql plural type")]
         [DataRow("UniquePublisher", "uniqueSingularPublisher", "uniquePluralPublishers", "/publishers", "The rest path: publishers specified for entity: publishers is already used by another entity.", DisplayName = "Autoentities fail due to rest path")]
@@ -6229,13 +6264,13 @@ type Planet @model(name:""PlanetAlias"") {
             return responseCode;
         }
 
-        /// <summary>	
-        /// Executing MCP POST requests against the engine until a non-503 error is received.	
-        /// </summary>	
-        /// <param name="httpClient">Client used for request execution.</param>	
-        /// <returns>ServiceUnavailable if service is not successfully hydrated with config,	
-        /// else the response code from the MCP request</returns>	
-        public static async Task<HttpStatusCode> GetMcpResponse(HttpClient httpClient, McpRuntimeOptions mcp)
+        /// <summary>
+        /// Executing MCP POST requests against the engine until a non-503 error is received.
+        /// </summary>
+        /// <param name="httpClient">Client used for request execution.</param>
+        /// <param name="mcp">MCP runtime options containing path configuration.</param>
+        /// <returns>A tuple containing the HTTP status code and response body.</returns>
+        public static async Task<(HttpStatusCode StatusCode, string ResponseBody)> GetMcpResponse(HttpClient httpClient, McpRuntimeOptions mcp)
         {
             // Retry request RETRY_COUNT times in exponential increments to allow
             // required services time to instantiate and hydrate permissions because
@@ -6245,6 +6280,8 @@ type Planet @model(name:""PlanetAlias"") {
             // but it is highly unlikely to be the case.
             int retryCount = 0;
             HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
+            string responseBody = string.Empty;
+
             while (retryCount < RETRY_COUNT)
             {
                 // Minimal MCP request (initialize) - valid JSON-RPC request.
@@ -6262,14 +6299,16 @@ type Planet @model(name:""PlanetAlias"") {
                         clientInfo = new { name = "dab-test", version = "1.0.0" }
                     }
                 };
-                HttpRequestMessage mcpRequest = new(HttpMethod.Post, mcp.Path)
+
+                using HttpRequestMessage mcpRequest = new(HttpMethod.Post, mcp.Path)
                 {
                     Content = JsonContent.Create(payload)
                 };
                 mcpRequest.Headers.Add("Accept", "application/json, text/event-stream");
 
-                HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
+                using HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
                 responseCode = mcpResponse.StatusCode;
+                responseBody = await mcpResponse.Content.ReadAsStringAsync();
 
                 if (responseCode == HttpStatusCode.ServiceUnavailable || responseCode == HttpStatusCode.NotFound)
                 {
@@ -6281,7 +6320,85 @@ type Planet @model(name:""PlanetAlias"") {
                 break;
             }
 
-            return responseCode;
+            return (responseCode, responseBody);
+        }
+
+        /// <summary>
+        /// Executes MCP initialize over HTTP and returns the parsed JSON response.
+        /// Reuses the core request/retry logic from GetMcpResponse.
+        /// </summary>
+        public static async Task<JsonElement> GetMcpInitializeResponse(HttpClient httpClient, McpRuntimeOptions mcp)
+        {
+            (HttpStatusCode responseCode, string responseBody) = await GetMcpResponse(httpClient, mcp);
+
+            Assert.AreEqual(HttpStatusCode.OK, responseCode, "MCP initialize should return HTTP 200.");
+            Assert.IsFalse(string.IsNullOrWhiteSpace(responseBody), "MCP initialize response body should not be empty.");
+
+            // Depending on transport/content negotiation, initialize can return plain JSON
+            // or SSE-formatted text where JSON payload is carried in a data: line.
+            string payloadToParse = responseBody.TrimStart().StartsWith('{')
+                ? responseBody
+                : ExtractJsonFromSsePayload(responseBody);
+
+            Assert.IsFalse(string.IsNullOrWhiteSpace(payloadToParse), "MCP initialize response did not contain a JSON payload.");
+
+            using JsonDocument responseDocument = JsonDocument.Parse(payloadToParse);
+            return responseDocument.RootElement.Clone();
+        }
+
+        /// <summary>
+        /// Extracts JSON payload from SSE-formatted text.
+        /// SSE events can split JSON across multiple data: lines which should be concatenated.
+        /// </summary>
+        private static string ExtractJsonFromSsePayload(string ssePayload)
+        {
+            List<string> eventDataLines = new();
+
+            static string GetJsonPayload(List<string> dataLines)
+            {
+                if (dataLines.Count == 0)
+                {
+                    return string.Empty;
+                }
+
+                string combinedPayload = string.Join("\n", dataLines);
+                return !string.IsNullOrWhiteSpace(combinedPayload) && combinedPayload.TrimStart().StartsWith('{')
+                    ? combinedPayload
+                    : string.Empty;
+            }
+
+            foreach (string rawLine in ssePayload.Split('\n'))
+            {
+                string line = rawLine.TrimEnd('\r');
+
+                // Empty line signals end of an SSE event
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    string jsonPayload = GetJsonPayload(eventDataLines);
+                    if (!string.IsNullOrEmpty(jsonPayload))
+                    {
+                        return jsonPayload;
+                    }
+
+                    eventDataLines.Clear();
+                    continue;
+                }
+
+                if (line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    string data = line.Substring("data:".Length);
+                    // SSE spec: if data starts with a space, strip one leading space
+                    if (data.StartsWith(' '))
+                    {
+                        data = data.Substring(1);
+                    }
+
+                    eventDataLines.Add(data);
+                }
+            }
+
+            // Handle case where payload doesn't end with empty line
+            return GetJsonPayload(eventDataLines);
         }
 
         /// <summary>

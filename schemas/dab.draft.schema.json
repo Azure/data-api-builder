@@ -24,7 +24,7 @@
             "postgresql",
             "mysql",
             "cosmosdb_nosql",
-            "cosmosdb_postgresql"
+            "dwsql"
           ]
         },
         "connection-string": {
@@ -124,7 +124,7 @@
           "if": {
             "properties": {
               "database-type": {
-                "const": "mssql"
+                "enum": ["mssql", "dwsql"]
               }
             }
           },
@@ -217,7 +217,7 @@
             "request-body-strict": {
               "$ref": "#/$defs/boolean-or-string",
               "description": "Does not allow extraneous fields in request body when set to true.",
-              "default": true
+              "default": false
             }
           }
         },
@@ -299,32 +299,32 @@
                     "describe-entities": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the describe-entities tool.",
-                      "default": false
+                      "default": true
                     },
                     "create-record": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the create-record tool.",
-                      "default": false
+                      "default": true
                     },
                     "read-records": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the read-records tool.",
-                      "default": false
+                      "default": true
                     },
                     "update-record": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the update-record tool.",
-                      "default": false
+                      "default": true
                     },
                     "delete-record": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the delete-record tool.",
-                      "default": false
+                      "default": true
                     },
                     "execute-entity": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the execute-entity tool.",
-                      "default": false
+                      "default": true
                     },
                     "aggregate-records": {
                       "description": "Enable/disable or configure the aggregate-records MCP tool.",
@@ -353,7 +353,7 @@
                           }
                         }
                       ],
-                      "default": false
+                      "default": true
                     }
                   }
                 }
@@ -436,7 +436,7 @@
                       "description": "Unauthenticated provider where all operations run as anonymous. Use when Data API builder is behind an app gateway or APIM where authentication is handled externally."
                     }
                   ],
-                  "default": "AppService"
+                  "default": "Unauthenticated"
                 },
                 "jwt": {
                   "type": "object",
@@ -1085,7 +1085,7 @@
                       },
                       "description": "DEPRECATED. Use the 'fields' array and set 'primary-key: true' on each key field instead. List of fields to be used as primary keys."
                     },
-                    "object-description": {
+                    "description": {
                       "type": "string",
                       "description": "Human-readable description of the database object, used for MCP tool discovery and documentation."
                     }

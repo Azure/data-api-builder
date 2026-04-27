@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 /// should not load the config directly, or maintain a reference to it, so that we can do hot-reloading by replacing
 /// the config that is available from this type.
 /// </remarks>
-public class RuntimeConfigProvider
+public class RuntimeConfigProvider : IDisposable
 {
     public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
 
@@ -46,6 +46,7 @@ public class RuntimeConfigProvider
     private RuntimeConfigLoader _configLoader;
     private DabChangeToken _changeToken = new();
     private readonly IDisposable _changeTokenRegistration;
+    private bool _disposed;
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
@@ -89,6 +90,12 @@ public class RuntimeConfigProvider
     /// </summary>
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _changeTokenRegistration.Dispose();
     }
 
@@ -188,6 +195,7 @@ public class RuntimeConfigProvider
         if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig,
+                out _,
                 replacementSettings: null))
         {
             _configLoader.RuntimeConfig = runtimeConfig;
@@ -269,7 +277,7 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replacementSettings))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, out _, replacementSettings))
         {
             _configLoader.RuntimeConfig = runtimeConfig.DataSource?.DatabaseType switch
             {

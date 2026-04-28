@@ -99,6 +99,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateAzureLogAnalyticsAuth(runtimeConfig);
         ValidateFileSinkPath(runtimeConfig);
         ValidateEmbeddingsOptions(runtimeConfig);
+        ValidateEmbedParameters(runtimeConfig);
     }
 
     /// <summary>
@@ -449,7 +450,84 @@ public class RuntimeConfigValidator : IConfigValidator
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
         }
+    }
 
+    /// <summary>
+    /// Validates that parameters with embed=true are only used on stored-procedure entities
+    /// and that runtime.embeddings is configured when embed parameters are present.
+    /// </summary>
+    private void ValidateEmbedParameters(RuntimeConfig runtimeConfig)
+    {
+        // Check once whether the embedding service is configured and enabled.
+        // Example: "runtime": { "embeddings": { "enabled": true, "provider": "azure-openai" } } → true
+        // Example: embeddings section missing or "enabled": false → false
+        bool embeddingsConfigured = runtimeConfig.Runtime?.Embeddings is not null
+            && runtimeConfig.Runtime.Embeddings.Enabled;
+
+        // Loop through every entity in the config.
+        // Example entities: "Product" (table), "Category" (table), "SearchProducts" (sproc)
+        foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+        {
+            // Skip entities that have no parameters defined.
+            // Tables and views typically don't have parameters.
+            // Example: "Product": { "source": { "type": "table" } } → Parameters is null → skip
+            if (entity.Source.Parameters is null)
+            {
+                continue;
+            }
+
+            // Check each parameter for the embed flag.
+            // Example: iterates over { "name": "query_vector", "embed": true } and { "name": "top_k", "default": "5" }
+            foreach (ParameterMetadata param in entity.Source.Parameters)
+            {
+                // Skip parameters that don't have embed: true. Most params are normal pass-through.
+                // Example: "top_k" has Embed=false (default) → skip
+                // Example: "query_vector" has Embed=true → continue to validation checks
+                if (!param.Embed)
+                {
+                    continue;
+                }
+
+                // Rule 1: embed:true is only valid on stored-procedure entities.
+                // Tables/views don't have user-supplied parameters that get passed to SQL.
+                // Example PASS: "SearchProducts": { "source": { "type": "stored-procedure" } }
+                // Example FAIL: "Product": { "source": { "type": "table", "parameters": [{"name":"x","embed":true}] } }
+                //   → Error: "Entity 'Product': parameter 'x' has 'embed: true' but is only valid on stored-procedure entities."
+                if (entity.Source.Type is not EntitySourceType.StoredProcedure)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}': parameter '{param.Name}' has 'embed: true' but is only valid on stored-procedure entities.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                // Rule 2: embed:true requires runtime.embeddings to be configured and enabled.
+                // Can't convert text to vectors without an embedding service.
+                // Example PASS: "embeddings": { "enabled": true, "provider": "azure-openai", "api-key": "..." }
+                // Example FAIL: "embeddings": { "enabled": false } or embeddings section missing
+                //   → Error: "parameter 'query_vector' has 'embed: true' but runtime.embeddings is not configured or not enabled."
+                if (!embeddingsConfigured)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}': parameter '{param.Name}' has 'embed: true' but runtime.embeddings is not configured or not enabled.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                // Rule 3: embed:true with a default value is not supported.
+                // A default value is text (e.g., "wireless headphones") that would need embedding at startup — not supported.
+                // Example PASS: { "name": "query_vector", "embed": true }  (no default)
+                // Example FAIL: { "name": "query_vector", "embed": true, "default": "wireless headphones" }
+                //   → Error: "parameter 'query_vector' has both 'embed: true' and a 'default' value. Embed parameters cannot have default values."
+                if (param.Default is not null)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}': parameter '{param.Name}' has both 'embed: true' and a 'default' value. Embed parameters cannot have default values.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+            }
+        }
     }
 
     /// <summary>

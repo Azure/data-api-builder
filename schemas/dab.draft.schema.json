@@ -1280,7 +1280,8 @@
                               "name": { "type": "string", "description": "Parameter name" },
                               "required": { "$ref": "#/$defs/boolean-or-string", "description": "Is parameter required" },
                               "default": { "type": ["string", "number", "boolean", "null"], "description": "Default value" },
-                              "description": { "type": "string", "description": "Parameter description. Since descriptions for multiple parameters are provided as a comma-separated string, individual parameter descriptions must not contain a comma (',')." }
+                              "description": { "type": "string", "description": "Parameter description. Since descriptions for multiple parameters are provided as a comma-separated string, individual parameter descriptions must not contain a comma (',')." },
+                              "embed": { "type": "boolean", "description": "When true, the parameter text is automatically converted to an embedding vector via the configured embedding service before being passed to the stored procedure. Requires runtime.embeddings to be configured. Only valid on stored-procedure entities.", "default": false }
                             }
                           }
                         }

@@ -575,19 +575,26 @@ type Table @model(name: ""table"") {
         }
 
         /// <summary>
-        /// Tests that QueryBuilder.Build adds a groupBy field to the connection type
-        /// for MSSQL entities when aggregation is enabled. This verifies the fix for the
-        /// regression where aggregation features were not accessible in the schema.
+        /// Tests that QueryBuilder.Build correctly adds or omits the groupBy field on the
+        /// connection type based on whether the database type is in
+        /// <see cref="QueryBuilder.AggregationEnabledDatabaseTypes"/>.
+        /// MSSQL and DWSQL are supported; other types (e.g. PostgreSQL) are not.
         /// </summary>
-        [TestMethod]
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL, true, DisplayName = "MSSQL: groupBy field present when aggregation enabled")]
+        [DataRow(DatabaseType.DWSQL, true, DisplayName = "DWSQL: groupBy field present when aggregation enabled")]
+        [DataRow(DatabaseType.PostgreSQL, false, DisplayName = "PostgreSQL: groupBy field absent (not in AggregationEnabledDatabaseTypes)")]
+        [DataRow(DatabaseType.MySQL, false, DisplayName = "MySQL: groupBy field absent (not in AggregationEnabledDatabaseTypes)")]
         [TestCategory("Query Builder - Aggregation")]
-        public void Build_WithMssqlAndAggregationEnabled_AddsGroupByToConnectionType()
+        public void Build_WithAggregationEnabled_GroupByPresenceMatchesDatabaseSupport(
+            DatabaseType dbType,
+            bool expectGroupBy)
         {
             // Arrange
             DocumentNode root = Utf8GraphQLParser.Parse(BOOK_WITH_NUMERIC_FIELDS_GQL);
             Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
             {
-                { "Book", DatabaseType.MSSQL }
+                { "Book", dbType }
             };
 
             // Act
@@ -607,42 +614,14 @@ type Table @model(name: ""table"") {
             Assert.IsNotNull(bookConnection, "BookConnection type should exist");
 
             FieldDefinitionNode groupByField = bookConnection.Fields.FirstOrDefault(f => f.Name.Value == "groupBy");
-            Assert.IsNotNull(groupByField, "groupBy field should exist on BookConnection when aggregation is enabled for MSSQL");
-        }
-
-        /// <summary>
-        /// Tests that QueryBuilder.Build does NOT add a groupBy field to the connection type
-        /// for PostgreSQL entities, since aggregation is only enabled for MSSQL and DWSQL.
-        /// </summary>
-        [TestMethod]
-        [TestCategory("Query Builder - Aggregation")]
-        public void Build_WithPostgreSqlAndAggregationEnabled_DoesNotAddGroupByToConnectionType()
-        {
-            // Arrange
-            DocumentNode root = Utf8GraphQLParser.Parse(BOOK_WITH_NUMERIC_FIELDS_GQL);
-            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            if (expectGroupBy)
             {
-                { "Book", DatabaseType.PostgreSQL }
-            };
-
-            // Act
-            DocumentNode queryRoot = QueryBuilder.Build(
-                root,
-                entityNameToDatabaseType,
-                new(new Dictionary<string, Entity> { { "Book", GraphQLTestHelpers.GenerateEmptyEntity() } }),
-                inputTypes: new(),
-                entityPermissionsMap: CreateBookEntityPermissions(),
-                _isAggregationEnabled: true
-            );
-
-            // Assert: find BookConnection type
-            ObjectTypeDefinitionNode bookConnection = queryRoot.Definitions
-                .OfType<ObjectTypeDefinitionNode>()
-                .FirstOrDefault(d => d.Name.Value == "BookConnection");
-            Assert.IsNotNull(bookConnection, "BookConnection type should exist");
-
-            FieldDefinitionNode groupByField = bookConnection.Fields.FirstOrDefault(f => f.Name.Value == "groupBy");
-            Assert.IsNull(groupByField, "groupBy field should NOT exist on BookConnection for PostgreSQL (not in AggregationEnabledDatabaseTypes)");
+                Assert.IsNotNull(groupByField, $"groupBy field should exist on BookConnection for {dbType}");
+            }
+            else
+            {
+                Assert.IsNull(groupByField, $"groupBy field should NOT exist on BookConnection for {dbType} (not in AggregationEnabledDatabaseTypes)");
+            }
         }
 
         public static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)

@@ -528,18 +528,8 @@ public class RuntimeConfigLoaderTests
             ""entities"": {}
         }";
 
-        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
-        {
-            { "dab-config.json", new MockFileData(configJson) }
-        });
+        RuntimeConfig runtimeConfig = LoadConfig(configJson);
 
-        FileSystemRuntimeConfigLoader loader = new(fs);
-
-        // Act
-        bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig);
-
-        // Assert
-        Assert.IsTrue(loaded, "Config should load successfully.");
         Assert.IsNull(runtimeConfig.Runtime?.GraphQL, "GraphQL section should be null for this config.");
         Assert.IsTrue(runtimeConfig.EnableAggregation,
             "EnableAggregation should default to true when runtime.graphql section is absent.");
@@ -561,102 +551,57 @@ public class RuntimeConfigLoaderTests
             ""entities"": {}
         }";
 
-        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
-        {
-            { "dab-config.json", new MockFileData(configJson) }
-        });
+        RuntimeConfig runtimeConfig = LoadConfig(configJson);
 
-        FileSystemRuntimeConfigLoader loader = new(fs);
-
-        // Act
-        bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig);
-
-        // Assert
-        Assert.IsTrue(loaded, "Config should load successfully.");
         Assert.IsNull(runtimeConfig.Runtime, "Runtime section should be null for this config.");
         Assert.IsTrue(runtimeConfig.EnableAggregation,
             "EnableAggregation should default to true when runtime section is absent.");
     }
 
     /// <summary>
-    /// Tests that EnableAggregation returns false when explicitly disabled in config.
+    /// Tests that EnableAggregation honours the explicit value set in the config file.
     /// </summary>
-    [TestMethod]
-    public void EnableAggregation_WhenExplicitlyDisabled_ReturnsFalse()
+    [DataTestMethod]
+    [DataRow(true, DisplayName = "Explicit true is respected")]
+    [DataRow(false, DisplayName = "Explicit false is respected")]
+    public void EnableAggregation_WhenExplicitlySet_ReturnsConfiguredValue(bool explicitValue)
     {
-        // Arrange: a config with enable-aggregation explicitly set to false
-        string configJson = @"{
+        string configJson = $@"{{
             ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
-            ""data-source"": {
+            ""data-source"": {{
                 ""database-type"": ""mssql"",
                 ""connection-string"": ""Server=tcp:127.0.0.1,1433;""
-            },
-            ""runtime"": {
-                ""graphql"": {
+            }},
+            ""runtime"": {{
+                ""graphql"": {{
                     ""enabled"": true,
-                    ""enable-aggregation"": false
-                },
-                ""host"": {
-                    ""authentication"": { ""provider"": ""StaticWebApps"" }
-                }
-            },
-            ""entities"": {}
-        }";
+                    ""enable-aggregation"": {explicitValue.ToString().ToLower()}
+                }},
+                ""host"": {{
+                    ""authentication"": {{ ""provider"": ""StaticWebApps"" }}
+                }}
+            }},
+            ""entities"": {{}}
+        }}";
 
-        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
-        {
-            { "dab-config.json", new MockFileData(configJson) }
-        });
+        RuntimeConfig runtimeConfig = LoadConfig(configJson);
 
-        FileSystemRuntimeConfigLoader loader = new(fs);
-
-        // Act
-        bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig);
-
-        // Assert
-        Assert.IsTrue(loaded, "Config should load successfully.");
-        Assert.IsFalse(runtimeConfig.EnableAggregation,
-            "EnableAggregation should be false when explicitly set to false in config.");
+        Assert.AreEqual(explicitValue, runtimeConfig.EnableAggregation,
+            $"EnableAggregation should be {explicitValue} when explicitly set to {explicitValue} in config.");
     }
 
     /// <summary>
-    /// Tests that EnableAggregation returns true when explicitly enabled in config.
+    /// Loads a <see cref="RuntimeConfig"/> from a JSON string using a mock file system.
     /// </summary>
-    [TestMethod]
-    public void EnableAggregation_WhenExplicitlyEnabled_ReturnsTrue()
+    private static RuntimeConfig LoadConfig(string configJson)
     {
-        // Arrange: a config with enable-aggregation explicitly set to true
-        string configJson = @"{
-            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
-            ""data-source"": {
-                ""database-type"": ""mssql"",
-                ""connection-string"": ""Server=tcp:127.0.0.1,1433;""
-            },
-            ""runtime"": {
-                ""graphql"": {
-                    ""enabled"": true,
-                    ""enable-aggregation"": true
-                },
-                ""host"": {
-                    ""authentication"": { ""provider"": ""StaticWebApps"" }
-                }
-            },
-            ""entities"": {}
-        }";
-
-        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
+        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>
         {
             { "dab-config.json", new MockFileData(configJson) }
         });
 
         FileSystemRuntimeConfigLoader loader = new(fs);
-
-        // Act
-        bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig);
-
-        // Assert
-        Assert.IsTrue(loaded, "Config should load successfully.");
-        Assert.IsTrue(runtimeConfig.EnableAggregation,
-            "EnableAggregation should be true when explicitly set to true in config.");
+        Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig config), "Config should load successfully.");
+        return config;
     }
 }

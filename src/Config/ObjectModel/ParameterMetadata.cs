@@ -24,5 +24,12 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         /// Gets or sets the default value of the parameter, if any.
         /// </summary>
         public string? Default { get; set; }
+
+        /// <summary>
+        /// When true, the parameter value (text) is automatically embedded via the
+        /// EmbeddingService and the resulting vector is passed to the stored procedure.
+        /// Only valid on stored-procedure entities when runtime.embeddings is configured.
+        /// </summary>
+        public bool Embed { get; set; }
     }
 }

@@ -330,7 +330,7 @@ public class RuntimeConfigValidator : IConfigValidator
         await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
 
         // Validate entity configuration (root vs non-root rules, entity counts) after autoentity resolution.
-        // Only run when DB connection succeeded, since autoentity resolution requires DB access.
+        // Only run when there are no connection string errors, since autoentity resolution requires DB access.
         if (!ConfigValidationExceptions.Any(x => x.Message.StartsWith(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
         {
             // Re-read the config since autoentity resolution may have added new entities.

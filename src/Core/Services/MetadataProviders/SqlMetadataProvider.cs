@@ -324,9 +324,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     await ValidateDatabaseConnection();
                 }
-                catch (DataApiBuilderException e)
+                catch (Exception e)
                 {
-                    HandleOrRecordException(e);
+                    HandleOrRecordException(e is DataApiBuilderException dabe ? dabe : new DataApiBuilderException(
+                        message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE + $" {e.Message}",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                        innerException: e));
                     return;
                 }
             }

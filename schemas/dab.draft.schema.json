@@ -212,7 +212,8 @@
             },
             "enabled": {
               "$ref": "#/$defs/boolean-or-string",
-              "description": "Allow enabling/disabling REST requests for all entities."
+              "description": "Allow enabling/disabling REST requests for all entities.",
+              "default": true
             },
             "request-body-strict": {
               "$ref": "#/$defs/boolean-or-string",
@@ -237,7 +238,8 @@
             },
             "enabled": {
               "$ref": "#/$defs/boolean-or-string",
-              "description": "Allow enabling/disabling GraphQL requests for all entities."
+              "description": "Allow enabling/disabling GraphQL requests for all entities.",
+              "default": true
             },
             "depth-limit": {
               "type": [ "integer", "null" ],

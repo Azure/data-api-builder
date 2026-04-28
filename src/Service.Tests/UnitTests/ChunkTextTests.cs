@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Service.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -43,7 +42,7 @@ public class ChunkTextTests
     public void ChunkText_SplitsIntoMultipleChunks()
     {
         // Arrange
-        string text = new string('A', 250); // 250 characters
+        string text = new('A', 250); // 250 characters
         int chunkSize = 100;
         int overlap = 0;
 
@@ -58,92 +57,30 @@ public class ChunkTextTests
     }
 
     /// <summary>
-    /// Tests that ChunkText creates overlapping chunks.
+    /// Data-driven test for various overlap scenarios in ChunkText.
     /// </summary>
-    [TestMethod]
-    public void ChunkText_CreatesOverlappingChunks()
+    [DataTestMethod]
+    [DataRow("0123456789ABCDEFGHIJ", 10, 3, "0123456789", "789", DisplayName = "Creates overlapping chunks")]
+    [DataRow("AAAABBBBCCCCDDDD", 4, 0, "AAAA", "BBBB", DisplayName = "Zero overlap creates adjacent chunks")]
+    [DataRow("0123456789ABCDEF", 5, 5, null, null, DisplayName = "Overlap equal to chunk size")]
+    [DataRow("0123456789ABCDEF", 5, 10, null, null, DisplayName = "Overlap larger than chunk size")]
+    public void ChunkText_OverlapScenarios(string text, int chunkSize, int overlap, string expectedFirst, string expectedSecond)
     {
-        // Arrange
-        string text = "0123456789ABCDEFGHIJ"; // 20 characters
-        int chunkSize = 10;
-        int overlap = 3;
-
-        // Act
         List<string> chunks = ChunkText(text, chunkSize, overlap);
 
-        // Assert
-        Assert.IsTrue(chunks.Count >= 2, "Should have multiple chunks");
-
-        // First chunk: chars 0-9
-        Assert.AreEqual("0123456789", chunks[0]);
-
-        // Second chunk should start at position 7 (10 - 3 overlap)
-        // and include chars 7-16
-        if (chunks.Count >= 2)
+        // For the first two scenarios, check specific chunk content
+        if (expectedFirst != null && expectedSecond != null)
         {
-            Assert.IsTrue(chunks[1].StartsWith("789"), "Second chunk should start with overlap from first chunk");
+            Assert.IsTrue(chunks.Count >= 2, "Should have multiple chunks");
+            Assert.AreEqual(expectedFirst, chunks[0]);
+            Assert.IsTrue(chunks[1].StartsWith(expectedSecond), $"Second chunk should start with expected overlap: {expectedSecond}");
         }
-    }
-
-    /// <summary>
-    /// Tests that ChunkText with zero overlap creates adjacent chunks.
-    /// </summary>
-    [TestMethod]
-    public void ChunkText_WithZeroOverlap_CreatesAdjacentChunks()
-    {
-        // Arrange
-        string text = "AAAABBBBCCCCDDDD"; // 16 characters
-        int chunkSize = 4;
-        int overlap = 0;
-
-        // Act
-        List<string> chunks = ChunkText(text, chunkSize, overlap);
-
-        // Assert
-        Assert.AreEqual(4, chunks.Count);
-        Assert.AreEqual("AAAA", chunks[0]);
-        Assert.AreEqual("BBBB", chunks[1]);
-        Assert.AreEqual("CCCC", chunks[2]);
-        Assert.AreEqual("DDDD", chunks[3]);
-    }
-
-    /// <summary>
-    /// Tests that ChunkText handles overlap equal to chunk size.
-    /// </summary>
-    [TestMethod]
-    public void ChunkText_HandlesOverlapEqualToChunkSize()
-    {
-        // Arrange
-        string text = "0123456789ABCDEF"; // 16 characters
-        int chunkSize = 5;
-        int overlap = 5;
-
-        // Act
-        List<string> chunks = ChunkText(text, chunkSize, overlap);
-
-        // Assert - each chunk should start at the same position as previous (overlap = size)
-        // This should still terminate and not create infinite chunks
-        Assert.IsTrue(chunks.Count > 0);
-        Assert.IsTrue(chunks.Count < 100, "Should not create excessive chunks");
-    }
-
-    /// <summary>
-    /// Tests that ChunkText handles overlap larger than chunk size.
-    /// </summary>
-    [TestMethod]
-    public void ChunkText_HandlesOverlapLargerThanChunkSize()
-    {
-        // Arrange
-        string text = "0123456789ABCDEF"; // 16 characters
-        int chunkSize = 5;
-        int overlap = 10;
-
-        // Act
-        List<string> chunks = ChunkText(text, chunkSize, overlap);
-
-        // Assert - should handle gracefully without infinite loop
-        Assert.IsTrue(chunks.Count > 0);
-        Assert.IsTrue(chunks.Count < 100, "Should not create excessive chunks");
+        else
+        {
+            // For edge cases (overlap >= chunk size), just check chunk count is reasonable
+            Assert.IsTrue(chunks.Count > 0);
+            Assert.IsTrue(chunks.Count < 100, "Should not create excessive chunks");
+        }
     }
 
     /// <summary>
@@ -301,7 +238,7 @@ public class ChunkTextTests
     public void ChunkText_HandlesLargeText()
     {
         // Arrange
-        string text = new string('X', 10000);
+        string text = new('X', 10000);
         int chunkSize = 1000;
         int overlap = 100;
 

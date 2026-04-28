@@ -13,36 +13,35 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
 public class EmbeddingsChunkingOptionsTests
 {
     /// <summary>
-    /// Tests that default values are correctly set.
+    /// Data-driven test for constructor and EffectiveSizeChars scenarios.
     /// </summary>
-    [TestMethod]
-    public void Constructor_SetsDefaultValues()
+    [DataTestMethod]
+    [DataRow(true, null, null, EmbeddingsChunkingOptions.DEFAULT_SIZE_CHARS, EmbeddingsChunkingOptions.DEFAULT_OVERLAP_CHARS, EmbeddingsChunkingOptions.DEFAULT_SIZE_CHARS, DisplayName = "Default values")]
+    [DataRow(true, 500, 100, 500, 100, 500, DisplayName = "Custom values override defaults")]
+    [DataRow(true, 750, 50, 750, 50, 750, DisplayName = "EffectiveSizeChars returns configured value when valid")]
+    [DataRow(true, 0, 50, 0, 50, 51, DisplayName = "EffectiveSizeChars returns minimum valid when value too small")]
+    [DataRow(true, -100, 50, -100, 50, 51, DisplayName = "EffectiveSizeChars returns minimum valid when value negative")]
+    [DataRow(false, 500, 100, 500, 100, 500, DisplayName = "Allows disabled chunking")]
+    [DataRow(true, 1000, 0, 1000, 0, 1000, DisplayName = "Allows zero overlap")]
+    [DataRow(true, 1000, -50, 1000, 0, 1000, DisplayName = "Negative overlap clamped to zero")]
+    [DataRow(true, 100000, 1000, 100000, 1000, 100000, DisplayName = "Allows large chunk size")]
+    [DataRow(true, 100, 200, 100, 200, 201, DisplayName = "Allows overlap larger than chunk size (edge case)")]
+    public void EmbeddingsChunkingOptions_ConstructorAndEffectiveSizeChars(
+        bool enabled,
+        int? sizeChars,
+        int? overlapChars,
+        int expectedSizeChars,
+        int expectedOverlapChars,
+        int expectedEffectiveSize)
     {
-        // Arrange & Act
-        EmbeddingsChunkingOptions options = new(Enabled: true);
+        EmbeddingsChunkingOptions options = sizeChars is null && overlapChars is null
+            ? new(enabled)
+            : new(enabled, sizeChars ?? EmbeddingsChunkingOptions.DEFAULT_SIZE_CHARS, overlapChars ?? EmbeddingsChunkingOptions.DEFAULT_OVERLAP_CHARS);
 
-        // Assert
-        Assert.IsTrue(options.Enabled);
-        Assert.AreEqual(EmbeddingsChunkingOptions.DEFAULT_SIZE_CHARS, options.SizeChars);
-        Assert.AreEqual(EmbeddingsChunkingOptions.DEFAULT_OVERLAP_CHARS, options.OverlapChars);
-    }
-
-    /// <summary>
-    /// Tests that custom values override defaults.
-    /// </summary>
-    [TestMethod]
-    public void Constructor_SetsCustomValues()
-    {
-        // Arrange & Act
-        EmbeddingsChunkingOptions options = new(
-            Enabled: true,
-            SizeChars: 500,
-            OverlapChars: 100);
-
-        // Assert
-        Assert.IsTrue(options.Enabled);
-        Assert.AreEqual(500, options.SizeChars);
-        Assert.AreEqual(100, options.OverlapChars);
+        Assert.AreEqual(enabled, options.Enabled);
+        Assert.AreEqual(expectedSizeChars, options.SizeChars);
+        Assert.AreEqual(expectedOverlapChars, options.OverlapChars);
+        Assert.AreEqual(expectedEffectiveSize, options.EffectiveSizeChars);
     }
 
     /// <summary>

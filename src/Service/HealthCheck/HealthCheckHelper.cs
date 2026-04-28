@@ -398,7 +398,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
                 int responseTimeMs = (int)stopwatch.ElapsedMilliseconds;
                 bool isResponseTimeWithinThreshold = responseTimeMs <= thresholdMs;
-                bool isDimensionsValid = true;
+                bool isDimensionsValid = false;
                 string? errorMessage = null;
 
                 if (!result.Success)
@@ -427,6 +427,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     {
                         errorMessage = $"{DIMENSIONS_MISMATCH_ERROR_MESSAGE} Expected: {expectedDimensions.Value}, Actual: {result.Embedding.Length}";
                     }
+                }
+                else if (!expectedDimensions.HasValue)
+                {
+                    // If no expected dimensions are specified, consider dimensions valid
+                    isDimensionsValid = true;
                 }
 
                 // Check response time threshold

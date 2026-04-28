@@ -243,7 +243,7 @@
             },
             "depth-limit": {
               "type": [ "integer", "null" ],
-              "description": "Maximum allowed depth of a GraphQL query. Default: null (no limit). Use -1 via CLI to remove a previously set limit.",
+              "description": "Maximum allowed depth of a GraphQL query. Only positive integers are enforced. Default: null (no limit). Use -1 to explicitly remove a previously set limit.",
               "default": null
             },
             "multiple-mutations": {
@@ -950,7 +950,7 @@
                     "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                   },
                   "actions": {
-                    "description": "The operations permitted for this role. Use \"*\" to allow all, or specify an array of actions.",
+                    "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                     "oneOf": [
                       {
                         "type": "string",
@@ -1345,7 +1345,7 @@
                       "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                     },
                     "actions": {
-                      "description": "The operations permitted for this role. Use \"*\" to allow all, or specify an array of actions.",
+                      "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                       "oneOf": [
                         {
                           "type": "string",
@@ -1421,7 +1421,7 @@
                       "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                     },
                     "actions": {
-                      "description": "The operations permitted for this role. Use \"*\" to allow all, or specify an array of actions.",
+                      "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                       "oneOf": [
                         {
                           "type": "string",

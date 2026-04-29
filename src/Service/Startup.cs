@@ -621,32 +621,46 @@ namespace Azure.DataApiBuilder.Service
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
                     // Hot Chocolate v16 builds the GraphQL schema eagerly during host startup
-                    // (RequestExecutorWarmupService). DAB supports starting without a runtime
-                    // config and accepting one later via the /configuration endpoint or
-                    // hot-reload, in which case the dependencies of GraphQLSchemaCreator are
-                    // not yet constructible (RuntimeConfigProvider.GetConfig() throws
-                    // "Runtime config isn't setup."). Detect this case using TryGetConfig and
-                    // emit a minimal placeholder schema so HC's eager validation succeeds; the
-                    // GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED hot-reload event will rebuild
-                    // the executor against the real schema once the config is loaded.
+                    // (RequestExecutorWarmupService). DAB supports several scenarios where the
+                    // schema cannot be built at startup:
+                    //   1. Running without a runtime config (config supplied later via the
+                    //      /configuration endpoint or hot-reload).
+                    //   2. Config validation failure (e.g. Application Insights enabled with no
+                    //      connection string) where Startup.PerformOnConfigChangeAsync logs the
+                    //      error and continues; metadata-provider initialization never runs, so
+                    //      GraphQLSchemaCreator's transitive dependencies (AuthorizationResolver
+                    //      etc.) cannot construct.
+                    // In both cases, emit a minimal placeholder schema with a no-op resolver so
+                    // HC's eager validation succeeds without bringing the host down. The
+                    // GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED hot-reload event rebuilds the
+                    // executor against the real schema once a usable config is loaded.
                     RuntimeConfigProvider configProvider = serviceProvider.GetRootServiceProvider()
                         .GetRequiredService<RuntimeConfigProvider>();
                     if (!configProvider.TryGetConfig(out _))
                     {
-                        // Tolerate "no config yet" by registering a syntactically valid schema.
-                        // HC v16 also requires every field to have a resolver, so bind a no-op.
-                        // The field is unreachable in normal operation because GraphQL requests
-                        // are rejected upstream when no config is loaded.
-                        schemaBuilder.AddDocumentFromString("type Query { _dab: String }");
-                        schemaBuilder.AddResolver("Query", "_dab", _ => null);
+                        EmitPlaceholderSchema(schemaBuilder);
                         return;
                     }
 
-                    // The GraphQLSchemaCreator is an application service that is not available on 
-                    // the schema specific service provider, this means we have to get it with 
-                    // the GetRootServiceProvider helper.
-                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRootServiceProvider().GetRequiredService<GraphQLSchemaCreator>();
-                    graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                    try
+                    {
+                        // The GraphQLSchemaCreator is an application service that is not available on 
+                        // the schema specific service provider, this means we have to get it with 
+                        // the GetRootServiceProvider helper.
+                        GraphQLSchemaCreator graphQLService = serviceProvider.GetRootServiceProvider().GetRequiredService<GraphQLSchemaCreator>();
+                        graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Schema construction failed (e.g. metadata provider was not initialized
+                        // due to a config validation error). Fall back to the placeholder schema
+                        // so the host can still start; the underlying error will have already
+                        // been surfaced by Startup.PerformOnConfigChangeAsync.
+                        _logger.LogWarning(
+                            exception: ex,
+                            message: "Failed to build GraphQL schema; emitting placeholder schema. The error will surface on first GraphQL request and is typically caused by a runtime config that failed validation.");
+                        EmitPlaceholderSchema(schemaBuilder);
+                    }
                 })
                 .AddHttpRequestInterceptor<IntrospectionInterceptor>()
                 .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
@@ -890,6 +904,21 @@ namespace Azure.DataApiBuilder.Service
         {
             Console.WriteLine("Evicting old GraphQL schema.");
             requestExecutorResolver.EvictExecutor();
+        }
+
+        /// <summary>
+        /// Registers a minimal valid GraphQL schema (a single placeholder field with a no-op
+        /// resolver) on the supplied <paramref name="schemaBuilder"/>. Used to satisfy Hot
+        /// Chocolate v16's eager schema validation when the real schema cannot be constructed
+        /// at startup (no runtime config loaded yet, or a config validation failure prevented
+        /// metadata provider initialization). The placeholder is unreachable in normal
+        /// operation: it is shadowed once a real config is hot-reloaded via the
+        /// <c>GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED</c> event.
+        /// </summary>
+        private static void EmitPlaceholderSchema(ISchemaBuilder schemaBuilder)
+        {
+            schemaBuilder.AddDocumentFromString("type Query { _dab: String }");
+            schemaBuilder.AddResolver("Query", "_dab", _ => null);
         }
 
         /// <summary>

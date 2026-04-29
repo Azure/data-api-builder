@@ -488,6 +488,20 @@ public class RuntimeConfigValidator : IConfigValidator
                     continue;
                 }
 
+                // Rule 0: embed:true is only supported on Azure SQL / SQL Server data sources.
+                // The metadata type override (Byte[] → String) only exists in MsSqlMetadataProvider.
+                // For PostgreSQL/MySQL/Cosmos, the request would fail at runtime with a confusing
+                // type error. Reject at startup instead.
+                // Example FAIL: PostgreSQL entity with embed:true → "embed feature only supported for MSSQL"
+                DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
+                if (entityDataSource.DatabaseType != DatabaseType.MSSQL)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}': parameter '{param.Name}' has 'embed: true' but the data source type is '{entityDataSource.DatabaseType}'. The embed feature is currently only supported for Azure SQL / SQL Server.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
                 // Rule 1: embed:true is only valid on stored-procedure entities.
                 // Tables/views don't have user-supplied parameters that get passed to SQL.
                 // Example PASS: "SearchProducts": { "source": { "type": "stored-procedure" } }

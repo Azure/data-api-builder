@@ -29,6 +29,14 @@ namespace Cli
             // Check if MCP stdio mode is requested - suppress CLI logging to keep stdout clean for JSON-RPC.
             Utils.IsMcpStdioMode = args.Any(a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
 
+            // Check if user explicitly set --LogLevel (allows logs to stderr even in MCP mode)
+            int logLevelIndex = Array.FindIndex(args, a => string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));
+            Utils.IsLogLevelOverriddenByCli = logLevelIndex >= 0 && logLevelIndex + 1 < args.Length;
+            if (Utils.IsLogLevelOverriddenByCli && Enum.TryParse<LogLevel>(args[logLevelIndex + 1], ignoreCase: true, out LogLevel cliLogLevel))
+            {
+                Utils.CliLogLevel = cliLogLevel;
+            }
+
             // Logger setup and configuration
             ILoggerFactory loggerFactory = Utils.LoggerFactoryForCli;
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();

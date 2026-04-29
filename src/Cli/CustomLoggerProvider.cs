@@ -19,7 +19,8 @@ public class CustomLoggerProvider : ILoggerProvider
     public class CustomConsoleLogger : ILogger
     {
         // Minimum LogLevel. LogLevel below this would be disabled.
-        private readonly LogLevel _minimumLogLevel = LogLevel.Information;
+        // When CLI specifies --LogLevel, use that value; otherwise default to Information.
+        private static LogLevel _minimumLogLevel => Cli.Utils.IsLogLevelOverriddenByCli ? Cli.Utils.CliLogLevel : LogLevel.Information;
 
         //  Color values based on LogLevel
         //  LogLevel    Foreground      Background
@@ -71,13 +72,33 @@ public class CustomLoggerProvider : ILoggerProvider
 
         /// <summary>
         /// Creates Log message by setting console message color based on LogLevel.
-        /// Skips logging when in MCP stdio mode to keep stdout clean for JSON-RPC protocol.
+        /// In MCP stdio mode:
+        /// - If user explicitly set --LogLevel: write to stderr (colored output)
+        /// - Otherwise: suppress entirely to keep stdout clean for JSON-RPC protocol.
         /// </summary>
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            // In MCP stdio mode, suppress all CLI logging to keep stdout clean for JSON-RPC.
+            // In MCP stdio mode, only output logs if user explicitly requested a log level.
+            // In that case, write to stderr to keep stdout clean for JSON-RPC.
             if (Cli.Utils.IsMcpStdioMode)
             {
+                if (!Cli.Utils.IsLogLevelOverriddenByCli)
+                {
+                    return; // Suppress entirely when no explicit log level
+                }
+
+                // User wants logs in MCP mode - write to stderr
+                if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
+                {
+                    return;
+                }
+
+                if (!_logLevelToAbbreviation.TryGetValue(logLevel, out string? mcpAbbreviation))
+                {
+                    return;
+                }
+
+                Console.Error.WriteLine($"{mcpAbbreviation}: {formatter(state, exception)}");
                 return;
             }
 

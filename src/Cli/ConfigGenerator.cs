@@ -2720,7 +2720,10 @@ namespace Cli
 
             /// Add arguments for LogLevel. Only pass --LogLevel when user explicitly specified it,
             /// so that MCP logging/setLevel can still adjust the level when no CLI override is present.
-            /// If not provided, Default minimum LogLevel is Debug for Development mode and Error for Production mode.
+            /// 
+            /// When --LogLevel is NOT specified:
+            /// - MCP stdio mode: Service defaults to None for clean stdout output
+            /// - Non-MCP mode: Service defaults to Debug (Development) or Error (Production) based on config
             LogLevel minimumLogLevel;
             if (options.LogLevel is not null)
             {

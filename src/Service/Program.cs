@@ -5,11 +5,13 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
@@ -66,10 +68,10 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Initialize log level EARLY, before building the host.
                 // This ensures logging filters are effective during the entire host build process.
-                // Note: isCliOverridden is set here. IsConfigOverridden is determined later
-                // when UpdateFromRuntimeConfig() is called and checks HasExplicitLogLevel().
-                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgs(args, runMcpStdio, out bool isCliOverridden);
-                LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverridden, isConfigOverridden: false);
+                // For MCP mode, we also read the config file early to check for log level override.
+                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgs(args, runMcpStdio, out bool isCliOverridden, out bool isConfigOverridden);
+
+                LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverridden, isConfigOverridden);
 
                 // For MCP stdio mode, redirect Console.Out to keep stdout clean for JSON-RPC.
                 // MCP SDK uses Console.OpenStandardOutput() which gets the real stdout, unaffected by this redirect.
@@ -140,10 +142,19 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .ConfigureLogging(logging =>
                 {
-                    // Set minimum level at the framework level - this affects all loggers.
-                    // For MCP stdio mode, Console.Out is redirected to stderr in Main(),
-                    // so any logging output goes to stderr and doesn't pollute the JSON-RPC channel.
-                    logging.SetMinimumLevel(LogLevelProvider.CurrentLogLevel);
+                    // For MCP stdio mode, we need dynamic log level control via logging/setLevel.
+                    // Set framework minimum to Trace so all logs pass through to the dynamic filter.
+                    // The dynamic AddFilter() will do the actual filtering based on current level.
+                    // For non-MCP mode, use the configured level directly.
+                    if (runMcpStdio)
+                    {
+                        // Allow all logs through framework, filter dynamically
+                        logging.SetMinimumLevel(LogLevel.Trace);
+                    }
+                    else
+                    {
+                        logging.SetMinimumLevel(LogLevelProvider.CurrentLogLevel);
+                    }
 
                     // Add filter for dynamic log level changes (e.g., via MCP logging/setLevel)
                     logging.AddFilter(logLevel => LogLevelProvider.ShouldLog(logLevel));
@@ -162,25 +173,33 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Extracts the log level from the command line arguments.
+        /// Extracts the log level from the command line arguments and optionally from config.
         /// When --LogLevel is present, returns that value with CLI override flag set.
-        /// When in MCP stdio mode without explicit --LogLevel, defaults to None.
-        /// Config override is determined later via UpdateFromRuntimeConfig().
+        /// When in MCP stdio mode without explicit --LogLevel, reads the config file to check for log level.
+        /// When in normal mode without explicit --LogLevel, defaults to Error (UpdateFromRuntimeConfig()
+        /// will later adjust based on config: Debug for Development mode, Error for Production mode).
         /// </summary>
-        /// <param name="args">array that may contain log level information.</param>
-        /// <param name="runMcpStdio">whether running in MCP stdio mode.</param>
-        /// <param name="isLogLevelOverridenByCli">sets if log level is found in the args from CLI.</param>
+        /// <param name="args">Array that may contain log level information.</param>
+        /// <param name="runMcpStdio">Whether running in MCP stdio mode.</param>
+        /// <param name="isLogLevelOverridenByCli">Sets if log level is found in the args from CLI.</param>
+        /// <param name="isConfigOverridden">Sets if log level is found in the config file (MCP mode only).</param>
         /// <returns>Appropriate log level.</returns>
-        private static LogLevel GetLogLevelFromCommandLineArgs(string[] args, bool runMcpStdio, out bool isLogLevelOverridenByCli)
+        private static LogLevel GetLogLevelFromCommandLineArgs(string[] args, bool runMcpStdio, out bool isLogLevelOverridenByCli, out bool isConfigOverridden)
         {
             Command cmd = new(name: "start");
             Option<LogLevel> logLevelOption = new(name: "--LogLevel");
+            Option<string> configFileOption = new(name: "--ConfigFileName");
             cmd.AddOption(logLevelOption);
+            cmd.AddOption(configFileOption);
             ParseResult result = GetParseResult(cmd, args);
-            bool matchedToken = result.Tokens.Count - result.UnmatchedTokens.Count - result.UnparsedTokens.Count > 1;
 
             LogLevel logLevel;
-            if (matchedToken)
+            isConfigOverridden = false;
+
+            // Check if --LogLevel was explicitly specified via CLI
+            bool hasCliLogLevel = args.Any(a => string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));
+
+            if (hasCliLogLevel)
             {
                 // User explicitly set --LogLevel via CLI (highest priority)
                 logLevel = result.GetValueForOption(logLevelOption);
@@ -188,15 +207,23 @@ namespace Azure.DataApiBuilder.Service
             }
             else if (runMcpStdio)
             {
-                // MCP stdio mode without explicit --LogLevel: default to None to keep stdout clean.
-                // This is NOT a CLI override, so MCP logging/setLevel can potentially change it
-                // (unless config override is detected later via UpdateFromRuntimeConfig).
-                logLevel = LogLevel.None;
+                // MCP stdio mode without explicit --LogLevel: check config for log level (second priority)
                 isLogLevelOverridenByCli = false;
+                logLevel = LogLevel.None; // Default if config doesn't have log level
+
+                string? configFilePath = result.GetValueForOption(configFileOption);
+                if (!string.IsNullOrWhiteSpace(configFilePath) && TryGetLogLevelFromConfig(configFilePath, out LogLevel configLogLevel))
+                {
+                    logLevel = configLogLevel;
+                    isConfigOverridden = true;
+                }
             }
             else
             {
-                // Normal mode without explicit --LogLevel
+                // Normal (non-MCP) mode without explicit --LogLevel:
+                // Start with Error as fallback. UpdateFromRuntimeConfig() will later
+                // adjust based on config: Debug for Development mode, Error for Production mode.
+                // This initial value is used before config is loaded.
                 logLevel = LogLevel.Error;
                 isLogLevelOverridenByCli = false;
             }
@@ -211,6 +238,42 @@ namespace Azure.DataApiBuilder.Service
             }
 
             return logLevel;
+        }
+
+        /// <summary>
+        /// Attempts to read the config file early to extract the log level.
+        /// This is used in MCP stdio mode to determine the Console redirect before host build.
+        /// </summary>
+        /// <param name="configFilePath">Path to the config file.</param>
+        /// <param name="logLevel">The log level from config, if found.</param>
+        /// <returns>True if config has an explicit log level; false otherwise.</returns>
+        private static bool TryGetLogLevelFromConfig(string configFilePath, out LogLevel logLevel)
+        {
+            logLevel = LogLevel.None;
+            try
+            {
+                if (!File.Exists(configFilePath))
+                {
+                    return false;
+                }
+
+                string configJson = File.ReadAllText(configFilePath);
+                if (RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig? config) && config is not null)
+                {
+                    if (config.HasExplicitLogLevel())
+                    {
+                        // Use the config's method to get the resolved log level
+                        logLevel = config.GetConfiguredLogLevel();
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore config parse errors - fall back to default log level
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -331,14 +394,21 @@ namespace Azure.DataApiBuilder.Service
                         }
                     }
 
-                    // In stdio mode, route console logs to STDERR to keep STDOUT clean for MCP JSON
+                    // In stdio mode, route console logs to STDERR to keep STDOUT clean for MCP JSON.
+                    // Only add console logger if log level is not None (silent mode).
                     if (stdio)
                     {
                         builder.ClearProviders();
-                        builder.AddConsole(options =>
+
+                        // Only add ConsoleLoggerProvider if we actually want logs.
+                        // When LogLevel.None, skip the console logger entirely for true silence.
+                        if (LogLevelProvider.CurrentLogLevel != LogLevel.None)
                         {
-                            options.LogToStandardErrorThreshold = LogLevel.Trace;
-                        });
+                            builder.AddConsole(options =>
+                            {
+                                options.LogToStandardErrorThreshold = LogLevel.Trace;
+                            });
+                        }
                     }
                     else
                     {

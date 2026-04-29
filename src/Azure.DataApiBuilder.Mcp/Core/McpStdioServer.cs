@@ -179,22 +179,43 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
             }
 
-            // Create the initialize response
-            object result = new
+            // Create the initialize response - only include instructions if non-empty
+            object result;
+            if (!string.IsNullOrWhiteSpace(instructions))
             {
-                protocolVersion = _protocolVersion,
-                capabilities = new
+                result = new
                 {
-                    tools = new { listChanged = true },
-                    logging = new { }
-                },
-                serverInfo = new
+                    protocolVersion = _protocolVersion,
+                    capabilities = new
+                    {
+                        tools = new { listChanged = true },
+                        logging = new { }
+                    },
+                    serverInfo = new
+                    {
+                        name = McpProtocolDefaults.MCP_SERVER_NAME,
+                        version = McpProtocolDefaults.MCP_SERVER_VERSION
+                    },
+                    instructions = instructions
+                };
+            }
+            else
+            {
+                result = new
                 {
-                    name = McpProtocolDefaults.MCP_SERVER_NAME,
-                    version = McpProtocolDefaults.MCP_SERVER_VERSION
-                },
-                instructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null
-            };
+                    protocolVersion = _protocolVersion,
+                    capabilities = new
+                    {
+                        tools = new { listChanged = true },
+                        logging = new { }
+                    },
+                    serverInfo = new
+                    {
+                        name = McpProtocolDefaults.MCP_SERVER_NAME,
+                        version = McpProtocolDefaults.MCP_SERVER_VERSION
+                    }
+                };
+            }
 
             WriteResult(id, result);
         }
@@ -241,6 +262,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// 
         /// If CLI or Config set the log level, this method accepts the request but silently ignores it.
         /// The client won't get an error, but CLI/Config wins.
+        /// 
+        /// When MCP sets a level other than "none", this also restores Console.Error to the real stderr
+        /// stream so that logs become visible (Console may have been redirected to null at startup).
+        /// It also enables MCP log notifications so logs are sent to the client via notifications/message.
         /// </remarks>
         private void HandleSetLogLevel(JsonElement? id, JsonElement root)
         {
@@ -270,10 +295,36 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             // Attempt to update the log level
             // If CLI or Config overrode, this returns false but we still return success to the client
-            logLevelController.UpdateFromMcp(level);
+            bool updated = logLevelController.UpdateFromMcp(level);
+
+            // If MCP successfully changed the log level to something other than "none",
+            // ensure Console.Error is pointing to the real stderr (not TextWriter.Null).
+            // This handles the case where MCP stdio mode started with LogLevel.None (quiet startup)
+            // and the client later enables logging via logging/setLevel.
+            bool isLoggingEnabled = !string.Equals(level, "none", StringComparison.OrdinalIgnoreCase);
+            if (updated && isLoggingEnabled)
+            {
+                RestoreStderrIfNeeded();
+            }
 
             // Always return success (empty result object) per MCP spec
             WriteResult(id, new { });
+        }
+
+        /// <summary>
+        /// Restores Console.Error to the real stderr stream if it was redirected to TextWriter.Null.
+        /// This enables log output after MCP client sends logging/setLevel with a level other than "none".
+        /// </summary>
+        private static void RestoreStderrIfNeeded()
+        {
+            // Always restore stderr to the real stream when MCP enables logging.
+            // This is safe to call multiple times - we just re-wrap the standard error stream.
+            Stream stderr = Console.OpenStandardError();
+            StreamWriter stderrWriter = new(stderr, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false))
+            {
+                AutoFlush = true
+            };
+            Console.SetError(stderrWriter);
         }
 
         /// <summary>

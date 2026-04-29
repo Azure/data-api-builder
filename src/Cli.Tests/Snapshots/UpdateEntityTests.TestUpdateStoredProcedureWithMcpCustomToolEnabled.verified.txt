@@ -24,7 +24,8 @@
           Issuer: 
         }
       }
-    }
+    },
+    IsEmbeddingsConfigured: false
   },
   Entities: [
     {

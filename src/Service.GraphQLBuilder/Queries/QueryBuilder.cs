@@ -107,10 +107,45 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
             List<IDefinitionNode> definitionNodes = new()
             {
-                new ObjectTypeDefinitionNode(location: null, new NameNode("Query"), description: null, new List<DirectiveNode>(), new List<NamedTypeNode>(), queryFields),
+                // Hot Chocolate v16 validates schemas eagerly during host startup
+                // (RequestExecutorWarmupService) and rejects an empty Query type with
+                // "The object type `Query` has to at least define one field in order to be valid."
+                // This can occur in valid runtime configurations: GraphQL globally disabled,
+                // every entity opting out of GraphQL via `graphql.enabled = false`, no entities
+                // configured yet, and similar OpenAPI-only / REST-only setups.
+                // Emit a hidden placeholder field so the schema is structurally valid; it is
+                // never returned to clients because GraphQL requests are rejected upstream when
+                // GraphQL is disabled, and it is shadowed by real fields whenever any entity
+                // contributes a query.
+                new ObjectTypeDefinitionNode(
+                    location: null,
+                    new NameNode("Query"),
+                    description: null,
+                    new List<DirectiveNode>(),
+                    new List<NamedTypeNode>(),
+                    queryFields.Count > 0 ? queryFields : new List<FieldDefinitionNode> { BuildEmptySchemaPlaceholderField() }),
             };
             definitionNodes.AddRange(returnTypes);
             return new(definitionNodes);
+        }
+
+        /// <summary>
+        /// Builds a hidden placeholder field used to keep the GraphQL Query type valid when no
+        /// entity contributes any query field (e.g. GraphQL globally disabled, all entities have
+        /// graphql.enabled = false, or no entities configured). Without it, Hot Chocolate v16's
+        /// eager schema validation throws on an empty Query.
+        /// </summary>
+        private static FieldDefinitionNode BuildEmptySchemaPlaceholderField()
+        {
+            return new FieldDefinitionNode(
+                location: null,
+                new NameNode("_dab"),
+                new StringValueNode(
+                    "Internal placeholder; only present when no entity contributes a query field. "
+                    + "Always returns null and is never reachable in normal operation."),
+                arguments: new List<InputValueDefinitionNode>(),
+                type: new NamedTypeNode(new NameNode("String")),
+                directives: new List<DirectiveNode>());
         }
 
         public static FieldDefinitionNode GenerateByPKQuery(

@@ -216,7 +216,12 @@ namespace Azure.DataApiBuilder.Service.Services
                         // generated schemas still use the GraphQL name "ByteArray", so HC binds entity
                         // fields to ByteArrayType. We accept either type here so DAB also tolerates
                         // schemas that bind to Base64StringType (e.g. via DefaultValueType).
+                        // CS0618: ByteArrayType is [Obsolete] in HC v16 in favor of Base64StringType,
+                        // but we still need to pattern-match it because it remains the type bound to
+                        // the GraphQL name "ByteArray" that DAB-generated schemas continue to use.
+#pragma warning disable CS0618
                         Base64StringType or ByteArrayType => fieldValue.GetBytesFromBase64(),
+#pragma warning restore CS0618
                         BooleanType => fieldValue.GetBoolean(), // spec
                         UrlType => new Uri(fieldValue.GetString()!),
                         UuidType => fieldValue.GetGuid(),

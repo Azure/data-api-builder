@@ -11,7 +11,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
     {
         private static readonly ITypeNode _id = new NamedTypeNode(ScalarNames.ID);
         private static readonly ITypeNode _boolean = new NamedTypeNode(ScalarNames.Boolean);
-        private static readonly ITypeNode _byte = new NamedTypeNode(ScalarNames.Byte);
+        // BYTE_TYPE is "UnsignedByte" after the HC v16 upgrade (HC v16 split ByteType
+        // into a signed-byte ByteType and a new UnsignedByteType for byte 0..255). DAB's
+        // SQL tinyint columns map to UnsignedByte, so the filter input must reference the
+        // same scalar that schema fields are typed as.
+        private static readonly ITypeNode _byte = new NamedTypeNode(BYTE_TYPE);
         private static readonly ITypeNode _short = new NamedTypeNode(ScalarNames.Short);
         private static readonly ITypeNode _int = new NamedTypeNode(ScalarNames.Int);
         private static readonly ITypeNode _long = new NamedTypeNode(ScalarNames.Long);
@@ -55,7 +59,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             CreateSimpleEqualsFilter("BooleanFilterInput", "Input type for adding Boolean filters", _boolean);
 
         private static InputObjectTypeDefinitionNode ByteInputType() =>
-            CreateComparableFilter("ByteFilterInput", "Input type for adding Byte filters", _byte);
+            // Filter input type name follows the $"{TypeName}FilterInput" convention used by
+            // GetCommonFilterInputType, so this is "UnsignedByteFilterInput" with HC v16.
+            CreateComparableFilter($"{BYTE_TYPE}FilterInput", $"Input type for adding {BYTE_TYPE} filters", _byte);
 
         private static InputObjectTypeDefinitionNode ShortInputType() =>
             CreateComparableFilter("ShortFilterInput", "Input type for adding Short filters", _short);
@@ -189,7 +195,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         {
             AddInputType(ScalarNames.ID, IdInputType());
             AddInputType(ScalarNames.UUID, UuidInputType());
-            AddInputType(ScalarNames.Byte, ByteInputType());
+            // Register under BYTE_TYPE ("UnsignedByte" with HC v16) so InputTypeBuilder's
+            // lookup by the field's GraphQL type name resolves correctly.
+            AddInputType(BYTE_TYPE, ByteInputType());
             AddInputType(ScalarNames.Short, ShortInputType());
             AddInputType(ScalarNames.Int, IntInputType());
             AddInputType(ScalarNames.Long, LongInputType());

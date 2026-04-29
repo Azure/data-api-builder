@@ -620,6 +620,26 @@ namespace Azure.DataApiBuilder.Service
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
+                    // Hot Chocolate v16 builds the GraphQL schema eagerly during host startup
+                    // (RequestExecutorWarmupService). DAB supports starting without a runtime
+                    // config and accepting one later via the /configuration endpoint or
+                    // hot-reload, in which case the dependencies of GraphQLSchemaCreator are
+                    // not yet constructible (RuntimeConfigProvider.GetConfig() throws
+                    // "Runtime config isn't setup."). Detect this case using TryGetConfig and
+                    // emit a minimal placeholder schema so HC's eager validation succeeds; the
+                    // GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED hot-reload event will rebuild
+                    // the executor against the real schema once the config is loaded.
+                    RuntimeConfigProvider configProvider = serviceProvider.GetRootServiceProvider()
+                        .GetRequiredService<RuntimeConfigProvider>();
+                    if (!configProvider.TryGetConfig(out _))
+                    {
+                        // Tolerate "no config yet" by registering a syntactically valid schema.
+                        // The single field is internal and unreachable in normal operation.
+                        schemaBuilder.AddDocumentFromString(
+                            "type Query { _dab: String }");
+                        return;
+                    }
+
                     // The GraphQLSchemaCreator is an application service that is not available on 
                     // the schema specific service provider, this means we have to get it with 
                     // the GetRootServiceProvider helper.

@@ -601,29 +601,318 @@ public class ValidateConfigTests
     }
 
     /// <summary>
+    /// Non-root with datasource and only autoentities that resolve zero entities → error
+    /// ("No entities found"). Covers truth-table row 6 (DSF=0, DS=1, E=0, AE=1, resolved=0).
+    /// </summary>
+    [TestMethod]
+    public void TestNonRootWithDataSourceAndAutoentitiesResolvingZeroProducesError()
+    {
+        RuntimeConfig config = BuildTestConfig(
+            hasDataSource: true,
+            entities: new(),
+            autoentities: new() { { "ae1", BuildSimpleAutoentity() } },
+            autoentityResolutionCounts: new() { { "ae1", 0 } });
+        RuntimeConfigValidator validator = BuildValidator(config);
+        validator.ValidateDataSourceAndEntityPresence(config);
+
+        Assert.AreEqual(1, validator.ConfigValidationExceptions.Count);
+        Assert.IsTrue(validator.ConfigValidationExceptions[0].Message.Contains("No entities found"));
+    }
+
+    /// <summary>
+    /// Non-root with datasource and only autoentities that resolve to >0 entities → valid.
+    /// Covers truth-table row 6 (DSF=0, DS=1, E=0, AE=1, resolved>0).
+    /// </summary>
+    [TestMethod]
+    public void TestNonRootWithDataSourceAndAutoentitiesResolvingEntitiesIsValid()
+    {
+        RuntimeConfig config = BuildTestConfig(
+            hasDataSource: true,
+            entities: new(),
+            autoentities: new() { { "ae1", BuildSimpleAutoentity() } },
+            autoentityResolutionCounts: new() { { "ae1", 3 } });
+        RuntimeConfigValidator validator = BuildValidator(config);
+        validator.ValidateDataSourceAndEntityPresence(config);
+
+        Assert.AreEqual(0, validator.ConfigValidationExceptions.Count);
+    }
+
+    /// <summary>
+    /// Non-root with manual entities AND autoentities that resolve zero → valid, but a warning
+    /// is emitted. Covers truth-table row 8 (DSF=0, DS=1, E=1, AE=1, resolved=0).
+    /// </summary>
+    [TestMethod]
+    public void TestNonRootWithEntitiesAndAutoentitiesResolvingZeroLogsWarning()
+    {
+        RuntimeConfig config = BuildTestConfig(
+            hasDataSource: true,
+            entities: new() { { "Book", BuildSimpleEntity("dbo.books") } },
+            autoentities: new() { { "ae1", BuildSimpleAutoentity() } },
+            autoentityResolutionCounts: new() { { "ae1", 0 } });
+        RuntimeConfigValidator validator = BuildValidator(config, out Mock<ILogger<RuntimeConfigValidator>> loggerMock);
+        validator.ValidateDataSourceAndEntityPresence(config);
+
+        Assert.AreEqual(0, validator.ConfigValidationExceptions.Count);
+        VerifyAutoentityZeroDiscoveredWarning(loggerMock, expectedFileNameInMessage: null);
+    }
+
+    /// <summary>
+    /// Root config (DSF=1) with no data-source but with autoentities defined → error.
+    /// Covers truth-table row 10 (DSF=1, DS=0, E=0, AE=1).
+    /// </summary>
+    [TestMethod]
+    public void TestRootWithNoDataSourceButAutoentitiesProducesError()
+    {
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new() { { "Author", BuildSimpleEntity("dbo.authors") } });
+        childConfig.IsChildConfig = true;
+
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: false,
+            entities: new(),
+            dataSourceFiles: new DataSourceFiles(new[] { "child.json" }),
+            autoentities: new() { { "ae1", BuildSimpleAutoentity() } });
+        rootConfig.ChildConfigs.Add(("child.json", childConfig));
+
+        RuntimeConfigValidator validator = BuildValidator(rootConfig);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
+
+        Assert.IsTrue(validator.ConfigValidationExceptions.Count > 0);
+        Assert.IsTrue(validator.ConfigValidationExceptions[0].Message.Contains("must not define entities"));
+    }
+
+    /// <summary>
+    /// Root config with its own data-source but zero entities and zero autoentities → error.
+    /// When a root config defines a data-source, normal entity rules apply at the root.
+    /// Covers truth-table row 13 (DSF=1, DS=1, E=0, AE=0).
+    /// </summary>
+    [TestMethod]
+    public void TestRootWithDataSourceAndNoEntitiesProducesError()
+    {
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new() { { "Author", BuildSimpleEntity("dbo.authors") } });
+        childConfig.IsChildConfig = true;
+
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new(),
+            dataSourceFiles: new DataSourceFiles(new[] { "child.json" }));
+        rootConfig.ChildConfigs.Add(("child.json", childConfig));
+
+        RuntimeConfigValidator validator = BuildValidator(rootConfig);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
+
+        Assert.IsTrue(validator.ConfigValidationExceptions.Any(e => e.Message.Contains("No entities found")),
+            "Expected 'No entities found' error on root with own data-source and zero entities.");
+    }
+
+    /// <summary>
+    /// Root config with its own data-source and autoentities that resolve zero → error.
+    /// Covers truth-table row 14 (DSF=1, DS=1, E=0, AE=1, resolved=0).
+    /// </summary>
+    [TestMethod]
+    public void TestRootWithDataSourceAndAutoentitiesResolvingZeroProducesError()
+    {
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new() { { "Author", BuildSimpleEntity("dbo.authors") } });
+        childConfig.IsChildConfig = true;
+
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new(),
+            dataSourceFiles: new DataSourceFiles(new[] { "child.json" }),
+            autoentities: new() { { "ae1", BuildSimpleAutoentity() } },
+            autoentityResolutionCounts: new() { { "ae1", 0 } });
+        rootConfig.ChildConfigs.Add(("child.json", childConfig));
+
+        RuntimeConfigValidator validator = BuildValidator(rootConfig);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
+
+        Assert.IsTrue(validator.ConfigValidationExceptions.Any(e => e.Message.Contains("No entities found")));
+    }
+
+    /// <summary>
+    /// Root config with its own data-source and autoentities that resolve to >0 entities → valid.
+    /// Covers truth-table row 14 (DSF=1, DS=1, E=0, AE=1, resolved>0).
+    /// </summary>
+    [TestMethod]
+    public void TestRootWithDataSourceAndAutoentitiesResolvingEntitiesIsValid()
+    {
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new() { { "Author", BuildSimpleEntity("dbo.authors") } });
+        childConfig.IsChildConfig = true;
+
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new(),
+            dataSourceFiles: new DataSourceFiles(new[] { "child.json" }),
+            autoentities: new() { { "ae1", BuildSimpleAutoentity() } },
+            autoentityResolutionCounts: new() { { "ae1", 5 } });
+        rootConfig.ChildConfigs.Add(("child.json", childConfig));
+
+        RuntimeConfigValidator validator = BuildValidator(rootConfig);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
+
+        Assert.AreEqual(0, validator.ConfigValidationExceptions.Count);
+    }
+
+    /// <summary>
+    /// Root config with manual entities AND autoentities that resolve zero → valid, but a warning
+    /// is emitted at the root level. Covers truth-table row 16 (DSF=1, DS=1, E=1, AE=1, resolved=0).
+    /// </summary>
+    [TestMethod]
+    public void TestRootWithEntitiesAndAutoentitiesResolvingZeroLogsWarning()
+    {
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new() { { "Author", BuildSimpleEntity("dbo.authors") } });
+        childConfig.IsChildConfig = true;
+
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new() { { "Book", BuildSimpleEntity("dbo.books") } },
+            dataSourceFiles: new DataSourceFiles(new[] { "child.json" }),
+            autoentities: new() { { "ae1", BuildSimpleAutoentity() } },
+            autoentityResolutionCounts: new() { { "ae1", 0 } });
+        rootConfig.ChildConfigs.Add(("child.json", childConfig));
+
+        RuntimeConfigValidator validator = BuildValidator(rootConfig, out Mock<ILogger<RuntimeConfigValidator>> loggerMock);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
+
+        Assert.AreEqual(0, validator.ConfigValidationExceptions.Count);
+        VerifyAutoentityZeroDiscoveredWarning(loggerMock, expectedFileNameInMessage: null);
+    }
+
+    /// <summary>
+    /// Child config with its own data-source and only autoentities that resolve zero → error
+    /// naming the child file. Covers child truth-table row C4 (DS=1, E=0, AE=1, resolved=0).
+    /// </summary>
+    [TestMethod]
+    public void TestChildWithDataSourceAndAutoentitiesResolvingZeroProducesNamedError()
+    {
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new(),
+            autoentities: new() { { "ae1", BuildSimpleAutoentity() } },
+            autoentityResolutionCounts: new() { { "ae1", 0 } });
+        childConfig.IsChildConfig = true;
+
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: false, entities: new(),
+            dataSourceFiles: new DataSourceFiles(new[] { "child-db.json" }));
+        rootConfig.ChildConfigs.Add(("child-db.json", childConfig));
+
+        RuntimeConfigValidator validator = BuildValidator(rootConfig);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
+
+        Assert.AreEqual(1, validator.ConfigValidationExceptions.Count);
+        Assert.IsTrue(validator.ConfigValidationExceptions[0].Message.Contains("child-db.json"),
+            "Error should name the child config file.");
+        Assert.IsTrue(validator.ConfigValidationExceptions[0].Message.Contains("No entities found"),
+            "Error should mention no entities found.");
+    }
+
+    /// <summary>
+    /// Child config with manual entities AND autoentities that resolve zero → valid, but a
+    /// warning naming the child file is emitted. Covers child truth-table row C6
+    /// (DS=1, E=1, AE=1, resolved=0).
+    /// </summary>
+    [TestMethod]
+    public void TestChildWithEntitiesAndAutoentitiesResolvingZeroLogsNamedWarning()
+    {
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new() { { "Book", BuildSimpleEntity("dbo.books") } },
+            autoentities: new() { { "ae1", BuildSimpleAutoentity() } },
+            autoentityResolutionCounts: new() { { "ae1", 0 } });
+        childConfig.IsChildConfig = true;
+
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: false, entities: new(),
+            dataSourceFiles: new DataSourceFiles(new[] { "child-db.json" }));
+        rootConfig.ChildConfigs.Add(("child-db.json", childConfig));
+
+        RuntimeConfigValidator validator = BuildValidator(rootConfig, out Mock<ILogger<RuntimeConfigValidator>> loggerMock);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
+
+        Assert.AreEqual(0, validator.ConfigValidationExceptions.Count);
+        VerifyAutoentityZeroDiscoveredWarning(loggerMock, expectedFileNameInMessage: "child-db.json");
+    }
+
+    /// <summary>
+    /// Helper: verifies that the autoentity-discovered-zero warning was logged at least once,
+    /// optionally also checking that the formatted message contains a child config file name.
+    /// </summary>
+    private static void VerifyAutoentityZeroDiscoveredWarning(
+        Mock<ILogger<RuntimeConfigValidator>> loggerMock,
+        string? expectedFileNameInMessage)
+    {
+        const string FRAGMENT = "Autoentities are configured but no entities were discovered";
+        // Using string.Empty when no file name is expected makes Contains() always true,
+        // letting us keep a single Moq expression tree (which can't use 'is null').
+        string fileFragment = expectedFileNameInMessage ?? string.Empty;
+
+        loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) =>
+                    o.ToString()!.Contains(FRAGMENT)
+                    && o.ToString()!.Contains(fileFragment)),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+            Times.AtLeastOnce);
+    }
+
+    /// <summary>
     /// Helper: builds a RuntimeConfigValidator in validate-only mode over the given config.
     /// </summary>
     private static RuntimeConfigValidator BuildValidator(RuntimeConfig config)
+        => BuildValidator(config, out _);
+
+    /// <summary>
+    /// Helper: builds a RuntimeConfigValidator in validate-only mode and exposes its logger mock
+    /// so the test can verify warning calls.
+    /// </summary>
+    private static RuntimeConfigValidator BuildValidator(
+        RuntimeConfig config,
+        out Mock<ILogger<RuntimeConfigValidator>> loggerMock)
     {
         MockFileSystem fs = new();
         FileSystemRuntimeConfigLoader loader = new(fs) { RuntimeConfig = config };
         RuntimeConfigProvider provider = new(loader);
-        return new RuntimeConfigValidator(provider, fs, new Mock<ILogger<RuntimeConfigValidator>>().Object, isValidateOnly: true);
+        loggerMock = new();
+        return new RuntimeConfigValidator(provider, fs, loggerMock.Object, isValidateOnly: true);
     }
 
     /// <summary>
     /// Helper: builds a minimal RuntimeConfig for testing.
     /// </summary>
+    /// <param name="hasDataSource">Whether to include a data source.</param>
+    /// <param name="entities">Manual entities to include.</param>
+    /// <param name="dataSourceFiles">Optional data-source-files block (used for root configs).</param>
+    /// <param name="autoentities">Optional autoentity definitions (the "AE present" axis).</param>
+    /// <param name="autoentityResolutionCounts">
+    /// Optional pre-populated resolution counts. In production these are filled by the metadata
+    /// provider during autoentity expansion; tests pre-populate them to deterministically exercise
+    /// the "AE resolved 0" vs "AE resolved N" branches without needing DB connectivity.
+    /// </param>
     private static RuntimeConfig BuildTestConfig(
         bool hasDataSource,
         Dictionary<string, Entity> entities,
-        DataSourceFiles? dataSourceFiles = null)
+        DataSourceFiles? dataSourceFiles = null,
+        Dictionary<string, Autoentity>? autoentities = null,
+        Dictionary<string, int>? autoentityResolutionCounts = null)
     {
         DataSource? ds = hasDataSource
             ? new DataSource(DatabaseType.MSSQL, "Server=localhost;Database=test;", Options: null)
             : null;
 
-        return new RuntimeConfig(
+        RuntimeConfig config = new(
             Schema: null,
             DataSource: ds,
             Runtime: new(
@@ -632,7 +921,18 @@ public class ValidateConfigTests
                 Mcp: new(),
                 Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)),
             Entities: new RuntimeEntities(entities),
+            Autoentities: autoentities is not null ? new RuntimeAutoentities(autoentities) : null,
             DataSourceFiles: dataSourceFiles);
+
+        if (autoentityResolutionCounts is not null)
+        {
+            foreach (KeyValuePair<string, int> kvp in autoentityResolutionCounts)
+            {
+                config.AutoentityResolutionCounts[kvp.Key] = kvp.Value;
+            }
+        }
+
+        return config;
     }
 
     /// <summary>
@@ -648,5 +948,16 @@ public class ValidateConfigTests
             Permissions: new[] { new EntityPermission("anonymous", new[] { new EntityAction(EntityActionOperation.Read, null, null) }) },
             Relationships: null,
             Mappings: null);
+    }
+
+    /// <summary>
+    /// Helper: builds a minimal autoentity definition (defaults are used for patterns/template).
+    /// </summary>
+    private static Autoentity BuildSimpleAutoentity()
+    {
+        return new Autoentity(
+            Patterns: null,
+            Template: null,
+            Permissions: new[] { new EntityPermission("anonymous", new[] { new EntityAction(EntityActionOperation.Read, null, null) }) });
     }
 }

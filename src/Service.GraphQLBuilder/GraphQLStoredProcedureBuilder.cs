@@ -157,13 +157,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 Tuple<string, IValueNode> valueNode = paramValueType switch
                 {
                     UUID_TYPE => new(UUID_TYPE, new UuidType().ValueToLiteral(Guid.Parse(defaultValueFromConfig))),
-                    BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig))),
-                    SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig))),
-                    INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig))),
-                    LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig))),
-                    SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ValueToLiteral(float.Parse(defaultValueFromConfig))),
-                    FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
-                    DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
+                    BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ValueToLiteral(float.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
                     STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
                     BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(
                         defaultValueFromConfig switch

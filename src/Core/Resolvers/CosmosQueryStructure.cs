@@ -122,9 +122,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
+            FieldNode selectionFieldNode = selection.RequireFieldNode();
             if (IsPaginated)
             {
-                FieldNode? fieldNode = ExtractQueryField(selection.SyntaxNodes[0].Node);
+                FieldNode? fieldNode = ExtractQueryField(selectionFieldNode);
 
                 if (fieldNode is not null)
                 {
@@ -139,7 +140,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                Columns.AddRange(GenerateQueryColumns(selection.SyntaxNodes[0].Node.SelectionSet!, _context.Operation.Document, SourceAlias));
+                Columns.AddRange(GenerateQueryColumns(selectionFieldNode.SelectionSet!, _context.Operation.Document, SourceAlias));
                 string typeName = GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingType.Directives, out string? modelName) ?
                     modelName :
                     underlyingType.Name;

@@ -19,7 +19,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Execution;
-using HotChocolate.Execution.Processing;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using NodaTime.Text;
@@ -509,7 +508,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             return GetParametersFromSchemaAndQueryFields(
                 context.Selection.Field,
-                context.Selection.SyntaxNodes[0].Node,
+                context.Selection.RequireFieldNode(),
                 context.Variables);
         }
 

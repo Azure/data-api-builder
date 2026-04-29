@@ -5651,7 +5651,7 @@ type Planet @model(name:""PlanetAlias"") {
                     "PublisherAutoEntity", new Autoentity(
                         Patterns: new AutoentityPatterns(
                             Include: null,
-                            Exclude: null,
+                            Exclude: new[] { "dbo.GQLmappings", "dbo.graphql_incompatible", "dbo.brokers" },
                             Name: null
                         ),
                         Template: new AutoentityTemplate(
@@ -5808,13 +5808,14 @@ type Planet @model(name:""PlanetAlias"") {
             using (HttpClient client = server.CreateClient())
             {
                 // Act
-                using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/magazines");
+                string path = isPatternFoo ? "foo_magazines" : "bar_magazines";
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{path}");
                 using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 
                 string item = isPatternFoo ? "title" : "comic_name";
                 string graphqlQuery = $@"
                 {{
-                    magazines {{
+                    {path} {{
                         items {{
                             {item}
                         }}

@@ -5,7 +5,6 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -186,23 +185,17 @@ namespace Azure.DataApiBuilder.Service
         /// <returns>Appropriate log level.</returns>
         private static LogLevel GetLogLevelFromCommandLineArgs(string[] args, bool runMcpStdio, out bool isLogLevelOverridenByCli, out bool isConfigOverridden)
         {
-            Command cmd = new(name: "start");
-            Option<LogLevel> logLevelOption = new(name: "--LogLevel");
-            Option<string> configFileOption = new(name: "--ConfigFileName");
-            cmd.AddOption(logLevelOption);
-            cmd.AddOption(configFileOption);
-            ParseResult result = GetParseResult(cmd, args);
-
             LogLevel logLevel;
             isConfigOverridden = false;
 
-            // Check if --LogLevel was explicitly specified via CLI
-            bool hasCliLogLevel = args.Any(a => string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));
+            // Check if --LogLevel was explicitly specified via CLI (case-insensitive parsing)
+            int logLevelIndex = Array.FindIndex(args, a => string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));
+            bool hasCliLogLevel = logLevelIndex >= 0 && logLevelIndex + 1 < args.Length;
 
-            if (hasCliLogLevel)
+            if (hasCliLogLevel && Enum.TryParse(args[logLevelIndex + 1], ignoreCase: true, out LogLevel cliLogLevel))
             {
                 // User explicitly set --LogLevel via CLI (highest priority)
-                logLevel = result.GetValueForOption(logLevelOption);
+                logLevel = cliLogLevel;
                 isLogLevelOverridenByCli = true;
             }
             else if (runMcpStdio)
@@ -211,7 +204,12 @@ namespace Azure.DataApiBuilder.Service
                 isLogLevelOverridenByCli = false;
                 logLevel = LogLevel.None; // Default if config doesn't have log level
 
-                string? configFilePath = result.GetValueForOption(configFileOption);
+                // Find --config or --ConfigFileName argument
+                int configIndex = Array.FindIndex(args, a =>
+                    string.Equals(a, "--config", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(a, "--ConfigFileName", StringComparison.OrdinalIgnoreCase));
+                string? configFilePath = configIndex >= 0 && configIndex + 1 < args.Length ? args[configIndex + 1] : null;
+
                 if (!string.IsNullOrWhiteSpace(configFilePath) && TryGetLogLevelFromConfig(configFilePath, out LogLevel configLogLevel))
                 {
                     logLevel = configLogLevel;

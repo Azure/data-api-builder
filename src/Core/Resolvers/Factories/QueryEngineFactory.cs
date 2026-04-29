@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -33,6 +34,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly DabCacheService _cache;
         private readonly ILogger<IQueryEngine> _logger;
+        private readonly IEmbeddingService? _embeddingService;
 
         /// <inheritdoc/>
         public QueryEngineFactory(RuntimeConfigProvider runtimeConfigProvider,
@@ -44,7 +46,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
             DabCacheService cache,
-            HotReloadEventHandler<HotReloadEventArgs>? handler)
+            HotReloadEventHandler<HotReloadEventArgs>? handler,
+            IEmbeddingService? embeddingService = null)
         {
             handler?.Subscribe(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
@@ -57,6 +60,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             _gQLFilterParser = gQLFilterParser;
             _cache = cache;
             _logger = logger;
+            _embeddingService = embeddingService;
 
             ConfigureQueryEngines();
         }
@@ -75,7 +79,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                     _gQLFilterParser,
                     _logger,
                     _runtimeConfigProvider,
-                    _cache);
+                    _cache,
+                    _embeddingService);
                 _queryEngines.Add(DatabaseType.MSSQL, queryEngine);
                 _queryEngines.Add(DatabaseType.MySQL, queryEngine);
                 _queryEngines.Add(DatabaseType.PostgreSQL, queryEngine);

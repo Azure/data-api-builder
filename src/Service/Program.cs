@@ -323,13 +323,50 @@ namespace Azure.DataApiBuilder.Service
                     AddConfigurationProviders(builder, args);
                     DisableHttpsRedirectionIfNeeded(args);
                 })
-                .UseStartup<Startup>();
+                .UseStartup<Startup>()
+                .ConfigureServices(RemoveHotChocolateEagerWarmup);
 
         // This is used for testing purposes only. The test web server takes in a
         // IWebHostBuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostFromInMemoryUpdatableConfBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-            .UseStartup<Startup>();
+            .UseStartup<Startup>()
+            .ConfigureServices(RemoveHotChocolateEagerWarmup);
+
+        /// <summary>
+        /// Removes Hot Chocolate v16's eager <c>RequestExecutorWarmupService</c> from the
+        /// service collection so the GraphQL schema is built lazily on the first request.
+        /// </summary>
+        /// <remarks>
+        /// HC v16 added a hosted service (<c>HotChocolate.AspNetCore.Warmup.RequestExecutorWarmupService</c>)
+        /// that constructs the GraphQL schema during <c>WebHost.StartAsync</c>. The two
+        /// <c>IWebHostBuilder</c> entry points above are only used by callers that bring up a
+        /// <c>TestServer</c> before the runtime config is fully loaded (post-startup config
+        /// endpoint, hot-reload rewrites, configs with no entities, GraphQL-disabled configs).
+        /// In those cases the eager build sees an empty <c>Query</c> type and throws a
+        /// <c>HotChocolate.SchemaException</c> before the host can serve a request. Removing
+        /// the warmup hosted service restores HC v15's lazy-on-first-request semantics for
+        /// these entry points only. The production startup path (<see cref="CreateHostBuilder"/>
+        /// invoked from <see cref="Main"/>) is unaffected and continues to fail fast on schema
+        /// errors at <c>dab start</c>.
+        /// </remarks>
+        private static void RemoveHotChocolateEagerWarmup(IServiceCollection services)
+        {
+            // The implementation type is internal to HotChocolate.AspNetCore, so we match by
+            // full name rather than a symbolic type reference.
+            const string warmupServiceFullName =
+                "HotChocolate.AspNetCore.Warmup.RequestExecutorWarmupService";
+
+            for (int i = services.Count - 1; i >= 0; i--)
+            {
+                Type? implementationType = services[i].ImplementationType;
+                if (implementationType is not null
+                    && implementationType.FullName == warmupServiceFullName)
+                {
+                    services.RemoveAt(i);
+                }
+            }
+        }
 
         /// <summary>
         /// Adds the various configuration providers.

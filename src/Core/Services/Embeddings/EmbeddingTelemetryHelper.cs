@@ -109,10 +109,15 @@ public static class EmbeddingTelemetryHelper
     }
 
     /// <summary>
+    /// <summary>
     /// Tracks an embedding error.
     /// </summary>
     /// <param name="provider">The embedding provider.</param>
     /// <param name="errorType">The type of error that occurred.</param>
+    /// <remarks>
+    /// The metric counter for errors is incremented by a delta of 1 for each call to this method.
+    /// The delta represents the number of error occurrences being recorded (always 1 per invocation).
+    /// </remarks>
     public static void TrackError(string provider, string errorType)
     {
         _embeddingErrors.Add(1,

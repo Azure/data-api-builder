@@ -32,7 +32,7 @@
           "type": "string"
         },
         "options": {
-          "description": "Database specific properties for the backend database",
+          "description": "Database-specific connection and configuration properties. Available options depend on the database-type.",
           "type": "object"
         },
         "health": {
@@ -42,7 +42,7 @@
           "properties": {
             "enabled": {
               "$ref": "#/$defs/boolean-or-string",
-              "description": "Enable health check endpoint for something",
+              "description": "Enable health check for this data source.",
               "default": true,
               "additionalProperties": false
             },
@@ -97,7 +97,7 @@
           "then": {
             "properties": {
               "options": {
-                "description": "Database specific properties for the backend database",
+                "description": "Database-specific connection and configuration properties. Available options depend on the database-type.",
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
@@ -243,7 +243,7 @@
             },
             "depth-limit": {
               "type": [ "integer", "null" ],
-              "description": "Maximum allowed depth of a GraphQL query.",
+              "description": "Maximum allowed depth of a GraphQL query. Only positive integers are enforced. Default: null (no limit). Use -1 to explicitly remove a previously set limit.",
               "default": null
             },
             "multiple-mutations": {
@@ -946,9 +946,11 @@
                 "additionalProperties": false,
                 "properties": {
                   "role": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                   },
                   "actions": {
+                    "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                     "oneOf": [
                       {
                         "type": "string",
@@ -1339,9 +1341,11 @@
                   "additionalProperties": false,
                   "properties": {
                     "role": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                     },
                     "actions": {
+                      "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                       "oneOf": [
                         {
                           "type": "string",
@@ -1413,9 +1417,11 @@
                   "additionalProperties": false,
                   "properties": {
                     "role": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                     },
                     "actions": {
+                      "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                       "oneOf": [
                         {
                           "type": "string",

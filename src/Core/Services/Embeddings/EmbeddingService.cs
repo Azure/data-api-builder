@@ -251,8 +251,13 @@ public class EmbeddingService : IEmbeddingService
         return embedding;
     }
 
-    /// <inheritdoc/>
-    public async Task<float[][]> EmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Validates the batch embedding request parameters.
+    /// </summary>
+    /// <param name="texts">The array of texts to validate.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the embedding service is disabled.</exception>
+    /// <exception cref="ArgumentException">Thrown when texts are invalid.</exception>
+    private void ValidateEmbedBatchRequest(string[] texts)
     {
         if (!_options.Enabled)
         {
@@ -275,6 +280,12 @@ public class EmbeddingService : IEmbeddingService
                 $"Texts array exceeds max supported batch size of {MAX_BATCH_TEXT_COUNT}.",
                 nameof(texts));
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<float[][]> EmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
+    {
+        ValidateEmbedBatchRequest(texts);
 
         // For batch, check cache for each text individually
         string[] cacheKeys = texts.Select(CreateCacheKey).ToArray();

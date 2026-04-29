@@ -4,7 +4,7 @@
 
 ## About
 
-**Microsoft.DataApiBuilder.Core** is the core engine library for [Data API builder](https://learn.microsoft.com/azure/data-api-builder/) (DAB). It provides the runtime components needed to generate and execute secure REST, GraphQL endpoints and MCP tools backed by Azure and other databases.
+**Microsoft.DataApiBuilder.Core** is the core engine library for [Data API builder](https://learn.microsoft.com/azure/data-api-builder/) (DAB). It provides the runtime components needed to generate and execute secure REST, GraphQL endpoints and MCP tools backed by Azure SQL and other databases.
 
 This package is intended for developers who want to embed or extend the Data API builder engine within their own .NET applications or services.
 

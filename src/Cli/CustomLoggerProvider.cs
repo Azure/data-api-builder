@@ -20,7 +20,7 @@ public class CustomLoggerProvider : ILoggerProvider
     {
         // Minimum LogLevel. LogLevel below this would be disabled.
         // When CLI specifies --LogLevel, use that value; otherwise default to Information.
-        private static LogLevel _minimumLogLevel => Cli.Utils.IsLogLevelOverriddenByCli ? Cli.Utils.CliLogLevel : LogLevel.Information;
+        private static LogLevel MinimumLogLevel => Cli.Utils.IsLogLevelOverriddenByCli ? Cli.Utils.CliLogLevel : LogLevel.Information;
 
         //  Color values based on LogLevel
         //  LogLevel    Foreground      Background
@@ -88,7 +88,7 @@ public class CustomLoggerProvider : ILoggerProvider
                 }
 
                 // User wants logs in MCP mode - write to stderr
-                if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
+                if (!IsEnabled(logLevel) || logLevel < MinimumLogLevel)
                 {
                     return;
                 }
@@ -102,7 +102,7 @@ public class CustomLoggerProvider : ILoggerProvider
                 return;
             }
 
-            if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
+            if (!IsEnabled(logLevel) || logLevel < MinimumLogLevel)
             {
                 return;
             }

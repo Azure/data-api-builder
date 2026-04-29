@@ -259,6 +259,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// 1. CLI --LogLevel flag - cannot be overridden
         /// 2. Config runtime.telemetry.log-level - cannot be overridden by MCP
         /// 3. MCP logging/setLevel - only works if neither CLI nor Config explicitly set a level
+        /// 4. Default: None for MCP stdio mode (silent by default to keep stdout clean for JSON-RPC)
         /// 
         /// If CLI or Config set the log level, this method accepts the request but silently ignores it.
         /// The client won't get an error, but CLI/Config wins.

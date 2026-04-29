@@ -19,17 +19,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// is available.
         /// </summary>
         /// <remarks>
-        /// Hot Chocolate v16 introduced <c>Selection.SyntaxNodes</c> (a list) to support field-merging
+        /// Hot Chocolate v16 introduced <c>Selection.SyntaxNodes</c> (a span) to support field-merging
         /// across multiple selection-set occurrences of the same field. Indexing directly with
         /// <c>SyntaxNodes[0]</c> would surface as an <see cref="IndexOutOfRangeException"/> at request
-        /// time if the list were ever empty. In practice an executable selection always has at least
-        /// one syntax node, so an empty list is an invariant violation rather than a legitimate
+        /// time if the span were ever empty. In practice an executable selection always has at least
+        /// one syntax node, so an empty span is an invariant violation rather than a legitimate
         /// "no field" signal — surface it as a clear DAB error.
         /// </remarks>
         public static FieldNode RequireFieldNode(this Selection selection)
         {
-            FieldNode? fieldNode = selection.SyntaxNodes.FirstOrDefault()?.Node;
-            if (fieldNode is null)
+            // SyntaxNodes is a ReadOnlySpan<FieldSelectionNode>, so LINQ helpers (e.g. FirstOrDefault)
+            // are not available; check IsEmpty before indexing.
+            ReadOnlySpan<FieldSelectionNode> syntaxNodes = selection.SyntaxNodes;
+            if (syntaxNodes.IsEmpty)
             {
                 throw new DataApiBuilderException(
                     message: $"GraphQL selection '{selection.ResponseName}' has no syntax node available.",
@@ -37,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
-            return fieldNode;
+            return syntaxNodes[0].Node;
         }
     }
 }

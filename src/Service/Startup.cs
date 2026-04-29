@@ -616,7 +616,7 @@ namespace Azure.DataApiBuilder.Service
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
                 .AddInstrumentation()
-                .AddType(new DateTimeType(disableFormatCheck: graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true))
+                .AddType(new DateTimeType(new DateTimeOptions { ValidateInputFormat = !(graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true) }))
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
@@ -847,23 +847,11 @@ namespace Azure.DataApiBuilder.Service
 
                 endpoints
                     .MapGraphQL()
-                    .WithOptions(new GraphQLServerOptions
+                    .WithOptions(options =>
                     {
-                        Tool = {
-                            // Determines if accessing the endpoint from a browser
-                            // will load the GraphQL Banana Cake Pop IDE.
-                            Enable = IsUIEnabled(runtimeConfig, env)
-                        }
-                    });
-
-                // In development mode, Nitro is enabled at /graphql endpoint by default.
-                // Need to disable mapping Nitro explicitly as well to avoid ability to query
-                // at an additional endpoint: /graphql/ui.
-                endpoints
-                    .MapNitroApp()
-                    .WithOptions(new GraphQLToolOptions
-                    {
-                        Enable = false
+                        // Determines if accessing the endpoint from a browser
+                        // will load the GraphQL Banana Cake Pop / Nitro IDE.
+                        options.Tool.Enable = IsUIEnabled(runtimeConfig, env);
                     });
 
                 endpoints.MapHealthChecks("/", new HealthCheckOptions

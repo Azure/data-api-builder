@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedDateTimeTypes;
@@ -89,15 +90,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// <summary>
         /// PostgreSQL datetime filter tests with timezone offsets.
         /// Verifies that GraphQL datetime arguments are normalized to UTC before filtering.
+        /// Tests all comparison operators (eq, neq, gt, gte, lt, lte) with offset and offset-less inputs.
         /// </summary>
         [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08T05:23:54-05:00\"", "=",
-            DisplayName = "DateTime filter eq converts -05:00 offset to UTC.")]
-        [DataRow(DATETIME_TYPE, "gte", "'1999-01-08 10:23:54'", "\"1999-01-08T05:23:54-05:00\"", ">=",
-            DisplayName = "DateTime filter gte converts -05:00 offset to UTC.")]
+            DisplayName = "DateTime eq converts -05:00 offset to UTC.")]
         [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08T15:53:54+05:30\"", "=",
-            DisplayName = "DateTime filter eq converts +05:30 offset to UTC.")]
+            DisplayName = "DateTime eq converts +05:30 offset to UTC.")]
         [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08T10:23:54Z\"", "=",
-            DisplayName = "DateTime filter eq preserves UTC input.")]
+            DisplayName = "DateTime eq preserves UTC input.")]
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08T10:23:54\"", "=",
+            DisplayName = "DateTime eq treats offset-less input as UTC.")]
+        [DataRow(DATETIME_TYPE, "neq", "'1999-01-08 10:23:54'", "\"1999-01-08T05:23:54-05:00\"", "!=",
+            DisplayName = "DateTime neq converts -05:00 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "gt", "'1999-01-08 10:23:53'", "\"1999-01-08T05:23:53-05:00\"", ">",
+            DisplayName = "DateTime gt converts -05:00 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "gte", "'1999-01-08 10:23:54'", "\"1999-01-08T05:23:54-05:00\"", ">=",
+            DisplayName = "DateTime gte converts -05:00 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "lt", "'1999-01-08 10:23:55'", "\"1999-01-08T05:23:55-05:00\"", "<",
+            DisplayName = "DateTime lt converts -05:00 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "lte", "'1999-01-08 10:23:54'", "\"1999-01-08T05:23:54-05:00\"", "<=",
+            DisplayName = "DateTime lte converts -05:00 offset to UTC.")]
         [DataTestMethod]
         public async Task PGSQL_real_graphql_datetime_filter_offset_expectedValues(
             string type,
@@ -107,6 +119,90 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string queryOperator)
         {
             await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
+        }
+
+        [TestMethod]
+        public async Task PGSQL_real_graphql_datetime_in_filter_offset_expectedValues()
+        {
+            const string field = "datetime_types";
+            string gqlQuery = @"{
+                supportedTypes(first: 100, orderBy: { typeid: ASC }, filter: {
+                    " + field + @": {
+                        in: [""1999-01-08T05:23:54-05:00"", ""1900-01-01T00:00:00Z""]
+                    }
+                }) {
+                    items {
+                        typeid, " + field + @"
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOnTypeTable(
+                queryFields: new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) },
+                filterValue: "('1999-01-08 10:23:54', '1900-01-01 00:00:00')",
+                filterOperator: "IN",
+                filterField: field,
+                orderBy: "id",
+                limit: "100");
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, "supportedTypes", isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            PerformTestEqualsForExtendedTypes(DATETIME_TYPE, expected, actual.GetProperty("items").ToString());
+        }
+
+        [TestMethod]
+        public async Task PGSQL_real_graphql_datetime_and_filter_offset_expectedValues()
+        {
+            const string field = "datetime_types";
+            string gqlQuery = @"{
+                supportedTypes(first: 100, orderBy: { typeid: ASC }, filter: {
+                    and: [
+                        { " + field + @": { gte: ""1999-01-08T05:23:54-05:00"" } },
+                        { " + field + @": { lte: ""1999-01-08T05:23:54-05:00"" } }
+                    ]
+                }) {
+                    items {
+                        typeid, " + field + @"
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOnTypeTableWithWhereClause(
+                queryFields: new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) },
+                whereClause: field + " >= '1999-01-08 10:23:54' AND " + field + " <= '1999-01-08 10:23:54'");
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, "supportedTypes", isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            PerformTestEqualsForExtendedTypes(DATETIME_TYPE, expected, actual.GetProperty("items").ToString());
+        }
+
+        [TestMethod]
+        public async Task PGSQL_real_graphql_datetime_or_filter_offset_expectedValues()
+        {
+            const string field = "datetime_types";
+            string gqlQuery = @"{
+                supportedTypes(first: 100, orderBy: { typeid: ASC }, filter: {
+                    or: [
+                        { " + field + @": { eq: ""1900-01-01T00:00:00Z"" } },
+                        { " + field + @": { eq: ""1999-01-08T05:23:54-05:00"" } }
+                    ]
+                }) {
+                    items {
+                        typeid, " + field + @"
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOnTypeTableWithWhereClause(
+                queryFields: new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) },
+                whereClause: field + " = '1900-01-01 00:00:00' OR " + field + " = '1999-01-08 10:23:54'");
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, "supportedTypes", isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            PerformTestEqualsForExtendedTypes(DATETIME_TYPE, expected, actual.GetProperty("items").ToString());
         }
 
         protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)
@@ -163,6 +259,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 return columnName;
             }
+        }
+
+        private static string MakeQueryOnTypeTableWithWhereClause(
+            List<DabField> queryFields,
+            string whereClause,
+            string orderBy = "id",
+            string limit = "100")
+        {
+            string formattedSelect = limit.Equals("1") ? "SELECT to_jsonb(subq3) AS DATA" : "SELECT json_agg(to_jsonb(subq3)) AS DATA";
+
+            return @"
+                " + formattedSelect + @"
+                FROM
+                  (SELECT " + string.Join(", ", queryFields.Select(field => ProperlyFormatTypeTableColumn(field.BackingColumnName) + $" AS {field.Alias}")) + @"
+                   FROM public.type_table AS table0
+                   WHERE " + whereClause + @"
+                   ORDER BY " + orderBy + @" asc
+                   LIMIT " + limit + @") AS subq3
+            ";
         }
 
         /// <summary>

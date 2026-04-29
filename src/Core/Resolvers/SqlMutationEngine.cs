@@ -353,15 +353,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
 
             // Phase 3: substitute embed:true parameters with embedding vectors (REST mutation path)
-            if (_embeddingService is not null)
-            {
-                Entity entity = _runtimeConfigProvider.GetConfig().Entities[context.EntityName];
-                await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
-                    context.ResolvedParameters,
-                    entity.Source.Parameters,
-                    _embeddingService,
-                    _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None);
-            }
+            // Helper handles the case where embed params exist but service is null (throws 503).
+            Entity entity = _runtimeConfigProvider.GetConfig().Entities[context.EntityName];
+            await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+                context.ResolvedParameters,
+                entity.Source.Parameters,
+                _embeddingService,
+                _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None);
 
             SqlExecuteStructure executeQueryStructure = new(
                 context.EntityName,

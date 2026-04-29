@@ -41,13 +41,36 @@ public static class ParameterEmbeddingHelper
     public static async Task SubstituteEmbedParametersAsync(
         IDictionary<string, object?> resolvedParams,
         List<ParameterMetadata>? configParams,
-        IEmbeddingService embeddingService,
+        IEmbeddingService? embeddingService,
         CancellationToken cancellationToken)
     {
         // Nothing to do if no config params defined
         if (configParams is null)
         {
             return;
+        }
+
+        // Check upfront: are there any embed params we need to handle?
+        // If not, return immediately — no need to validate the embedding service.
+        bool hasEmbedParams = configParams.Any(p => p.Embed);
+        if (!hasEmbedParams)
+        {
+            return;
+        }
+
+        // If we have embed params but no embedding service, fail loudly.
+        // This catches edge cases like:
+        //   - Hot-reload disabled embeddings while DAB is running
+        //   - DI misconfiguration (service not registered when embed params exist)
+        //   - Future code paths that construct engines without the service
+        // Without this check, the silent-skip behavior would send raw text to SQL,
+        // producing confusing errors or (worst case) silently storing/querying with garbage.
+        if (embeddingService is null)
+        {
+            throw new DataApiBuilderException(
+                message: "An embed parameter is configured but the embedding service is not available. Verify runtime.embeddings is configured and enabled.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
         }
 
         foreach (ParameterMetadata configParam in configParams)
@@ -66,10 +89,59 @@ public static class ParameterEmbeddingHelper
                 continue;
             }
 
+            // Validate: embed parameters must be strings.
+            // Azure OpenAI's embedding API only accepts strings as input — passing a number,
+            // boolean, array, or object would either be silently stringified into garbage
+            // (e.g., "System.Object[]") or rejected by the API with a confusing error.
+            //
+            // DAB delivers parameter values as either System.String OR System.Text.Json.JsonElement
+            // (the JSON parser wraps body values in JsonElement). We accept both string and
+            // JsonElement-of-kind-String, and reject all other types with a clear 400.
+            //
+            // Example FAIL: { "query_vector": 12345 } → JsonElement(Number) → 400 "must be a string"
+            // Example FAIL: { "query_vector": true } → JsonElement(True) → 400 "must be a string"
+            // Example FAIL: { "query_vector": ["a","b"] } → JsonElement(Array) → 400 "must be a string"
+            // Example FAIL: { "query_vector": {"foo":"bar"} } → JsonElement(Object) → 400 "must be a string"
+            // Example PASS: { "query_vector": "headphones" } → JsonElement(String) or string → proceed
+            //
+            // Note: GraphQL is automatically protected since the embed param is exposed as
+            // GraphQL String type (via Stage 2 metadata override) — non-strings are rejected
+            // by the GraphQL parser before reaching this code.
+            string? text = null;
+            if (value is string s)
+            {
+                text = s;
+            }
+            else if (value is System.Text.Json.JsonElement jsonElement)
+            {
+                if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    text = jsonElement.GetString();
+                }
+                else if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.Null)
+                {
+                    text = null;  // Will be caught by IsNullOrWhiteSpace below
+                }
+                else
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Parameter '{configParam.Name}' has 'embed: true' but received a non-string JSON value of kind '{jsonElement.ValueKind}'. Embed parameters must be JSON strings.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+            }
+            else if (value is not null)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Parameter '{configParam.Name}' has 'embed: true' but received a non-string value of type '{value.GetType().Name}'. Embed parameters must be JSON strings.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
             // Validate: embed params must have non-empty text
             // Example FAIL: { "query_vector": "" } → 400 error
             // Example FAIL: { "query_vector": "   " } → 400 error
-            string? text = value?.ToString();
+            // Example FAIL: { "query_vector": null } → 400 error (null treated as empty)
             if (string.IsNullOrWhiteSpace(text))
             {
                 throw new DataApiBuilderException(
@@ -97,8 +169,13 @@ public static class ParameterEmbeddingHelper
             //
             // Uses InvariantCulture to prevent European locales from using comma as decimal separator
             // (e.g., German locale would produce "0,012" instead of "0.012" → invalid JSON)
+            //
+            // Uses "R" (round-trip) format specifier instead of "G" (general):
+            //   - "G" defaults to G7 for Single, which is NOT round-trippable (~30% of values lose precision)
+            //   - "R" guarantees the string can be parsed back to the exact same float
+            //   - Embeddings are precision-sensitive — even tiny drift affects cosine similarity scores
             string vectorJson = "["
-                + string.Join(",", result.Embedding.Select(f => f.ToString("G", CultureInfo.InvariantCulture)))
+                + string.Join(",", result.Embedding.Select(f => f.ToString("R", CultureInfo.InvariantCulture)))
                 + "]";
 
             // Replace the text value with the vector string in-place

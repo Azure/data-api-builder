@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Mcp.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
@@ -37,6 +38,12 @@ namespace Azure.DataApiBuilder.Service
     {
         public static bool IsHttpsRedirectionDisabled { get; private set; }
         public static DynamicLogLevelProvider LogLevelProvider = new();
+
+        /// <summary>
+        /// MCP log notification writer for sending logs to MCP clients via notifications/message.
+        /// Created once and shared between logging pipeline and MCP server.
+        /// </summary>
+        private static readonly McpLogNotificationWriter _mcpNotificationWriter = new();
 
         public static void Main(string[] args)
         {
@@ -138,6 +145,12 @@ namespace Azure.DataApiBuilder.Service
                 {
                     services.AddSingleton(LogLevelProvider);
                     services.AddSingleton<ILogLevelController>(LogLevelProvider);
+
+                    // For MCP stdio mode, register the notification writer for sending logs to MCP clients
+                    if (runMcpStdio)
+                    {
+                        services.AddSingleton<IMcpLogNotificationWriter>(_mcpNotificationWriter);
+                    }
                 })
                 .ConfigureLogging(logging =>
                 {
@@ -147,6 +160,10 @@ namespace Azure.DataApiBuilder.Service
                     // For non-MCP mode, use the configured level directly.
                     if (runMcpStdio)
                     {
+                        // Clear all default providers (Console, Debug, EventSource, EventLog)
+                        // to ensure stdout remains pure JSON-RPC for MCP protocol compliance.
+                        logging.ClearProviders();
+
                         // Allow all logs through framework, filter dynamically
                         logging.SetMinimumLevel(LogLevel.Trace);
                     }
@@ -159,6 +176,12 @@ namespace Azure.DataApiBuilder.Service
                     logging.AddFilter(logLevel => LogLevelProvider.ShouldLog(logLevel));
                     logging.AddFilter("Microsoft", logLevel => LogLevelProvider.ShouldLog(logLevel));
                     logging.AddFilter("Microsoft.Hosting.Lifetime", logLevel => LogLevelProvider.ShouldLog(logLevel));
+
+                    // For MCP stdio mode, add the MCP logger provider to send logs as notifications
+                    if (runMcpStdio)
+                    {
+                        logging.AddProvider(new McpLoggerProvider(_mcpNotificationWriter, LogLevelProvider.ShouldLog));
+                    }
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {

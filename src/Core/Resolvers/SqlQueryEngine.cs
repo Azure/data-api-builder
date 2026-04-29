@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -37,6 +38,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly DabCacheService _cache;
+        private readonly IEmbeddingService? _embeddingService;
 
         // <summary>
         // Constructor.
@@ -49,7 +51,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider,
-            DabCacheService cache)
+            DabCacheService cache,
+            IEmbeddingService? embeddingService = null)
         {
             _queryFactory = queryFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
@@ -59,6 +62,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
             _cache = cache;
+            _embeddingService = embeddingService;
         }
 
         /// <summary>
@@ -140,6 +144,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name, out string? entityName))
             {
+                // Phase 3: substitute embed:true parameters with embedding vectors (GraphQL path)
+                if (_embeddingService is not null)
+                {
+                    Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
+                    await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+                        parameters,
+                        entity.Source.Parameters,
+                        _embeddingService,
+                        _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None);
+                }
+
                 SqlExecuteStructure sqlExecuteStructure = new(
                     entityName,
                     sqlMetadataProvider,
@@ -198,6 +213,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName)
         {
+            // Phase 3: substitute embed:true parameters with embedding vectors
+            // before SqlExecuteStructure reads them. The helper replaces text values
+            // (e.g., "wireless headphones") with vector JSON strings (e.g., "[0.012,...]").
+            if (_embeddingService is not null)
+            {
+                Entity entity = _runtimeConfigProvider.GetConfig().Entities[context.EntityName];
+                await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+                    context.ResolvedParameters,
+                    entity.Source.Parameters,
+                    _embeddingService,
+                    _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None);
+            }
+
             SqlExecuteStructure structure = new(
                 context.EntityName,
                 _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName),

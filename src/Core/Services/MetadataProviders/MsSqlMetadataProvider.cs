@@ -239,6 +239,27 @@ namespace Azure.DataApiBuilder.Core.Services
                         parameterDefinition.Default = paramMetadata.Default;
                         parameterDefinition.HasConfigDefault = paramMetadata.Default is not null;
                         parameterDefinition.ConfigDefaultValue = paramMetadata.Default?.ToString();
+
+                        // For embed:true parameters, override the SQL metadata type.
+                        // SQL Server reports VECTOR(N) as "varbinary" → DAB maps to Byte[] → DbType.Binary.
+                        // This causes ParseParamAsSystemType to try base64 decoding on our vector JSON string.
+                        //
+                        // Fix: override to String/DbType.String so the vector JSON string
+                        // flows through ParseParamAsSystemType's "String" => param path (returns as-is).
+                        // SQL Server auto-casts the NVARCHAR string to VECTOR at execution time.
+                        //
+                        // Guard conditions (ALL must be true):
+                        //   1. This parameter has embed:true in config
+                        //   2. SQL metadata reported it as Byte[] (the VECTOR→varbinary mapping)
+                        // A normal varbinary param (e.g., image blob) is NOT affected — it won't have embed:true.
+                        //
+                        // Follows the same pattern as the DateTime DbType override above (lines 186-195).
+                        if (paramMetadata.Embed && parameterDefinition.SystemType == typeof(byte[]))
+                        {
+                            parameterDefinition.SystemType = typeof(string);
+                            parameterDefinition.DbType = System.Data.DbType.String;
+                            parameterDefinition.SqlDbType = System.Data.SqlDbType.NVarChar;
+                        }
                     }
                 }
             }

@@ -240,22 +240,52 @@ namespace Azure.DataApiBuilder.Core.Services
                         parameterDefinition.HasConfigDefault = paramMetadata.Default is not null;
                         parameterDefinition.ConfigDefaultValue = paramMetadata.Default?.ToString();
 
-                        // For embed:true parameters, override the SQL metadata type.
-                        // SQL Server reports VECTOR(N) as "varbinary" → DAB maps to Byte[] → DbType.Binary.
-                        // This causes ParseParamAsSystemType to try base64 decoding on our vector JSON string.
+                        // Phase 3: validate and override types for embed:true parameters.
                         //
-                        // Fix: override to String/DbType.String so the vector JSON string
-                        // flows through ParseParamAsSystemType's "String" => param path (returns as-is).
-                        // SQL Server auto-casts the NVARCHAR string to VECTOR at execution time.
+                        // SQL Server reports VECTOR(N) as "varbinary" via INFORMATION_SCHEMA.PARAMETERS,
+                        // which DAB maps to typeof(byte[]). We use this Byte[] mapping as our signal
+                        // that the parameter is VECTOR-shaped. If the param is NOT Byte[], the
+                        // developer has misconfigured — embed only makes sense for VECTOR parameters.
                         //
-                        // Guard conditions (ALL must be true):
-                        //   1. This parameter has embed:true in config
-                        //   2. SQL metadata reported it as Byte[] (the VECTOR→varbinary mapping)
-                        // A normal varbinary param (e.g., image blob) is NOT affected — it won't have embed:true.
+                        // Why fail at startup instead of letting it silently break at request time:
+                        //   - embed:true on NVARCHAR → vector JSON treated as text → empty/wrong results, no error
+                        //   - embed:true on INT/DATETIME → SQL conversion error at request time
+                        //   - embed:true on VECTOR(N) → works correctly (SQL reports as Byte[])
+                        // Catching this at startup gives a clear error message before any user is impacted.
                         //
-                        // Follows the same pattern as the DateTime DbType override above (lines 186-195).
-                        if (paramMetadata.Embed && parameterDefinition.SystemType == typeof(byte[]))
+                        // KNOWN LIMITATION: SQL Server's INFORMATION_SCHEMA.PARAMETERS reports both
+                        // VECTOR(N) and varbinary(N) as the same "varbinary" type. We cannot
+                        // distinguish them here. If a developer mistakenly applies embed:true to
+                        // a real varbinary parameter (e.g., image blob), this override will fire
+                        // and the request will fail at SQL execution with an "implicit conversion
+                        // not allowed" error. That failure is loud and clear, so we accept it.
+                        // Documented in ParameterMetadata.Embed and the JSON schema.
+                        //
+                        // (Detection IS possible via sys.parameters which distinguishes vector
+                        // from varbinary by user_type_id, but adding a separate query for this
+                        // would require infrastructure changes beyond Phase 3 scope. Filed as
+                        // future enhancement.)
+                        //
+                        // Follows the same pattern as the DateTime DbType override above.
+                        if (paramMetadata.Embed)
                         {
+                            // Reject embed:true on non-VECTOR-shaped params at startup with a
+                            // clear error. This catches NVARCHAR/INT/DATETIME misconfigurations
+                            // that would otherwise silently produce wrong results at request time.
+                            if (parameterDefinition.SystemType != typeof(byte[]))
+                            {
+                                throw new DataApiBuilderException(
+                                    message: $"Procedure '{schemaName}.{storedProcedureSourceName}': " +
+                                             $"parameter '{configParamKey}' has 'embed: true' in config but is " +
+                                             $"declared as '{parameterDefinition.SystemType.Name}' in the stored procedure. " +
+                                             $"Embed parameters must be declared as VECTOR(N).",
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                            }
+
+                            // Override the metadata type so the vector JSON string flows through
+                            // DAB's String type pipeline. SQL Server auto-casts NVARCHAR → VECTOR
+                            // at execution time.
                             parameterDefinition.SystemType = typeof(string);
                             parameterDefinition.DbType = System.Data.DbType.String;
                             parameterDefinition.SqlDbType = System.Data.SqlDbType.NVarChar;

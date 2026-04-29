@@ -634,9 +634,11 @@ namespace Azure.DataApiBuilder.Service
                     if (!configProvider.TryGetConfig(out _))
                     {
                         // Tolerate "no config yet" by registering a syntactically valid schema.
-                        // The single field is internal and unreachable in normal operation.
-                        schemaBuilder.AddDocumentFromString(
-                            "type Query { _dab: String }");
+                        // HC v16 also requires every field to have a resolver, so bind a no-op.
+                        // The field is unreachable in normal operation because GraphQL requests
+                        // are rejected upstream when no config is loaded.
+                        schemaBuilder.AddDocumentFromString("type Query { _dab: String }");
+                        schemaBuilder.AddResolver("Query", "_dab", _ => null);
                         return;
                     }
 

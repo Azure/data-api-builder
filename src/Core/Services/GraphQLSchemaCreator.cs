@@ -105,6 +105,15 @@ namespace Azure.DataApiBuilder.Core.Services
             // Generate the Query and the Mutation Node.
             (DocumentNode queryNode, DocumentNode mutationNode) = GenerateQueryAndMutationNodes(root, inputTypes);
 
+            // Hot Chocolate v16 validates schemas eagerly during host startup
+            // (RequestExecutorWarmupService) and rejects an empty Query type with
+            // "The object type `Query` has to at least define one field in order to be valid."
+            // This can occur in valid runtime configurations: GraphQL globally disabled,
+            // every entity opting out of GraphQL via `graphql.enabled = false`, or no entities
+            // configured. Inject a hidden placeholder field with a no-op resolver so the schema
+            // is structurally valid; HC v16 also rejects fields without resolvers.
+            queryNode = EnsureQueryHasAtLeastOneField(queryNode, sb);
+
             return sb
                 .AddDocument(root)
                 .AddAuthorizeDirectiveType()
@@ -124,6 +133,66 @@ namespace Azure.DataApiBuilder.Core.Services
                 .AddDocument(mutationNode)
                 // Adds our type interceptor that will create the resolvers.
                 .TryAddTypeInterceptor(new ResolverTypeInterceptor(new ExecutionHelper(_queryEngineFactory, _mutationEngineFactory, _runtimeConfigProvider)));
+        }
+
+        /// <summary>
+        /// Name of the hidden placeholder field added to <c>Query</c> when no entity contributes
+        /// a query field, used to keep the schema valid for HC v16's eager validation.
+        /// </summary>
+        private const string EmptySchemaPlaceholderFieldName = "_dab";
+
+        /// <summary>
+        /// If the generated <c>Query</c> object type has no fields, append a hidden placeholder
+        /// field and register a null-returning resolver for it. The placeholder is shadowed in
+        /// any configuration that produces real query fields, so it is only visible in
+        /// otherwise-empty schemas (GraphQL globally disabled, all entities opting out,
+        /// no entities configured).
+        /// </summary>
+        private static DocumentNode EnsureQueryHasAtLeastOneField(DocumentNode queryNode, ISchemaBuilder sb)
+        {
+            ImmutableArray<IDefinitionNode>.Builder rewritten = ImmutableArray.CreateBuilder<IDefinitionNode>(queryNode.Definitions.Count);
+            bool placeholderInjected = false;
+
+            foreach (IDefinitionNode definition in queryNode.Definitions)
+            {
+                if (definition is ObjectTypeDefinitionNode objectType
+                    && objectType.Name.Value == "Query"
+                    && objectType.Fields.Count == 0)
+                {
+                    FieldDefinitionNode placeholderField = new(
+                        location: null,
+                        new NameNode(EmptySchemaPlaceholderFieldName),
+                        new StringValueNode(
+                            "Internal placeholder; only present when no entity contributes a query field. "
+                            + "Always returns null and is never reachable in normal operation."),
+                        arguments: new List<InputValueDefinitionNode>(),
+                        type: new NamedTypeNode(new NameNode("String")),
+                        directives: new List<DirectiveNode>());
+
+                    rewritten.Add(new ObjectTypeDefinitionNode(
+                        objectType.Location,
+                        objectType.Name,
+                        objectType.Description,
+                        objectType.Directives,
+                        objectType.Interfaces,
+                        new List<FieldDefinitionNode> { placeholderField }));
+                    placeholderInjected = true;
+                }
+                else
+                {
+                    rewritten.Add(definition);
+                }
+            }
+
+            if (placeholderInjected)
+            {
+                // HC v16 requires every field to have a resolver; bind a no-op that always
+                // returns null. The field is unreachable in normal operation because callers
+                // for empty-Query configurations never issue GraphQL requests.
+                sb.AddResolver("Query", EmptySchemaPlaceholderFieldName, _ => null);
+            }
+
+            return new DocumentNode(rewritten.ToImmutable());
         }
 
         /// <summary>

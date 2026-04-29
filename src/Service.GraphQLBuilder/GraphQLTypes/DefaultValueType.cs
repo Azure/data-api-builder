@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         {
             descriptor.Name("DefaultValue");
             descriptor.OneOf();
-            descriptor.Field(BYTE_TYPE).Type<ByteType>();
+            descriptor.Field(BYTE_TYPE).Type<UnsignedByteType>();
             descriptor.Field(SHORT_TYPE).Type<ShortType>();
             descriptor.Field(INT_TYPE).Type<IntType>();
             descriptor.Field(LONG_TYPE).Type<LongType>();

@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     return namedType switch
                     {
                         StringType => fieldValue.GetString(), // spec
-                        ByteType => fieldValue.GetByte(),
+                        UnsignedByteType => fieldValue.GetByte(),
                         ShortType => fieldValue.GetInt16(),
                         IntType => fieldValue.GetInt32(), // spec
                         LongType => fieldValue.GetInt64(),
@@ -211,7 +211,12 @@ namespace Azure.DataApiBuilder.Service.Services
                         DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" (double quotes) due to stringagg parsing and hence we need to ensure parsing is correct.
                         DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
                         HotChocolate.Types.NodaTime.LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
-                        Base64StringType => fieldValue.GetBytesFromBase64(),
+                        // HC v16 ships both ByteArrayType (legacy, GraphQL name "ByteArray", runtime byte[])
+                        // and Base64StringType (new, GraphQL name "Base64String", runtime byte[]). DAB's
+                        // generated schemas still use the GraphQL name "ByteArray", so HC binds entity
+                        // fields to ByteArrayType. We accept either type here so DAB also tolerates
+                        // schemas that bind to Base64StringType (e.g. via DefaultValueType).
+                        Base64StringType or ByteArrayType => fieldValue.GetBytesFromBase64(),
                         BooleanType => fieldValue.GetBoolean(), // spec
                         UrlType => new Uri(fieldValue.GetString()!),
                         UuidType => fieldValue.GetGuid(),

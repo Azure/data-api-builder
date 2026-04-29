@@ -11,7 +11,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
     public static class SupportedHotChocolateTypes
     {
         public const string UUID_TYPE = "UUID";
-        public const string BYTE_TYPE = "Byte";
+        // HC v16 split the legacy Byte scalar into:
+        //  - ByteType         (runtime: sbyte, range -128..127)
+        //  - UnsignedByteType (runtime: byte,  range 0..255)
+        // SQL Server's tinyint maps to .NET byte (0..255), so DAB targets UnsignedByte.
+        // The GraphQL type name visible in the generated schema therefore changed from
+        // "Byte" to "UnsignedByte" with the HC v16 upgrade.
+        public const string BYTE_TYPE = "UnsignedByte";
         public const string SHORT_TYPE = "Short";
         public const string INT_TYPE = "Int";
         public const string LONG_TYPE = "Long";

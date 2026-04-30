@@ -4,7 +4,21 @@
     <TargetFrameworks>net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
+    <PackageId>Microsoft.DataApiBuilder.Core</PackageId>
+    <Title>Microsoft.DataApiBuilder.Core</Title>
+    <Authors>Microsoft</Authors>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://go.microsoft.com/fwlink/?linkid=2224253</PackageProjectUrl>
+    <PackageTags>microsoft rest graphql mcp api azure sql mssql mysql pgsql postgresql azure-sql sqlserver nosql cosmosdb dataApiBuilder</PackageTags>
+    <AssemblyName>Microsoft.DataApiBuilder.Core</AssemblyName>
+    <Description>Data API builder Core library for Azure Databases provides modern REST, GraphQL endpoints and MCP tools to your Azure Databases.</Description>
+    <PackageIcon>nuget_icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <NoWarn>NU1603</NoWarn>
   </PropertyGroup>
 
@@ -42,6 +56,13 @@
     <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
     <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\nuget\nuget_core\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\nuget\nuget_icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE.txt" Pack="true" PackagePath="\" />
+    <None Include="..\..\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\..\NOTICE.txt')" />
   </ItemGroup>
 
 </Project>

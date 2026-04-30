@@ -57,6 +57,22 @@ public static class ParameterEmbeddingHelper
             return;
         }
 
+        // If we have embed params in config but no embedding service, fail loudly.
+        // This catches DI misconfiguration and future code paths that construct engines
+        // without the service. Without this check, the silent-skip behavior would send
+        // raw text to SQL, producing confusing errors or silently wrong results.
+        //
+        // Note: Startup config validation already requires runtime.embeddings to be
+        // configured and enabled when embed:true is present (see ValidateEmbedParameters).
+        // This is defense-in-depth for unexpected DI states at runtime.
+        if (embeddingService is null)
+        {
+            throw new DataApiBuilderException(
+                message: "An embed parameter is configured but the embedding service is not available. Verify runtime.embeddings is configured and enabled.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+        }
+
         foreach (ParameterMetadata configParam in configParams)
         {
             // Skip non-embed params — they pass through unchanged
@@ -68,30 +84,9 @@ public static class ParameterEmbeddingHelper
 
             // Check if the request provided this parameter
             // If not provided, DAB's existing required-param validation will handle it
-            // (and an embed:true param without a value in this request doesn't need
-            // the embedding service — only the params actually being substituted do)
             if (!resolvedParams.TryGetValue(configParam.Name, out object? value))
             {
                 continue;
-            }
-
-            // If we have an embed param value to substitute but no embedding service,
-            // fail loudly. Without this check, the silent-skip behavior would send raw
-            // text to SQL, producing confusing errors or silently wrong results.
-            //
-            // This catches:
-            //   - DI misconfiguration (service not registered when embed params exist)
-            //   - Future code paths that construct engines without the service
-            //
-            // Note: This check is scoped to "this request actually has an embed param
-            // value" — a request that omits the embed param won't fail here, so optional
-            // embed params don't break when the embedding service is unavailable.
-            if (embeddingService is null)
-            {
-                throw new DataApiBuilderException(
-                    message: $"Parameter '{configParam.Name}' has 'embed: true' but the embedding service is not available. Verify runtime.embeddings is configured and enabled.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             // Validate: embed parameters must be strings.

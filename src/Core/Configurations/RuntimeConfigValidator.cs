@@ -503,7 +503,6 @@ public class RuntimeConfigValidator : IConfigValidator
                         message: $"Entity '{entityName}': parameter '{param.Name}' has 'embed: true' but the data source type is '{entityDataSource.DatabaseType}'. The embed feature is currently only supported for Azure SQL / SQL Server.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                    continue;  // Don't cascade further rules — this is a fundamental issue
                 }
 
                 // Rule 1: embed:true is only valid on stored-procedure entities.
@@ -517,7 +516,6 @@ public class RuntimeConfigValidator : IConfigValidator
                         message: $"Entity '{entityName}': parameter '{param.Name}' has 'embed: true' but is only valid on stored-procedure entities.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                    continue;  // Don't cascade further rules
                 }
 
                 // Rule 2: embed:true requires runtime.embeddings to be configured and enabled.
@@ -531,7 +529,6 @@ public class RuntimeConfigValidator : IConfigValidator
                         message: $"Entity '{entityName}': parameter '{param.Name}' has 'embed: true' but runtime.embeddings is not configured or not enabled.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                    continue;  // Don't cascade further rules
                 }
 
                 // Rule 3: embed:true with a default value is not supported.
@@ -545,7 +542,6 @@ public class RuntimeConfigValidator : IConfigValidator
                         message: $"Entity '{entityName}': parameter '{param.Name}' has both 'embed: true' and a 'default' value. Embed parameters cannot have default values.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                    // No continue needed — this is the last rule
                 }
             }
         }

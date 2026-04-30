@@ -80,12 +80,14 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Executed when a hot-reload event occurs. Pulls the latest
         /// runtimeconfig object from the provider and updates the flag indicating
-        /// whether multiple create operations are enabled, and the entities based on the new config.
+        /// whether multiple create operations are enabled, whether aggregation is enabled,
+        /// and the entities based on the new config.
         /// </summary>
         protected void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
+            _isAggregationEnabled = runtimeConfig.EnableAggregation;
             _entities = runtimeConfig.Entities;
         }
 

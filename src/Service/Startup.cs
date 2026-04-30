@@ -615,25 +615,33 @@ namespace Azure.DataApiBuilder.Service
         private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
+                // Hot Chocolate v16 builds the GraphQL schema eagerly during host startup. DAB
+                // supports a "hosted" scenario where the runtime config is supplied after the
+                // host starts (POST /configuration), so the schema cannot exist at startup. Eager
+                // initialization plus our placeholder-schema fallback also creates a race on
+                // late-config hydration: HC keeps serving the warm placeholder executor in the
+                // background while the new schema's warmup runs, so the first GraphQL request
+                // after hydration validates against the placeholder and returns BadRequest.
+                // Opt into lazy initialization (the v15 default) so the schema is constructed on
+                // first request, by which time the runtime config is loaded and the metadata
+                // provider has been initialized in PerformOnConfigChangeAsync.
+                .ModifyOptions(options => options.LazyInitialization = true)
                 .AddInstrumentation()
                 .AddType(new DateTimeType(new DateTimeOptions { ValidateInputFormat = !(graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true) }))
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
-                    // Hot Chocolate v16 builds the GraphQL schema eagerly during host startup
-                    // (RequestExecutorWarmupService). DAB supports several scenarios where the
-                    // schema cannot be built at startup:
-                    //   1. Running without a runtime config (config supplied later via the
-                    //      /configuration endpoint or hot-reload).
-                    //   2. Config validation failure (e.g. Application Insights enabled with no
-                    //      connection string) where Startup.PerformOnConfigChangeAsync logs the
-                    //      error and continues; metadata-provider initialization never runs, so
-                    //      GraphQLSchemaCreator's transitive dependencies (AuthorizationResolver
-                    //      etc.) cannot construct.
-                    // In both cases, emit a minimal placeholder schema with a no-op resolver so
-                    // HC's eager validation succeeds without bringing the host down. The
-                    // GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED hot-reload event rebuilds the
-                    // executor against the real schema once a usable config is loaded.
+                    // With LazyInitialization, ConfigureSchema runs on the first GraphQL request,
+                    // not at host startup. By that point the runtime config is loaded for both
+                    // the file-based and POST /configuration scenarios. The placeholder fallback
+                    // remains as a safety net for two edge cases:
+                    //   1. GraphQL globally disabled - requests are short-circuited to 404 by
+                    //      PathRewriteMiddleware, but if a request slips through, emit a minimal
+                    //      schema so HC validation does not fail on entity metadata that is
+                    //      intentionally never exposed (e.g. column names colliding with
+                    //      reserved GraphQL identifiers like the leading double-underscore).
+                    //   2. Schema construction failure (e.g. config validation error preventing
+                    //      metadata-provider initialization).
                     RuntimeConfigProvider configProvider = serviceProvider.GetRootServiceProvider()
                         .GetRequiredService<RuntimeConfigProvider>();
                     if (!configProvider.TryGetConfig(out RuntimeConfig? loadedConfig))
@@ -642,11 +650,6 @@ namespace Azure.DataApiBuilder.Service
                         return;
                     }
 
-                    // When GraphQL is globally disabled, requests are short-circuited to 404 by
-                    // PathRewriteMiddleware before reaching Hot Chocolate. Skip building the real
-                    // schema so HC's eager validation does not fail on entity metadata that is
-                    // intentionally never exposed (e.g. column names colliding with reserved
-                    // GraphQL identifiers like the leading double-underscore).
                     if (!loadedConfig.IsGraphQLEnabled)
                     {
                         EmitPlaceholderSchema(schemaBuilder);
@@ -785,32 +788,6 @@ namespace Azure.DataApiBuilder.Service
                 runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (_, _) =>
                 {
                     isRuntimeReady = await PerformOnConfigChangeAsync(app);
-
-                    // Hot Chocolate v16's eager schema warmup ran during host startup (before any
-                    // runtime config existed) and cached the EmitPlaceholderSchema executor. Now
-                    // that a real config has been hydrated, evict that cached executor and force
-                    // an immediate rebuild via GetExecutorAsync so the next GraphQL request hits
-                    // the real schema. Without the synchronous rebuild, the test (or a fast
-                    // client) can race the lazy rebuild and observe the stale placeholder, which
-                    // returns BadRequest because it doesn't expose the entity query fields.
-                    // Skipped when initialization failed because the schema could not be built.
-                    if (isRuntimeReady)
-                    {
-                        IRequestExecutorManager requestExecutorManager =
-                            app.ApplicationServices.GetRequiredService<IRequestExecutorManager>();
-                        EvictGraphQLSchema(requestExecutorManager);
-                        try
-                        {
-                            await requestExecutorManager.GetExecutorAsync();
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(
-                                exception: ex,
-                                message: "Failed to eagerly rebuild GraphQL schema after late-config hydration. The schema will be rebuilt lazily on the next GraphQL request.");
-                        }
-                    }
-
                     return isRuntimeReady;
                 });
             }

@@ -55,19 +55,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// <param name="dateTimeGraphQLInput">Unescaped string used as value for GraphQL input field datetime_types</param>
         /// <param name="expectedResult">Expected result the HotChocolate returns from resolving database response.</param>
         // Date and time
-        [DataRow("1000-01-01 00:00:00", "1000-01-01T00:00:00.000Z", DisplayName = "Datetime value separated by space.")]
-        [DataRow("9999-12-31T23:59:59", "9999-12-31T23:59:59.000Z", DisplayName = "Datetime value separated by T.")]
-        [DataRow("9999-12-31 23:59:59Z", "9999-12-31T23:59:59.000Z", DisplayName = "Datetime value specified with UTC offset Z as resolved by HotChocolate.")]
-        [DataRow("9999-12-31 23:59:59+00:00", "9999-12-31T23:59:59.000Z", DisplayName = "Datetime value specified with UTC offset with no datetime change when stored in db.")]
-        [DataRow("9999-12-31 23:59:59+03:00", "9999-12-31T20:59:59.000Z", DisplayName = "Timezone offset UTC+03:00 accepted by MySQL because UTC value is in supported datetime range.")]
-        [DataRow("9999-12-31 20:59:59-03:00", "9999-12-31T23:59:59.000Z", DisplayName = "Timezone offset UTC-03:00 accepted by MySQL because UTC value is in supported datetime range.")]
+        // Note: HC v16's DateTime scalar elides trailing zero fractional seconds in ISO-8601
+        // output (e.g. "1000-01-01T00:00:00.000Z" → "1000-01-01T00:00:00Z").
+        [DataRow("1000-01-01 00:00:00", "1000-01-01T00:00:00Z", DisplayName = "Datetime value separated by space.")]
+        [DataRow("9999-12-31T23:59:59", "9999-12-31T23:59:59Z", DisplayName = "Datetime value separated by T.")]
+        [DataRow("9999-12-31 23:59:59Z", "9999-12-31T23:59:59Z", DisplayName = "Datetime value specified with UTC offset Z as resolved by HotChocolate.")]
+        [DataRow("9999-12-31 23:59:59+00:00", "9999-12-31T23:59:59Z", DisplayName = "Datetime value specified with UTC offset with no datetime change when stored in db.")]
+        [DataRow("9999-12-31 23:59:59+03:00", "9999-12-31T20:59:59Z", DisplayName = "Timezone offset UTC+03:00 accepted by MySQL because UTC value is in supported datetime range.")]
+        [DataRow("9999-12-31 20:59:59-03:00", "9999-12-31T23:59:59Z", DisplayName = "Timezone offset UTC-03:00 accepted by MySQL because UTC value is in supported datetime range.")]
         // Fractional seconds rounded up/down when mysql column datetime doesn't specify fractional seconds
         // e.g. column not defined as datetime({1-6})
-        [DataRow("9999-12-31 23:59:59.499999", "9999-12-31T23:59:59.000Z", DisplayName = "Fractional seconds rounded down because fractional seconds are passed to column with datatype datetime(0).")]
-        [DataRow("2024-12-31 23:59:59.999999", "2025-01-01T00:00:00.000Z", DisplayName = "Fractional seconds rounded up because fractional seconds are passed to column with datatype datetime(0).")]
+        [DataRow("9999-12-31 23:59:59.499999", "9999-12-31T23:59:59Z", DisplayName = "Fractional seconds rounded down because fractional seconds are passed to column with datatype datetime(0).")]
+        [DataRow("2024-12-31 23:59:59.999999", "2025-01-01T00:00:00Z", DisplayName = "Fractional seconds rounded up because fractional seconds are passed to column with datatype datetime(0).")]
         // Only date
-        [DataRow("9999-12-31", "9999-12-31T00:00:00.000Z", DisplayName = "Max date for datetime column stored with zeroed out time.")]
-        [DataRow("1000-01-01", "1000-01-01T00:00:00.000Z", DisplayName = "Min date for datetime column stored with zeroed out time.")]
+        [DataRow("9999-12-31", "9999-12-31T00:00:00Z", DisplayName = "Max date for datetime column stored with zeroed out time.")]
+        [DataRow("1000-01-01", "1000-01-01T00:00:00Z", DisplayName = "Min date for datetime column stored with zeroed out time.")]
         [DataTestMethod]
         public async Task InsertMutationInput_DateTimeTypes_ValidRange_ReturnsExpectedValues(string dateTimeGraphQLInput, string expectedResult)
         {
@@ -98,9 +100,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         /// <param name="dateTimeGraphQLInput">Unescaped string used as value for GraphQL input field datetime_types</param>
         /// <param name="expectedResult">Expected result the HotChocolate returns from resolving database response.</param>
-        [DataRow("23:59:59.499999", "23:59:59.000Z", DisplayName = "hh:mm::ss.ffffff for datetime column stored with zeroed out date and rounded down fractional seconds.")]
-        [DataRow("23:59:59", "23:59:59.000Z", DisplayName = "hh:mm:ss for datetime column stored with zeroed out date.")]
-        [DataRow("23:59", "23:59:00.000Z", DisplayName = "hh:mm for datetime column stored with zeroed out date and seconds.")]
+        // Note: HC v16's DateTime scalar elides trailing zero fractional seconds in ISO-8601
+        // output (e.g. "23:59:59.000Z" → "23:59:59Z").
+        [DataRow("23:59:59.499999", "23:59:59Z", DisplayName = "hh:mm::ss.ffffff for datetime column stored with zeroed out date and rounded down fractional seconds.")]
+        [DataRow("23:59:59", "23:59:59Z", DisplayName = "hh:mm:ss for datetime column stored with zeroed out date.")]
+        [DataRow("23:59", "23:59:00Z", DisplayName = "hh:mm for datetime column stored with zeroed out date and seconds.")]
         [DataTestMethod]
         public async Task InsertMutationInput_DateTimeTypes_TimeOnly_ValidRange_ReturnsExpectedValues(string dateTimeGraphQLInput, string expectedResult)
         {

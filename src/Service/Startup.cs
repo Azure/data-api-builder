@@ -636,7 +636,18 @@ namespace Azure.DataApiBuilder.Service
                     // executor against the real schema once a usable config is loaded.
                     RuntimeConfigProvider configProvider = serviceProvider.GetRootServiceProvider()
                         .GetRequiredService<RuntimeConfigProvider>();
-                    if (!configProvider.TryGetConfig(out _))
+                    if (!configProvider.TryGetConfig(out RuntimeConfig? loadedConfig))
+                    {
+                        EmitPlaceholderSchema(schemaBuilder);
+                        return;
+                    }
+
+                    // When GraphQL is globally disabled, requests are short-circuited to 404 by
+                    // PathRewriteMiddleware before reaching Hot Chocolate. Skip building the real
+                    // schema so HC's eager validation does not fail on entity metadata that is
+                    // intentionally never exposed (e.g. column names colliding with reserved
+                    // GraphQL identifiers like the leading double-underscore).
+                    if (!loadedConfig.IsGraphQLEnabled)
                     {
                         EmitPlaceholderSchema(schemaBuilder);
                         return;
@@ -774,6 +785,19 @@ namespace Azure.DataApiBuilder.Service
                 runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (_, _) =>
                 {
                     isRuntimeReady = await PerformOnConfigChangeAsync(app);
+
+                    // Hot Chocolate v16's eager schema warmup ran during host startup (before any
+                    // runtime config existed) and cached the EmitPlaceholderSchema executor. Now
+                    // that a real config has been hydrated, evict that cached executor so the
+                    // next GraphQL request rebuilds the schema with the real entity types. Skipped
+                    // when initialization failed because the schema could not be built anyway.
+                    if (isRuntimeReady)
+                    {
+                        IRequestExecutorManager requestExecutorManager =
+                            app.ApplicationServices.GetRequiredService<IRequestExecutorManager>();
+                        EvictGraphQLSchema(requestExecutorManager);
+                    }
+
                     return isRuntimeReady;
                 });
             }

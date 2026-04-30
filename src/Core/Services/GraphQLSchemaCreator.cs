@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Name of the hidden placeholder field added to <c>Query</c> when no entity contributes
         /// a query field, used to keep the schema valid for HC v16's eager validation.
         /// </summary>
-        private const string EmptySchemaPlaceholderFieldName = "_dab";
+        private const string EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME = "_dab";
 
         /// <summary>
         /// If the generated <c>Query</c> object type has no fields, append a hidden placeholder
@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     FieldDefinitionNode placeholderField = new(
                         location: null,
-                        new NameNode(EmptySchemaPlaceholderFieldName),
+                        new NameNode(EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME),
                         new StringValueNode(
                             "Internal placeholder; only present when no entity contributes a query field. "
                             + "Always returns null and is never reachable in normal operation."),
@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // HC v16 requires every field to have a resolver; bind a no-op that always
                 // returns null. The field is unreachable in normal operation because callers
                 // for empty-Query configurations never issue GraphQL requests.
-                sb.AddResolver("Query", EmptySchemaPlaceholderFieldName, _ => null);
+                sb.AddResolver("Query", EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME, _ => null);
             }
 
             return new DocumentNode(rewritten.ToImmutable());

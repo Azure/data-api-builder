@@ -1338,7 +1338,7 @@ public class EmbeddingServiceTests
         HttpClient httpClient = new();
 
         // Act
-        EmbeddingService service = new(httpClient, options, _mockLogger.Object, _mockCache.Object);
+        _ = new EmbeddingService(httpClient, options, _mockLogger.Object, _mockCache.Object);
 
         // Assert
         Assert.AreEqual(TimeSpan.FromMilliseconds(customTimeoutMs), httpClient.Timeout);

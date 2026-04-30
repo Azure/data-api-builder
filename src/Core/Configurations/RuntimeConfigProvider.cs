@@ -279,10 +279,21 @@ public class RuntimeConfigProvider : IDisposable
 
         if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, out _, replacementSettings))
         {
-            _configLoader.RuntimeConfig = runtimeConfig.DataSource?.DatabaseType switch
+            // Late configuration injects a connection string into the parsed config's data source.
+            // A config with no data source (e.g. a root config that delegates to data-source-files)
+            // is not meaningful here. Return false to preserve pre-existing behavior — on main, the
+            // RuntimeConfig constructor threw when DataSource was null and TryParseConfig converted
+            // that into a 'false' return. Since DataSource is now nullable, we make the same
+            // determination explicitly rather than NRE'ing in the 'with' expression below.
+            if (runtimeConfig.DataSource is null)
+            {
+                return false;
+            }
+
+            _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {
                 DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
-                _ => runtimeConfig with { DataSource = runtimeConfig.DataSource! with { ConnectionString = connectionString } }
+                _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
             ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
             _configLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(_configLoader.RuntimeConfig.DefaultDataSourceName, _configLoader.RuntimeConfig.DataSource!);

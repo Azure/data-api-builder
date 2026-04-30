@@ -5815,11 +5815,14 @@ type Planet @model(name:""PlanetAlias"") {
 
             bool isValid = await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
 
-            // Validation may fail because autoentity patterns don't match any tables in the test DB,
-            // but it should not throw. The important thing is that the config is structurally valid
-            // and the autoentity configuration was processed without crashing.
-            // The "no entities found" error is expected when autoentities resolve zero entities
-            // and no manual entities are defined.
+            // Validation may legitimately fail in this test (autoentity patterns won't match
+            // any tables in the test DB), so isValid is intentionally not asserted. What we
+            // require is that:
+            //   1. TryValidateConfig completes without raising an exception (validation errors
+            //      are recorded into ConfigValidationExceptions, not thrown).
+            //   2. No autoentity-shaped error is recorded other than the expected
+            //      "No entities found" message that fires when autoentities resolve zero
+            //      entities and no manual entities are defined.
             Assert.IsTrue(
                 configValidator.ConfigValidationExceptions.All(
                     e => !e.Message.Contains("autoentities", StringComparison.OrdinalIgnoreCase)

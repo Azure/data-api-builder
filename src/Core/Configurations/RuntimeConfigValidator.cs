@@ -476,6 +476,10 @@ public class RuntimeConfigValidator : IConfigValidator
                 continue;
             }
 
+            // Hoist data source lookup outside the param loop — it's entity-scoped, not param-scoped.
+            // Looked up once per entity instead of once per parameter (was duplicated work in Stage 3.5).
+            DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
+
             // Check each parameter for the embed flag.
             // Example: iterates over { "name": "query_vector", "embed": true } and { "name": "top_k", "default": "5" }
             foreach (ParameterMetadata param in entity.Source.Parameters)
@@ -493,13 +497,13 @@ public class RuntimeConfigValidator : IConfigValidator
                 // For PostgreSQL/MySQL/Cosmos, the request would fail at runtime with a confusing
                 // type error. Reject at startup instead.
                 // Example FAIL: PostgreSQL entity with embed:true → "embed feature only supported for MSSQL"
-                DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
                 if (entityDataSource.DatabaseType != DatabaseType.MSSQL)
                 {
                     HandleOrRecordException(new DataApiBuilderException(
                         message: $"Entity '{entityName}': parameter '{param.Name}' has 'embed: true' but the data source type is '{entityDataSource.DatabaseType}'. The embed feature is currently only supported for Azure SQL / SQL Server.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    continue;  // Don't cascade further rules — this is a fundamental issue
                 }
 
                 // Rule 1: embed:true is only valid on stored-procedure entities.
@@ -513,6 +517,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         message: $"Entity '{entityName}': parameter '{param.Name}' has 'embed: true' but is only valid on stored-procedure entities.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    continue;  // Don't cascade further rules
                 }
 
                 // Rule 2: embed:true requires runtime.embeddings to be configured and enabled.
@@ -526,6 +531,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         message: $"Entity '{entityName}': parameter '{param.Name}' has 'embed: true' but runtime.embeddings is not configured or not enabled.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    continue;  // Don't cascade further rules
                 }
 
                 // Rule 3: embed:true with a default value is not supported.
@@ -539,6 +545,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         message: $"Entity '{entityName}': parameter '{param.Name}' has both 'embed: true' and a 'default' value. Embed parameters cannot have default values.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    // No continue needed — this is the last rule
                 }
             }
         }

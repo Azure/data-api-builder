@@ -337,7 +337,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Currently the source type is always Table for auto-generated entities from database objects.
                     Entity generatedEntity = new(
                         Source: new EntitySource(
-                            Object: objectName,
+                            Object: $"{schemaName}.{objectName}",
                             Type: EntitySourceType.Table,
                             Parameters: null,
                             KeyFields: null),

@@ -162,7 +162,7 @@ public class EnvironmentTests
             $"-c {TEST_RUNTIME_CONFIG_FILE}"
         );
 
-        string? output = await process.StandardError.ReadLineAsync();
+        string? output = await process.StandardOutput.ReadToEndAsync();
         Assert.IsNotNull(output);
         // Clean error message on stderr with no stack trace.
         StringAssert.Contains(output, "A valid Connection String should be provided.", StringComparison.Ordinal);

@@ -497,25 +497,17 @@
             },
             "level-2": {
               "type": "object",
-              "description": "Configuration for the level 2 (distributed) cache and backplane.",
+              "description": "Configuration for the level 2 (distributed) Redis cache and backplane.",
               "additionalProperties": false,
               "properties": {
                 "enabled": {
                   "$ref": "#/$defs/boolean-or-string",
-                  "description": "Enable or disable the level 2 distributed cache.",
+                  "description": "Enable or disable the level 2 distributed Redis cache.",
                   "default": false
-                },
-                "provider": {
-                  "type": "string",
-                  "description": "The provider for the L2 cache. Currently only 'redis' is supported."
                 },
                 "connection-string": {
                   "type": "string",
-                  "description": "The connection string for the level 2 cache provider."
-                },
-                "partition": {
-                  "type": "string",
-                  "description": "The prefix to use for cache keys in level 2 and backplane, useful in a shared environment to avoid collisions."
+                  "description": "The connection string for the Redis cache."
                 }
               },
               "if": {
@@ -910,6 +902,41 @@
                   "description": "The number of characters to overlap between consecutive chunks. Overlap helps maintain context across chunk boundaries.",
                   "default": 100,
                   "minimum": 0
+                }
+              }
+            },
+            "cache": {
+              "type": "object",
+              "description": "Cache configuration for embeddings. Includes L1 (in-memory) and optional L2 (Azure Cache for Redis) caching.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether caching is enabled for embeddings. Defaults to true.",
+                  "default": true
+                },
+                "ttl-hours": {
+                  "type": "integer",
+                  "description": "Time-to-live for cached embeddings in hours. Defaults to 24 hours. Set high since embeddings are deterministic.",
+                  "default": 24,
+                  "minimum": 1
+                },
+                "level-2": {
+                  "type": "object",
+                  "description": "Configuration for L2 distributed cache using Azure Cache for Redis.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Whether L2 (distributed Redis) cache is enabled. Defaults to false.",
+                      "default": false
+                    },
+                    "connection-string": {
+                      "type": "string",
+                      "description": "The connection string for Azure Cache for Redis. Supports environment variable substitution with @env('VAR_NAME'). Example: 'contoso.redis.cache.windows.net:6380,password=...,ssl=True,abortConnect=False'"
+                    }
+                  },
+                  "required": ["enabled"]
                 }
               }
             }

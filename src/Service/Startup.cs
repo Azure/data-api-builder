@@ -454,7 +454,26 @@ namespace Azure.DataApiBuilder.Service
 
                 if (embeddingsOptions.Enabled)
                 {
+                    // Configure dedicated FusionCache for embeddings
+                    ConfigureEmbeddingsCache(services, embeddingsOptions, runtimeConfigAvailable);
+
+                    // Register embedding service with the named cache
                     services.AddHttpClient<IEmbeddingService, EmbeddingService>();
+
+                    // Override the IEmbeddingService registration to use the named cache
+                    services.AddSingleton<IEmbeddingService>(serviceProvider =>
+                    {
+                        IFusionCache cache = embeddingsOptions.IsCachingEnabled
+                            ? serviceProvider.GetRequiredService<IFusionCacheProvider>().GetCache("EmbeddingsCache")
+                            : serviceProvider.GetRequiredService<IFusionCache>(); // Fallback to default cache
+
+                        ILogger<EmbeddingService> logger = serviceProvider.GetRequiredService<ILogger<EmbeddingService>>();
+                        IHttpClientFactory httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                        HttpClient httpClient = httpClientFactory.CreateClient(typeof(EmbeddingService).Name);
+
+                        return new EmbeddingService(httpClient, embeddingsOptions, logger, cache);
+                    });
+
                     _logger.LogInformation(
                         "Embeddings service enabled with provider: {Provider}, model: {Model}, base-url: {BaseUrl}",
                         providerName,
@@ -495,12 +514,6 @@ namespace Azure.DataApiBuilder.Service
                 {
                     options.FactoryErrorsLogLevel = LogLevel.Debug;
                     options.EventHandlingErrorsLogLevel = LogLevel.Debug;
-                    string? cachePartition = runtimeConfig?.Runtime?.Cache?.Level2?.Partition;
-                    if (string.IsNullOrWhiteSpace(cachePartition) == false)
-                    {
-                        options.CacheKeyPrefix = cachePartition + "_";
-                        options.BackplaneChannelPrefix = cachePartition + "_";
-                    }
                 })
                 .WithDefaultEntryOptions(new FusionCacheEntryOptions
                 {
@@ -518,42 +531,31 @@ namespace Azure.DataApiBuilder.Service
             if (isLevel2Enabled)
             {
                 RuntimeCacheLevel2Options level2CacheOptions = runtimeConfig!.Runtime!.Cache!.Level2!;
-                string level2CacheProvider = level2CacheOptions.Provider ?? EntityCacheOptions.L2_CACHE_PROVIDER;
 
-                switch (level2CacheProvider.ToLowerInvariant())
+                if (string.IsNullOrWhiteSpace(level2CacheOptions.ConnectionString))
                 {
-                    case EntityCacheOptions.L2_CACHE_PROVIDER:
-                        if (string.IsNullOrWhiteSpace(level2CacheOptions.ConnectionString))
-                        {
-                            throw new Exception($"Cache Provider: the \"{EntityCacheOptions.L2_CACHE_PROVIDER}\" level2 cache provider requires a valid connection-string. Please provide one.");
-                        }
-                        else
-                        {
-                            // NOTE: this is done to reuse the same connection multiplexer for both the cache and backplane
-                            Task<IConnectionMultiplexer> connectionMultiplexerTask = CreateConnectionMultiplexerAsync(level2CacheOptions.ConnectionString);
-
-                            fusionCacheBuilder
-                                .WithSerializer(new FusionCacheSystemTextJsonSerializer())
-                                .WithDistributedCache(new RedisCache(new RedisCacheOptions
-                                {
-                                    ConnectionMultiplexerFactory = async () =>
-                                    {
-                                        return await connectionMultiplexerTask;
-                                    }
-                                }))
-                                .WithBackplane(new RedisBackplane(new RedisBackplaneOptions
-                                {
-                                    ConnectionMultiplexerFactory = async () =>
-                                    {
-                                        return await connectionMultiplexerTask;
-                                    }
-                                }));
-                        }
-
-                        break;
-                    default:
-                        throw new Exception($"Cache Provider: ${level2CacheOptions.Provider} not supported. Please provide a valid cache provider.");
+                    throw new Exception("Redis L2 cache requires a valid connection-string. Please provide one.");
                 }
+
+                // NOTE: this is done to reuse the same connection multiplexer for both the cache and backplane
+                Task<IConnectionMultiplexer> connectionMultiplexerTask = CreateConnectionMultiplexerAsync(level2CacheOptions.ConnectionString);
+
+                fusionCacheBuilder
+                    .WithSerializer(new FusionCacheSystemTextJsonSerializer())
+                    .WithDistributedCache(new RedisCache(new RedisCacheOptions
+                    {
+                        ConnectionMultiplexerFactory = async () =>
+                        {
+                            return await connectionMultiplexerTask;
+                        }
+                    }))
+                    .WithBackplane(new RedisBackplane(new RedisBackplaneOptions
+                    {
+                        ConnectionMultiplexerFactory = async () =>
+                        {
+                            return await connectionMultiplexerTask;
+                        }
+                    }));
             }
 
             services.AddSingleton<DabCacheService>();
@@ -1409,6 +1411,77 @@ namespace Azure.DataApiBuilder.Service
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.CustomTableName)
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DcrImmutableId)
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DceEndpoint);
+        }
+
+        /// <summary>
+        /// Configures a dedicated FusionCache instance for embeddings with optional L2 Redis cache.
+        /// </summary>
+        /// <param name="services">The service collection.</param>
+        /// <param name="embeddingsOptions">The embeddings configuration options.</param>
+        /// <param name="runtimeConfigAvailable">Whether the runtime config is available.</param>
+        private void ConfigureEmbeddingsCache(
+            IServiceCollection services,
+            EmbeddingsOptions embeddingsOptions,
+            bool runtimeConfigAvailable)
+        {
+            if (!embeddingsOptions.IsCachingEnabled)
+            {
+                _logger.LogInformation("Embeddings caching is disabled");
+                return;
+            }
+
+            EmbeddingsCacheOptions cacheOptions = embeddingsOptions.Cache ?? new EmbeddingsCacheOptions();
+            int ttlHours = cacheOptions.EffectiveTtlHours;
+
+            IFusionCacheBuilder embeddingsCacheBuilder = services.AddFusionCache("EmbeddingsCache")
+                .WithOptions(options =>
+                {
+                    options.FactoryErrorsLogLevel = LogLevel.Debug;
+                    options.EventHandlingErrorsLogLevel = LogLevel.Debug;
+                })
+                .WithDefaultEntryOptions(new FusionCacheEntryOptions
+                {
+                    Duration = TimeSpan.FromHours(ttlHours),
+                    ReThrowBackplaneExceptions = false,
+                    ReThrowDistributedCacheExceptions = false,
+                    ReThrowSerializationExceptions = false,
+                });
+
+            _logger.LogInformation(
+                "Embeddings cache configured with TTL: {TtlHours} hours",
+                ttlHours);
+
+            // Configure L2 Redis cache if enabled
+            if (embeddingsOptions.IsLevel2CacheEnabled && runtimeConfigAvailable)
+            {
+                EmbeddingsCacheLevel2Options level2Options = cacheOptions.Level2!;
+
+                if (string.IsNullOrWhiteSpace(level2Options.ConnectionString))
+                {
+                    throw new Exception("Embeddings Redis L2 cache requires a valid connection-string.");
+                }
+
+                // Create connection multiplexer for embeddings Redis cache
+                Task<IConnectionMultiplexer> connectionMultiplexerTask =
+                    CreateConnectionMultiplexerAsync(level2Options.ConnectionString);
+
+                embeddingsCacheBuilder
+                    .WithSerializer(new FusionCacheSystemTextJsonSerializer())
+                    .WithDistributedCache(new RedisCache(new RedisCacheOptions
+                    {
+                        ConnectionMultiplexerFactory = async () => await connectionMultiplexerTask
+                    }))
+                    .WithBackplane(new RedisBackplane(new RedisBackplaneOptions
+                    {
+                        ConnectionMultiplexerFactory = async () => await connectionMultiplexerTask
+                    }));
+
+                _logger.LogInformation("Embeddings L2 (Redis) cache enabled");
+            }
+            else
+            {
+                _logger.LogInformation("Embeddings using L1 (memory) cache only");
+            }
         }
     }
 }

@@ -112,6 +112,13 @@ public record EmbeddingsOptions
     public EmbeddingsChunkingOptions? Chunking { get; init; }
 
     /// <summary>
+    /// Cache configuration for embeddings.
+    /// Includes L1 (in-memory) and optional L2 (Redis) caching.
+    /// </summary>
+    [JsonPropertyName("cache")]
+    public EmbeddingsCacheOptions? Cache { get; init; }
+
+    /// <summary>
     /// Flag which informs whether the user provided a custom timeout value.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
@@ -176,6 +183,18 @@ public record EmbeddingsOptions
     [JsonIgnore]
     public bool IsChunkingEnabled => Chunking?.Enabled ?? false;
 
+    /// <summary>
+    /// Returns true if caching is enabled for embeddings.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsCachingEnabled => Cache?.Enabled ?? true;
+
+    /// <summary>
+    /// Returns true if L2 (distributed Redis) cache is enabled for embeddings.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsLevel2CacheEnabled => (Cache?.Enabled ?? true) && (Cache?.IsLevel2Enabled ?? false);
+
     [JsonConstructor]
     public EmbeddingsOptions(
         EmbeddingProviderType Provider,
@@ -188,7 +207,8 @@ public record EmbeddingsOptions
         int? TimeoutMs = null,
         EmbeddingsEndpointOptions? Endpoint = null,
         EmbeddingsHealthCheckConfig? Health = null,
-        EmbeddingsChunkingOptions? Chunking = null)
+        EmbeddingsChunkingOptions? Chunking = null,
+        EmbeddingsCacheOptions? Cache = null)
     {
         this.Provider = Provider;
         this.BaseUrl = BaseUrl;
@@ -196,6 +216,7 @@ public record EmbeddingsOptions
         this.Endpoint = Endpoint;
         this.Health = Health;
         this.Chunking = Chunking;
+        this.Cache = Cache;
 
         if (Enabled.HasValue)
         {

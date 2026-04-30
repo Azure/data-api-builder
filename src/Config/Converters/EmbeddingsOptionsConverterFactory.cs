@@ -51,6 +51,7 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
             EmbeddingsEndpointOptions? endpoint = null;
             EmbeddingsHealthCheckConfig? health = null;
             EmbeddingsChunkingOptions? chunking = null;
+            EmbeddingsCacheOptions? cache = null;
 
             while (reader.Read())
             {
@@ -111,6 +112,9 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                     case "chunking":
                         chunking = ReadChunkingOptions(ref reader, options);
                         break;
+                    case "cache":
+                        cache = JsonSerializer.Deserialize<EmbeddingsCacheOptions>(ref reader, options);
+                        break;
                     default:
                         reader.Skip();
                         break;
@@ -143,7 +147,8 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                 TimeoutMs: timeoutMs,
                 Endpoint: endpoint,
                 Health: health,
-                Chunking: chunking);
+                Chunking: chunking,
+                Cache: cache);
         }
 
         /// <summary>
@@ -353,6 +358,12 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
             {
                 writer.WritePropertyName("chunking");
                 JsonSerializer.Serialize(writer, value.Chunking, options);
+            }
+
+            if (value.Cache is not null)
+            {
+                writer.WritePropertyName("cache");
+                JsonSerializer.Serialize(writer, value.Cache, options);
             }
 
             writer.WriteEndObject();

@@ -3474,7 +3474,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeCacheLevel2Options level2Options = new(
                 Enabled: true,
-                Provider: "redis",
                 ConnectionString: "localhost:6379");
 
             RuntimeCacheOptions cacheOptions = new(Enabled: true, TtlSeconds: 5)

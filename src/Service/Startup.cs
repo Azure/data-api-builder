@@ -788,14 +788,27 @@ namespace Azure.DataApiBuilder.Service
 
                     // Hot Chocolate v16's eager schema warmup ran during host startup (before any
                     // runtime config existed) and cached the EmitPlaceholderSchema executor. Now
-                    // that a real config has been hydrated, evict that cached executor so the
-                    // next GraphQL request rebuilds the schema with the real entity types. Skipped
-                    // when initialization failed because the schema could not be built anyway.
+                    // that a real config has been hydrated, evict that cached executor and force
+                    // an immediate rebuild via GetExecutorAsync so the next GraphQL request hits
+                    // the real schema. Without the synchronous rebuild, the test (or a fast
+                    // client) can race the lazy rebuild and observe the stale placeholder, which
+                    // returns BadRequest because it doesn't expose the entity query fields.
+                    // Skipped when initialization failed because the schema could not be built.
                     if (isRuntimeReady)
                     {
                         IRequestExecutorManager requestExecutorManager =
                             app.ApplicationServices.GetRequiredService<IRequestExecutorManager>();
                         EvictGraphQLSchema(requestExecutorManager);
+                        try
+                        {
+                            await requestExecutorManager.GetExecutorAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(
+                                exception: ex,
+                                message: "Failed to eagerly rebuild GraphQL schema after late-config hydration. The schema will be rebuilt lazily on the next GraphQL request.");
+                        }
                     }
 
                     return isRuntimeReady;

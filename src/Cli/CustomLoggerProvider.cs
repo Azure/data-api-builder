@@ -18,9 +18,13 @@ public class CustomLoggerProvider : ILoggerProvider
 
     public class CustomConsoleLogger : ILogger
     {
-        // Minimum LogLevel. LogLevel below this would be disabled.
-        // When CLI specifies --LogLevel, use that value; otherwise default to Information.
-        private static LogLevel MinimumLogLevel => Cli.Utils.IsLogLevelOverriddenByCli ? Cli.Utils.CliLogLevel : LogLevel.Information;
+        // Minimum LogLevel for CLI output.
+        // For MCP mode: use CLI's --LogLevel if specified, otherwise suppress all.
+        // For non-MCP mode: always use Information.
+        // Note: --LogLevel is meant for the ENGINE's log level, not CLI's output.
+        private static LogLevel MinimumLogLevel => Cli.Utils.IsMcpStdioMode
+            ? (Cli.Utils.IsLogLevelOverriddenByCli ? Cli.Utils.CliLogLevel : LogLevel.None)
+            : LogLevel.Information;
 
         //  Color values based on LogLevel
         //  LogLevel    Foreground      Background

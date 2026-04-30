@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
 using System.IO.Abstractions;
-using System.Linq;
 using System.Net;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -96,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (isInvalidConnectionBuilderString)
             {
                 sw = new();
-                Console.SetError(sw);
+                Console.SetOut(sw);
             }
 
             DatabaseEngine = TestCategory.MSSQL;
@@ -181,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // For strings that are an invalid format for the connection string builder, need to
             // redirect std error to a string writer for comparison to expected error messaging later.
             StringWriter sw = new();
-            Console.SetError(sw);
+            Console.SetOut(sw);
 
             DatabaseEngine = TestCategory.POSTGRESQL;
             await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString, sw);

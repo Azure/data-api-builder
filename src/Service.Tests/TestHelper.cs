@@ -317,7 +317,16 @@ namespace Azure.DataApiBuilder.Service.Tests
         {
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
+
+            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.SetMinimumLevel(LogLevel.Trace);
+                builder.AddConsole();
+            });
+
+            ILogger<FileSystemRuntimeConfigLoader> logger = loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            loader.SetLogger(logger);
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
             return runtimeConfigProvider;
         }

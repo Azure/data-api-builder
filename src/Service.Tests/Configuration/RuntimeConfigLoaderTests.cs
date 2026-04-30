@@ -95,18 +95,22 @@ public class RuntimeConfigLoaderTests
         FileSystemRuntimeConfigLoader loader = new(fs);
 
         StringWriter sw = new();
-        Console.SetOut(sw);
+        Console.SetError(sw);
 
         ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
         {
             builder.SetMinimumLevel(LogLevel.Trace);
-            builder.AddConsole();
+            builder.AddConsole(options =>
+            {
+                options.LogToStandardErrorThreshold = LogLevel.Error;
+            });
         });
         ILogger<FileSystemRuntimeConfigLoader> logger = loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
 
         loader.SetLogger(logger);
         loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
-        await Task.Delay(TimeSpan.FromSeconds(2));
+
+        await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
 
         Assert.IsTrue(loader.IsParseErrorEmitted,
             "IsParseErrorEmitted should be true when config parsing fails.");
@@ -492,18 +496,21 @@ public class RuntimeConfigLoaderTests
 
             try
             {
-                Console.SetOut(sw);
+                Console.SetError(sw);
 
                 ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
                 {
                     builder.SetMinimumLevel(LogLevel.Trace);
-                    builder.AddConsole();
+                    builder.AddConsole(options =>
+                    {
+                        options.LogToStandardErrorThreshold = LogLevel.Error;
+                    });
                 });
                 ILogger<FileSystemRuntimeConfigLoader> logger = loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
 
                 loader.SetLogger(logger);
                 bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
-                await Task.Delay(TimeSpan.FromSeconds(2));
+                await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
                 string error = sw.ToString();
 
                 Assert.IsFalse(loaded, "Config loading should fail when a child config file exists but cannot be parsed.");

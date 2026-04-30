@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (isInvalidConnectionBuilderString)
             {
                 sw = new();
-                Console.SetOut(sw);
+                Console.SetError(sw);
             }
 
             DatabaseEngine = TestCategory.MSSQL;
@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // For strings that are an invalid format for the connection string builder, need to
             // redirect std error to a string writer for comparison to expected error messaging later.
             StringWriter sw = new();
-            Console.SetOut(sw);
+            Console.SetError(sw);
 
             DatabaseEngine = TestCategory.POSTGRESQL;
             await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString, sw);
@@ -239,7 +239,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 // Combine both the console and exception messages because they both
                 // may contain the connection string errors this function expects to exist.
-                await Task.Delay(TimeSpan.FromSeconds(2));
+                await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
                 string consoleMessages = sw is not null ? sw.ToString() : string.Empty;
                 string allErrorMessages = ex.Message + " " + consoleMessages;
                 Assert.IsTrue(allErrorMessages.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE),

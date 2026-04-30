@@ -50,27 +50,11 @@ public static class ParameterEmbeddingHelper
             return;
         }
 
-        // Check upfront: are there any embed params we need to handle?
-        // If not, return immediately — no need to validate the embedding service.
+        // Quick exit: are there any embed params at all in config?
         bool hasEmbedParams = configParams.Any(p => p.Embed);
         if (!hasEmbedParams)
         {
             return;
-        }
-
-        // If we have embed params but no embedding service, fail loudly.
-        // This catches edge cases like:
-        //   - Hot-reload disabled embeddings while DAB is running
-        //   - DI misconfiguration (service not registered when embed params exist)
-        //   - Future code paths that construct engines without the service
-        // Without this check, the silent-skip behavior would send raw text to SQL,
-        // producing confusing errors or (worst case) silently storing/querying with garbage.
-        if (embeddingService is null)
-        {
-            throw new DataApiBuilderException(
-                message: "An embed parameter is configured but the embedding service is not available. Verify runtime.embeddings is configured and enabled.",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
         }
 
         foreach (ParameterMetadata configParam in configParams)
@@ -84,9 +68,30 @@ public static class ParameterEmbeddingHelper
 
             // Check if the request provided this parameter
             // If not provided, DAB's existing required-param validation will handle it
+            // (and an embed:true param without a value in this request doesn't need
+            // the embedding service — only the params actually being substituted do)
             if (!resolvedParams.TryGetValue(configParam.Name, out object? value))
             {
                 continue;
+            }
+
+            // If we have an embed param value to substitute but no embedding service,
+            // fail loudly. Without this check, the silent-skip behavior would send raw
+            // text to SQL, producing confusing errors or silently wrong results.
+            //
+            // This catches:
+            //   - DI misconfiguration (service not registered when embed params exist)
+            //   - Future code paths that construct engines without the service
+            //
+            // Note: This check is scoped to "this request actually has an embed param
+            // value" — a request that omits the embed param won't fail here, so optional
+            // embed params don't break when the embedding service is unavailable.
+            if (embeddingService is null)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Parameter '{configParam.Name}' has 'embed: true' but the embedding service is not available. Verify runtime.embeddings is configured and enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             // Validate: embed parameters must be strings.
@@ -170,12 +175,14 @@ public static class ParameterEmbeddingHelper
             // Uses InvariantCulture to prevent European locales from using comma as decimal separator
             // (e.g., German locale would produce "0,012" instead of "0.012" → invalid JSON)
             //
-            // Uses "R" (round-trip) format specifier instead of "G" (general):
+            // Uses "G9" format specifier (NOT "G" or "R"):
             //   - "G" defaults to G7 for Single, which is NOT round-trippable (~30% of values lose precision)
-            //   - "R" guarantees the string can be parsed back to the exact same float
+            //   - "R" is documented to fail round-trip in some cases for Single
+            //     (per Microsoft docs: "We recommend that you use the G9 format specifier instead.")
+            //   - "G9" guarantees the string can be parsed back to the exact same float
             //   - Embeddings are precision-sensitive — even tiny drift affects cosine similarity scores
             string vectorJson = "["
-                + string.Join(",", result.Embedding.Select(f => f.ToString("R", CultureInfo.InvariantCulture)))
+                + string.Join(",", result.Embedding.Select(f => f.ToString("G9", CultureInfo.InvariantCulture)))
                 + "]";
 
             // Replace the text value with the vector string in-place

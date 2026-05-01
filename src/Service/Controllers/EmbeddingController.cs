@@ -275,7 +275,7 @@ public class EmbeddingController : ControllerBase
             {
                 IEnumerable<string> lines = docResponses
                     .SelectMany(d => d.Data)
-                    .Select(embedding => string.Join(",", embedding.Select(f => f.ToString("G", CultureInfo.InvariantCulture))));
+                    .Select(embedding => string.Join(",", embedding.Select(f => f.ToString("G9", CultureInfo.InvariantCulture))));
                 return Content(string.Join("\n", lines), MediaTypeNames.Text.Plain);
             }
 

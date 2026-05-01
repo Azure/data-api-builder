@@ -1562,7 +1562,7 @@ namespace Cli.Tests
             }
         }
 
-         /// <summary>
+        /// <summary>
         /// Tests adding user-delegated-auth configuration options individually or together.
         /// Verifies that enabled and database-audience properties can be set independently or combined.
         /// Also verifies default values for properties not explicitly set.
@@ -1712,7 +1712,7 @@ namespace Cli.Tests
             // Assert
             config = AssertEmbeddingsConfigUpdate(isSuccess);
             AssertEmbeddingsEndpoint(config, expectedEnabled: true, expectedRoles: new[] { "admin", "reader" });
-            AssertBaseEmbeddingsSettings(config, EmbeddingProviderType.AzureOpenAI, 
+            AssertBaseEmbeddingsSettings(config, EmbeddingProviderType.AzureOpenAI,
                 TEST_AZURE_OPENAI_BASE_URL, TEST_EMBEDDINGS_API_KEY);
         }
 
@@ -1794,7 +1794,7 @@ namespace Cli.Tests
                 TEST_EMBEDDINGS_API_KEY,
                 model: TEST_EMBEDDINGS_MODEL,
                 endpoint: new EmbeddingsEndpointOptions(enabled: true, roles: new[] { "old-role" }),
-                health: new EmbeddingsHealthCheckConfig(enabled: true, thresholdMs: 2000, 
+                health: new EmbeddingsHealthCheckConfig(enabled: true, thresholdMs: 2000,
                     testText: "existing text", expectedDimensions: 512));
             _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
 

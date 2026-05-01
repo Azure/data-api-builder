@@ -185,10 +185,10 @@ public class AutoConfigTests
     }
 
     /// <summary>
-    /// Tests that invalid MCP dml-tool value is handled correctly.
+    /// Tests that invalid MCP dml-tools value is handled correctly.
     /// </summary>
     [TestMethod]
-    public void TestConfigureAutoentitiesDefinition_InvalidMcpDmlTool()
+    public void TestConfigureAutoentitiesDefinition_InvalidMcpDmlTools()
     {
         // Arrange
         InitOptions initOptions = CreateBasicInitOptionsForMsSqlWithConfig(config: TEST_RUNTIME_CONFIG_FILE);

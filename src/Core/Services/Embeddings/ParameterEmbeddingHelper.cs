@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 
@@ -24,6 +25,14 @@ public static class ParameterEmbeddingHelper
     /// <summary>
     /// For each parameter marked embed:true in config, replaces the text value in
     /// resolvedParams with a serialized vector string.
+    ///
+    /// Implementation uses 3 phases for efficiency when a sproc has multiple embed params:
+    ///   1. COLLECT — validate all embed param values, build a list of texts to embed
+    ///   2. BATCH   — single TryEmbedBatchAsync call instead of N sequential TryEmbedAsync calls
+    ///   3. SUBSTITUTE — serialize each returned vector and write back into resolvedParams
+    ///
+    /// For the common single-embed-param case, batch of 1 is equivalent to sequential.
+    /// For multi-embed sprocs, this saves ~(N-1) × API_LATENCY on cache miss.
     ///
     /// The embedding call goes through EmbeddingService which has built-in FusionCache,
     /// so repeated identical texts return instantly without calling the AI provider.
@@ -73,6 +82,18 @@ public static class ParameterEmbeddingHelper
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
         }
 
+        // ─────────────────────────────────────────────────────────────────────
+        // PHASE 1: COLLECT — validate each embed param's value and gather texts
+        // ─────────────────────────────────────────────────────────────────────
+        // We validate eagerly (per-param) so error messages stay specific:
+        //   "Parameter 'foo' has embed:true but received a non-string value..."
+        // rather than the batch-level "embed failed for params X, Y, Z."
+        //
+        // After this phase: embedRequests has (paramName, text) for every embed
+        // param the user supplied. Param metadata defines order; we preserve it.
+
+        List<(string paramName, string text)> embedRequests = new();
+
         foreach (ParameterMetadata configParam in configParams)
         {
             // Skip non-embed params — they pass through unchanged
@@ -82,66 +103,33 @@ public static class ParameterEmbeddingHelper
                 continue;
             }
 
-            // Check if the request provided this parameter
-            // If not provided, DAB's existing required-param validation will handle it
+            // Skip embed params not supplied in the request. We don't enforce
+            // required-ness here because DAB's request validation for sprocs only
+            // checks for extra fields, not missing ones — see RequestValidator
+            // .ValidateStoredProcedureRequestContext, which delegates required-param
+            // detection to SQL Server (no easy way to read default-value metadata
+            // from sys.parameters in a portable way).
+            //
+            // When a required embed param is missing entirely, SqlExecuteStructure
+            // also won't bind it, and SQL Server returns "expects parameter X, which
+            // was not supplied." MsSqlDbExceptionParser translates that to a 400
+            // DatabaseInputError for the client. So missing values still produce a
+            // clear, actionable error — just via the SQL-error-relay path rather
+            // than this helper.
+            //
+            // (Explicit null or empty string DOES reach this helper, via the
+            // IsNullOrWhiteSpace check below — that path produces our own 400 with
+            // the friendlier "has 'embed: true' but the provided text is empty or
+            // whitespace" message.)
             if (!resolvedParams.TryGetValue(configParam.Name, out object? value))
             {
                 continue;
             }
 
-            // Validate: embed parameters must be strings.
-            // Azure OpenAI's embedding API only accepts strings as input — passing a number,
-            // boolean, array, or object would either be silently stringified into garbage
-            // (e.g., "System.Object[]") or rejected by the API with a confusing error.
-            //
-            // DAB delivers parameter values as either System.String OR System.Text.Json.JsonElement
-            // (the JSON parser wraps body values in JsonElement). We accept both string and
-            // JsonElement-of-kind-String, and reject all other types with a clear 400.
-            //
-            // Example FAIL: { "query_vector": 12345 } → JsonElement(Number) → 400 "must be a string"
-            // Example FAIL: { "query_vector": true } → JsonElement(True) → 400 "must be a string"
-            // Example FAIL: { "query_vector": ["a","b"] } → JsonElement(Array) → 400 "must be a string"
-            // Example FAIL: { "query_vector": {"foo":"bar"} } → JsonElement(Object) → 400 "must be a string"
-            // Example PASS: { "query_vector": "headphones" } → JsonElement(String) or string → proceed
-            //
-            // Note: GraphQL is automatically protected since the embed param is exposed as
-            // GraphQL String type (via Stage 2 metadata override) — non-strings are rejected
-            // by the GraphQL parser before reaching this code.
-            string? text = null;
-            if (value is string s)
-            {
-                text = s;
-            }
-            else if (value is System.Text.Json.JsonElement jsonElement)
-            {
-                if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.String)
-                {
-                    text = jsonElement.GetString();
-                }
-                else if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.Null)
-                {
-                    text = null;  // Will be caught by IsNullOrWhiteSpace below
-                }
-                else
-                {
-                    throw new DataApiBuilderException(
-                        message: $"Parameter '{configParam.Name}' has 'embed: true' but received a non-string JSON value of kind '{jsonElement.ValueKind}'. Embed parameters must be JSON strings.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                }
-            }
-            else if (value is not null)
-            {
-                throw new DataApiBuilderException(
-                    message: $"Parameter '{configParam.Name}' has 'embed: true' but received a non-string value of type '{value.GetType().Name}'. Embed parameters must be JSON strings.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
+            // Validate type and extract text (throws 400 for non-strings)
+            string? text = ExtractTextValue(configParam.Name, value);
 
-            // Validate: embed params must have non-empty text
-            // Example FAIL: { "query_vector": "" } → 400 error
-            // Example FAIL: { "query_vector": "   " } → 400 error
-            // Example FAIL: { "query_vector": null } → 400 error (null treated as empty)
+            // Validate non-empty (throws 400 for empty/whitespace/null)
             if (string.IsNullOrWhiteSpace(text))
             {
                 throw new DataApiBuilderException(
@@ -150,16 +138,61 @@ public static class ParameterEmbeddingHelper
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
-            // Call EmbeddingService to convert text → float[1536]
-            // The service has built-in FusionCache (L1 + optional L2 Redis):
-            //   First call for "wireless headphones" → calls Azure OpenAI API (~200-500ms)
-            //   Second call for same text → cache hit, returns instantly
-            EmbeddingResult result = await embeddingService.TryEmbedAsync(text, cancellationToken);
+            embedRequests.Add((configParam.Name, text!));
+        }
 
-            if (!result.Success || result.Embedding is null)
+        // No embed param values supplied in this request — nothing to embed
+        if (embedRequests.Count == 0)
+        {
+            return;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PHASE 2: BATCH — single API call for all texts at once
+        // ─────────────────────────────────────────────────────────────────────
+        // EmbeddingService.TryEmbedBatchAsync (Phase 1 infra) does its own per-text
+        // FusionCache check. Texts that hit the cache don't trigger API calls;
+        // only uncached texts go to Azure OpenAI in a single batched request.
+        //
+        // For 1 text: equivalent to TryEmbedAsync (no overhead).
+        // For N texts: 1 API call instead of N sequential ones (saves ~(N-1) × latency).
+
+        string[] texts = embedRequests.Select(r => r.text).ToArray();
+        EmbeddingBatchResult batchResult = await embeddingService.TryEmbedBatchAsync(texts, cancellationToken);
+
+        if (!batchResult.Success || batchResult.Embeddings is null)
+        {
+            // Batch failure: we lose per-param error specificity here, but the
+            // batch result's ErrorMessage typically explains the underlying issue.
+            // Naming all involved params helps the user identify the request context.
+            string paramNames = string.Join(", ", embedRequests.Select(r => $"'{r.paramName}'"));
+            throw new DataApiBuilderException(
+                message: $"Failed to generate embeddings for parameter(s) {paramNames}.",
+                statusCode: HttpStatusCode.InternalServerError,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+        }
+
+        // Defensive: TryEmbedBatchAsync should return one embedding per input text
+        if (batchResult.Embeddings.Length != embedRequests.Count)
+        {
+            throw new DataApiBuilderException(
+                message: $"Embedding service returned {batchResult.Embeddings.Length} embeddings but {embedRequests.Count} were requested.",
+                statusCode: HttpStatusCode.InternalServerError,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PHASE 3: SUBSTITUTE — serialize each vector and write back into resolvedParams
+        // ─────────────────────────────────────────────────────────────────────
+        // Order is preserved: embedRequests[i] corresponds to batchResult.Embeddings[i].
+
+        for (int i = 0; i < embedRequests.Count; i++)
+        {
+            float[] embedding = batchResult.Embeddings[i];
+            if (embedding is null || embedding.Length == 0)
             {
                 throw new DataApiBuilderException(
-                    message: $"Failed to generate embedding for parameter '{configParam.Name}'.",
+                    message: $"Embedding service returned an empty vector for parameter '{embedRequests[i].paramName}'.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
@@ -177,13 +210,70 @@ public static class ParameterEmbeddingHelper
             //   - "G9" guarantees the string can be parsed back to the exact same float
             //   - Embeddings are precision-sensitive — even tiny drift affects cosine similarity scores
             string vectorJson = "["
-                + string.Join(",", result.Embedding.Select(f => f.ToString("G9", CultureInfo.InvariantCulture)))
+                + string.Join(",", embedding.Select(f => f.ToString("G9", CultureInfo.InvariantCulture)))
                 + "]";
 
             // Replace the text value with the vector string in-place
             // SqlExecuteStructure will see this as a String value (thanks to metadata override)
             // and pass it through to SQL, which auto-casts to VECTOR(N)
-            resolvedParams[configParam.Name] = vectorJson;
+            resolvedParams[embedRequests[i].paramName] = vectorJson;
         }
+    }
+
+    /// <summary>
+    /// Validates that the parameter value is a string (or JsonElement of kind String) and extracts it.
+    ///
+    /// Azure OpenAI's embedding API only accepts strings as input — passing a number,
+    /// boolean, array, or object would either be silently stringified into garbage
+    /// (e.g., "System.Object[]") or rejected by the API with a confusing error.
+    ///
+    /// DAB delivers parameter values as either System.String OR System.Text.Json.JsonElement
+    /// (the JSON parser wraps body values in JsonElement). We accept both string and
+    /// JsonElement-of-kind-String, and reject all other types with a clear 400.
+    ///
+    /// Example FAIL: { "query_vector": 12345 } → JsonElement(Number) → 400 "must be a string"
+    /// Example FAIL: { "query_vector": true } → JsonElement(True) → 400 "must be a string"
+    /// Example FAIL: { "query_vector": ["a","b"] } → JsonElement(Array) → 400 "must be a string"
+    /// Example FAIL: { "query_vector": {"foo":"bar"} } → JsonElement(Object) → 400 "must be a string"
+    /// Example PASS: { "query_vector": "headphones" } → JsonElement(String) or string → returns text
+    ///
+    /// Note: GraphQL is automatically protected since the embed param is exposed as
+    /// GraphQL String type (via Stage 2 metadata override) — non-strings are rejected
+    /// by the GraphQL parser before reaching this code.
+    /// </summary>
+    private static string? ExtractTextValue(string paramName, object? value)
+    {
+        if (value is string s)
+        {
+            return s;
+        }
+
+        if (value is JsonElement jsonElement)
+        {
+            if (jsonElement.ValueKind == JsonValueKind.String)
+            {
+                return jsonElement.GetString();
+            }
+
+            if (jsonElement.ValueKind == JsonValueKind.Null)
+            {
+                return null;  // Will be caught by IsNullOrWhiteSpace in caller
+            }
+
+            throw new DataApiBuilderException(
+                message: $"Parameter '{paramName}' has 'embed: true' but received a non-string JSON value of kind '{jsonElement.ValueKind}'. Embed parameters must be JSON strings.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+        }
+
+        if (value is not null)
+        {
+            throw new DataApiBuilderException(
+                message: $"Parameter '{paramName}' has 'embed: true' but received a non-string value of type '{value.GetType().Name}'. Embed parameters must be JSON strings.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+        }
+
+        return null;  // null value will be caught by IsNullOrWhiteSpace in caller
     }
 }

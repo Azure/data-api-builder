@@ -532,7 +532,46 @@ public class RuntimeConfigValidator : IConfigValidator
                 }
 
                 // Rule 3: embed:true with a default value is not supported.
-                // A default value is text (e.g., "wireless headphones") that would need embedding at startup — not supported.
+                //
+                // An embed parameter represents the user's text input that gets converted
+                // to a vector at request time — typically a semantic-search query.
+                //
+                // Setting a default for an embed parameter would mean: if the client doesn't
+                // supply a search query, the server invents one (e.g., "wireless headphones"),
+                // embeds it, and runs a semantic search the user never asked for. That isn't
+                // a fallback — it's the server fabricating user input. In any real UX, a
+                // missing search query indicates a client bug or an empty search box, not an
+                // invitation for the server to substitute a canned query on the user's behalf.
+                //
+                // (Defaults on non-embed parameters of the same sproc are unaffected by this
+                // rule and continue to work as before.)
+                //
+                // Even setting aside the UX concern, supporting embed-defaults would be
+                // non-trivial:
+                //   - GraphQL schema defaults are baked in at startup as typed literals
+                //     (GraphQLStoredProcedureBuilder.ConvertValueToGraphQLType). There is no
+                //     VECTOR literal type in GraphQL, and the literal text would surface in
+                //     introspection as a misleading default value for an embedded parameter.
+                //   - REST/MCP defaults are injected as plain text into the resolved-parameter
+                //     dictionary, then would be re-embedded by ParameterEmbeddingHelper on
+                //     every request — a hidden per-request cost for a value the client never
+                //     sent.
+                //   - Embedding the default once at startup would couple application startup
+                //     to the embedding provider's network availability (validation runs in
+                //     CLI / startup contexts that may not have outbound access).
+                //
+                // What happens today if a client forgets to supply an embed parameter:
+                //   - {"query_vector": null} or "" → 400 BadRequest "has 'embed: true' but
+                //     the provided text is empty or whitespace." (caught by ParameterEmbeddingHelper)
+                //   - field omitted entirely → 400 DatabaseInputError "expects parameter
+                //     '@query_vector', which was not supplied." (SQL Server error, parsed
+                //     by MsSqlDbExceptionParser)
+                // Both produce a clear, actionable client error — no silent failure.
+                //
+                // If a real use case for embed-defaults ever emerges, this rule can be lifted
+                // with the matching runtime support added. For now, embed parameters should
+                // always be supplied by the client.
+                //
                 // Example PASS: { "name": "query_vector", "embed": true }  (no default)
                 // Example FAIL: { "name": "query_vector", "embed": true, "default": "wireless headphones" }
                 //   → Error: "parameter 'query_vector' has both 'embed: true' and a 'default' value. Embed parameters cannot have default values."

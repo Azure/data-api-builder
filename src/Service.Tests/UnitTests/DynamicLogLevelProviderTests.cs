@@ -16,64 +16,29 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass]
     public class DynamicLogLevelProviderTests
     {
-        [TestMethod]
-        public void UpdateFromMcp_ValidLevel_ChangesLogLevel()
+        [DataTestMethod]
+        [DataRow(LogLevel.Error, false, false, "debug", true, LogLevel.Debug, DisplayName = "Valid level change succeeds")]
+        [DataRow(LogLevel.Error, true, false, "debug", false, LogLevel.Error, DisplayName = "CLI override blocks MCP change")]
+        [DataRow(LogLevel.Warning, false, true, "debug", false, LogLevel.Warning, DisplayName = "Config override blocks MCP change")]
+        [DataRow(LogLevel.Error, false, false, "invalid", false, LogLevel.Error, DisplayName = "Invalid level returns false")]
+        public void UpdateFromMcp_ReturnsExpectedResult(
+            LogLevel initialLevel,
+            bool isCliOverridden,
+            bool isConfigOverridden,
+            string mcpLevel,
+            bool expectedResult,
+            LogLevel expectedFinalLevel)
         {
             // Arrange
             DynamicLogLevelProvider provider = new();
-            provider.SetInitialLogLevel(LogLevel.Error, isCliOverridden: false);
+            provider.SetInitialLogLevel(initialLevel, isCliOverridden, isConfigOverridden);
 
             // Act
-            bool result = provider.UpdateFromMcp("debug");
+            bool result = provider.UpdateFromMcp(mcpLevel);
 
             // Assert
-            Assert.IsTrue(result);
-            Assert.AreEqual(LogLevel.Debug, provider.CurrentLogLevel);
-        }
-
-        [TestMethod]
-        public void UpdateFromMcp_CliOverridden_DoesNotChangeLogLevel()
-        {
-            // Arrange
-            DynamicLogLevelProvider provider = new();
-            provider.SetInitialLogLevel(LogLevel.Error, isCliOverridden: true);
-
-            // Act
-            bool result = provider.UpdateFromMcp("debug");
-
-            // Assert
-            Assert.IsFalse(result);
-            Assert.AreEqual(LogLevel.Error, provider.CurrentLogLevel);
-        }
-
-        [TestMethod]
-        public void UpdateFromMcp_ConfigOverridden_DoesNotChangeLogLevel()
-        {
-            // Arrange
-            DynamicLogLevelProvider provider = new();
-            provider.SetInitialLogLevel(LogLevel.Warning, isCliOverridden: false, isConfigOverridden: true);
-
-            // Act
-            bool result = provider.UpdateFromMcp("debug");
-
-            // Assert
-            Assert.IsFalse(result);
-            Assert.AreEqual(LogLevel.Warning, provider.CurrentLogLevel);
-        }
-
-        [TestMethod]
-        public void UpdateFromMcp_InvalidLevel_ReturnsFalse()
-        {
-            // Arrange
-            DynamicLogLevelProvider provider = new();
-            provider.SetInitialLogLevel(LogLevel.Error, isCliOverridden: false);
-
-            // Act
-            bool result = provider.UpdateFromMcp("invalid");
-
-            // Assert
-            Assert.IsFalse(result);
-            Assert.AreEqual(LogLevel.Error, provider.CurrentLogLevel);
+            Assert.AreEqual(expectedResult, result);
+            Assert.AreEqual(expectedFinalLevel, provider.CurrentLogLevel);
         }
 
         [TestMethod]

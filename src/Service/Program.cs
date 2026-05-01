@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service
                 // Initialize log level EARLY, before building the host.
                 // This ensures logging filters are effective during the entire host build process.
                 // For MCP mode, we also read the config file early to check for log level override.
-                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgs(args, runMcpStdio, out bool isCliOverridden, out bool isConfigOverridden);
+                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverridden, out bool isConfigOverridden);
 
                 LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverridden, isConfigOverridden);
 
@@ -183,7 +183,7 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="isLogLevelOverridenByCli">Sets if log level is found in the args from CLI.</param>
         /// <param name="isConfigOverridden">Sets if log level is found in the config file (MCP mode only).</param>
         /// <returns>Appropriate log level.</returns>
-        private static LogLevel GetLogLevelFromCommandLineArgs(string[] args, bool runMcpStdio, out bool isLogLevelOverridenByCli, out bool isConfigOverridden)
+        private static LogLevel GetLogLevelFromCommandLineArgsOrConfig(string[] args, bool runMcpStdio, out bool isLogLevelOverridenByCli, out bool isConfigOverridden)
         {
             LogLevel logLevel;
             isConfigOverridden = false;

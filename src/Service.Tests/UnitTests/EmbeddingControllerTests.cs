@@ -98,8 +98,10 @@ public class EmbeddingControllerTests
     {
         // Arrange
         Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(embeddingsOptions: null);
-        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object);
-        controller.ControllerContext = CreateControllerContext("/embed");
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed")
+        };
 
         // Act
         IActionResult result = await controller.PostAsync();
@@ -279,7 +281,7 @@ public class EmbeddingControllerTests
             requestPath: "/embed",
             requestBody: "test text",
             hostMode: HostMode.Production,
-            endpointRoles: UseConfigDefault,  // use config default ["authenticated"]
+            endpointRoles: _useConfigDefault,  // use config default ["authenticated"]
             clientRole: null);
 
         // Act
@@ -820,7 +822,7 @@ public class EmbeddingControllerTests
             requestPath: "/embed",
             requestBody: "test",
             hostMode: HostMode.Production,
-            endpointRoles: UseConfigDefault,  // use config default ["authenticated"]
+            endpointRoles: _useConfigDefault,  // use config default ["authenticated"]
             clientRole: null);  // anonymous - not allowed
 
         // Act
@@ -1061,7 +1063,7 @@ public class EmbeddingControllerTests
                 new EmbeddingBatchResult(true, texts.Select(_ => embedding1).ToArray()));
 
         // Create a long text that will be chunked (default chunk size is 1000)
-        string longText = new string('A', 1500);
+        string longText = new('A', 1500);
 
         string requestBody = $$"""
             [
@@ -1119,7 +1121,7 @@ public class EmbeddingControllerTests
             .ReturnsAsync((string[] texts, CancellationToken _) =>
                 new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
 
-        string longText = new string('A', 1500);
+        string longText = new('A', 1500);
         string requestBody = $$"""
             [
                 {"key": "doc-1", "text": "{{longText}}"}
@@ -1157,7 +1159,7 @@ public class EmbeddingControllerTests
             .ReturnsAsync((string[] texts, CancellationToken _) =>
                 new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
 
-        string text = new string('A', 1000);
+        string text = new('A', 1000);
         string requestBody = $$"""
             [
                 {"key": "doc-1", "text": "{{text}}"}
@@ -1241,7 +1243,7 @@ public class EmbeddingControllerTests
             .ReturnsAsync((string[] texts, CancellationToken _) =>
                 new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
 
-        string longText = new string('A', 2000);
+        string longText = new('A', 2000);
         string requestBody = $$"""
             [
                 {"key": "doc-1", "text": "{{longText}}"}
@@ -1418,7 +1420,7 @@ public class EmbeddingControllerTests
             .ReturnsAsync((string[] texts, CancellationToken _) =>
                 new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
 
-        string text = new string('A', 100);
+        string text = new('A', 100);
         string requestBody = $$"""
             [
                 {"key": "doc-1", "text": "{{text}}"}
@@ -1560,7 +1562,7 @@ public class EmbeddingControllerTests
             .ReturnsAsync((string[] texts, CancellationToken _) =>
                 new EmbeddingBatchResult(true, texts.Select(_ => embedding).ToArray()));
 
-        string longText = new string('X', 1500);
+        string longText = new('X', 1500);
 
         EmbeddingsEndpointOptions endpointOptions = new(enabled: true, roles: new[] { "anonymous" });
         EmbeddingsChunkingOptions chunkingOptions = new(Enabled: true, SizeChars: 1000, OverlapChars: 250);
@@ -1818,7 +1820,7 @@ public class EmbeddingControllerTests
     /// Sentinel array to indicate the test wants to use config defaults (not test defaults).
     /// Use this in tests that explicitly want to test the default role behavior.
     /// </summary>
-    private static readonly string[] UseConfigDefault = Array.Empty<string>();
+    private static readonly string[] _useConfigDefault = Array.Empty<string>();
 
     /// <summary>
     /// Creates an EmbeddingController with all the necessary mocks wired up.
@@ -1835,11 +1837,11 @@ public class EmbeddingControllerTests
         string? acceptHeader = null)
     {
         // Determine roles to use:
-        // - If UseConfigDefault sentinel: pass null to use actual config defaults
+        // - If _useConfigDefault sentinel: pass null to use actual config defaults
         // - If null: default to anonymous for test convenience
         // - Otherwise: use provided roles
         string[]? rolesToUse;
-        if (ReferenceEquals(endpointRoles, UseConfigDefault))
+        if (ReferenceEquals(endpointRoles, _useConfigDefault))
         {
             rolesToUse = null;  // Will use config default ["authenticated"]
         }

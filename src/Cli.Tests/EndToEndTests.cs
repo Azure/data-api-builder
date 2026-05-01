@@ -1233,6 +1233,11 @@ public class EndToEndTests
     [DataRow(ApiType.GraphQL, true, false, true, false, DisplayName = "Validate that GraphQL endpoint is disabled when enabled option is omitted and disabled option is included in the init command.")]
     [DataRow(ApiType.GraphQL, true, true, false, false, DisplayName = "Validate that GraphQL endpoint is disabled when enabled option is set to false and disabled option is included in the init command.")]
     [DataRow(ApiType.GraphQL, true, true, true, true, true, DisplayName = "Validate that config generation fails when enabled and disabled options provide conflicting values for GraphQL endpoint.")]
+    [DataRow(ApiType.MCP, false, false, true, true, DisplayName = "Validate that MCP endpoint is enabled when both enabled and disabled options are omitted from the init command.")]
+    [DataRow(ApiType.MCP, false, true, true, true, DisplayName = "Validate that MCP endpoint is enabled when enabled option is set to true and disabled option is omitted from the init command.")]
+    [DataRow(ApiType.MCP, true, false, true, false, DisplayName = "Validate that MCP endpoint is disabled when enabled option is omitted and disabled option is included in the init command.")]
+    [DataRow(ApiType.MCP, true, true, false, false, DisplayName = "Validate that MCP endpoint is disabled when enabled option is set to false and disabled option is included in the init command.")]
+    [DataRow(ApiType.MCP, true, true, true, true, true, DisplayName = "Validate that config generation fails when enabled and disabled options provide conflicting values for MCP endpoint.")]
     public void TestEnabledDisabledFlagsForApis(
         ApiType apiType,
         bool includeDisabledFlag,
@@ -1278,11 +1283,17 @@ public class EndToEndTests
                 Assert.IsNotNull(runtimeConfig.Runtime.Rest);
                 Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.Rest.Enabled);
             }
-            else
+            else if (apiType is ApiType.GraphQL)
             {
                 Assert.IsNotNull(runtimeConfig.Runtime);
                 Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
                 Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.GraphQL.Enabled);
+            }
+            else
+            {
+                Assert.IsNotNull(runtimeConfig.Runtime);
+                Assert.IsNotNull(runtimeConfig.Runtime.Mcp);
+                Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.Mcp.Enabled);
             }
         }
     }

@@ -194,12 +194,14 @@ public record RuntimeConfig
     public string DefaultDataSourceName { get; set; }
 
     /// <summary>
-    /// Retrieves the value of runtime.graphql.aggregation.enabled property if present, default is true.
+    /// Retrieves the value of runtime.graphql.enable-aggregation property if present, default is true.
+    /// Returns true when runtime section is absent, when graphql section is absent,
+    /// or when enable-aggregation is explicitly set to true.
     /// </summary>
     [JsonIgnore]
     public bool EnableAggregation =>
-        Runtime is not null &&
-        Runtime.GraphQL is not null &&
+        Runtime is null ||
+        Runtime.GraphQL is null ||
         Runtime.GraphQL.EnableAggregation;
 
     [JsonIgnore]

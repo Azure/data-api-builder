@@ -102,6 +102,8 @@ public class CustomLoggerProvider : ILoggerProvider
                     return;
                 }
 
+                // In MCP stdio mode, stdout is reserved for JSON-RPC protocol messages.
+                // Logs must go to stderr to avoid corrupting the MCP communication channel.
                 Console.Error.WriteLine($"{mcpAbbreviation}: {formatter(state, exception)}");
                 return;
             }

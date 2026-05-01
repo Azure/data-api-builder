@@ -204,11 +204,13 @@ namespace Azure.DataApiBuilder.Service
                 isLogLevelOverridenByCli = false;
                 logLevel = LogLevel.None; // Default if config doesn't have log level
 
-                // Find --config or --ConfigFileName argument
+                // Find --config or --ConfigFileName argument, or use default dab-config.json
                 int configIndex = Array.FindIndex(args, a =>
                     string.Equals(a, "--config", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(a, "--ConfigFileName", StringComparison.OrdinalIgnoreCase));
-                string? configFilePath = configIndex >= 0 && configIndex + 1 < args.Length ? args[configIndex + 1] : null;
+                string? configFilePath = configIndex >= 0 && configIndex + 1 < args.Length
+                    ? args[configIndex + 1]
+                    : FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
 
                 if (!string.IsNullOrWhiteSpace(configFilePath) && TryGetLogLevelFromConfig(configFilePath, out LogLevel configLogLevel))
                 {

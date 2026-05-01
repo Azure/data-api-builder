@@ -120,16 +120,10 @@ public class EmbeddingService : IEmbeddingService
     /// <inheritdoc/>
     public async Task<EmbeddingResult> TryEmbedAsync(string text, CancellationToken cancellationToken = default)
     {
-        if (!_options.Enabled)
+        EmbeddingResult? validationResult = ValidateTryEmbedRequest(text);
+        if (validationResult != null)
         {
-            _logger.LogDebug("Embedding service is disabled, skipping embed request");
-            return new EmbeddingResult(false, null, "Embedding service is disabled.");
-        }
-
-        if (string.IsNullOrEmpty(text))
-        {
-            _logger.LogWarning("TryEmbedAsync called with null or empty text");
-            return new EmbeddingResult(false, null, "Text cannot be null or empty.");
+            return validationResult;
         }
 
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -172,34 +166,10 @@ public class EmbeddingService : IEmbeddingService
     /// <inheritdoc/>
     public async Task<EmbeddingBatchResult> TryEmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
     {
-        if (!_options.Enabled)
+        EmbeddingBatchResult? validationResult = ValidateTryEmbedBatchRequest(texts);
+        if (validationResult != null)
         {
-            _logger.LogDebug("Embedding service is disabled, skipping batch embed request");
-            return new EmbeddingBatchResult(false, null, "Embedding service is disabled.");
-        }
-
-        if (texts is null || texts.Length == 0)
-        {
-            _logger.LogWarning("TryEmbedBatchAsync called with null or empty texts array");
-            return new EmbeddingBatchResult(false, null, "Texts array cannot be null or empty.");
-        }
-
-        if (texts.Any(string.IsNullOrEmpty))
-        {
-            _logger.LogWarning("TryEmbedBatchAsync called with one or more null or empty texts");
-            return new EmbeddingBatchResult(false, null, "Texts array must not contain null or empty entries.");
-        }
-
-        if (texts.Length > MAX_BATCH_TEXT_COUNT)
-        {
-            _logger.LogWarning(
-                "TryEmbedBatchAsync called with {Count} texts, which exceeds max supported batch size {MaxBatchSize}",
-                texts.Length,
-                MAX_BATCH_TEXT_COUNT);
-            return new EmbeddingBatchResult(
-                false,
-                null,
-                $"Texts array exceeds max supported batch size of {MAX_BATCH_TEXT_COUNT}.");
+            return validationResult;
         }
 
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -237,6 +207,20 @@ public class EmbeddingService : IEmbeddingService
     /// <inheritdoc/>
     public async Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken = default)
     {
+        ValidateEmbedRequest(text);
+
+        (float[] embedding, _) = await EmbedWithCacheInfoAsync(text, cancellationToken);
+        return embedding;
+    }
+
+    /// <summary>
+    /// Validates the single text embedding request parameters.
+    /// </summary>
+    /// <param name="text">The text to validate.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the embedding service is disabled.</exception>
+    /// <exception cref="ArgumentException">Thrown when text is invalid.</exception>
+    private void ValidateEmbedRequest(string text)
+    {
         if (!_options.Enabled)
         {
             throw new InvalidOperationException("Embedding service is disabled.");
@@ -246,13 +230,37 @@ public class EmbeddingService : IEmbeddingService
         {
             throw new ArgumentException("Text cannot be null or empty.", nameof(text));
         }
-
-        (float[] embedding, _) = await EmbedWithCacheInfoAsync(text, cancellationToken);
-        return embedding;
     }
 
-    /// <inheritdoc/>
-    public async Task<float[][]> EmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Validates the single text embedding request for Try methods.
+    /// </summary>
+    /// <param name="text">The text to validate.</param>
+    /// <returns>An EmbeddingResult with error details if validation fails, null if validation passes.</returns>
+    private EmbeddingResult? ValidateTryEmbedRequest(string text)
+    {
+        if (!_options.Enabled)
+        {
+            _logger.LogDebug("Embedding service is disabled, skipping embed request");
+            return new EmbeddingResult(false, null, "Embedding service is disabled.");
+        }
+
+        if (string.IsNullOrEmpty(text))
+        {
+            _logger.LogWarning("TryEmbedAsync called with null or empty text");
+            return new EmbeddingResult(false, null, "Text cannot be null or empty.");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Validates the batch embedding request parameters.
+    /// </summary>
+    /// <param name="texts">The array of texts to validate.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the embedding service is disabled.</exception>
+    /// <exception cref="ArgumentException">Thrown when texts are invalid.</exception>
+    private void ValidateEmbedBatchRequest(string[] texts)
     {
         if (!_options.Enabled)
         {
@@ -275,6 +283,52 @@ public class EmbeddingService : IEmbeddingService
                 $"Texts array exceeds max supported batch size of {MAX_BATCH_TEXT_COUNT}.",
                 nameof(texts));
         }
+    }
+
+    /// <summary>
+    /// Validates the batch embedding request for Try methods.
+    /// </summary>
+    /// <param name="texts">The array of texts to validate.</param>
+    /// <returns>An EmbeddingBatchResult with error details if validation fails, null if validation passes.</returns>
+    private EmbeddingBatchResult? ValidateTryEmbedBatchRequest(string[] texts)
+    {
+        if (!_options.Enabled)
+        {
+            _logger.LogDebug("Embedding service is disabled, skipping batch embed request");
+            return new EmbeddingBatchResult(false, null, "Embedding service is disabled.");
+        }
+
+        if (texts is null || texts.Length == 0)
+        {
+            _logger.LogWarning("TryEmbedBatchAsync called with null or empty texts array");
+            return new EmbeddingBatchResult(false, null, "Texts array cannot be null or empty.");
+        }
+
+        if (texts.Any(string.IsNullOrEmpty))
+        {
+            _logger.LogWarning("TryEmbedBatchAsync called with one or more null or empty texts");
+            return new EmbeddingBatchResult(false, null, "Texts array must not contain null or empty entries.");
+        }
+
+        if (texts.Length > MAX_BATCH_TEXT_COUNT)
+        {
+            _logger.LogWarning(
+                "TryEmbedBatchAsync called with {Count} texts, which exceeds max supported batch size {MaxBatchSize}",
+                texts.Length,
+                MAX_BATCH_TEXT_COUNT);
+            return new EmbeddingBatchResult(
+                false,
+                null,
+                $"Texts array exceeds max supported batch size of {MAX_BATCH_TEXT_COUNT}.");
+        }
+
+        return null;
+    }
+
+    /// <inheritdoc/>
+    public async Task<float[][]> EmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
+    {
+        ValidateEmbedBatchRequest(texts);
 
         // For batch, check cache for each text individually
         string[] cacheKeys = texts.Select(CreateCacheKey).ToArray();
@@ -310,31 +364,69 @@ public class EmbeddingService : IEmbeddingService
 
         _logger.LogDebug("Embedding cache miss for {Count} text(s), calling API", uncachedIndices.Count);
 
-        // Call API for uncached texts only
-        string[] uncachedTexts = uncachedIndices.Select(i => texts[i]).ToArray();
+        // Deduplicate uncached texts to minimize API calls
+        // Group by text content to find duplicates
+        Dictionary<string, List<int>> textToIndices = new();
+        foreach (int index in uncachedIndices)
+        {
+            string text = texts[index];
+            if (!textToIndices.ContainsKey(text))
+            {
+                textToIndices[text] = new List<int>();
+            }
+            textToIndices[text].Add(index);
+        }
 
+        // Get unique uncached texts only
+        string[] uniqueUncachedTexts = textToIndices.Keys.ToArray();
+        int duplicatesAvoided = uncachedIndices.Count - uniqueUncachedTexts.Length;
+
+        if (duplicatesAvoided > 0)
+        {
+            _logger.LogDebug(
+                "Detected {DuplicateCount} duplicate text(s) in batch, sending {UniqueCount} unique text(s) to API instead of {TotalCount}",
+                duplicatesAvoided,
+                uniqueUncachedTexts.Length,
+                uncachedIndices.Count);
+        }
+
+        // Call API for unique uncached texts only
         Stopwatch apiStopwatch = Stopwatch.StartNew();
-        float[][] apiResults = await EmbedFromApiAsync(uncachedTexts, cancellationToken);
+        float[][] apiResults = await EmbedFromApiAsync(uniqueUncachedTexts, cancellationToken);
         apiStopwatch.Stop();
 
-        // Track API call telemetry
-        EmbeddingTelemetryHelper.TrackApiCall(_providerName, uncachedTexts.Length);
-        EmbeddingTelemetryHelper.TrackApiDuration(_providerName, apiStopwatch.Elapsed, uncachedTexts.Length);
+        // Track API call telemetry (based on actual API calls made)
+        EmbeddingTelemetryHelper.TrackApiCall(_providerName, uniqueUncachedTexts.Length);
+        EmbeddingTelemetryHelper.TrackApiDuration(_providerName, apiStopwatch.Elapsed, uniqueUncachedTexts.Length);
 
-        // Cache new results and merge with cached results
-        for (int i = 0; i < uncachedIndices.Count; i++)
+        // Build a mapping from unique text to its embedding
+        Dictionary<string, float[]> textToEmbedding = new();
+        for (int i = 0; i < uniqueUncachedTexts.Length; i++)
         {
-            int originalIndex = uncachedIndices[i];
-            results[originalIndex] = apiResults[i];
+            textToEmbedding[uniqueUncachedTexts[i]] = apiResults[i];
+        }
 
-            // Store embeddings using the configured FusionCache stack.
+        // Cache new results and populate results array for all indices (including duplicates)
+        foreach (KeyValuePair<string, List<int>> kvp in textToIndices)
+        {
+            string text = kvp.Key;
+            float[] embedding = textToEmbedding[text];
+            string cacheKey = cacheKeys[kvp.Value[0]]; // All duplicate texts have the same cache key
+
+            // Cache the embedding once
             _cache.Set(
-                key: cacheKeys[originalIndex],
-                value: apiResults[i],
+                key: cacheKey,
+                value: embedding,
                 options =>
                 {
                     options.SetDuration(TimeSpan.FromHours(DEFAULT_CACHE_TTL_HOURS));
                 });
+
+            // Populate results for all indices that had this text
+            foreach (int originalIndex in kvp.Value)
+            {
+                results[originalIndex] = embedding;
+            }
         }
 
         return results!;

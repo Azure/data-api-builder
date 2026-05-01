@@ -1193,20 +1193,21 @@ namespace Cli
                 options.RuntimeEmbeddingsTimeoutMs is not null ||
                 options.RuntimeEmbeddingsEnabled is not null ||
                 options.RuntimeEmbeddingsEndpointEnabled is not null ||
-                options.RuntimeEmbeddingsEndpointRoles is not null ||
+                (options.RuntimeEmbeddingsEndpointRoles is not null && options.RuntimeEmbeddingsEndpointRoles.Any()) ||
                 options.RuntimeEmbeddingsHealthEnabled is not null ||
                 options.RuntimeEmbeddingsHealthThresholdMs is not null ||
                 options.RuntimeEmbeddingsHealthTestText is not null ||
                 options.RuntimeEmbeddingsHealthExpectedDimensions is not null)
             {
                 bool status = TryUpdateConfiguredEmbeddingsValues(options, runtimeConfig?.Runtime?.Embeddings, out EmbeddingsOptions? updatedEmbeddingsOptions);
-                if (status && updatedEmbeddingsOptions is not null)
-                {
-                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Embeddings = updatedEmbeddingsOptions } };
-                }
-                else
+                if (!status)
                 {
                     return false;
+                }
+
+                if (updatedEmbeddingsOptions is not null)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Embeddings = updatedEmbeddingsOptions } };
                 }
             }
 

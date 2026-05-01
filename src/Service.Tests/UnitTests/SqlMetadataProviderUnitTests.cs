@@ -239,7 +239,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 // Combine both the console and exception messages because they both
                 // may contain the connection string errors this function expects to exist.
-                await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
+                if (sw is not null)
+                {
+                    await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
+                }
+
                 string consoleMessages = sw is not null ? sw.ToString() : string.Empty;
                 string allErrorMessages = ex.Message + " " + consoleMessages;
                 Assert.IsTrue(allErrorMessages.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE),

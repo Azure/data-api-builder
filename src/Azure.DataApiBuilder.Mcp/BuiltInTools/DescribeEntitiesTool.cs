@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -179,7 +180,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         {
                             Dictionary<string, object?> entityInfo = nameOnly
                                 ? BuildBasicEntityInfo(entityName, entity)
-                                : BuildFullEntityInfo(entityName, entity, currentUserRole);
+                                : BuildFullEntityInfo(entityName, entity, currentUserRole, TryResolveDatabaseObject(entityName, entity, runtimeConfig, serviceProvider, logger, cancellationToken));
 
                             entityList.Add(entityInfo);
                         }
@@ -403,10 +404,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <param name="entityName">The name of the entity to include in the dictionary.</param>
         /// <param name="entity">The entity object from which to extract additional information.</param>
         /// <param name="currentUserRole">The role of the current user, used to determine permissions.</param>
+        /// <param name="databaseObject">The resolved database object metadata if available.</param>
         /// <returns>
         /// A dictionary containing the entity's name, description, fields, parameters (if applicable), and permissions.
         /// </returns>
-        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string? currentUserRole)
+        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string? currentUserRole, DatabaseObject? databaseObject)
         {
             // Use GraphQL singular name as alias if available, otherwise use entity name
             string displayName = !string.IsNullOrWhiteSpace(entity.GraphQL?.Singular)
@@ -422,12 +424,45 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (entity.Source.Type == EntitySourceType.StoredProcedure)
             {
-                info["parameters"] = BuildParameterMetadataInfo(entity.Source.Parameters);
+                info["parameters"] = BuildParameterMetadataInfo(entity.Source.Parameters, databaseObject);
             }
 
             info["permissions"] = BuildPermissionsInfo(entity, currentUserRole);
 
             return info;
+        }
+
+        /// <summary>
+        /// Tries to resolve the metadata-backed database object for an entity.
+        /// </summary>
+        private static DatabaseObject? TryResolveDatabaseObject(
+            string entityName,
+            Entity entity,
+            RuntimeConfig runtimeConfig,
+            IServiceProvider serviceProvider,
+            ILogger? logger,
+            CancellationToken cancellationToken)
+        {
+            if (entity.Source.Type != EntitySourceType.StoredProcedure)
+            {
+                return null;
+            }
+
+            if (McpMetadataHelper.TryResolveMetadata(
+                    entityName,
+                    runtimeConfig,
+                    serviceProvider,
+                    out _,
+                    out DatabaseObject dbObject,
+                    out _,
+                    out string error,
+                    cancellationToken))
+            {
+                return dbObject;
+            }
+
+            logger?.LogDebug("Could not resolve metadata for stored procedure entity {EntityName}. Falling back to config parameters. Error: {Error}", entityName, error);
+            return null;
         }
 
         /// <summary>
@@ -461,9 +496,65 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <param name="parameters">A list of <see cref="ParameterMetadata"/> objects representing the parameters to process. Can be null.</param>
         /// <returns>A list of dictionaries, each containing the parameter's name, whether it is required, its default
         /// value, and its description. Returns an empty list if <paramref name="parameters"/> is null.</returns>
-        private static List<object> BuildParameterMetadataInfo(List<ParameterMetadata>? parameters)
+        private static List<object> BuildParameterMetadataInfo(List<ParameterMetadata>? parameters, DatabaseObject? databaseObject)
         {
             List<object> result = new();
+
+            Dictionary<string, ParameterMetadata> configParameters = new(StringComparer.OrdinalIgnoreCase);
+            if (parameters != null)
+            {
+                foreach (ParameterMetadata parameter in parameters)
+                {
+                    configParameters[parameter.Name] = parameter;
+                }
+            }
+
+            if (databaseObject is DatabaseStoredProcedure storedProcedure)
+            {
+                IReadOnlyDictionary<string, ParameterDefinition>? storedProcedureParameters =
+                    storedProcedure.StoredProcedureDefinition?.Parameters;
+
+                if (storedProcedureParameters is null || storedProcedureParameters.Count == 0)
+                {
+                    // No runtime metadata available for this stored procedure. Fall back to config-only parameters.
+                    return BuildParameterMetadataInfo(parameters, databaseObject: null);
+                }
+
+                foreach ((string parameterName, ParameterDefinition parameterDefinition) in storedProcedureParameters)
+                {
+                    configParameters.TryGetValue(parameterName, out ParameterMetadata? configParameter);
+
+                    Dictionary<string, object?> paramInfo = new()
+                    {
+                        ["name"] = configParameter?.Name ?? parameterName,
+                        ["required"] = parameterDefinition.Required ?? configParameter?.Required ?? false,
+                        ["default"] = configParameter?.Default ?? parameterDefinition.Default,
+                        ["description"] = configParameter?.Description ?? parameterDefinition.Description ?? string.Empty
+                    };
+
+                    result.Add(paramInfo);
+                }
+
+                // Preserve config-only parameters if metadata is not available for a configured name.
+                foreach (ParameterMetadata configParameter in configParameters.Values)
+                {
+                    if (!storedProcedureParameters.ContainsKey(configParameter.Name) &&
+                        !storedProcedureParameters.Keys.Any(k => string.Equals(k, configParameter.Name, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        Dictionary<string, object?> paramInfo = new()
+                        {
+                            ["name"] = configParameter.Name,
+                            ["required"] = configParameter.Required,
+                            ["default"] = configParameter.Default,
+                            ["description"] = configParameter.Description ?? string.Empty
+                        };
+
+                        result.Add(paramInfo);
+                    }
+                }
+
+                return result;
+            }
 
             if (parameters != null)
             {

@@ -789,6 +789,17 @@ public record RuntimeConfig
     }
 
     /// <summary>
+    /// Checks if config actually specifies a non-null log level value.
+    /// This is stricter than !IsLogLevelNull() because it verifies at least
+    /// one log level value is explicitly set (not null).
+    /// Used to determine if MCP logging/setLevel should be blocked.
+    /// </summary>
+    public bool HasExplicitLogLevel()
+    {
+        return Runtime?.Telemetry?.LoggerLevel?.Values.Any(v => v.HasValue) ?? false;
+    }
+
+    /// <summary>
     /// Takes in the RuntimeConfig object and checks the LogLevel.
     /// If LogLevel is not null, it will return the current value as a LogLevel,
     /// else it will take the default option by checking host mode.

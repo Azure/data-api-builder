@@ -125,7 +125,7 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
         /// when its corresponding UserProvided* flag is true. This avoids polluting the written
         /// JSON file with properties the user omitted (defaults or inherited values).
         /// If the user provided a cache object (Entity.Cache is non-null), we always write the
-        /// object — even if it ends up empty ("cache": {}) — because the user explicitly included it.
+        /// object â€” even if it ends up empty ("cache": {}) â€” because the user explicitly included it.
         /// Entity.Cache being null means the user never wrote a cache property, and the serializer's
         /// DefaultIgnoreCondition.WhenWritingNull suppresses the "cache" key entirely.
         /// </summary>

@@ -456,7 +456,12 @@ public class RuntimeConfigValidator : IConfigValidator
     /// Validates that parameters with embed=true are only used on stored-procedure entities
     /// and that runtime.embeddings is configured when embed parameters are present.
     /// </summary>
-    private void ValidateEmbedParameters(RuntimeConfig runtimeConfig)
+    /// <remarks>
+    /// Internal (rather than private) to allow direct unit testing via the
+    /// <c>InternalsVisibleTo</c> attribute on Azure.DataApiBuilder.Core. Callers outside
+    /// the assembly should still go through <see cref="ValidateConfigProperties"/>.
+    /// </remarks>
+    internal void ValidateEmbedParameters(RuntimeConfig runtimeConfig)
     {
         // Check once whether the embedding service is configured and enabled.
         // Example: "runtime": { "embeddings": { "enabled": true, "provider": "azure-openai" } } → true

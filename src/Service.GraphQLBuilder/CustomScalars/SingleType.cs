@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using HotChocolate.Language;
+using HotChocolate.Text.Json;
 using HotChocolate.Types;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars
@@ -48,10 +50,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars
             Description = description;
         }
 
-        protected override float ParseLiteral(IFloatValueLiteral valueSyntax) =>
-            valueSyntax.ToSingle();
+        protected override float OnCoerceInputLiteral(IFloatValueLiteral valueLiteral)
+            => valueLiteral.ToSingle();
 
-        protected override FloatValueNode ParseValue(float runtimeValue) =>
-            new(runtimeValue);
+        protected override float OnCoerceInputValue(JsonElement inputValue)
+            => inputValue.GetSingle();
+
+        public override void OnCoerceOutputValue(float runtimeValue, ResultElement resultValue)
+            => resultValue.SetNumberValue(runtimeValue);
+
+        public override IValueNode OnValueToLiteral(float runtimeValue)
+            => new FloatValueNode(runtimeValue);
     }
 }

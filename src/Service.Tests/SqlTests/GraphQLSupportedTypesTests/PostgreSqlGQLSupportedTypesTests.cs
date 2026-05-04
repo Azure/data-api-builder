@@ -177,15 +177,5 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 return columnName;
             }
         }
-
-        /// <summary>
-        /// Bypass DateTime GQL tests for PostreSql
-        /// </summary>
-        [DataTestMethod]
-        [Ignore]
-        public new void QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
-        {
-            Assert.Inconclusive("Test skipped for PostgreSql.");
-        }
     }
 }

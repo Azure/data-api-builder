@@ -1183,7 +1183,7 @@ namespace Cli
                 };
             }
 
-            // Embeddings: Provider, Endpoint, ApiKey, Model, ApiVersion, Dimensions, TimeoutMs, Enabled, Endpoint.Enabled/Roles, Health.*
+            // Embeddings: Provider, Endpoint, ApiKey, Model, ApiVersion, Dimensions, TimeoutMs, Enabled, Endpoint.Enabled/Roles/Path, Health.*, Chunking.*
             if (options.RuntimeEmbeddingsProvider is not null ||
                 options.RuntimeEmbeddingsBaseUrl is not null ||
                 options.RuntimeEmbeddingsApiKey is not null ||
@@ -1194,10 +1194,14 @@ namespace Cli
                 options.RuntimeEmbeddingsEnabled is not null ||
                 options.RuntimeEmbeddingsEndpointEnabled is not null ||
                 (options.RuntimeEmbeddingsEndpointRoles is not null && options.RuntimeEmbeddingsEndpointRoles.Any()) ||
+                options.RuntimeEmbeddingsEndpointPath is not null ||
                 options.RuntimeEmbeddingsHealthEnabled is not null ||
                 options.RuntimeEmbeddingsHealthThresholdMs is not null ||
                 options.RuntimeEmbeddingsHealthTestText is not null ||
-                options.RuntimeEmbeddingsHealthExpectedDimensions is not null)
+                options.RuntimeEmbeddingsHealthExpectedDimensions is not null ||
+                options.RuntimeEmbeddingsChunkingEnabled is not null ||
+                options.RuntimeEmbeddingsChunkingSizeChars is not null ||
+                options.RuntimeEmbeddingsChunkingOverlapChars is not null)
             {
                 bool status = TryUpdateConfiguredEmbeddingsValues(options, runtimeConfig?.Runtime?.Embeddings, out EmbeddingsOptions? updatedEmbeddingsOptions);
                 if (!status)
@@ -1955,6 +1959,7 @@ namespace Cli
 
                 if (options.RuntimeEmbeddingsEndpointEnabled is not null ||
                     options.RuntimeEmbeddingsEndpointRoles is not null ||
+                    options.RuntimeEmbeddingsEndpointPath is not null ||
                     existingEndpoint is not null)
                 {
                     bool? endpointEnabled = options.RuntimeEmbeddingsEndpointEnabled.HasValue
@@ -1965,9 +1970,23 @@ namespace Cli
                         ? options.RuntimeEmbeddingsEndpointRoles.ToArray()
                         : existingEndpoint?.Roles;
 
+                    string? endpointPath = options.RuntimeEmbeddingsEndpointPath ?? existingEndpoint?.Path;
+
+                    // Validate path if provided
+                    if (endpointPath is not null)
+                    {
+                        bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: endpointPath, out string exceptionMessage);
+                        if (!status)
+                        {
+                            _logger.LogError("Failed to configure embeddings endpoint path as '{path}'. Error: {error}", endpointPath, exceptionMessage);
+                            return false;
+                        }
+                    }
+
                     endpointOptions = new EmbeddingsEndpointOptions(
                         enabled: endpointEnabled,
-                        roles: endpointRoles);
+                        roles: endpointRoles,
+                        path: endpointPath);
 
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Endpoint configuration.");
                 }
@@ -2013,6 +2032,51 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Health configuration.");
                 }
 
+                // Build EmbeddingsChunkingOptions from CLI flags or existing config
+                EmbeddingsChunkingOptions? existingChunking = existingEmbeddingsOptions?.Chunking;
+                EmbeddingsChunkingOptions? chunkingOptions = null;
+
+                if (options.RuntimeEmbeddingsChunkingEnabled is not null ||
+                    options.RuntimeEmbeddingsChunkingSizeChars is not null ||
+                    options.RuntimeEmbeddingsChunkingOverlapChars is not null ||
+                    existingChunking is not null)
+                {
+                    bool? chunkingEnabled = options.RuntimeEmbeddingsChunkingEnabled.HasValue
+                        ? options.RuntimeEmbeddingsChunkingEnabled.Value == CliBool.True
+                        : existingChunking?.Enabled;
+
+                    int? sizeChars = options.RuntimeEmbeddingsChunkingSizeChars ?? existingChunking?.SizeChars;
+                    int? overlapChars = options.RuntimeEmbeddingsChunkingOverlapChars ?? existingChunking?.OverlapChars;
+
+                    // Validate size-chars if provided
+                    if (sizeChars is not null && sizeChars <= 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings chunking: size-chars must be a positive integer.");
+                        return false;
+                    }
+
+                    // Validate overlap-chars if provided
+                    if (overlapChars is not null && overlapChars < 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings chunking: overlap-chars must be a non-negative integer.");
+                        return false;
+                    }
+
+                    // Validate that overlap is less than size
+                    if (sizeChars is not null && overlapChars is not null && overlapChars >= sizeChars)
+                    {
+                        _logger.LogError("Failed to configure embeddings chunking: overlap-chars must be less than size-chars.");
+                        return false;
+                    }
+
+                    chunkingOptions = new EmbeddingsChunkingOptions(
+                        Enabled: chunkingEnabled,
+                        SizeChars: sizeChars,
+                        OverlapChars: overlapChars);
+
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Chunking configuration.");
+                }
+
                 // Create the embeddings options
                 updatedEmbeddingsOptions = new EmbeddingsOptions(
                     Provider: (EmbeddingProviderType)provider,
@@ -2024,7 +2088,8 @@ namespace Cli
                     Dimensions: dimensions,
                     TimeoutMs: timeoutMs,
                     Endpoint: endpointOptions,
-                    Health: healthOptions);
+                    Health: healthOptions,
+                    Chunking: chunkingOptions);
 
                 _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings configuration.");
                 return true;

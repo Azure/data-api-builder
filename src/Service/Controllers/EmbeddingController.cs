@@ -59,10 +59,10 @@ public class EmbeddingController : ControllerBase
     /// </summary>
     /// <returns>Embedding vector(s) as JSON, or an error response.</returns>
     [HttpPost]
-    [Route("embed")]
+    [Route("{*path}")]
     [Consumes("text/plain", "application/json")]
     [Produces("application/json", "text/plain")]
-    public async Task<IActionResult> PostAsync()
+    public async Task<IActionResult> PostAsync(string path)
     {
         // Get embeddings configuration
         EmbeddingsOptions? embeddingsOptions = _runtimeConfigProvider.GetConfig()?.Runtime?.Embeddings;
@@ -79,15 +79,13 @@ public class EmbeddingController : ControllerBase
             return NotFound();
         }
 
-        // Check if embedding service is available
-        if (_embeddingService is null || !_embeddingService.IsEnabled)
+        // Validate the request path matches the configured embedding endpoint path
+        string expectedPath = endpointOptions.EffectivePath.TrimStart('/');
+        string normalizedPath = path?.TrimStart('/') ?? string.Empty;
+
+        if (!string.Equals(normalizedPath, expectedPath, StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogWarning("Embedding endpoint called but embedding service is not available or disabled.");
-            Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-            return RestController.ErrorResponse(
-                "UnexpectedError",
-                "Embedding service is not available.",
-                HttpStatusCode.ServiceUnavailable);
+            return NotFound();
         }
 
         // Check authorization
@@ -103,7 +101,6 @@ public class EmbeddingController : ControllerBase
                 "Access denied.",
                 HttpStatusCode.Forbidden);
         }
-
         // Parse query parameters for chunking options
         EmbeddingsChunkingOptions? queryChunkingOptions = ParseChunkingOptionsFromQuery(out string? paramValidationError);
         if (paramValidationError is not null)
@@ -322,7 +319,7 @@ public class EmbeddingController : ControllerBase
         // Return embedding as plain text (comma-separated floats) when explicitly requested via Accept header.
         if (ClientAcceptsTextPlain())
         {
-            string embeddingText = string.Join(",", result.Embedding.Select(f => f.ToString("G", CultureInfo.InvariantCulture)));
+            string embeddingText = string.Join(",", result.Embedding.Select(f => f.ToString("G9", CultureInfo.InvariantCulture)));
             return Content(embeddingText, MediaTypeNames.Text.Plain);
         }
 

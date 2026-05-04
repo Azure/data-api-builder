@@ -51,6 +51,20 @@ public record EmbeddingsEndpointOptions
     public string[]? Roles { get; init; }
 
     /// <summary>
+    /// The URL path for the embedding endpoint.
+    /// Defaults to "/embed" if not specified.
+    /// </summary>
+    [JsonPropertyName("path")]
+    public string? Path { get; init; }
+
+    /// <summary>
+    /// Gets the effective path for the embedding endpoint.
+    /// Returns the configured path if specified, otherwise returns the default "/embed".
+    /// </summary>
+    [JsonIgnore]
+    public string EffectivePath => Path ?? DEFAULT_PATH;
+
+    /// <summary>
     /// Gets the effective roles based on configuration and environment.
     /// Returns configured roles if specified.
     /// In development mode without explicit roles, returns ["anonymous"] to allow easy testing.
@@ -96,7 +110,8 @@ public record EmbeddingsEndpointOptions
     [JsonConstructor]
     public EmbeddingsEndpointOptions(
         bool? enabled = null,
-        string[]? roles = null)
+        string[]? roles = null,
+        string? path = null)
     {
         if (enabled.HasValue)
         {
@@ -111,5 +126,6 @@ public record EmbeddingsEndpointOptions
         // Keep roles as-is (null if not provided) so validation can check it
         // GetEffectiveRoles() will provide the default when needed
         Roles = roles;
+        Path = path;
     }
 }

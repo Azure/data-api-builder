@@ -870,30 +870,6 @@
                 }
               }
             },
-            "cache": {
-              "type": "object",
-              "description": "Cache configuration for embedding results.",
-              "additionalProperties": false,
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "description": "Whether caching is enabled for embeddings. Defaults to true.",
-                  "default": true
-                },
-                "level": {
-                  "type": "string",
-                  "description": "Cache level (L1 for in-memory only, L1L2 for in-memory + distributed). Defaults to L1.",
-                  "enum": ["L1", "L1L2"],
-                  "default": "L1"
-                },
-                "ttl-seconds": {
-                  "type": "integer",
-                  "description": "Time-to-live for cached embeddings in seconds. Defaults to 86400 (24 hours).",
-                  "default": 86400,
-                  "minimum": 1
-                }
-              }
-            },
             "chunking": {
               "type": "object",
               "description": "Chunking configuration for text processing before embedding. Used to split large text inputs into smaller chunks.",

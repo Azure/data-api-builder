@@ -3587,6 +3587,333 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             configValidator.ValidateEmbeddingsOptions(runtimeConfig);
         }
 
+        #region Embed Parameters Validation
+
+        // ─────────────────────────────────────────────────────────────────
+        // Tests for RuntimeConfigValidator.ValidateEmbedParameters (Phase 3)
+        // Covers the four startup rules:
+        //   Rule 0 — embed:true requires MSSQL data source
+        //   Rule 1 — embed:true requires stored-procedure entity
+        //   Rule 2 — embed:true requires runtime.embeddings configured & enabled
+        //   Rule 3 — embed:true cannot be combined with a `default` value
+        // Plus multi-entity / message-content checks.
+        // ─────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Builds a valid <see cref="EmbeddingsOptions"/> instance with embeddings enabled.
+        /// Used to satisfy Rule 2 in tests that target other rules.
+        /// </summary>
+        private static EmbeddingsOptions BuildEmbeddingsEnabled() =>
+            new(
+                Provider: EmbeddingProviderType.AzureOpenAI,
+                BaseUrl: "https://test.openai.azure.com",
+                ApiKey: "test-key",
+                Enabled: true,
+                Model: "text-embedding-ada-002");
+
+        /// <summary>
+        /// Builds a stored-procedure <see cref="Entity"/> with one parameter whose
+        /// Embed flag and Default value are caller-controlled.
+        /// </summary>
+        private static Entity BuildSprocEntity(
+            string sprocObject,
+            string paramName,
+            bool embed,
+            string defaultValue = null)
+        {
+            return new(
+                Source: new(
+                    Type: EntitySourceType.StoredProcedure,
+                    Object: sprocObject,
+                    Parameters: new List<ParameterMetadata>
+                    {
+                        new() { Name = paramName, Embed = embed, Default = defaultValue }
+                    },
+                    KeyFields: null),
+                Fields: null,
+                Rest: new(EntityRestOptions.DEFAULT_HTTP_VERBS_ENABLED_FOR_SP),
+                GraphQL: new($"{paramName}_singular", $"{paramName}_plural"),
+                Permissions: new EntityPermission[]
+                {
+                    new(
+                        Role: "anonymous",
+                        Actions: new[] { new EntityAction(EntityActionOperation.Execute, null, new()) })
+                },
+                Relationships: null,
+                Mappings: null);
+        }
+
+        /// <summary>
+        /// Builds an entity of the given source type (Table / View / StoredProcedure)
+        /// with one embed:true parameter. Used to test that embed:true is rejected
+        /// on non-stored-procedure entities (Rule 1).
+        /// </summary>
+        private static Entity BuildEntityWithSourceType(
+            EntitySourceType sourceType,
+            string objectName,
+            string paramName)
+        {
+            return new(
+                Source: new(
+                    Type: sourceType,
+                    Object: objectName,
+                    Parameters: new List<ParameterMetadata>
+                    {
+                        new() { Name = paramName, Embed = true }
+                    },
+                    KeyFields: null),
+                Fields: null,
+                Rest: new(),
+                GraphQL: new("entity", "entities"),
+                Permissions: new EntityPermission[]
+                {
+                    new(
+                        Role: "anonymous",
+                        Actions: new[] { new EntityAction(EntityActionOperation.Read, null, new()) })
+                },
+                Relationships: null,
+                Mappings: null);
+        }
+
+        /// <summary>
+        /// Builds a <see cref="RuntimeConfig"/> wrapping the given entities, with
+        /// caller-controlled data source type and embeddings configuration.
+        ///
+        /// Passing <paramref name="embeddings"/> = null literally produces a config with
+        /// runtime.embeddings = null (the "section missing" scenario for Rule 2). Tests
+        /// that want the happy-path embeddings should pass <c>BuildEmbeddingsEnabled()</c>.
+        /// </summary>
+        private static RuntimeConfig BuildRuntimeConfigForEmbedTest(
+            Dictionary<string, Entity> entities,
+            DatabaseType databaseType = DatabaseType.MSSQL,
+            EmbeddingsOptions embeddings = null)
+        {
+            return new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(databaseType, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Embeddings: embeddings),
+                Entities: new(entities));
+        }
+
+        /// <summary>
+        /// Rule 1: embed:true on a stored-procedure entity (with all other rules satisfied)
+        /// is the happy path. The validator should NOT throw and should record no
+        /// validation exceptions.
+        /// </summary>
+        [TestMethod]
+        public void ValidateEmbedParameters_EmbedOnStoredProcedure_NoError()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                { "SearchProducts", BuildSprocEntity("sp_search", "q", embed: true) }
+            };
+            RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, embeddings: BuildEmbeddingsEnabled());
+
+            RuntimeConfigValidator validator = InitializeRuntimeConfigValidator();
+
+            // Should not throw
+            validator.ValidateEmbedParameters(config);
+
+            // And no validation exceptions should have been recorded.
+            // (Defensive: in default mode HandleOrRecordException throws rather than
+            // appending, so the absence of a throw above already guarantees Count == 0.
+            // This explicit check documents the success criterion and would catch a
+            // future change that switched to record-only mode without our notice.)
+            Assert.AreEqual(0, validator.ConfigValidationExceptions.Count,
+                "Expected no validation exceptions for the happy path");
+
+            // Sanity: the entity under test is wired correctly so a future refactor
+            // can't make this test pass by accidentally short-circuiting.
+            Assert.AreEqual(EntitySourceType.StoredProcedure, config.Entities["SearchProducts"].Source.Type);
+            Assert.IsTrue(config.Entities["SearchProducts"].Source.Parameters!.Any(p => p.Embed),
+                "Test setup expected at least one embed:true parameter");
+        }
+
+        /// <summary>
+        /// Rule 1: embed:true on a Table or View entity must throw a config-validation
+        /// exception naming the offending entity, parameter, and source-type constraint.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(EntitySourceType.Table, DisplayName = "Rule 1: embed:true on Table → 503")]
+        [DataRow(EntitySourceType.View, DisplayName = "Rule 1: embed:true on View → 503")]
+        public void ValidateEmbedParameters_EmbedOnNonSproc_ThrowsConfigError(EntitySourceType sourceType)
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                { "Product", BuildEntityWithSourceType(sourceType, "products", "q") }
+            };
+            RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, embeddings: BuildEmbeddingsEnabled());
+
+            RuntimeConfigValidator validator = InitializeRuntimeConfigValidator();
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidateEmbedParameters(config));
+
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            StringAssert.Contains(ex.Message, "Product");
+            StringAssert.Contains(ex.Message, "q");
+            StringAssert.Contains(ex.Message, "stored-procedure");
+        }
+
+        /// <summary>
+        /// Rule 2: embed:true with embeddings disabled (or absent) must throw a
+        /// config-validation exception. Two flavors: section present but enabled=false,
+        /// and section completely absent (null).
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Rule 2: embeddings.enabled=false → 503")]
+        [DataRow(true, DisplayName = "Rule 2: embeddings section missing → 503")]
+        public void ValidateEmbedParameters_EmbedTrue_EmbeddingsNotConfigured_ThrowsConfigError(bool nullEmbeddings)
+        {
+            EmbeddingsOptions embeddings = nullEmbeddings
+                ? null
+                : new EmbeddingsOptions(
+                    Provider: EmbeddingProviderType.OpenAI,
+                    BaseUrl: "https://api.openai.com",
+                    ApiKey: "key",
+                    Enabled: false);
+
+            Dictionary<string, Entity> entities = new()
+            {
+                { "SearchProducts", BuildSprocEntity("sp_search", "q", embed: true) }
+            };
+            RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, embeddings: embeddings);
+
+            RuntimeConfigValidator validator = InitializeRuntimeConfigValidator();
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidateEmbedParameters(config));
+
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            StringAssert.Contains(ex.Message, "SearchProducts");
+            StringAssert.Contains(ex.Message, "q");
+            StringAssert.Contains(ex.Message, "runtime.embeddings");
+        }
+
+        /// <summary>
+        /// Rule 3: embed:true combined with a default value is not supported.
+        /// Should throw a config-validation exception even though all other rules pass.
+        /// </summary>
+        [TestMethod]
+        public void ValidateEmbedParameters_EmbedTrue_WithDefault_ThrowsConfigError()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                {
+                    "SearchProducts",
+                    BuildSprocEntity("sp_search", "q", embed: true, defaultValue: "wireless headphones")
+                }
+            };
+            RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, embeddings: BuildEmbeddingsEnabled());
+
+            RuntimeConfigValidator validator = InitializeRuntimeConfigValidator();
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidateEmbedParameters(config));
+
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            StringAssert.Contains(ex.Message, "SearchProducts");
+            StringAssert.Contains(ex.Message, "q");
+            StringAssert.Contains(ex.Message, "default");
+        }
+
+        /// <summary>
+        /// Rule 3 happy path: embed:true with no default value is allowed. The validator
+        /// should NOT throw and should record no validation exceptions.
+        /// </summary>
+        [TestMethod]
+        public void ValidateEmbedParameters_EmbedTrue_WithoutDefault_NoError()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                { "SearchProducts", BuildSprocEntity("sp_search", "q", embed: true, defaultValue: null) }
+            };
+            RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, embeddings: BuildEmbeddingsEnabled());
+
+            RuntimeConfigValidator validator = InitializeRuntimeConfigValidator();
+
+            // Should not throw
+            validator.ValidateEmbedParameters(config);
+
+            // And no validation exceptions should have been recorded.
+            Assert.AreEqual(0, validator.ConfigValidationExceptions.Count,
+                "Expected no validation exceptions when embed:true is paired with no default");
+
+            // Sanity: the embed param under test was set up with no default, as intended.
+            ParameterMetadata embedParam = config.Entities["SearchProducts"].Source.Parameters!
+                .Single(p => p.Embed);
+            Assert.IsNull(embedParam.Default, "Test setup expected the embed param to have no default");
+        }
+
+        /// <summary>
+        /// Rule 0: embed:true is only supported on MSSQL data sources. The validator
+        /// should reject embed:true on PostgreSQL, MySQL, DWSQL, or CosmosDB.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(DatabaseType.PostgreSQL, DisplayName = "Rule 0: embed:true on PostgreSQL → 503")]
+        [DataRow(DatabaseType.MySQL, DisplayName = "Rule 0: embed:true on MySQL → 503")]
+        public void ValidateEmbedParameters_EmbedTrue_NonMssqlDataSource_ThrowsConfigError(DatabaseType dbType)
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                { "SearchProducts", BuildSprocEntity("sp_search", "q", embed: true) }
+            };
+            RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, databaseType: dbType, embeddings: BuildEmbeddingsEnabled());
+
+            RuntimeConfigValidator validator = InitializeRuntimeConfigValidator();
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidateEmbedParameters(config));
+
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            StringAssert.Contains(ex.Message, dbType.ToString());
+            StringAssert.Contains(ex.Message, "Azure SQL");
+        }
+
+        /// <summary>
+        /// When multiple entities exist and ONE has an embed-rule violation, the
+        /// thrown exception must clearly identify the offending entity and parameter
+        /// (so the user can fix their config without grep-and-guess).
+        /// </summary>
+        [TestMethod]
+        public void ValidateEmbedParameters_MultipleEntities_OneViolates_NamesViolatingEntityAndParam()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                // Healthy entities
+                { "OkProducts", BuildSprocEntity("sp_ok", "q", embed: true) },
+                { "AlsoOk", BuildSprocEntity("sp_other", "input", embed: true) },
+                // The violator: embed:true on a table
+                { "BadEntity", BuildEntityWithSourceType(EntitySourceType.Table, "bad_table", "queryParam") }
+            };
+            RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, embeddings: BuildEmbeddingsEnabled());
+
+            RuntimeConfigValidator validator = InitializeRuntimeConfigValidator();
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidateEmbedParameters(config));
+
+            // Must name the offending entity and param specifically
+            StringAssert.Contains(ex.Message, "BadEntity");
+            StringAssert.Contains(ex.Message, "queryParam");
+            // Must not name the healthy ones
+            Assert.IsFalse(ex.Message.Contains("OkProducts"),
+                "Error should not mention healthy entities; was: " + ex.Message);
+            Assert.IsFalse(ex.Message.Contains("AlsoOk"),
+                "Error should not mention healthy entities; was: " + ex.Message);
+        }
+
+        #endregion
+
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
         {
             MockFileSystem fileSystem = new();

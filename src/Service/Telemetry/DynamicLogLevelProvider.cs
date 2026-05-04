@@ -33,6 +33,14 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
         public bool IsConfigOverridden { get; private set; }
 
+        /// <summary>
+        /// Sets the initial log level, which can be passed from the CLI or the Config file,
+        /// if not specified, it defaults to None if flag --mcp-stdio, to Error if in Production mode or Debug if in Development mode.
+        /// Also sets whether the log level was overridden by the CLI, which will prevent updates from runtime config changes. 
+        /// </summary>
+        /// <param name="logLevel">The initial log level to set.</param>
+        /// <param name="isCliOverridden">Indicates whether the log level was overridden by the CLI.</param>
+        /// <param name="isConfigOverridden">Indicates whether the log level was overridden by the runtime config.</param>
         public void SetInitialLogLevel(LogLevel logLevel = LogLevel.Error, bool isCliOverridden = false, bool isConfigOverridden = false)
         {
             CurrentLogLevel = logLevel;

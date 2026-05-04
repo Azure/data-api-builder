@@ -25,13 +25,18 @@ public class CustomLoggerProvider : ILoggerProvider
 
     public class CustomConsoleLogger : ILogger
     {
+        private readonly LogLevel _minimumLogLevel;
+
         // Minimum LogLevel for CLI output.
         // For MCP mode: use CLI's --LogLevel if specified, otherwise suppress all.
         // For non-MCP mode: always use Information.
         // Note: --LogLevel is meant for the ENGINE's log level, not CLI's output.
-        private static LogLevel MinimumLogLevel => Cli.Utils.IsMcpStdioMode
+        public CustomConsoleLogger(LogLevel minimumLogLevel = LogLevel.Information)
+        {
+            _minimumLogLevel = Cli.Utils.IsMcpStdioMode
             ? (Cli.Utils.IsLogLevelOverriddenByCli ? Cli.Utils.CliLogLevel : LogLevel.None)
-            : LogLevel.Information;
+            : minimumLogLevel;
+        }
 
         //  Color values based on LogLevel
         //  LogLevel    Foreground      Background
@@ -99,7 +104,7 @@ public class CustomLoggerProvider : ILoggerProvider
                 }
 
                 // User wants logs in MCP mode - write to stderr
-                if (!IsEnabled(logLevel) || logLevel < MinimumLogLevel)
+                if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
                 {
                     return;
                 }
@@ -115,7 +120,7 @@ public class CustomLoggerProvider : ILoggerProvider
                 return;
             }
 
-            if (!IsEnabled(logLevel) || logLevel < MinimumLogLevel)
+            if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
             {
                 return;
             }

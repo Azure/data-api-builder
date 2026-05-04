@@ -57,7 +57,8 @@
         Headers: @env('OTEL_EXPORTER_OTLP_HEADERS'),
         ServiceName: @env('OTEL_SERVICE_NAME')
       }
-    }
+    },
+    IsEmbeddingsConfigured: false
   },
   Entities: []
 }

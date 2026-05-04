@@ -398,9 +398,9 @@ public class RuntimeConfigLoaderTests
         }";
 
         // Save original env var values and clear them to ensure they don't exist.
-        string? origEndpoint = Environment.GetEnvironmentVariable("NONEXISTENT_OTEL_ENDPOINT");
-        string? origHeaders = Environment.GetEnvironmentVariable("NONEXISTENT_OTEL_HEADERS");
-        string? origServiceName = Environment.GetEnvironmentVariable("NONEXISTENT_OTEL_SERVICE_NAME");
+        string origEndpoint = Environment.GetEnvironmentVariable("NONEXISTENT_OTEL_ENDPOINT");
+        string origHeaders = Environment.GetEnvironmentVariable("NONEXISTENT_OTEL_HEADERS");
+        string origServiceName = Environment.GetEnvironmentVariable("NONEXISTENT_OTEL_SERVICE_NAME");
         Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_ENDPOINT", null);
         Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_HEADERS", null);
         Environment.SetEnvironmentVariable("NONEXISTENT_OTEL_SERVICE_NAME", null);

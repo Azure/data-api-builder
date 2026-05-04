@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
@@ -24,6 +25,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Core.Telemetry;
@@ -169,7 +171,8 @@ namespace Azure.DataApiBuilder.Service
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                             configure.Protocol = OtlpExportProtocol.Grpc;
                         })
-                        .AddMeter(TelemetryMetricsHelper.MeterName);
+                        .AddMeter(TelemetryMetricsHelper.MeterName)
+                        .AddMeter(EmbeddingTelemetryHelper.MeterName);
                 })
                 .WithTracing(tracing =>
                 {
@@ -434,6 +437,50 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
+
+            // Register embedding service if configured and enabled.
+            // NOTE: IEmbeddingService is only registered when enabled to avoid constructor
+            // failures when config has empty/placeholder values for disabled embeddings.
+            // TODO: To support hot-reload for embeddings (toggling enabled on/off at runtime),
+            // EmbeddingService would need to read config dynamically from RuntimeConfigProvider
+            // and defer constructor validation. Track as a separate work item.
+            if (runtimeConfigAvailable
+                && runtimeConfig?.Runtime?.IsEmbeddingsConfigured == true)
+            {
+                EmbeddingsOptions embeddingsOptions = runtimeConfig.Runtime.Embeddings;
+                services.AddSingleton(embeddingsOptions);
+
+                string providerName = embeddingsOptions.Provider.ToString().ToLowerInvariant();
+
+                if (embeddingsOptions.Enabled)
+                {
+                    services.AddHttpClient<IEmbeddingService, EmbeddingService>();
+                    _logger.LogInformation(
+                        "Embeddings service enabled with provider: {Provider}, model: {Model}, base-url: {BaseUrl}",
+                        providerName,
+                        embeddingsOptions.EffectiveModel ?? "(default)",
+                        embeddingsOptions.BaseUrl);
+
+                    // Endpoint is only available if both embeddings and endpoint are enabled
+                    if (embeddingsOptions.IsEndpointEnabled)
+                    {
+                        _logger.LogInformation(
+                            "Embeddings endpoint enabled at path: {Path}",
+                            EmbeddingsEndpointOptions.DEFAULT_PATH);
+                    }
+
+                    if (embeddingsOptions.IsHealthCheckEnabled)
+                    {
+                        _logger.LogInformation(
+                            "Embeddings health check enabled with threshold: {ThresholdMs}ms",
+                            embeddingsOptions.Health!.ThresholdMs);
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("Embeddings service is configured but disabled.");
+                }
+            }
 
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
 

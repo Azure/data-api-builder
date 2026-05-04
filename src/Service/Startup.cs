@@ -1412,5 +1412,6 @@ namespace Azure.DataApiBuilder.Service
                     statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
+        }
     }
 }

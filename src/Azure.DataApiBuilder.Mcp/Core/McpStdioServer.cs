@@ -6,6 +6,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
@@ -46,8 +47,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task RunAsync(CancellationToken cancellationToken)
         {
-            Console.Error.WriteLine("[MCP DEBUG] MCP stdio server started.");
-
             // Use UTF-8 WITHOUT BOM
             UTF8Encoding utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
@@ -77,15 +76,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 {
                     doc = JsonDocument.Parse(line);
                 }
-                catch (JsonException jsonEx)
+                catch (JsonException)
                 {
-                    Console.Error.WriteLine($"[MCP DEBUG] JSON parse error: {jsonEx.Message}");
                     WriteError(id: null, code: McpStdioJsonRpcErrorCodes.PARSE_ERROR, message: "Parse error");
                     continue;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Console.Error.WriteLine($"[MCP DEBUG] Unexpected error parsing request: {ex.Message}");
                     WriteError(id: null, code: McpStdioJsonRpcErrorCodes.INTERNAL_ERROR, message: "Internal error");
                     continue;
                 }
@@ -131,6 +128,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 WriteResult(id, new { ok = true });
                                 break;
 
+                            case "logging/setLevel":
+                                HandleSetLogLevel(id, root);
+                                break;
+
                             case "shutdown":
                                 WriteResult(id, new { ok = true });
                                 return;
@@ -171,30 +172,50 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
                     instructions = runtimeConfig.Runtime?.Mcp?.Description;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    // Log to stderr for diagnostics and rethrow to avoid masking configuration errors
-                    Console.Error.WriteLine($"[MCP WARNING] Failed to retrieve MCP description from config: {ex.Message}");
+                    // Rethrow to avoid masking configuration errors
                     throw;
                 }
             }
 
-            // Create the initialize response
-            object result = new
+            // Create the initialize response - only include instructions if non-empty
+            object result;
+            if (!string.IsNullOrWhiteSpace(instructions))
             {
-                protocolVersion = _protocolVersion,
-                capabilities = new
+                result = new
                 {
-                    tools = new { listChanged = true },
-                    logging = new { }
-                },
-                serverInfo = new
+                    protocolVersion = _protocolVersion,
+                    capabilities = new
+                    {
+                        tools = new { listChanged = true },
+                        logging = new { }
+                    },
+                    serverInfo = new
+                    {
+                        name = McpProtocolDefaults.MCP_SERVER_NAME,
+                        version = McpProtocolDefaults.MCP_SERVER_VERSION
+                    },
+                    instructions = instructions
+                };
+            }
+            else
+            {
+                result = new
                 {
-                    name = McpProtocolDefaults.MCP_SERVER_NAME,
-                    version = McpProtocolDefaults.MCP_SERVER_VERSION
-                },
-                instructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null
-            };
+                    protocolVersion = _protocolVersion,
+                    capabilities = new
+                    {
+                        tools = new { listChanged = true },
+                        logging = new { }
+                    },
+                    serverInfo = new
+                    {
+                        name = McpProtocolDefaults.MCP_SERVER_NAME,
+                        version = McpProtocolDefaults.MCP_SERVER_VERSION
+                    }
+                };
+            }
 
             WriteResult(id, result);
         }
@@ -229,6 +250,85 @@ namespace Azure.DataApiBuilder.Mcp.Core
         }
 
         /// <summary>
+        /// Handles the "logging/setLevel" JSON-RPC method by updating the runtime log level.
+        /// </summary>
+        /// <param name="id">The request identifier extracted from the incoming JSON-RPC request.</param>
+        /// <param name="root">The root JSON element of the incoming JSON-RPC request.</param>
+        /// <remarks>
+        /// Log level precedence (highest to lowest):
+        /// 1. CLI --LogLevel flag - cannot be overridden
+        /// 2. Config runtime.telemetry.log-level - cannot be overridden by MCP
+        /// 3. MCP logging/setLevel - only works if neither CLI nor Config explicitly set a level
+        /// 4. Default: None for MCP stdio mode (silent by default to keep stdout clean for JSON-RPC)
+        /// 
+        /// If CLI or Config set the log level, this method accepts the request but silently ignores it.
+        /// The client won't get an error, but CLI/Config wins.
+        /// 
+        /// When MCP sets a level other than "none", this also restores Console.Error to the real stderr
+        /// stream so that logs become visible (Console may have been redirected to null at startup).
+        /// It also enables MCP log notifications so logs are sent to the client via notifications/message.
+        /// </remarks>
+        private void HandleSetLogLevel(JsonElement? id, JsonElement root)
+        {
+            // Extract the level parameter from the request
+            string? level = null;
+            if (root.TryGetProperty("params", out JsonElement paramsEl) &&
+                paramsEl.TryGetProperty("level", out JsonElement levelEl) &&
+                levelEl.ValueKind == JsonValueKind.String)
+            {
+                level = levelEl.GetString();
+            }
+
+            if (string.IsNullOrWhiteSpace(level))
+            {
+                WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing or invalid 'level' parameter");
+                return;
+            }
+
+            // Get the ILogLevelController from service provider
+            ILogLevelController? logLevelController = _serviceProvider.GetService<ILogLevelController>();
+            if (logLevelController is null)
+            {
+                // Log level controller not available - still accept request per MCP spec
+                WriteResult(id, new { });
+                return;
+            }
+
+            // Attempt to update the log level
+            // If CLI or Config overrode, this returns false but we still return success to the client
+            bool updated = logLevelController.UpdateFromMcp(level);
+
+            // If MCP successfully changed the log level to something other than "none",
+            // ensure Console.Error is pointing to the real stderr (not TextWriter.Null).
+            // This handles the case where MCP stdio mode started with LogLevel.None (quiet startup)
+            // and the client later enables logging via logging/setLevel.
+            bool isLoggingEnabled = !string.Equals(level, "none", StringComparison.OrdinalIgnoreCase);
+            if (updated && isLoggingEnabled)
+            {
+                RestoreStderrIfNeeded();
+            }
+
+            // Always return success (empty result object) per MCP spec
+            WriteResult(id, new { });
+        }
+
+        /// <summary>
+        /// Restores Console.Error to the real stderr stream if it was redirected to TextWriter.Null.
+        /// This enables log output after MCP client sends logging/setLevel with a level other than "none".
+        /// </summary>
+        private static void RestoreStderrIfNeeded()
+        {
+            // Always restore stderr to the real stream when MCP enables logging.
+            // This is safe to call multiple times - we just re-wrap the standard error stream.
+            Stream stderr = Console.OpenStandardError();
+            StreamWriter stderrWriter = new(stderr, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false))
+            {
+                AutoFlush = true
+            };
+            Console.SetError(stderrWriter);
+        }
+
+        /// <summary>
         /// Handles the "tools/call" JSON-RPC method by executing the specified tool with the provided arguments.
         /// </summary>
         /// <param name="id"> The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.</param>
@@ -259,14 +359,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             if (string.IsNullOrWhiteSpace(toolName))
             {
-                Console.Error.WriteLine("[MCP DEBUG] callTool → missing tool name.");
                 WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing tool name");
                 return;
             }
 
             if (!_toolRegistry.TryGetTool(toolName!, out IMcpTool? tool) || tool is null)
             {
-                Console.Error.WriteLine($"[MCP DEBUG] callTool → tool not found: {toolName}");
                 WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, $"Tool not found: {toolName}");
                 return;
             }
@@ -276,13 +374,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             {
                 if (@params.TryGetProperty("arguments", out JsonElement argsEl) && argsEl.ValueKind == JsonValueKind.Object)
                 {
-                    string rawArgs = argsEl.GetRawText();
-                    Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: {rawArgs}");
-                    argsDoc = JsonDocument.Parse(rawArgs);
-                }
-                else
-                {
-                    Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: <none>");
+                    argsDoc = JsonDocument.Parse(argsEl.GetRawText());
                 }
 
                 // Execute the tool with telemetry.

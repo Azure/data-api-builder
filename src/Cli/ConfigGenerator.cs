@@ -2869,11 +2869,11 @@ namespace Cli
             {
                 if (logBuffer is null)
                 {
-                    _logger.LogInformation("Using merged config file based on environment,: {configToBeUsed}.", configToBeUsed);
+                    _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
                 }
                 else
                 {
-                    logBuffer.BufferLog(LogLevel.Information, $"Merged config file based on environment is available: {configToBeUsed}.");
+                    logBuffer.BufferLog(LogLevel.Information, $"Using merged config file based on environment: {configToBeUsed}.");
                 }
             }
 

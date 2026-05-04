@@ -405,7 +405,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         public static async Task DelayTask(Func<bool> condition)
         {
             int retryCount = 0;
-            while (retryCount < ConfigurationTests.RETRY_COUNT)
+            while (retryCount < ConfigurationTests.RETRY_COUNT && condition())
             {
                 retryCount++;
                 if (condition())

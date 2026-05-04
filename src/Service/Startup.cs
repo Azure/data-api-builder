@@ -751,6 +751,7 @@ namespace Azure.DataApiBuilder.Service
 
                         //Flush all logs that were buffered before setting the LogLevel.
                         // Important: All logs set before this point should use _logBuffer.
+                        // This flush ensures that no logs are lost in the case of an IsLateConfigured scenario.
                         FlushAllLogs(app);
 
                         isRuntimeReady = await PerformOnConfigChangeAsync(app);
@@ -1396,11 +1397,20 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="app">Contains all the services needed to set the logger.</param>
         private void FlushAllLogs(IApplicationBuilder app)
         {
-            FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
-            configLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
+            try
+            {
+                FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
+                configLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
 
-            _logBuffer.FlushToLogger(_logger);
-            configLoader.FlushLogBuffer();
-        }
+                _logBuffer.FlushToLogger(_logger);
+                configLoader.FlushLogBuffer();
+            }
+            catch (Exception ex)
+            {
+                throw new DataApiBuilderException(
+                    message: ex.Message,
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
     }
 }

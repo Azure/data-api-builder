@@ -130,14 +130,15 @@ public class CustomLoggerProvider : ILoggerProvider
                 return;
             }
 
+            TextWriter writer = logLevel >= LogLevel.Error ? Console.Error : Console.Out;
             ConsoleColor originalForeGroundColor = Console.ForegroundColor;
             ConsoleColor originalBackGroundColor = Console.BackgroundColor;
             Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
             Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
-            Console.Write($"{abbreviation}:");
+            writer.Write($"{abbreviation}:");
             Console.ForegroundColor = originalForeGroundColor;
             Console.BackgroundColor = originalBackGroundColor;
-            Console.WriteLine($" {formatter(state, exception)}");
+            writer.WriteLine($" {formatter(state, exception)}");
         }
 
         /// <inheritdoc/>

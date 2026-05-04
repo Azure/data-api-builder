@@ -133,7 +133,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string orderBy = "id",
             string limit = "1")
         {
-            string formattedSelect = limit.Equals("1") ? "SELECT to_jsonb(subq3) AS DATA" : "SELECT json_agg(to_jsonb(subq3)) AS DATA";
+            string formattedSelect = limit.Equals("1")
+                ? "SELECT to_jsonb(subq3) AS DATA"
+                : "SELECT COALESCE(json_agg(to_jsonb(subq3)), '[]'::json) AS DATA";
 
             return @"
                 " + formattedSelect + @"

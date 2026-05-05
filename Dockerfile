@@ -14,4 +14,13 @@ COPY --from=build /out /App
 COPY dab-config.json /App/dab-config.json
 WORKDIR /App
 ENV ASPNETCORE_URLS=http://+:5000
+
+# Run as the non-root "app" user (UID/GID 64198) that ships with the
+# mcr.microsoft.com/dotnet/aspnet base image. DAB is just an ASP.NET Core
+# process and does not require root privileges. Declaring USER explicitly
+# sets the image's Config.User field so image scanners (e.g. Checkmarx One)
+# that require a non-root user in the final stage are satisfied.
+# Port 5000 is above 1024 so a non-root user can bind to it without CAP_NET_BIND_SERVICE.
+USER app
+
 ENTRYPOINT ["dotnet", "Azure.DataApiBuilder.Service.dll"]

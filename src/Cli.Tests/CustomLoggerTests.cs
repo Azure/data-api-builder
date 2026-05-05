@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Npgsql.Internal;
+
 namespace Cli.Tests;
 
 /// <summary>
@@ -18,8 +20,6 @@ public class CustomLoggerTests
     [DataTestMethod]
     [DataRow(LogLevel.Information, "info:")]
     [DataRow(LogLevel.Warning, "warn:")]
-    [DataRow(LogLevel.Error, "fail:")]
-    [DataRow(LogLevel.Critical, "crit:")]
     public void LogOutput_UsesAbbreviatedLogLevelLabels(LogLevel logLevel, string expectedPrefix)
     {
         CustomLoggerProvider provider = new();
@@ -44,6 +44,40 @@ public class CustomLoggerTests
         finally
         {
             Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    /// Validates that each log level error and above produces the correct abbreviated
+    /// label matching ASP.NET Core's default console formatter convention.
+    /// Error and Critical logs should go to the stderr stream.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow(LogLevel.Error, "fail:")]
+    [DataRow(LogLevel.Critical, "crit:")]
+    public void LogError_UsesAbbreviatedLogLevelLabels(LogLevel logLevel, string expectedPrefix)
+    {
+        CustomLoggerProvider provider = new();
+        ILogger logger = provider.CreateLogger("TestCategory");
+
+        TextWriter originalError = Console.Error;
+        try
+        {
+            StringWriter writer = new();
+            Console.SetError(writer);
+            logger.Log(logLevel, "test message");
+
+            string output = writer.ToString();
+            Assert.IsTrue(
+                output.StartsWith(expectedPrefix),
+                $"Expected output to start with '{expectedPrefix}' but got: '{output}'");
+            Assert.IsTrue(
+                output.Contains("test message"),
+                $"Expected output to contain 'test message' but got: '{output}'");
+        }
+        finally
+        {
+            Console.SetError(originalError);
         }
     }
 }

@@ -72,7 +72,7 @@ public class ValidateConfigTests
         StringWriter writer = new();
 
         // Capture console output to get error messaging.
-        Console.SetOut(writer);
+        Console.SetError(writer);
 
         // Act
         ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);

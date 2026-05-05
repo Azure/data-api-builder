@@ -2725,6 +2725,12 @@ namespace Cli
             /// - MCP stdio mode: Service defaults to None for clean stdout output
             /// - Non-MCP mode: Service defaults to Debug (Development) or Error (Production) based on config
             LogLevel minimumLogLevel;
+
+            // Reset the config-based override flag so stale state from a prior call
+            // (these are static) cannot leak into the current run.
+            Utils.IsLogLevelOverriddenByConfig = false;
+            Utils.ConfigLogLevel = LogLevel.Information;
+
             if (options.LogLevel is not null)
             {
                 if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)

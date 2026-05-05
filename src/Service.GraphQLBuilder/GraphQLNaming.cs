@@ -28,6 +28,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <seealso cref="https://spec.graphql.org/October2021/#sec-Names.Reserved-Names"/>
         public const string INTROSPECTION_FIELD_PREFIX = "__";
 
+        public const string INVALID_EMPTY_SPACE = " ";
+
         public const string LINKING_OBJECT_PREFIX = "linkingObject";
 
         public const string PK_QUERY_SUFFIX = "_by_pk";
@@ -94,6 +96,20 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public static bool IsIntrospectionField(string fieldName)
         {
             return fieldName.StartsWith(INTROSPECTION_FIELD_PREFIX, StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// Per GraphQL specification:
+        /// A name can only start with a letter or an underscore, and can only
+        /// contain letters, numbers, and underscores. It is not able to contain whitespaces
+        /// This helper function identifies whether the provided name contains whitespaces.
+        /// </summary>
+        /// <seealso cref="https://spec.graphql.org/October2021/#sec-Names"/>
+        /// <param name="fieldName">Field name to evaluate</param>
+        /// <returns>True/False</returns>
+        public static bool IsGraphQLNameWhiteSpace(string fieldName)
+        {
+            return fieldName.Contains(INVALID_EMPTY_SPACE, StringComparison.Ordinal);
         }
 
         /// <summary>

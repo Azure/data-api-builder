@@ -378,6 +378,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     _logger.LogWarning("No new entities were generated from the autoentities definition '{autoentityName}'.", autoentityName);
                 }
+
+                // Track resolution count for validation.
+                runtimeConfig.AutoentityResolutionCounts[autoentityName] = addedEntities;
             }
 
             _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);

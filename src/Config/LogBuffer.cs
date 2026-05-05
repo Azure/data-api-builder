@@ -12,7 +12,7 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public class LogBuffer
     {
-        private readonly ConcurrentQueue<(LogLevel LogLevel, string Message, Exception? Exception)> _logBuffer;
+        private readonly ConcurrentQueue<(ILogger Logger, LogLevel LogLevel, string Message, Exception? Exception)> _logBuffer;
         private readonly object _flushLock = new();
 
         public LogBuffer()
@@ -23,21 +23,21 @@ namespace Azure.DataApiBuilder.Config
         /// <summary>
         /// Buffers a log entry with a specific category name.
         /// </summary>
-        public void BufferLog(LogLevel logLevel, string message, Exception? exception = null)
+        public void BufferLog(ILogger logger, LogLevel logLevel, string message, Exception? exception = null)
         {
-            _logBuffer.Enqueue((logLevel, message, exception));
+            _logBuffer.Enqueue((logger, logLevel, message, exception));
         }
 
         /// <summary>
         /// Flushes all buffered logs to a single target logger.
         /// </summary>
-        public void FlushToLogger(ILogger targetLogger)
+        public void FlushToLogger()
         {
             lock (_flushLock)
             {
-                while (_logBuffer.TryDequeue(out (LogLevel LogLevel, string Message, Exception? Exception) entry))
+                while (_logBuffer.TryDequeue(out (ILogger logger, LogLevel LogLevel, string Message, Exception? Exception) entry))
                 {
-                    targetLogger.Log(entry.LogLevel, message: entry.Message, exception: entry.Exception);
+                    entry.logger.Log(entry.LogLevel, message: entry.Message, exception: entry.Exception);
                 }
             }
         }

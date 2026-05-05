@@ -2752,7 +2752,7 @@ namespace Cli
             // Update logger for StartOptions and
             // flush all current logs saved in LogBuffer
             ILogger<Program> programLogger = Utils.LoggerFactoryForCli.CreateLogger<Program>();
-            options.CliBuffer.FlushToLogger(programLogger);
+            options.CliBuffer.FlushToLogger();
 
             // Update logger for Utils
             ILogger<Utils> utilsLogger = Utils.LoggerFactoryForCli.CreateLogger<Utils>();

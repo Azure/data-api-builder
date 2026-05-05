@@ -556,7 +556,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// </summary>
     public void FlushLogBuffer()
     {
-        _logBuffer.FlushToLogger(_logger!);
+        _logBuffer.FlushToLogger();
     }
 
     /// <summary>

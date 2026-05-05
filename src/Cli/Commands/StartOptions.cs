@@ -60,7 +60,7 @@ namespace Cli.Commands
                 logger = Utils.LoggerFactoryForCli.CreateLogger<Program>();
                 loader.SetLogger(Utils.LoggerFactoryForCli.CreateLogger<FileSystemRuntimeConfigLoader>());
 
-                CliBuffer.FlushToLogger(logger);
+                CliBuffer.FlushToLogger();
                 loader.FlushLogBuffer();
 
                 logger.LogError("Failed to start the engine{mode}.",

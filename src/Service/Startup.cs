@@ -1402,7 +1402,7 @@ namespace Azure.DataApiBuilder.Service
                 FileSystemRuntimeConfigLoader configLoader = app.ApplicationServices.GetRequiredService<FileSystemRuntimeConfigLoader>();
                 configLoader.SetLogger(app.ApplicationServices.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
 
-                _logBuffer.FlushToLogger(_logger);
+                _logBuffer.FlushToLogger();
                 configLoader.FlushLogBuffer();
             }
             catch (Exception ex)

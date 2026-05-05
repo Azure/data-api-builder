@@ -644,13 +644,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Gets a consolidated next link for pagination in JSON format.
+        /// Builds the next-page URI used for cursor-based pagination.
         /// </summary>
-        /// <param name="baseUri">The base Pagination Uri</param>
-        /// <param name="queryString">The query string with after value</param>
-        /// <param name="isNextLinkRelative">True, if the next link should be relative</param>
-        /// <returns></returns>
-        public static JsonElement GetConsolidatedNextLinkForPagination(string baseUri, string queryString, bool isNextLinkRelative = false)
+        /// <param name="baseUri">The base pagination URI.</param>
+        /// <param name="queryString">The query string with the $after value already merged in.</param>
+        /// <param name="isNextLinkRelative">True to return only the path + query (no host); false for an absolute URL.</param>
+        /// <returns>The next-page URI as a string.</returns>
+        public static string BuildNextLinkUri(string baseUri, string queryString, bool isNextLinkRelative = false)
         {
             UriBuilder uriBuilder = new(baseUri)
             {
@@ -659,17 +659,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             };
 
             // Construct final link- absolute or relative
-            string nextLinkValue = isNextLinkRelative
+            return isNextLinkRelative
                 ? uriBuilder.Uri.PathAndQuery // returns just "/api/<Entity>?$after...", no host
                 : uriBuilder.Uri.AbsoluteUri; // returns full URL
-
-            // Return serialized JSON object
-            string jsonString = JsonSerializer.Serialize(new[]
-            {
-                new { nextLink = nextLinkValue }
-            });
-
-            return JsonSerializer.Deserialize<JsonElement>(jsonString);
         }
 
         /// <summary>

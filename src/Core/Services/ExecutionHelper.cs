@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Services
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
 
             IDictionary<string, object?> parameters = GetParametersFromContext(context);
-
+              
             if (context.Selection.Type.IsListType())
             {
                 Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
@@ -395,9 +395,49 @@ namespace Azure.DataApiBuilder.Service.Services
                 SupportedHotChocolateTypes.SINGLE_TYPE => value is IntValueNode intValueNode ? intValueNode.ToSingle() : ((FloatValueNode)value).ToSingle(),
                 SupportedHotChocolateTypes.FLOAT_TYPE => value is IntValueNode intValueNode ? intValueNode.ToDouble() : ((FloatValueNode)value).ToDouble(),
                 SupportedHotChocolateTypes.DECIMAL_TYPE => value is IntValueNode intValueNode ? intValueNode.ToDecimal() : ((FloatValueNode)value).ToDecimal(),
+                SupportedHotChocolateTypes.DATETIME_TYPE => ParseDateTimeValue(value.Value),
                 SupportedHotChocolateTypes.UUID_TYPE => Guid.TryParse(value.Value!.ToString(), out Guid guidValue) ? guidValue : value.Value,
                 _ => value.Value
             };
+
+            static object? ParseDateTimeValue(object? raw)
+            {
+                if (raw is null)
+                {
+                    return null;
+                }
+
+                if (raw is DateTime dt)
+                {
+                    return dt.Kind switch
+                    {
+                        DateTimeKind.Utc => dt,
+                        DateTimeKind.Unspecified => DateTime.SpecifyKind(dt, DateTimeKind.Utc),
+                        _ => dt.ToUniversalTime()
+                    };
+                }
+
+                if (raw is DateTimeOffset dto)
+                {
+                    return dto.UtcDateTime;
+                }
+
+                if (raw is string s)
+                {
+                    // HotChocolate DateTime inputs are supplied as strings; parse them so DB providers
+                    // (notably PostgreSQL) receive a typed UTC parameter instead of text.
+                    if (DateTimeOffset.TryParse(
+                        s,
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeUniversal,
+                        out DateTimeOffset parsedDto))
+                    {
+                        return parsedDto.UtcDateTime;
+                    }
+                }
+
+                return raw;
+            }
         }
 
         /// <summary>

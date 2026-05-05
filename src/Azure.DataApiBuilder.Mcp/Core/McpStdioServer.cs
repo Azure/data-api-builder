@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Telemetry;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -296,16 +297,24 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             // Attempt to update the log level
             // If CLI or Config overrode, this returns false but we still return success to the client
-            bool updated = logLevelController.UpdateFromMcp(level);
+            logLevelController.UpdateFromMcp(level);
 
-            // If MCP successfully changed the log level to something other than "none",
-            // ensure Console.Error is pointing to the real stderr (not TextWriter.Null).
-            // This handles the case where MCP stdio mode started with LogLevel.None (quiet startup)
-            // and the client later enables logging via logging/setLevel.
+            // Determine if logging is enabled (level != "none")
+            // Note: Even if CLI/Config overrode the level, we still enable notifications
+            // when the client requests logging. They'll get logs at the overridden level.
             bool isLoggingEnabled = !string.Equals(level, "none", StringComparison.OrdinalIgnoreCase);
-            if (updated && isLoggingEnabled)
+            if (isLoggingEnabled)
             {
                 RestoreStderrIfNeeded();
+            }
+
+            // Enable or disable MCP log notifications based on the requested level
+            // When CLI/Config overrode, notifications are still enabled - client asked for logs,
+            // they just get them at the CLI/Config level instead of the requested level.
+            IMcpLogNotificationWriter? notificationWriter = _serviceProvider.GetService<IMcpLogNotificationWriter>();
+            if (notificationWriter != null)
+            {
+                notificationWriter.IsEnabled = isLoggingEnabled;
             }
 
             // Always return success (empty result object) per MCP spec
@@ -546,7 +555,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             var response = new
             {
-                jsonrpc = "2.0",
+                jsonrpc = McpStdioJsonRpcErrorCodes.JSON_RPC_VERSION,
                 id = id.HasValue ? GetIdValue(id.Value) : null,
                 result = resultObject
             };
@@ -565,7 +574,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             var errorObj = new
             {
-                jsonrpc = "2.0",
+                jsonrpc = McpStdioJsonRpcErrorCodes.JSON_RPC_VERSION,
                 id = id.HasValue ? GetIdValue(id.Value) : null,
                 error = new { code, message }
             };

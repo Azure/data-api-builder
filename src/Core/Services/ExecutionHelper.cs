@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Xml;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -18,7 +19,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Execution;
-using HotChocolate.Execution.Processing;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using NodaTime.Text;
@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     return namedType switch
                     {
                         StringType => fieldValue.GetString(), // spec
-                        ByteType => fieldValue.GetByte(),
+                        UnsignedByteType => fieldValue.GetByte(),
                         ShortType => fieldValue.GetInt16(),
                         IntType => fieldValue.GetInt32(), // spec
                         LongType => fieldValue.GetInt64(),
@@ -211,11 +211,21 @@ namespace Azure.DataApiBuilder.Service.Services
                         DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" (double quotes) due to stringagg parsing and hence we need to ensure parsing is correct.
                         DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
                         HotChocolate.Types.NodaTime.LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
-                        ByteArrayType => fieldValue.GetBytesFromBase64(),
+                        // HC v16 ships both ByteArrayType (legacy, GraphQL name "ByteArray", runtime byte[])
+                        // and Base64StringType (new, GraphQL name "Base64String", runtime byte[]). DAB's
+                        // generated schemas still use the GraphQL name "ByteArray", so HC binds entity
+                        // fields to ByteArrayType. We accept either type here so DAB also tolerates
+                        // schemas that bind to Base64StringType (e.g. via DefaultValueType).
+                        // CS0618: ByteArrayType is [Obsolete] in HC v16 in favor of Base64StringType,
+                        // but we still need to pattern-match it because it remains the type bound to
+                        // the GraphQL name "ByteArray" that DAB-generated schemas continue to use.
+#pragma warning disable CS0618
+                        Base64StringType or ByteArrayType => fieldValue.GetBytesFromBase64(),
+#pragma warning restore CS0618
                         BooleanType => fieldValue.GetBoolean(), // spec
                         UrlType => new Uri(fieldValue.GetString()!),
                         UuidType => fieldValue.GetGuid(),
-                        TimeSpanType => TimeSpan.Parse(fieldValue.GetString()!),
+                        DurationType => XmlConvert.ToTimeSpan(fieldValue.GetString()!),
                         AnyType => fieldValue.ToString(),
                         _ => fieldValue.GetString()
                     };
@@ -508,7 +518,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             return GetParametersFromSchemaAndQueryFields(
                 context.Selection.Field,
-                context.Selection.SyntaxNode,
+                context.Selection.RequireFieldNode(),
                 context.Variables);
         }
 

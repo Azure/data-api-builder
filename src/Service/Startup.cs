@@ -614,16 +614,66 @@ namespace Azure.DataApiBuilder.Service
         private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
+                // Hot Chocolate v16 builds the GraphQL schema eagerly during host startup. DAB
+                // supports a "hosted" scenario where the runtime config is supplied after the
+                // host starts (POST /configuration), so the schema cannot exist at startup. Eager
+                // initialization plus our placeholder-schema fallback also creates a race on
+                // late-config hydration: HC keeps serving the warm placeholder executor in the
+                // background while the new schema's warmup runs, so the first GraphQL request
+                // after hydration validates against the placeholder and returns BadRequest.
+                // Opt into lazy initialization (the v15 default) so the schema is constructed on
+                // first request, by which time the runtime config is loaded and the metadata
+                // provider has been initialized in PerformOnConfigChangeAsync.
+                .ModifyOptions(options => options.LazyInitialization = true)
                 .AddInstrumentation()
-                .AddType(new DateTimeType(disableFormatCheck: graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true))
+                .AddType(new DateTimeType(new DateTimeOptions { ValidateInputFormat = !(graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true) }))
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
-                    // The GraphQLSchemaCreator is an application service that is not available on 
-                    // the schema specific service provider, this means we have to get it with 
-                    // the GetRootServiceProvider helper.
-                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRootServiceProvider().GetRequiredService<GraphQLSchemaCreator>();
-                    graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                    // With LazyInitialization, ConfigureSchema runs on the first GraphQL request,
+                    // not at host startup. By that point the runtime config is loaded for both
+                    // the file-based and POST /configuration scenarios. The placeholder fallback
+                    // remains as a safety net for two edge cases:
+                    //   1. GraphQL globally disabled - requests are short-circuited to 404 by
+                    //      PathRewriteMiddleware, but if a request slips through, emit a minimal
+                    //      schema so HC validation does not fail on entity metadata that is
+                    //      intentionally never exposed (e.g. column names colliding with
+                    //      reserved GraphQL identifiers like the leading double-underscore).
+                    //   2. Schema construction failure (e.g. config validation error preventing
+                    //      metadata-provider initialization).
+                    RuntimeConfigProvider configProvider = serviceProvider.GetRootServiceProvider()
+                        .GetRequiredService<RuntimeConfigProvider>();
+                    if (!configProvider.TryGetConfig(out RuntimeConfig? loadedConfig))
+                    {
+                        EmitPlaceholderSchema(schemaBuilder);
+                        return;
+                    }
+
+                    if (!loadedConfig.IsGraphQLEnabled)
+                    {
+                        EmitPlaceholderSchema(schemaBuilder);
+                        return;
+                    }
+
+                    try
+                    {
+                        // The GraphQLSchemaCreator is an application service that is not available on 
+                        // the schema specific service provider, this means we have to get it with 
+                        // the GetRootServiceProvider helper.
+                        GraphQLSchemaCreator graphQLService = serviceProvider.GetRootServiceProvider().GetRequiredService<GraphQLSchemaCreator>();
+                        graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Schema construction failed (e.g. metadata provider was not initialized
+                        // due to a config validation error). Fall back to the placeholder schema
+                        // so the host can still start; the underlying error will have already
+                        // been surfaced by Startup.PerformOnConfigChangeAsync.
+                        _logger.LogWarning(
+                            exception: ex,
+                            message: "Failed to build GraphQL schema; emitting placeholder schema. The error will surface on first GraphQL request and is typically caused by a runtime config that failed validation.");
+                        EmitPlaceholderSchema(schemaBuilder);
+                    }
                 })
                 .AddHttpRequestInterceptor<IntrospectionInterceptor>()
                 .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
@@ -872,23 +922,11 @@ namespace Azure.DataApiBuilder.Service
 
                 endpoints
                     .MapGraphQL()
-                    .WithOptions(new GraphQLServerOptions
+                    .WithOptions(options =>
                     {
-                        Tool = {
-                            // Determines if accessing the endpoint from a browser
-                            // will load the GraphQL Banana Cake Pop IDE.
-                            Enable = IsUIEnabled(runtimeConfig, env)
-                        }
-                    });
-
-                // In development mode, Nitro is enabled at /graphql endpoint by default.
-                // Need to disable mapping Nitro explicitly as well to avoid ability to query
-                // at an additional endpoint: /graphql/ui.
-                endpoints
-                    .MapNitroApp()
-                    .WithOptions(new GraphQLToolOptions
-                    {
-                        Enable = false
+                        // Determines if accessing the endpoint from a browser
+                        // will load the GraphQL Banana Cake Pop / Nitro IDE.
+                        options.Tool.Enable = IsUIEnabled(runtimeConfig, env);
                     });
 
                 endpoints.MapHealthChecks("/", new HealthCheckOptions
@@ -905,6 +943,21 @@ namespace Azure.DataApiBuilder.Service
         {
             Console.WriteLine("Evicting old GraphQL schema.");
             requestExecutorResolver.EvictExecutor();
+        }
+
+        /// <summary>
+        /// Registers a minimal valid GraphQL schema (a single placeholder field with a no-op
+        /// resolver) on the supplied <paramref name="schemaBuilder"/>. Used to satisfy Hot
+        /// Chocolate v16's eager schema validation when the real schema cannot be constructed
+        /// at startup (no runtime config loaded yet, or a config validation failure prevented
+        /// metadata provider initialization). The placeholder is unreachable in normal
+        /// operation: it is shadowed once a real config is hot-reloaded via the
+        /// <c>GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED</c> event.
+        /// </summary>
+        private static void EmitPlaceholderSchema(ISchemaBuilder schemaBuilder)
+        {
+            schemaBuilder.AddDocumentFromString("type Query { _dab: String }");
+            schemaBuilder.AddResolver("Query", "_dab", _ => null);
         }
 
         /// <summary>

@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.Inconclusive("Type not supported");
             }
 
-            string field = $"{type.ToLowerInvariant()}_types";
+            string field = GetTestFieldName(type);
             string graphQLQueryName = "supportedType_by_pk";
             string gqlQuery = "{ supportedType_by_pk(typeid: " + id + ") { typeid, " + field + " } }";
 
@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.Inconclusive("Type not supported");
             }
 
-            string field = $"{type.ToLowerInvariant()}_types";
+            string field = GetTestFieldName(type);
             string graphQLQueryName = "supportedTypes";
             string gqlQuery = @"{
                 supportedTypes(first: 100 orderBy: { typeid: ASC } filter: { " + field + ": {" + filterOperator + ": " + gqlValue + @"} }) {
@@ -403,7 +403,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.Inconclusive("Type not supported");
             }
 
-            string field = $"{type.ToLowerInvariant()}_types";
+            string field = GetTestFieldName(type);
             string graphQLMutationName = "createSupportedType";
             string gqlMutation = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ typeid, " + field + " } }";
 
@@ -434,7 +434,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.Inconclusive("Type not supported");
             }
 
-            string field = $"{type.ToLowerInvariant()}_types";
+            string field = GetTestFieldName(type);
             string graphQLQueryName = "createSupportedType";
             string gqlQuery = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ typeid, " + field + " } }";
 
@@ -471,7 +471,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.Inconclusive("Type not supported");
             }
 
-            string field = $"{type.ToLowerInvariant()}_types";
+            string field = GetTestFieldName(type);
             string graphQLQueryName = "createSupportedType";
             string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ createSupportedType (item: {" + field + ": $param }){ typeid, " + field + " } }";
 
@@ -537,7 +537,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.Inconclusive("Type not supported");
             }
 
-            string field = $"{type.ToLowerInvariant()}_types";
+            string field = GetTestFieldName(type);
             string graphQLQueryName = "updateSupportedType";
             string gqlQuery = "mutation{ updateSupportedType (typeid: 1, item: {" + field + ": " + value + " }){ typeid " + field + " } }";
 
@@ -577,7 +577,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.Inconclusive("Type not supported");
             }
 
-            string field = $"{type.ToLowerInvariant()}_types";
+            string field = GetTestFieldName(type);
             string graphQLQueryName = "updateSupportedType";
             string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ updateSupportedType (typeid: 1, item: {" + field + ": $param }){ typeid, " + field + " } }";
 
@@ -660,7 +660,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static void CompareFloatResults(string floatType, string actual, string expected)
         {
-            string fieldName = $"{floatType.ToLowerInvariant()}_types";
+            string fieldName = GetTestFieldName(floatType);
 
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
@@ -869,6 +869,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 TIME_TYPE => LOCALTIME_TYPE,
                 _ => typeName
             };
+        }
+
+        /// <summary>
+        /// Maps a DAB GraphQL scalar type name to the column-name suffix used in the
+        /// supported-types test table (and corresponding GraphQL field). The convention is
+        /// <c>{lower(typeName)}_types</c>, except for <see cref="BYTE_TYPE"/> which is
+        /// <c>"UnsignedByte"</c> after the HC v16 upgrade. SQL Server's tinyint column and
+        /// the corresponding GraphQL field are still named <c>byte_types</c>, so map
+        /// <c>UnsignedByte</c> back to <c>byte</c> for the column-name lookup.
+        /// </summary>
+        protected static string GetTestFieldName(string typeName)
+        {
+            if (typeName == BYTE_TYPE)
+            {
+                return "byte_types";
+            }
+
+            return $"{typeName.ToLowerInvariant()}_types";
         }
 
         protected abstract string MakeQueryOnTypeTable(

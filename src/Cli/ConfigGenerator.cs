@@ -2743,6 +2743,15 @@ namespace Cli
             else
             {
                 minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
+
+                // Track whether config explicitly set a log level. In MCP stdio mode this
+                // allows CLI logs to be emitted to stderr (instead of being suppressed)
+                // when the user expressed intent via the config file rather than --LogLevel.
+                if (deserializedRuntimeConfig.HasExplicitLogLevel())
+                {
+                    Utils.IsLogLevelOverriddenByConfig = true;
+                    Utils.ConfigLogLevel = minimumLogLevel;
+                }
             }
 
             options.CliBuffer.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");

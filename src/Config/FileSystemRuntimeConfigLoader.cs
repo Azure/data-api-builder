@@ -64,8 +64,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     private ILogger<FileSystemRuntimeConfigLoader>? _logger;
 
-    private StartupLogBuffer? _logBuffer;
-
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";
     public const string ENVIRONMENT_PREFIX = "DAB_";
@@ -84,14 +82,19 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     public string ConfigFilePath { get; internal set; }
 
+    /// <summary>
+    /// Indicates whether the most recent TryLoadConfig call encountered a parse error
+    /// that was already emitted to Console.Error.
+    /// </summary>
+    public bool IsParseErrorEmitted { get; private set; }
+
     public FileSystemRuntimeConfigLoader(
         IFileSystem fileSystem,
         HotReloadEventHandler<HotReloadEventArgs>? handler = null,
         string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME,
         string? connectionString = null,
         bool isCliLoader = false,
-        ILogger<FileSystemRuntimeConfigLoader>? logger = null,
-        StartupLogBuffer? logBuffer = null)
+        ILogger<FileSystemRuntimeConfigLoader>? logger = null)
         : base(handler, connectionString)
     {
         _fileSystem = fileSystem;
@@ -99,7 +102,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         ConfigFilePath = GetFinalConfigFilePath();
         _isCliLoader = isCliLoader;
         _logger = logger;
-        _logBuffer = logBuffer;
     }
 
     /// <summary>
@@ -205,6 +207,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         bool? isDevMode = null,
         DeserializationVariableReplacementSettings? replacementSettings = null)
     {
+        IsParseErrorEmitted = false;
         if (_fileSystem.File.Exists(path))
         {
             SendLogToBufferOrLogger(LogLevel.Information, $"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
@@ -241,11 +244,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             // Use default replacement settings if none provided
             replacementSettings ??= new DeserializationVariableReplacementSettings();
 
+            string? parseError = null;
             if (!string.IsNullOrEmpty(json) && TryParseConfig(
                 json,
                 out RuntimeConfig,
+                out parseError,
                 replacementSettings,
-                logger: null,
                 connectionString: _connectionString))
             {
                 if (TrySetupConfigFileWatcher())
@@ -279,6 +283,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             if (LastValidRuntimeConfig is not null)
             {
                 RuntimeConfig = LastValidRuntimeConfig;
+            }
+
+            if (parseError is not null)
+            {
+                SendLogToBufferOrLogger(LogLevel.Error, parseError);
+                IsParseErrorEmitted = true;
             }
 
             config = null;
@@ -520,10 +530,11 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 
     /// <summary>
     /// Flush all logs from the buffer after the log level is set from the RuntimeConfig.
+    /// Logger needs to be present, or else the logs will be lost.
     /// </summary>
     public void FlushLogBuffer()
     {
-        _logBuffer?.FlushToLogger(_logger);
+        _logBuffer.FlushToLogger(_logger!);
     }
 
     /// <summary>
@@ -536,7 +547,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     {
         if (_logger is null)
         {
-            _logBuffer?.BufferLog(logLevel, message);
+            _logBuffer.BufferLog(logLevel, message);
         }
         else
         {

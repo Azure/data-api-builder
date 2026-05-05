@@ -70,8 +70,9 @@ public class ValidateConfigTests
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, COMPLETE_CONFIG_WITH_RELATIONSHIPS_NON_WORKING_CONN_STRING);
         ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
         StringWriter writer = new();
+
         // Capture console output to get error messaging.
-        Console.SetOut(writer);
+        Console.SetError(writer);
 
         // Act
         ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
@@ -200,6 +201,34 @@ public class ValidateConfigTests
     }
 
     /// <summary>
+    /// Validates that when the config has no entities or autoentities, TryParseConfig
+    /// sets a clean error message (not a raw exception with stack trace) and
+    /// IsConfigValid returns false without throwing.
+    /// Regression test for https://github.com/Azure/data-api-builder/issues/3268
+    /// </summary>
+    [TestMethod]
+    public void TestValidateConfigWithNoEntitiesProducesCleanError()
+    {
+        string configWithoutEntities = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
+
+        // Verify TryParseConfig produces a clean error without stack traces.
+        bool parsed = RuntimeConfigLoader.TryParseConfig(configWithoutEntities, out _, out string? parseError);
+
+        Assert.IsFalse(parsed, "Config with no entities should fail to parse.");
+        Assert.IsNotNull(parseError, "parseError should be set when config parsing fails.");
+        StringAssert.Contains(parseError,
+            "Configuration file should contain either at least the entities or autoentities property",
+            "Parse error should contain the clean validation message.");
+        Assert.IsFalse(parseError.Contains("StackTrace"),
+            "Stack trace should not be present in parse error.");
+
+        // Verify IsConfigValid also returns false cleanly (no exception thrown).
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, configWithoutEntities);
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+        Assert.IsFalse(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
+    }
+
+    /// <summary>
     /// This Test is used to verify that the validate command is able to catch when data source field is missing.
     /// </summary>
     [TestMethod]
@@ -264,6 +293,7 @@ public class ValidateConfigTests
         ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
 
         // Act
+        Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
         ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
 
         // Assert

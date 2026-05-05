@@ -37,7 +37,7 @@ namespace Cli
         public static bool Export(ExportOptions options, ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             // Attempt to locate the runtime configuration file based on CLI options
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader: loader, userProvidedConfigFile: options.Config, runtimeConfigFile: out string runtimeConfigFile))
             {
                 logger.LogError("Failed to find the config file provided, check your options and try again.");
                 return false;

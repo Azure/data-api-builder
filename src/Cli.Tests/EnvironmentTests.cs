@@ -162,9 +162,9 @@ public class EnvironmentTests
             $"-c {TEST_RUNTIME_CONFIG_FILE}"
         );
 
-        string? output = await process.StandardError.ReadLineAsync();
-        Assert.AreEqual("Deserialization of the configuration file failed during a post-processing step.", output);
-        output = await process.StandardError.ReadToEndAsync();
+        string? output = await process.StandardError.ReadToEndAsync();
+        Assert.IsNotNull(output);
+        // Clean error message on stderr with no stack trace.
         StringAssert.Contains(output, "A valid Connection String should be provided.", StringComparison.Ordinal);
         process.Kill();
     }

@@ -371,6 +371,15 @@ namespace Cli
                 return false;
             }
 
+            if (runtimeConfig.DataSource is null)
+            {
+                _logger.LogError(
+                    "Cannot add an entity to '{runtimeConfigFile}' because it has no data source. " +
+                    "If this is a root config (uses data-source-files), run 'dab add' against the specific child config file instead.",
+                    runtimeConfigFile);
+                return false;
+            }
+
             if (!TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig))
             {
                 _logger.LogError("Failed to add a new entity.");
@@ -674,6 +683,15 @@ namespace Cli
             if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
             {
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (runtimeConfig.DataSource is null)
+            {
+                _logger.LogError(
+                    "Cannot configure '{runtimeConfigFile}' because it has no data source. " +
+                    "If this is a root config (uses data-source-files), run 'dab configure' against the specific child config file instead.",
+                    runtimeConfigFile);
                 return false;
             }
 
@@ -1900,6 +1918,15 @@ namespace Cli
             if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
             {
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (runtimeConfig.DataSource is null)
+            {
+                _logger.LogError(
+                    "Cannot update an entity in '{runtimeConfigFile}' because it has no data source. " +
+                    "If this is a root config (uses data-source-files), run 'dab update' against the specific child config file instead.",
+                    runtimeConfigFile);
                 return false;
             }
 

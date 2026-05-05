@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 
@@ -96,7 +97,20 @@ public class RuntimeConfigLoaderTests
         StringWriter sw = new();
         Console.SetError(sw);
 
+        ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.SetMinimumLevel(LogLevel.Trace);
+            builder.AddConsole(options =>
+            {
+                options.LogToStandardErrorThreshold = LogLevel.Error;
+            });
+        });
+        ILogger<FileSystemRuntimeConfigLoader> logger = loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
+
+        loader.SetLogger(logger);
         loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
+
+        await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
 
         Assert.IsTrue(loader.IsParseErrorEmitted,
             "IsParseErrorEmitted should be true when config parsing fails.");
@@ -484,7 +498,19 @@ public class RuntimeConfigLoaderTests
             {
                 Console.SetError(sw);
 
+                ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+                {
+                    builder.SetMinimumLevel(LogLevel.Trace);
+                    builder.AddConsole(options =>
+                    {
+                        options.LogToStandardErrorThreshold = LogLevel.Error;
+                    });
+                });
+                ILogger<FileSystemRuntimeConfigLoader> logger = loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
+
+                loader.SetLogger(logger);
                 bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
+                await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
                 string error = sw.ToString();
 
                 Assert.IsFalse(loaded, "Config loading should fail when a child config file exists but cannot be parsed.");

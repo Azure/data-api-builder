@@ -157,6 +157,8 @@ namespace Azure.DataApiBuilder.Service
 
                     // Add filter for dynamic log level changes (e.g., via MCP logging/setLevel)
                     logging.AddFilter(logLevel => LogLevelProvider.ShouldLog(logLevel));
+                    logging.AddFilter("Microsoft", logLevel => LogLevelProvider.ShouldLog(logLevel));
+                    logging.AddFilter("Microsoft.Hosting.Lifetime", logLevel => LogLevelProvider.ShouldLog(logLevel));
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {

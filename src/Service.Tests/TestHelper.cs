@@ -6,9 +6,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -317,7 +319,19 @@ namespace Azure.DataApiBuilder.Service.Tests
         {
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
+
+            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.SetMinimumLevel(LogLevel.Trace);
+                builder.AddConsole(options =>
+                {
+                    options.LogToStandardErrorThreshold = LogLevel.Error;
+                });
+            });
+
+            ILogger<FileSystemRuntimeConfigLoader> logger = loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            loader.SetLogger(logger);
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
             return runtimeConfigProvider;
         }
@@ -380,6 +394,25 @@ namespace Azure.DataApiBuilder.Service.Tests
                 MergeArrayHandling = MergeArrayHandling.Union
             });
             return configurationJson.ToString();
+        }
+
+        /// <summary>
+        /// Helper function to add retry logic with delay when there is a function
+        /// that requires the to wait some time for a condition to be met.
+        /// </summary>
+        /// <param name="condition">Boolean condition that needs to be met</param>
+        /// <returns></returns>
+        public static async Task DelayTask(Func<bool> condition)
+        {
+            int retryCount = 0;
+            while (retryCount < ConfigurationTests.RETRY_COUNT && condition())
+            {
+                retryCount++;
+                if (condition())
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(ConfigurationTests.RETRY_WAIT_SECONDS, retryCount)));
+                }
+            }
         }
     }
 }

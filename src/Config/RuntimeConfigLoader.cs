@@ -239,7 +239,7 @@ public abstract class RuntimeConfigLoader
             }
 
             // retreive current connection string from config
-            string updatedConnectionString = config.DataSource.ConnectionString;
+            string updatedConnectionString = config.DataSource?.ConnectionString ?? string.Empty;
 
             if (!string.IsNullOrEmpty(connectionString))
             {
@@ -247,34 +247,39 @@ public abstract class RuntimeConfigLoader
                 updatedConnectionString = connectionString;
             }
 
-            Dictionary<string, string> datasourceNameToConnectionString = new();
-
-            // add to dictionary if datasourceName is present
-            datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
-
-            // iterate over dictionary and update runtime config with connection strings.
-            foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
+            // Post-processing for connection strings only applies when a data source is present.
+            // Root configs (with data-source-files) may not have a data source.
+            if (config.DataSource is not null)
             {
-                string updatedConnection = connectionValue;
+                Dictionary<string, string> datasourceNameToConnectionString = new();
 
-                DataSource ds = config.GetDataSourceFromDataSourceName(dataSourceKey);
+                // add to dictionary if datasourceName is present
+                datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
 
-                // Add Application Name for telemetry for MsSQL or PgSql
-                if (ds.DatabaseType is DatabaseType.MSSQL && replacementSettings?.DoReplaceEnvVar == true)
+                // iterate over dictionary and update runtime config with connection strings.
+                foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
                 {
-                    updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
-                }
-                else if (ds.DatabaseType is DatabaseType.PostgreSQL && replacementSettings?.DoReplaceEnvVar == true)
-                {
-                    updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue);
-                }
+                    string updatedConnection = connectionValue;
 
-                ds = ds with { ConnectionString = updatedConnection };
-                config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
+                    DataSource ds = config.GetDataSourceFromDataSourceName(dataSourceKey);
 
-                if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
-                {
-                    config = config with { DataSource = ds };
+                    // Add Application Name for telemetry for MsSQL or PgSql
+                    if (ds.DatabaseType is DatabaseType.MSSQL && replacementSettings?.DoReplaceEnvVar == true)
+                    {
+                        updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
+                    }
+                    else if (ds.DatabaseType is DatabaseType.PostgreSQL && replacementSettings?.DoReplaceEnvVar == true)
+                    {
+                        updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue);
+                    }
+
+                    ds = ds with { ConnectionString = updatedConnection };
+                    config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
+
+                    if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        config = config with { DataSource = ds };
+                    }
                 }
             }
         }

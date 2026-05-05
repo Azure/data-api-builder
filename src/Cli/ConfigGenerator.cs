@@ -371,6 +371,15 @@ namespace Cli
                 return false;
             }
 
+            if (runtimeConfig.DataSource is null)
+            {
+                _logger.LogError(
+                    "Cannot add an entity to '{runtimeConfigFile}' because it has no data source. " +
+                    "If this is a root config (uses data-source-files), run 'dab add' against the specific child config file instead.",
+                    runtimeConfigFile);
+                return false;
+            }
+
             if (!TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig))
             {
                 _logger.LogError("Failed to add a new entity.");
@@ -402,7 +411,7 @@ namespace Cli
             // Try to get the source object as string or DatabaseObjectSource for new Entity
             if (!TryCreateSourceObjectForNewEntity(
                 options,
-                initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL,
+                initialRuntimeConfig.DataSource!.DatabaseType == DatabaseType.CosmosDB_NoSQL,
                 out EntitySource? source))
             {
                 _logger.LogError("Unable to create the source object.");
@@ -677,6 +686,15 @@ namespace Cli
                 return false;
             }
 
+            if (runtimeConfig.DataSource is null)
+            {
+                _logger.LogError(
+                    "Cannot configure '{runtimeConfigFile}' because it has no data source. " +
+                    "If this is a root config (uses data-source-files), run 'dab configure' against the specific child config file instead.",
+                    runtimeConfigFile);
+                return false;
+            }
+
             if (!TryUpdateConfiguredDataSourceOptions(options, ref runtimeConfig))
             {
                 return false;
@@ -715,7 +733,7 @@ namespace Cli
             ConfigureOptions options,
             [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
         {
-            DatabaseType dbType = runtimeConfig.DataSource.DatabaseType;
+            DatabaseType dbType = runtimeConfig.DataSource!.DatabaseType;
             string dataSourceConnectionString = runtimeConfig.DataSource.ConnectionString;
             DatasourceHealthCheckConfig? datasourceHealthCheckConfig = runtimeConfig.DataSource.Health;
             UserDelegatedAuthOptions? userDelegatedAuthConfig = runtimeConfig.DataSource.UserDelegatedAuth;
@@ -1903,6 +1921,15 @@ namespace Cli
                 return false;
             }
 
+            if (runtimeConfig.DataSource is null)
+            {
+                _logger.LogError(
+                    "Cannot update an entity in '{runtimeConfigFile}' because it has no data source. " +
+                    "If this is a root config (uses data-source-files), run 'dab update' against the specific child config file instead.",
+                    runtimeConfigFile);
+                return false;
+            }
+
             if (!TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedConfig))
             {
                 _logger.LogError("Failed to update the Entity: {entityName}.", options.Entity);
@@ -1970,7 +1997,7 @@ namespace Cli
                 }
             }
 
-            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource!.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
             EntityPermission[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, EntityRelationship>? updatedRelationships = entity.Relationships;
@@ -2591,7 +2618,7 @@ namespace Cli
         public static bool VerifyCanUpdateRelationship(RuntimeConfig runtimeConfig, string? cardinality, string? targetEntity)
         {
             // CosmosDB doesn't support Relationship
-            if (runtimeConfig.DataSource.DatabaseType.Equals(DatabaseType.CosmosDB_NoSQL))
+            if (runtimeConfig.DataSource!.DatabaseType.Equals(DatabaseType.CosmosDB_NoSQL))
             {
                 _logger.LogError("Adding/updating Relationships is currently not supported in CosmosDB.");
                 return false;
@@ -2708,7 +2735,7 @@ namespace Cli
                 options.CliBuffer.BufferLog(LogLevel.Information, $"Loaded config file: {runtimeConfigFile}");
             }
 
-            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
+            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource?.ConnectionString))
             {
                 options.CliBuffer.BufferLog(LogLevel.Error, "Invalid connection-string provided in the config.");
                 return false;
@@ -2814,10 +2841,10 @@ namespace Cli
 
             bool isValid = runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
 
-            // Additional validation: warn if fields are missing and MCP is enabled
-            if (isValid)
+            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
             {
-                if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
+                // Additional validation: warn if fields are missing and MCP is enabled
+                if (isValid)
                 {
                     bool mcpEnabled = config.IsMcpEnabled;
                     if (mcpEnabled)
@@ -3448,9 +3475,9 @@ namespace Cli
                 return false;
             }
 
-            if (runtimeConfig.DataSource.DatabaseType != DatabaseType.MSSQL)
+            if (runtimeConfig.DataSource?.DatabaseType != DatabaseType.MSSQL)
             {
-                _logger.LogError("The autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
+                _logger.LogError("The autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource?.DatabaseType);
                 return false;
             }
 
@@ -3804,5 +3831,6 @@ namespace Cli
 
             return true;
         }
+
     }
 }

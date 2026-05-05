@@ -19,6 +19,8 @@ namespace Cli.Commands
     {
         private const string LOGLEVEL_HELPTEXT = "Specifies logging level as provided value. For possible values, see: https://go.microsoft.com/fwlink/?linkid=2263106";
 
+        public LogBuffer CliBuffer { get; }
+
         public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, bool mcpStdio, string? mcpRole, string config)
             : base(config)
         {
@@ -27,6 +29,7 @@ namespace Cli.Commands
             IsHttpsRedirectionDisabled = isHttpsRedirectionDisabled;
             McpStdio = mcpStdio;
             McpRole = mcpRole;
+            CliBuffer = new LogBuffer();
         }
 
         // SetName defines mutually exclusive sets, ie: can not have
@@ -48,11 +51,18 @@ namespace Cli.Commands
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
+            CliBuffer.BufferLog(Microsoft.Extensions.Logging.LogLevel.Information, $"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
             bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(this, loader, fileSystem);
 
             if (!isSuccess)
             {
+                // Update loggers and flush buffers to ensure that all the logs are printed if the TryStartEngineWithOptions fails.
+                logger = Utils.LoggerFactoryForCli.CreateLogger<Program>();
+                loader.SetLogger(Utils.LoggerFactoryForCli.CreateLogger<FileSystemRuntimeConfigLoader>());
+
+                CliBuffer.FlushToLogger(logger);
+                loader.FlushLogBuffer();
+
                 logger.LogError("Failed to start the engine{mode}.",
                     McpStdio ? " in MCP stdio mode" : string.Empty);
             }

@@ -2555,7 +2555,7 @@ namespace Cli
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile, options.CliBuffer))
             {
                 return false;
             }
@@ -2569,19 +2569,19 @@ namespace Cli
                 // duplicate output (stderr + stdout).
                 if (!loader.IsParseErrorEmitted)
                 {
-                    _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                    options.CliBuffer.BufferLog(LogLevel.Error, $"Failed to parse the config file: {runtimeConfigFile}.");
                 }
 
                 return false;
             }
             else
             {
-                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
+                options.CliBuffer.BufferLog(LogLevel.Information, $"Loaded config file: {runtimeConfigFile}");
             }
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
             {
-                _logger.LogError("Invalid connection-string provided in the config.");
+                options.CliBuffer.BufferLog(LogLevel.Error, "Invalid connection-string provided in the config.");
                 return false;
             }
 
@@ -2600,9 +2600,8 @@ namespace Cli
             {
                 if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
                 {
-                    _logger.LogError(
-                        "LogLevel's valid range is 0 to 6, your value: {logLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel",
-                        options.LogLevel);
+                    options.CliBuffer.BufferLog(LogLevel.Error,
+                        $"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel");
                     return false;
                 }
 
@@ -2611,8 +2610,28 @@ namespace Cli
                 // This allows MCP logging/setLevel to work when no CLI override is present.
                 args.Add("--LogLevel");
                 args.Add(minimumLogLevel.ToString());
-                _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
             }
+            else
+            {
+                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
+            }
+
+            options.CliBuffer.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");
+
+            Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli(minimumLogLevel);
+
+            // Update logger for StartOptions and
+            // flush all current logs saved in LogBuffer
+            ILogger<Program> programLogger = Utils.LoggerFactoryForCli.CreateLogger<Program>();
+            options.CliBuffer.FlushToLogger(programLogger);
+
+            // Update logger for Utils
+            ILogger<Utils> utilsLogger = Utils.LoggerFactoryForCli.CreateLogger<Utils>();
+            Utils.SetCliUtilsLogger(utilsLogger);
+
+            // Update logger for ConfigGenerator
+            ILogger<ConfigGenerator> configGeneratorLogger = Utils.LoggerFactoryForCli.CreateLogger<ConfigGenerator>();
+            SetLoggerForCliConfigGenerator(configGeneratorLogger);
 
             // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)
@@ -2714,16 +2733,32 @@ namespace Cli
             string? configToBeUsed,
             FileSystemRuntimeConfigLoader loader,
             IFileSystem fileSystem,
-            out string runtimeConfigFile)
+            out string runtimeConfigFile,
+            LogBuffer? logBuffer = null)
         {
-            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
+            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, logBuffer, out configToBeUsed))
             {
-                _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
+                if (logBuffer is null)
+                {
+                    _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
+                }
+                else
+                {
+                    logBuffer.BufferLog(LogLevel.Information, $"Using merged config file based on environment: {configToBeUsed}.");
+                }
             }
 
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile, logBuffer))
             {
-                _logger.LogError("Config not provided and default config file doesn't exist.");
+                if (logBuffer is null)
+                {
+                    _logger.LogError("Config not provided and default config file doesn't exist.");
+                }
+                else
+                {
+                    logBuffer.BufferLog(LogLevel.Error, "Config not provided and default config file doesn't exist.");
+                }
+
                 return false;
             }
 

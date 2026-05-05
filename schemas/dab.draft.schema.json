@@ -24,7 +24,7 @@
             "postgresql",
             "mysql",
             "cosmosdb_nosql",
-            "cosmosdb_postgresql"
+            "dwsql"
           ]
         },
         "connection-string": {
@@ -32,7 +32,7 @@
           "type": "string"
         },
         "options": {
-          "description": "Database specific properties for the backend database",
+          "description": "Database-specific connection and configuration properties. Available options depend on the database-type.",
           "type": "object"
         },
         "health": {
@@ -42,7 +42,7 @@
           "properties": {
             "enabled": {
               "$ref": "#/$defs/boolean-or-string",
-              "description": "Enable health check endpoint for something",
+              "description": "Enable health check for this data source.",
               "default": true,
               "additionalProperties": false
             },
@@ -97,7 +97,7 @@
           "then": {
             "properties": {
               "options": {
-                "description": "Database specific properties for the backend database",
+                "description": "Database-specific connection and configuration properties. Available options depend on the database-type.",
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
@@ -124,7 +124,7 @@
           "if": {
             "properties": {
               "database-type": {
-                "const": "mssql"
+                "enum": ["mssql", "dwsql"]
               }
             }
           },
@@ -212,12 +212,13 @@
             },
             "enabled": {
               "$ref": "#/$defs/boolean-or-string",
-              "description": "Allow enabling/disabling REST requests for all entities."
+              "description": "Allow enabling/disabling REST requests for all entities.",
+              "default": true
             },
             "request-body-strict": {
               "$ref": "#/$defs/boolean-or-string",
               "description": "Does not allow extraneous fields in request body when set to true.",
-              "default": true
+              "default": false
             }
           }
         },
@@ -237,11 +238,12 @@
             },
             "enabled": {
               "$ref": "#/$defs/boolean-or-string",
-              "description": "Allow enabling/disabling GraphQL requests for all entities."
+              "description": "Allow enabling/disabling GraphQL requests for all entities.",
+              "default": true
             },
             "depth-limit": {
               "type": [ "integer", "null" ],
-              "description": "Maximum allowed depth of a GraphQL query.",
+              "description": "Maximum allowed depth of a GraphQL query. Only positive integers are enforced. Default: null (no limit). Use -1 to explicitly remove a previously set limit.",
               "default": null
             },
             "multiple-mutations": {
@@ -295,32 +297,32 @@
                     "describe-entities": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the describe-entities tool.",
-                      "default": false
+                      "default": true
                     },
                     "create-record": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the create-record tool.",
-                      "default": false
+                      "default": true
                     },
                     "read-records": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the read-records tool.",
-                      "default": false
+                      "default": true
                     },
                     "update-record": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the update-record tool.",
-                      "default": false
+                      "default": true
                     },
                     "delete-record": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the delete-record tool.",
-                      "default": false
+                      "default": true
                     },
                     "execute-entity": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the execute-entity tool.",
-                      "default": false
+                      "default": true
                     },
                     "aggregate-records": {
                       "description": "Enable/disable or configure the aggregate-records MCP tool.",
@@ -349,7 +351,7 @@
                           }
                         }
                       ],
-                      "default": false
+                      "default": true
                     }
                   }
                 }
@@ -907,9 +909,11 @@
                 "additionalProperties": false,
                 "properties": {
                   "role": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                   },
                   "actions": {
+                    "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                     "oneOf": [
                       {
                         "type": "string",
@@ -1300,9 +1304,11 @@
                   "additionalProperties": false,
                   "properties": {
                     "role": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                     },
                     "actions": {
+                      "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                       "oneOf": [
                         {
                           "type": "string",
@@ -1374,9 +1380,11 @@
                   "additionalProperties": false,
                   "properties": {
                     "role": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                     },
                     "actions": {
+                      "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                       "oneOf": [
                         {
                           "type": "string",

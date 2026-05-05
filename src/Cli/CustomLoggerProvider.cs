@@ -28,14 +28,18 @@ public class CustomLoggerProvider : ILoggerProvider
         private readonly LogLevel _minimumLogLevel;
 
         // Minimum LogLevel for CLI output.
-        // For MCP mode: use CLI's --LogLevel if specified, otherwise suppress all.
-        // For non-MCP mode: always use Information.
+        // For MCP mode: prefer CLI's --LogLevel, fall back to config's log-level, otherwise suppress all.
+        // For non-MCP mode: always use the level passed to the constructor.
         // Note: --LogLevel is meant for the ENGINE's log level, not CLI's output.
         public CustomConsoleLogger(LogLevel minimumLogLevel = LogLevel.Information)
         {
             _minimumLogLevel = Cli.Utils.IsMcpStdioMode
-            ? (Cli.Utils.IsLogLevelOverriddenByCli ? Cli.Utils.CliLogLevel : LogLevel.None)
-            : minimumLogLevel;
+                ? (Cli.Utils.IsLogLevelOverriddenByCli
+                    ? Cli.Utils.CliLogLevel
+                    : Cli.Utils.IsLogLevelOverriddenByConfig
+                        ? Cli.Utils.ConfigLogLevel
+                        : LogLevel.None)
+                : minimumLogLevel;
         }
 
         //  Color values based on LogLevel
@@ -89,16 +93,17 @@ public class CustomLoggerProvider : ILoggerProvider
         /// <summary>
         /// Creates Log message by setting console message color based on LogLevel.
         /// In MCP stdio mode:
-        /// - If user explicitly set --LogLevel: write to stderr (colored output)
+        /// - If user explicitly set --LogLevel (CLI) or log-level (config): write to stderr (colored output)
         /// - Otherwise: suppress entirely to keep stdout clean for JSON-RPC protocol.
         /// </summary>
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            // In MCP stdio mode, only output logs if user explicitly requested a log level.
+            // In MCP stdio mode, only output logs if user explicitly requested a log level
+            // via either the CLI --LogLevel flag or the runtime config file's log-level.
             // In that case, write to stderr to keep stdout clean for JSON-RPC.
             if (Cli.Utils.IsMcpStdioMode)
             {
-                if (!Cli.Utils.IsLogLevelOverriddenByCli)
+                if (!Cli.Utils.IsLogLevelOverriddenByCli && !Cli.Utils.IsLogLevelOverriddenByConfig)
                 {
                     return; // Suppress entirely when no explicit log level
                 }
@@ -116,7 +121,15 @@ public class CustomLoggerProvider : ILoggerProvider
 
                 // In MCP stdio mode, stdout is reserved for JSON-RPC protocol messages.
                 // Logs must go to stderr to avoid corrupting the MCP communication channel.
-                Console.Error.WriteLine($"{mcpAbbreviation}: {formatter(state, exception)}");
+                // Apply colors so the abbreviation matches the visual style of engine logs.
+                ConsoleColor mcpOriginalForeGroundColor = Console.ForegroundColor;
+                ConsoleColor mcpOriginalBackGroundColor = Console.BackgroundColor;
+                Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
+                Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
+                Console.Error.Write($"{mcpAbbreviation}:");
+                Console.ForegroundColor = mcpOriginalForeGroundColor;
+                Console.BackgroundColor = mcpOriginalBackGroundColor;
+                Console.Error.WriteLine($" {formatter(state, exception)}");
                 return;
             }
 

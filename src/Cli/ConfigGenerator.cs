@@ -2725,6 +2725,12 @@ namespace Cli
             /// - MCP stdio mode: Service defaults to None for clean stdout output
             /// - Non-MCP mode: Service defaults to Debug (Development) or Error (Production) based on config
             LogLevel minimumLogLevel;
+
+            // Reset the config-based override flag so stale state from a prior call
+            // (these are static) cannot leak into the current run.
+            Utils.IsLogLevelOverriddenByConfig = false;
+            Utils.ConfigLogLevel = LogLevel.Information;
+
             if (options.LogLevel is not null)
             {
                 if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
@@ -2743,6 +2749,15 @@ namespace Cli
             else
             {
                 minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
+
+                // Track whether config explicitly set a log level. In MCP stdio mode this
+                // allows CLI logs to be emitted to stderr (instead of being suppressed)
+                // when the user expressed intent via the config file rather than --LogLevel.
+                if (deserializedRuntimeConfig.HasExplicitLogLevel())
+                {
+                    Utils.IsLogLevelOverriddenByConfig = true;
+                    Utils.ConfigLogLevel = minimumLogLevel;
+                }
             }
 
             options.CliBuffer.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");

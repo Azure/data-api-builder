@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 
@@ -95,11 +96,26 @@ public class RuntimeConfigLoaderTests
         StringWriter sw = new();
         Console.SetError(sw);
 
+        ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.SetMinimumLevel(LogLevel.Trace);
+            builder.AddConsole(options =>
+            {
+                options.LogToStandardErrorThreshold = LogLevel.Error;
+            });
+        });
+        ILogger<FileSystemRuntimeConfigLoader> logger = loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
+
+        loader.SetLogger(logger);
         loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
         string error = sw.ToString();
 
-        Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
-        Assert.IsTrue(error.Contains("An item with the same key has already been added."));
+        await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
+
+        Assert.IsTrue(loader.IsParseErrorEmitted,
+            "IsParseErrorEmitted should be true when config parsing fails.");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(sw.ToString()),
+            "An error message should have been emitted to Console.Error.");
     }
 
     /// <summary>

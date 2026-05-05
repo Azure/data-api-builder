@@ -65,8 +65,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// </summary>
     private ILogger<FileSystemRuntimeConfigLoader>? _logger;
 
-    private StartupLogBuffer? _logBuffer;
-
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";
     public const string ENVIRONMENT_PREFIX = "DAB_";
@@ -91,8 +89,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME,
         string? connectionString = null,
         bool isCliLoader = false,
-        ILogger<FileSystemRuntimeConfigLoader>? logger = null,
-        StartupLogBuffer? logBuffer = null)
+        ILogger<FileSystemRuntimeConfigLoader>? logger = null)
         : base(handler, connectionString)
     {
         _fileSystem = fileSystem;
@@ -100,7 +97,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         ConfigFilePath = GetFinalConfigFilePath();
         _isCliLoader = isCliLoader;
         _logger = logger;
-        _logBuffer = logBuffer;
     }
 
     /// <summary>
@@ -301,6 +297,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             if (LastValidRuntimeConfig is not null)
             {
                 RuntimeConfig = LastValidRuntimeConfig;
+            }
+
+            if (parseError is not null)
+            {
+                SendLogToBufferOrLogger(LogLevel.Error, parseError);
+                IsParseErrorEmitted = true;
             }
 
             config = null;
@@ -542,10 +544,11 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 
     /// <summary>
     /// Flush all logs from the buffer after the log level is set from the RuntimeConfig.
+    /// Logger needs to be present, or else the logs will be lost.
     /// </summary>
     public void FlushLogBuffer()
     {
-        _logBuffer?.FlushToLogger(_logger);
+        _logBuffer.FlushToLogger(_logger!);
     }
 
     /// <summary>
@@ -558,7 +561,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     {
         if (_logger is null)
         {
-            _logBuffer?.BufferLog(logLevel, message);
+            _logBuffer.BufferLog(logLevel, message);
         }
         else
         {

@@ -123,18 +123,18 @@ namespace Cli
 
             bool isMultipleCreateEnabledForGraphQL;
 
-            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-mutations.create.enabled is specified for other database types,
             // a warning is logged.
             // When multiple mutation operations are extended for other database types, this option should be honored.
             // Tracked by issue #2001: https://github.com/Azure/data-api-builder/issues/2001.
             if (dbType is not DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
             {
-                _logger.LogWarning($"The option --graphql.multiple-create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
+                _logger.LogWarning($"The option --graphql.multiple-mutations.create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
             }
 
             MultipleMutationOptions? multipleMutationOptions = null;
 
-            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-mutations.create.enabled is specified for other database types,
             // it is not honored.
             if (dbType is DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
             {
@@ -347,7 +347,7 @@ namespace Cli
         /// <summary>
         /// Helper method to determine if the multiple create operation is enabled or not based on the inputs from dab init command.
         /// </summary>
-        /// <param name="multipleCreateEnabledOptionValue">Input value for --graphql.multiple-create.enabled option of the init command</param>
+        /// <param name="multipleCreateEnabledOptionValue">Input value for --graphql.multiple-mutations.create.enabled option of the init command</param>
         /// <returns>True/False</returns>
         private static bool IsMultipleCreateOperationEnabled(CliBool multipleCreateEnabledOptionValue)
         {
@@ -464,7 +464,8 @@ namespace Cli
 
             EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
-            EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
+            EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtlSeconds, options.CacheLevel);
+            EntityHealthCheckConfig? entityHealthOptions = ConstructEntityHealthOptions(options.HealthEnabled);
             EntityMcpOptions? mcpOptions = null;
 
             if (options.McpDmlTools is not null || options.McpCustomTool is not null)
@@ -489,7 +490,8 @@ namespace Cli
                 Mappings: null,
                 Cache: cacheOptions,
                 Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description,
-                Mcp: mcpOptions);
+                Mcp: mcpOptions,
+                Health: entityHealthOptions);
 
             // Add entity to existing runtime config.
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialRuntimeConfig.Entities.Entities)
@@ -758,39 +760,41 @@ namespace Cli
                 dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
             }
 
-            // Handle health.name option
-            if (options.DataSourceHealthName is not null)
+            // Handle health options (name, enabled, threshold-ms)
+            if (options.DataSourceHealthName is not null
+                || options.DataSourceHealthEnabled is not null
+                || options.DataSourceHealthThresholdMs is not null)
             {
-                // If there's no existing health config, create one with the name
-                // Note: Passing enabled: null results in Enabled = true at runtime (default behavior)
-                // but UserProvidedEnabled = false, so the enabled property won't be serialized to JSON.
-                // This ensures only the name property is written to the config file.
                 if (datasourceHealthCheckConfig is null)
                 {
-                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(enabled: null, name: options.DataSourceHealthName);
+                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
+                        enabled: options.DataSourceHealthEnabled,
+                        name: options.DataSourceHealthName,
+                        thresholdMs: options.DataSourceHealthThresholdMs);
                 }
                 else
                 {
-                    // Update the existing health config with the new name while preserving other settings.
-                    // DatasourceHealthCheckConfig is a record (immutable), so we create a new instance.
-                    // Preserve threshold only if it was explicitly set by the user
-                    int? thresholdToPreserve = datasourceHealthCheckConfig.UserProvidedThresholdMs
-                        ? datasourceHealthCheckConfig.ThresholdMs
-                        : null;
-                    // Preserve enabled only if it was explicitly set by the user
-                    bool? enabledToPreserve = datasourceHealthCheckConfig.UserProvidedEnabled
-                        ? datasourceHealthCheckConfig.Enabled
-                        : null;
+                    int? thresholdToPreserve = options.DataSourceHealthThresholdMs
+                        ?? (datasourceHealthCheckConfig.UserProvidedThresholdMs
+                            ? datasourceHealthCheckConfig.ThresholdMs
+                            : null);
+                    bool? enabledToPreserve = options.DataSourceHealthEnabled
+                        ?? (datasourceHealthCheckConfig.UserProvidedEnabled
+                            ? datasourceHealthCheckConfig.Enabled
+                            : null);
+                    string? nameToPreserve = options.DataSourceHealthName
+                        ?? datasourceHealthCheckConfig.Name;
                     datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
                         enabled: enabledToPreserve,
-                        name: options.DataSourceHealthName,
+                        name: nameToPreserve,
                         thresholdMs: thresholdToPreserve);
                 }
             }
 
             // Handle user-delegated-auth options
             if (options.DataSourceUserDelegatedAuthEnabled is not null
-                || options.DataSourceUserDelegatedAuthDatabaseAudience is not null)
+                || options.DataSourceUserDelegatedAuthDatabaseAudience is not null
+                || options.DataSourceUserDelegatedAuthProvider is not null)
             {
                 // Determine the enabled state: use new value if provided, otherwise preserve existing
                 bool enabled = options.DataSourceUserDelegatedAuthEnabled
@@ -808,8 +812,10 @@ namespace Cli
                 string? databaseAudience = options.DataSourceUserDelegatedAuthDatabaseAudience
                     ?? userDelegatedAuthConfig?.DatabaseAudience;
 
-                // Get provider: preserve existing or use default "EntraId"
-                string? provider = userDelegatedAuthConfig?.Provider ?? "EntraId";
+                // Get provider: use new value if provided, otherwise preserve existing or use default "EntraId"
+                string? provider = options.DataSourceUserDelegatedAuthProvider
+                    ?? userDelegatedAuthConfig?.Provider
+                    ?? "EntraId";
 
                 // Create or update user-delegated-auth config
                 userDelegatedAuthConfig = new UserDelegatedAuthOptions(
@@ -824,6 +830,13 @@ namespace Cli
                 UserDelegatedAuth = userDelegatedAuthConfig
             };
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
+
+            // Handle data-source-files
+            if (options.DataSourceFiles is not null && options.DataSourceFiles.Any())
+            {
+                DataSourceFiles dataSourceFiles = new(options.DataSourceFiles);
+                runtimeConfig = runtimeConfig with { DataSourceFiles = dataSourceFiles };
+            }
 
             return runtimeConfig != null;
         }
@@ -988,6 +1001,39 @@ namespace Cli
                 }
             }
 
+            // Pagination: MaxPageSize, DefaultPageSize, NextLinkRelative
+            if (options.RuntimePaginationMaxPageSize != null ||
+                options.RuntimePaginationDefaultPageSize != null ||
+                options.RuntimePaginationNextLinkRelative != null)
+            {
+                PaginationOptions currentPagination = runtimeConfig?.Runtime?.Pagination ?? new();
+                int? maxPageSize = options.RuntimePaginationMaxPageSize ?? (currentPagination.UserProvidedMaxPageSize ? currentPagination.MaxPageSize : null);
+                int? defaultPageSize = options.RuntimePaginationDefaultPageSize ?? (currentPagination.UserProvidedDefaultPageSize ? currentPagination.DefaultPageSize : null);
+                bool? nextLinkRelative = options.RuntimePaginationNextLinkRelative ?? currentPagination.NextLinkRelative;
+
+                PaginationOptions updatedPaginationOptions = new(
+                    MaxPageSize: maxPageSize,
+                    DefaultPageSize: defaultPageSize,
+                    NextLinkRelative: nextLinkRelative);
+
+                if (options.RuntimePaginationMaxPageSize != null)
+                {
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.pagination.max-page-size as '{value}'", options.RuntimePaginationMaxPageSize);
+                }
+
+                if (options.RuntimePaginationDefaultPageSize != null)
+                {
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.pagination.default-page-size as '{value}'", options.RuntimePaginationDefaultPageSize);
+                }
+
+                if (options.RuntimePaginationNextLinkRelative != null)
+                {
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.pagination.next-link-relative as '{value}'", options.RuntimePaginationNextLinkRelative);
+                }
+
+                runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Pagination = updatedPaginationOptions } };
+            }
+
             // Compression: Level
             if (options.RuntimeCompressionLevel != null)
             {
@@ -1003,13 +1049,14 @@ namespace Cli
                 }
             }
 
-            // Host: Mode, Cors.Origins, Cors.AllowCredentials, Authentication.Provider, Authentication.Jwt.Audience, Authentication.Jwt.Issuer
+            // Host: Mode, Cors.Origins, Cors.AllowCredentials, Authentication.Provider, Authentication.Jwt.Audience, Authentication.Jwt.Issuer, MaxResponseSizeMb
             if (options.RuntimeHostMode != null ||
                 options.RuntimeHostCorsOrigins != null ||
                 options.RuntimeHostCorsAllowCredentials != null ||
                 options.RuntimeHostAuthenticationProvider != null ||
                 options.RuntimeHostAuthenticationJwtAudience != null ||
-                options.RuntimeHostAuthenticationJwtIssuer != null)
+                options.RuntimeHostAuthenticationJwtIssuer != null ||
+                options.RuntimeHostMaxResponseSizeMb != null)
             {
                 HostOptions? updatedHostOptions = runtimeConfig?.Runtime?.Host;
                 bool status = TryUpdateConfiguredHostValues(options, ref updatedHostOptions);
@@ -1021,6 +1068,30 @@ namespace Cli
                 {
                     return false;
                 }
+            }
+
+            // Health: Enabled, CacheTtlSeconds, MaxQueryParallelism, Roles
+            if (options.RuntimeHealthEnabled != null ||
+                options.RuntimeHealthCacheTtlSeconds != null ||
+                options.RuntimeHealthMaxQueryParallelism != null ||
+                options.RuntimeHealthRoles != null)
+            {
+                RuntimeHealthCheckConfig existingHealth = runtimeConfig?.Runtime?.Health ?? new();
+                // If any health sub-option is provided without --runtime.health.enabled,
+                // auto-set enabled=true so the section persists in serialized config.
+                bool? enabled = options.RuntimeHealthEnabled
+                    ?? (existingHealth.UserProvidedEnabled ? existingHealth.Enabled : true);
+                int? cacheTtl = options.RuntimeHealthCacheTtlSeconds ?? (existingHealth.UserProvidedTtlOptions ? existingHealth.CacheTtlSeconds : null);
+                int? maxParallelism = options.RuntimeHealthMaxQueryParallelism ?? (existingHealth.UserProvidedMaxQueryParallelism ? existingHealth.MaxQueryParallelism : null);
+                HashSet<string>? roles = options.RuntimeHealthRoles is not null ? new HashSet<string>(options.RuntimeHealthRoles) : existingHealth.Roles;
+
+                RuntimeHealthCheckConfig updatedHealthOptions = new(
+                    enabled: enabled,
+                    roles: roles,
+                    cacheTtlSeconds: cacheTtl,
+                    maxQueryParallelism: maxParallelism);
+
+                runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Health = updatedHealthOptions } };
             }
 
             // Telemetry: Azure Log Analytics
@@ -1060,6 +1131,55 @@ namespace Cli
                 {
                     return false;
                 }
+            }
+
+            // Telemetry: Log Level
+            if (options.RuntimeTelemetryLogLevel is not null && options.RuntimeTelemetryLogLevel.Any())
+            {
+                Dictionary<string, LogLevel?> logLevels = new();
+                foreach (string entry in options.RuntimeTelemetryLogLevel)
+                {
+                    string[] parts = entry.Split(':', 2);
+                    if (parts.Length != 2)
+                    {
+                        _logger.LogError("Invalid log-level format '{entry}'. Expected 'Namespace:Level'.", entry);
+                        return false;
+                    }
+
+                    string ns = parts[0].Trim();
+                    string levelStr = parts[1].Trim();
+
+                    if (string.IsNullOrEmpty(ns))
+                    {
+                        _logger.LogError("Invalid log-level entry: namespace cannot be empty. Use 'Default:Level' for the root filter.");
+                        return false;
+                    }
+
+                    if (!Enum.TryParse(levelStr, ignoreCase: true, out LogLevel level))
+                    {
+                        _logger.LogError("Invalid log level '{level}'. Allowed values: trace, debug, information, warning, error, critical, none.", levelStr);
+                        return false;
+                    }
+
+                    logLevels[ns] = level;
+                }
+
+                // Merge with existing log levels (create a new dictionary to avoid mutating the original)
+                Dictionary<string, LogLevel?> mergedLevels = new(runtimeConfig?.Runtime?.Telemetry?.LoggerLevel ?? new());
+                foreach (KeyValuePair<string, LogLevel?> kvp in logLevels)
+                {
+                    mergedLevels[kvp.Key] = kvp.Value;
+                }
+
+                runtimeConfig = runtimeConfig! with
+                {
+                    Runtime = runtimeConfig.Runtime! with
+                    {
+                        Telemetry = runtimeConfig.Runtime!.Telemetry is not null
+                            ? runtimeConfig.Runtime!.Telemetry with { LoggerLevel = mergedLevels }
+                            : new TelemetryOptions(LoggerLevel: mergedLevels)
+                    }
+                };
             }
 
             return runtimeConfig != null;
@@ -1562,6 +1682,13 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.Issuer as '{updatedValue}'", updatedValue);
                 }
 
+                // Runtime.Host.MaxResponseSizeMb
+                if (options?.RuntimeHostMaxResponseSizeMb != null)
+                {
+                    updatedHostOptions = updatedHostOptions! with { MaxResponseSizeMB = options.RuntimeHostMaxResponseSizeMb, UserProvidedMaxResponseSizeMB = true };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.MaxResponseSizeMb as '{value}'", options.RuntimeHostMaxResponseSizeMb);
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -1850,7 +1977,8 @@ namespace Cli
             Dictionary<string, string>? updatedMappings = entity.Mappings;
             EntityActionPolicy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
-            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
+            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtlSeconds, options.CacheLevel) ?? entity.Cache;
+            EntityHealthCheckConfig? updatedEntityHealthOptions = ConstructEntityHealthOptions(options.HealthEnabled) ?? entity.Health;
 
             // Determine if the entity is or will be a stored procedure
             bool isStoredProcedureAfterUpdate = doOptionsRepresentStoredProcedure || (isCurrentEntityStoredProcedure && options.SourceType is null);
@@ -2113,7 +2241,8 @@ namespace Cli
                 Mappings: updatedMappings,
                 Cache: updatedCacheOptions,
                 Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description,
-                Mcp: updatedMcpOptions
+                Mcp: updatedMcpOptions,
+                Health: updatedEntityHealthOptions
                 );
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
             {

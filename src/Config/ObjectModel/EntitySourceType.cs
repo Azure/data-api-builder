@@ -12,5 +12,6 @@ public enum EntitySourceType
 {
     Table,
     View,
-    [EnumMember(Value = "stored-procedure")] StoredProcedure
+    [EnumMember(Value = "stored-procedure")] StoredProcedure,
+    [EnumMember(Value = "function")] Function
 }

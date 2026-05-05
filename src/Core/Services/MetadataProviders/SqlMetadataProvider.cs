@@ -1474,7 +1474,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     && IsGraphQLReservedName(entity, columnName, graphQLEnabledGlobally: runtimeConfig.IsGraphQLEnabled))
                 {
                     throw new DataApiBuilderException(
-                       message: $"The column '{columnName}' violates GraphQL name restrictions.",
+                       message: $"The column '{columnName}' from '{entityName}' violates GraphQL name restrictions.",
                        statusCode: HttpStatusCode.ServiceUnavailable,
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                 }
@@ -1584,7 +1584,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         }
                     }
 
-                    return IsIntrospectionField(databaseColumnName);
+                    // Possible naming violations are if the field starts with '__' or if it contains whitespace characters.
+                    return IsIntrospectionField(databaseColumnName) || IsGraphQLNameWhiteSpace(databaseColumnName);
                 }
             }
 

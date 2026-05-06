@@ -301,7 +301,7 @@ namespace Cli.Tests
             UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
                 cacheEnabled: "true",
-                cacheTtl: "1"
+                cacheTtlSeconds: "1"
             );
 
             string initialConfig = GetInitialConfigString() + "," + @"
@@ -1157,7 +1157,9 @@ namespace Cli.Tests
                 relationshipFields: null,
                 map: null,
                 cacheEnabled: null,
-                cacheTtl: null,
+                cacheTtlSeconds: null,
+                cacheLevel: null,
+                healthEnabled: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
@@ -1245,7 +1247,9 @@ namespace Cli.Tests
             IEnumerable<string>? restMethodsForStoredProcedure = null,
             string? graphQLOperationForStoredProcedure = null,
             string? cacheEnabled = null,
-            string? cacheTtl = null,
+            string? cacheTtlSeconds = null,
+            string? cacheLevel = null,
+            string? healthEnabled = null,
             string? description = null,
             string? mcpDmlTools = null,
             string? mcpCustomTool = null
@@ -1273,7 +1277,9 @@ namespace Cli.Tests
                 relationshipFields: relationshipFields,
                 map: map,
                 cacheEnabled: cacheEnabled,
-                cacheTtl: cacheTtl,
+                cacheTtlSeconds: cacheTtlSeconds,
+                cacheLevel: cacheLevel,
+                healthEnabled: healthEnabled,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethodsForStoredProcedure,
                 graphQLOperationForStoredProcedure: graphQLOperationForStoredProcedure,
@@ -1335,7 +1341,9 @@ namespace Cli.Tests
                 relationshipFields: null,
                 map: null,
                 cacheEnabled: null,
-                cacheTtl: null,
+                cacheTtlSeconds: null,
+                cacheLevel: null,
+                healthEnabled: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
@@ -1401,7 +1409,9 @@ namespace Cli.Tests
                 relationshipFields: null,
                 map: null,
                 cacheEnabled: null,
-                cacheTtl: null,
+                cacheTtlSeconds: null,
+                cacheLevel: null,
+                healthEnabled: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
@@ -1470,7 +1480,9 @@ namespace Cli.Tests
                 relationshipFields: null,
                 map: null,
                 cacheEnabled: null,
-                cacheTtl: null,
+                cacheTtlSeconds: null,
+                cacheLevel: null,
+                healthEnabled: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
@@ -1540,7 +1552,9 @@ namespace Cli.Tests
                 relationshipFields: null,
                 map: null,
                 cacheEnabled: null,
-                cacheTtl: null,
+                cacheTtlSeconds: null,
+                cacheLevel: null,
+                healthEnabled: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
@@ -1609,7 +1623,9 @@ namespace Cli.Tests
                 relationshipFields: null,
                 map: null,
                 cacheEnabled: null,
-                cacheTtl: null,
+                cacheTtlSeconds: null,
+                cacheLevel: null,
+                healthEnabled: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
@@ -1677,7 +1693,9 @@ namespace Cli.Tests
                 relationshipFields: null,
                 map: null,
                 cacheEnabled: null,
-                cacheTtl: null,
+                cacheTtlSeconds: null,
+                cacheLevel: null,
+                healthEnabled: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
@@ -1715,5 +1733,87 @@ namespace Cli.Tests
         }
 
         #endregion MCP Entity Configuration Tests
+
+        #region Entity Cache Level and Health Tests
+
+        /// <summary>
+        /// Tests updating an entity's cache level.
+        /// Command: dab update MyEntity --cache.level L1L2
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("L1", DisplayName = "Set cache level to L1")]
+        [DataRow("L1L2", DisplayName = "Set cache level to L1L2")]
+        public void TestUpdateEntityCacheLevel(string level)
+        {
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                source: "MyTable",
+                cacheEnabled: "true",
+                cacheLevel: level
+            );
+
+            string initialConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""permissions"": [
+                                    {
+                                        ""role"": ""anonymous"",
+                                        ""actions"": [""*""]
+                                    }
+                                ],
+                                ""cache"": {
+                                    ""enabled"": false,
+                                    ""ttl-seconds"": 5
+                                }
+                            }
+                        }
+                    }";
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig), "Parsed config file.");
+            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig), "Successfully updated entity in the config.");
+
+            Entity updatedEntity = updatedRuntimeConfig.Entities["MyEntity"];
+            Assert.IsNotNull(updatedEntity.Cache);
+            Assert.IsTrue(updatedEntity.Cache.Enabled);
+            Assert.AreEqual(Enum.Parse<EntityCacheLevel>(level, ignoreCase: true), updatedEntity.Cache.Level);
+        }
+
+        /// <summary>
+        /// Tests updating an entity's health enabled setting.
+        /// Command: dab update MyEntity --health.enabled true
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("true", DisplayName = "Enable entity health")]
+        [DataRow("false", DisplayName = "Disable entity health")]
+        public void TestUpdateEntityHealthEnabled(string healthEnabled)
+        {
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                source: "MyTable",
+                healthEnabled: healthEnabled
+            );
+
+            string initialConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""permissions"": [
+                                    {
+                                        ""role"": ""anonymous"",
+                                        ""actions"": [""*""]
+                                    }
+                                ]
+                            }
+                        }
+                    }";
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig), "Parsed config file.");
+            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig), "Successfully updated entity in the config.");
+
+            Entity updatedEntity = updatedRuntimeConfig.Entities["MyEntity"];
+            Assert.IsNotNull(updatedEntity.Health);
+            Assert.AreEqual(bool.Parse(healthEnabled), updatedEntity.Health.Enabled);
+        }
+
+        #endregion Entity Cache Level and Health Tests
     }
 }

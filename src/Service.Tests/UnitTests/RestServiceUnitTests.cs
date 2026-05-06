@@ -25,7 +25,7 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
-    [TestClass, TestCategory(TestCategory.MSSQL)]
+    [TestClass]
     public class RestServiceUnitTests
     {
         private static RestService _restService;

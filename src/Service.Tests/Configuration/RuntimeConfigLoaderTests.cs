@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 
@@ -96,7 +97,20 @@ public class RuntimeConfigLoaderTests
         StringWriter sw = new();
         Console.SetError(sw);
 
+        ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.SetMinimumLevel(LogLevel.Trace);
+            builder.AddConsole(options =>
+            {
+                options.LogToStandardErrorThreshold = LogLevel.Error;
+            });
+        });
+        ILogger<FileSystemRuntimeConfigLoader> logger = loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
+
+        loader.SetLogger(logger);
         loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
+
+        await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
 
         Assert.IsTrue(loader.IsParseErrorEmitted,
             "IsParseErrorEmitted should be true when config parsing fails.");
@@ -484,7 +498,19 @@ public class RuntimeConfigLoaderTests
             {
                 Console.SetError(sw);
 
+                ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+                {
+                    builder.SetMinimumLevel(LogLevel.Trace);
+                    builder.AddConsole(options =>
+                    {
+                        options.LogToStandardErrorThreshold = LogLevel.Error;
+                    });
+                });
+                ILogger<FileSystemRuntimeConfigLoader> logger = loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
+
+                loader.SetLogger(logger);
                 bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
+                await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
                 string error = sw.ToString();
 
                 Assert.IsFalse(loaded, "Config loading should fail when a child config file exists but cannot be parsed.");
@@ -503,5 +529,105 @@ public class RuntimeConfigLoaderTests
                 File.Delete(invalidChildPath);
             }
         }
+    }
+
+    /// <summary>
+    /// Tests that EnableAggregation returns true by default when runtime.graphql section is absent.
+    /// This is a regression test for the bug where EnableAggregation returned false (disabled)
+    /// when Runtime.GraphQL was null, even though the default value for EnableAggregation is true.
+    /// </summary>
+    [TestMethod]
+    public void EnableAggregation_WhenGraphQLSectionAbsent_DefaultsToTrue()
+    {
+        // Arrange: a minimal config with no runtime.graphql section
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=tcp:127.0.0.1,1433;""
+            },
+            ""runtime"": {
+                ""host"": {
+                    ""authentication"": { ""provider"": ""StaticWebApps"" }
+                }
+            },
+            ""entities"": {}
+        }";
+
+        RuntimeConfig runtimeConfig = LoadConfig(configJson);
+
+        Assert.IsNull(runtimeConfig.Runtime?.GraphQL, "GraphQL section should be null for this config.");
+        Assert.IsTrue(runtimeConfig.EnableAggregation,
+            "EnableAggregation should default to true when runtime.graphql section is absent.");
+    }
+
+    /// <summary>
+    /// Tests that EnableAggregation returns true by default when runtime section is absent.
+    /// </summary>
+    [TestMethod]
+    public void EnableAggregation_WhenRuntimeSectionAbsent_DefaultsToTrue()
+    {
+        // Arrange: a minimal config with no runtime section at all
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=tcp:127.0.0.1,1433;""
+            },
+            ""entities"": {}
+        }";
+
+        RuntimeConfig runtimeConfig = LoadConfig(configJson);
+
+        Assert.IsNull(runtimeConfig.Runtime, "Runtime section should be null for this config.");
+        Assert.IsTrue(runtimeConfig.EnableAggregation,
+            "EnableAggregation should default to true when runtime section is absent.");
+    }
+
+    /// <summary>
+    /// Tests that EnableAggregation honours the explicit value set in the config file.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow(true, DisplayName = "Explicit true is respected")]
+    [DataRow(false, DisplayName = "Explicit false is respected")]
+    public void EnableAggregation_WhenExplicitlySet_ReturnsConfiguredValue(bool explicitValue)
+    {
+        string configJson = $@"{{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": {{
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=tcp:127.0.0.1,1433;""
+            }},
+            ""runtime"": {{
+                ""graphql"": {{
+                    ""enabled"": true,
+                    ""enable-aggregation"": {explicitValue.ToString().ToLower()}
+                }},
+                ""host"": {{
+                    ""authentication"": {{ ""provider"": ""StaticWebApps"" }}
+                }}
+            }},
+            ""entities"": {{}}
+        }}";
+
+        RuntimeConfig runtimeConfig = LoadConfig(configJson);
+
+        Assert.AreEqual(explicitValue, runtimeConfig.EnableAggregation,
+            $"EnableAggregation should be {explicitValue} when explicitly set to {explicitValue} in config.");
+    }
+
+    /// <summary>
+    /// Loads a <see cref="RuntimeConfig"/> from a JSON string using a mock file system.
+    /// </summary>
+    private static RuntimeConfig LoadConfig(string configJson)
+    {
+        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>
+        {
+            { "dab-config.json", new MockFileData(configJson) }
+        });
+
+        FileSystemRuntimeConfigLoader loader = new(fs);
+        Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig config), "Config should load successfully.");
+        return config;
     }
 }

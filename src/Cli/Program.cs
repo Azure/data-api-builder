@@ -26,6 +26,10 @@ namespace Cli
             // Load environment variables from .env file if present.
             DotNetEnv.Env.Load();
 
+            // Parse MCP and LogLevel flags in a single pass for efficiency.
+            // These flags need to be known before logger creation.
+            ParseEarlyFlags(args);
+
             // Logger setup and configuration
             ILoggerFactory loggerFactory = Utils.LoggerFactoryForCli;
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
@@ -39,6 +43,32 @@ namespace Cli
             FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null, isCliLoader: true);
 
             return Execute(args, cliLogger, fileSystem, loader);
+        }
+
+        /// <summary>
+        /// Parses flags that need to be known before logger creation.
+        /// Scans args in a single pass for efficiency.
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        private static void ParseEarlyFlags(string[] args)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                string arg = args[i];
+
+                if (string.Equals(arg, "--mcp-stdio", StringComparison.OrdinalIgnoreCase))
+                {
+                    Utils.IsMcpStdioMode = true;
+                }
+                else if (string.Equals(arg, "--LogLevel", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    Utils.IsLogLevelOverriddenByCli = true;
+                    if (Enum.TryParse<LogLevel>(args[i + 1], ignoreCase: true, out LogLevel cliLogLevel))
+                    {
+                        Utils.CliLogLevel = cliLogLevel;
+                    }
+                }
+            }
         }
 
         /// <summary>

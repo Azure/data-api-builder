@@ -58,7 +58,7 @@ namespace Cli.Commands
         [Option("patterns.exclude", Required = false, HelpText = "T-SQL LIKE pattern(s) to exclude database objects. Space-separated array of patterns. Default: null")]
         public IEnumerable<string>? PatternsExclude { get; }
 
-        [Option("patterns.name", Required = false, HelpText = "Interpolation syntax for entity naming (must be unique for each generated entity). Default: '{object}'")]
+        [Option("patterns.name", Required = false, HelpText = "Interpolation syntax for entity naming (must be unique for each generated entity). Default: '{schema}_{object}'")]
         public string? PatternsName { get; }
 
         [Option("template.mcp.dml-tools", Required = false, HelpText = "Enable/disable DML tools for generated entities. Allowed values: true, false. Default: true")]

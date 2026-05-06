@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service
 {
     public class Program
     {
-        public static bool IsHttpsRedirectionDisabled { get; private set; }
+        public static bool IsHttpsRedirectionDisabled { get; internal set; }
         public static DynamicLogLevelProvider LogLevelProvider = new();
 
         public static void Main(string[] args)

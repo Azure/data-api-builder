@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service
             _configProvider = configProvider;
 
             services.AddSingleton(fileSystem);
-            services.AddSingleton(configLoader);
+            services.AddSingleton<FileSystemRuntimeConfigLoader>(sp => configLoader);
             services.AddSingleton(configProvider);
 
             bool runtimeConfigAvailable = configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
@@ -600,7 +600,7 @@ namespace Azure.DataApiBuilder.Service
                 options.Level = systemCompressionLevel;
             });
 
-            _logger.LogInformation("Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.", compressionLevel);
+            _logger.LogDebug("Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.", compressionLevel);
         }
 
         /// <summary>

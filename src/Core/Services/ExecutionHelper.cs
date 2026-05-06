@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Services
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
 
             IDictionary<string, object?> parameters = GetParametersFromContext(context);
-              
+
             if (context.Selection.Type.IsListType())
             {
                 Tuple<IEnumerable<JsonDocument>, IMetadata?> result =

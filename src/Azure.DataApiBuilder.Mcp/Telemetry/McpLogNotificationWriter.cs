@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.Logging;
 
@@ -27,57 +27,54 @@ namespace Azure.DataApiBuilder.Mcp.Telemetry;
 ///   }
 /// }
 /// </code>
+/// All writes are routed through the shared <see cref="McpStdoutWriter"/> so
+/// notifications cannot interleave with JSON-RPC responses written by
+/// <see cref="McpStdioServer"/>.
 /// </remarks>
 public class McpLogNotificationWriter : IMcpLogNotificationWriter
 {
-    private readonly object _lock = new();
-    private StreamWriter? _writer;
-    private bool _isEnabled;
+    private readonly McpStdoutWriter? _stdoutWriter;
 
     /// <summary>
-    /// Gets or sets whether MCP log notifications are enabled.
-    /// When false, no notifications are written (to keep stdout clean before client requests logging).
+    /// Creates a notification writer that writes through the shared stdout
+    /// writer. The shared writer serializes notifications with JSON-RPC
+    /// responses so concurrent writes do not interleave on the wire.
     /// </summary>
-    public bool IsEnabled
+    /// <param name="stdoutWriter">
+    /// Shared stdout writer. May be <c>null</c> for unit tests that do not
+    /// exercise the write path; in that case <see cref="WriteNotification"/>
+    /// becomes a no-op.
+    /// </param>
+    public McpLogNotificationWriter(McpStdoutWriter? stdoutWriter = null)
     {
-        get => _isEnabled;
-        set
-        {
-            lock (_lock)
-            {
-                _isEnabled = value;
-                if (value && _writer == null)
-                {
-                    InitializeWriter();
-                }
-            }
-        }
+        _stdoutWriter = stdoutWriter;
     }
 
     /// <summary>
-    /// Initializes the stdout writer for MCP notifications.
-    /// Uses Console.OpenStandardOutput() to get the raw stdout stream,
-    /// bypassing any Console.SetOut() redirections.
+    /// Gets or sets whether MCP log notifications are enabled. This is the
+    /// single source of truth for whether notifications flow to the client;
+    /// it is consulted by <see cref="McpLogger.IsEnabled(LogLevel)"/> so that
+    /// the gate is enforced once, at log time, before any formatter work runs.
+    /// <see cref="WriteNotification"/> intentionally does not re-check this
+    /// flag — callers must gate via <see cref="McpLogger"/>.
     /// </summary>
-    private void InitializeWriter()
-    {
-        // Use the same approach as McpStdioServer - get raw stdout
-        Stream stdout = Console.OpenStandardOutput();
-        _writer = new StreamWriter(stdout, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false))
-        {
-            AutoFlush = true
-        };
-    }
+    public bool IsEnabled { get; set; }
 
     /// <summary>
-    /// Writes a log message as an MCP notification.
+    /// Writes a log message as an MCP notification. The caller is responsible
+    /// for gating on <see cref="IsEnabled"/>; <see cref="McpLogger"/> already
+    /// does this in its <see cref="McpLogger.IsEnabled(LogLevel)"/> override.
     /// </summary>
     /// <param name="logLevel">The .NET log level.</param>
     /// <param name="categoryName">The logger category (typically class name).</param>
     /// <param name="message">The formatted log message.</param>
     public void WriteNotification(LogLevel logLevel, string categoryName, string message)
     {
-        if (!_isEnabled || _writer == null)
+        // No IsEnabled check here: the gate lives in McpLogger.IsEnabled so
+        // that we have a single source of truth and a single check site.
+        // The _stdoutWriter null check remains as a defensive guard for unit
+        // tests that construct the writer without a backing stdout.
+        if (_stdoutWriter is null)
         {
             return;
         }
@@ -96,12 +93,7 @@ public class McpLogNotificationWriter : IMcpLogNotificationWriter
             }
         };
 
-        string json = JsonSerializer.Serialize(notification);
-
-        lock (_lock)
-        {
-            _writer?.WriteLine(json);
-        }
+        _stdoutWriter.WriteLine(JsonSerializer.Serialize(notification));
     }
 }
 

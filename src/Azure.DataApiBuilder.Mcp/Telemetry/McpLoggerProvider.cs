@@ -12,25 +12,38 @@ namespace Azure.DataApiBuilder.Mcp.Telemetry;
 public class McpLoggerProvider : ILoggerProvider
 {
     private readonly IMcpLogNotificationWriter _writer;
-    private readonly Func<LogLevel, bool> _levelFilter;
     private readonly ConcurrentDictionary<string, McpLogger> _loggers = new();
     private bool _disposed;
 
     /// <summary>
-    /// Creates a new McpLoggerProvider.
+    /// Creates a new <see cref="McpLoggerProvider"/>.
     /// </summary>
-    /// <param name="writer">The notification writer to use for sending log messages.</param>
-    /// <param name="levelFilter">A function to filter log levels. Returns true if the level should be logged.</param>
-    public McpLoggerProvider(IMcpLogNotificationWriter writer, Func<LogLevel, bool> levelFilter)
+    /// <param name="writer">The notification writer used to send log messages to the MCP client.</param>
+    /// <remarks>
+    /// No level-filter delegate is accepted here. Level filtering is owned
+    /// by the logging framework's filter chain configured in Program.cs
+    /// (<c>logging.AddFilter(logLevel =&gt; LogLevelProvider.ShouldLog(logLevel))</c>),
+    /// which runs before any provider's logger is invoked. Threading the
+    /// same delegate through this provider would just call the same shared
+    /// state twice and obscure where filtering actually happens.
+    /// </remarks>
+    public McpLoggerProvider(IMcpLogNotificationWriter writer)
     {
         _writer = writer ?? throw new ArgumentNullException(nameof(writer));
-        _levelFilter = levelFilter ?? throw new ArgumentNullException(nameof(levelFilter));
     }
 
     /// <inheritdoc />
+    /// <exception cref="ObjectDisposedException">
+    /// Thrown when the provider has already been disposed. Returning a fresh
+    /// <see cref="McpLogger"/> after disposal would hand the caller a stale
+    /// reference to <see cref="_writer"/> and bypass any teardown the host
+    /// performed (e.g. flushing the underlying stdout writer). This matches
+    /// the behavior of the framework <c>ConsoleLoggerProvider</c>.
+    /// </exception>
     public ILogger CreateLogger(string categoryName)
     {
-        return _loggers.GetOrAdd(categoryName, name => new McpLogger(name, _writer, _levelFilter));
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _loggers.GetOrAdd(categoryName, name => new McpLogger(name, _writer));
     }
 
     /// <inheritdoc />

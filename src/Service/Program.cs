@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
@@ -40,10 +41,32 @@ namespace Azure.DataApiBuilder.Service
         public static DynamicLogLevelProvider LogLevelProvider = new();
 
         /// <summary>
+        /// Process-wide owner of the MCP stdio process's stdout stream.
+        /// Both the JSON-RPC server (<see cref="Azure.DataApiBuilder.Mcp.Core.McpStdioServer"/>) and the notification writer share this
+        /// instance so concurrent writes to stdout are serialized through one lock.
+        /// </summary>
+        private static readonly McpStdoutWriter _mcpStdoutWriter = new();
+
+        /// <summary>
         /// MCP log notification writer for sending logs to MCP clients via notifications/message.
         /// Created once and shared between logging pipeline and MCP server.
         /// </summary>
-        private static readonly McpLogNotificationWriter _mcpNotificationWriter = new();
+        private static readonly McpLogNotificationWriter _mcpNotificationWriter = new(_mcpStdoutWriter);
+
+        /// <summary>
+        /// Ensures the shared MCP stdout writer is flushed and disposed on
+        /// process exit. The writer is registered with DI as an externally
+        /// owned singleton instance (<c>AddSingleton(instance)</c>), and
+        /// <see cref="Microsoft.Extensions.DependencyInjection"/> does not
+        /// dispose externally constructed instances. Hooking
+        /// <see cref="AppDomain.ProcessExit"/> guarantees the underlying
+        /// <see cref="StreamWriter"/> is released even when the host shuts
+        /// down via signal or unhandled exception path.
+        /// </summary>
+        static Program()
+        {
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => _mcpStdoutWriter.Dispose();
+        }
 
         public static void Main(string[] args)
         {
@@ -149,6 +172,7 @@ namespace Azure.DataApiBuilder.Service
                     // For MCP stdio mode, register the notification writer for sending logs to MCP clients
                     if (runMcpStdio)
                     {
+                        services.AddSingleton(_mcpStdoutWriter);
                         services.AddSingleton<IMcpLogNotificationWriter>(_mcpNotificationWriter);
                     }
                 })
@@ -180,7 +204,7 @@ namespace Azure.DataApiBuilder.Service
                     // For MCP stdio mode, add the MCP logger provider to send logs as notifications
                     if (runMcpStdio)
                     {
-                        logging.AddProvider(new McpLoggerProvider(_mcpNotificationWriter, LogLevelProvider.ShouldLog));
+                        logging.AddProvider(new McpLoggerProvider(_mcpNotificationWriter));
                     }
                 })
                 .ConfigureWebHostDefaults(webBuilder =>

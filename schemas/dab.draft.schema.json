@@ -814,8 +814,8 @@
                 },
                 "name": {
                   "type": "string",
-                  "description": "Entity name interpolation pattern using {schema} and {object}. Null defaults to {object}. Must be unique for every entity inside the pattern",
-                  "default": "{object}"
+                  "description": "Entity name interpolation pattern using {schema} and {object}. Null defaults to {schema}_{object}. Must be unique for every entity inside the pattern",
+                  "default": "{schema}_{object}"
                 }
               }
             },
@@ -1056,7 +1056,7 @@
                       },
                       "description": "DEPRECATED. Use the 'fields' array and set 'primary-key: true' on each key field instead. List of fields to be used as primary keys."
                     },
-                    "object-description": {
+                    "description": {
                       "type": "string",
                       "description": "Human-readable description of the database object, used for MCP tool discovery and documentation."
                     }

@@ -171,8 +171,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         #region Input Validation Tests - GroupBy Dependencies
 
         [DataTestMethod]
-        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"desc\"}", "groupby",
-            DisplayName = "Orderby without groupby")]
         [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"having\": {\"gt\": 5}}", "groupby",
             DisplayName = "Having without groupby")]
         [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"groupby\": [\"title\"], \"orderby\": \"ascending\"}", "'asc' or 'desc'",
@@ -186,6 +184,83 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             string message = AssertErrorResult(result, "InvalidArguments");
             Assert.IsTrue(message.Contains(expectedInMessage),
                 $"Error message must contain '{expectedInMessage}'. Actual: '{message}'");
+        }
+
+        #endregion
+
+        #region Input Validation Tests - Orderby Without Groupby (Issue #3279)
+
+        /// <summary>
+        /// Verifies that orderby without groupby is silently ignored rather than rejected.
+        /// This is the core fix for https://github.com/Azure/data-api-builder/issues/3279.
+        /// The tool should pass input validation and only fail at metadata resolution (no real DB).
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"desc\"}",
+            DisplayName = "count(*) with orderby desc, no groupby")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"asc\"}",
+            DisplayName = "count(*) with orderby asc, no groupby")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"ascending\"}",
+            DisplayName = "Invalid orderby value without groupby is silently ignored")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"orderby\": \"garbage\"}",
+            DisplayName = "Nonsense orderby value without groupby is silently ignored")]
+        public async Task AggregateRecords_OrderbyWithoutGroupby_PassesValidation(string json)
+        {
+            IServiceProvider sp = CreateDefaultServiceProvider();
+
+            CallToolResult result = await ExecuteToolAsync(sp, json);
+
+            // The tool may fail at metadata resolution (no real DB), but must NOT fail with InvalidArguments.
+            // If the tool succeeds, that's also acceptable — the test is focused on input validation.
+            if (result.IsError != true)
+            {
+                return;
+            }
+
+            JsonElement content = ParseContent(result);
+            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
+            Assert.AreNotEqual("InvalidArguments", errorType,
+                $"orderby without groupby must not be rejected as InvalidArguments. Got error type: {errorType}");
+        }
+
+        /// <summary>
+        /// Verifies that simple count(*) without orderby or groupby passes validation.
+        /// </summary>
+        [TestMethod]
+        public async Task AggregateRecords_SimpleCountStar_PassesValidation()
+        {
+            IServiceProvider sp = CreateDefaultServiceProvider();
+
+            CallToolResult result = await ExecuteToolAsync(sp,
+                "{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\"}");
+
+            // If the tool succeeds, that's acceptable — the test is focused on input validation.
+            if (result.IsError != true)
+            {
+                return;
+            }
+
+            JsonElement content = ParseContent(result);
+            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
+            Assert.AreNotEqual("InvalidArguments", errorType,
+                "Simple count(*) must pass input validation.");
+        }
+
+        /// <summary>
+        /// Verifies that the orderby schema property has no default value (fix for #3279).
+        /// </summary>
+        [TestMethod]
+        public void GetToolMetadata_OrderbySchemaHasNoDefault()
+        {
+            AggregateRecordsTool tool = new();
+            Tool metadata = tool.GetToolMetadata();
+
+            JsonElement properties = metadata.InputSchema.GetProperty("properties");
+            JsonElement orderbyProp = properties.GetProperty("orderby");
+
+            Assert.IsFalse(orderbyProp.TryGetProperty("default", out _),
+                "The 'orderby' schema property must not have a default value. " +
+                "A default causes LLMs to always send orderby, which previously forced groupby to be required.");
         }
 
         #endregion

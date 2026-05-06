@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Telemetry;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -26,6 +27,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
     {
         private readonly McpToolRegistry _toolRegistry;
         private readonly IServiceProvider _serviceProvider;
+        private readonly McpStdoutWriter _stdoutWriter;
         private readonly string _protocolVersion;
 
         private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
@@ -34,6 +36,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+
+            // Resolve the shared stdout writer so JSON-RPC responses and
+            // notifications/message frames are serialized through one lock.
+            // Falls back to a fresh instance if DI didn't register one (defensive).
+            _stdoutWriter = _serviceProvider.GetService<McpStdoutWriter>() ?? new McpStdoutWriter();
 
             // Allow protocol version to be configured via IConfiguration, using centralized defaults.
             IConfiguration? configuration = _serviceProvider.GetService<IConfiguration>();
@@ -47,16 +54,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task RunAsync(CancellationToken cancellationToken)
         {
-            // Use UTF-8 WITHOUT BOM
+            // Use UTF-8 WITHOUT BOM for stdin. Stdout is owned by McpStdoutWriter,
+            // which serializes all writes from McpStdioServer and the MCP logging
+            // pipeline so JSON-RPC frames cannot interleave at the byte level.
             UTF8Encoding utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
             using Stream stdin = Console.OpenStandardInput();
-            using Stream stdout = Console.OpenStandardOutput();
             using StreamReader reader = new(stdin, utf8NoBom);
-            using StreamWriter writer = new(stdout, utf8NoBom) { AutoFlush = true };
 
-            // Redirect Console.Out to use our writer
-            Console.SetOut(writer);
             while (!cancellationToken.IsCancellationRequested)
             {
                 string? line = await reader.ReadLineAsync(cancellationToken);
@@ -298,14 +303,29 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // If CLI or Config overrode, this returns false but we still return success to the client
             bool updated = logLevelController.UpdateFromMcp(level);
 
-            // If MCP successfully changed the log level to something other than "none",
-            // ensure Console.Error is pointing to the real stderr (not TextWriter.Null).
-            // This handles the case where MCP stdio mode started with LogLevel.None (quiet startup)
-            // and the client later enables logging via logging/setLevel.
+            // Determine if logging is enabled (level != "none")
+            // Note: Even if CLI/Config overrode the level, we still enable notifications
+            // when the client requests logging. They'll get logs at the overridden level.
             bool isLoggingEnabled = !string.Equals(level, "none", StringComparison.OrdinalIgnoreCase);
+
+            // Only restore stderr when this MCP call actually changed the effective level.
+            // If CLI/Config overrode (updated == false), stderr is already in the correct state:
+            //   - CLI/Config level == "none": stderr was redirected to TextWriter.Null at startup
+            //     and must stay that way; restoring it would re-introduce noisy output even
+            //     though the operator explicitly asked for silence.
+            //   - CLI/Config level != "none": stderr was never redirected, so restoring is a no-op.
             if (updated && isLoggingEnabled)
             {
                 RestoreStderrIfNeeded();
+            }
+
+            // Enable or disable MCP log notifications based on the requested level
+            // When CLI/Config overrode, notifications are still enabled - client asked for logs,
+            // they just get them at the CLI/Config level instead of the requested level.
+            IMcpLogNotificationWriter? notificationWriter = _serviceProvider.GetService<IMcpLogNotificationWriter>();
+            if (notificationWriter != null)
+            {
+                notificationWriter.IsEnabled = isLoggingEnabled;
             }
 
             // Always return success (empty result object) per MCP spec
@@ -539,39 +559,41 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         /// <summary>
         /// Writes a JSON-RPC result response to the standard output.
+        /// Routed through <see cref="McpStdoutWriter"/> so the write is serialized
+        /// with notifications/message frames from the logging pipeline.
         /// </summary>
         /// <param name="id">The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.</param>
         /// <param name="resultObject">The result object to include in the response.</param>
-        private static void WriteResult(JsonElement? id, object resultObject)
+        private void WriteResult(JsonElement? id, object resultObject)
         {
             var response = new
             {
-                jsonrpc = "2.0",
+                jsonrpc = McpStdioJsonRpcErrorCodes.JSON_RPC_VERSION,
                 id = id.HasValue ? GetIdValue(id.Value) : null,
                 result = resultObject
             };
 
-            string json = JsonSerializer.Serialize(response);
-            Console.Out.WriteLine(json);
+            _stdoutWriter.WriteLine(JsonSerializer.Serialize(response));
         }
 
         /// <summary>
         /// Writes a JSON-RPC error response to the standard output.
+        /// Routed through <see cref="McpStdoutWriter"/> so the write is serialized
+        /// with notifications/message frames from the logging pipeline.
         /// </summary>
         /// <param name="id">The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.</param>
         /// <param name="code">The error code.</param>
         /// <param name="message">The error message.</param>
-        private static void WriteError(JsonElement? id, int code, string message)
+        private void WriteError(JsonElement? id, int code, string message)
         {
             var errorObj = new
             {
-                jsonrpc = "2.0",
+                jsonrpc = McpStdioJsonRpcErrorCodes.JSON_RPC_VERSION,
                 id = id.HasValue ? GetIdValue(id.Value) : null,
                 error = new { code, message }
             };
 
-            string json = JsonSerializer.Serialize(errorObj);
-            Console.Out.WriteLine(json);
+            _stdoutWriter.WriteLine(JsonSerializer.Serialize(errorObj));
         }
 
         /// <summary>

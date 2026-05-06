@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     /// Context classes that are not easily tested through
     /// integration testing.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
+    [TestClass]
     public class RequestContextUnitTests
     {
         private static DatabaseObject _defaultDbObject = new DatabaseTable()

@@ -845,8 +845,8 @@
                 },
                 "name": {
                   "type": "string",
-                  "description": "Entity name interpolation pattern using {schema} and {object}. Null defaults to {object}. Must be unique for every entity inside the pattern",
-                  "default": "{object}"
+                  "description": "Entity name interpolation pattern using {schema} and {object}. Null defaults to {schema}_{object}. Must be unique for every entity inside the pattern",
+                  "default": "{schema}_{object}"
                 }
               }
             },

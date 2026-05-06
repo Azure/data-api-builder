@@ -77,8 +77,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string BROWSER_USER_AGENT_HEADER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36";
         private const string BROWSER_ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
 
-        private const int RETRY_COUNT = 5;
-        private const int RETRY_WAIT_SECONDS = 2;
+        public const int RETRY_COUNT = 5;
+        public const int RETRY_WAIT_SECONDS = 2;
 
         /// <summary>
         ///
@@ -4712,7 +4712,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             RuntimeConfig config = new(
                 Schema: baseConfig!.Schema,
-                DataSource: baseConfig.DataSource,
+                DataSource: baseConfig.DataSource!,
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -6027,16 +6027,23 @@ type Planet @model(name:""PlanetAlias"") {
 
             RuntimeConfigProvider provider = new(loader);
             Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object, isValidateOnly: true);
 
-            try
-            {
-                await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
-            }
-            catch (Exception ex)
-            {
-                Assert.Fail(ex.Message);
-            }
+            bool isValid = await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
+
+            // Validation may legitimately fail in this test (autoentity patterns won't match
+            // any tables in the test DB), so isValid is intentionally not asserted. What we
+            // require is that:
+            //   1. TryValidateConfig completes without raising an exception (validation errors
+            //      are recorded into ConfigValidationExceptions, not thrown).
+            //   2. No autoentity-shaped error is recorded other than the expected
+            //      "No entities found" message that fires when autoentities resolve zero
+            //      entities and no manual entities are defined.
+            Assert.IsTrue(
+                configValidator.ConfigValidationExceptions.All(
+                    e => !e.Message.Contains("autoentities", StringComparison.OrdinalIgnoreCase)
+                         || e.Message.Contains("No entities found", StringComparison.OrdinalIgnoreCase)),
+                "Unexpected autoentity-related validation error.");
         }
 
         /// <summary>

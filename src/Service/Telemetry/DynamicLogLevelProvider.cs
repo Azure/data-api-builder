@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Microsoft.Extensions.Logging;
@@ -11,22 +9,6 @@ namespace Azure.DataApiBuilder.Service.Telemetry
     /// </summary>
     public class DynamicLogLevelProvider : ILogLevelController
     {
-        /// <summary>
-        /// Maps MCP log level strings to Microsoft.Extensions.Logging.LogLevel.
-        /// MCP levels: debug, info, notice, warning, error, critical, alert, emergency.
-        /// </summary>
-        private static readonly Dictionary<string, LogLevel> _mcpLevelMapping = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["debug"] = LogLevel.Debug,
-            ["info"] = LogLevel.Information,
-            ["notice"] = LogLevel.Information, // MCP "notice" maps to Information (no direct equivalent)
-            ["warning"] = LogLevel.Warning,
-            ["error"] = LogLevel.Error,
-            ["critical"] = LogLevel.Critical,
-            ["alert"] = LogLevel.Critical,     // MCP "alert" maps to Critical
-            ["emergency"] = LogLevel.Critical  // MCP "emergency" maps to Critical
-        };
-
         public LogLevel CurrentLogLevel { get; private set; }
 
         public bool IsCliOverridden { get; private set; }
@@ -98,12 +80,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(mcpLevel))
-            {
-                return false;
-            }
-
-            if (_mcpLevelMapping.TryGetValue(mcpLevel, out LogLevel logLevel))
+            if (McpLogLevelConverter.TryConvertFromMcp(mcpLevel, out LogLevel logLevel))
             {
                 CurrentLogLevel = logLevel;
                 return true;

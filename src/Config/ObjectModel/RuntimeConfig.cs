@@ -315,7 +315,7 @@ public record RuntimeConfig
     [JsonConstructor]
     public RuntimeConfig(
         string? Schema,
-        DataSource DataSource,
+        DataSource? DataSource,
         RuntimeEntities Entities,
         RuntimeAutoentities? Autoentities = null,
         RuntimeOptions? Runtime = null,

@@ -337,7 +337,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Currently the source type is always Table for auto-generated entities from database objects.
                     Entity generatedEntity = new(
                         Source: new EntitySource(
-                            Object: objectName,
+                            Object: $"{schemaName}.{objectName}",
                             Type: EntitySourceType.Table,
                             Parameters: null,
                             KeyFields: null),
@@ -378,6 +378,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     _logger.LogWarning("No new entities were generated from the autoentities definition '{autoentityName}'.", autoentityName);
                 }
+
+                // Track resolution count for validation.
+                runtimeConfig.AutoentityResolutionCounts[autoentityName] = addedEntities;
             }
 
             _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);

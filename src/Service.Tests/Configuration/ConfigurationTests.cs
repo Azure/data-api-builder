@@ -77,8 +77,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string BROWSER_USER_AGENT_HEADER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36";
         private const string BROWSER_ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
 
-        private const int RETRY_COUNT = 5;
-        private const int RETRY_WAIT_SECONDS = 2;
+        public const int RETRY_COUNT = 5;
+        public const int RETRY_WAIT_SECONDS = 2;
 
         /// <summary>
         ///

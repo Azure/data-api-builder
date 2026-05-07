@@ -90,7 +90,7 @@ namespace Cli.Commands
         [Option("set-session-context", Default = false, Required = false, HelpText = "Enable sending data to MsSql using session context.")]
         public bool SetSessionContext { get; }
 
-        [Option("host-mode", Default = HostMode.Production, Required = false, HelpText = "Specify the Host mode - Development or Production")]
+        [Option("host-mode", Default = HostMode.Production, Required = false, HelpText = "Specify the Host mode - development or production")]
         public HostMode HostMode { get; }
 
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]

@@ -250,9 +250,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             FindRequestContext context = new(entityName: ENTITY_NAME, dbo: dbObject, isList: true)
             {
-                First = first
+                First = first,
+                FieldsToBeReturned = fieldsToBeReturned
             };
-            context.FieldsToBeReturned = fieldsToBeReturned;
             return context;
         }
 

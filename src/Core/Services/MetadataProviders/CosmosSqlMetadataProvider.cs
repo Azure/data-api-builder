@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             // to store internally.
             _runtimeConfigEntities = new RuntimeEntities(runtimeConfig.Entities.Entities);
             _isDevelopmentMode = runtimeConfig.IsDevelopmentMode();
-            _databaseType = runtimeConfig.DataSource.DatabaseType;
+            _databaseType = runtimeConfig.DataSource!.DatabaseType;
 
             CosmosDbNoSQLDataSourceOptions? cosmosDb = runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
 

@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(EntityActionOperation.Upsert));
+                EntityActionOperation.Upsert);
         }
 
         /// <summary>
@@ -181,7 +181,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(EntityActionOperation.UpsertIncremental));
+                EntityActionOperation.UpsertIncremental);
         }
 
         /// <summary>
@@ -205,6 +205,11 @@ namespace Azure.DataApiBuilder.Service.Controllers
             try
             {
                 TelemetryMetricsHelper.IncrementActiveRequests(ApiType.REST);
+
+                if (operationType is EntityActionOperation.Upsert or EntityActionOperation.UpsertIncremental)
+                {
+                    operationType = DeterminePatchPutSemantics(operationType);
+                }
 
                 if (activity is not null)
                 {
@@ -249,7 +254,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     // Validate role doesn't contain path separators (reject /openapi/foo/bar)
                     if (string.IsNullOrEmpty(role) || role.Contains('/'))
                     {
-                        return NotFound();
+                        return Problem(
+                            detail: $"Invalid role name '{role}'. Role names must not be empty or contain path separators.",
+                            statusCode: StatusCodes.Status404NotFound,
+                            title: "Not Found");
                     }
 
                     if (_openApiDocumentor.TryGetDocumentForRole(role, out string? roleDocument))
@@ -257,7 +265,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         return Content(roleDocument, MediaTypeNames.Application.Json);
                     }
 
-                    return NotFound();
+                    return Problem(
+                        detail: $"Role '{role}' is not present in the configuration.",
+                        statusCode: StatusCodes.Status404NotFound,
+                        title: "Not Found");
                 }
 
                 (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);

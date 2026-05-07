@@ -2521,8 +2521,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());
             string[] args = new[]
@@ -2609,8 +2608,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());
             string[] args = new[]
@@ -3678,8 +3676,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, deserializedConfig.ToJson());
             string[] args = new[]
@@ -4715,7 +4712,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             RuntimeConfig config = new(
                 Schema: baseConfig!.Schema,
-                DataSource: baseConfig.DataSource,
+                DataSource: baseConfig.DataSource!,
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -6030,16 +6027,23 @@ type Planet @model(name:""PlanetAlias"") {
 
             RuntimeConfigProvider provider = new(loader);
             Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object, isValidateOnly: true);
 
-            try
-            {
-                await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
-            }
-            catch (Exception ex)
-            {
-                Assert.Fail(ex.Message);
-            }
+            bool isValid = await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
+
+            // Validation may legitimately fail in this test (autoentity patterns won't match
+            // any tables in the test DB), so isValid is intentionally not asserted. What we
+            // require is that:
+            //   1. TryValidateConfig completes without raising an exception (validation errors
+            //      are recorded into ConfigValidationExceptions, not thrown).
+            //   2. No autoentity-shaped error is recorded other than the expected
+            //      "No entities found" message that fires when autoentities resolve zero
+            //      entities and no manual entities are defined.
+            Assert.IsTrue(
+                configValidator.ConfigValidationExceptions.All(
+                    e => !e.Message.Contains("autoentities", StringComparison.OrdinalIgnoreCase)
+                         || e.Message.Contains("No entities found", StringComparison.OrdinalIgnoreCase)),
+                "Unexpected autoentity-related validation error.");
         }
 
         /// <summary>

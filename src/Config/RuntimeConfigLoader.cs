@@ -13,7 +13,6 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Npgsql;
 using static Azure.DataApiBuilder.Config.DabConfigEvents;
@@ -179,16 +178,34 @@ public abstract class RuntimeConfigLoader
     /// </summary>
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
+    /// <param name="parseError">A clean error message when parsing fails, or null on success.</param>
     /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, no variable replacement will be performed.</param>
-    /// <param name="logger">logger to log messages</param>
     /// <param name="connectionString">connectionString to add to config if specified</param>
     /// <returns>True if the config was parsed, otherwise false.</returns>
     public static bool TryParseConfig(string json,
         [NotNullWhen(true)] out RuntimeConfig? config,
         DeserializationVariableReplacementSettings? replacementSettings = null,
-        ILogger? logger = null,
         string? connectionString = null)
     {
+        return TryParseConfig(json, out config, out _, replacementSettings, connectionString);
+    }
+
+    /// <summary>
+    /// Parses a JSON string into a <c>RuntimeConfig</c> object for single database scenario.
+    /// </summary>
+    /// <param name="json">JSON that represents the config file.</param>
+    /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
+    /// <param name="parseError">A clean error message when parsing fails, or null on success.</param>
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, no variable replacement will be performed.</param>
+    /// <param name="connectionString">connectionString to add to config if specified</param>
+    /// <returns>True if the config was parsed, otherwise false.</returns>
+    public static bool TryParseConfig(string json,
+        [NotNullWhen(true)] out RuntimeConfig? config,
+        out string? parseError,
+        DeserializationVariableReplacementSettings? replacementSettings = null,
+        string? connectionString = null)
+    {
+        parseError = null;
         // First pass: extract AzureKeyVault options if AKV replacement is requested
         if (replacementSettings?.DoReplaceAkvVar is true)
         {
@@ -220,7 +237,7 @@ public abstract class RuntimeConfigLoader
             }
 
             // retreive current connection string from config
-            string updatedConnectionString = config.DataSource.ConnectionString;
+            string updatedConnectionString = config.DataSource?.ConnectionString ?? string.Empty;
 
             if (!string.IsNullOrEmpty(connectionString))
             {
@@ -228,34 +245,39 @@ public abstract class RuntimeConfigLoader
                 updatedConnectionString = connectionString;
             }
 
-            Dictionary<string, string> datasourceNameToConnectionString = new();
-
-            // add to dictionary if datasourceName is present
-            datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
-
-            // iterate over dictionary and update runtime config with connection strings.
-            foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
+            // Post-processing for connection strings only applies when a data source is present.
+            // Root configs (with data-source-files) may not have a data source.
+            if (config.DataSource is not null)
             {
-                string updatedConnection = connectionValue;
+                Dictionary<string, string> datasourceNameToConnectionString = new();
 
-                DataSource ds = config.GetDataSourceFromDataSourceName(dataSourceKey);
+                // add to dictionary if datasourceName is present
+                datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
 
-                // Add Application Name for telemetry for MsSQL or PgSql
-                if (ds.DatabaseType is DatabaseType.MSSQL && replacementSettings?.DoReplaceEnvVar == true)
+                // iterate over dictionary and update runtime config with connection strings.
+                foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
                 {
-                    updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
-                }
-                else if (ds.DatabaseType is DatabaseType.PostgreSQL && replacementSettings?.DoReplaceEnvVar == true)
-                {
-                    updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue);
-                }
+                    string updatedConnection = connectionValue;
 
-                ds = ds with { ConnectionString = updatedConnection };
-                config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
+                    DataSource ds = config.GetDataSourceFromDataSourceName(dataSourceKey);
 
-                if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
-                {
-                    config = config with { DataSource = ds };
+                    // Add Application Name for telemetry for MsSQL or PgSql
+                    if (ds.DatabaseType is DatabaseType.MSSQL && replacementSettings?.DoReplaceEnvVar == true)
+                    {
+                        updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
+                    }
+                    else if (ds.DatabaseType is DatabaseType.PostgreSQL && replacementSettings?.DoReplaceEnvVar == true)
+                    {
+                        updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue);
+                    }
+
+                    ds = ds with { ConnectionString = updatedConnection };
+                    config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
+
+                    if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        config = config with { DataSource = ds };
+                    }
                 }
             }
         }
@@ -263,18 +285,9 @@ public abstract class RuntimeConfigLoader
             ex is JsonException ||
             ex is DataApiBuilderException)
         {
-            string errorMessage = ex is JsonException ? "Deserialization of the configuration file failed." :
-                "Deserialization of the configuration file failed during a post-processing step.";
-
-            // logger can be null when called from CLI
-            if (logger is null)
-            {
-                Console.Error.WriteLine(errorMessage + $"\n" + $"Message:\n {ex.Message}\n" + $"Stack Trace:\n {ex.StackTrace}");
-            }
-            else
-            {
-                logger.LogError(exception: ex, message: errorMessage);
-            }
+            parseError = ex is DataApiBuilderException
+                ? ex.Message
+                : $"Deserialization of the configuration file failed. {ex.Message}";
 
             config = null;
             return false;

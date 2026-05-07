@@ -811,7 +811,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
-            Assert.AreEqual(config.DataSource.DatabaseType, Enum.Parse<DatabaseType>(dbType, ignoreCase: true));
+            Assert.AreEqual(config.DataSource!.DatabaseType, Enum.Parse<DatabaseType>(dbType, ignoreCase: true));
         }
 
         /// <summary>
@@ -841,7 +841,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
-            Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.MSSQL);
+            Assert.AreEqual(config.DataSource!.DatabaseType, DatabaseType.MSSQL);
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("set-session-context", false), true);
             Assert.IsFalse(config.DataSource.Options!.ContainsKey("database"));
             Assert.IsFalse(config.DataSource.Options!.ContainsKey("container"));
@@ -877,7 +877,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
-            Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.CosmosDB_NoSQL);
+            Assert.AreEqual(config.DataSource!.DatabaseType, DatabaseType.CosmosDB_NoSQL);
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("database"), "testdb");
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("container"), "testcontainer");
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("schema"), "testschema.gql");

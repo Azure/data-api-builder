@@ -163,7 +163,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Updates the DataSource Health Check Results in the response.
         private async Task UpdateDataSourceHealthCheckResultsAsync(ComprehensiveHealthCheckReport comprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
-            if (comprehensiveHealthCheckReport.Checks != null && runtimeConfig.DataSource.IsDatasourceHealthEnabled)
+            if (comprehensiveHealthCheckReport.Checks != null && runtimeConfig.DataSource is not null && runtimeConfig.DataSource.IsDatasourceHealthEnabled)
             {
                 string query = Utilities.GetDatSourceQuery(runtimeConfig.DataSource.DatabaseType);
                 (int, string?) response = await ExecuteDatasourceQueryCheckAsync(query, runtimeConfig.DataSource.ConnectionString, Utilities.GetDbProviderFactory(runtimeConfig.DataSource.DatabaseType), runtimeConfig.DataSource.DatabaseType);

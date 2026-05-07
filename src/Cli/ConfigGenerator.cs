@@ -303,12 +303,12 @@ namespace Cli
 
         /// <summary>
         /// Helper method to determine if the api is enabled or not based on the enabled/disabled options in the dab init command.
-        /// The method also validates that there is no mismatch in semantics of enabling/disabling the REST/GraphQL API(s)
+        /// The method also validates that there is no mismatch in semantics of enabling/disabling the REST/GraphQL/MCP API(s)
         /// based on the values supplied in the enabled/disabled options for the API in the init command.
         /// </summary>
         /// <param name="apiDisabledOptionValue">Value of disabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
         /// <param name="apiEnabledOptionValue">Value of enabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
-        /// <param name="apiType">ApiType - REST/GraphQL.</param>
+        /// <param name="apiType">ApiType - REST/GraphQL/MCP.</param>
         /// <param name="isApiEnabled">Boolean value indicating whether the API endpoint is enabled or not.</param>
         private static bool TryDetermineIfApiIsEnabled(bool apiDisabledOptionValue, CliBool apiEnabledOptionValue, ApiType apiType, out bool isApiEnabled)
         {

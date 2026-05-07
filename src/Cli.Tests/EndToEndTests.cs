@@ -1289,11 +1289,15 @@ public class EndToEndTests
                 Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
                 Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.GraphQL.Enabled);
             }
-            else
+            else if (apiType is ApiType.MCP)
             {
                 Assert.IsNotNull(runtimeConfig.Runtime);
                 Assert.IsNotNull(runtimeConfig.Runtime.Mcp);
                 Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.Mcp.Enabled);
+            }
+            else
+            {
+                Assert.Fail($"Unexpected ApiType value '{apiType}' in test.");
             }
         }
     }

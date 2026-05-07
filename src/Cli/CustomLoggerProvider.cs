@@ -118,11 +118,6 @@ public class CustomLoggerProvider : ILoggerProvider
                 return;
             }
 
-            if (!_logLevelToAbbreviation.TryGetValue(logLevel, out string? abbreviation))
-            {
-                return;
-            }
-
             ConsoleColor originalForeGroundColor = Console.ForegroundColor;
             ConsoleColor originalBackGroundColor = Console.BackgroundColor;
             Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);

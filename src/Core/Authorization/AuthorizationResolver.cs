@@ -845,7 +845,12 @@ public class AuthorizationResolver : IAuthorizationResolver
         switch (claim.ValueType)
         {
             case ClaimValueTypes.String:
-                return $"'{claim.Value}'";
+                // Escape embedded single quotes per OData 4.01 ABNF (Section 7: Literal Data Values)
+                // by doubling them. This prevents an attacker-influenced claim value from breaking
+                // out of the string literal and injecting additional OData predicates into the
+                // database authorization policy expression.
+                // See: http://docs.oasis-open.org/odata/odata/v4.01/cs01/abnf/odata-abnf-construction-rules.txt
+                return $"'{claim.Value.Replace("'", "''")}'";
             case ClaimValueTypes.Boolean:
             case ClaimValueTypes.Integer:
             case ClaimValueTypes.Integer32:

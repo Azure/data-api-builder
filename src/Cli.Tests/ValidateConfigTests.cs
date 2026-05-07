@@ -70,8 +70,9 @@ public class ValidateConfigTests
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, COMPLETE_CONFIG_WITH_RELATIONSHIPS_NON_WORKING_CONN_STRING);
         ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
         StringWriter writer = new();
+
         // Capture console output to get error messaging.
-        Console.SetOut(writer);
+        Console.SetError(writer);
 
         // Act
         ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
@@ -285,6 +286,7 @@ public class ValidateConfigTests
         ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
 
         // Act
+        Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
         ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
 
         // Assert

@@ -78,7 +78,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         },
                         ""field"": {
                             ""type"": ""string"",
-                            ""description"": ""Field name to aggregate, or * with count to count all rows.""
+                            ""description"": ""Field name to aggregate, or * with count to count all rows. Defaults to '*' when omitted (only valid with function 'count')."",
+                            ""default"": ""*""
                         },
                         ""distinct"": {
                             ""type"": ""boolean"",
@@ -128,7 +129,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             ""description"": ""Opaque cursor from a previous endCursor for next-page retrieval. Requires groupby and first. Do not construct manually.""
                         }
                     },
-                    ""required"": [""entity"", ""function"", ""field""]
+                    ""required"": [""entity"", ""function""]
                 }"
             )
         };
@@ -367,13 +368,24 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     $"Invalid function '{function}'. Must be one of: count, avg, sum, min, max.", logger);
             }
 
-            // Parse field
-            if (!root.TryGetProperty("field", out JsonElement fieldElement) || string.IsNullOrWhiteSpace(fieldElement.GetString()))
+            // Parse field. When omitted, default to '*' (only valid with function 'count').
+            // For non-count functions, an explicit numeric field name is required.
+            string field;
+            if (root.TryGetProperty("field", out JsonElement fieldElement) && !string.IsNullOrWhiteSpace(fieldElement.GetString()))
             {
-                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Missing required argument 'field'.", logger);
+                field = fieldElement.GetString()!;
+            }
+            else
+            {
+                if (function != "count")
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                        $"Missing required argument 'field'. The default value '*' is only valid with function 'count'; for function '{function}', provide a specific numeric field name.", logger);
+                }
+
+                field = "*";
             }
 
-            string field = fieldElement.GetString()!;
             bool isCountStar = function == "count" && field == "*";
 
             if (field == "*" && function != "count")

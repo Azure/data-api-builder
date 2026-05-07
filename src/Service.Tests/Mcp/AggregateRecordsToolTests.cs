@@ -62,7 +62,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             CollectionAssert.Contains(requiredFields, "entity");
             CollectionAssert.Contains(requiredFields, "function");
-            CollectionAssert.Contains(requiredFields, "field");
+            CollectionAssert.DoesNotContain(requiredFields, "field",
+                "'field' must not be required; it defaults to '*'.");
+
+            // Verify the field property declares '*' as its default value.
+            JsonElement fieldProp = properties.GetProperty("field");
+            Assert.IsTrue(fieldProp.TryGetProperty("default", out JsonElement fieldDefault),
+                "'field' property must declare a default value.");
+            Assert.AreEqual("*", fieldDefault.GetString(),
+                "'field' default must be '*'.");
 
             // Verify all schema properties exist with correct types
             AssertSchemaProperty(properties, "entity", "string");
@@ -119,7 +127,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataTestMethod]
         [DataRow("{\"function\": \"count\", \"field\": \"*\"}", null, DisplayName = "Missing entity")]
         [DataRow("{\"entity\": \"Book\", \"field\": \"*\"}", null, DisplayName = "Missing function")]
-        [DataRow("{\"entity\": \"Book\", \"function\": \"count\"}", null, DisplayName = "Missing field")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"avg\"}", "field", DisplayName = "Missing field for non-count function")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"sum\"}", "field", DisplayName = "Missing field for sum function")]
         [DataRow("{\"entity\": \"Book\", \"function\": \"median\", \"field\": \"price\"}", "median", DisplayName = "Invalid function 'median'")]
         public async Task AggregateRecords_MissingOrInvalidRequiredArgs_ReturnsInvalidArguments(string json, string expectedInMessage)
         {

@@ -35,6 +35,10 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
         /// </summary>
         Boolean = 5,
         /// <summary>
+        /// A JSON integer (subset of number without a fraction or exponent part)
+        /// </summary>
+        Integer = 7,
+        /// <summary>
         /// The JSON value null
         /// </summary>
         Null = 6

@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="sqlMetadataProvider">The metadataprovider.</param>
         /// <param name="runtimeConfig">Runtimeconfig object</param>
         /// <param name="httpContext">HTTP context associated with the API request</param>
-        /// <param name="isMcpRequest">True if request is done through MCP endpoint</param>
+        /// <param name="isMcpRequest"><c>true</c> if invoked from the MCP endpoint (emit <c>after</c>); <c>false</c> or <c>null</c> for REST (emit <c>nextLink</c>).</param>
         /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
         public static OkObjectResult FormatFindResult(
             JsonElement findOperationResponse,
@@ -41,8 +41,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             HttpContext httpContext,
             bool? isMcpRequest = null)
         {
-            // When there are no rows returned from the database, the jsonElement will be an empty array.
-            // In that case, the response is returned as is.
+            // Empty result set: return the standard envelope { "value": [] } and skip extra-field/cursor work.
             if (findOperationResponse.ValueKind is JsonValueKind.Array && findOperationResponse.GetArrayLength() == 0)
             {
                 return OkResponse(findOperationResponse);
@@ -110,7 +109,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // REST endpoint: { value: [...], nextLink: "<absolute-or-relative-uri>" }
             string basePaginationUri = SqlPaginationUtil.ConstructBaseUriForPagination(httpContext, runtimeConfig.Runtime?.BaseRoute);
             string queryString = SqlPaginationUtil.BuildQueryStringWithAfterToken(
-                                     queryStringParameters: context!.ParsedQueryString,
+                                     queryStringParameters: context.ParsedQueryString,
                                      newAfterPayload: after);
             string nextLink = SqlPaginationUtil.BuildNextLinkUri(
                                   baseUri: basePaginationUri,
@@ -133,9 +132,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="response">Response json retrieved from the database</param>
         /// <param name="fieldsToBeReturned">List of fields to be returned in the response.</param>
-        /// <returns>Additional fields that are present in the response</returns>
+        /// <returns>Additional fields that are present in the response. Returns an empty set when <paramref name="response"/> is not a JSON object (e.g. a scalar or array-typed row value), since there are no named properties to filter.</returns>
         private static HashSet<string> DetermineExtraFieldsInResponse(JsonElement response, List<string> fieldsToBeReturned)
         {
+            // Guard: a result row is normally a JSON object, but with database engines that can return
+            // array/scalar/collection-typed shapes at the row level there is nothing to enumerate. In that
+            // case there are no extra-field columns to strip, so return an empty set rather than throwing.
+            if (response.ValueKind is not JsonValueKind.Object)
+            {
+                return new HashSet<string>();
+            }
+
             HashSet<string> fieldsPresentInResponse = new();
 
             foreach (JsonProperty property in response.EnumerateObject())
@@ -207,7 +214,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public static OkObjectResult OkResponse(JsonElement jsonResult)
         {
             // For consistency we always return the payload as an array under "value".
-            List<JsonElement> rows = jsonResult.ValueKind == JsonValueKind.Array
+            List<JsonElement> rows = jsonResult.ValueKind is JsonValueKind.Array
                 ? jsonResult.EnumerateArray().ToList()
                 : new List<JsonElement> { jsonResult };
 

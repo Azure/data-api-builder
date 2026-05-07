@@ -608,8 +608,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Builds a query string by appending or replacing the <c>$after</c> token with the specified value.
         /// </summary>
-        /// <remarks>This method does not include the <paramref name="path"/> in the returned query
-        /// string. It only processes and formats the query string parameters.</remarks>
+        /// <remarks>This method returns only the query string portion (no path or host).</remarks>
         /// <param name="queryStringParameters">A collection of existing query string parameters. If <see langword="null"/>, an empty collection is used.
         /// The <c>$after</c> parameter, if present, will be removed before appending the new token.</param>
         /// <param name="newAfterPayload">The new value for the <c>$after</c> token. If this value is <see langword="null"/>, empty, or whitespace, no
@@ -638,8 +637,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={newAfterPayload}";
             }
 
-            // Construct final link
-            // return $"{path}{queryString}";
             return queryString;
         }
 

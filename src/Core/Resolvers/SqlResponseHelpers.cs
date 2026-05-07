@@ -111,10 +111,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string queryString = SqlPaginationUtil.BuildQueryStringWithAfterToken(
                                      queryStringParameters: context.ParsedQueryString,
                                      newAfterPayload: after);
-            string nextLink = SqlPaginationUtil.BuildNextLinkUri(
-                                  baseUri: basePaginationUri,
-                                  queryString: queryString,
-                                  isNextLinkRelative: runtimeConfig.NextLinkRelative());
+            UriBuilder uriBuilder = new(basePaginationUri)
+            {
+                // Form final link by appending the query string
+                Query = queryString
+            };
+            string nextLink = runtimeConfig.NextLinkRelative()
+                ? uriBuilder.Uri.PathAndQuery // returns just "/api/<Entity>?$after...", no host
+                : uriBuilder.Uri.AbsoluteUri; // returns full URL
 
             return new OkObjectResult(new
             {
@@ -208,11 +212,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// shape of <paramref name="jsonResult"/>. <see cref="FormatFindResult"/> attaches those fields
         /// out-of-band when needed. This avoids confusing array-typed column values (e.g. SQL Server
         /// JSON arrays, vector/collection types) with a pagination sentinel.
+        ///
+        /// <paramref name="isMcpRequest"/> is accepted for source compatibility with prior versions
+        /// of <c>Microsoft.DataApiBuilder.Core</c> but is no longer used: the envelope shape produced
+        /// here is identical for REST and MCP, and pagination metadata is built by
+        /// <see cref="FormatFindResult"/>.
         /// </summary>
         /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
+        /// <param name="isMcpRequest">Unused; preserved for backwards-compatible call sites.</param>
         /// <returns>Correctly formatted OkObjectResult.</returns>
-        public static OkObjectResult OkResponse(JsonElement jsonResult)
+        public static OkObjectResult OkResponse(JsonElement jsonResult, bool? isMcpRequest = null)
         {
+            _ = isMcpRequest; // intentionally unused; kept for source compatibility.
+
             // For consistency we always return the payload as an array under "value".
             List<JsonElement> rows = jsonResult.ValueKind is JsonValueKind.Array
                 ? jsonResult.EnumerateArray().ToList()

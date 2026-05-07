@@ -18,14 +18,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     /// <summary>
     /// Focused unit tests for <see cref="SqlResponseHelpers.FormatFindResult"/>.
     ///
-    /// These tests pin the response envelope shape across the five paths the method takes:
+    /// Tests 1-5 pin the response envelope shape across each path the method takes:
     /// (1) empty result, (2) single object, (3) collection without next page,
     /// (4) collection with next page (REST), (5) collection with next page (MCP).
     ///
-    /// Test 6 is a regression guard against confusing array-typed column values with the old
-    /// pagination "shape sentinel" — it pins that a row containing an array-valued property
-    /// (e.g. a SQL Server JSON array, vector, or other collection-typed column) is returned
-    /// unmodified and is NOT misinterpreted as a pagination marker.
+    /// Test 6 documents that rows containing array-valued columns (the shape enabled by
+    /// SQL Server's JSON/vector types) round-trip through the response pipeline unchanged.
+    ///
+    /// Test 7 is the load-bearing regression guard for the shape-sentinel removal:
+    /// it pins that a result whose last top-level element is itself a JSON array — the
+    /// exact trigger the pre-refactor <see cref="SqlResponseHelpers.OkResponse"/> used to
+    /// detect a pagination sentinel — is now correctly treated as ordinary data.
     /// </summary>
     [TestClass]
     public class SqlResponseHelpersUnitTests
@@ -176,14 +179,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Regression guard for the shape-sentinel removal:
-        /// a row whose last column is an array-valued JSON value (e.g. a SQL Server JSON array
-        /// or vector/collection column) must be returned verbatim and must NOT be confused
-        /// with a pagination marker. Pre-refactor, the in-band sentinel detection in
-        /// <see cref="SqlResponseHelpers.OkResponse"/> would have misclassified this shape.
+        /// Pins that rows containing array-valued columns (e.g. a SQL Server JSON array, vector,
+        /// or other collection-typed column) round-trip through the response pipeline unchanged.
+        /// This is forward-looking coverage for query shapes enabled by SQL Server's JSON/vector
+        /// types: the array values live inside object-shaped rows, so this case did not actually
+        /// trigger the pre-refactor shape sentinel — but it documents the supported shape and
+        /// guards against future regressions in extra-field stripping or envelope construction.
         /// </summary>
         [TestMethod]
-        public void FormatFindResult_RowWithArrayColumn_NotMisclassifiedAsPagination()
+        public void FormatFindResult_RowWithArrayColumn_RoundTripsUnchanged()
         {
             // Two rows with array-valued "tags" column. first=5 so HasNext=false.
             JsonElement input = ParseJson(@"[
@@ -212,6 +216,50 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual("sci-fi", value[0].GetProperty("tags")[0].GetString());
             Assert.AreEqual(1, value[1].GetProperty("tags").GetArrayLength());
             Assert.AreEqual("fantasy", value[1].GetProperty("tags")[0].GetString());
+        }
+
+        /// <summary>
+        /// Regression guard for the actual shape-sentinel failure mode: when the result list's
+        /// last top-level element is itself a JSON array (a non-object row, as could be produced
+        /// by future query shapes that project array-typed values at the row level), the response
+        /// must be returned verbatim under <c>value</c>. Pre-refactor, <see cref="SqlResponseHelpers.OkResponse"/>
+        /// inspected <c>JsonValueKind.Array</c> on the last element and would have attempted to
+        /// unpack it as a <c>{ "nextLink" }</c> / <c>{ "after" }</c> sentinel, producing an
+        /// incorrect envelope. With shape-based detection removed, the array element is now
+        /// correctly treated as ordinary data.
+        /// </summary>
+        [TestMethod]
+        public void FormatFindResult_TopLevelArrayTailRow_IsNotMisclassifiedAsPaginationSentinel()
+        {
+            // Last top-level element is a JSON array — the exact shape the old in-band sentinel
+            // detection used as its trigger. first=10 keeps HasNext=false so the no-pagination
+            // path is taken; without the refactor, OkResponse would have misfired here.
+            JsonElement input = ParseJson(@"[
+                { ""id"": 1 },
+                { ""id"": 2 },
+                [ 1, 2, 3 ]
+            ]");
+            FindRequestContext context = CreateContext(
+                fieldsToBeReturned: new List<string> { "id" },
+                first: 10);
+
+            OkObjectResult result = SqlResponseHelpers.FormatFindResult(
+                findOperationResponse: input,
+                context: context,
+                sqlMetadataProvider: Mock.Of<ISqlMetadataProvider>(),
+                runtimeConfig: CreateRuntimeConfig(),
+                httpContext: new DefaultHttpContext());
+
+            JsonElement envelope = SerializeValue(result);
+            AssertHasNoPaginationFields(envelope);
+
+            JsonElement value = envelope.GetProperty("value");
+            Assert.AreEqual(3, value.GetArrayLength(),
+                "All three top-level elements must be preserved; the trailing array must NOT be unpacked as a pagination sentinel.");
+            Assert.AreEqual(JsonValueKind.Object, value[0].ValueKind);
+            Assert.AreEqual(JsonValueKind.Object, value[1].ValueKind);
+            Assert.AreEqual(JsonValueKind.Array, value[2].ValueKind);
+            Assert.AreEqual(3, value[2].GetArrayLength());
         }
 
         #endregion

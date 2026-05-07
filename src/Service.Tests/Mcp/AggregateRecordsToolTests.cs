@@ -164,6 +164,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             DisplayName = "Star field with avg (must mention count)")]
         [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": \"*\", \"distinct\": true}", "DISTINCT",
             DisplayName = "Distinct with count(*)")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"distinct\": true}", "DISTINCT",
+            DisplayName = "Distinct with implicit count(*) default (issue #3280)")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"avg\"}", "field",
+            DisplayName = "Non-count function without field returns InvalidArguments (issue #3280)")]
+        [DataRow("{\"entity\": \"Book\", \"function\": \"count\", \"field\": 123}", "field",
+            DisplayName = "Non-string field value returns InvalidArguments")]
         public async Task AggregateRecords_InvalidFieldFunctionCombination_ReturnsInvalidArguments(string json, string expectedInMessage)
         {
             IServiceProvider sp = CreateDefaultServiceProvider();
@@ -253,6 +259,29 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
             Assert.AreNotEqual("InvalidArguments", errorType,
                 "Simple count(*) must pass input validation.");
+        }
+
+        /// <summary>
+        /// Verifies that count without an explicit field passes validation by defaulting to '*' (issue #3280).
+        /// </summary>
+        [TestMethod]
+        public async Task AggregateRecords_CountWithoutField_PassesValidation()
+        {
+            IServiceProvider sp = CreateDefaultServiceProvider();
+
+            CallToolResult result = await ExecuteToolAsync(sp,
+                "{\"entity\": \"Book\", \"function\": \"count\"}");
+
+            // May fail at metadata resolution (no real DB), but must NOT fail with InvalidArguments.
+            if (result.IsError != true)
+            {
+                return;
+            }
+
+            JsonElement content = ParseContent(result);
+            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
+            Assert.AreNotEqual("InvalidArguments", errorType,
+                "count without field must pass input validation by defaulting to '*' (issue #3280).");
         }
 
         /// <summary>

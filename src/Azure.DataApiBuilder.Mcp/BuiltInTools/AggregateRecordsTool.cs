@@ -371,9 +371,27 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             // Parse field. When omitted, default to '*' (only valid with function 'count').
             // For non-count functions, an explicit numeric field name is required.
             string field;
-            if (root.TryGetProperty("field", out JsonElement fieldElement) && !string.IsNullOrWhiteSpace(fieldElement.GetString()))
+            if (root.TryGetProperty("field", out JsonElement fieldElement))
             {
-                field = fieldElement.GetString()!;
+                if (fieldElement.ValueKind != JsonValueKind.String)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                        $"Argument 'field' must be a string. Got: '{fieldElement.ValueKind}'.", logger);
+                }
+
+                if (!string.IsNullOrWhiteSpace(fieldElement.GetString()))
+                {
+                    field = fieldElement.GetString()!;
+                }
+                else if (function == "count")
+                {
+                    field = "*";
+                }
+                else
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                        $"Missing required argument 'field'. The default value '*' is only valid with function 'count'; for function '{function}', provide a specific numeric field name.", logger);
+                }
             }
             else
             {

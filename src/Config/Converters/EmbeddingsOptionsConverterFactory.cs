@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Config.Converters;
 /// </summary>
 internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
 {
-    public EmbeddingsOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings = null)
+    public EmbeddingsOptionsConverterFactory(DeserializationVariableReplacementSettings? /*replacementSettings*/ = null)
     {
         // Note: replacementSettings is not used in this converter because the environment variable
         // replacement is handled by the string deserializers registered in the JsonSerializerOptions.
@@ -198,14 +198,15 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
         /// between nullable constructor parameters and non-nullable properties.
         /// Follows the same pattern as FileSinkConverter.
         /// </summary>
-        private static EmbeddingsChunkingOptions ReadChunkingOptions(ref Utf8JsonReader reader, JsonSerializerOptions options)
+        private static EmbeddingsChunkingOptions ReadChunkingOptions(ref Utf8JsonReader reader, JsonSerializerOptions /*options*/)
         {
             if (reader.TokenType != JsonTokenType.StartObject)
             {
                 throw new JsonException("Expected start of object for chunking.");
-            }
+                            };
+                        }
+                        break;
 
-            bool? enabled = null;
             int? sizeChars = null;
             int? overlapChars = null;
 

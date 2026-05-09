@@ -374,6 +374,7 @@ public class EmbeddingService : IEmbeddingService
             {
                 textToIndices[text] = new List<int>();
             }
+            
             textToIndices[text].Add(index);
         }
 

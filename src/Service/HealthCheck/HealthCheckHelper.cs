@@ -30,8 +30,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         private ILogger<HealthCheckHelper> _logger;
         private HttpUtilities _httpUtility;
         private IEmbeddingService? _embeddingService;
-        private string _incomingRoleHeader = string.Empty;
-        private string _incomingRoleToken = string.Empty;
 
         private const string TIME_EXCEEDED_ERROR_MESSAGE = "The threshold for executing the request has exceeded.";
         private const string DIMENSIONS_MISMATCH_ERROR_MESSAGE = "The embedding dimensions do not match the expected dimensions.";

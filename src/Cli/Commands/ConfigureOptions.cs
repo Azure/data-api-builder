@@ -425,6 +425,7 @@ namespace Cli.Commands
 
         [Option("show-effective-permissions", Required = false, HelpText = "Display effective permissions for all entities, including inherited permissions. Entities are listed in alphabetical order.")]
         public bool ShowEffectivePermissions { get; }
+        
         [Option("runtime.embeddings.enabled", Required = false, HelpText = "Enable/disable the embedding service. Default: true")]
         public CliBool? RuntimeEmbeddingsEnabled { get; }
 

@@ -122,11 +122,11 @@ public class EmbeddingControllerTests
             ApiKey: "key",
             Enabled: false,
             Endpoint: new EmbeddingsEndpointOptions(enabled: true, path: "/embed"));
-
-        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
-            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object);
-        controller.ControllerContext = CreateControllerContext("/embed");
+        var mockProvider = CreateMockConfigProvider(embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        var controller = new EmbeddingController(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed")
+        };
 
         // Act
         IActionResult result = await controller.PostAsync("embed");
@@ -147,11 +147,11 @@ public class EmbeddingControllerTests
             BaseUrl: "https://api.openai.com",
             ApiKey: "key",
             Endpoint: null);
-
-        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
-            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object);
-        controller.ControllerContext = CreateControllerContext("/embed");
+        var mockProvider = CreateMockConfigProvider(embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        var controller = new EmbeddingController(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed")
+        };
 
         // Act
         IActionResult result = await controller.PostAsync("embed");
@@ -172,11 +172,11 @@ public class EmbeddingControllerTests
             BaseUrl: "https://api.openai.com",
             ApiKey: "key",
             Endpoint: new EmbeddingsEndpointOptions(enabled: false, path: "/embed"));
-
-        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
-            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object);
-        controller.ControllerContext = CreateControllerContext("/embed");
+        var mockProvider = CreateMockConfigProvider(embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        var controller = new EmbeddingController(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed")
+        };
 
         // Act
         IActionResult result = await controller.PostAsync("embed");
@@ -1009,12 +1009,10 @@ public class EmbeddingControllerTests
         EmbeddingController controller = new(
             mockProvider.Object,
             _mockLogger.Object,
-            _mockEmbeddingService.Object);
-
-        controller.ControllerContext = CreateControllerContext(
-            "/embed",
-            requestBody,
-            "application/json");
+            _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed", requestBody, "application/json")
+        };
 
         // Act
         IActionResult result = await controller.PostAsync("embed");
@@ -1188,12 +1186,10 @@ public class EmbeddingControllerTests
         EmbeddingController controller = new(
             mockProvider.Object,
             _mockLogger.Object,
-            _mockEmbeddingService.Object);
-
-        controller.ControllerContext = CreateControllerContext(
-            "/embed?$chunking.enabled=false",
-            requestBody,
-            "application/json");
+            _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed?$chunking.enabled=false", requestBody, "application/json")
+        };
 
         // Act
         IActionResult result = await controller.PostAsync("embed");

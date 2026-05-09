@@ -425,7 +425,7 @@ namespace Cli.Commands
 
         [Option("show-effective-permissions", Required = false, HelpText = "Display effective permissions for all entities, including inherited permissions. Entities are listed in alphabetical order.")]
         public bool ShowEffectivePermissions { get; }
-        
+
         [Option("runtime.embeddings.enabled", Required = false, HelpText = "Enable/disable the embedding service. Default: true")]
         public CliBool? RuntimeEmbeddingsEnabled { get; }
 
@@ -456,7 +456,7 @@ namespace Cli.Commands
         [Option("runtime.embeddings.endpoint.roles", Required = false, Separator = ',', HelpText = "Configure the roles allowed to access the embedding endpoint. Comma-separated list. In development mode defaults to 'anonymous'.")]
         public IEnumerable<string>? RuntimeEmbeddingsEndpointRoles { get; }
 
-        [Option("runtime.embeddings.endpoint.path", Required = false, HelpText = "Configure the URL path for the embedding endpoint. Default: '/embed' Conditions: Prefix path with '/'." )]
+        [Option("runtime.embeddings.endpoint.path", Required = false, HelpText = "Configure the URL path for the embedding endpoint. Default: '/embed' Conditions: Prefix path with '/'.")]
         public string? RuntimeEmbeddingsEndpointPath { get; }
 
         [Option("runtime.embeddings.health.enabled", Required = false, HelpText = "Enable/disable health checks for the embedding service. Default: true")]

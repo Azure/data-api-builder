@@ -1495,8 +1495,10 @@ public class EmbeddingControllerTests
             embeddingsOptions: embeddingsOptions,
             hostMode: HostMode.Development);
 
-        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object);
-        controller.ControllerContext = CreateControllerContext("/embed", longText, "text/plain");
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed", longText, "text/plain")
+        };
 
         // Act
         IActionResult result = await controller.PostAsync("embed");
@@ -1710,12 +1712,14 @@ public class EmbeddingControllerTests
             embeddingsOptions: embeddingsOptions,
             hostMode: HostMode.Development);
 
-        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object);
-        controller.ControllerContext = CreateControllerContext(
-            "/embed",
-            requestBody,
-            contentType: "text/plain",
-            acceptHeader: acceptHeader);
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext(
+                "/embed",
+                requestBody,
+                contentType: "text/plain",
+                acceptHeader: acceptHeader)
+        };
         return controller;
     }
 
@@ -1791,14 +1795,15 @@ public class EmbeddingControllerTests
         EmbeddingController controller = new(
             mockProvider.Object,
             _mockLogger.Object,
-            serviceToUse);
-
-        controller.ControllerContext = CreateControllerContext(
-            requestPath,
-            requestBody,
-            contentType,
-            clientRole,
-            acceptHeader);
+            serviceToUse)
+        {
+            ControllerContext = CreateControllerContext(
+                requestPath,
+                requestBody,
+                contentType,
+                clientRole,
+                acceptHeader)
+        };
 
         return controller;
     }

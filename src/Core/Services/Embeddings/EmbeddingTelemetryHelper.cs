@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Azure.DataApiBuilder.Core.Telemetry;
 
-
 namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 
 /// <summary>

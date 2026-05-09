@@ -84,6 +84,7 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                                 _ => throw new JsonException($"Unknown provider: {providerStr}")
                             };
                         }
+
                         break;
                     case "base-url":
                         baseUrl = JsonSerializer.Deserialize<string>(ref reader, options);

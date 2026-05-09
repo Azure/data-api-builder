@@ -107,7 +107,7 @@ public class EmbeddingServiceTests
         // Arrange
         EmbeddingsOptions options = CreateAzureOpenAIOptions();
         HttpClient httpClient = new();
-        new EmbeddingService(httpClient, options, _mockLogger.Object, _mockCache.Object);
+        EmbeddingService service = new EmbeddingService(httpClient, options, _mockLogger.Object, _mockCache.Object);
 
         // Act
         EmbeddingResult result = await service.TryEmbedAsync(text!);

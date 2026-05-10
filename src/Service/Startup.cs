@@ -1431,7 +1431,7 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Configures a dedicated FusionCache instance for embeddings with optional L2 Redis cache.
+        /// Configures a dedicated FusionCache instance for embeddings with optional L2 Azure Managed Redis cache.
         /// </summary>
         /// <param name="services">The service collection.</param>
         /// <param name="embeddingsOptions">The embeddings configuration options.</param>
@@ -1475,10 +1475,10 @@ namespace Azure.DataApiBuilder.Service
 
                 if (string.IsNullOrWhiteSpace(level2Options.ConnectionString))
                 {
-                    throw new Exception("Embeddings Redis L2 cache requires a valid connection-string.");
+                    throw new Exception("Embeddings Azure Managed Redis L2 cache requires a valid connection-string.");
                 }
 
-                // Create connection multiplexer for embeddings Redis cache
+                // Create connection multiplexer for embeddings Azure Managed Redis cache
                 Task<IConnectionMultiplexer> connectionMultiplexerTask =
                     CreateConnectionMultiplexerAsync(level2Options.ConnectionString);
 
@@ -1493,7 +1493,7 @@ namespace Azure.DataApiBuilder.Service
                         ConnectionMultiplexerFactory = async () => await connectionMultiplexerTask
                     }));
 
-                _logger.LogInformation("Embeddings L2 (Redis) cache enabled");
+                _logger.LogInformation("Embeddings L2 (Azure Managed Redis) cache enabled");
             }
             else
             {

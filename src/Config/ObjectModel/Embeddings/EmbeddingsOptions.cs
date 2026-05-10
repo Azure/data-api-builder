@@ -113,7 +113,7 @@ public record EmbeddingsOptions
 
     /// <summary>
     /// Cache configuration for embeddings.
-    /// Includes L1 (in-memory) and optional L2 (Redis) caching.
+    /// Includes L1 (in-memory) and optional L2 (Azure Managed Redis) caching.
     /// </summary>
     [JsonPropertyName("cache")]
     public EmbeddingsCacheOptions? Cache { get; init; }
@@ -190,7 +190,7 @@ public record EmbeddingsOptions
     public bool IsCachingEnabled => Cache?.Enabled ?? true;
 
     /// <summary>
-    /// Returns true if L2 (distributed Redis) cache is enabled for embeddings.
+    /// Returns true if L2 (distributed Azure Managed Redis) cache is enabled for embeddings.
     /// </summary>
     [JsonIgnore]
     public bool IsLevel2CacheEnabled => (Cache?.Enabled ?? true) && (Cache?.IsLevel2Enabled ?? false);

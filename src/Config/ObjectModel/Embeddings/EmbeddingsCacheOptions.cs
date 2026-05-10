@@ -31,7 +31,7 @@ public record EmbeddingsCacheOptions
     public int? TtlHours { get; init; } = null;
 
     /// <summary>
-    /// The options for the level2 cache (distributed Redis cache).
+    /// The options for the level2 cache (distributed Azure Managed Redis cache).
     /// </summary>
     [JsonPropertyName("level-2")]
     public EmbeddingsCacheLevel2Options? Level2 { get; init; } = null;

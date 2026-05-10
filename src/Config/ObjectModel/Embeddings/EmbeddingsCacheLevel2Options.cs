@@ -6,19 +6,19 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 
 /// <summary>
-/// Embeddings-specific level2 (distributed) cache configuration for Redis.
+/// Embeddings-specific level2 (distributed) cache configuration for Azure Managed Redis.
 /// Properties are nullable to support DAB CLI merge config expected behavior.
 /// </summary>
 public record EmbeddingsCacheLevel2Options
 {
     /// <summary>
-    /// Whether the L2 distributed Redis cache should be used for embeddings.
+    /// Whether the L2 distributed Azure Managed Redis cache should be used for embeddings.
     /// </summary>
     [JsonPropertyName("enabled")]
     public bool? Enabled { get; init; } = false;
 
     /// <summary>
-    /// The connection string for Azure Cache for Redis.
+    /// The connection string for Azure Managed Redis.
     /// Example: "contoso.redis.cache.windows.net:6380,password=...,ssl=True,abortConnect=False"
     /// </summary>
     [JsonPropertyName("connection-string")]

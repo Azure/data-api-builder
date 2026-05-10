@@ -915,7 +915,7 @@
             },
             "cache": {
               "type": "object",
-              "description": "Cache configuration for embeddings. Includes L1 (in-memory) and optional L2 (Azure Cache for Redis) caching.",
+              "description": "Cache configuration for embeddings. Includes L1 (in-memory) and optional L2 (Azure Managed Redis) caching.",
               "additionalProperties": false,
               "properties": {
                 "enabled": {
@@ -931,7 +931,7 @@
                 },
                 "level-2": {
                   "type": "object",
-                  "description": "Configuration for L2 distributed cache using Azure Cache for Redis.",
+                  "description": "Configuration for L2 distributed cache using Azure Managed Redis.",
                   "additionalProperties": false,
                   "properties": {
                     "enabled": {
@@ -941,7 +941,7 @@
                     },
                     "connection-string": {
                       "type": "string",
-                      "description": "The connection string for Azure Cache for Redis. Supports environment variable substitution with @env('VAR_NAME'). Example: 'contoso.redis.cache.windows.net:6380,password=...,ssl=True,abortConnect=False'"
+                      "description": "The connection string for Azure Managed Redis. Supports environment variable substitution with @env('VAR_NAME'). Example: 'contoso.redis.cache.windows.net:6380,password=...,ssl=True,abortConnect=False'"
                     }
                   },
                   "required": ["enabled"]

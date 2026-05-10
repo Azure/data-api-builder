@@ -941,7 +941,7 @@
                     },
                     "connection-string": {
                       "type": "string",
-                      "description": "The connection string for Azure Managed Redis. Supports environment variable substitution with @env('VAR_NAME'). Example: 'contoso.redis.cache.windows.net:6380,password=...,ssl=True,abortConnect=False'"
+                      "description": "The connection string for Azure Managed Redis. Supports environment variable substitution with @env('VAR_NAME'). Example: 'contoso.redis.cache.windows.net:6380,password=...,ssl=True,abortConnect=False'. Note: Currently only connection-string based authentication is supported. Microsoft Entra ID (token-based) authentication support is planned for a future release."
                     }
                   },
                   "required": ["enabled"]

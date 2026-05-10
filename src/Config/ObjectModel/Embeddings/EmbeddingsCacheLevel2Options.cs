@@ -20,6 +20,7 @@ public record EmbeddingsCacheLevel2Options
     /// <summary>
     /// The connection string for Azure Managed Redis.
     /// Example: "contoso.redis.cache.windows.net:6380,password=...,ssl=True,abortConnect=False"
+    /// Note: Currently only connection-string based authentication is supported. Microsoft Entra ID (token-based) authentication support is planned for a future release.
     /// </summary>
     [JsonPropertyName("connection-string")]
     public string? ConnectionString { get; init; } = null;

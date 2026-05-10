@@ -54,6 +54,18 @@ internal class RuntimeCacheLevel2OptionsConverterFactory : JsonConverterFactory
 
             if (value is not null)
             {
+                if (value.Provider is not null)
+                {
+                    writer.WritePropertyName("provider");
+                    JsonSerializer.Serialize(writer, value.Provider, options);
+                }
+
+                if (value.Partition is not null)
+                {
+                    writer.WritePropertyName("partition");
+                    JsonSerializer.Serialize(writer, value.Partition, options);
+                }
+
                 if (value.ConnectionString is not null)
                 {
                     writer.WritePropertyName("connection-string");

@@ -1475,7 +1475,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (string.IsNullOrWhiteSpace(level2Options.ConnectionString))
                 {
-                    throw new Exception("Embeddings Azure Managed Redis L2 cache requires a valid connection-string.");
+                    throw new Exception("Embeddings internal L2 cache requires a valid connection-string.");
                 }
 
                 // Create connection multiplexer for embeddings Azure Managed Redis cache
@@ -1493,7 +1493,7 @@ namespace Azure.DataApiBuilder.Service
                         ConnectionMultiplexerFactory = async () => await connectionMultiplexerTask
                     }));
 
-                _logger.LogInformation("Embeddings L2 (Azure Managed Redis) cache enabled");
+                _logger.LogInformation("Embeddings L2 (internal) cache enabled");
             }
             else
             {

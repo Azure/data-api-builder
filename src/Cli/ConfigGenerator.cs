@@ -99,21 +99,21 @@ namespace Cli
 
             HyphenatedNamingPolicy namingPolicy = new();
 
-            // If --rest.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
+            // If --rest.disabled flag is included in the init command, we log a warning as the flag is deprecated.
             if (options.RestDisabled is true)
             {
                 _logger.LogWarning("The option --rest.disabled is deprecated and support for the option will be removed in future versions of Data API builder." +
                     " Use the --rest.enabled option instead.");
             }
 
-            // If --graphql.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
+            // If --graphql.disabled flag is included in the init command, we log a warning as the flag is deprecated.
             if (options.GraphQLDisabled is true)
             {
                 _logger.LogWarning("The option --graphql.disabled is deprecated and support for the option will be removed in future versions of Data API builder." +
                     " Use the --graphql.enabled option instead.");
             }
 
-            // If --mcp.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
+            // If --mcp.disabled flag is included in the init command, we log a warning as the flag is deprecated.
             if (options.McpDisabled is true)
             {
                 _logger.LogWarning("The option --mcp.disabled is deprecated and support for the option will be removed in future versions of Data API builder." +
@@ -243,9 +243,9 @@ namespace Cli
                 }
             }
 
-            if (!restEnabled && !graphQLEnabled)
+            if (!restEnabled && !graphQLEnabled && !mcpEnabled)
             {
-                _logger.LogError("Both Rest and GraphQL cannot be disabled together.");
+                _logger.LogError("At least one of REST, GraphQL, or MCP must be enabled.");
                 return false;
             }
 

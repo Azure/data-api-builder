@@ -18,6 +18,16 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
     {
         private const int NUMBER_OF_ARGUMENTS = 4;
 
+        /// <summary>
+        /// GQL schema for a Book entity with numeric fields, used for aggregation tests.
+        /// </summary>
+        private const string BOOK_WITH_NUMERIC_FIELDS_GQL = @"
+type Book @model(name:""Book"") {
+    id: ID!
+    price: Float!
+    title: String
+}";
+
         private Dictionary<string, EntityMetadata> _entityPermissions;
 
         /// <summary>
@@ -35,6 +45,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                     new EntityActionOperation[] { EntityActionOperation.Read },
                     new string[] { "anonymous", "authenticated" }
                     );
+        }
+
+        private static Dictionary<string, EntityMetadata> CreateBookEntityPermissions()
+        {
+            return GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                new string[] { "Book" },
+                new EntityActionOperation[] { EntityActionOperation.Read },
+                new string[] { "anonymous" });
         }
 
         [DataTestMethod]
@@ -536,6 +554,74 @@ type Table @model(name: ""table"") {
             NamedTypeNode groupByType = (returnListType.Type as NonNullTypeNode)!.Type as NamedTypeNode;
             Assert.IsNotNull(groupByType, "return elements should be named type");
             Assert.AreEqual("BookGroupBy", groupByType.Name.Value, "should return GroupBy type");
+        }
+
+        /// <summary>
+        /// Tests that the return type does NOT include the groupBy field when aggregation is disabled.
+        /// </summary>
+        [TestMethod]
+        [TestCategory("Query Builder - Return Type")]
+        public void GenerateReturnType_ExcludesGroupByField_WhenAggregationDisabled()
+        {
+            // Arrange
+            NameNode entityName = new("Book");
+
+            // Act
+            ObjectTypeDefinitionNode returnType = QueryBuilder.GenerateReturnType(entityName, isAggregationEnabled: false);
+
+            // Assert
+            FieldDefinitionNode groupByField = returnType.Fields.FirstOrDefault(f => f.Name.Value == "groupBy");
+            Assert.IsNull(groupByField, "groupBy field should NOT exist when aggregation is disabled");
+        }
+
+        /// <summary>
+        /// Tests that QueryBuilder.Build correctly adds or omits the groupBy field on the
+        /// connection type based on whether the database type is in
+        /// <see cref="QueryBuilder.AggregationEnabledDatabaseTypes"/>.
+        /// MSSQL and DWSQL are supported; other types (e.g. PostgreSQL) are not.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL, true, DisplayName = "MSSQL: groupBy field present when aggregation enabled")]
+        [DataRow(DatabaseType.DWSQL, true, DisplayName = "DWSQL: groupBy field present when aggregation enabled")]
+        [DataRow(DatabaseType.PostgreSQL, false, DisplayName = "PostgreSQL: groupBy field absent (not in AggregationEnabledDatabaseTypes)")]
+        [DataRow(DatabaseType.MySQL, false, DisplayName = "MySQL: groupBy field absent (not in AggregationEnabledDatabaseTypes)")]
+        [TestCategory("Query Builder - Aggregation")]
+        public void Build_WithAggregationEnabled_GroupByPresenceMatchesDatabaseSupport(
+            DatabaseType dbType,
+            bool expectGroupBy)
+        {
+            // Arrange
+            DocumentNode root = Utf8GraphQLParser.Parse(BOOK_WITH_NUMERIC_FIELDS_GQL);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Book", dbType }
+            };
+
+            // Act
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                entityNameToDatabaseType,
+                new(new Dictionary<string, Entity> { { "Book", GraphQLTestHelpers.GenerateEmptyEntity() } }),
+                inputTypes: new(),
+                entityPermissionsMap: CreateBookEntityPermissions(),
+                _isAggregationEnabled: true
+            );
+
+            // Assert: find BookConnection type
+            ObjectTypeDefinitionNode bookConnection = queryRoot.Definitions
+                .OfType<ObjectTypeDefinitionNode>()
+                .FirstOrDefault(d => d.Name.Value == "BookConnection");
+            Assert.IsNotNull(bookConnection, "BookConnection type should exist");
+
+            FieldDefinitionNode groupByField = bookConnection.Fields.FirstOrDefault(f => f.Name.Value == "groupBy");
+            if (expectGroupBy)
+            {
+                Assert.IsNotNull(groupByField, $"groupBy field should exist on BookConnection for {dbType}");
+            }
+            else
+            {
+                Assert.IsNull(groupByField, $"groupBy field should NOT exist on BookConnection for {dbType} (not in AggregationEnabledDatabaseTypes)");
+            }
         }
 
         public static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)

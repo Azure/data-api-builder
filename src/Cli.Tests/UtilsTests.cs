@@ -253,9 +253,11 @@ public class UtilsTests
 
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
+        LogBuffer logBuffer = new();
+
         Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
 
-        Assert.IsTrue(ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), out string? mergedConfig), "Failed to merge config files");
+        Assert.IsTrue(ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), logBuffer, out string? mergedConfig), "Failed to merge config files");
         Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
         Assert.IsTrue(fileSystem.File.Exists(mergedConfig));
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(fileSystem.File.ReadAllText(mergedConfig))));
@@ -306,10 +308,11 @@ public class UtilsTests
         }
 
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
+        LogBuffer logBuffer = new();
 
         Assert.AreEqual(
             expectedIsMergedConfigAvailable,
-            ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), out string? mergedConfigFile),
+            ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), logBuffer, out string? mergedConfigFile),
             "Availability of merge config should match");
         Assert.AreEqual(expectedMergedConfigFileName, mergedConfigFile, "Merge config file name should match expected");
 

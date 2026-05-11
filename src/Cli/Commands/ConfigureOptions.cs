@@ -102,10 +102,14 @@ namespace Cli.Commands
             int? runtimeEmbeddingsTimeoutMs = null,
             CliBool? runtimeEmbeddingsEndpointEnabled = null,
             IEnumerable<string>? runtimeEmbeddingsEndpointRoles = null,
+            string? runtimeEmbeddingsEndpointPath = null,
             CliBool? runtimeEmbeddingsHealthEnabled = null,
             int? runtimeEmbeddingsHealthThresholdMs = null,
             string? runtimeEmbeddingsHealthTestText = null,
             int? runtimeEmbeddingsHealthExpectedDimensions = null,
+            CliBool? runtimeEmbeddingsChunkingEnabled = null,
+            int? runtimeEmbeddingsChunkingSizeChars = null,
+            int? runtimeEmbeddingsChunkingOverlapChars = null,
             string? config = null)
             : base(config)
         {
@@ -203,11 +207,16 @@ namespace Cli.Commands
             // Embeddings Endpoint
             RuntimeEmbeddingsEndpointEnabled = runtimeEmbeddingsEndpointEnabled;
             RuntimeEmbeddingsEndpointRoles = runtimeEmbeddingsEndpointRoles;
+            RuntimeEmbeddingsEndpointPath = runtimeEmbeddingsEndpointPath;
             // Embeddings Health
             RuntimeEmbeddingsHealthEnabled = runtimeEmbeddingsHealthEnabled;
             RuntimeEmbeddingsHealthThresholdMs = runtimeEmbeddingsHealthThresholdMs;
             RuntimeEmbeddingsHealthTestText = runtimeEmbeddingsHealthTestText;
             RuntimeEmbeddingsHealthExpectedDimensions = runtimeEmbeddingsHealthExpectedDimensions;
+            // Embeddings Chunking
+            RuntimeEmbeddingsChunkingEnabled = runtimeEmbeddingsChunkingEnabled;
+            RuntimeEmbeddingsChunkingSizeChars = runtimeEmbeddingsChunkingSizeChars;
+            RuntimeEmbeddingsChunkingOverlapChars = runtimeEmbeddingsChunkingOverlapChars;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: mssql, postgresql, cosmosdb_nosql, mysql, dwsql.")]
@@ -457,6 +466,60 @@ namespace Cli.Commands
 
         [Option("runtime.embeddings.health.expected-dimensions", Required = false, HelpText = "Configure the expected dimensions for health check validation. Optional.")]
         public int? RuntimeEmbeddingsHealthExpectedDimensions { get; }
+
+        [Option("runtime.embeddings.enabled", Required = false, HelpText = "Enable/disable the embedding service. Default: true")]
+        public CliBool? RuntimeEmbeddingsEnabled { get; }
+
+        [Option("runtime.embeddings.provider", Required = false, HelpText = "Configure embedding provider type. Allowed values: azure-openai, openai.")]
+        public EmbeddingProviderType? RuntimeEmbeddingsProvider { get; }
+
+        [Option("runtime.embeddings.base-url", Required = false, HelpText = "Configure the embedding provider base URL.")]
+        public string? RuntimeEmbeddingsBaseUrl { get; }
+
+        [Option("runtime.embeddings.api-key", Required = false, HelpText = "Configure the embedding API key for authentication.")]
+        public string? RuntimeEmbeddingsApiKey { get; }
+
+        [Option("runtime.embeddings.model", Required = false, HelpText = "Configure the model/deployment name. Required for Azure OpenAI, defaults to text-embedding-3-small for OpenAI.")]
+        public string? RuntimeEmbeddingsModel { get; }
+
+        [Option("runtime.embeddings.api-version", Required = false, HelpText = "Configure the Azure API version. Only used for Azure OpenAI provider. Default: 2024-02-01")]
+        public string? RuntimeEmbeddingsApiVersion { get; }
+
+        [Option("runtime.embeddings.dimensions", Required = false, HelpText = "Configure the output vector dimensions. Optional, uses model default if not specified.")]
+        public int? RuntimeEmbeddingsDimensions { get; }
+
+        [Option("runtime.embeddings.timeout-ms", Required = false, HelpText = "Configure the request timeout in milliseconds. Default: 30000")]
+        public int? RuntimeEmbeddingsTimeoutMs { get; }
+
+        [Option("runtime.embeddings.endpoint.enabled", Required = false, HelpText = "Enable/disable the endpoint for embeddings. Default: false")]
+        public CliBool? RuntimeEmbeddingsEndpointEnabled { get; }
+
+        [Option("runtime.embeddings.endpoint.roles", Required = false, Separator = ',', HelpText = "Configure the roles allowed to access the embedding endpoint. Comma-separated list. In development mode defaults to 'anonymous'.")]
+        public IEnumerable<string>? RuntimeEmbeddingsEndpointRoles { get; }
+
+        [Option("runtime.embeddings.endpoint.path", Required = false, HelpText = "Configure the URL path for the embedding endpoint. Default: '/embed' Conditions: Prefix path with '/'.")]
+        public string? RuntimeEmbeddingsEndpointPath { get; }
+
+        [Option("runtime.embeddings.health.enabled", Required = false, HelpText = "Enable/disable health checks for the embedding service. Default: true")]
+        public CliBool? RuntimeEmbeddingsHealthEnabled { get; }
+
+        [Option("runtime.embeddings.health.threshold-ms", Required = false, HelpText = "Configure the health check threshold in milliseconds. Default: 5000")]
+        public int? RuntimeEmbeddingsHealthThresholdMs { get; }
+
+        [Option("runtime.embeddings.health.test-text", Required = false, HelpText = "Configure the test text for health check validation. Default: 'health check'")]
+        public string? RuntimeEmbeddingsHealthTestText { get; }
+
+        [Option("runtime.embeddings.health.expected-dimensions", Required = false, HelpText = "Configure the expected dimensions for health check validation. Optional.")]
+        public int? RuntimeEmbeddingsHealthExpectedDimensions { get; }
+
+        [Option("runtime.embeddings.chunking.enabled", Required = false, HelpText = "Enable/disable text chunking before embedding. Default: true")]
+        public CliBool? RuntimeEmbeddingsChunkingEnabled { get; }
+
+        [Option("runtime.embeddings.chunking.size-chars", Required = false, HelpText = "Configure the chunk size in characters. Default: 800")]
+        public int? RuntimeEmbeddingsChunkingSizeChars { get; }
+
+        [Option("runtime.embeddings.chunking.overlap-chars", Required = false, HelpText = "Configure the overlap size in characters between consecutive chunks. Default: 100")]
+        public int? RuntimeEmbeddingsChunkingOverlapChars { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

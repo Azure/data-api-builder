@@ -17,6 +17,7 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
     {
         // Note: replacementSettings is not used in this converter because the environment variable
         // replacement is handled by the string deserializers registered in the JsonSerializerOptions.
+        _ = replacementSettings;
     }
 
     /// <inheritdoc/>
@@ -84,6 +85,7 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                                 _ => throw new JsonException($"Unknown provider: {providerStr}")
                             };
                         }
+
                         break;
                     case "base-url":
                         baseUrl = JsonSerializer.Deserialize<string>(ref reader, options);
@@ -147,8 +149,7 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                 TimeoutMs: timeoutMs,
                 Endpoint: endpoint,
                 Health: health,
-                Chunking: chunking,
-                Cache: cache);
+                Chunking: chunking);
         }
 
         /// <summary>
@@ -205,6 +206,7 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
         /// </summary>
         private static EmbeddingsChunkingOptions ReadChunkingOptions(ref Utf8JsonReader reader, JsonSerializerOptions options)
         {
+            _ = options;
             if (reader.TokenType != JsonTokenType.StartObject)
             {
                 throw new JsonException("Expected start of object for chunking.");

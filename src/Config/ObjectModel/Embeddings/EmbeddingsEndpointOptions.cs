@@ -16,9 +16,14 @@ public record EmbeddingsEndpointOptions
     public const string DEFAULT_PATH = "/embed";
 
     /// <summary>
-    /// Default roles for the embedding endpoint.
+    /// Default roles for the embedding endpoint in production mode.
     /// </summary>
     public static readonly string[] DEFAULT_ROLES = new[] { "authenticated" };
+
+    /// <summary>
+    /// Default roles for the embedding endpoint in development mode.
+    /// </summary>
+    public static readonly string[] DEFAULT_ROLES_DEVELOPMENT = new[] { "anonymous" };
 
     /// <summary>
     /// Anonymous role constant.
@@ -39,17 +44,33 @@ public record EmbeddingsEndpointOptions
 
     /// <summary>
     /// The roles allowed to access the embedding endpoint.
-    /// When null, GetEffectiveRoles returns ["authenticated"] by default.
-    /// In production mode, must be explicitly configured (cannot be null).
+    /// When null in development mode, GetEffectiveRoles returns ["anonymous"].
+    /// When null in production mode, GetEffectiveRoles returns ["authenticated"].
     /// </summary>
     [JsonPropertyName("roles")]
     public string[]? Roles { get; init; }
 
     /// <summary>
-    /// Gets the effective roles.
-    /// Returns configured roles if specified, otherwise defaults to ["authenticated"].
+    /// The URL path for the embedding endpoint.
+    /// Defaults to "/embed" if not specified.
     /// </summary>
-    /// <param name="isDevelopmentMode">Whether the host is in development mode (kept for API compatibility).</param>
+    [JsonPropertyName("path")]
+    public string? Path { get; init; }
+
+    /// <summary>
+    /// Gets the effective path for the embedding endpoint.
+    /// Returns the configured path if specified, otherwise returns the default "/embed".
+    /// </summary>
+    [JsonIgnore]
+    public string EffectivePath => Path ?? DEFAULT_PATH;
+
+    /// <summary>
+    /// Gets the effective roles based on configuration and environment.
+    /// Returns configured roles if specified.
+    /// In development mode without explicit roles, returns ["anonymous"] to allow easy testing.
+    /// In production mode without explicit roles, returns ["authenticated"] for security.
+    /// </summary>
+    /// <param name="isDevelopmentMode">Whether the host is in development mode.</param>
     /// <returns>Array of allowed roles.</returns>
     public string[] GetEffectiveRoles(bool isDevelopmentMode)
     {
@@ -58,7 +79,9 @@ public record EmbeddingsEndpointOptions
             return Roles;
         }
 
-        return DEFAULT_ROLES;
+        // In development mode, allow anonymous access for easier testing
+        // In production mode, require authentication by default
+        return isDevelopmentMode ? DEFAULT_ROLES_DEVELOPMENT : DEFAULT_ROLES;
     }
 
     /// <summary>
@@ -87,7 +110,8 @@ public record EmbeddingsEndpointOptions
     [JsonConstructor]
     public EmbeddingsEndpointOptions(
         bool? enabled = null,
-        string[]? roles = null)
+        string[]? roles = null,
+        string? path = null)
     {
         if (enabled.HasValue)
         {
@@ -102,5 +126,6 @@ public record EmbeddingsEndpointOptions
         // Keep roles as-is (null if not provided) so validation can check it
         // GetEffectiveRoles() will provide the default when needed
         Roles = roles;
+        Path = path;
     }
 }

@@ -43,6 +43,7 @@ namespace Cli.Commands
             CliBool restRequestBodyStrict = CliBool.None,
             CliBool multipleCreateOperationEnabled = CliBool.None,
             int? mcpAggregateRecordsQueryTimeout = null,
+            string? mcpDescription = null,
             string? config = null)
             : base(config)
         {
@@ -70,6 +71,7 @@ namespace Cli.Commands
             RestRequestBodyStrict = restRequestBodyStrict;
             MultipleCreateOperationEnabled = multipleCreateOperationEnabled;
             McpAggregateRecordsQueryTimeout = mcpAggregateRecordsQueryTimeout;
+            McpDescription = mcpDescription;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql, dwsql")]
@@ -144,6 +146,9 @@ namespace Cli.Commands
 
         [Option("mcp.aggregate-records.query-timeout", Required = false, HelpText = "Set the execution timeout in seconds for the aggregate-records MCP tool. Default: 30 (integer). Range: 1-600.")]
         public int? McpAggregateRecordsQueryTimeout { get; }
+
+        [Option("mcp.description", Required = false, HelpText = "Set the MCP server description to be exposed in the initialize response.")]
+        public string? McpDescription { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

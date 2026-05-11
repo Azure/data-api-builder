@@ -562,6 +562,34 @@ namespace Cli.Tests
             Assert.IsTrue(json.Contains("90"), $"Expected timeout value 90 in serialized JSON. Got: {json}");
         }
 
+        /// <summary>
+        /// Test that init with --mcp.description sets the MCP server description in the config.
+        /// When null (not specified), the description should be null. When provided, the config reflects the value.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, DisplayName = "Init without mcp.description leaves description null")]
+        [DataRow("This MCP provides access to the Products database.", DisplayName = "Init with mcp.description sets description")]
+        [DataRow("Use this server for customer data queries.", DisplayName = "Init with short mcp.description")]
+        public void InitWithMcpDescription_SetsDescription(string? mcpDescription)
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.MSSQL,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostMode.Development,
+                corsOrigin: null,
+                authenticationProvider: EasyAuthType.AppService.ToString(),
+                mcpDescription: mcpDescription,
+                config: TEST_RUNTIME_CONFIG_FILE);
+
+            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig?.Runtime?.Mcp);
+            Assert.AreEqual(mcpDescription, runtimeConfig.Runtime.Mcp.Description);
+        }
+
         private Task ExecuteVerifyTest(InitOptions options, VerifySettings? settings = null)
         {
             Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));

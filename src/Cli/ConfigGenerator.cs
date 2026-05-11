@@ -273,7 +273,8 @@ namespace Cli
                         Path: mcpPath ?? McpRuntimeOptions.DEFAULT_PATH,
                         DmlTools: options.McpAggregateRecordsQueryTimeout is not null
                             ? new DmlToolsConfig(aggregateRecordsQueryTimeout: options.McpAggregateRecordsQueryTimeout)
-                            : null),
+                            : null,
+                        Description: options.McpDescription),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(

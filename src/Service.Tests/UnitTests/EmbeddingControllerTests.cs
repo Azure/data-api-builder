@@ -123,16 +123,12 @@ public class EmbeddingControllerTests
             ApiKey: "key",
             Enabled: false,
             Endpoint: new EmbeddingsEndpointOptions(enabled: true, path: "/embed"));
-        var mockProvider = CreateMockConfigProvider(embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        var controller = new EmbeddingController(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
         {
             ControllerContext = CreateControllerContext("/embed")
         };
-
-        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
-            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object);
-        controller.ControllerContext = CreateControllerContext("/embed");
 
         // Act
         IActionResult result = await controller.PostAsync("embed");
@@ -153,16 +149,12 @@ public class EmbeddingControllerTests
             BaseUrl: "https://api.openai.com",
             ApiKey: "key",
             Endpoint: null);
-        var mockProvider = CreateMockConfigProvider(embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        var controller = new EmbeddingController(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
         {
             ControllerContext = CreateControllerContext("/embed")
         };
-
-        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
-            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object);
-        controller.ControllerContext = CreateControllerContext("/embed");
 
         // Act
         IActionResult result = await controller.PostAsync("embed");
@@ -183,16 +175,12 @@ public class EmbeddingControllerTests
             BaseUrl: "https://api.openai.com",
             ApiKey: "key",
             Endpoint: new EmbeddingsEndpointOptions(enabled: false, path: "/embed"));
-        var mockProvider = CreateMockConfigProvider(embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        var controller = new EmbeddingController(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
         {
             ControllerContext = CreateControllerContext("/embed")
         };
-
-        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
-            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object);
-        controller.ControllerContext = CreateControllerContext("/embed");
 
         // Act
         IActionResult result = await controller.PostAsync("embed");
@@ -219,7 +207,7 @@ public class EmbeddingControllerTests
             useClassMockService: false);
 
         // Act
-        IActionResult result = await controller.PostAsync();
+        IActionResult result = await controller.PostAsync("embed");
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
@@ -246,7 +234,7 @@ public class EmbeddingControllerTests
             useClassMockService: false);
 
         // Act
-        IActionResult result = await controller.PostAsync();
+        IActionResult result = await controller.PostAsync("embed");
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));

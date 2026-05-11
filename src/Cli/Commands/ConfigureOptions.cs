@@ -425,47 +425,6 @@ namespace Cli.Commands
 
         [Option("show-effective-permissions", Required = false, HelpText = "Display effective permissions for all entities, including inherited permissions. Entities are listed in alphabetical order.")]
         public bool ShowEffectivePermissions { get; }
-        [Option("runtime.embeddings.enabled", Required = false, HelpText = "Enable/disable the embedding service. Default: true")]
-        public CliBool? RuntimeEmbeddingsEnabled { get; }
-
-        [Option("runtime.embeddings.provider", Required = false, HelpText = "Configure embedding provider type. Allowed values: azure-openai, openai.")]
-        public EmbeddingProviderType? RuntimeEmbeddingsProvider { get; }
-
-        [Option("runtime.embeddings.base-url", Required = false, HelpText = "Configure the embedding provider base URL.")]
-        public string? RuntimeEmbeddingsBaseUrl { get; }
-
-        [Option("runtime.embeddings.api-key", Required = false, HelpText = "Configure the embedding API key for authentication.")]
-        public string? RuntimeEmbeddingsApiKey { get; }
-
-        [Option("runtime.embeddings.model", Required = false, HelpText = "Configure the model/deployment name. Required for Azure OpenAI, defaults to text-embedding-3-small for OpenAI.")]
-        public string? RuntimeEmbeddingsModel { get; }
-
-        [Option("runtime.embeddings.api-version", Required = false, HelpText = "Configure the Azure API version. Only used for Azure OpenAI provider. Default: 2024-02-01")]
-        public string? RuntimeEmbeddingsApiVersion { get; }
-
-        [Option("runtime.embeddings.dimensions", Required = false, HelpText = "Configure the output vector dimensions. Optional, uses model default if not specified.")]
-        public int? RuntimeEmbeddingsDimensions { get; }
-
-        [Option("runtime.embeddings.timeout-ms", Required = false, HelpText = "Configure the request timeout in milliseconds. Default: 30000")]
-        public int? RuntimeEmbeddingsTimeoutMs { get; }
-
-        [Option("runtime.embeddings.endpoint.enabled", Required = false, HelpText = "Enable/disable the endpoint for embeddings. Default: false")]
-        public CliBool? RuntimeEmbeddingsEndpointEnabled { get; }
-
-        [Option("runtime.embeddings.endpoint.roles", Required = false, Separator = ',', HelpText = "Configure the roles allowed to access the embedding endpoint. Comma-separated list. In development mode defaults to 'anonymous'.")]
-        public IEnumerable<string>? RuntimeEmbeddingsEndpointRoles { get; }
-
-        [Option("runtime.embeddings.health.enabled", Required = false, HelpText = "Enable/disable health checks for the embedding service. Default: true")]
-        public CliBool? RuntimeEmbeddingsHealthEnabled { get; }
-
-        [Option("runtime.embeddings.health.threshold-ms", Required = false, HelpText = "Configure the health check threshold in milliseconds. Default: 5000")]
-        public int? RuntimeEmbeddingsHealthThresholdMs { get; }
-
-        [Option("runtime.embeddings.health.test-text", Required = false, HelpText = "Configure the test text for health check validation. Default: 'health check'")]
-        public string? RuntimeEmbeddingsHealthTestText { get; }
-
-        [Option("runtime.embeddings.health.expected-dimensions", Required = false, HelpText = "Configure the expected dimensions for health check validation. Optional.")]
-        public int? RuntimeEmbeddingsHealthExpectedDimensions { get; }
 
         [Option("runtime.embeddings.enabled", Required = false, HelpText = "Enable/disable the embedding service. Default: true")]
         public CliBool? RuntimeEmbeddingsEnabled { get; }

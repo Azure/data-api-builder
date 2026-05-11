@@ -17,7 +17,6 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
     {
         // Note: replacementSettings is not used in this converter because the environment variable
         // replacement is handled by the string deserializers registered in the JsonSerializerOptions.
-        _ = replacementSettings;
     }
 
     /// <inheritdoc/>

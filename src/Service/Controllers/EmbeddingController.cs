@@ -59,7 +59,7 @@ public class EmbeddingController : ControllerBase
     /// </summary>
     /// <returns>Embedding vector(s) as JSON, or an error response.</returns>
     [HttpPost]
-    [Route("{*path}")]
+    [Route("{*path}", Order = int.MaxValue)]
     [Consumes("text/plain", "application/json")]
     [Produces("application/json", "text/plain")]
     public async Task<IActionResult> PostAsync(string path)

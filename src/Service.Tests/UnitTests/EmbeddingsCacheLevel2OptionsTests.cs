@@ -13,22 +13,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
 [TestClass]
 public class EmbeddingsCacheLevel2OptionsTests
 {
-    private const string LocalRedisConnectionString = "localhost:6379";
-    private const string AzureRedisConnectionString = "contoso.redis.cache.windows.net:6380,password=secretkey,ssl=True,abortConnect=False";
-    private const string DifferentRedisConnectionString = "different:6379";
-    private const string EnvironmentVariablePlaceholder = "@env('REDIS_CONNECTION_STRING')";
-    private const string EmptyString = "";
-    private const string WhitespaceString = "   ";
+    private const string LOCAL_REDIS_CONNECTION_STRING = "localhost:6379";
+    private const string AZURE_REDIS_CONNECTION_STRING = "contoso.redis.cache.windows.net:6380,password=secretkey,ssl=True,abortConnect=False";
+    private const string DIFFERENT_REDIS_CONNECTION_STRING = "different:6379";
+    private const string ENVIRONMENT_VARIABLE_PLACEHOLDER = "@env('REDIS_CONNECTION_STRING')";
+    private const string EMPTY_STRING = "";
+    private const string WHITESPACE_STRING = "   ";
 
     [DataTestMethod]
     [DataRow(null, null, false, null, DisplayName = "Default values")]
     [DataRow(true, null, true, null, DisplayName = "Enabled without connection string")]
-    [DataRow(true, LocalRedisConnectionString, true, LocalRedisConnectionString, DisplayName = "Local Redis")]
-    [DataRow(true, AzureRedisConnectionString, true, AzureRedisConnectionString, DisplayName = "Azure Redis")]
-    [DataRow(false, LocalRedisConnectionString, false, LocalRedisConnectionString, DisplayName = "Disabled with connection string")]
-    [DataRow(true, EnvironmentVariablePlaceholder, true, EnvironmentVariablePlaceholder, DisplayName = "Environment variable")]
-    [DataRow(true, EmptyString, true, EmptyString, DisplayName = "Empty connection string")]
-    [DataRow(true, WhitespaceString, true, WhitespaceString, DisplayName = "Whitespace connection string")]
+    [DataRow(true, LOCAL_REDIS_CONNECTION_STRING, true, LOCAL_REDIS_CONNECTION_STRING, DisplayName = "Local Redis")]
+    [DataRow(true, AZURE_REDIS_CONNECTION_STRING, true, AZURE_REDIS_CONNECTION_STRING, DisplayName = "Azure Redis")]
+    [DataRow(false, LOCAL_REDIS_CONNECTION_STRING, false, LOCAL_REDIS_CONNECTION_STRING, DisplayName = "Disabled with connection string")]
+    [DataRow(true, ENVIRONMENT_VARIABLE_PLACEHOLDER, true, ENVIRONMENT_VARIABLE_PLACEHOLDER, DisplayName = "Environment variable")]
+    [DataRow(true, EMPTY_STRING, true, EMPTY_STRING, DisplayName = "Empty connection string")]
+    [DataRow(true, WHITESPACE_STRING, true, WHITESPACE_STRING, DisplayName = "Whitespace connection string")]
     public void EmbeddingsCacheLevel2Options_Configuration(bool? enabled, string connectionString, bool expectedEnabled, string expectedConnectionString)
     {
         // Arrange & Act
@@ -53,9 +53,9 @@ public class EmbeddingsCacheLevel2OptionsTests
     public void EmbeddingsCacheLevel2Options_RecordEquality()
     {
         // Arrange
-        EmbeddingsCacheLevel2Options options1 = new(Enabled: true, ConnectionString: LocalRedisConnectionString);
-        EmbeddingsCacheLevel2Options options2 = new(Enabled: true, ConnectionString: LocalRedisConnectionString);
-        EmbeddingsCacheLevel2Options options3 = new(Enabled: true, ConnectionString: DifferentRedisConnectionString);
+        EmbeddingsCacheLevel2Options options1 = new(Enabled: true, ConnectionString: LOCAL_REDIS_CONNECTION_STRING);
+        EmbeddingsCacheLevel2Options options2 = new(Enabled: true, ConnectionString: LOCAL_REDIS_CONNECTION_STRING);
+        EmbeddingsCacheLevel2Options options3 = new(Enabled: true, ConnectionString: DIFFERENT_REDIS_CONNECTION_STRING);
 
         // Act & Assert
         Assert.AreEqual(options1, options2, "Options with same values should be equal");

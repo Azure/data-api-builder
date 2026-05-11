@@ -21,7 +21,7 @@ public class EmbeddingsCacheOptionsTests
 
         // Assert
         Assert.IsTrue(options.Enabled ?? true, "Enabled should default to true");
-        Assert.AreEqual(EmbeddingsCacheOptions.DEFAULT_TTL_HOURS, options.TtlHours, 
+        Assert.AreEqual(EmbeddingsCacheOptions.DEFAULT_TTL_HOURS, options.TtlHours,
             "TtlHours should default to 24");
         Assert.IsNull(options.Level2, "Level2 should default to null");
         Assert.IsFalse(options.UserProvidedTtlHours, "UserProvidedTtlHours should be false");
@@ -152,7 +152,7 @@ public class EmbeddingsCacheOptionsTests
     public void EmbeddingsCacheOptions_DefaultTtlConstant()
     {
         // Assert
-        Assert.AreEqual(24, EmbeddingsCacheOptions.DEFAULT_TTL_HOURS, 
+        Assert.AreEqual(24, EmbeddingsCacheOptions.DEFAULT_TTL_HOURS,
             "DEFAULT_TTL_HOURS constant should be 24");
     }
 
@@ -188,7 +188,7 @@ public class EmbeddingsCacheOptionsTests
         EmbeddingsCacheOptions options = new(Enabled: true);
 
         // Assert
-        Assert.IsFalse(options.UserProvidedTtlHours, 
+        Assert.IsFalse(options.UserProvidedTtlHours,
             "UserProvidedTtlHours should be false when TTL not provided");
     }
 
@@ -199,7 +199,7 @@ public class EmbeddingsCacheOptionsTests
         EmbeddingsCacheOptions options = new(Enabled: true, TtlHours: 12);
 
         // Assert
-        Assert.IsTrue(options.UserProvidedTtlHours, 
+        Assert.IsTrue(options.UserProvidedTtlHours,
             "UserProvidedTtlHours should be true when TTL provided");
     }
 }

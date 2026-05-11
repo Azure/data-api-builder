@@ -31,7 +31,7 @@ public class EmbeddingsCacheOptionsSerializationTests
         JsonSerializerOptions serializerOptions = GetSerializerOptions();
 
         // Act
-        string json = JsonSerializer.Serialize(options, serializerOptions);
+        _ = JsonSerializer.Serialize(options, serializerOptions);
 
         // The default serializer (without custom converter) produces empty object {}
         // because all properties have [JsonIgnore] or similar attributes
@@ -47,7 +47,7 @@ public class EmbeddingsCacheOptionsSerializationTests
         // Assert
         Assert.IsNotNull(deserialized, "Deserialized options should not be null");
         Assert.IsTrue(deserialized.Enabled ?? false, "enabled should be true");
-        Assert.AreEqual(EmbeddingsCacheOptions.DEFAULT_TTL_HOURS, deserialized.TtlHours, 
+        Assert.AreEqual(EmbeddingsCacheOptions.DEFAULT_TTL_HOURS, deserialized.TtlHours,
             "TtlHours should use default value");
     }
 
@@ -85,7 +85,7 @@ public class EmbeddingsCacheOptionsSerializationTests
         Assert.IsTrue(jsonObject.ContainsKey("level-2"), "JSON should contain 'level-2' property");
         JObject level2Object = jsonObject["level-2"]!.Value<JObject>()!;
         Assert.AreEqual(true, level2Object["enabled"]!.Value<bool>(), "level-2 enabled should be true");
-        Assert.AreEqual("localhost:6379", level2Object["connection-string"]!.Value<string>(), 
+        Assert.AreEqual("localhost:6379", level2Object["connection-string"]!.Value<string>(),
             "level-2 connection-string should match");
     }
 
@@ -157,7 +157,7 @@ public class EmbeddingsCacheOptionsSerializationTests
         Assert.AreEqual(original.Enabled, deserialized.Enabled, "Enabled should match");
         Assert.AreEqual(original.TtlHours, deserialized.TtlHours, "TtlHours should match");
         Assert.AreEqual(original.Level2!.Enabled, deserialized.Level2!.Enabled, "Level2 Enabled should match");
-        Assert.AreEqual(original.Level2.ConnectionString, deserialized.Level2.ConnectionString, 
+        Assert.AreEqual(original.Level2.ConnectionString, deserialized.Level2.ConnectionString,
             "Level2 ConnectionString should match");
     }
 
@@ -212,7 +212,7 @@ public class EmbeddingsCacheOptionsSerializationTests
         string json = JsonSerializer.Serialize(options, serializerOptions);
 
         // Assert
-        Assert.IsFalse(json.Contains("\"ttl-hours\""), 
+        Assert.IsFalse(json.Contains("\"ttl-hours\""),
             "Serialized JSON should not include ttl-hours when using default value");
     }
 
@@ -227,7 +227,7 @@ public class EmbeddingsCacheOptionsSerializationTests
         string json = JsonSerializer.Serialize(options, serializerOptions);
 
         // Assert
-        Assert.IsTrue(json.Contains("\"ttl-hours\""), 
+        Assert.IsTrue(json.Contains("\"ttl-hours\""),
             "Serialized JSON should include ttl-hours when explicitly provided");
     }
 }

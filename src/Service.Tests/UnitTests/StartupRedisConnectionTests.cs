@@ -1,9 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Net;
-using Azure.DataApiBuilder.Service;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StackExchange.Redis;
 
@@ -16,26 +14,26 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
 [TestClass]
 public class StartupRedisConnectionTests
 {
-    private const string LocalhostConnectionString = "localhost:6379";
-    private const string LocalhostWithPassword = "localhost:6379,password=secret";
-    private const string LocalhostUppercase = "LOCALHOST:6379";
-    private const string ContosoRedisHost = "contoso.redis.cache.windows.net";
-    private const string ContosoRedisConnectionString = "contoso.redis.cache.windows.net:6380";
-    private const string ContosoRedisWithPassword = "contoso.redis.cache.windows.net:6380,password=secret";
-    private const string ContosoRedisEmptyPassword = "contoso.redis.cache.windows.net:6380,password=";
-    private const string AzureRedisConnectionString = "myredis.redis.cache.windows.net:6380,ssl=True,abortConnect=False";
-    private const int RedisPort = 6379;
-    private const int AzureRedisPort = 6380;
-    private const string RemoteIpAddress = "10.0.0.1";
+    private const string LOCALHOST_CONNECTION_STRING = "localhost:6379";
+    private const string LOCALHOST_WITH_PASSWORD = "localhost:6379,password=secret";
+    private const string LOCALHOST_UPPERCASE = "LOCALHOST:6379";
+    private const string CONTOSO_REDIS_HOST = "contoso.redis.cache.windows.net";
+    private const string CONTOSO_REDIS_CONNECTION_STRING = "contoso.redis.cache.windows.net:6380";
+    private const string CONTOSO_REDIS_WITH_PASSWORD = "contoso.redis.cache.windows.net:6380,password=secret";
+    private const string CONTOSO_REDIS_EMPTY_PASSWORD = "contoso.redis.cache.windows.net:6380,password=";
+    private const string AZURE_REDIS_CONNECTION_STRING = "myredis.redis.cache.windows.net:6380,ssl=True,abortConnect=False";
+    private const int REDIS_PORT = 6379;
+    private const int AZURE_REDIS_PORT = 6380;
+    private const string REMOTE_IP_ADDRESS = "10.0.0.1";
 
     [DataTestMethod]
-    [DataRow(LocalhostWithPassword, false, DisplayName = "With password - should not use Entra")]
-    [DataRow(LocalhostConnectionString, false, DisplayName = "Localhost without password - should not use Entra")]
-    [DataRow(LocalhostUppercase, false, DisplayName = "Case insensitive localhost - should not use Entra")]
-    [DataRow(ContosoRedisConnectionString, true, DisplayName = "Remote without password - should use Entra")]
-    [DataRow(ContosoRedisWithPassword, false, DisplayName = "Remote with password - should not use Entra")]
-    [DataRow(ContosoRedisEmptyPassword, true, DisplayName = "Empty password - should use Entra")]
-    [DataRow(AzureRedisConnectionString, true, DisplayName = "Azure Redis without password - should use Entra")]
+    [DataRow(LOCALHOST_WITH_PASSWORD, false, DisplayName = "With password - should not use Entra")]
+    [DataRow(LOCALHOST_CONNECTION_STRING, false, DisplayName = "Localhost without password - should not use Entra")]
+    [DataRow(LOCALHOST_UPPERCASE, false, DisplayName = "Case insensitive localhost - should not use Entra")]
+    [DataRow(CONTOSO_REDIS_CONNECTION_STRING, true, DisplayName = "Remote without password - should use Entra")]
+    [DataRow(CONTOSO_REDIS_WITH_PASSWORD, false, DisplayName = "Remote with password - should not use Entra")]
+    [DataRow(CONTOSO_REDIS_EMPTY_PASSWORD, true, DisplayName = "Empty password - should use Entra")]
+    [DataRow(AZURE_REDIS_CONNECTION_STRING, true, DisplayName = "Azure Redis without password - should use Entra")]
     public void ShouldUseEntraAuthForRedis_ConnectionStringScenarios(string connectionString, bool expectedResult)
     {
         // Arrange
@@ -52,9 +50,9 @@ public class StartupRedisConnectionTests
     public void ShouldUseEntraAuthForRedis_LoopbackIP_ReturnsFalse()
     {
         // Arrange
-        ConfigurationOptions options = new ConfigurationOptions
+        ConfigurationOptions options = new()
         {
-            EndPoints = { new IPEndPoint(IPAddress.Loopback, RedisPort) }
+            EndPoints = { new IPEndPoint(IPAddress.Loopback, REDIS_PORT) }
         };
 
         // Act
@@ -68,9 +66,9 @@ public class StartupRedisConnectionTests
     public void ShouldUseEntraAuthForRedis_IPv6Loopback_ReturnsFalse()
     {
         // Arrange
-        ConfigurationOptions options = new ConfigurationOptions
+        ConfigurationOptions options = new()
         {
-            EndPoints = { new IPEndPoint(IPAddress.IPv6Loopback, RedisPort) }
+            EndPoints = { new IPEndPoint(IPAddress.IPv6Loopback, REDIS_PORT) }
         };
 
         // Act
@@ -84,9 +82,9 @@ public class StartupRedisConnectionTests
     public void ShouldUseEntraAuthForRedis_RemoteIP_ReturnsTrue()
     {
         // Arrange
-        ConfigurationOptions options = new ConfigurationOptions
+        ConfigurationOptions options = new()
         {
-            EndPoints = { new IPEndPoint(IPAddress.Parse(RemoteIpAddress), RedisPort) }
+            EndPoints = { new IPEndPoint(IPAddress.Parse(REMOTE_IP_ADDRESS), REDIS_PORT) }
         };
 
         // Act
@@ -100,12 +98,12 @@ public class StartupRedisConnectionTests
     public void ShouldUseEntraAuthForRedis_MixedEndpoints_ReturnsTrue()
     {
         // Arrange
-        ConfigurationOptions options = new ConfigurationOptions
+        ConfigurationOptions options = new()
         {
-            EndPoints = 
-            { 
-                new IPEndPoint(IPAddress.Loopback, RedisPort),
-                new DnsEndPoint(ContosoRedisHost, AzureRedisPort)
+            EndPoints =
+            {
+                new IPEndPoint(IPAddress.Loopback, REDIS_PORT),
+                new DnsEndPoint(CONTOSO_REDIS_HOST, AZURE_REDIS_PORT)
             }
         };
 
@@ -120,12 +118,12 @@ public class StartupRedisConnectionTests
     public void ShouldUseEntraAuthForRedis_MultipleLocalhostEndpoints_ReturnsFalse()
     {
         // Arrange
-        ConfigurationOptions options = new ConfigurationOptions
+        ConfigurationOptions options = new()
         {
-            EndPoints = 
-            { 
-                new DnsEndPoint("localhost", RedisPort),
-                new IPEndPoint(IPAddress.Loopback, AzureRedisPort)
+            EndPoints =
+            {
+                new DnsEndPoint("localhost", REDIS_PORT),
+                new IPEndPoint(IPAddress.Loopback, AZURE_REDIS_PORT)
             }
         };
 

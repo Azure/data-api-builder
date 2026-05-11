@@ -148,7 +148,8 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                 TimeoutMs: timeoutMs,
                 Endpoint: endpoint,
                 Health: health,
-                Chunking: chunking);
+                Chunking: chunking,
+                Cache: cache);
         }
 
         /// <summary>

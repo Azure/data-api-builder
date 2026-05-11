@@ -491,88 +491,67 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Builds a list of parameter metadata objects containing information about each parameter.
+        /// Merges DB-discovered stored-procedure parameters with optional config overlays (see issue #3400):
+        /// <list type="bullet">
+        ///   <item><description><c>name</c>: from DB metadata.</description></item>
+        ///   <item><description><c>required</c>: from config when the parameter is listed there; defaults to <c>true</c> when config is silent.</description></item>
+        ///   <item><description><c>default</c>, <c>description</c>: config-only (T-SQL doesn't expose them reliably).</description></item>
+        /// </list>
+        /// The metadata provider validates at startup that every config-listed parameter exists in DB metadata
+        /// (see <c>SqlMetadataProvider.FillSchemaForStoredProcedureAsync</c>), so iterating DB parameters alone is exhaustive.
+        /// Falls back to emitting config parameters as-is when DB metadata is not available.
         /// </summary>
-        /// <param name="parameters">A list of <see cref="ParameterMetadata"/> objects representing the parameters to process. Can be null.</param>
-        /// <returns>A list of dictionaries, each containing the parameter's name, whether it is required, its default
-        /// value, and its description. Returns an empty list if <paramref name="parameters"/> is null.</returns>
-        private static List<object> BuildParameterMetadataInfo(List<ParameterMetadata>? parameters, DatabaseObject? databaseObject)
+        /// <param name="configParameters">Parameter overlays declared in the runtime config. May be <c>null</c> or empty.</param>
+        /// <param name="databaseObject">Resolved database metadata for the entity. Expected to be a <see cref="DatabaseStoredProcedure"/>; may be <c>null</c>.</param>
+        /// <returns>A list of parameter dictionaries (<c>name</c>, <c>required</c>, <c>default</c>, <c>description</c>) describing each parameter.</returns>
+        private static List<object> BuildParameterMetadataInfo(
+            List<ParameterMetadata>? configParameters,
+            DatabaseObject? databaseObject)
         {
-            List<object> result = new();
-
-            Dictionary<string, ParameterMetadata> configParameters = new(StringComparer.OrdinalIgnoreCase);
-            if (parameters != null)
+            Dictionary<string, ParameterMetadata> configByName = new(StringComparer.OrdinalIgnoreCase);
+            if (configParameters is not null)
             {
-                foreach (ParameterMetadata parameter in parameters)
+                foreach (ParameterMetadata parameter in configParameters)
                 {
-                    configParameters[parameter.Name] = parameter;
+                    configByName[parameter.Name] = parameter;
                 }
             }
 
-            if (databaseObject is DatabaseStoredProcedure storedProcedure)
+            IReadOnlyDictionary<string, ParameterDefinition>? dbParameters =
+                (databaseObject as DatabaseStoredProcedure)?.StoredProcedureDefinition?.Parameters;
+
+            if (dbParameters is { Count: > 0 })
             {
-                IReadOnlyDictionary<string, ParameterDefinition>? storedProcedureParameters =
-                    storedProcedure.StoredProcedureDefinition?.Parameters;
-
-                if (storedProcedureParameters is null || storedProcedureParameters.Count == 0)
+                List<object> result = new(dbParameters.Count);
+                foreach (string parameterName in dbParameters.Keys)
                 {
-                    // No runtime metadata available for this stored procedure. Fall back to config-only parameters.
-                    return BuildParameterMetadataInfo(parameters, databaseObject: null);
-                }
-
-                foreach ((string parameterName, ParameterDefinition parameterDefinition) in storedProcedureParameters)
-                {
-                    configParameters.TryGetValue(parameterName, out ParameterMetadata? configParameter);
-
-                    Dictionary<string, object?> paramInfo = new()
-                    {
-                        ["name"] = configParameter?.Name ?? parameterName,
-                        ["required"] = parameterDefinition.Required ?? configParameter?.Required ?? false,
-                        ["default"] = configParameter?.Default ?? parameterDefinition.Default,
-                        ["description"] = configParameter?.Description ?? parameterDefinition.Description ?? string.Empty
-                    };
-
-                    result.Add(paramInfo);
-                }
-
-                // Preserve config-only parameters if metadata is not available for a configured name.
-                foreach (ParameterMetadata configParameter in configParameters.Values)
-                {
-                    if (!storedProcedureParameters.ContainsKey(configParameter.Name) &&
-                        !storedProcedureParameters.Keys.Any(k => string.Equals(k, configParameter.Name, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        Dictionary<string, object?> paramInfo = new()
-                        {
-                            ["name"] = configParameter.Name,
-                            ["required"] = configParameter.Required,
-                            ["default"] = configParameter.Default,
-                            ["description"] = configParameter.Description ?? string.Empty
-                        };
-
-                        result.Add(paramInfo);
-                    }
+                    configByName.TryGetValue(parameterName, out ParameterMetadata? config);
+                    result.Add(BuildParameterEntry(parameterName, config));
                 }
 
                 return result;
             }
 
-            if (parameters != null)
+            // DB metadata unavailable: emit config parameters as-is so the tool stays usable.
+            List<object> configOnly = new();
+            if (configParameters is not null)
             {
-                foreach (ParameterMetadata param in parameters)
+                foreach (ParameterMetadata parameter in configParameters)
                 {
-                    Dictionary<string, object?> paramInfo = new()
-                    {
-                        ["name"] = param.Name,
-                        ["required"] = param.Required,
-                        ["default"] = param.Default,
-                        ["description"] = param.Description ?? string.Empty
-                    };
-                    result.Add(paramInfo);
+                    configOnly.Add(BuildParameterEntry(parameter.Name, parameter));
                 }
             }
 
-            return result;
+            return configOnly;
         }
+
+        private static Dictionary<string, object?> BuildParameterEntry(string name, ParameterMetadata? config) => new()
+        {
+            ["name"] = name,
+            ["required"] = config?.Required ?? true,
+            ["default"] = config?.Default,
+            ["description"] = config?.Description ?? string.Empty
+        };
 
         /// <summary>
         /// Build a list of permission metadata info for the current user's role

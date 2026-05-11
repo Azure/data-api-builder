@@ -101,7 +101,6 @@ public class EmbeddingController : ControllerBase
                 "Access denied.",
                 HttpStatusCode.Forbidden);
         }
-
         // Parse query parameters for chunking options
         EmbeddingsChunkingOptions? queryChunkingOptions = ParseChunkingOptionsFromQuery(out string? paramValidationError);
         if (paramValidationError is not null)

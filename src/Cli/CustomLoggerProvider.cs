@@ -122,13 +122,22 @@ public class CustomLoggerProvider : ILoggerProvider
                 // In MCP stdio mode, stdout is reserved for JSON-RPC protocol messages.
                 // Logs must go to stderr to avoid corrupting the MCP communication channel.
                 // Apply colors so the abbreviation matches the visual style of engine logs.
+                // try/finally guarantees the original colors are restored even if Write throws,
+                // otherwise the console would be left tinted (e.g. red on error) for subsequent output.
                 ConsoleColor mcpOriginalForeGroundColor = Console.ForegroundColor;
                 ConsoleColor mcpOriginalBackGroundColor = Console.BackgroundColor;
-                Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
-                Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
-                Console.Error.Write($"{mcpAbbreviation}:");
-                Console.ForegroundColor = mcpOriginalForeGroundColor;
-                Console.BackgroundColor = mcpOriginalBackGroundColor;
+                try
+                {
+                    Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
+                    Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
+                    Console.Error.Write($"{mcpAbbreviation}:");
+                }
+                finally
+                {
+                    Console.ForegroundColor = mcpOriginalForeGroundColor;
+                    Console.BackgroundColor = mcpOriginalBackGroundColor;
+                }
+
                 Console.Error.WriteLine($" {formatter(state, exception)}");
                 return;
             }
@@ -144,13 +153,22 @@ public class CustomLoggerProvider : ILoggerProvider
             }
 
             TextWriter writer = logLevel >= LogLevel.Error ? Console.Error : Console.Out;
+            // try/finally guarantees the original colors are restored even if Write throws,
+            // otherwise the console would be left tinted (e.g. red on error) for subsequent output.
             ConsoleColor originalForeGroundColor = Console.ForegroundColor;
             ConsoleColor originalBackGroundColor = Console.BackgroundColor;
-            Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
-            Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
-            writer.Write($"{abbreviation}:");
-            Console.ForegroundColor = originalForeGroundColor;
-            Console.BackgroundColor = originalBackGroundColor;
+            try
+            {
+                Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
+                Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
+                writer.Write($"{abbreviation}:");
+            }
+            finally
+            {
+                Console.ForegroundColor = originalForeGroundColor;
+                Console.BackgroundColor = originalBackGroundColor;
+            }
+
             writer.WriteLine($" {formatter(state, exception)}");
         }
 

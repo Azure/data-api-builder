@@ -10,12 +10,36 @@
     Rest: {
       Enabled: false,
       Path: /api,
-      RequestBodyStrict: true
+      RequestBodyStrict: false
     },
     GraphQL: {
       Enabled: true,
       Path: /graphql,
       AllowIntrospection: true
+    },
+    Mcp: {
+      Enabled: true,
+      Path: /mcp,
+      DmlTools: {
+        AllToolsEnabled: true,
+        DescribeEntities: true,
+        CreateRecord: true,
+        ReadRecords: true,
+        UpdateRecord: true,
+        DeleteRecord: true,
+        ExecuteEntity: true,
+        AggregateRecords: true,
+        UserProvidedAllTools: false,
+        UserProvidedDescribeEntities: false,
+        UserProvidedCreateRecord: false,
+        UserProvidedReadRecords: false,
+        UserProvidedUpdateRecord: false,
+        UserProvidedDeleteRecord: false,
+        UserProvidedExecuteEntity: false,
+        UserProvidedAggregateRecords: false,
+        UserProvidedAggregateRecordsQueryTimeout: false,
+        EffectiveAggregateRecordsQueryTimeoutSeconds: 30
+      }
     },
     Host: {
       Cors: {
@@ -28,8 +52,14 @@
         Provider: AppService
       }
     },
-    Telemetry: {},
-    IsEmbeddingsConfigured: false
+    Telemetry: {
+      OpenTelemetry: {
+        Enabled: true,
+        Endpoint: @env('OTEL_EXPORTER_OTLP_ENDPOINT'),
+        Headers: @env('OTEL_EXPORTER_OTLP_HEADERS'),
+        ServiceName: @env('OTEL_SERVICE_NAME')
+      }
+    }
   },
   Entities: [
     {

@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Product;
 using Cli.Constants;
 using CommandLine;
@@ -31,6 +32,10 @@ namespace Cli.Commands
             string? dataSourceHealthName = null,
             bool? dataSourceUserDelegatedAuthEnabled = null,
             string? dataSourceUserDelegatedAuthDatabaseAudience = null,
+            string? dataSourceUserDelegatedAuthProvider = null,
+            bool? dataSourceHealthEnabled = null,
+            int? dataSourceHealthThresholdMs = null,
+            IEnumerable<string>? dataSourceFiles = null,
             int? depthLimit = null,
             bool? runtimeGraphQLEnabled = null,
             string? runtimeGraphQLPath = null,
@@ -53,13 +58,21 @@ namespace Cli.Commands
             int? runtimeMcpDmlToolsAggregateRecordsQueryTimeout = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
+            int? runtimePaginationMaxPageSize = null,
+            int? runtimePaginationDefaultPageSize = null,
+            bool? runtimePaginationNextLinkRelative = null,
             CompressionLevel? runtimeCompressionLevel = null,
+            bool? runtimeHealthEnabled = null,
+            int? runtimeHealthCacheTtlSeconds = null,
+            int? runtimeHealthMaxQueryParallelism = null,
+            IEnumerable<string>? runtimeHealthRoles = null,
             HostMode? runtimeHostMode = null,
             IEnumerable<string>? runtimeHostCorsOrigins = null,
             bool? runtimeHostCorsAllowCredentials = null,
             string? runtimeHostAuthenticationProvider = null,
             string? runtimeHostAuthenticationJwtAudience = null,
             string? runtimeHostAuthenticationJwtIssuer = null,
+            int? runtimeHostMaxResponseSizeMb = null,
             string? azureKeyVaultEndpoint = null,
             AKVRetryPolicyMode? azureKeyVaultRetryPolicyMode = null,
             int? azureKeyVaultRetryPolicyMaxCount = null,
@@ -77,7 +90,26 @@ namespace Cli.Commands
             RollingInterval? fileSinkRollingInterval = null,
             int? fileSinkRetainedFileCountLimit = null,
             long? fileSinkFileSizeLimitBytes = null,
+            IEnumerable<string>? runtimeTelemetryLogLevel = null,
             bool showEffectivePermissions = false,
+            CliBool? runtimeEmbeddingsEnabled = null,
+            EmbeddingProviderType? runtimeEmbeddingsProvider = null,
+            string? runtimeEmbeddingsBaseUrl = null,
+            string? runtimeEmbeddingsApiKey = null,
+            string? runtimeEmbeddingsModel = null,
+            string? runtimeEmbeddingsApiVersion = null,
+            int? runtimeEmbeddingsDimensions = null,
+            int? runtimeEmbeddingsTimeoutMs = null,
+            CliBool? runtimeEmbeddingsEndpointEnabled = null,
+            IEnumerable<string>? runtimeEmbeddingsEndpointRoles = null,
+            string? runtimeEmbeddingsEndpointPath = null,
+            CliBool? runtimeEmbeddingsHealthEnabled = null,
+            int? runtimeEmbeddingsHealthThresholdMs = null,
+            string? runtimeEmbeddingsHealthTestText = null,
+            int? runtimeEmbeddingsHealthExpectedDimensions = null,
+            CliBool? runtimeEmbeddingsChunkingEnabled = null,
+            int? runtimeEmbeddingsChunkingSizeChars = null,
+            int? runtimeEmbeddingsChunkingOverlapChars = null,
             string? config = null)
             : base(config)
         {
@@ -91,6 +123,10 @@ namespace Cli.Commands
             DataSourceHealthName = dataSourceHealthName;
             DataSourceUserDelegatedAuthEnabled = dataSourceUserDelegatedAuthEnabled;
             DataSourceUserDelegatedAuthDatabaseAudience = dataSourceUserDelegatedAuthDatabaseAudience;
+            DataSourceUserDelegatedAuthProvider = dataSourceUserDelegatedAuthProvider;
+            DataSourceHealthEnabled = dataSourceHealthEnabled;
+            DataSourceHealthThresholdMs = dataSourceHealthThresholdMs;
+            DataSourceFiles = dataSourceFiles;
             // GraphQL
             DepthLimit = depthLimit;
             RuntimeGraphQLEnabled = runtimeGraphQLEnabled;
@@ -117,8 +153,17 @@ namespace Cli.Commands
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
+            // Pagination
+            RuntimePaginationMaxPageSize = runtimePaginationMaxPageSize;
+            RuntimePaginationDefaultPageSize = runtimePaginationDefaultPageSize;
+            RuntimePaginationNextLinkRelative = runtimePaginationNextLinkRelative;
             // Compression
             RuntimeCompressionLevel = runtimeCompressionLevel;
+            // Health
+            RuntimeHealthEnabled = runtimeHealthEnabled;
+            RuntimeHealthCacheTtlSeconds = runtimeHealthCacheTtlSeconds;
+            RuntimeHealthMaxQueryParallelism = runtimeHealthMaxQueryParallelism;
+            RuntimeHealthRoles = runtimeHealthRoles;
             // Host
             RuntimeHostMode = runtimeHostMode;
             RuntimeHostCorsOrigins = runtimeHostCorsOrigins;
@@ -126,6 +171,7 @@ namespace Cli.Commands
             RuntimeHostAuthenticationProvider = runtimeHostAuthenticationProvider;
             RuntimeHostAuthenticationJwtAudience = runtimeHostAuthenticationJwtAudience;
             RuntimeHostAuthenticationJwtIssuer = runtimeHostAuthenticationJwtIssuer;
+            RuntimeHostMaxResponseSizeMb = runtimeHostMaxResponseSizeMb;
             // Azure Key Vault
             AzureKeyVaultEndpoint = azureKeyVaultEndpoint;
             AzureKeyVaultRetryPolicyMode = azureKeyVaultRetryPolicyMode;
@@ -146,10 +192,34 @@ namespace Cli.Commands
             FileSinkRollingInterval = fileSinkRollingInterval;
             FileSinkRetainedFileCountLimit = fileSinkRetainedFileCountLimit;
             FileSinkFileSizeLimitBytes = fileSinkFileSizeLimitBytes;
+            // Telemetry Log Level
+            RuntimeTelemetryLogLevel = runtimeTelemetryLogLevel;
             ShowEffectivePermissions = showEffectivePermissions;
+            // Embeddings
+            RuntimeEmbeddingsEnabled = runtimeEmbeddingsEnabled;
+            RuntimeEmbeddingsProvider = runtimeEmbeddingsProvider;
+            RuntimeEmbeddingsBaseUrl = runtimeEmbeddingsBaseUrl;
+            RuntimeEmbeddingsApiKey = runtimeEmbeddingsApiKey;
+            RuntimeEmbeddingsModel = runtimeEmbeddingsModel;
+            RuntimeEmbeddingsApiVersion = runtimeEmbeddingsApiVersion;
+            RuntimeEmbeddingsDimensions = runtimeEmbeddingsDimensions;
+            RuntimeEmbeddingsTimeoutMs = runtimeEmbeddingsTimeoutMs;
+            // Embeddings Endpoint
+            RuntimeEmbeddingsEndpointEnabled = runtimeEmbeddingsEndpointEnabled;
+            RuntimeEmbeddingsEndpointRoles = runtimeEmbeddingsEndpointRoles;
+            RuntimeEmbeddingsEndpointPath = runtimeEmbeddingsEndpointPath;
+            // Embeddings Health
+            RuntimeEmbeddingsHealthEnabled = runtimeEmbeddingsHealthEnabled;
+            RuntimeEmbeddingsHealthThresholdMs = runtimeEmbeddingsHealthThresholdMs;
+            RuntimeEmbeddingsHealthTestText = runtimeEmbeddingsHealthTestText;
+            RuntimeEmbeddingsHealthExpectedDimensions = runtimeEmbeddingsHealthExpectedDimensions;
+            // Embeddings Chunking
+            RuntimeEmbeddingsChunkingEnabled = runtimeEmbeddingsChunkingEnabled;
+            RuntimeEmbeddingsChunkingSizeChars = runtimeEmbeddingsChunkingSizeChars;
+            RuntimeEmbeddingsChunkingOverlapChars = runtimeEmbeddingsChunkingOverlapChars;
         }
 
-        [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
+        [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: mssql, postgresql, cosmosdb_nosql, mysql, dwsql.")]
         public string? DataSourceDatabaseType { get; }
 
         [Option("data-source.connection-string", Required = false, HelpText = "Connection string for the data source.")]
@@ -164,7 +234,7 @@ namespace Cli.Commands
         [Option("data-source.options.schema", Required = false, HelpText = "Schema path for Cosmos DB for NoSql.")]
         public string? DataSourceOptionsSchema { get; }
 
-        [Option("data-source.options.set-session-context", Required = false, HelpText = "Enable session context. Allowed values: true (default), false.")]
+        [Option("data-source.options.set-session-context", Required = false, HelpText = "Enable session context. Allowed values: true, false.")]
         public bool? DataSourceOptionsSetSessionContext { get; }
 
         [Option("data-source.health.name", Required = false, HelpText = "Identifier for data source in health check report.")]
@@ -176,7 +246,19 @@ namespace Cli.Commands
         [Option("data-source.user-delegated-auth.database-audience", Required = false, HelpText = "Database resource identifier for token acquisition (e.g., https://database.windows.net for Azure SQL).")]
         public string? DataSourceUserDelegatedAuthDatabaseAudience { get; }
 
-        [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]
+        [Option("data-source.user-delegated-auth.provider", Required = false, HelpText = "Authentication provider for user-delegated auth. Allowed values: EntraId. Default: EntraId.")]
+        public string? DataSourceUserDelegatedAuthProvider { get; }
+
+        [Option("data-source.health.enabled", Required = false, HelpText = "Enable health check for this data source. Default: true (boolean).")]
+        public bool? DataSourceHealthEnabled { get; }
+
+        [Option("data-source.health.threshold-ms", Required = false, HelpText = "Health check response time threshold in milliseconds. Default: 1000. Range: 1-2147483647.")]
+        public int? DataSourceHealthThresholdMs { get; }
+
+        [Option("data-source-files", Required = false, Separator = ',', HelpText = "Comma-separated list of additional runtime config files for multi-database scenarios.")]
+        public IEnumerable<string>? DataSourceFiles { get; }
+
+        [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of a nested query. Allowed values: 1-2147483647, or -1 to remove a previously set limit. Default: -1.")]
         public int? DepthLimit { get; }
 
         [Option("runtime.graphql.enabled", Required = false, HelpText = "Enable DAB's GraphQL endpoint. Default: true (boolean).")]
@@ -188,7 +270,7 @@ namespace Cli.Commands
         [Option("runtime.graphql.allow-introspection", Required = false, HelpText = "Allow/Deny GraphQL introspection requests in GraphQL Schema. Default: true (boolean).")]
         public bool? RuntimeGraphQLAllowIntrospection { get; }
 
-        [Option("runtime.graphql.multiple-mutations.create.enabled", Required = false, HelpText = "Enable/Disable multiple-mutation create operations on DAB's generated GraphQL schema. Default: true (boolean).")]
+        [Option("runtime.graphql.multiple-mutations.create.enabled", Required = false, HelpText = "Enable/Disable multiple-mutation create operations on DAB's generated GraphQL schema. Default: false (boolean).")]
         public bool? RuntimeGraphQLMultipleMutationsCreateEnabled { get; }
 
         [Option("runtime.rest.enabled", Required = false, HelpText = "Enable DAB's Rest endpoint. Default: true (boolean).")]
@@ -197,7 +279,7 @@ namespace Cli.Commands
         [Option("runtime.rest.path", Required = false, HelpText = "Customize DAB's REST endpoint path. Default: '/api' Conditions: Prefix path with '/'.")]
         public string? RuntimeRestPath { get; }
 
-        [Option("runtime.rest.request-body-strict", Required = false, HelpText = "Prohibit extraneous REST request body fields. Default: true (boolean).")]
+        [Option("runtime.rest.request-body-strict", Required = false, HelpText = "Prohibit extraneous REST request body fields. Default: false (boolean).")]
         public bool? RuntimeRestRequestBodyStrict { get; }
 
         [Option("runtime.mcp.enabled", Required = false, HelpText = "Enable DAB's MCP endpoint. Default: true (boolean).")]
@@ -242,10 +324,31 @@ namespace Cli.Commands
         [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize the DAB cache's global default time to live in seconds. Default: 5 seconds (Integer).")]
         public int? RuntimeCacheTTL { get; }
 
+        [Option("runtime.pagination.max-page-size", Required = false, HelpText = "Maximum page size for paginated results. Default: 100000. Minimum: 1.")]
+        public int? RuntimePaginationMaxPageSize { get; }
+
+        [Option("runtime.pagination.default-page-size", Required = false, HelpText = "Default page size for paginated results. Default: 100. Minimum: 1.")]
+        public int? RuntimePaginationDefaultPageSize { get; }
+
+        [Option("runtime.pagination.next-link-relative", Required = false, HelpText = "Use relative URLs for pagination next links. Default: false (boolean).")]
+        public bool? RuntimePaginationNextLinkRelative { get; }
+
         [Option("runtime.compression.level", Required = false, HelpText = "Set the response compression level. Allowed values: optimal (default), fastest, none.")]
         public CompressionLevel? RuntimeCompressionLevel { get; }
 
-        [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: Development.")]
+        [Option("runtime.health.enabled", Required = false, HelpText = "Enable runtime health checks. Default: true (boolean).")]
+        public bool? RuntimeHealthEnabled { get; }
+
+        [Option("runtime.health.cache-ttl-seconds", Required = false, HelpText = "Time to live in seconds for cached health check results. Default: 5.")]
+        public int? RuntimeHealthCacheTtlSeconds { get; }
+
+        [Option("runtime.health.max-query-parallelism", Required = false, HelpText = "Maximum number of parallel health check queries. Default: 4. Range: 1-8.")]
+        public int? RuntimeHealthMaxQueryParallelism { get; }
+
+        [Option("runtime.health.roles", Required = false, Separator = ',', HelpText = "Comma-separated list of roles allowed to access health check details.")]
+        public IEnumerable<string>? RuntimeHealthRoles { get; }
+
+        [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: Production.")]
         public HostMode? RuntimeHostMode { get; }
 
         [Option("runtime.host.cors.origins", Required = false, HelpText = "Overwrite Allowed Origins in CORS. Default: [] (Space separated array of strings).")]
@@ -262,6 +365,9 @@ namespace Cli.Commands
 
         [Option("runtime.host.authentication.jwt.issuer", Required = false, HelpText = "Configure the entity that issued the Jwt Token.")]
         public string? RuntimeHostAuthenticationJwtIssuer { get; }
+
+        [Option("runtime.host.max-response-size-mb", Required = false, HelpText = "Maximum response size in megabytes. Use -1 for maximum engine limit. Default: 158.")]
+        public int? RuntimeHostMaxResponseSizeMb { get; }
 
         [Option("azure-key-vault.endpoint", Required = false, HelpText = "Configure the Azure Key Vault endpoint URL.")]
         public string? AzureKeyVaultEndpoint { get; }
@@ -314,8 +420,65 @@ namespace Cli.Commands
         [Option("runtime.telemetry.file.file-size-limit-bytes", Required = false, HelpText = "Configure maximum file size limit in bytes. Default: 1048576")]
         public long? FileSinkFileSizeLimitBytes { get; }
 
+        [Option("runtime.telemetry.log-level", Required = false, Separator = ',', HelpText = "Configure log levels by namespace. Format: 'Namespace:Level,...'. Allowed levels: trace, debug, information, warning, error, critical, none.")]
+        public IEnumerable<string>? RuntimeTelemetryLogLevel { get; }
+
         [Option("show-effective-permissions", Required = false, HelpText = "Display effective permissions for all entities, including inherited permissions. Entities are listed in alphabetical order.")]
         public bool ShowEffectivePermissions { get; }
+
+        [Option("runtime.embeddings.enabled", Required = false, HelpText = "Enable/disable the embedding service. Default: true")]
+        public CliBool? RuntimeEmbeddingsEnabled { get; }
+
+        [Option("runtime.embeddings.provider", Required = false, HelpText = "Configure embedding provider type. Allowed values: azure-openai, openai.")]
+        public EmbeddingProviderType? RuntimeEmbeddingsProvider { get; }
+
+        [Option("runtime.embeddings.base-url", Required = false, HelpText = "Configure the embedding provider base URL.")]
+        public string? RuntimeEmbeddingsBaseUrl { get; }
+
+        [Option("runtime.embeddings.api-key", Required = false, HelpText = "Configure the embedding API key for authentication.")]
+        public string? RuntimeEmbeddingsApiKey { get; }
+
+        [Option("runtime.embeddings.model", Required = false, HelpText = "Configure the model/deployment name. Required for Azure OpenAI, defaults to text-embedding-3-small for OpenAI.")]
+        public string? RuntimeEmbeddingsModel { get; }
+
+        [Option("runtime.embeddings.api-version", Required = false, HelpText = "Configure the Azure API version. Only used for Azure OpenAI provider. Default: 2024-02-01")]
+        public string? RuntimeEmbeddingsApiVersion { get; }
+
+        [Option("runtime.embeddings.dimensions", Required = false, HelpText = "Configure the output vector dimensions. Optional, uses model default if not specified.")]
+        public int? RuntimeEmbeddingsDimensions { get; }
+
+        [Option("runtime.embeddings.timeout-ms", Required = false, HelpText = "Configure the request timeout in milliseconds. Default: 30000")]
+        public int? RuntimeEmbeddingsTimeoutMs { get; }
+
+        [Option("runtime.embeddings.endpoint.enabled", Required = false, HelpText = "Enable/disable the endpoint for embeddings. Default: false")]
+        public CliBool? RuntimeEmbeddingsEndpointEnabled { get; }
+
+        [Option("runtime.embeddings.endpoint.roles", Required = false, Separator = ',', HelpText = "Configure the roles allowed to access the embedding endpoint. Comma-separated list. In development mode defaults to 'anonymous'.")]
+        public IEnumerable<string>? RuntimeEmbeddingsEndpointRoles { get; }
+
+        [Option("runtime.embeddings.endpoint.path", Required = false, HelpText = "Configure the URL path for the embedding endpoint. Default: '/embed' Conditions: Prefix path with '/'.")]
+        public string? RuntimeEmbeddingsEndpointPath { get; }
+
+        [Option("runtime.embeddings.health.enabled", Required = false, HelpText = "Enable/disable health checks for the embedding service. Default: true")]
+        public CliBool? RuntimeEmbeddingsHealthEnabled { get; }
+
+        [Option("runtime.embeddings.health.threshold-ms", Required = false, HelpText = "Configure the health check threshold in milliseconds. Default: 5000")]
+        public int? RuntimeEmbeddingsHealthThresholdMs { get; }
+
+        [Option("runtime.embeddings.health.test-text", Required = false, HelpText = "Configure the test text for health check validation. Default: 'health check'")]
+        public string? RuntimeEmbeddingsHealthTestText { get; }
+
+        [Option("runtime.embeddings.health.expected-dimensions", Required = false, HelpText = "Configure the expected dimensions for health check validation. Optional.")]
+        public int? RuntimeEmbeddingsHealthExpectedDimensions { get; }
+
+        [Option("runtime.embeddings.chunking.enabled", Required = false, HelpText = "Enable/disable text chunking before embedding. Default: true")]
+        public CliBool? RuntimeEmbeddingsChunkingEnabled { get; }
+
+        [Option("runtime.embeddings.chunking.size-chars", Required = false, HelpText = "Configure the chunk size in characters. Default: 800")]
+        public int? RuntimeEmbeddingsChunkingSizeChars { get; }
+
+        [Option("runtime.embeddings.chunking.overlap-chars", Required = false, HelpText = "Configure the overlap size in characters between consecutive chunks. Default: 100")]
+        public int? RuntimeEmbeddingsChunkingOverlapChars { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

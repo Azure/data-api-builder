@@ -457,7 +457,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Use shared test helper to create RuntimeConfigProvider
             RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
-            services.AddSingleton(configProvider);
+            services.AddSingleton<RuntimeConfigProvider>(sp => configProvider);
 
             // Mock IAuthorizationResolver
             Mock<IAuthorizationResolver> mockAuthResolver = new();

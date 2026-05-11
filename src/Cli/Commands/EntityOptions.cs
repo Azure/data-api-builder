@@ -24,7 +24,9 @@ namespace Cli.Commands
             string? policyRequest,
             string? policyDatabase,
             string? cacheEnabled,
-            string? cacheTtl,
+            string? cacheTtlSeconds,
+            string? cacheLevel,
+            string? healthEnabled,
             string? description,
             IEnumerable<string>? parametersNameCollection,
             IEnumerable<string>? parametersDescriptionCollection,
@@ -53,7 +55,9 @@ namespace Cli.Commands
             PolicyRequest = policyRequest;
             PolicyDatabase = policyDatabase;
             CacheEnabled = cacheEnabled;
-            CacheTtl = cacheTtl;
+            CacheTtlSeconds = cacheTtlSeconds;
+            CacheLevel = cacheLevel;
+            HealthEnabled = healthEnabled;
             Description = description;
             ParametersNameCollection = parametersNameCollection;
             ParametersDescriptionCollection = parametersDescriptionCollection;
@@ -83,13 +87,13 @@ namespace Cli.Commands
         [Option("rest", Required = false, HelpText = "Route for rest api.")]
         public string? RestRoute { get; }
 
-        [Option("rest.methods", Required = false, Separator = ',', HelpText = "HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are : [GET, POST, PUT, PATCH, DELETE]")]
+        [Option("rest.methods", Required = false, Separator = ',', HelpText = "HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are: [get, post, put, patch, delete]")]
         public IEnumerable<string>? RestMethodsForStoredProcedure { get; }
 
         [Option("graphql", Required = false, HelpText = "Type of graphQL.")]
         public string? GraphQLType { get; }
 
-        [Option("graphql.operation", Required = false, HelpText = $"GraphQL operation to be supported for stored procedure. Valid operations are : [Query, Mutation] ")]
+        [Option("graphql.operation", Required = false, HelpText = "GraphQL operation to be supported for stored procedure. Valid operations are: [query, mutation]")]
         public string? GraphQLOperationForStoredProcedure { get; }
 
         [Option("fields.include", Required = false, Separator = ',', HelpText = "Fields that are allowed access to permission.")]
@@ -107,8 +111,14 @@ namespace Cli.Commands
         [Option("cache.enabled", Required = false, HelpText = "Specify if caching is enabled for Entity, default value is false.")]
         public string? CacheEnabled { get; }
 
-        [Option("cache.ttl", Required = false, HelpText = "Specify time to live in seconds for cache entries for Entity.")]
-        public string? CacheTtl { get; }
+        [Option("cache.ttl-seconds", Required = false, HelpText = "Specify time to live in seconds for cache entries for Entity.")]
+        public string? CacheTtlSeconds { get; }
+
+        [Option("cache.level", Required = false, HelpText = "Cache level for entity. Allowed values: L1, L1L2. Default: L1L2.")]
+        public string? CacheLevel { get; }
+
+        [Option("health.enabled", Required = false, HelpText = "Enable health checks for this entity. Default: true (boolean).")]
+        public string? HealthEnabled { get; }
 
         [Option("description", Required = false, HelpText = "Description of the entity.")]
         public string? Description { get; }

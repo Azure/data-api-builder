@@ -347,7 +347,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                                     };
                                 });
                             services.AddAuthorization();
-                            services.AddSingleton(runtimeConfigProvider);
+                            services.AddSingleton<RuntimeConfigProvider>(sp => runtimeConfigProvider);
                         })
                         .ConfigureLogging(o =>
                         {

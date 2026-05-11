@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 /// should not load the config directly, or maintain a reference to it, so that we can do hot-reloading by replacing
 /// the config that is available from this type.
 /// </remarks>
-public class RuntimeConfigProvider
+public class RuntimeConfigProvider : IDisposable
 {
     public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
 
@@ -46,6 +46,7 @@ public class RuntimeConfigProvider
     private RuntimeConfigLoader _configLoader;
     private DabChangeToken _changeToken = new();
     private readonly IDisposable _changeTokenRegistration;
+    private bool _disposed;
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
@@ -89,6 +90,12 @@ public class RuntimeConfigProvider
     /// </summary>
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _changeTokenRegistration.Dispose();
     }
 
@@ -193,7 +200,7 @@ public class RuntimeConfigProvider
         {
             _configLoader.RuntimeConfig = runtimeConfig;
 
-            if (string.IsNullOrEmpty(runtimeConfig.DataSource.ConnectionString))
+            if (string.IsNullOrEmpty(runtimeConfig.DataSource?.ConnectionString))
             {
                 throw new ArgumentException($"'{nameof(runtimeConfig.DataSource.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.DataSource.ConnectionString));
             }
@@ -272,13 +279,24 @@ public class RuntimeConfigProvider
 
         if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, out _, replacementSettings))
         {
+            // Late configuration injects a connection string into the parsed config's data source.
+            // A config with no data source (e.g. a root config that delegates to data-source-files)
+            // is not meaningful here. Return false to preserve pre-existing behavior — on main, the
+            // RuntimeConfig constructor threw when DataSource was null and TryParseConfig converted
+            // that into a 'false' return. Since DataSource is now nullable, we make the same
+            // determination explicitly rather than NRE'ing in the 'with' expression below.
+            if (runtimeConfig.DataSource is null)
+            {
+                return false;
+            }
+
             _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {
                 DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
                 _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
             ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
-            _configLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(_configLoader.RuntimeConfig.DefaultDataSourceName, _configLoader.RuntimeConfig.DataSource);
+            _configLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(_configLoader.RuntimeConfig.DefaultDataSourceName, _configLoader.RuntimeConfig.DataSource!);
 
             return await InvokeConfigLoadedHandlersAsync();
         }

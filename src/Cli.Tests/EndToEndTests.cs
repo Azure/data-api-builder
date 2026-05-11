@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Product;
+using Azure.DataApiBuilder.Service;
 using Cli.Constants;
 using Microsoft.Data.SqlClient;
 
@@ -47,6 +48,9 @@ public class EndToEndTests
         _fileSystem = null;
         _runtimeConfigLoader = null;
         _cliLogger = null;
+
+        // Reset the LoggerFactoryForCli to avoid impacting other tests.
+        Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
     }
 
     /// <summary>
@@ -64,7 +68,7 @@ public class EndToEndTests
 
         Assert.IsNotNull(runtimeConfig);
         Assert.IsTrue(runtimeConfig.AllowIntrospection);
-        Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource.DatabaseType);
+        Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource!.DatabaseType);
         CosmosDbNoSQLDataSourceOptions? cosmosDataSourceOptions = runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
         Assert.IsNotNull(cosmosDataSourceOptions);
         Assert.AreEqual("graphqldb", cosmosDataSourceOptions.Database);
@@ -92,7 +96,7 @@ public class EndToEndTests
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
 
         Assert.IsNotNull(runtimeConfig);
-        Assert.AreEqual(DatabaseType.CosmosDB_PostgreSQL, runtimeConfig.DataSource.DatabaseType);
+        Assert.AreEqual(DatabaseType.CosmosDB_PostgreSQL, runtimeConfig.DataSource!.DatabaseType);
         Assert.IsNotNull(runtimeConfig.Runtime);
         Assert.IsNotNull(runtimeConfig.Runtime.Rest);
         Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest.Path);
@@ -123,7 +127,7 @@ public class EndToEndTests
             out RuntimeConfig? runtimeConfig,
             replacementSettings: replacementSettings));
 
-        SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
+        SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource!.ConnectionString);
         Assert.AreEqual(ProductInfo.GetDataApiBuilderUserAgent(), builder.ApplicationName);
 
         Assert.IsNotNull(runtimeConfig);
@@ -204,7 +208,7 @@ public class EndToEndTests
             replacementSettings: replacementSettings));
 
         Assert.IsNotNull(runtimeConfig);
-        Assert.AreEqual(expectedDbType, runtimeConfig.DataSource.DatabaseType);
+        Assert.AreEqual(expectedDbType, runtimeConfig.DataSource!.DatabaseType);
         Assert.IsNotNull(runtimeConfig.Runtime);
         Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
         if (runtimeConfig.DataSource.DatabaseType is DatabaseType.MSSQL && isMultipleCreateEnabled is not CliBool.None)
@@ -243,7 +247,7 @@ public class EndToEndTests
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? addRuntimeConfig));
         Assert.IsNotNull(addRuntimeConfig);
-        Assert.AreEqual(TEST_ENV_CONN_STRING, addRuntimeConfig.DataSource.ConnectionString);
+        Assert.AreEqual(TEST_ENV_CONN_STRING, addRuntimeConfig.DataSource!.ConnectionString);
         Assert.AreEqual(1, addRuntimeConfig.Entities.Count()); // 1 new entity added
         Assert.IsTrue(addRuntimeConfig.Entities.ContainsKey("todo"));
         Entity entity = addRuntimeConfig.Entities["todo"];
@@ -725,7 +729,7 @@ public class EndToEndTests
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updateRuntimeConfig));
         Assert.IsNotNull(updateRuntimeConfig);
-        Assert.AreEqual(TEST_ENV_CONN_STRING, updateRuntimeConfig.DataSource.ConnectionString);
+        Assert.AreEqual(TEST_ENV_CONN_STRING, updateRuntimeConfig.DataSource!.ConnectionString);
         Assert.AreEqual(2, updateRuntimeConfig.Entities.Count()); // No new entity added
 
         Assert.IsTrue(updateRuntimeConfig.Entities.ContainsKey("todo"));
@@ -821,24 +825,12 @@ public class EndToEndTests
     [DataRow("--LogLevel 0", DisplayName = "LogLevel 0 from command line.")]
     [DataRow("--LogLevel 1", DisplayName = "LogLevel 1 from command line.")]
     [DataRow("--LogLevel 2", DisplayName = "LogLevel 2 from command line.")]
-    [DataRow("--LogLevel 3", DisplayName = "LogLevel 3 from command line.")]
-    [DataRow("--LogLevel 4", DisplayName = "LogLevel 4 from command line.")]
-    [DataRow("--LogLevel 5", DisplayName = "LogLevel 5 from command line.")]
-    [DataRow("--LogLevel 6", DisplayName = "LogLevel 6 from command line.")]
     [DataRow("--LogLevel Trace", DisplayName = "LogLevel Trace from command line.")]
     [DataRow("--LogLevel Debug", DisplayName = "LogLevel Debug from command line.")]
     [DataRow("--LogLevel Information", DisplayName = "LogLevel Information from command line.")]
-    [DataRow("--LogLevel Warning", DisplayName = "LogLevel Warning from command line.")]
-    [DataRow("--LogLevel Error", DisplayName = "LogLevel Error from command line.")]
-    [DataRow("--LogLevel Critical", DisplayName = "LogLevel Critical from command line.")]
-    [DataRow("--LogLevel None", DisplayName = "LogLevel None from command line.")]
     [DataRow("--LogLevel tRace", DisplayName = "Case sensitivity: LogLevel Trace from command line.")]
     [DataRow("--LogLevel DebUG", DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
     [DataRow("--LogLevel information", DisplayName = "Case sensitivity: LogLevel Information from command line.")]
-    [DataRow("--LogLevel waRNing", DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
-    [DataRow("--LogLevel eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
-    [DataRow("--LogLevel CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
-    [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
     public void TestEngineStartUpWithVerboseAndLogLevelOptions(string logLevelOption)
     {
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
@@ -855,6 +847,147 @@ public class EndToEndTests
         process.Kill();
         Assert.IsNotNull(output);
         StringAssert.Contains(output, $"User provided config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Test to validate that the engine starts successfully when --LogLevel is set to Warning
+    /// or above. At these levels, CLI phase messages (logged at Information) are suppressed,
+    /// so no stdout output with message 'info' is expected during the CLI phase.
+    /// </summary>
+    /// <param name="logLevelOption">Log level options</param>
+    [DataTestMethod]
+    [DataRow("3", DisplayName = "LogLevel 3 from command line.")]
+    [DataRow("4", DisplayName = "LogLevel 4 from command line.")]
+    [DataRow("5", DisplayName = "LogLevel 5 from command line.")]
+    [DataRow("Warning", DisplayName = "LogLevel Warning from command line.")]
+    [DataRow("Error", DisplayName = "LogLevel Error from command line.")]
+    [DataRow("Critical", DisplayName = "LogLevel Critical from command line.")]
+    [DataRow("waRNing", DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
+    [DataRow("eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
+    [DataRow("CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
+    public async Task TestEngineStartUpWithHighLogLevelOptions(string logLevelOption)
+    {
+        StringLogger logger = new();
+        StringWriter consoleOutput = new();
+        Console.SetOut(consoleOutput);
+
+        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--LogLevel", logLevelOption };
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
+
+        // Run Program.Execute on a background task because StartEngine blocks until the host shuts down.
+        Task engineTask = Task.Run(() => Program.Execute(args, logger, _fileSystem!, _runtimeConfigLoader!));
+
+        // Wait for the CLI to set up the proper LogLevel.
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
+        string engineStdOut = consoleOutput.ToString();
+        Assert.IsNotNull(engineStdOut);
+        Assert.IsFalse(engineStdOut.Contains("info"), $"Expected no 'info' outputs at LogLevel {logLevelOption}, but got: {engineStdOut}");
+    }
+
+    /// <summary>
+    /// Test to validate that the engine starts successfully when --LogLevel is set to None.
+    /// At these levels, CLI phase messages (logged at Information) are suppressed,
+    /// so no stdout output is expected during the CLI phase.
+    /// </summary>
+    /// <param name="logLevelOption">Log level options</param>
+    [DataTestMethod]
+    [DataRow("6", DisplayName = "LogLevel 6 from command line.")]
+    [DataRow("None", DisplayName = "LogLevel None from command line.")]
+    [DataRow("NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
+    public async Task TestEngineStartUpWithLogLevelNone(string logLevelOption)
+    {
+        StringLogger logger = new();
+        StringWriter consoleOutput = new();
+        Console.SetOut(consoleOutput);
+
+        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--LogLevel", logLevelOption };
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
+
+        // Run Program.Execute on a background task because StartEngine blocks until the host shuts down.
+        Task engineTask = Task.Run(() => Program.Execute(args, logger, _fileSystem!, _runtimeConfigLoader!));
+
+        // Wait for the CLI to set up the proper LogLevel.
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
+        string engineStdOut = consoleOutput.ToString();
+        Assert.IsTrue(string.IsNullOrEmpty(engineStdOut), $"Expected no output at LogLevel {logLevelOption}, but got: {engineStdOut}");
+    }
+
+    /// Validates that `dab start` correctly sets <see cref="Startup.IsLogLevelOverriddenByCli"/>
+    /// based on whether the --LogLevel CLI flag is provided.
+    ///
+    /// When the --LogLevel flag is provided, IsLogLevelOverriddenByCli should be true.
+    /// When the --LogLevel flag is omitted (log level comes from the config file), IsLogLevelOverriddenByCli should be false.
+    /// </summary>
+    /// <param name="cliLogLevel">The --LogLevel CLI flag value, or null to omit the flag.</param>
+    /// <param name="expectedIsOverridden">Expected value of Startup.IsLogLevelOverriddenByCli.</param>
+    [DataTestMethod]
+    [DataRow(null, false, DisplayName = "IsLogLevelOverriddenByCli is false")]
+    [DataRow(LogLevel.Error, true, DisplayName = "IsLogLevelOverriddenByCli is true")]
+    public async Task TestStartCommandResolvesLogLevelFromConfigOrFlag(
+        LogLevel? cliLogLevel,
+        bool expectedIsOverridden)
+    {
+        string baseConfig = @"
+        {
+            ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @""",
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
+            },
+            ""runtime"": {
+                ""rest"": {
+                    ""path"": ""/api"",
+                    ""enabled"": true
+                },
+                ""graphql"": {
+                    ""path"": ""/graphql"",
+                    ""enabled"": true,
+                    ""allow-introspection"": true
+                },
+                ""host"": {
+                    ""mode"": ""development"",
+                    ""cors"": {
+                        ""origins"": [],
+                        ""allow-credentials"": false
+                    },
+                    ""authentication"": {
+                        ""provider"": ""Unauthenticated""
+                    }
+                },
+                ""telemetry"": {
+                    ""log-level"": {
+                        ""Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider"": ""Information"",
+                        ""Azure.DataApiBuilder.Core"": ""Debug"",
+                        ""Azure.DataApiBuilder.Service.Controllers.RestController"": ""Error"",
+                        ""default"": ""Warning""
+                    }
+                }
+            },
+            ""entities"": {}
+        }";
+
+        // Merge in an entity so the config is not rejected for having an empty entities section.
+        string configWithLogLevel = AddPropertiesToJson(baseConfig, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, configWithLogLevel);
+
+        StartOptions options = new(
+            verbose: false,
+            logLevel: cliLogLevel,
+            isHttpsRedirectionDisabled: false,
+            mcpStdio: false,
+            mcpRole: null,
+            config: TEST_RUNTIME_CONFIG_FILE);
+
+        // Run TryStartEngineWithOptions on a background task because StartEngine blocks until the host shuts down.
+        Task engineTask = Task.Run(() =>
+            TryStartEngineWithOptions(options, _runtimeConfigLoader!, _fileSystem!));
+
+        // Wait for the engine to finish loading the config.
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
+        Assert.AreEqual(expectedIsOverridden, Startup.IsLogLevelOverriddenByCli);
     }
 
     /// <summary>

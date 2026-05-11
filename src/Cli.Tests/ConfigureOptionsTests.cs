@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Serilog;
 
 namespace Cli.Tests
@@ -15,6 +16,12 @@ namespace Cli.Tests
         private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
         private const string TEST_RUNTIME_CONFIG_FILE = "test-update-runtime-setting.json";
         private const string TEST_DATASOURCE_HEALTH_NAME = "My Data Source";
+
+        // Embeddings test constants
+        private const string TEST_AZURE_OPENAI_BASE_URL = "https://myservice.openai.azure.com";
+        private const string TEST_OPENAI_BASE_URL = "https://api.openai.com";
+        private const string TEST_EMBEDDINGS_API_KEY = "test-api-key";
+        private const string TEST_EMBEDDINGS_MODEL = "text-embedding-ada-002";
 
         [TestInitialize]
         public void TestInitialize()
@@ -811,7 +818,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
-            Assert.AreEqual(config.DataSource.DatabaseType, Enum.Parse<DatabaseType>(dbType, ignoreCase: true));
+            Assert.AreEqual(config.DataSource!.DatabaseType, Enum.Parse<DatabaseType>(dbType, ignoreCase: true));
         }
 
         /// <summary>
@@ -841,7 +848,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
-            Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.MSSQL);
+            Assert.AreEqual(config.DataSource!.DatabaseType, DatabaseType.MSSQL);
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("set-session-context", false), true);
             Assert.IsFalse(config.DataSource.Options!.ContainsKey("database"));
             Assert.IsFalse(config.DataSource.Options!.ContainsKey("container"));
@@ -877,7 +884,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
-            Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.CosmosDB_NoSQL);
+            Assert.AreEqual(config.DataSource!.DatabaseType, DatabaseType.CosmosDB_NoSQL);
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("database"), "testdb");
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("container"), "testcontainer");
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("schema"), "testschema.gql");
@@ -1439,6 +1446,95 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Helper method to create a RuntimeConfig with embeddings configuration for testing.
+        /// </summary>
+        private static RuntimeConfig CreateConfigWithEmbeddings(
+            EmbeddingProviderType provider,
+            string baseUrl,
+            string apiKey,
+            string? model = null,
+            EmbeddingsEndpointOptions? endpoint = null,
+            EmbeddingsHealthCheckConfig? health = null)
+        {
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config);
+            Assert.IsNotNull(config);
+
+            return config with
+            {
+                Runtime = config.Runtime! with
+                {
+                    Embeddings = new EmbeddingsOptions(
+                        Provider: provider,
+                        BaseUrl: baseUrl,
+                        ApiKey: apiKey,
+                        Model: model,
+                        Endpoint: endpoint,
+                        Health: health)
+                }
+            };
+        }
+
+        /// <summary>
+        /// Helper method to assert common embeddings configuration after an update.
+        /// </summary>
+        private RuntimeConfig AssertEmbeddingsConfigUpdate(bool isSuccess)
+        {
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime?.Embeddings);
+            return config;
+        }
+
+        /// <summary>
+        /// Helper method to assert embeddings endpoint settings.
+        /// </summary>
+        private static void AssertEmbeddingsEndpoint(
+            RuntimeConfig config,
+            bool expectedEnabled,
+            string[] expectedRoles)
+        {
+            Assert.IsNotNull(config.Runtime?.Embeddings);
+            Assert.IsNotNull(config.Runtime.Embeddings.Endpoint);
+            Assert.AreEqual(expectedEnabled, config.Runtime.Embeddings.Endpoint.Enabled);
+            Assert.IsNotNull(config.Runtime.Embeddings.Endpoint.Roles);
+            CollectionAssert.AreEqual(expectedRoles, config.Runtime.Embeddings.Endpoint.Roles);
+        }
+
+        /// <summary>
+        /// Helper method to assert embeddings health settings.
+        /// </summary>
+        private static void AssertEmbeddingsHealth(
+            RuntimeConfig config,
+            bool expectedEnabled,
+            int expectedThresholdMs,
+            string expectedTestText,
+            int expectedDimensions)
+        {
+            Assert.IsNotNull(config.Runtime?.Embeddings);
+            Assert.IsNotNull(config.Runtime.Embeddings.Health);
+            Assert.AreEqual(expectedEnabled, config.Runtime.Embeddings.Health.Enabled);
+            Assert.AreEqual(expectedThresholdMs, config.Runtime.Embeddings.Health.ThresholdMs);
+            Assert.AreEqual(expectedTestText, config.Runtime.Embeddings.Health.TestText);
+            Assert.AreEqual(expectedDimensions, config.Runtime.Embeddings.Health.ExpectedDimensions);
+        }
+
+        /// <summary>
+        /// Helper method to assert base embeddings provider settings are preserved.
+        /// </summary>
+        private static void AssertBaseEmbeddingsSettings(
+            RuntimeConfig config,
+            EmbeddingProviderType expectedProvider,
+            string expectedBaseUrl,
+            string expectedApiKey)
+        {
+            Assert.IsNotNull(config.Runtime?.Embeddings);
+            Assert.AreEqual(expectedProvider, config.Runtime.Embeddings.Provider);
+            Assert.AreEqual(expectedBaseUrl, config.Runtime.Embeddings.BaseUrl);
+            Assert.AreEqual(expectedApiKey, config.Runtime.Embeddings.ApiKey);
+        }
+
+        /// <summary>
         /// A simple ILogger implementation that records all log messages to a list,
         /// enabling tests to assert on log output without redirecting console streams.
         /// </summary>
@@ -1589,6 +1685,448 @@ namespace Cli.Tests
             Assert.AreEqual(newAudience, (string?)userDelegatedAuthSection["database-audience"]);
             Assert.AreEqual(true, (bool?)userDelegatedAuthSection["enabled"]);
             Assert.AreEqual("EntraId", (string?)userDelegatedAuthSection["provider"]);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure" with embeddings endpoint options on a config with existing embeddings
+        /// results in the endpoint options being added to the embeddings configuration.
+        /// </summary>
+        [TestMethod]
+        public void TestAddEmbeddingsEndpointOptions()
+        {
+            // Arrange: Create a config with embeddings but no endpoint/health
+            RuntimeConfig config = CreateConfigWithEmbeddings(
+                EmbeddingProviderType.AzureOpenAI,
+                TEST_AZURE_OPENAI_BASE_URL,
+                TEST_EMBEDDINGS_API_KEY,
+                model: TEST_EMBEDDINGS_MODEL);
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Configure embeddings endpoint options
+            ConfigureOptions options = new(
+                runtimeEmbeddingsEndpointEnabled: CliBool.True,
+                runtimeEmbeddingsEndpointRoles: new List<string> { "admin", "reader" },
+                config: TEST_RUNTIME_CONFIG_FILE);
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            config = AssertEmbeddingsConfigUpdate(isSuccess);
+            AssertEmbeddingsEndpoint(config, expectedEnabled: true, expectedRoles: new[] { "admin", "reader" });
+            AssertBaseEmbeddingsSettings(config, EmbeddingProviderType.AzureOpenAI,
+                TEST_AZURE_OPENAI_BASE_URL, TEST_EMBEDDINGS_API_KEY);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure" with embeddings health options on a config with existing embeddings
+        /// results in the health options being added to the embeddings configuration.
+        /// </summary>
+        [TestMethod]
+        public void TestAddEmbeddingsHealthOptions()
+        {
+            // Arrange: Create a config with embeddings but no health config
+            RuntimeConfig config = CreateConfigWithEmbeddings(
+                EmbeddingProviderType.OpenAI,
+                TEST_OPENAI_BASE_URL,
+                TEST_EMBEDDINGS_API_KEY);
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Configure embeddings health options
+            ConfigureOptions options = new(
+                runtimeEmbeddingsHealthEnabled: CliBool.True,
+                runtimeEmbeddingsHealthThresholdMs: 3000,
+                runtimeEmbeddingsHealthTestText: "hello world",
+                runtimeEmbeddingsHealthExpectedDimensions: 1536,
+                config: TEST_RUNTIME_CONFIG_FILE);
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            config = AssertEmbeddingsConfigUpdate(isSuccess);
+            AssertEmbeddingsHealth(config, expectedEnabled: true, expectedThresholdMs: 3000,
+                expectedTestText: "hello world", expectedDimensions: 1536);
+            Assert.IsNotNull(config.Runtime?.Embeddings);
+            Assert.AreEqual(EmbeddingProviderType.OpenAI, config.Runtime.Embeddings.Provider);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure" with both embeddings endpoint and health options
+        /// on a config with existing embeddings results in both being added.
+        /// </summary>
+        [TestMethod]
+        public void TestAddEmbeddingsEndpointAndHealthOptionsTogether()
+        {
+            // Arrange
+            RuntimeConfig config = CreateConfigWithEmbeddings(
+                EmbeddingProviderType.AzureOpenAI,
+                TEST_AZURE_OPENAI_BASE_URL,
+                TEST_EMBEDDINGS_API_KEY,
+                model: TEST_EMBEDDINGS_MODEL);
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Configure both endpoint and health options at once
+            ConfigureOptions options = new(
+                runtimeEmbeddingsEndpointEnabled: CliBool.True,
+                runtimeEmbeddingsEndpointRoles: new List<string> { "authenticated" },
+                runtimeEmbeddingsHealthEnabled: CliBool.True,
+                runtimeEmbeddingsHealthThresholdMs: 5000,
+                runtimeEmbeddingsHealthTestText: "test embedding",
+                runtimeEmbeddingsHealthExpectedDimensions: 768,
+                config: TEST_RUNTIME_CONFIG_FILE);
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            config = AssertEmbeddingsConfigUpdate(isSuccess);
+            AssertEmbeddingsEndpoint(config, expectedEnabled: true, expectedRoles: new[] { "authenticated" });
+            AssertEmbeddingsHealth(config, expectedEnabled: true, expectedThresholdMs: 5000,
+                expectedTestText: "test embedding", expectedDimensions: 768);
+        }
+
+        /// <summary>
+        /// Tests that updating endpoint roles on a config that already has endpoint and health settings
+        /// preserves the existing health settings.
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateExistingEmbeddingsEndpointRolesPreservesHealth()
+        {
+            // Arrange: Create a config with embeddings that already has endpoint and health
+            RuntimeConfig config = CreateConfigWithEmbeddings(
+                EmbeddingProviderType.AzureOpenAI,
+                TEST_AZURE_OPENAI_BASE_URL,
+                TEST_EMBEDDINGS_API_KEY,
+                model: TEST_EMBEDDINGS_MODEL,
+                endpoint: new EmbeddingsEndpointOptions(enabled: true, roles: new[] { "old-role" }),
+                health: new EmbeddingsHealthCheckConfig(enabled: true, thresholdMs: 2000,
+                    testText: "existing text", expectedDimensions: 512));
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Update only endpoint roles
+            ConfigureOptions options = new(
+                runtimeEmbeddingsEndpointRoles: new List<string> { "new-role" },
+                config: TEST_RUNTIME_CONFIG_FILE);
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Endpoint roles updated, health preserved
+            config = AssertEmbeddingsConfigUpdate(isSuccess);
+            AssertEmbeddingsEndpoint(config, expectedEnabled: true, expectedRoles: new[] { "new-role" });
+            AssertEmbeddingsHealth(config, expectedEnabled: true, expectedThresholdMs: 2000,
+                expectedTestText: "existing text", expectedDimensions: 512);
+        }
+
+        /// <summary>
+        /// Tests that configuring embeddings health with an invalid (negative) threshold fails.
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureEmbeddingsHealthWithInvalidThresholdFails()
+        {
+            // Arrange
+            RuntimeConfig config = CreateConfigWithEmbeddings(
+                EmbeddingProviderType.OpenAI,
+                TEST_OPENAI_BASE_URL,
+                TEST_EMBEDDINGS_API_KEY);
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Configure with invalid threshold
+            ConfigureOptions options = new(
+                runtimeEmbeddingsHealthEnabled: CliBool.True,
+                runtimeEmbeddingsHealthThresholdMs: -1,
+                config: TEST_RUNTIME_CONFIG_FILE);
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Should fail
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Tests that configuring embeddings health with an invalid (negative) expected-dimensions fails.
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureEmbeddingsHealthWithInvalidExpectedDimensionsFails()
+        {
+            // Arrange
+            RuntimeConfig config = CreateConfigWithEmbeddings(
+                EmbeddingProviderType.OpenAI,
+                TEST_OPENAI_BASE_URL,
+                TEST_EMBEDDINGS_API_KEY);
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Configure with invalid expected dimensions
+            ConfigureOptions options = new(
+                runtimeEmbeddingsHealthEnabled: CliBool.True,
+                runtimeEmbeddingsHealthExpectedDimensions: 0,
+                config: TEST_RUNTIME_CONFIG_FILE);
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Should fail
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Tests adding pagination options to a config that doesn't have a pagination section.
+        /// Command: dab configure --runtime.pagination.max-page-size 500 --runtime.pagination.default-page-size 50 --runtime.pagination.next-link-relative true
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(500, 50, true, DisplayName = "Set all pagination options")]
+        [DataRow(1000, null, null, DisplayName = "Set only max-page-size")]
+        [DataRow(null, 25, null, DisplayName = "Set only default-page-size")]
+        [DataRow(null, null, true, DisplayName = "Set only next-link-relative")]
+        public void TestConfigurePaginationOptions(int? maxPageSize, int? defaultPageSize, bool? nextLinkRelative)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimePaginationMaxPageSize: maxPageSize,
+                runtimePaginationDefaultPageSize: defaultPageSize,
+                runtimePaginationNextLinkRelative: nextLinkRelative,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Pagination);
+
+            if (maxPageSize.HasValue)
+            {
+                Assert.AreEqual(maxPageSize.Value, config.Runtime.Pagination.MaxPageSize);
+            }
+
+            if (defaultPageSize.HasValue)
+            {
+                Assert.AreEqual(defaultPageSize.Value, config.Runtime.Pagination.DefaultPageSize);
+            }
+
+            if (nextLinkRelative.HasValue)
+            {
+                Assert.AreEqual(nextLinkRelative.Value, config.Runtime.Pagination.NextLinkRelative);
+            }
+        }
+
+        /// <summary>
+        /// Tests adding runtime health options to a config that doesn't have a health section.
+        /// The enabled flag must be explicitly set for health options to persist in config.
+        /// Command: dab configure --runtime.health.enabled true --runtime.health.cache-ttl-seconds 10 --runtime.health.max-query-parallelism 2 --runtime.health.roles "admin,monitor"
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, 10, 2, new string[] { "admin", "monitor" }, DisplayName = "Set all runtime health options")]
+        [DataRow(false, null, null, null, DisplayName = "Disable runtime health")]
+        [DataRow(true, 30, null, null, DisplayName = "Enable health with custom cache-ttl")]
+        [DataRow(true, null, 8, null, DisplayName = "Enable health with custom max-query-parallelism")]
+        [DataRow(true, null, null, new string[] { "admin" }, DisplayName = "Enable health with roles")]
+        [DataRow(null, 20, null, null, DisplayName = "Null enabled with cache-ttl auto-enables health")]
+        public void TestConfigureRuntimeHealthOptions(bool? enabled, int? cacheTtlSeconds, int? maxQueryParallelism, string[]? roles)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeHealthEnabled: enabled,
+                runtimeHealthCacheTtlSeconds: cacheTtlSeconds,
+                runtimeHealthMaxQueryParallelism: maxQueryParallelism,
+                runtimeHealthRoles: roles,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Health);
+
+            if (enabled.HasValue)
+            {
+                Assert.AreEqual(enabled.Value, config.Runtime.Health.Enabled);
+            }
+            else
+            {
+                // When enabled is null but sub-options are set, health is auto-enabled.
+                Assert.IsTrue(config.Runtime.Health.Enabled);
+            }
+
+            if (cacheTtlSeconds.HasValue)
+            {
+                Assert.AreEqual(cacheTtlSeconds.Value, config.Runtime.Health.CacheTtlSeconds);
+            }
+
+            if (maxQueryParallelism.HasValue)
+            {
+                Assert.AreEqual(maxQueryParallelism.Value, config.Runtime.Health.MaxQueryParallelism);
+            }
+
+            if (roles is not null)
+            {
+                Assert.IsNotNull(config.Runtime.Health.Roles);
+                CollectionAssert.AreEquivalent(roles, config.Runtime.Health.Roles.ToArray());
+            }
+        }
+
+        /// <summary>
+        /// Tests adding host max-response-size-mb to a config.
+        /// Command: dab configure --runtime.host.max-response-size-mb 50
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(50, DisplayName = "Set max-response-size-mb to 50")]
+        [DataRow(1, DisplayName = "Set max-response-size-mb to 1")]
+        [DataRow(-1, DisplayName = "Set max-response-size-mb to -1 (engine max)")]
+        public void TestConfigureHostMaxResponseSizeMb(int maxResponseSizeMb)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeHostMaxResponseSizeMb: maxResponseSizeMb,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Host);
+            Assert.IsNotNull(config.Runtime.Host.MaxResponseSizeMB);
+            Assert.IsTrue(config.Runtime.Host.UserProvidedMaxResponseSizeMB);
+        }
+
+        /// <summary>
+        /// Tests adding data-source-files to a config.
+        /// Command: dab configure --data-source-files "config1.json,config2.json"
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureDataSourceFiles()
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            string[] files = new[] { "config1.json", "config2.json" };
+            ConfigureOptions options = new(
+                dataSourceFiles: files,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSourceFiles);
+            Assert.IsNotNull(config.DataSourceFiles.SourceFiles);
+            CollectionAssert.AreEquivalent(files, config.DataSourceFiles.SourceFiles.ToArray());
+        }
+
+        /// <summary>
+        /// Tests adding data-source.health.enabled and data-source.health.threshold-ms to a config.
+        /// Command: dab configure --data-source.health.enabled false --data-source.health.threshold-ms 2000
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(false, 2000, DisplayName = "Disable data source health with custom threshold")]
+        [DataRow(true, null, DisplayName = "Enable data source health with default threshold")]
+        [DataRow(null, 500, DisplayName = "Set only threshold-ms")]
+        public void TestConfigureDataSourceHealthOptions(bool? enabled, int? thresholdMs)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceHealthEnabled: enabled,
+                dataSourceHealthThresholdMs: thresholdMs,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.Health);
+
+            if (enabled.HasValue)
+            {
+                Assert.AreEqual(enabled.Value, config.DataSource.Health.Enabled);
+            }
+
+            if (thresholdMs.HasValue)
+            {
+                Assert.AreEqual(thresholdMs.Value, config.DataSource.Health.ThresholdMs);
+            }
+        }
+
+        /// <summary>
+        /// Tests adding data-source.user-delegated-auth.provider to a config.
+        /// Command: dab configure --data-source.user-delegated-auth.provider "EntraId"
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureUserDelegatedAuthProvider()
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceUserDelegatedAuthEnabled: true,
+                dataSourceUserDelegatedAuthProvider: "EntraId",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.UserDelegatedAuth);
+            Assert.AreEqual("EntraId", config.DataSource.UserDelegatedAuth.Provider);
+            Assert.IsTrue(config.DataSource.UserDelegatedAuth.Enabled);
+        }
+
+        /// <summary>
+        /// Tests adding telemetry log-level configuration.
+        /// Command: dab configure --runtime.telemetry.log-level "Microsoft.AspNetCore:Warning,Default:Information"
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[] { "Microsoft.AspNetCore:Warning" }, DisplayName = "Set single log level")]
+        [DataRow(new string[] { "Microsoft.AspNetCore:Warning", "Default:Information" }, DisplayName = "Set multiple log levels")]
+        public void TestConfigureTelemetryLogLevel(string[] logLevels)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeTelemetryLogLevel: logLevels,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Telemetry);
+            Assert.IsNotNull(config.Runtime.Telemetry.LoggerLevel);
+
+            foreach (string entry in logLevels)
+            {
+                string[] parts = entry.Split(':');
+                Assert.IsTrue(config.Runtime.Telemetry.LoggerLevel.ContainsKey(parts[0]));
+            }
+        }
+
+        /// <summary>
+        /// Tests that an empty namespace in log-level input is rejected.
+        /// Command: dab configure --runtime.telemetry.log-level ":Warning"
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureTelemetryLogLevelRejectsEmptyNamespace()
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeTelemetryLogLevel: new string[] { ":Warning" },
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsFalse(isSuccess);
         }
     }
 }

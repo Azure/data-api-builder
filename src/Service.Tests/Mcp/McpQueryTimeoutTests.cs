@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             ServiceCollection services = new();
             RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
-            services.AddSingleton(configProvider);
+            services.AddSingleton<RuntimeConfigProvider>(sp => configProvider);
             services.AddLogging();
             return services.BuildServiceProvider();
         }

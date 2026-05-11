@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         /// <param name="entityName">Entity to test, requires updating the CreateEntities() helper.</param>
         /// <param name="expectedColumns">Expected first result set columns</param>
         /// <param name="expectedColumnJsonTypes">Expected first result set column types (JSON)</param>
-        [DataRow("sp1", new string[] { "id", "title", "publisher_id" }, new string[] { "number", "string", "number" }, DisplayName = "Validate response body parameters and parameter Json data types.")]
+        [DataRow("sp1", new string[] { "id", "title", "publisher_id" }, new string[] { "integer", "string", "integer" }, DisplayName = "Validate response body parameters and parameter Json data types.")]
         [DataTestMethod]
         public void ValidateResponseBodyContents(string entityName, string[] expectedColumns, string[] expectedColumnJsonTypes)
         {

@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -371,6 +372,15 @@ namespace Cli
                 return false;
             }
 
+            if (runtimeConfig.DataSource is null)
+            {
+                _logger.LogError(
+                    "Cannot add an entity to '{runtimeConfigFile}' because it has no data source. " +
+                    "If this is a root config (uses data-source-files), run 'dab add' against the specific child config file instead.",
+                    runtimeConfigFile);
+                return false;
+            }
+
             if (!TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig))
             {
                 _logger.LogError("Failed to add a new entity.");
@@ -402,7 +412,7 @@ namespace Cli
             // Try to get the source object as string or DatabaseObjectSource for new Entity
             if (!TryCreateSourceObjectForNewEntity(
                 options,
-                initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL,
+                initialRuntimeConfig.DataSource!.DatabaseType == DatabaseType.CosmosDB_NoSQL,
                 out EntitySource? source))
             {
                 _logger.LogError("Unable to create the source object.");
@@ -464,7 +474,8 @@ namespace Cli
 
             EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
-            EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
+            EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtlSeconds, options.CacheLevel);
+            EntityHealthCheckConfig? entityHealthOptions = ConstructEntityHealthOptions(options.HealthEnabled);
             EntityMcpOptions? mcpOptions = null;
 
             if (options.McpDmlTools is not null || options.McpCustomTool is not null)
@@ -489,7 +500,8 @@ namespace Cli
                 Mappings: null,
                 Cache: cacheOptions,
                 Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description,
-                Mcp: mcpOptions);
+                Mcp: mcpOptions,
+                Health: entityHealthOptions);
 
             // Add entity to existing runtime config.
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialRuntimeConfig.Entities.Entities)
@@ -675,6 +687,15 @@ namespace Cli
                 return false;
             }
 
+            if (runtimeConfig.DataSource is null)
+            {
+                _logger.LogError(
+                    "Cannot configure '{runtimeConfigFile}' because it has no data source. " +
+                    "If this is a root config (uses data-source-files), run 'dab configure' against the specific child config file instead.",
+                    runtimeConfigFile);
+                return false;
+            }
+
             if (!TryUpdateConfiguredDataSourceOptions(options, ref runtimeConfig))
             {
                 return false;
@@ -713,7 +734,7 @@ namespace Cli
             ConfigureOptions options,
             [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
         {
-            DatabaseType dbType = runtimeConfig.DataSource.DatabaseType;
+            DatabaseType dbType = runtimeConfig.DataSource!.DatabaseType;
             string dataSourceConnectionString = runtimeConfig.DataSource.ConnectionString;
             DatasourceHealthCheckConfig? datasourceHealthCheckConfig = runtimeConfig.DataSource.Health;
             UserDelegatedAuthOptions? userDelegatedAuthConfig = runtimeConfig.DataSource.UserDelegatedAuth;
@@ -758,39 +779,41 @@ namespace Cli
                 dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
             }
 
-            // Handle health.name option
-            if (options.DataSourceHealthName is not null)
+            // Handle health options (name, enabled, threshold-ms)
+            if (options.DataSourceHealthName is not null
+                || options.DataSourceHealthEnabled is not null
+                || options.DataSourceHealthThresholdMs is not null)
             {
-                // If there's no existing health config, create one with the name
-                // Note: Passing enabled: null results in Enabled = true at runtime (default behavior)
-                // but UserProvidedEnabled = false, so the enabled property won't be serialized to JSON.
-                // This ensures only the name property is written to the config file.
                 if (datasourceHealthCheckConfig is null)
                 {
-                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(enabled: null, name: options.DataSourceHealthName);
+                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
+                        enabled: options.DataSourceHealthEnabled,
+                        name: options.DataSourceHealthName,
+                        thresholdMs: options.DataSourceHealthThresholdMs);
                 }
                 else
                 {
-                    // Update the existing health config with the new name while preserving other settings.
-                    // DatasourceHealthCheckConfig is a record (immutable), so we create a new instance.
-                    // Preserve threshold only if it was explicitly set by the user
-                    int? thresholdToPreserve = datasourceHealthCheckConfig.UserProvidedThresholdMs
-                        ? datasourceHealthCheckConfig.ThresholdMs
-                        : null;
-                    // Preserve enabled only if it was explicitly set by the user
-                    bool? enabledToPreserve = datasourceHealthCheckConfig.UserProvidedEnabled
-                        ? datasourceHealthCheckConfig.Enabled
-                        : null;
+                    int? thresholdToPreserve = options.DataSourceHealthThresholdMs
+                        ?? (datasourceHealthCheckConfig.UserProvidedThresholdMs
+                            ? datasourceHealthCheckConfig.ThresholdMs
+                            : null);
+                    bool? enabledToPreserve = options.DataSourceHealthEnabled
+                        ?? (datasourceHealthCheckConfig.UserProvidedEnabled
+                            ? datasourceHealthCheckConfig.Enabled
+                            : null);
+                    string? nameToPreserve = options.DataSourceHealthName
+                        ?? datasourceHealthCheckConfig.Name;
                     datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
                         enabled: enabledToPreserve,
-                        name: options.DataSourceHealthName,
+                        name: nameToPreserve,
                         thresholdMs: thresholdToPreserve);
                 }
             }
 
             // Handle user-delegated-auth options
             if (options.DataSourceUserDelegatedAuthEnabled is not null
-                || options.DataSourceUserDelegatedAuthDatabaseAudience is not null)
+                || options.DataSourceUserDelegatedAuthDatabaseAudience is not null
+                || options.DataSourceUserDelegatedAuthProvider is not null)
             {
                 // Determine the enabled state: use new value if provided, otherwise preserve existing
                 bool enabled = options.DataSourceUserDelegatedAuthEnabled
@@ -808,8 +831,10 @@ namespace Cli
                 string? databaseAudience = options.DataSourceUserDelegatedAuthDatabaseAudience
                     ?? userDelegatedAuthConfig?.DatabaseAudience;
 
-                // Get provider: preserve existing or use default "EntraId"
-                string? provider = userDelegatedAuthConfig?.Provider ?? "EntraId";
+                // Get provider: use new value if provided, otherwise preserve existing or use default "EntraId"
+                string? provider = options.DataSourceUserDelegatedAuthProvider
+                    ?? userDelegatedAuthConfig?.Provider
+                    ?? "EntraId";
 
                 // Create or update user-delegated-auth config
                 userDelegatedAuthConfig = new UserDelegatedAuthOptions(
@@ -824,6 +849,13 @@ namespace Cli
                 UserDelegatedAuth = userDelegatedAuthConfig
             };
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
+
+            // Handle data-source-files
+            if (options.DataSourceFiles is not null && options.DataSourceFiles.Any())
+            {
+                DataSourceFiles dataSourceFiles = new(options.DataSourceFiles);
+                runtimeConfig = runtimeConfig with { DataSourceFiles = dataSourceFiles };
+            }
 
             return runtimeConfig != null;
         }
@@ -988,6 +1020,39 @@ namespace Cli
                 }
             }
 
+            // Pagination: MaxPageSize, DefaultPageSize, NextLinkRelative
+            if (options.RuntimePaginationMaxPageSize != null ||
+                options.RuntimePaginationDefaultPageSize != null ||
+                options.RuntimePaginationNextLinkRelative != null)
+            {
+                PaginationOptions currentPagination = runtimeConfig?.Runtime?.Pagination ?? new();
+                int? maxPageSize = options.RuntimePaginationMaxPageSize ?? (currentPagination.UserProvidedMaxPageSize ? currentPagination.MaxPageSize : null);
+                int? defaultPageSize = options.RuntimePaginationDefaultPageSize ?? (currentPagination.UserProvidedDefaultPageSize ? currentPagination.DefaultPageSize : null);
+                bool? nextLinkRelative = options.RuntimePaginationNextLinkRelative ?? currentPagination.NextLinkRelative;
+
+                PaginationOptions updatedPaginationOptions = new(
+                    MaxPageSize: maxPageSize,
+                    DefaultPageSize: defaultPageSize,
+                    NextLinkRelative: nextLinkRelative);
+
+                if (options.RuntimePaginationMaxPageSize != null)
+                {
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.pagination.max-page-size as '{value}'", options.RuntimePaginationMaxPageSize);
+                }
+
+                if (options.RuntimePaginationDefaultPageSize != null)
+                {
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.pagination.default-page-size as '{value}'", options.RuntimePaginationDefaultPageSize);
+                }
+
+                if (options.RuntimePaginationNextLinkRelative != null)
+                {
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.pagination.next-link-relative as '{value}'", options.RuntimePaginationNextLinkRelative);
+                }
+
+                runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Pagination = updatedPaginationOptions } };
+            }
+
             // Compression: Level
             if (options.RuntimeCompressionLevel != null)
             {
@@ -1003,13 +1068,14 @@ namespace Cli
                 }
             }
 
-            // Host: Mode, Cors.Origins, Cors.AllowCredentials, Authentication.Provider, Authentication.Jwt.Audience, Authentication.Jwt.Issuer
+            // Host: Mode, Cors.Origins, Cors.AllowCredentials, Authentication.Provider, Authentication.Jwt.Audience, Authentication.Jwt.Issuer, MaxResponseSizeMb
             if (options.RuntimeHostMode != null ||
                 options.RuntimeHostCorsOrigins != null ||
                 options.RuntimeHostCorsAllowCredentials != null ||
                 options.RuntimeHostAuthenticationProvider != null ||
                 options.RuntimeHostAuthenticationJwtAudience != null ||
-                options.RuntimeHostAuthenticationJwtIssuer != null)
+                options.RuntimeHostAuthenticationJwtIssuer != null ||
+                options.RuntimeHostMaxResponseSizeMb != null)
             {
                 HostOptions? updatedHostOptions = runtimeConfig?.Runtime?.Host;
                 bool status = TryUpdateConfiguredHostValues(options, ref updatedHostOptions);
@@ -1021,6 +1087,30 @@ namespace Cli
                 {
                     return false;
                 }
+            }
+
+            // Health: Enabled, CacheTtlSeconds, MaxQueryParallelism, Roles
+            if (options.RuntimeHealthEnabled != null ||
+                options.RuntimeHealthCacheTtlSeconds != null ||
+                options.RuntimeHealthMaxQueryParallelism != null ||
+                options.RuntimeHealthRoles != null)
+            {
+                RuntimeHealthCheckConfig existingHealth = runtimeConfig?.Runtime?.Health ?? new();
+                // If any health sub-option is provided without --runtime.health.enabled,
+                // auto-set enabled=true so the section persists in serialized config.
+                bool? enabled = options.RuntimeHealthEnabled
+                    ?? (existingHealth.UserProvidedEnabled ? existingHealth.Enabled : true);
+                int? cacheTtl = options.RuntimeHealthCacheTtlSeconds ?? (existingHealth.UserProvidedTtlOptions ? existingHealth.CacheTtlSeconds : null);
+                int? maxParallelism = options.RuntimeHealthMaxQueryParallelism ?? (existingHealth.UserProvidedMaxQueryParallelism ? existingHealth.MaxQueryParallelism : null);
+                HashSet<string>? roles = options.RuntimeHealthRoles is not null ? new HashSet<string>(options.RuntimeHealthRoles) : existingHealth.Roles;
+
+                RuntimeHealthCheckConfig updatedHealthOptions = new(
+                    enabled: enabled,
+                    roles: roles,
+                    cacheTtlSeconds: cacheTtl,
+                    maxQueryParallelism: maxParallelism);
+
+                runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Health = updatedHealthOptions } };
             }
 
             // Telemetry: Azure Log Analytics
@@ -1059,6 +1149,87 @@ namespace Cli
                 else
                 {
                     return false;
+                }
+            }
+
+            // Telemetry: Log Level
+            if (options.RuntimeTelemetryLogLevel is not null && options.RuntimeTelemetryLogLevel.Any())
+            {
+                Dictionary<string, LogLevel?> logLevels = new();
+                foreach (string entry in options.RuntimeTelemetryLogLevel)
+                {
+                    string[] parts = entry.Split(':', 2);
+                    if (parts.Length != 2)
+                    {
+                        _logger.LogError("Invalid log-level format '{entry}'. Expected 'Namespace:Level'.", entry);
+                        return false;
+                    }
+
+                    string ns = parts[0].Trim();
+                    string levelStr = parts[1].Trim();
+
+                    if (string.IsNullOrEmpty(ns))
+                    {
+                        _logger.LogError("Invalid log-level entry: namespace cannot be empty. Use 'Default:Level' for the root filter.");
+                        return false;
+                    }
+
+                    if (!Enum.TryParse(levelStr, ignoreCase: true, out LogLevel level))
+                    {
+                        _logger.LogError("Invalid log level '{level}'. Allowed values: trace, debug, information, warning, error, critical, none.", levelStr);
+                        return false;
+                    }
+
+                    logLevels[ns] = level;
+                }
+
+                // Merge with existing log levels (create a new dictionary to avoid mutating the original)
+                Dictionary<string, LogLevel?> mergedLevels = new(runtimeConfig?.Runtime?.Telemetry?.LoggerLevel ?? new());
+                foreach (KeyValuePair<string, LogLevel?> kvp in logLevels)
+                {
+                    mergedLevels[kvp.Key] = kvp.Value;
+                }
+
+                runtimeConfig = runtimeConfig! with
+                {
+                    Runtime = runtimeConfig.Runtime! with
+                    {
+                        Telemetry = runtimeConfig.Runtime!.Telemetry is not null
+                            ? runtimeConfig.Runtime!.Telemetry with { LoggerLevel = mergedLevels }
+                            : new TelemetryOptions(LoggerLevel: mergedLevels)
+                    }
+                };
+            }
+
+            // Embeddings: Provider, Endpoint, ApiKey, Model, ApiVersion, Dimensions, TimeoutMs, Enabled, Endpoint.Enabled/Roles/Path, Health.*, Chunking.*
+            if (options.RuntimeEmbeddingsProvider is not null ||
+                options.RuntimeEmbeddingsBaseUrl is not null ||
+                options.RuntimeEmbeddingsApiKey is not null ||
+                options.RuntimeEmbeddingsModel is not null ||
+                options.RuntimeEmbeddingsApiVersion is not null ||
+                options.RuntimeEmbeddingsDimensions is not null ||
+                options.RuntimeEmbeddingsTimeoutMs is not null ||
+                options.RuntimeEmbeddingsEnabled is not null ||
+                options.RuntimeEmbeddingsEndpointEnabled is not null ||
+                (options.RuntimeEmbeddingsEndpointRoles is not null && options.RuntimeEmbeddingsEndpointRoles.Any()) ||
+                options.RuntimeEmbeddingsEndpointPath is not null ||
+                options.RuntimeEmbeddingsHealthEnabled is not null ||
+                options.RuntimeEmbeddingsHealthThresholdMs is not null ||
+                options.RuntimeEmbeddingsHealthTestText is not null ||
+                options.RuntimeEmbeddingsHealthExpectedDimensions is not null ||
+                options.RuntimeEmbeddingsChunkingEnabled is not null ||
+                options.RuntimeEmbeddingsChunkingSizeChars is not null ||
+                options.RuntimeEmbeddingsChunkingOverlapChars is not null)
+            {
+                bool status = TryUpdateConfiguredEmbeddingsValues(options, runtimeConfig?.Runtime?.Embeddings, out EmbeddingsOptions? updatedEmbeddingsOptions);
+                if (!status)
+                {
+                    return false;
+                }
+
+                if (updatedEmbeddingsOptions is not null)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Embeddings = updatedEmbeddingsOptions } };
                 }
             }
 
@@ -1562,6 +1733,13 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.Issuer as '{updatedValue}'", updatedValue);
                 }
 
+                // Runtime.Host.MaxResponseSizeMb
+                if (options?.RuntimeHostMaxResponseSizeMb != null)
+                {
+                    updatedHostOptions = updatedHostOptions! with { MaxResponseSizeMB = options.RuntimeHostMaxResponseSizeMb, UserProvidedMaxResponseSizeMB = true };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.MaxResponseSizeMb as '{value}'", options.RuntimeHostMaxResponseSizeMb);
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -1724,6 +1902,224 @@ namespace Cli
         }
 
         /// <summary>
+        /// Attempts to update the embeddings configuration based on the provided options.
+        /// Creates a new EmbeddingsOptions object if the configuration is valid.
+        /// Provider, endpoint, and API key are required when configuring embeddings.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="existingEmbeddingsOptions">The existing embeddings options from the runtime configuration.</param>
+        /// <param name="updatedEmbeddingsOptions">The resulting embeddings options if successful.</param>
+        /// <returns>True if the embeddings options were successfully configured; otherwise, false.</returns>
+        private static bool TryUpdateConfiguredEmbeddingsValues(
+            ConfigureOptions options,
+            EmbeddingsOptions? existingEmbeddingsOptions,
+            out EmbeddingsOptions? updatedEmbeddingsOptions)
+        {
+            updatedEmbeddingsOptions = null;
+
+            try
+            {
+                // Get values from options or fall back to existing configuration
+                EmbeddingProviderType? provider = options.RuntimeEmbeddingsProvider ?? existingEmbeddingsOptions?.Provider;
+                string? baseUrl = options.RuntimeEmbeddingsBaseUrl ?? existingEmbeddingsOptions?.BaseUrl;
+                string? apiKey = options.RuntimeEmbeddingsApiKey ?? existingEmbeddingsOptions?.ApiKey;
+                string? model = options.RuntimeEmbeddingsModel ?? existingEmbeddingsOptions?.Model;
+                string? apiVersion = options.RuntimeEmbeddingsApiVersion ?? existingEmbeddingsOptions?.ApiVersion;
+                int? dimensions = options.RuntimeEmbeddingsDimensions ?? existingEmbeddingsOptions?.Dimensions;
+                int? timeoutMs = options.RuntimeEmbeddingsTimeoutMs ?? existingEmbeddingsOptions?.TimeoutMs;
+                bool? enabled = options.RuntimeEmbeddingsEnabled.HasValue
+                    ? options.RuntimeEmbeddingsEnabled.Value == CliBool.True
+                    : existingEmbeddingsOptions?.Enabled;
+
+                // Validate required fields
+                if (provider is null)
+                {
+                    _logger.LogError("Failed to configure embeddings: provider is required. Use --runtime.embeddings.provider to specify the provider (azure-openai or openai).");
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(baseUrl))
+                {
+                    _logger.LogError("Failed to configure embeddings: base-url is required. Use --runtime.embeddings.base-url to specify the provider base URL.");
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(apiKey))
+                {
+                    _logger.LogError("Failed to configure embeddings: api-key is required. Use --runtime.embeddings.api-key to specify the authentication key.");
+                    return false;
+                }
+
+                // Validate Azure OpenAI requires model/deployment name
+                if (provider == EmbeddingProviderType.AzureOpenAI && string.IsNullOrEmpty(model))
+                {
+                    _logger.LogError("Failed to configure embeddings: model/deployment name is required for Azure OpenAI provider. Use --runtime.embeddings.model to specify the deployment name.");
+                    return false;
+                }
+
+                // Validate dimensions if provided
+                if (dimensions is not null && dimensions <= 0)
+                {
+                    _logger.LogError("Failed to configure embeddings: dimensions must be a positive integer.");
+                    return false;
+                }
+
+                // Validate timeout if provided
+                if (timeoutMs is not null && timeoutMs <= 0)
+                {
+                    _logger.LogError("Failed to configure embeddings: timeout-ms must be a positive integer.");
+                    return false;
+                }
+
+                // Build EmbeddingsEndpointOptions from CLI flags or existing config
+                EmbeddingsEndpointOptions? existingEndpoint = existingEmbeddingsOptions?.Endpoint;
+                EmbeddingsEndpointOptions? endpointOptions = null;
+
+                if (options.RuntimeEmbeddingsEndpointEnabled is not null ||
+                    options.RuntimeEmbeddingsEndpointRoles is not null ||
+                    options.RuntimeEmbeddingsEndpointPath is not null ||
+                    existingEndpoint is not null)
+                {
+                    bool? endpointEnabled = options.RuntimeEmbeddingsEndpointEnabled.HasValue
+                        ? options.RuntimeEmbeddingsEndpointEnabled.Value == CliBool.True
+                        : existingEndpoint?.Enabled;
+
+                    string[]? endpointRoles = options.RuntimeEmbeddingsEndpointRoles is not null && options.RuntimeEmbeddingsEndpointRoles.Any()
+                        ? options.RuntimeEmbeddingsEndpointRoles.ToArray()
+                        : existingEndpoint?.Roles;
+
+                    string? endpointPath = options.RuntimeEmbeddingsEndpointPath ?? existingEndpoint?.Path;
+
+                    // Validate path if provided
+                    if (endpointPath is not null)
+                    {
+                        bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: endpointPath, out string exceptionMessage);
+                        if (!status)
+                        {
+                            _logger.LogError("Failed to configure embeddings endpoint path as '{path}'. Error: {error}", endpointPath, exceptionMessage);
+                            return false;
+                        }
+                    }
+
+                    endpointOptions = new EmbeddingsEndpointOptions(
+                        enabled: endpointEnabled,
+                        roles: endpointRoles,
+                        path: endpointPath);
+
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Endpoint configuration.");
+                }
+
+                // Build EmbeddingsHealthCheckConfig from CLI flags or existing config
+                EmbeddingsHealthCheckConfig? existingHealth = existingEmbeddingsOptions?.Health;
+                EmbeddingsHealthCheckConfig? healthOptions = null;
+
+                if (options.RuntimeEmbeddingsHealthEnabled is not null ||
+                    options.RuntimeEmbeddingsHealthThresholdMs is not null ||
+                    options.RuntimeEmbeddingsHealthTestText is not null ||
+                    options.RuntimeEmbeddingsHealthExpectedDimensions is not null ||
+                    existingHealth is not null)
+                {
+                    bool? healthEnabled = options.RuntimeEmbeddingsHealthEnabled.HasValue
+                        ? options.RuntimeEmbeddingsHealthEnabled.Value == CliBool.True
+                        : existingHealth?.Enabled;
+
+                    int? healthThresholdMs = options.RuntimeEmbeddingsHealthThresholdMs ?? existingHealth?.ThresholdMs;
+                    string? healthTestText = options.RuntimeEmbeddingsHealthTestText ?? existingHealth?.TestText;
+                    int? healthExpectedDimensions = options.RuntimeEmbeddingsHealthExpectedDimensions ?? existingHealth?.ExpectedDimensions;
+
+                    // Validate threshold if provided
+                    if (healthThresholdMs is not null && healthThresholdMs <= 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings health: threshold-ms must be a positive integer.");
+                        return false;
+                    }
+
+                    // Validate expected dimensions if provided
+                    if (healthExpectedDimensions is not null && healthExpectedDimensions <= 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings health: expected-dimensions must be a positive integer.");
+                        return false;
+                    }
+
+                    healthOptions = new EmbeddingsHealthCheckConfig(
+                        enabled: healthEnabled,
+                        thresholdMs: healthThresholdMs,
+                        testText: healthTestText,
+                        expectedDimensions: healthExpectedDimensions);
+
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Health configuration.");
+                }
+
+                // Build EmbeddingsChunkingOptions from CLI flags or existing config
+                EmbeddingsChunkingOptions? existingChunking = existingEmbeddingsOptions?.Chunking;
+                EmbeddingsChunkingOptions? chunkingOptions = null;
+
+                if (options.RuntimeEmbeddingsChunkingEnabled is not null ||
+                    options.RuntimeEmbeddingsChunkingSizeChars is not null ||
+                    options.RuntimeEmbeddingsChunkingOverlapChars is not null ||
+                    existingChunking is not null)
+                {
+                    bool? chunkingEnabled = options.RuntimeEmbeddingsChunkingEnabled.HasValue
+                        ? options.RuntimeEmbeddingsChunkingEnabled.Value == CliBool.True
+                        : existingChunking?.Enabled;
+
+                    int? sizeChars = options.RuntimeEmbeddingsChunkingSizeChars ?? existingChunking?.SizeChars;
+                    int? overlapChars = options.RuntimeEmbeddingsChunkingOverlapChars ?? existingChunking?.OverlapChars;
+
+                    // Validate size-chars if provided
+                    if (sizeChars is not null && sizeChars <= 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings chunking: size-chars must be a positive integer.");
+                        return false;
+                    }
+
+                    // Validate overlap-chars if provided
+                    if (overlapChars is not null && overlapChars < 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings chunking: overlap-chars must be a non-negative integer.");
+                        return false;
+                    }
+
+                    // Validate that overlap is less than size
+                    if (sizeChars is not null && overlapChars is not null && overlapChars >= sizeChars)
+                    {
+                        _logger.LogError("Failed to configure embeddings chunking: overlap-chars must be less than size-chars.");
+                        return false;
+                    }
+
+                    chunkingOptions = new EmbeddingsChunkingOptions(
+                        Enabled: chunkingEnabled,
+                        SizeChars: sizeChars,
+                        OverlapChars: overlapChars);
+
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Chunking configuration.");
+                }
+
+                // Create the embeddings options
+                updatedEmbeddingsOptions = new EmbeddingsOptions(
+                    Provider: (EmbeddingProviderType)provider,
+                    BaseUrl: baseUrl,
+                    ApiKey: apiKey,
+                    Enabled: enabled,
+                    Model: model,
+                    ApiVersion: apiVersion,
+                    Dimensions: dimensions,
+                    TimeoutMs: timeoutMs,
+                    Endpoint: endpointOptions,
+                    Health: healthOptions,
+                    Chunking: chunkingOptions);
+
+                _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings configuration.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Embeddings with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Parse permission string to create PermissionSetting array.
         /// </summary>
         /// <param name="permissions">Permission input string as IEnumerable.</param>
@@ -1773,6 +2169,15 @@ namespace Cli
             if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
             {
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (runtimeConfig.DataSource is null)
+            {
+                _logger.LogError(
+                    "Cannot update an entity in '{runtimeConfigFile}' because it has no data source. " +
+                    "If this is a root config (uses data-source-files), run 'dab update' against the specific child config file instead.",
+                    runtimeConfigFile);
                 return false;
             }
 
@@ -1843,14 +2248,15 @@ namespace Cli
                 }
             }
 
-            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource!.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
             EntityPermission[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, EntityRelationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
             EntityActionPolicy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
-            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
+            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtlSeconds, options.CacheLevel) ?? entity.Cache;
+            EntityHealthCheckConfig? updatedEntityHealthOptions = ConstructEntityHealthOptions(options.HealthEnabled) ?? entity.Health;
 
             // Determine if the entity is or will be a stored procedure
             bool isStoredProcedureAfterUpdate = doOptionsRepresentStoredProcedure || (isCurrentEntityStoredProcedure && options.SourceType is null);
@@ -2113,7 +2519,8 @@ namespace Cli
                 Mappings: updatedMappings,
                 Cache: updatedCacheOptions,
                 Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description,
-                Mcp: updatedMcpOptions
+                Mcp: updatedMcpOptions,
+                Health: updatedEntityHealthOptions
                 );
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
             {
@@ -2462,7 +2869,7 @@ namespace Cli
         public static bool VerifyCanUpdateRelationship(RuntimeConfig runtimeConfig, string? cardinality, string? targetEntity)
         {
             // CosmosDB doesn't support Relationship
-            if (runtimeConfig.DataSource.DatabaseType.Equals(DatabaseType.CosmosDB_NoSQL))
+            if (runtimeConfig.DataSource!.DatabaseType.Equals(DatabaseType.CosmosDB_NoSQL))
             {
                 _logger.LogError("Adding/updating Relationships is currently not supported in CosmosDB.");
                 return false;
@@ -2555,7 +2962,7 @@ namespace Cli
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile, options.CliBuffer))
             {
                 return false;
             }
@@ -2569,19 +2976,19 @@ namespace Cli
                 // duplicate output (stderr + stdout).
                 if (!loader.IsParseErrorEmitted)
                 {
-                    _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                    options.CliBuffer.BufferLog(LogLevel.Error, $"Failed to parse the config file: {runtimeConfigFile}.");
                 }
 
                 return false;
             }
             else
             {
-                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
+                options.CliBuffer.BufferLog(LogLevel.Information, $"Loaded config file: {runtimeConfigFile}");
             }
 
-            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
+            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource?.ConnectionString))
             {
-                _logger.LogError("Invalid connection-string provided in the config.");
+                options.CliBuffer.BufferLog(LogLevel.Error, "Invalid connection-string provided in the config.");
                 return false;
             }
 
@@ -2589,32 +2996,49 @@ namespace Cli
             List<string> args = new()
             { "--ConfigFileName", runtimeConfigFile };
 
-            /// Add arguments for LogLevel. Checks if LogLevel is overridden with option `--LogLevel`.
-            /// If not provided, Default minimum LogLevel is Debug for Development mode and Error for Production mode.
+            /// Add arguments for LogLevel. Only pass --LogLevel when user explicitly specified it,
+            /// so that MCP logging/setLevel can still adjust the level when no CLI override is present.
+            /// 
+            /// When --LogLevel is NOT specified:
+            /// - MCP stdio mode: Service defaults to None for clean stdout output
+            /// - Non-MCP mode: Service defaults to Debug (Development) or Error (Production) based on config
             LogLevel minimumLogLevel;
             if (options.LogLevel is not null)
             {
                 if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
                 {
-                    _logger.LogError(
-                        "LogLevel's valid range is 0 to 6, your value: {logLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel",
-                        options.LogLevel);
+                    options.CliBuffer.BufferLog(LogLevel.Error,
+                        $"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel");
                     return false;
                 }
 
                 minimumLogLevel = (LogLevel)options.LogLevel;
-                _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
+                // Only add --LogLevel when user explicitly specified it via CLI.
+                // This allows MCP logging/setLevel to work when no CLI override is present.
+                args.Add("--LogLevel");
+                args.Add(minimumLogLevel.ToString());
             }
             else
             {
                 minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
-                HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
-
-                _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.", minimumLogLevel, hostModeType);
             }
 
-            args.Add("--LogLevel");
-            args.Add(minimumLogLevel.ToString());
+            options.CliBuffer.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");
+
+            Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli(minimumLogLevel);
+
+            // Update logger for StartOptions and
+            // flush all current logs saved in LogBuffer
+            ILogger<Program> programLogger = Utils.LoggerFactoryForCli.CreateLogger<Program>();
+            options.CliBuffer.FlushToLogger(programLogger);
+
+            // Update logger for Utils
+            ILogger<Utils> utilsLogger = Utils.LoggerFactoryForCli.CreateLogger<Utils>();
+            Utils.SetCliUtilsLogger(utilsLogger);
+
+            // Update logger for ConfigGenerator
+            ILogger<ConfigGenerator> configGeneratorLogger = Utils.LoggerFactoryForCli.CreateLogger<ConfigGenerator>();
+            SetLoggerForCliConfigGenerator(configGeneratorLogger);
 
             // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)
@@ -2668,10 +3092,10 @@ namespace Cli
 
             bool isValid = runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
 
-            // Additional validation: warn if fields are missing and MCP is enabled
-            if (isValid)
+            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
             {
-                if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
+                // Additional validation: warn if fields are missing and MCP is enabled
+                if (isValid)
                 {
                     bool mcpEnabled = config.IsMcpEnabled;
                     if (mcpEnabled)
@@ -2716,16 +3140,32 @@ namespace Cli
             string? configToBeUsed,
             FileSystemRuntimeConfigLoader loader,
             IFileSystem fileSystem,
-            out string runtimeConfigFile)
+            out string runtimeConfigFile,
+            LogBuffer? logBuffer = null)
         {
-            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
+            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, logBuffer, out configToBeUsed))
             {
-                _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
+                if (logBuffer is null)
+                {
+                    _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
+                }
+                else
+                {
+                    logBuffer.BufferLog(LogLevel.Information, $"Using merged config file based on environment: {configToBeUsed}.");
+                }
             }
 
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile, logBuffer))
             {
-                _logger.LogError("Config not provided and default config file doesn't exist.");
+                if (logBuffer is null)
+                {
+                    _logger.LogError("Config not provided and default config file doesn't exist.");
+                }
+                else
+                {
+                    logBuffer.BufferLog(LogLevel.Error, "Config not provided and default config file doesn't exist.");
+                }
+
                 return false;
             }
 
@@ -3286,9 +3726,9 @@ namespace Cli
                 return false;
             }
 
-            if (runtimeConfig.DataSource.DatabaseType != DatabaseType.MSSQL)
+            if (runtimeConfig.DataSource?.DatabaseType != DatabaseType.MSSQL)
             {
-                _logger.LogError("The autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource.DatabaseType);
+                _logger.LogError("The autoentities simulation is only supported for MSSQL databases. Current database type: {DatabaseType}.", runtimeConfig.DataSource?.DatabaseType);
                 return false;
             }
 
@@ -3642,5 +4082,6 @@ namespace Cli
 
             return true;
         }
+
     }
 }

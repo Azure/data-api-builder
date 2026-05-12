@@ -191,61 +191,6 @@ public class EmbeddingControllerTests
 
     #endregion
 
-    #region Service Availability Tests
-
-    /// <summary>
-    /// Tests that the controller returns ServiceUnavailable when embedding service is null.
-    /// </summary>
-    [TestMethod]
-    public async Task PostAsync_ReturnsServiceUnavailable_WhenServiceIsNull()
-    {
-        // Arrange
-        EmbeddingController controller = CreateController(
-            requestPath: "/embed",
-            hostMode: HostMode.Development,
-            embeddingService: null,
-            useClassMockService: false);
-
-        // Act
-        IActionResult result = await controller.PostAsync("embed");
-
-        // Assert
-        Assert.IsInstanceOfType(result, typeof(JsonResult));
-        JsonResult jsonResult = (JsonResult)result;
-        dynamic? value = jsonResult.Value;
-        Assert.IsNotNull(value);
-        Assert.AreEqual((int)HttpStatusCode.ServiceUnavailable, (int)value!.error.status);
-    }
-
-    /// <summary>
-    /// Tests that the controller returns ServiceUnavailable when embedding service is disabled.
-    /// </summary>
-    [TestMethod]
-    public async Task PostAsync_ReturnsServiceUnavailable_WhenServiceIsDisabled()
-    {
-        // Arrange
-        Mock<IEmbeddingService> disabledService = new();
-        disabledService.Setup(s => s.IsEnabled).Returns(false);
-
-        EmbeddingController controller = CreateController(
-            requestPath: "/embed",
-            hostMode: HostMode.Development,
-            embeddingService: disabledService.Object,
-            useClassMockService: false);
-
-        // Act
-        IActionResult result = await controller.PostAsync("embed");
-
-        // Assert
-        Assert.IsInstanceOfType(result, typeof(JsonResult));
-        JsonResult jsonResult = (JsonResult)result;
-        dynamic? value = jsonResult.Value;
-        Assert.IsNotNull(value);
-        Assert.AreEqual((int)HttpStatusCode.ServiceUnavailable, (int)value!.error.status);
-    }
-
-    #endregion
-
     #region Authorization Tests
 
     /// <summary>

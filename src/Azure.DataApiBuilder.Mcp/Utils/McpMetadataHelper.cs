@@ -35,7 +35,18 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 return false;
             }
 
-            var metadataProviderFactory = serviceProvider.GetRequiredService<Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory>();
+            // Use GetService (not GetRequiredService) so the helper honours its Try* contract:
+            // when the DI container has no IMetadataProviderFactory (e.g. lightweight test
+            // graphs, or any future host that doesn't register one) the helper degrades to
+            // "metadata unavailable" rather than throwing InvalidOperationException through
+            // every caller.
+            Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory? metadataProviderFactory =
+                serviceProvider.GetService<Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory>();
+            if (metadataProviderFactory is null)
+            {
+                error = "Metadata provider factory is not registered.";
+                return false;
+            }
 
             // Resolve datasource name for the entity.
             try

@@ -916,7 +916,7 @@ public class ValidateConfigTests
 
         RuntimeConfig config = new(
             Schema: null,
-            DataSource: ds,
+            DataSource: ds!,
             Runtime: new(
                 Rest: new(),
                 GraphQL: new(),
@@ -944,7 +944,7 @@ public class ValidateConfigTests
     {
         return new Entity(
             Source: new EntitySource(Object: source, Type: EntitySourceType.Table, Parameters: null, KeyFields: null),
-            GraphQL: new(Singular: null, Plural: null),
+            GraphQL: new(Singular: string.Empty, Plural: string.Empty),
             Fields: null,
             Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
             Permissions: new[] { new EntityPermission("anonymous", new[] { new EntityAction(EntityActionOperation.Read, null, null) }) },

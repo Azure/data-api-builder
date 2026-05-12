@@ -299,8 +299,20 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return;
             }
 
-            // Determine if logging is enabled (level != "none")
-            bool isLoggingEnabled = !string.Equals(level, "none", StringComparison.OrdinalIgnoreCase);
+            // Validate the level BEFORE touching any side-effect (notification writer, stderr).
+            // "none" is the disable signal and is not a recognized MCP level; everything else
+            // must round-trip through McpLogLevelConverter so a typo can't silently turn the
+            // notification stream on while UpdateFromMcp ignores the bad value.
+            bool isDisableRequest = string.Equals(level, "none", StringComparison.OrdinalIgnoreCase);
+            bool isValidLevel = isDisableRequest || McpLogLevelConverter.TryConvertFromMcp(level, out _);
+            if (!isValidLevel)
+            {
+                // Unknown level - return success per MCP spec but make no state changes.
+                WriteResult(id, new { });
+                return;
+            }
+
+            bool isLoggingEnabled = !isDisableRequest;
 
             // Enable or disable MCP log notifications based on the requested level BEFORE updating
             // the level. Doing it in this order means the agent-override Information line emitted
@@ -312,10 +324,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 notificationWriter.IsEnabled = isLoggingEnabled;
             }
 
-            // Attempt to update the log level.
-            // The agent always wins over CLI and Config (precedence: Agent > CLI > Config).
-            // The only reason this can return false is an unrecognized level string,
-            // in which case we still return success to the client per MCP spec.
+            // Update the log level. Validation above guarantees this returns true for non-"none"
+            // values; for "none" it returns false (no LogLevel mapping) and we just keep
+            // notifications off without touching the current level.
             bool updated = logLevelController.UpdateFromMcp(level);
 
             // Restore stderr if the agent successfully turned logging on. When `--mcp-stdio` (or

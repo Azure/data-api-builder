@@ -10,6 +10,13 @@ namespace Azure.DataApiBuilder.Service.Telemetry
     /// </summary>
     public class DynamicLogLevelProvider : ILogLevelController
     {
+        /// <summary>
+        /// Guards mutations of <see cref="CurrentLogLevel"/> and the override flags so
+        /// concurrent <see cref="UpdateFromMcp"/> and <see cref="UpdateFromRuntimeConfig"/>
+        /// calls cannot interleave and break the Agent &gt; CLI &gt; Config precedence.
+        /// </summary>
+        private readonly object _stateLock = new();
+
         public LogLevel CurrentLogLevel { get; private set; }
 
         public bool IsCliOverridden { get; private set; }
@@ -36,9 +43,12 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// <param name="isConfigOverridden">Indicates whether the log level was overridden by the runtime config.</param>
         public void SetInitialLogLevel(LogLevel logLevel = LogLevel.Error, bool isCliOverridden = false, bool isConfigOverridden = false)
         {
-            CurrentLogLevel = logLevel;
-            IsCliOverridden = isCliOverridden;
-            IsConfigOverridden = isConfigOverridden;
+            lock (_stateLock)
+            {
+                CurrentLogLevel = logLevel;
+                IsCliOverridden = isCliOverridden;
+                IsConfigOverridden = isConfigOverridden;
+            }
         }
 
         /// <summary>
@@ -49,22 +59,27 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// <param name="loggerFilter">Optional logger filter to apply when determining the log level.</param>
         public void UpdateFromRuntimeConfig(RuntimeConfig runtimeConfig, string? loggerFilter = null)
         {
-            // Agent override and CLI override both win over a hot-reloaded Config value.
-            if (IsAgentOverridden || IsCliOverridden)
+            lock (_stateLock)
             {
-                return;
+                // Agent override and CLI override both win over a hot-reloaded Config value.
+                // The check + assignment must be inside the lock so a concurrent UpdateFromMcp
+                // cannot slip in between the guard and the write.
+                if (IsAgentOverridden || IsCliOverridden)
+                {
+                    return;
+                }
+
+                if (loggerFilter is null)
+                {
+                    loggerFilter = string.Empty;
+                }
+
+                CurrentLogLevel = runtimeConfig.GetConfiguredLogLevel(loggerFilter);
+
+                // Track if config explicitly set a non-null log level value, so callers can
+                // distinguish a config-pinned level from defaults.
+                IsConfigOverridden = runtimeConfig.HasExplicitLogLevel();
             }
-
-            if (loggerFilter is null)
-            {
-                loggerFilter = string.Empty;
-            }
-
-            CurrentLogLevel = runtimeConfig.GetConfiguredLogLevel(loggerFilter);
-
-            // Track if config explicitly set a non-null log level value, so callers can
-            // distinguish a config-pinned level from defaults.
-            IsConfigOverridden = runtimeConfig.HasExplicitLogLevel();
         }
 
         /// <summary>
@@ -81,10 +96,14 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                 return false;
             }
 
-            CurrentLogLevel = logLevel;
-            IsAgentOverridden = true;
+            lock (_stateLock)
+            {
+                CurrentLogLevel = logLevel;
+                IsAgentOverridden = true;
+            }
 
             // Surface the override so operators can see the agent moved the level.
+            // Logged outside the lock so logger sinks can't deadlock with state mutations.
             Logger?.LogInformation(
                 "Log level updated to {LogLevel} via MCP logging/setLevel (agent override).",
                 logLevel);

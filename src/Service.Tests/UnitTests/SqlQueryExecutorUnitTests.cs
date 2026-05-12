@@ -951,8 +951,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(null, null, "iss and oid/sub",
             DisplayName = "Authenticated user with no claims throws OboAuthenticationFailure")]
         public void TestOboEnabled_AuthenticatedUserMissingClaims_ThrowsException(
-            string? issuer,
-            string? objectId,
+            string issuer,
+            string objectId,
             string missingClaimDescription)
         {
             // Arrange - Create an authenticated HttpContext with incomplete claims
@@ -987,8 +987,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="objectId">The oid claim value, or null to omit.</param>
         /// <returns>A configured HttpContextAccessor mock with authenticated user.</returns>
         private static Mock<IHttpContextAccessor> CreateHttpContextAccessorWithAuthenticatedUserMissingClaims(
-            string? issuer,
-            string? objectId)
+            string issuer,
+            string objectId)
         {
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DefaultHttpContext context = new();

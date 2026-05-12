@@ -299,33 +299,31 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return;
             }
 
-            // Attempt to update the log level
-            // If CLI or Config overrode, this returns false but we still return success to the client
-            bool updated = logLevelController.UpdateFromMcp(level);
-
             // Determine if logging is enabled (level != "none")
-            // Note: Even if CLI/Config overrode the level, we still enable notifications
-            // when the client requests logging. They'll get logs at the overridden level.
             bool isLoggingEnabled = !string.Equals(level, "none", StringComparison.OrdinalIgnoreCase);
 
-            // Only restore stderr when this MCP call actually changed the effective level.
-            // If CLI/Config overrode (updated == false), stderr is already in the correct state:
-            //   - CLI/Config level == "none": stderr was redirected to TextWriter.Null at startup
-            //     and must stay that way; restoring it would re-introduce noisy output even
-            //     though the operator explicitly asked for silence.
-            //   - CLI/Config level != "none": stderr was never redirected, so restoring is a no-op.
-            if (updated && isLoggingEnabled)
-            {
-                RestoreStderrIfNeeded();
-            }
-
-            // Enable or disable MCP log notifications based on the requested level
-            // When CLI/Config overrode, notifications are still enabled - client asked for logs,
-            // they just get them at the CLI/Config level instead of the requested level.
+            // Enable or disable MCP log notifications based on the requested level BEFORE updating
+            // the level. Doing it in this order means the agent-override Information line emitted
+            // by UpdateFromMcp is forwarded to the agent (otherwise it would be dropped because
+            // the notification writer was still disabled at the moment of emission).
             IMcpLogNotificationWriter? notificationWriter = _serviceProvider.GetService<IMcpLogNotificationWriter>();
             if (notificationWriter != null)
             {
                 notificationWriter.IsEnabled = isLoggingEnabled;
+            }
+
+            // Attempt to update the log level.
+            // The agent always wins over CLI and Config (precedence: Agent > CLI > Config).
+            // The only reason this can return false is an unrecognized level string,
+            // in which case we still return success to the client per MCP spec.
+            bool updated = logLevelController.UpdateFromMcp(level);
+
+            // Restore stderr if the agent successfully turned logging on. When `--mcp-stdio` (or
+            // `--LogLevel none`) was the startup default, stderr was redirected to TextWriter.Null;
+            // re-enable it now so subsequent logs flow.
+            if (updated && isLoggingEnabled)
+            {
+                RestoreStderrIfNeeded();
             }
 
             // Always return success (empty result object) per MCP spec

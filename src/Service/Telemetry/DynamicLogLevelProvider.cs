@@ -6,6 +6,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 {
     /// <summary>
     /// Provides dynamic log level control with support for CLI override, runtime config, and MCP.
+    /// Precedence (highest to lowest): Agent (MCP) > CLI > Config > defaults.
     /// </summary>
     public class DynamicLogLevelProvider : ILogLevelController
     {
@@ -15,10 +16,20 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
         public bool IsConfigOverridden { get; private set; }
 
+        public bool IsAgentOverridden { get; private set; }
+
         /// <summary>
-        /// Sets the initial log level, which can be passed from the CLI or the Config file,
-        /// if not specified, it defaults to None if flag --mcp-stdio, to Error if in Production mode or Debug if in Development mode.
-        /// Also sets whether the log level was overridden by the CLI, which will prevent updates from runtime config changes. 
+        /// Optional logger used to emit an Information line when the agent successfully overrides
+        /// the log level. Wired by host startup once the logging pipeline is available; safe to
+        /// leave unset (e.g. in unit tests).
+        /// </summary>
+        public ILogger? Logger { get; set; }
+
+        /// <summary>
+        /// Sets the initial log level from CLI args or the config file. When not specified the level
+        /// defaults to None for <c>--mcp-stdio</c>, Error in Production, or Debug in Development.
+        /// The CLI/Config flags drive runtime-config hot-reload behavior; they no longer block
+        /// agent (MCP) overrides — see <see cref="UpdateFromMcp"/>.
         /// </summary>
         /// <param name="logLevel">The initial log level to set.</param>
         /// <param name="isCliOverridden">Indicates whether the log level was overridden by the CLI.</param>
@@ -31,63 +42,54 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         }
 
         /// <summary>
-        /// Updates the current log level based on the runtime configuration, unless it was overridden by the CLI.
+        /// Updates the current log level from a runtime-config (hot-reload) change.
+        /// Skipped when the CLI or the agent has already overridden, so neither is clobbered.
         /// </summary>
         /// <param name="runtimeConfig">The runtime configuration to use for updating the log level.</param>
         /// <param name="loggerFilter">Optional logger filter to apply when determining the log level.</param>
         public void UpdateFromRuntimeConfig(RuntimeConfig runtimeConfig, string? loggerFilter = null)
         {
-            // Only update if CLI didn't override
-            if (!IsCliOverridden)
+            // Agent override and CLI override both win over a hot-reloaded Config value.
+            if (IsAgentOverridden || IsCliOverridden)
             {
-                if (loggerFilter is null)
-                {
-                    loggerFilter = string.Empty;
-                }
-
-                CurrentLogLevel = runtimeConfig.GetConfiguredLogLevel(loggerFilter);
-
-                // Track if config explicitly set a non-null log level value.
-                // This ensures MCP logging/setLevel is only blocked when config
-                // actually pins a log level, not just when the dictionary exists.
-                IsConfigOverridden = runtimeConfig.HasExplicitLogLevel();
+                return;
             }
+
+            if (loggerFilter is null)
+            {
+                loggerFilter = string.Empty;
+            }
+
+            CurrentLogLevel = runtimeConfig.GetConfiguredLogLevel(loggerFilter);
+
+            // Track if config explicitly set a non-null log level value, so callers can
+            // distinguish a config-pinned level from defaults.
+            IsConfigOverridden = runtimeConfig.HasExplicitLogLevel();
         }
 
-        /// Updates the log level from an MCP logging/setLevel request.
-        /// Precedence (highest to lowest):
-        /// 1. CLI --LogLevel flag (IsCliOverridden = true)
-        /// 2. Config runtime.telemetry.log-level (IsConfigOverridden = true)
-        /// 3. MCP logging/setLevel
-        /// 
-        /// If CLI or Config overrode, this method accepts the request silently but does not change the level.
+        /// <summary>
+        /// Updates the log level from an MCP <c>logging/setLevel</c> request.
+        /// The agent always wins over CLI and Config; only an unrecognized level is rejected.
         /// </summary>
         /// <param name="mcpLevel">The MCP log level string (e.g., "debug", "info", "warning", "error").</param>
-        /// <returns>True if the level was changed; false if CLI/Config override prevented the change or level was invalid.</returns>
+        /// <returns>True if the level was changed; false only if the input was an unrecognized level.</returns>
         public bool UpdateFromMcp(string mcpLevel)
         {
-            // If CLI overrode the log level, accept the request but don't change anything.
-            // This prevents MCP clients from getting errors, but CLI wins.
-            if (IsCliOverridden)
+            if (!McpLogLevelConverter.TryConvertFromMcp(mcpLevel, out LogLevel logLevel))
             {
+                // Unknown level - don't change, but don't fail the MCP call either.
                 return false;
             }
 
-            // If Config explicitly set the log level, accept the request but don't change anything.
-            // Config has second precedence after CLI.
-            if (IsConfigOverridden)
-            {
-                return false;
-            }
+            CurrentLogLevel = logLevel;
+            IsAgentOverridden = true;
 
-            if (McpLogLevelConverter.TryConvertFromMcp(mcpLevel, out LogLevel logLevel))
-            {
-                CurrentLogLevel = logLevel;
-                return true;
-            }
+            // Surface the override so operators can see the agent moved the level.
+            Logger?.LogInformation(
+                "Log level updated to {LogLevel} via MCP logging/setLevel (agent override).",
+                logLevel);
 
-            // Unknown level - don't change, but don't fail either
-            return false;
+            return true;
         }
 
         /// <summary>

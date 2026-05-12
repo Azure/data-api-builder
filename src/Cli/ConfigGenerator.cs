@@ -100,24 +100,31 @@ namespace Cli
 
             HyphenatedNamingPolicy namingPolicy = new();
 
-            // If --rest.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
+            // If --rest.disabled flag is included in the init command, we log a warning as the flag is deprecated.
             if (options.RestDisabled is true)
             {
-                _logger.LogWarning("The option --rest.disabled will be deprecated and support for the option will be removed in future versions of Data API builder." +
-                    " We recommend that you use the --rest.enabled option instead.");
+                _logger.LogWarning("The option --rest.disabled is deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " Use the --rest.enabled option instead.");
             }
 
-            // If --graphql.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
+            // If --graphql.disabled flag is included in the init command, we log a warning as the flag is deprecated.
             if (options.GraphQLDisabled is true)
             {
-                _logger.LogWarning("The option --graphql.disabled will be deprecated and support for the option will be removed in future versions of Data API builder." +
-                    " We recommend that you use the --graphql.enabled option instead.");
+                _logger.LogWarning("The option --graphql.disabled is deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " Use the --graphql.enabled option instead.");
+            }
+
+            // If --mcp.disabled flag is included in the init command, we log a warning as the flag is deprecated.
+            if (options.McpDisabled is true)
+            {
+                _logger.LogWarning("The option --mcp.disabled is deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " Use the --mcp.enabled option instead.");
             }
 
             bool restEnabled, graphQLEnabled, mcpEnabled;
             if (!TryDetermineIfApiIsEnabled(options.RestDisabled, options.RestEnabled, ApiType.REST, out restEnabled) ||
                 !TryDetermineIfApiIsEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL, out graphQLEnabled) ||
-                !TryDetermineIfMcpIsEnabled(options.McpEnabled, out mcpEnabled))
+                !TryDetermineIfApiIsEnabled(options.McpDisabled, options.McpEnabled, ApiType.MCP, out mcpEnabled))
             {
                 return false;
             }
@@ -237,9 +244,9 @@ namespace Cli
                 }
             }
 
-            if (options.RestDisabled && options.GraphQLDisabled)
+            if (!restEnabled && !graphQLEnabled && !mcpEnabled)
             {
-                _logger.LogError("Both Rest and GraphQL cannot be disabled together.");
+                _logger.LogError("At least one of REST, GraphQL, or MCP must be enabled.");
                 return false;
             }
 
@@ -297,12 +304,12 @@ namespace Cli
 
         /// <summary>
         /// Helper method to determine if the api is enabled or not based on the enabled/disabled options in the dab init command.
-        /// The method also validates that there is no mismatch in semantics of enabling/disabling the REST/GraphQL API(s)
+        /// The method also validates that there is no mismatch in semantics of enabling/disabling the REST/GraphQL/MCP API(s)
         /// based on the values supplied in the enabled/disabled options for the API in the init command.
         /// </summary>
         /// <param name="apiDisabledOptionValue">Value of disabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
         /// <param name="apiEnabledOptionValue">Value of enabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
-        /// <param name="apiType">ApiType - REST/GraphQL.</param>
+        /// <param name="apiType">ApiType - REST/GraphQL/MCP.</param>
         /// <param name="isApiEnabled">Boolean value indicating whether the API endpoint is enabled or not.</param>
         private static bool TryDetermineIfApiIsEnabled(bool apiDisabledOptionValue, CliBool apiEnabledOptionValue, ApiType apiType, out bool isApiEnabled)
         {
@@ -332,17 +339,6 @@ namespace Cli
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Helper method to determine if the mcp api is enabled or not based on the enabled/disabled options in the dab init command.
-        /// </summary>
-        /// <param name="mcpEnabledOptionValue">True, if MCP is enabled</param>
-        /// <param name="isMcpEnabled">Out param isMcpEnabled</param>
-        /// <returns>True if MCP is enabled</returns>
-        private static bool TryDetermineIfMcpIsEnabled(CliBool mcpEnabledOptionValue, out bool isMcpEnabled)
-        {
-            return TryDetermineIfApiIsEnabled(false, mcpEnabledOptionValue, ApiType.MCP, out isMcpEnabled);
         }
 
         /// <summary>

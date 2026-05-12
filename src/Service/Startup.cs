@@ -52,6 +52,7 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -931,6 +932,28 @@ namespace Azure.DataApiBuilder.Service
 
             app.UseEndpoints(endpoints =>
             {
+                // Map the embeddings POST endpoint with a literal path BEFORE MapControllers
+                // so it wins over RestController's global catch-all attribute route ({*route})
+                // by route specificity. The path is taken from runtime config
+                // (runtime.embeddings.endpoint.path), defaulting to "/embed".
+                if (runtimeConfig?.Runtime?.Embeddings is { Enabled: true } embeddingsOptions
+                    && embeddingsOptions.Endpoint is { Enabled: true } embeddingsEndpoint)
+                {
+                    string embedPath = embeddingsEndpoint.EffectivePath;
+                    if (!embedPath.StartsWith('/'))
+                    {
+                        embedPath = "/" + embedPath;
+                    }
+
+                    endpoints.MapPost(embedPath, async context =>
+                    {
+                        EmbeddingController controller = ActivatorUtilities.CreateInstance<EmbeddingController>(context.RequestServices);
+                        controller.ControllerContext = new ControllerContext { HttpContext = context };
+                        IActionResult result = await controller.PostAsync(embedPath.TrimStart('/'));
+                        await result.ExecuteResultAsync(controller.ControllerContext);
+                    });
+                }
+
                 endpoints.MapControllers();
 
                 // Special for MCP

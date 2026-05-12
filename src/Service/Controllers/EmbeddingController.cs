@@ -58,8 +58,13 @@ public class EmbeddingController : ControllerBase
     /// or [{ "key": "...", "data": [[...], [...]] }] for document arrays.
     /// </summary>
     /// <returns>Embedding vector(s) as JSON, or an error response.</returns>
-    [HttpPost]
-    [Route("{*path}", Order = int.MaxValue)]
+    /// <remarks>
+    /// This action is NOT bound to an attribute route. The endpoint is registered
+    /// explicitly in Startup.Configure (UseEndpoints) using the configured
+    /// <see cref="EmbeddingsEndpointOptions.Path"/> so it wins over RestController's
+    /// global catch-all route (<c>{*route}</c>) by route specificity.
+    /// </remarks>
+    [NonAction]
     [Consumes("text/plain", "application/json")]
     [Produces("application/json", "text/plain")]
     public async Task<IActionResult> PostAsync(string path)

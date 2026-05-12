@@ -49,19 +49,33 @@ public class EmbeddingControllerTests
     #region Fixed Endpoint Route Tests
 
     /// <summary>
-    /// Tests that the controller action is bound to a dynamic path route.
+    /// Tests that the controller action is NOT bound to an attribute route.
+    /// The endpoint is registered explicitly in Startup using the configured
+    /// embeddings endpoint path, so it wins over RestController's catch-all
+    /// route by route specificity. The action carries [NonAction] so MVC
+    /// attribute routing ignores it.
     /// </summary>
     [TestMethod]
-    public void PostAsync_UsesFixedEmbedRoute()
+    public void PostAsync_HasNoAttributeRoute_AndIsNonAction()
     {
-        RouteAttribute? routeAttribute = typeof(EmbeddingController)
-            .GetMethod(nameof(EmbeddingController.PostAsync))?
+        System.Reflection.MethodInfo? method = typeof(EmbeddingController)
+            .GetMethod(nameof(EmbeddingController.PostAsync));
+
+        Assert.IsNotNull(method);
+
+        RouteAttribute? routeAttribute = method!
             .GetCustomAttributes(typeof(RouteAttribute), inherit: false)
             .Cast<RouteAttribute>()
             .SingleOrDefault();
 
-        Assert.IsNotNull(routeAttribute);
-        Assert.AreEqual("{*path}", routeAttribute.Template, "Route should be dynamic to support configurable paths");
+        Assert.IsNull(routeAttribute, "PostAsync must not declare a [Route] attribute; the route is registered in Startup.");
+
+        NonActionAttribute? nonAction = method
+            .GetCustomAttributes(typeof(NonActionAttribute), inherit: false)
+            .Cast<NonActionAttribute>()
+            .SingleOrDefault();
+
+        Assert.IsNotNull(nonAction, "PostAsync must be marked [NonAction] so MVC attribute routing ignores it.");
     }
 
     /// <summary>

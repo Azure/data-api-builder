@@ -750,6 +750,17 @@ namespace Azure.DataApiBuilder.Service
             bool isRuntimeReady = false;
             RuntimeConfig? runtimeConfig = null;
 
+            // Wire a logger on the DynamicLogLevelProvider as soon as ILoggerFactory is available
+            // — ahead of any config-load branch — so an early MCP logging/setLevel call (which can
+            // arrive before runtime config in the late-configured path) still surfaces its audit
+            // log line through the standard logging pipeline.
+            DynamicLogLevelProvider? logLevelProviderForAudit = app.ApplicationServices.GetService<DynamicLogLevelProvider>();
+            ILoggerFactory? earlyLoggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
+            if (logLevelProviderForAudit is not null && earlyLoggerFactory is not null)
+            {
+                logLevelProviderForAudit.Logger = earlyLoggerFactory.CreateLogger<DynamicLogLevelProvider>();
+            }
+
             try
             {
                 if (runtimeConfigProvider.TryGetConfig(out runtimeConfig))
@@ -760,13 +771,6 @@ namespace Azure.DataApiBuilder.Service
                     // Set LogLevel based on RuntimeConfig
                     DynamicLogLevelProvider logLevelProvider = app.ApplicationServices.GetRequiredService<DynamicLogLevelProvider>();
                     logLevelProvider.UpdateFromRuntimeConfig(runtimeConfig);
-
-                    // Wire a logger so agent (MCP) overrides surface in the standard logging pipeline.
-                    ILoggerFactory? logLevelLoggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
-                    if (logLevelLoggerFactory is not null)
-                    {
-                        logLevelProvider.Logger = logLevelLoggerFactory.CreateLogger<DynamicLogLevelProvider>();
-                    }
 
                     // Configure Telemetry
                     // TODO: Issue #3239. Refactor this methods so that they are all called before creating the new logger factory.
@@ -802,13 +806,6 @@ namespace Azure.DataApiBuilder.Service
                         RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
                         DynamicLogLevelProvider logLevelProvider = app.ApplicationServices.GetRequiredService<DynamicLogLevelProvider>();
                         logLevelProvider.UpdateFromRuntimeConfig(runtimeConfig);
-
-                        // Wire a logger so agent (MCP) overrides surface in the standard logging pipeline.
-                        ILoggerFactory? logLevelLoggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
-                        if (logLevelLoggerFactory is not null)
-                        {
-                            logLevelProvider.Logger = logLevelLoggerFactory.CreateLogger<DynamicLogLevelProvider>();
-                        }
 
                         //Flush all logs that were buffered before setting the LogLevel.
                         // Important: All logs set before this point should use _logBuffer.

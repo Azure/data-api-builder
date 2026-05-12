@@ -104,7 +104,14 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
             // Surface the override so operators can see the agent moved the level.
             // Logged outside the lock so logger sinks can't deadlock with state mutations.
-            Logger?.LogInformation(
+            //
+            // Emit at max(Information, newLevel) so the audit line is never filtered by the
+            // freshly-applied level. Without this, an agent that raised the floor to Warning
+            // / Error / Critical would never see its own confirmation message because the
+            // Information line would fall below the new minimum.
+            LogLevel auditLevel = logLevel > LogLevel.Information ? logLevel : LogLevel.Information;
+            Logger?.Log(
+                auditLevel,
                 "Log level updated to {LogLevel} via MCP logging/setLevel (agent override).",
                 logLevel);
 

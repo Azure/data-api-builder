@@ -261,17 +261,26 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="root">The root JSON element of the incoming JSON-RPC request.</param>
         /// <remarks>
         /// Log level precedence (highest to lowest):
-        /// 1. CLI --LogLevel flag - cannot be overridden
-        /// 2. Config runtime.telemetry.log-level - cannot be overridden by MCP
-        /// 3. MCP logging/setLevel - only works if neither CLI nor Config explicitly set a level
-        /// 4. Default: None for MCP stdio mode (silent by default to keep stdout clean for JSON-RPC)
-        /// 
-        /// If CLI or Config set the log level, this method accepts the request but silently ignores it.
-        /// The client won't get an error, but CLI/Config wins.
-        /// 
-        /// When MCP sets a level other than "none", this also restores Console.Error to the real stderr
-        /// stream so that logs become visible (Console may have been redirected to null at startup).
-        /// It also enables MCP log notifications so logs are sent to the client via notifications/message.
+        /// 1. MCP <c>logging/setLevel</c> (Agent) - always wins, overrides CLI and Config.
+        /// 2. CLI <c>--LogLevel</c> flag.
+        /// 3. Config <c>runtime.telemetry.log-level</c>.
+        /// 4. Default: <c>None</c> for MCP stdio mode (silent by default to keep stdout clean for JSON-RPC),
+        ///    <c>Error</c> in Production, <c>Debug</c> in Development.
+        ///
+        /// Per MCP spec the response is always success (empty result object) even when the input is
+        /// an unrecognized level — in that case no side effect runs and no state changes.
+        ///
+        /// Side effects performed in order on a valid request:
+        /// 1. Toggle <see cref="IMcpLogNotificationWriter.IsEnabled"/> based on the level
+        ///    (<c>"none"</c> disables, anything else enables). This is done BEFORE
+        ///    <see cref="ILogLevelController.UpdateFromMcp"/> so the audit log line that
+        ///    <c>UpdateFromMcp</c> emits is forwarded to the agent rather than dropped.
+        /// 2. Call <see cref="ILogLevelController.UpdateFromMcp"/>, which updates the level and
+        ///    flips <see cref="ILogLevelController.IsAgentOverridden"/> so subsequent runtime-config
+        ///    hot-reloads do not clobber the agent's choice.
+        /// 3. Restore <see cref="Console.Error"/> to the real stderr stream when logging is enabled,
+        ///    in case startup redirected it to <see cref="TextWriter.Null"/> (default for
+        ///    <c>--mcp-stdio</c> or <c>--LogLevel none</c>).
         /// </remarks>
         private void HandleSetLogLevel(JsonElement? id, JsonElement root)
         {

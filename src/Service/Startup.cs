@@ -615,33 +615,17 @@ namespace Azure.DataApiBuilder.Service
         private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
-                // Hot Chocolate v16 builds the GraphQL schema eagerly during host startup. DAB
-                // supports a "hosted" scenario where the runtime config is supplied after the
-                // host starts (POST /configuration), so the schema cannot exist at startup. Eager
-                // initialization plus our placeholder-schema fallback also creates a race on
-                // late-config hydration: HC keeps serving the warm placeholder executor in the
-                // background while the new schema's warmup runs, so the first GraphQL request
-                // after hydration validates against the placeholder and returns BadRequest.
-                // Opt into lazy initialization (the v15 default) so the schema is constructed on
-                // first request, by which time the runtime config is loaded and the metadata
-                // provider has been initialized in PerformOnConfigChangeAsync.
+                // Defer schema construction to the first GraphQL request so the runtime config
+                // is available for both file-based and POST /configuration (hosted) scenarios.
+                // See docs/design/HC16-upgrade.md for the full rationale.
                 .ModifyOptions(options => options.LazyInitialization = true)
                 .AddInstrumentation()
                 .AddType(new DateTimeType(new DateTimeOptions { ValidateInputFormat = !(graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true) }))
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
-                    // With LazyInitialization, ConfigureSchema runs on the first GraphQL request,
-                    // not at host startup. By that point the runtime config is loaded for both
-                    // the file-based and POST /configuration scenarios. The placeholder fallback
-                    // remains as a safety net for two edge cases:
-                    //   1. GraphQL globally disabled - requests are short-circuited to 404 by
-                    //      PathRewriteMiddleware, but if a request slips through, emit a minimal
-                    //      schema so HC validation does not fail on entity metadata that is
-                    //      intentionally never exposed (e.g. column names colliding with
-                    //      reserved GraphQL identifiers like the leading double-underscore).
-                    //   2. Schema construction failure (e.g. config validation error preventing
-                    //      metadata-provider initialization).
+                    // Runs on first GraphQL request (LazyInitialization). The placeholder
+                    // fallback covers GraphQL-disabled configs and schema-construction failures.
                     RuntimeConfigProvider configProvider = serviceProvider.GetRootServiceProvider()
                         .GetRequiredService<RuntimeConfigProvider>();
                     if (!configProvider.TryGetConfig(out RuntimeConfig? loadedConfig))

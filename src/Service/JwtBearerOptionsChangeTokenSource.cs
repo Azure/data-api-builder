@@ -23,12 +23,13 @@ public class JwtBearerOptionsChangeTokenSource : IOptionsChangeTokenSource<JwtBe
     /// Get RuntimeConfigProvider to use as the change token source.
     /// </summary>
     /// <param name="configProvider">Change token source.</param>
-    public JwtBearerOptionsChangeTokenSource(RuntimeConfigProvider configProvider)
+    public JwtBearerOptionsChangeTokenSource(RuntimeConfigProvider configProvider, string name = JwtBearerDefaults.AuthenticationScheme)
     {
         _configProvider = configProvider;
+        Name = name;
     }
 
-    public string Name => "Bearer";
+    public string Name { get; }
 
     /// <summary>
     /// Returns a change token that signals when the JwtBearerOptions should be reloaded.
@@ -41,4 +42,3 @@ public class JwtBearerOptionsChangeTokenSource : IOptionsChangeTokenSource<JwtBe
         return _configProvider.GetChangeToken();
     }
 }
-

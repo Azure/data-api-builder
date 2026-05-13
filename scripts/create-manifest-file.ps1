@@ -76,7 +76,7 @@ $latestBlock = @'
         "nuget": {
             "url": "${download_url_nuget_cli}",
             "sha": "${nuget_cli_file_hash}"
-        }
+        },
         "nuget": {
             "url": "${download_url_nuget_core}",
             "sha": "${nuget_core_file_hash}"

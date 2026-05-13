@@ -30,7 +30,7 @@ public record EmbeddingsCacheLevel2Options
 
     [JsonConstructor]
     public EmbeddingsCacheLevel2Options(
-        bool? Enabled = null,
+        bool? Enabled = false,
         string? ConnectionString = null)
     {
         this.Enabled = Enabled;

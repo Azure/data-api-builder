@@ -457,10 +457,16 @@ namespace Azure.DataApiBuilder.Service
                     // Configure dedicated FusionCache for embeddings
                     ConfigureEmbeddingsCache(services, embeddingsOptions, runtimeConfigAvailable);
 
-                    // Register embedding service with the named cache
-                    services.AddHttpClient<IEmbeddingService, EmbeddingService>();
+                    // Register a named HttpClient for EmbeddingService. The IEmbeddingService
+                    // registration below resolves this client by name via IHttpClientFactory.
+                    // We register the typed client by EmbeddingService (the concrete type) so the
+                    // factory name matches the typed-client convention (typeof(EmbeddingService).Name).
+                    services.AddHttpClient<EmbeddingService>();
 
-                    // Override the IEmbeddingService registration to use the named cache
+                    // Register IEmbeddingService as a singleton that uses the named FusionCache
+                    // ("EmbeddingsCache") when embeddings caching is enabled, or falls back to the
+                    // default IFusionCache otherwise. The factory pattern is required because we need
+                    // to select between two IFusionCache instances at resolution time.
                     services.AddSingleton<IEmbeddingService>(serviceProvider =>
                     {
                         IFusionCache cache = embeddingsOptions.IsCachingEnabled
@@ -945,6 +951,21 @@ namespace Azure.DataApiBuilder.Service
                         embedPath = "/" + embedPath;
                     }
 
+                    // ARCHITECTURAL NOTE: This MapPost delegate manually instantiates EmbeddingController
+                    // via ActivatorUtilities so the embeddings endpoint can be served on a configurable,
+                    // literal path that wins over RestController's global catch-all attribute route
+                    // ({*route}) by route-specificity. This intentionally bypasses the MVC controller
+                    // pipeline, which means:
+                    //   * MVC action filters, [Authorize], [Consumes]/[Produces], and model-binding/
+                    //     validation attributes on EmbeddingController are NOT executed here.
+                    //   * Authentication & authorization are still enforced because the ASP.NET Core
+                    //     auth middleware (UseAuthentication/UseAuthorization and the DAB client-role
+                    //     header authorization middleware) runs earlier in the pipeline, before
+                    //     UseEndpoints. EmbeddingController.PostAsync performs its own role/permission
+                    //     checks against HttpContext.User.
+                    // If future work adds new filter/authorization attributes to EmbeddingController,
+                    // those will NOT take effect on this path; either replicate the behavior here or
+                    // move to a standard attribute-routed controller mapping.
                     endpoints.MapPost(embedPath, async context =>
                     {
                         EmbeddingController controller = ActivatorUtilities.CreateInstance<EmbeddingController>(context.RequestServices);

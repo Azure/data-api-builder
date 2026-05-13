@@ -37,7 +37,7 @@ public record EmbeddingsCacheOptions
     public EmbeddingsCacheLevel2Options? Level2 { get; init; } = null;
 
     [JsonConstructor]
-    public EmbeddingsCacheOptions(bool? Enabled = null, int? TtlHours = null, EmbeddingsCacheLevel2Options? Level2 = null)
+    public EmbeddingsCacheOptions(bool? Enabled = true, int? TtlHours = null, EmbeddingsCacheLevel2Options? Level2 = null)
     {
         this.Enabled = Enabled;
         this.Level2 = Level2;
@@ -64,10 +64,11 @@ public record EmbeddingsCacheOptions
     public bool UserProvidedTtlHours { get; init; } = false;
 
     /// <summary>
-    /// Gets the effective TTL in hours, using default if not specified.
+    /// Gets the effective TTL in hours. The constructor guarantees TtlHours is set
+    /// (defaults to <see cref="DEFAULT_TTL_HOURS"/> when not user-provided).
     /// </summary>
     [JsonIgnore]
-    public int EffectiveTtlHours => TtlHours ?? DEFAULT_TTL_HOURS;
+    public int EffectiveTtlHours => TtlHours!.Value;
 
     /// <summary>
     /// Returns true if L2 (distributed) cache is enabled.

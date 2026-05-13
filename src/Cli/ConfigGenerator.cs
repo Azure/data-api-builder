@@ -3361,7 +3361,32 @@ namespace Cli
                 graphQLOperation = GraphQLOperation.Mutation;
             }
 
-            return graphQLType with { Operation = graphQLOperation };
+            EntityGraphQLSubscriptionOptions? subscription = graphQLType.Subscription;
+
+            if (options.GraphQLSubscriptionEnabled is not null || options.GraphQLSubscriptionEvents is not null)
+            {
+                bool enabled = subscription?.Enabled ?? true;
+                GraphQLSubscriptionEvent[] events = subscription?.Events ?? Array.Empty<GraphQLSubscriptionEvent>();
+
+                if (options.GraphQLSubscriptionEnabled is not null)
+                {
+                    enabled = bool.Parse(options.GraphQLSubscriptionEnabled);
+                }
+
+                if (options.GraphQLSubscriptionEvents is not null)
+                {
+                    events = string.IsNullOrWhiteSpace(options.GraphQLSubscriptionEvents)
+                        ? Array.Empty<GraphQLSubscriptionEvent>()
+                        : options.GraphQLSubscriptionEvents
+                            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                            .Select(value => Enum.Parse<GraphQLSubscriptionEvent>(value, ignoreCase: true))
+                            .ToArray();
+                }
+
+                subscription = new EntityGraphQLSubscriptionOptions(enabled, events);
+            }
+
+            return graphQLType with { Operation = graphQLOperation, Subscription = subscription };
         }
 
         /// <summary>

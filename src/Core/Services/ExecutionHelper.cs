@@ -11,16 +11,20 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Subscriptions;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Processing;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NodaTime.Text;
 using Kestral = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
 
@@ -35,17 +39,23 @@ namespace Azure.DataApiBuilder.Service.Services
         internal readonly IQueryEngineFactory _queryEngineFactory;
         internal readonly IMutationEngineFactory _mutationEngineFactory;
         internal readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IGraphQLSubscriptionEventPublisher _subscriptionEventPublisher;
+        private readonly ILogger<ExecutionHelper> _logger;
 
         private const string PURE_RESOLVER_CONTEXT_SUFFIX = "_PURE_RESOLVER_CTX";
 
         public ExecutionHelper(
             IQueryEngineFactory queryEngineFactory,
             IMutationEngineFactory mutationEngineFactory,
-            RuntimeConfigProvider runtimeConfigProvider)
+            RuntimeConfigProvider runtimeConfigProvider,
+            IGraphQLSubscriptionEventPublisher? subscriptionEventPublisher = null,
+            ILogger<ExecutionHelper>? logger = null)
         {
             _queryEngineFactory = queryEngineFactory;
             _mutationEngineFactory = mutationEngineFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _subscriptionEventPublisher = subscriptionEventPublisher ?? NullGraphQLSubscriptionEventPublisher.Instance;
+            _logger = logger ?? NullLogger<ExecutionHelper>.Instance;
         }
 
         /// <summary>
@@ -166,6 +176,75 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             return activity;
+        }
+
+        public async ValueTask<ISourceStream> SubscribeAsync(IResolverContext context)
+        {
+            string entityName = GraphQLUtils.GetEntityNameFromContext(context);
+            GraphQLSubscriptionEvent subscriptionEvent = GetSubscriptionEvent(context.Selection.Field.Name);
+            string document = context.Operation.Document.ToString();
+
+            _logger.LogInformation(
+                "GraphQLSubscriptionCreated entity {EntityName}, event {EventType}, document {Document}",
+                entityName,
+                subscriptionEvent,
+                document);
+
+            TelemetryMetricsHelper.IncrementActiveGraphQLSubscriptions(entityName, subscriptionEvent.ToString());
+            ISourceStream<JsonElement> stream = await _subscriptionEventPublisher.SubscribeAsync(entityName, subscriptionEvent, context.RequestAborted);
+            return new ActiveSubscriptionSourceStream(stream, entityName, subscriptionEvent.ToString());
+        }
+
+        public static ValueTask<object?> ResolveSubscriptionEventAsync(IResolverContext context) =>
+            new(context.Parent<JsonElement>());
+
+        public static object? ExecuteSubscriptionEventField(IResolverContext context)
+        {
+            JsonElement parent = context.Parent<JsonElement>();
+            return parent.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.Null) &&
+                parent.TryGetProperty(context.Selection.Field.Name, out JsonElement propertyValue) ?
+                propertyValue :
+                null;
+        }
+
+        private static GraphQLSubscriptionEvent GetSubscriptionEvent(string fieldName)
+        {
+            foreach (GraphQLSubscriptionEvent subscriptionEvent in Enum.GetValues<GraphQLSubscriptionEvent>())
+            {
+                if (fieldName.EndsWith(subscriptionEvent.ToString(), StringComparison.Ordinal))
+                {
+                    return subscriptionEvent;
+                }
+            }
+
+            throw new DataApiBuilderException(
+                message: $"Invalid GraphQL subscription field: {fieldName}",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+        }
+
+        private sealed class ActiveSubscriptionSourceStream : ISourceStream<JsonElement>
+        {
+            private readonly ISourceStream<JsonElement> _inner;
+            private readonly string _entityName;
+            private readonly string _eventType;
+
+            public ActiveSubscriptionSourceStream(ISourceStream<JsonElement> inner, string entityName, string eventType)
+            {
+                _inner = inner;
+                _entityName = entityName;
+                _eventType = eventType;
+            }
+
+            public IAsyncEnumerable<JsonElement> ReadEventsAsync() => _inner.ReadEventsAsync();
+
+            IAsyncEnumerable<object> ISourceStream.ReadEventsAsync() => ((ISourceStream)_inner).ReadEventsAsync()!;
+
+            public async ValueTask DisposeAsync()
+            {
+                await _inner.DisposeAsync();
+                TelemetryMetricsHelper.DecrementActiveGraphQLSubscriptions(_entityName, _eventType);
+            }
         }
 
         /// <summary>

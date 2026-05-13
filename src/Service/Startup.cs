@@ -303,6 +303,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IQueryEngineFactory, QueryEngineFactory>();
 
             services.AddSingleton<IMutationEngineFactory, MutationEngineFactory>();
+            services.AddSingleton<IGraphQLSubscriptionEventPublisher, GraphQLSubscriptionEventPublisher>();
 
             services.AddSingleton<IMetadataProviderFactory, MetadataProviderFactory>();
 
@@ -662,6 +663,7 @@ namespace Azure.DataApiBuilder.Service
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
                 .AddInstrumentation()
+                .AddInMemorySubscriptions()
                 .AddType(new DateTimeType(disableFormatCheck: graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true))
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
@@ -853,6 +855,7 @@ namespace Azure.DataApiBuilder.Service
             }
 
             app.UseRouting();
+            app.UseWebSockets();
 
             // Adding CORS Middleware
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Cors is not null)

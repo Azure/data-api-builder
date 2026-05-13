@@ -11,9 +11,12 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
 {
     private readonly FieldMiddlewareConfiguration _queryMiddleware;
     private readonly FieldMiddlewareConfiguration _mutationMiddleware;
+    private readonly SubscribeResolverDelegate _subscriptionResolver;
+    private readonly FieldResolverDelegate _subscriptionFieldResolver;
     private readonly PureFieldDelegate _leafFieldResolver;
     private readonly PureFieldDelegate _objectFieldResolver;
     private readonly PureFieldDelegate _listFieldResolver;
+    private readonly PureFieldDelegate _subscriptionEventFieldResolver;
 
     private ObjectType? _queryType;
     private ObjectType? _mutationType;
@@ -40,6 +43,9 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
         _leafFieldResolver = ExecutionHelper.ExecuteLeafField;
         _objectFieldResolver = executionHelper.ExecuteObjectField;
         _listFieldResolver = executionHelper.ExecuteListField;
+        _subscriptionResolver = executionHelper.SubscribeAsync;
+        _subscriptionFieldResolver = ExecutionHelper.ResolveSubscriptionEventAsync;
+        _subscriptionEventFieldResolver = ExecutionHelper.ExecuteSubscriptionEventField;
     }
 
     public override void OnAfterResolveRootType(
@@ -93,7 +99,20 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
         }
         else if (ReferenceEquals(completionContext.Type, _subscriptionType))
         {
-            throw new NotSupportedException();
+            foreach (ObjectFieldConfiguration field in objectTypeConfig.Fields)
+            {
+                field.SubscribeResolver = _subscriptionResolver;
+                field.Resolver = _subscriptionFieldResolver;
+            }
+        }
+        else if (objectTypeConfig.Name.EndsWith("Event", StringComparison.Ordinal) &&
+            objectTypeConfig.Fields.Any(field => field.Name == "eventId") &&
+            objectTypeConfig.Fields.Any(field => field.Name == "record"))
+        {
+            foreach (ObjectFieldConfiguration field in objectTypeConfig.Fields)
+            {
+                field.PureResolver = _subscriptionEventFieldResolver;
+            }
         }
         else
         {

@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Subscriptions;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -41,6 +42,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IGraphQLSubscriptionEventPublisher _subscriptionEventPublisher;
         public const string IS_UPDATE_RESULT_SET = "IsUpdateResultSet";
         private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
         public const string SINGLE_INPUT_ARGUEMENT_NAME = "item";
@@ -60,7 +62,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IHttpContextAccessor httpContextAccessor,
-            RuntimeConfigProvider runtimeConfigProvider)
+            RuntimeConfigProvider runtimeConfigProvider,
+            IGraphQLSubscriptionEventPublisher? subscriptionEventPublisher = null)
         {
             _queryManagerFactory = queryManagerFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
@@ -69,6 +72,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _httpContextAccessor = httpContextAccessor;
             _gQLFilterParser = gQLFilterParser;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _subscriptionEventPublisher = subscriptionEventPublisher ?? NullGraphQLSubscriptionEventPublisher.Instance;
         }
 
         /// <summary>
@@ -251,6 +255,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     transactionScope.Complete();
                 }
 
+                if (result?.Item1 is not null)
+                {
+                    JsonElement record = mutationOperation is EntityActionOperation.Delete
+                        ? JsonSerializer.SerializeToElement(parameters)
+                        : result.Item1.RootElement.Clone();
+                    await PublishSubscriptionEventAsync(entityName, ToSubscriptionEvent(mutationOperation), roleName, record);
+                }
+
             }
             // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
             // derive from TransactionException. Hence, TransactionException acts as a catch-all.
@@ -307,6 +319,45 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return isPointMutation;
         }
+
+        private async Task PublishSubscriptionEventAsync(string entityName, GraphQLSubscriptionEvent? subscriptionEvent, string actorRole, JsonElement record)
+        {
+            if (subscriptionEvent is null || !IsSubscriptionConfigured(entityName, subscriptionEvent.Value))
+            {
+                return;
+            }
+
+            await _subscriptionEventPublisher.PublishAsync(entityName, subscriptionEvent.Value, actorRole, record);
+        }
+
+        private async Task PublishSubscriptionEventAsync(string entityName, GraphQLSubscriptionEvent? subscriptionEvent, string actorRole, IReadOnlyDictionary<string, object?> record)
+        {
+            if (subscriptionEvent is null || !IsSubscriptionConfigured(entityName, subscriptionEvent.Value))
+            {
+                return;
+            }
+
+            await _subscriptionEventPublisher.PublishAsync(entityName, subscriptionEvent.Value, actorRole, record);
+        }
+
+        private bool IsSubscriptionConfigured(string entityName, GraphQLSubscriptionEvent subscriptionEvent) =>
+            _runtimeConfigProvider.GetConfig().Entities.TryGetValue(entityName, out Entity? entity) &&
+            SubscriptionBuilder.IsSubscriptionEnabled(entity) &&
+            entity.GraphQL.Subscription!.Events.Contains(subscriptionEvent);
+
+        private string GetClientRole() =>
+            GetHttpContext().Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues headerValues) && headerValues.Count == 1
+                ? headerValues.ToString()
+                : AuthorizationType.Anonymous.ToString();
+
+        private static GraphQLSubscriptionEvent? ToSubscriptionEvent(EntityActionOperation operation) =>
+            operation switch
+            {
+                EntityActionOperation.Create or EntityActionOperation.Insert => GraphQLSubscriptionEvent.Created,
+                EntityActionOperation.Update or EntityActionOperation.UpdateGraphQL or EntityActionOperation.UpdateIncremental => GraphQLSubscriptionEvent.Updated,
+                EntityActionOperation.Delete => GraphQLSubscriptionEvent.Deleted,
+                _ => null
+            };
 
         /// <summary>
         /// Converts exposed column names from the parameters provided to backing column names.
@@ -516,6 +567,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound);
                     }
 
+                    await PublishSubscriptionEventAsync(
+                        context.EntityName,
+                        GraphQLSubscriptionEvent.Deleted,
+                        GetClientRole(),
+                        context.PrimaryKeyValuePairs.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value));
+
                     return new NoContentResult();
                 }
             }
@@ -683,6 +740,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // When the upsert operation results in the creation of a new record, an HTTP 201 CreatedResult response is returned.
                         if (!hasPerformedUpdate)
                         {
+                            await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Created, roleName, resultRow);
+
                             // Location Header is made up of the Base URL of the request and the primary key of the item created.
                             // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
                             // would not be available in the URL and needs to be appended. Since, this is a PUT or PATCH request that has resulted in the creation of
@@ -691,6 +750,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         }
 
                         // When the upsert operation results in the update of an existing record, an HTTP 200 OK response is returned.
+                        await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Updated, roleName, resultRow);
                         return SqlResponseHelpers.ConstructOkMutationResponse(resultRow, selectOperationResponse, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
                     }
                     else
@@ -806,6 +866,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                         if (effectiveOperationType is EntityActionOperation.Insert)
                         {
+                            await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Created, roleName, mutationResultRow!.Columns);
+
                             // Location Header is made up of the Base URL of the request and the primary key of the item created.
                             // For POST requests and keyless PUT/PATCH requests, the primary key info would not be available
                             // in the URL and needs to be appended. So, the primary key of the newly created item which is
@@ -825,6 +887,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                         if (effectiveOperationType is EntityActionOperation.Update || effectiveOperationType is EntityActionOperation.UpdateIncremental)
                         {
+                            await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Updated, roleName, mutationResultRow!.Columns);
+
                             return SqlResponseHelpers.ConstructOkMutationResponse(
                                 mutationResultRow!.Columns,
                                 selectOperationResponse,

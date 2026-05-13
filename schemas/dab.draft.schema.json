@@ -1348,6 +1348,27 @@
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Allow enabling/disabling GraphQL requests for this specific entity.",
                       "default": true
+                    },
+                    "subscription": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "description": "GraphQL subscription configuration for this entity.",
+                      "properties": {
+                        "enabled": {
+                          "$ref": "#/$defs/boolean-or-string",
+                          "description": "Allow enabling/disabling GraphQL subscriptions for this specific entity.",
+                          "default": true
+                        },
+                        "events": {
+                          "type": "array",
+                          "description": "GraphQL subscription events to generate for this entity.",
+                          "items": {
+                            "type": "string",
+                            "enum": ["created", "updated", "deleted"]
+                          },
+                          "uniqueItems": true
+                        }
+                      }
                     }
                   },
                   "anyOf": [
@@ -1359,6 +1380,9 @@
                     },
                     {
                       "required": ["enabled"]
+                    },
+                    {
+                      "required": ["subscription"]
                     }
                   ]
                 }

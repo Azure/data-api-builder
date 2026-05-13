@@ -983,6 +983,11 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 ValidateNameRequirements(entity.GraphQL.Singular);
                 ValidateNameRequirements(entity.GraphQL.Plural);
+
+                if (entity.GraphQL.Subscription is { Enabled: true, Events.Length: 0 })
+                {
+                    _logger.LogWarning("Entity {entityName} has GraphQL subscriptions enabled but no subscription events configured.", entityName);
+                }
             }
         }
     }

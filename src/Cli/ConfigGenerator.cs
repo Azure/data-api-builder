@@ -3415,7 +3415,7 @@ namespace Cli
                     if (!Enum.TryParse(subscriptionEvent, ignoreCase: true, out GraphQLSubscriptionEvent _))
                     {
                         _logger.LogError(
-                            "Invalid GraphQL subscription event '{subscriptionEvent}'. Supported events are created, updated, and deleted.",
+                            "Invalid GraphQL subscription event '{subscriptionEvent}'. Supported events are Created, Updated, and Deleted.",
                             subscriptionEvent);
                         return false;
                     }

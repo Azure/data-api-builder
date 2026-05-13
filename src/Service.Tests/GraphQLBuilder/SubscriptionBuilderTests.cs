@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             DocumentNode result = SubscriptionBuilder.Build(
                 CreateRoot(),
-                CreateEntities(new EntityGraphQLSubscriptionOptions(Enabled: false, Events: new[] { GraphQLSubscriptionEvent.Created })),
+                CreateEntities(new EntityGraphQLSubscriptionOptions(enabled: false, events: new[] { GraphQLSubscriptionEvent.Created })),
                 CreatePermissions(EntityActionOperation.Create));
 
             Assert.AreEqual(0, result.Definitions.Count);
@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             DocumentNode result = SubscriptionBuilder.Build(
                 CreateRoot(),
-                CreateEntities(new EntityGraphQLSubscriptionOptions(Events: new[] { GraphQLSubscriptionEvent.Updated })),
+                CreateEntities(new EntityGraphQLSubscriptionOptions(events: new[] { GraphQLSubscriptionEvent.Updated })),
                 CreatePermissions(EntityActionOperation.Update));
 
             ObjectTypeDefinitionNode subscription = result.Definitions.OfType<ObjectTypeDefinitionNode>().Single(node => node.Name.Value == "Subscription");
@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             DocumentNode result = SubscriptionBuilder.Build(
                 CreateRoot(),
-                CreateEntities(new EntityGraphQLSubscriptionOptions(Events: new[] { GraphQLSubscriptionEvent.Deleted })),
+                CreateEntities(new EntityGraphQLSubscriptionOptions(events: new[] { GraphQLSubscriptionEvent.Deleted })),
                 CreatePermissions(EntityActionOperation.Update));
 
             Assert.AreEqual(0, result.Definitions.Count);

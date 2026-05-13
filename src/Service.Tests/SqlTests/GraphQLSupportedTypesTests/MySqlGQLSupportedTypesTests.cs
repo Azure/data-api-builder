@@ -233,7 +233,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 return $"cast({columnName} is true as json)";
             }
-            else if (columnName.Contains(BYTEARRAY_TYPE.ToLowerInvariant()))
+            else if (columnName.Contains("bytearray"))
             {
                 return $"to_base64({columnName})";
             }

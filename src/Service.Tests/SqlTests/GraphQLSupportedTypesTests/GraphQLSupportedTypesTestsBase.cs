@@ -874,16 +874,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// <summary>
         /// Maps a DAB GraphQL scalar type name to the column-name suffix used in the
         /// supported-types test table (and corresponding GraphQL field). The convention is
-        /// <c>{lower(typeName)}_types</c>, except for <see cref="BYTE_TYPE"/> which is
-        /// <c>"UnsignedByte"</c> after the HC v16 upgrade. SQL Server's tinyint column and
-        /// the corresponding GraphQL field are still named <c>byte_types</c>, so map
-        /// <c>UnsignedByte</c> back to <c>byte</c> for the column-name lookup.
+        /// <c>{lower(typeName)}_types</c>, with two exceptions where the GraphQL scalar name
+        /// no longer matches the column-name root after the HC v16 upgrade:
+        ///  - <see cref="BYTE_TYPE"/> is <c>"UnsignedByte"</c> but the column is <c>byte_types</c>.
+        ///  - <see cref="BYTEARRAY_TYPE"/> is <c>"Base64String"</c> but the column is <c>bytearray_types</c>.
         /// </summary>
         protected static string GetTestFieldName(string typeName)
         {
             if (typeName == BYTE_TYPE)
             {
                 return "byte_types";
+            }
+
+            if (typeName == BYTEARRAY_TYPE)
+            {
+                return "bytearray_types";
             }
 
             return $"{typeName.ToLowerInvariant()}_types";

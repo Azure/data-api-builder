@@ -31,12 +31,6 @@ Caller-side helpers also moved: `ParseValue` / `ParseResult` became
 `src/Service.GraphQLBuilder/CustomScalars/` — which now inherits from
 `FloatTypeBase<float>` and uses the new method names.
 
-`ByteArrayType` is `[Obsolete]` in favor of `Base64StringType`. We still need
-to pattern-match `ByteArrayType` in the resolver because DAB's generated schema
-still binds the GraphQL name `"ByteArray"` to it. Migrating the schema to
-emit `"Base64String"` is intentionally **out of scope for this PR** — it's a
-second user-visible schema change and deserves its own deprecation cycle.
-
 ---
 
 ## 3. The `Byte` scalar got split (user-visible)
@@ -54,11 +48,36 @@ DAB is `UnsignedByteType`. That means the GraphQL **schema type names** change:
 
 This is a **breaking change for clients** that hard-code those names in
 GraphQL queries or generated client bindings. The runtime values returned to
-clients are unchanged. The PR description / release notes call this out.
+clients are unchanged.
 
 ---
 
-## 4. `TimeSpan` no longer has a dedicated scalar
+## 4. `ByteArray` scalar replaced by `Base64String` (user-visible)
+
+HC v16 marked the legacy `ByteArrayType` as `[Obsolete]` in favor of the new
+`Base64StringType`. The two scalars serialize `byte[]` identically — both
+emit a base64-encoded JSON string — but the GraphQL scalar **name** changed:
+
+- The scalar exposed in generated schemas: `ByteArray` → `Base64String`
+- The filter input type: `ByteArrayFilterInput` → `Base64StringFilterInput`
+
+DAB targets the new name so the generated schema does not depend on a
+deprecated scalar. Because the wire format is unchanged, inline literal
+filters and round-tripped byte[] values keep working. Clients that declare
+typed variables of `ByteArrayFilterInput`, or that regenerate code from the
+schema (graphql-codegen, Strawberry Shake, Apollo codegen, etc.), must
+update the type names.
+
+The internal C# constant `BYTEARRAY_TYPE` (in `SupportedHotChocolateTypes`)
+is kept under its original name to minimize churn at call sites; only its
+value changed from `"ByteArray"` to `"Base64String"`. Two test classes that
+were using `BYTEARRAY_TYPE.ToLowerInvariant()` as a column-name root were
+updated to use the literal column-name string `"bytearray"`, since the
+database column is not being renamed alongside the GraphQL scalar.
+
+---
+
+## 5. `TimeSpan` no longer has a dedicated scalar
 
 `TimeSpanType` was removed in v16 in favor of `DurationType` (ISO-8601 on the
 wire, parsed via `XmlConvert.ToTimeSpan`). DAB does not bind any column type
@@ -69,7 +88,7 @@ because HC's `DurationType` produces ISO-8601 on output.
 
 ---
 
-## 5. `ISelection` and `Selection.SyntaxNode` changed
+## 6. `ISelection` and `Selection.SyntaxNode` changed
 
 Two related changes:
 
@@ -95,7 +114,7 @@ All previous call sites that did `Selection.SyntaxNode` now do
 
 ---
 
-## 6. `OperationResult.WithContextData` removed
+## 7. `OperationResult.WithContextData` removed
 
 The old fluent `result.WithContextData(...)` is gone. To set context data on
 the result you now set `singleResult.ContextData` directly. DAB uses an
@@ -104,7 +123,7 @@ the result you now set `singleResult.ContextData` directly. DAB uses an
 
 ---
 
-## 7. `EnableOneOf` is on by default
+## 8. `EnableOneOf` is on by default
 
 We previously had `ModifyOptions(o => o.EnableOneOf = true)`. v16 enables
 `@oneOf` by default, so the explicit call is gone. Equivalent behavior, less
@@ -112,7 +131,7 @@ code.
 
 ---
 
-## 8. `DateTimeType` configuration
+## 9. `DateTimeType` configuration
 
 `new DateTimeType(disableFormatCheck: true)` is obsolete. The replacement is
 `new DateTimeType(new DateTimeOptions { ValidateInputFormat = ... })` and the
@@ -131,7 +150,7 @@ fractional seconds on output. `1999-01-08T10:23:54.000Z` is now emitted as
 
 ---
 
-## 9. `WithOptions` takes a delegate, and `MapNitroApp` is gone
+## 10. `WithOptions` takes a delegate, and `MapNitroApp` is gone
 
 The endpoint-mapping API moved from an options object to a per-request delegate:
 
@@ -156,7 +175,7 @@ development, is hidden in production.
 
 ---
 
-## 10. Lazy schema initialization (DAB-specific)
+## 11. Lazy schema initialization (DAB-specific)
 
 Most important DAB-specific change. HC v16 builds the schema **eagerly** at
 host startup by default. DAB has a "hosted" mode where the runtime config is
@@ -177,20 +196,37 @@ the schema is built from the right metadata.
 
 ---
 
-## 11. Test-only changes
+## 12. `IntrospectionInterceptor` and service-scope isolation
 
-Aside from the DateTime literal updates and `Byte` → `UnsignedByte` rename in
-filter input names, three test files needed `#nullable enable annotations` at
-the top. These files use C# nullable syntax (`Type?`) while their host
-project (`Service.Tests`) declares `<Nullable>disable</Nullable>`, which
-produces CS8632 warnings. They are not currently treated as errors under
-`dotnet build --configuration Debug`, but the pragmas suppress build-log
-noise. The change is independent of the HC upgrade; it was rolled in to keep
-the build log clean.
+HC v16 isolates schema-level services from request-level services. The
+practical implication for DAB is that any singleton that used to be reached
+via constructor DI on a schema-scoped class (like
+`IntrospectionInterceptor`) is no longer automatically available.
 
-Also `MultiSourceQueryExecutionUnitTests` was updated for the v16
-`OperationResultData` / `ResultDocument` / `ResultElement` / `ResultProperty`
-traversal API, and `TestNoConfigReturnsServiceUnavailable` now recognizes
-that lazy `WithOptions` resolution surfaces "no runtime config" as
-`DataApiBuilderException(ServiceUnavailable)` rather than a 503 response or
-`ApplicationException`.
+`IntrospectionInterceptor` now has a no-arg constructor and resolves its
+dependencies from `context.RequestServices` inside the new four-arg
+`OnCreateAsync(HttpContext, IRequestExecutor, OperationRequestBuilder, CancellationToken)`
+override. The same pattern applies inside `ConfigureSchema(...)` in
+`Startup.cs`, where DAB calls
+`serviceProvider.GetRootServiceProvider().GetRequiredService<T>()` for
+application-level services like `RuntimeConfigProvider` and
+`GraphQLSchemaCreator`.
+
+---
+
+## 13. Test-only changes
+
+Aside from the schema-name renames and DateTime literal updates, the
+notable test changes are:
+
+- `MultiSourceQueryExecutionUnitTests` was updated for the v16
+  `OperationResultData` / `ResultDocument` / `ResultElement` /
+  `ResultProperty` traversal API.
+- `TestNoConfigReturnsServiceUnavailable` now recognizes that lazy
+  `WithOptions` resolution surfaces "no runtime config" as
+  `DataApiBuilderException(ServiceUnavailable)` rather than a 503 response
+  or `ApplicationException`.
+- `GetTestFieldName` in `GraphQLSupportedTypesTestsBase` special-cases both
+  `BYTE_TYPE` (`UnsignedByte` → `byte_types`) and `BYTEARRAY_TYPE`
+  (`Base64String` → `bytearray_types`) because the GraphQL scalar name no
+  longer matches the test database column-name root.

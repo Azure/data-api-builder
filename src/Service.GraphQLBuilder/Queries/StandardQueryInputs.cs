@@ -87,11 +87,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         private static InputObjectTypeDefinitionNode DateTimeInputType() =>
             CreateComparableFilter("DateTimeFilterInput", "Input type for adding DateTime filters", _dateTime);
 
-        public static InputObjectTypeDefinitionNode ByteArrayInputType() =>
+        public static InputObjectTypeDefinitionNode Base64StringInputType() =>
             new(
                 location: null,
-                new NameNode("ByteArrayFilterInput"),
-                new StringValueNode("Input type for adding ByteArray filters"),
+                new NameNode("Base64StringFilterInput"),
+                new StringValueNode("Input type for adding Base64String filters"),
                 [],
                 [
                     new(null, _isNull, _isNullDescription, _boolean, null, []),
@@ -207,7 +207,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             AddInputType(ScalarNames.Boolean, BooleanInputType());
             AddInputType(ScalarNames.String, StringInputType());
             AddInputType(ScalarNames.DateTime, DateTimeInputType());
-            AddInputType(ScalarNames.ByteArray, ByteArrayInputType());
+            // Register under BYTEARRAY_TYPE ("Base64String" with HC v16) so InputTypeBuilder's
+            // lookup by the field's GraphQL type name resolves correctly.
+            AddInputType(BYTEARRAY_TYPE, Base64StringInputType());
             AddInputType(ScalarNames.LocalTime, LocalTimeInputType());
 
             void AddInputType(string inputTypeName, InputObjectTypeDefinitionNode inputType)

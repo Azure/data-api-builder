@@ -211,17 +211,9 @@ namespace Azure.DataApiBuilder.Service.Services
                         DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" (double quotes) due to stringagg parsing and hence we need to ensure parsing is correct.
                         DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
                         HotChocolate.Types.NodaTime.LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
-                        // HC v16 ships both ByteArrayType (legacy, GraphQL name "ByteArray", runtime byte[])
-                        // and Base64StringType (new, GraphQL name "Base64String", runtime byte[]). DAB's
-                        // generated schemas still use the GraphQL name "ByteArray", so HC binds entity
-                        // fields to ByteArrayType. We accept either type here so DAB also tolerates
-                        // schemas that bind to Base64StringType (e.g. via DefaultValueType).
-                        // CS0618: ByteArrayType is [Obsolete] in HC v16 in favor of Base64StringType,
-                        // but we still need to pattern-match it because it remains the type bound to
-                        // the GraphQL name "ByteArray" that DAB-generated schemas continue to use.
-#pragma warning disable CS0618
-                        Base64StringType or ByteArrayType => fieldValue.GetBytesFromBase64(),
-#pragma warning restore CS0618
+                        // HC v16 deprecated ByteArrayType in favor of Base64StringType; DAB-generated
+                        // schemas now bind byte[] fields to Base64StringType (see BYTEARRAY_TYPE).
+                        Base64StringType => fieldValue.GetBytesFromBase64(),
                         BooleanType => fieldValue.GetBoolean(), // spec
                         UrlType => new Uri(fieldValue.GetString()!),
                         UuidType => fieldValue.GetGuid(),

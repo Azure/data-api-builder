@@ -40,6 +40,18 @@ namespace Cli
         /// </summary>
         public static LogLevel CliLogLevel { get; set; } = LogLevel.Information;
 
+        /// <summary>
+        /// When true, the runtime config file explicitly set a log-level value.
+        /// This allows CLI logs to be written to stderr in MCP mode even when no --LogLevel flag was provided.
+        /// </summary>
+        public static bool IsLogLevelOverriddenByConfig { get; set; }
+
+        /// <summary>
+        /// The log level specified via runtime config file's log-level setting.
+        /// Only valid when IsLogLevelOverriddenByConfig is true.
+        /// </summary>
+        public static LogLevel ConfigLogLevel { get; set; } = LogLevel.Information;
+
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private static ILogger<Utils> _logger;
 #pragma warning restore CS8618

@@ -1219,6 +1219,8 @@ public class RuntimeConfigValidator : IConfigValidator
 
         bool isAudienceSet = !string.IsNullOrEmpty(runtimeConfig.Runtime.Host.Authentication.Jwt?.Audience);
         bool isIssuerSet = !string.IsNullOrEmpty(runtimeConfig.Runtime.Host.Authentication.Jwt?.Issuer);
+        bool isRolesPathSet = runtimeConfig.Runtime.Host.Authentication.Jwt?.RolesPath is not null;
+        bool isRolesFormatSet = runtimeConfig.Runtime.Host.Authentication.Jwt?.RolesFormat is not null;
 
         try
         {
@@ -1232,6 +1234,25 @@ public class RuntimeConfigValidator : IConfigValidator
                 (isAudienceSet || isIssuerSet))
             {
                 throw new NotSupportedException("Audience and Issuer can not be set when a JWT identity provider is not configured.");
+            }
+
+            if ((isRolesPathSet || isRolesFormatSet) &&
+                !runtimeConfig.Runtime.Host.Authentication.IsCustomAuthenticationProvider())
+            {
+                _logger.LogError(CustomJwtRoleClaimExtractor.CUSTOM_JWT_ROLE_SETTINGS_PROVIDER_ERROR);
+                throw new NotSupportedException(CustomJwtRoleClaimExtractor.CUSTOM_JWT_ROLE_SETTINGS_PROVIDER_ERROR);
+            }
+
+            string rolesPath = runtimeConfig.Runtime.Host.Authentication.Jwt?.ResolvedRolesPath ?? JwtOptions.DEFAULT_ROLES_PATH;
+            if (!CustomJwtRoleClaimExtractor.IsValidRolesPath(rolesPath))
+            {
+                throw new NotSupportedException($"Invalid jwt.rolesPath bracket literal syntax: '{rolesPath}'.");
+            }
+
+            string rolesFormat = runtimeConfig.Runtime.Host.Authentication.Jwt?.ResolvedRolesFormat ?? JwtOptions.DEFAULT_ROLES_FORMAT;
+            if (!CustomJwtRoleClaimExtractor.IsValidRolesFormat(rolesFormat))
+            {
+                throw new NotSupportedException($"Invalid jwt.rolesFormat: '{rolesFormat}'.");
             }
         }
         catch (NotSupportedException e)

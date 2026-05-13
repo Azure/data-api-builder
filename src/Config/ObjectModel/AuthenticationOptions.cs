@@ -14,6 +14,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record AuthenticationOptions(string Provider = "Unauthenticated", JwtOptions? Jwt = null)
 {
     public const string SIMULATOR_AUTHENTICATION = "Simulator";
+    public const string CUSTOM_AUTHENTICATION = "Custom";
     public const string CLIENT_PRINCIPAL_HEADER = "X-MS-CLIENT-PRINCIPAL";
     public const string NAME_CLAIM_TYPE = "name";
     public const string ROLE_CLAIM_TYPE = "roles";
@@ -39,6 +40,8 @@ public record AuthenticationOptions(string Provider = "Unauthenticated", JwtOpti
     /// </summary>
     /// <returns>True if Provider is Unauthenticated type.</returns>
     public bool IsUnauthenticatedAuthenticationProvider() => Provider.Equals(UNAUTHENTICATED_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsCustomAuthenticationProvider() => Provider.Equals(CUSTOM_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// A shorthand method to determine whether JWT is configured for the current authentication provider.

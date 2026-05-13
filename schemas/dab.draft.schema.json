@@ -457,6 +457,22 @@
                     "issuer": {
                       "type": "string",
                       "description": "The expected issuer (iss) claim of incoming JWT tokens."
+                    },
+                    "rolesPath": {
+                      "type": "string",
+                      "description": "Path to the roles claim in the raw JWT payload JSON. Supported for Custom authentication.",
+                      "default": "roles"
+                    },
+                    "rolesFormat": {
+                      "type": "string",
+                      "description": "Format used to parse the roles claim. Supported for Custom authentication.",
+                      "enum": [
+                        "array",
+                        "string",
+                        "space-delimited",
+                        "comma-delimited"
+                      ],
+                      "default": "array"
                     }
                   },
                   "required": [ "audience", "issuer" ]

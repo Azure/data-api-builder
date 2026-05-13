@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -110,6 +111,120 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 expected: AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
+        }
+
+        [DataTestMethod]
+        [DataRow("admin", HttpStatusCode.OK, DisplayName = "X-MS-API-ROLE selects an extracted role")]
+        [DataRow("writer", HttpStatusCode.Forbidden, DisplayName = "X-MS-API-ROLE fails for a role absent from the token")]
+        public async Task TestCustomJwtExtractedRolesWithClientRoleHeader(string clientRoleHeader, HttpStatusCode expectedStatusCode)
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            string token = CreateJwt(
+                audience: AUDIENCE,
+                issuer: LOCAL_ISSUER,
+                signingKey: key,
+                claims: new Dictionary<string, object>
+                {
+                    { "realm_access", new Dictionary<string, object> { { "roles", new[] { "admin" } } } }
+                });
+
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    key,
+                    token,
+                    clientRoleHeader,
+                    authOptions: new AuthenticationOptions(
+                        Provider: AuthenticationOptions.CUSTOM_AUTHENTICATION,
+                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER, RolesPath: "realm_access.roles")),
+                    useAuthorizationMiddleware: true);
+
+            Assert.AreEqual((int)expectedStatusCode, postMiddlewareContext.Response.StatusCode);
+            Assert.IsTrue(postMiddlewareContext.User.IsInRole("admin"));
+        }
+
+        [TestMethod("User.IsInRole works with normalized Custom JWT roles")]
+        public async Task TestCustomJwtExtractedRolesUserIsInRole()
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            string token = CreateJwt(
+                audience: AUDIENCE,
+                issuer: LOCAL_ISSUER,
+                signingKey: key,
+                claims: new Dictionary<string, object>
+                {
+                    { "scope", "read:orders write:orders read:orders" }
+                });
+
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    key,
+                    token,
+                    authOptions: new AuthenticationOptions(
+                        Provider: AuthenticationOptions.CUSTOM_AUTHENTICATION,
+                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER, RolesPath: "scope", RolesFormat: "space-delimited")));
+
+            Assert.AreEqual((int)HttpStatusCode.OK, postMiddlewareContext.Response.StatusCode);
+            Assert.IsTrue(postMiddlewareContext.User.IsInRole("read:orders"));
+            Assert.IsTrue(postMiddlewareContext.User.IsInRole("write:orders"));
+            Assert.AreEqual(1, postMiddlewareContext.User.Claims.Count(claim => claim.Type == AuthenticationOptions.ROLE_CLAIM_TYPE && claim.Value == "read:orders"));
+        }
+
+        [TestMethod("@claims.roles sees normalized Custom JWT roles")]
+        public async Task TestCustomJwtExtractedRolesClaimsPolicy()
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            string token = CreateJwt(
+                audience: AUDIENCE,
+                issuer: LOCAL_ISSUER,
+                signingKey: key,
+                claims: new Dictionary<string, object>
+                {
+                    { "roles_csv", " admin,writer,admin" }
+                });
+
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    key,
+                    token,
+                    clientRoleHeader: "admin",
+                    authOptions: new AuthenticationOptions(
+                        Provider: AuthenticationOptions.CUSTOM_AUTHENTICATION,
+                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER, RolesPath: "roles_csv", RolesFormat: "comma-delimited")));
+
+            Dictionary<string, List<Claim>> claimsInRequestContext = AuthorizationResolver.GetAllAuthenticatedUserClaims(postMiddlewareContext);
+
+            Assert.IsTrue(claimsInRequestContext.TryGetValue(AuthenticationOptions.ROLE_CLAIM_TYPE, out List<Claim> selectedRoleClaim));
+            Assert.AreEqual("admin", selectedRoleClaim.Single().Value);
+            Assert.IsTrue(claimsInRequestContext.TryGetValue(AuthenticationOptions.ORIGINAL_ROLE_CLAIM_TYPE, out List<Claim> originalRoleClaims));
+            CollectionAssert.AreEqual(
+                new[] { "admin", "writer" },
+                originalRoleClaims.Select(claim => claim.Value).ToArray());
+        }
+
+        [DataTestMethod]
+        [DataRow(true, DisplayName = "Missing configured claim fails authentication")]
+        [DataRow(false, DisplayName = "Wrong rolesFormat type fails authentication")]
+        public async Task TestCustomJwtRoleExtractionFailureReturnsUnauthorized(bool useMissingClaim)
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            string token = CreateJwt(
+                audience: AUDIENCE,
+                issuer: LOCAL_ISSUER,
+                signingKey: key,
+                claims: useMissingClaim
+                    ? new Dictionary<string, object> { { "groups", new[] { "admin" } } }
+                    : new Dictionary<string, object> { { "roles", "admin" } });
+
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    key,
+                    token,
+                    authOptions: new AuthenticationOptions(
+                        Provider: AuthenticationOptions.CUSTOM_AUTHENTICATION,
+                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER)));
+
+            Assert.AreEqual((int)HttpStatusCode.Unauthorized, postMiddlewareContext.Response.StatusCode);
+            Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
         }
 
         /// <summary>
@@ -303,12 +418,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// </summary>
         /// <param name="key"></param>
         /// <returns>IHost</returns>
-        private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key)
+        private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key, AuthenticationOptions authOptions = null, bool useAuthorizationMiddleware = false)
         {
             // Setup RuntimeConfigProvider object for the pipeline.
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = new(new MockFileSystem());
-            AuthenticationOptions authOptions = new()
+            authOptions ??= new()
             {
                 Provider = "AzureAD"
             };
@@ -324,8 +439,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                         .UseTestServer()
                         .ConfigureServices(services =>
                         {
-                            services.AddAuthentication(defaultScheme: JwtBearerDefaults.AuthenticationScheme)
-                                .AddJwtBearer(options =>
+                            string authenticationScheme = authOptions.IsCustomAuthenticationProvider()
+                                ? GenericOAuthDefaults.AUTHENTICATIONSCHEME
+                                : JwtBearerDefaults.AuthenticationScheme;
+                            services.AddAuthentication(defaultScheme: authenticationScheme)
+                                .AddJwtBearer(authenticationScheme, options =>
                                 {
                                     options.Audience = AUDIENCE;
                                     options.TokenValidationParameters = new()
@@ -343,8 +461,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                                         IssuerSigningKey = key,
 
                                         // Lifetime
-                                        ValidateLifetime = true
+                                        ValidateLifetime = true,
+
+                                        RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
                                     };
+                                    options.ConfigureCustomJwtRoleExtraction(authOptions);
                                 });
                             services.AddAuthorization();
                             services.AddSingleton<RuntimeConfigProvider>(sp => runtimeConfigProvider);
@@ -359,6 +480,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                         {
                             app.UseAuthentication();
                             app.UseClientRoleHeaderAuthenticationMiddleware();
+                            if (useAuthorizationMiddleware)
+                            {
+                                app.UseClientRoleHeaderAuthorizationMiddleware();
+                            }
 
                             // app.Run acts as terminating middleware to return 200 if we reach it. Without this,
                             // the Middleware pipeline will return 404 by default.
@@ -384,9 +509,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         private static async Task<HttpContext> SendRequestAndGetHttpContextState(
             SecurityKey key,
             string token,
-            string clientRoleHeader = null)
+            string clientRoleHeader = null,
+            AuthenticationOptions authOptions = null,
+            bool useAuthorizationMiddleware = false)
         {
-            using IHost host = await CreateWebHostCustomIssuer(key);
+            using IHost host = await CreateWebHostCustomIssuer(key, authOptions, useAuthorizationMiddleware);
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>
@@ -423,7 +550,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             string issuer = ISSUER,
             DateTime? notBefore = null,
             DateTime? expirationTime = null,
-            SecurityKey signingKey = null)
+            SecurityKey signingKey = null,
+            Dictionary<string, object> claims = null)
         {
             JsonWebTokenHandler jsonWebTokenHandler = new();
             SecurityTokenDescriptor tokenDescriptor = new()
@@ -431,6 +559,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 Audience = audience,
                 Issuer = issuer,
                 Subject = new ClaimsIdentity(new[] { new Claim("id", "1337-314159"), new Claim("userId", "777"), new Claim(ClaimTypes.Name, "ladybird") }),
+                Claims = claims,
                 NotBefore = notBefore,
                 Expires = expirationTime,
                 SigningCredentials = new(key: signingKey, algorithm: SecurityAlgorithms.RsaSha256)

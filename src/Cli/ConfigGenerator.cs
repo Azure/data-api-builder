@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service;
@@ -217,6 +218,11 @@ namespace Cli
                 return false;
             }
 
+            if (!ValidateCustomJwtRolesOptions(options.AuthenticationProvider, options.RolesPath, options.RolesFormat))
+            {
+                return false;
+            }
+
             if (!IsURIComponentValid(restPath))
             {
                 _logger.LogError("{apiType} path {message}", ApiType.REST, RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
@@ -286,7 +292,9 @@ namespace Cli
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
                             Provider: options.AuthenticationProvider,
-                            Jwt: (options.Audience is null && options.Issuer is null) ? null : new(options.Audience, options.Issuer)),
+                            Jwt: (options.Audience is null && options.Issuer is null && options.RolesPath is null && options.RolesFormat is null)
+                                ? null
+                                : new(options.Audience, options.Issuer, options.RolesPath, options.RolesFormat)),
                         Mode: options.HostMode),
                     BaseRoute: runtimeBaseRoute,
                     Telemetry: new TelemetryOptions(
@@ -298,6 +306,30 @@ namespace Cli
                             ServiceName: "@env('OTEL_SERVICE_NAME')"))
                 ),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
+
+            return true;
+        }
+
+        private static bool ValidateCustomJwtRolesOptions(string authenticationProvider, string? rolesPath, string? rolesFormat)
+        {
+            if ((rolesPath is not null || rolesFormat is not null) &&
+                !AuthenticationOptions.CUSTOM_AUTHENTICATION.Equals(authenticationProvider, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogError(CustomJwtRoleClaimExtractor.CUSTOM_JWT_ROLE_SETTINGS_PROVIDER_ERROR);
+                return false;
+            }
+
+            if (rolesPath is not null && !CustomJwtRoleClaimExtractor.IsValidRolesPath(rolesPath))
+            {
+                _logger.LogError("Invalid jwt.rolesPath bracket literal syntax: '{rolesPath}'.", rolesPath);
+                return false;
+            }
+
+            if (rolesFormat is not null && !CustomJwtRoleClaimExtractor.IsValidRolesFormat(rolesFormat))
+            {
+                _logger.LogError("Invalid jwt.rolesFormat: '{rolesFormat}'.", rolesFormat);
+                return false;
+            }
 
             return true;
         }
@@ -1064,13 +1096,15 @@ namespace Cli
                 }
             }
 
-            // Host: Mode, Cors.Origins, Cors.AllowCredentials, Authentication.Provider, Authentication.Jwt.Audience, Authentication.Jwt.Issuer, MaxResponseSizeMb
+            // Host: Mode, Cors.Origins, Cors.AllowCredentials, Authentication.Provider, Authentication.Jwt.*, MaxResponseSizeMb
             if (options.RuntimeHostMode != null ||
                 options.RuntimeHostCorsOrigins != null ||
                 options.RuntimeHostCorsAllowCredentials != null ||
                 options.RuntimeHostAuthenticationProvider != null ||
                 options.RuntimeHostAuthenticationJwtAudience != null ||
                 options.RuntimeHostAuthenticationJwtIssuer != null ||
+                options.RuntimeHostAuthenticationJwtRolesPath != null ||
+                options.RuntimeHostAuthenticationJwtRolesFormat != null ||
                 options.RuntimeHostMaxResponseSizeMb != null)
             {
                 HostOptions? updatedHostOptions = runtimeConfig?.Runtime?.Host;
@@ -1727,6 +1761,62 @@ namespace Cli
 
                     updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.Issuer as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Jwt.RolesPath
+                updatedValue = options?.RuntimeHostAuthenticationJwtRolesPath;
+                if (updatedValue != null)
+                {
+                    JwtOptions jwtOptions;
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null || updatedHostOptions.Authentication?.Jwt == null)
+                    {
+                        jwtOptions = new(null, null, RolesPath: (string)updatedValue);
+                    }
+                    else
+                    {
+                        jwtOptions = updatedHostOptions.Authentication.Jwt with { RolesPath = (string)updatedValue };
+                    }
+
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Jwt: jwtOptions);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Jwt = jwtOptions };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.RolesPath as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Jwt.RolesFormat
+                updatedValue = options?.RuntimeHostAuthenticationJwtRolesFormat;
+                if (updatedValue != null)
+                {
+                    JwtOptions jwtOptions;
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null || updatedHostOptions.Authentication?.Jwt == null)
+                    {
+                        jwtOptions = new(null, null, RolesFormat: (string)updatedValue);
+                    }
+                    else
+                    {
+                        jwtOptions = updatedHostOptions.Authentication.Jwt with { RolesFormat = (string)updatedValue };
+                    }
+
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Jwt: jwtOptions);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Jwt = jwtOptions };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.RolesFormat as '{updatedValue}'", updatedValue);
                 }
 
                 // Runtime.Host.MaxResponseSizeMb

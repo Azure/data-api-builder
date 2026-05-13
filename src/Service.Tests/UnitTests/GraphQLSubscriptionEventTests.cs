@@ -1,10 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+#nullable enable
+
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -45,5 +51,32 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(1, records.Length);
             Assert.AreEqual(1, records[0].GetProperty("id").GetInt32());
         }
+
+        [TestMethod]
+        public void GraphQLDeletePayloadContainsOnlyPrimaryKeyValues()
+        {
+            Dictionary<string, object?> parameters = new()
+            {
+                ["Id"] = 1,
+                ["filter"] = new object()
+            };
+            SourceDefinition sourceDefinition = new()
+            {
+                PrimaryKey = new List<string> { "id" }
+            };
+            Mock<ISqlMetadataProvider> metadataProvider = new();
+            metadataProvider.Setup(provider => provider.GetSourceDefinition("Actor")).Returns(sourceDefinition);
+            string? exposedColumnName = "Id";
+            metadataProvider
+                .Setup(provider => provider.TryGetExposedColumnName("Actor", "id", out exposedColumnName))
+                .Returns(true);
+
+            JsonElement record = SqlMutationEngine.GetGraphQLDeleteSubscriptionRecord("Actor", parameters, metadataProvider.Object);
+
+            Assert.AreEqual(1, record.GetProperty("Id").GetInt32());
+            Assert.IsFalse(record.TryGetProperty("filter", out _));
+        }
     }
 }
+
+#nullable restore

@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (result?.Item1 is not null)
                 {
-                    await PublishGraphQLMutationSubscriptionEventsAsync(entityName, mutationOperation, roleName, parameters, result.Item1.RootElement);
+                    await PublishGraphQLMutationSubscriptionEventsAsync(entityName, mutationOperation, roleName, parameters, result.Item1.RootElement, sqlMetadataProvider);
                 }
 
             }
@@ -332,12 +332,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             EntityActionOperation mutationOperation,
             string actorRole,
             IDictionary<string, object?> parameters,
-            JsonElement result)
+            JsonElement result,
+            ISqlMetadataProvider sqlMetadataProvider)
         {
             GraphQLSubscriptionEvent? subscriptionEvent = ToSubscriptionEvent(mutationOperation);
             if (mutationOperation is EntityActionOperation.Delete)
             {
-                await PublishSubscriptionEventAsync(entityName, subscriptionEvent, actorRole, JsonSerializer.SerializeToElement(parameters));
+                await PublishSubscriptionEventAsync(entityName, subscriptionEvent, actorRole, GetGraphQLDeleteSubscriptionRecord(entityName, parameters, sqlMetadataProvider));
                 return;
             }
 
@@ -345,6 +346,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 await PublishSubscriptionEventAsync(entityName, subscriptionEvent, actorRole, record);
             }
+        }
+
+        public static JsonElement GetGraphQLDeleteSubscriptionRecord(string entityName, IDictionary<string, object?> parameters, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            Dictionary<string, object?> primaryKeyValues = new();
+            SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
+
+            foreach (string backingPrimaryKey in sourceDefinition.PrimaryKey)
+            {
+                if (sqlMetadataProvider.TryGetExposedColumnName(entityName, backingPrimaryKey, out string? exposedPrimaryKey) &&
+                    parameters.TryGetValue(exposedPrimaryKey, out object? exposedValue))
+                {
+                    primaryKeyValues[exposedPrimaryKey] = exposedValue;
+                }
+                else if (parameters.TryGetValue(backingPrimaryKey, out object? backingValue))
+                {
+                    primaryKeyValues[backingPrimaryKey] = backingValue;
+                }
+            }
+
+            return JsonSerializer.SerializeToElement(primaryKeyValues);
         }
 
         public static IEnumerable<JsonElement> GetSubscriptionRecordsFromGraphQLResult(JsonElement result)

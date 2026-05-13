@@ -2244,6 +2244,11 @@ namespace Cli
                 }
             }
 
+            if (!ValidateGraphQLSubscriptionOptions(options))
+            {
+                return false;
+            }
+
             EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource!.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
             EntityPermission[]? updatedPermissions = entity!.Permissions;
@@ -3370,7 +3375,7 @@ namespace Cli
 
                 if (options.GraphQLSubscriptionEnabled is not null)
                 {
-                    enabled = bool.Parse(options.GraphQLSubscriptionEnabled);
+                    bool.TryParse(options.GraphQLSubscriptionEnabled, out enabled);
                 }
 
                 if (options.GraphQLSubscriptionEvents is not null)
@@ -3379,7 +3384,11 @@ namespace Cli
                         ? Array.Empty<GraphQLSubscriptionEvent>()
                         : options.GraphQLSubscriptionEvents
                             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                            .Select(value => Enum.Parse<GraphQLSubscriptionEvent>(value, ignoreCase: true))
+                            .Select(value =>
+                            {
+                                Enum.TryParse(value, ignoreCase: true, out GraphQLSubscriptionEvent subscriptionEvent);
+                                return subscriptionEvent;
+                            })
                             .ToArray();
                 }
 
@@ -3387,6 +3396,33 @@ namespace Cli
             }
 
             return graphQLType with { Operation = graphQLOperation, Subscription = subscription };
+        }
+
+        private static bool ValidateGraphQLSubscriptionOptions(EntityOptions options)
+        {
+            if (options.GraphQLSubscriptionEnabled is not null &&
+                !bool.TryParse(options.GraphQLSubscriptionEnabled, out _))
+            {
+                _logger.LogError("Invalid GraphQL subscription enabled value. Supported values are true and false.");
+                return false;
+            }
+
+            if (options.GraphQLSubscriptionEvents is not null &&
+                !string.IsNullOrWhiteSpace(options.GraphQLSubscriptionEvents))
+            {
+                foreach (string subscriptionEvent in options.GraphQLSubscriptionEvents.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (!Enum.TryParse(subscriptionEvent, ignoreCase: true, out GraphQLSubscriptionEvent _))
+                    {
+                        _logger.LogError(
+                            "Invalid GraphQL subscription event '{subscriptionEvent}'. Supported events are created, updated, and deleted.",
+                            subscriptionEvent);
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         /// <summary>

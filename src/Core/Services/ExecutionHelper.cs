@@ -18,6 +18,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Subscriptions;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Processing;
 using HotChocolate.Language;
@@ -180,17 +181,23 @@ namespace Azure.DataApiBuilder.Service.Services
         public async ValueTask<ISourceStream> SubscribeAsync(IResolverContext context)
         {
             string entityName = GraphQLUtils.GetEntityNameFromContext(context);
-            GraphQLSubscriptionEvent subscriptionEvent = GetSubscriptionEvent(context.Selection.Field.Name);
-            string document = context.Operation.Document.ToString();
+            GraphQLSubscriptionEvent subscriptionEvent = GetSubscriptionEvent(entityName, context.Selection.Field.Name);
+
+            ISourceStream<JsonElement> stream = await _subscriptionEventPublisher.SubscribeAsync(entityName, subscriptionEvent, context.RequestAborted);
+            TelemetryMetricsHelper.IncrementActiveGraphQLSubscriptions(entityName, subscriptionEvent.ToString());
 
             _logger.LogInformation(
-                "GraphQLSubscriptionCreated entity {EntityName}, event {EventType}, document {Document}",
+                "GraphQLSubscriptionCreated entity {EntityName}, event {EventType}",
                 entityName,
-                subscriptionEvent,
-                document);
+                subscriptionEvent);
 
-            TelemetryMetricsHelper.IncrementActiveGraphQLSubscriptions(entityName, subscriptionEvent.ToString());
-            ISourceStream<JsonElement> stream = await _subscriptionEventPublisher.SubscribeAsync(entityName, subscriptionEvent, context.RequestAborted);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "GraphQLSubscriptionCreated document {Document}",
+                    context.Operation.Document.ToString());
+            }
+
             return new ActiveSubscriptionSourceStream(stream, entityName, subscriptionEvent.ToString());
         }
 
@@ -206,13 +213,20 @@ namespace Azure.DataApiBuilder.Service.Services
                 null;
         }
 
-        private static GraphQLSubscriptionEvent GetSubscriptionEvent(string fieldName)
+        private GraphQLSubscriptionEvent GetSubscriptionEvent(string entityName, string fieldName)
         {
-            foreach (GraphQLSubscriptionEvent subscriptionEvent in Enum.GetValues<GraphQLSubscriptionEvent>())
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            if (runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity))
             {
-                if (fieldName.EndsWith(subscriptionEvent.ToString(), StringComparison.Ordinal))
+                foreach (GraphQLSubscriptionEvent subscriptionEvent in entity.GraphQL.Subscription?.Events ?? Array.Empty<GraphQLSubscriptionEvent>())
                 {
-                    return subscriptionEvent;
+                    if (string.Equals(
+                        fieldName,
+                        SubscriptionBuilder.GenerateSubscriptionFieldName(entityName, entity, subscriptionEvent),
+                        StringComparison.Ordinal))
+                    {
+                        return subscriptionEvent;
+                    }
                 }
             }
 

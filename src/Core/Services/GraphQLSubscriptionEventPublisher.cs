@@ -77,7 +77,7 @@ public sealed class GraphQLSubscriptionEventPublisher : IGraphQLSubscriptionEven
     }
 }
 
-internal sealed class NullGraphQLSubscriptionEventPublisher : IGraphQLSubscriptionEventPublisher
+public sealed class NullGraphQLSubscriptionEventPublisher : IGraphQLSubscriptionEventPublisher
 {
     public static readonly NullGraphQLSubscriptionEventPublisher Instance = new();
 

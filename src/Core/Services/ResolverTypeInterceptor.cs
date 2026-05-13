@@ -105,9 +105,8 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
                 field.Resolver = _subscriptionFieldResolver;
             }
         }
-        else if (objectTypeConfig.Name.EndsWith("Event", StringComparison.Ordinal) &&
-            objectTypeConfig.Fields.Any(field => field.Name == "eventId") &&
-            objectTypeConfig.Fields.Any(field => field.Name == "record"))
+        else if (objectTypeConfig.Interfaces.Any(interfaceType =>
+            string.Equals(interfaceType.ToString(), "SubscriptionEvent", StringComparison.Ordinal)))
         {
             foreach (ObjectFieldConfiguration field in objectTypeConfig.Fields)
             {

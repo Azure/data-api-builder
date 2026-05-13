@@ -257,10 +257,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (result?.Item1 is not null)
                 {
-                    JsonElement record = mutationOperation is EntityActionOperation.Delete
-                        ? JsonSerializer.SerializeToElement(parameters)
-                        : result.Item1.RootElement.Clone();
-                    await PublishSubscriptionEventAsync(entityName, ToSubscriptionEvent(mutationOperation), roleName, record);
+                    await PublishGraphQLMutationSubscriptionEventsAsync(entityName, mutationOperation, roleName, parameters, result.Item1.RootElement);
                 }
 
             }
@@ -328,6 +325,50 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             await _subscriptionEventPublisher.PublishAsync(entityName, subscriptionEvent.Value, actorRole, record);
+        }
+
+        private async Task PublishGraphQLMutationSubscriptionEventsAsync(
+            string entityName,
+            EntityActionOperation mutationOperation,
+            string actorRole,
+            IDictionary<string, object?> parameters,
+            JsonElement result)
+        {
+            GraphQLSubscriptionEvent? subscriptionEvent = ToSubscriptionEvent(mutationOperation);
+            if (mutationOperation is EntityActionOperation.Delete)
+            {
+                await PublishSubscriptionEventAsync(entityName, subscriptionEvent, actorRole, JsonSerializer.SerializeToElement(parameters));
+                return;
+            }
+
+            foreach (JsonElement record in GetSubscriptionRecordsFromGraphQLResult(result))
+            {
+                await PublishSubscriptionEventAsync(entityName, subscriptionEvent, actorRole, record);
+            }
+        }
+
+        public static IEnumerable<JsonElement> GetSubscriptionRecordsFromGraphQLResult(JsonElement result)
+        {
+            if (result.ValueKind is JsonValueKind.Array)
+            {
+                foreach (JsonElement item in result.EnumerateArray())
+                {
+                    yield return item.Clone();
+                }
+            }
+            else if (result.ValueKind is JsonValueKind.Object &&
+                result.TryGetProperty(Service.GraphQLBuilder.Queries.QueryBuilder.PAGINATION_FIELD_NAME, out JsonElement items) &&
+                items.ValueKind is JsonValueKind.Array)
+            {
+                foreach (JsonElement item in items.EnumerateArray())
+                {
+                    yield return item.Clone();
+                }
+            }
+            else
+            {
+                yield return result.Clone();
+            }
         }
 
         private async Task PublishSubscriptionEventAsync(string entityName, GraphQLSubscriptionEvent? subscriptionEvent, string actorRole, IReadOnlyDictionary<string, object?> record)

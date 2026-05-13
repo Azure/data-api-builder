@@ -47,4 +47,3 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
     }
 }
-

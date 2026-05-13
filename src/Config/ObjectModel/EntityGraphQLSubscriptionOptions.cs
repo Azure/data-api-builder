@@ -12,4 +12,3 @@ public record EntityGraphQLSubscriptionOptions(bool Enabled = true, GraphQLSubsc
 {
     public GraphQLSubscriptionEvent[] Events { get; init; } = Events ?? Array.Empty<GraphQLSubscriptionEvent>();
 }
-

@@ -12,4 +12,3 @@ public enum GraphQLSubscriptionEvent
     Updated,
     Deleted
 }
-

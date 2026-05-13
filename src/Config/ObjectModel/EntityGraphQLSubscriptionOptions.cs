@@ -6,9 +6,20 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <summary>
 /// Describes GraphQL subscription settings specific to an entity.
 /// </summary>
-/// <param name="Enabled">Indicates if GraphQL subscriptions are enabled for the entity.</param>
-/// <param name="Events">The enabled subscription events.</param>
-public record EntityGraphQLSubscriptionOptions(bool Enabled = true, GraphQLSubscriptionEvent[]? Events = null)
+public record EntityGraphQLSubscriptionOptions
 {
-    public GraphQLSubscriptionEvent[] Events { get; init; } = Events ?? Array.Empty<GraphQLSubscriptionEvent>();
+    /// <summary>
+    /// Creates a new instance of <see cref="EntityGraphQLSubscriptionOptions"/>.
+    /// </summary>
+    /// <param name="enabled">Indicates if GraphQL subscriptions are enabled for the entity.</param>
+    /// <param name="events">The enabled subscription events.</param>
+    public EntityGraphQLSubscriptionOptions(bool enabled = true, GraphQLSubscriptionEvent[]? events = null)
+    {
+        Enabled = enabled;
+        Events = events ?? Array.Empty<GraphQLSubscriptionEvent>();
+    }
+
+    public bool Enabled { get; init; }
+
+    public GraphQLSubscriptionEvent[] Events { get; init; }
 }

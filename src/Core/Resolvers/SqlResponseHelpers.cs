@@ -212,19 +212,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// shape of <paramref name="jsonResult"/>. <see cref="FormatFindResult"/> attaches those fields
         /// out-of-band when needed. This avoids confusing array-typed column values (e.g. SQL Server
         /// JSON arrays, vector/collection types) with a pagination sentinel.
-        ///
-        /// <paramref name="isMcpRequest"/> is accepted for source compatibility with prior versions
-        /// of <c>Microsoft.DataApiBuilder.Core</c> but is no longer used: the envelope shape produced
-        /// here is identical for REST and MCP, and pagination metadata is built by
-        /// <see cref="FormatFindResult"/>.
         /// </summary>
         /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
-        /// <param name="isMcpRequest">Unused; preserved for backwards-compatible call sites.</param>
         /// <returns>Correctly formatted OkObjectResult.</returns>
-        public static OkObjectResult OkResponse(JsonElement jsonResult, bool? isMcpRequest = null)
+        public static OkObjectResult OkResponse(JsonElement jsonResult)
         {
-            _ = isMcpRequest; // intentionally unused; kept for source compatibility.
-
             // For consistency we always return the payload as an array under "value".
             List<JsonElement> rows = jsonResult.ValueKind is JsonValueKind.Array
                 ? jsonResult.EnumerateArray().ToList()

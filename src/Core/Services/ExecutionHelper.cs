@@ -18,7 +18,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Subscriptions;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Processing;
 using HotChocolate.Language;

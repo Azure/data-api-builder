@@ -1142,6 +1142,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                 }
 
+                // Validate that the current role has read access to the column referenced in orderBy.
+                // Without this check, protected column values could leak through the pagination endCursor.
+                string roleName = Authorization.AuthorizationResolver.GetRoleOfGraphQLRequest(_ctx);
+                if (!AuthorizationResolver.AreColumnsAllowedForOperation(
+                        entityName: EntityName,
+                        roleName: roleName,
+                        operation: EntityActionOperation.Read,
+                        columns: new[] { backingColumnName }))
+                {
+                    throw new DataApiBuilderException(
+                        message: DataApiBuilderException.GRAPHQL_ORDERBY_FIELD_AUTHZ_FAILURE,
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                }
+
                 // Validate that the orderBy field is present in the groupBy fields if it's a groupBy query
                 if (isGroupByQuery && !GroupByMetadata.Fields.ContainsKey(backingColumnName))
                 {

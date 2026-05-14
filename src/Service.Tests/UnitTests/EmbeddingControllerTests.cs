@@ -679,9 +679,12 @@ public class EmbeddingControllerTests
             hostMode: HostMode.Development);
 
         // Act
-        await controller.PostAsync("embed");
+        IActionResult result = await controller.PostAsync("embed");
 
         // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        Assert.IsInstanceOfType(okResult.Value, typeof(EmbeddingResponse));
         _mockEmbeddingService.Verify(
             s => s.TryEmbedAsync(inputText, It.IsAny<CancellationToken>()),
             Times.Once());
@@ -726,9 +729,14 @@ public class EmbeddingControllerTests
             hostMode: HostMode.Development);
 
         // Act
-        await controller.PostAsync("embed");
+        IActionResult result = await controller.PostAsync("embed");
 
         // Assert
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, (int)value!.error.status);
         _mockEmbeddingService.Verify(
             s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never());
@@ -749,9 +757,14 @@ public class EmbeddingControllerTests
             clientRole: "unauthorized-role");
 
         // Act
-        await controller.PostAsync("embed");
+        IActionResult result = await controller.PostAsync("embed");
 
         // Assert
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, (int)value!.error.status);
         _mockEmbeddingService.Verify(
             s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never());
@@ -2091,6 +2104,10 @@ public class EmbeddingControllerTests
 
         // Assert
         Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, (int)value!.error.status);
         _mockEmbeddingService.Verify(
             s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never());
@@ -2127,6 +2144,10 @@ public class EmbeddingControllerTests
 
         // Assert — denied before batch service is invoked
         Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, (int)value!.error.status);
         _mockEmbeddingService.Verify(
             s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()),
             Times.Never(),

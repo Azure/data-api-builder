@@ -744,6 +744,49 @@ namespace Cli.Tests
             Assert.AreEqual(updatedJwtIssuerValue.ToString(), runtimeConfig.Runtime.Host.Authentication.Jwt.Issuer);
         }
 
+        [TestMethod]
+        public void TestUpdateAuthenticationJwtRolesSettingsForCustomProvider()
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeHostAuthenticationProvider: "Custom",
+                runtimeHostAuthenticationJwtAudience: "updatedAudience",
+                runtimeHostAuthenticationJwtIssuer: "updatedIssuer",
+                runtimeHostAuthenticationJwtRolesPath: "realm_access.roles",
+                runtimeHostAuthenticationJwtRolesFormat: "array",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.AreEqual("realm_access.roles", runtimeConfig.Runtime?.Host?.Authentication?.Jwt?.RolesPath);
+            Assert.AreEqual("array", runtimeConfig.Runtime?.Host?.Authentication?.Jwt?.RolesFormat);
+        }
+
+        [DataTestMethod]
+        [DataRow("EntraID", "roles", "array", DisplayName = "Role settings fail for non-Custom provider.")]
+        [DataRow("Custom", "$[app.roles]", "array", DisplayName = "Invalid rolesPath fails.")]
+        [DataRow("Custom", "", "array", DisplayName = "Blank rolesPath fails.")]
+        [DataRow("Custom", "roles", "semicolon-delimited", DisplayName = "Invalid rolesFormat fails.")]
+        public void TestUpdateAuthenticationJwtRolesSettingsValidationFailure(string authenticationProvider, string rolesPath, string rolesFormat)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeHostAuthenticationProvider: authenticationProvider,
+                runtimeHostAuthenticationJwtRolesPath: rolesPath,
+                runtimeHostAuthenticationJwtRolesFormat: rolesFormat,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsFalse(isSuccess);
+            Assert.AreEqual(INITIAL_CONFIG, _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE));
+        }
+
         /// <summary>
         /// Test to update the current depth limit for GraphQL and removal the depth limit using -1.
         /// When runtime.graphql.depth-limit has an initial value of 8.

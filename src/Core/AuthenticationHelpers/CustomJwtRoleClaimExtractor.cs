@@ -19,7 +19,8 @@ public static class CustomJwtRoleClaimExtractor
 
     public static bool IsValidRolesPath(string rolesPath)
     {
-        return !rolesPath.StartsWith("$[", StringComparison.Ordinal) || IsBracketLiteralPath(rolesPath);
+        return !string.IsNullOrWhiteSpace(rolesPath) &&
+            (!rolesPath.StartsWith("$[", StringComparison.Ordinal) || IsBracketLiteralPath(rolesPath));
     }
 
     public static bool IsValidRolesFormat(string rolesFormat)

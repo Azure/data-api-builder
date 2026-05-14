@@ -149,6 +149,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         [DataTestMethod("Custom JWT roles settings fail with invalid values")]
         [DataRow("$[app.roles]", null)]
+        [DataRow("", null)]
+        [DataRow("   ", null)]
         [DataRow(null, "semicolon-delimited")]
         public void ValidateCustomJwtRolesSettingsFailWithInvalidValues(string rolesPath, string rolesFormat)
         {

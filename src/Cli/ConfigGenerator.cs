@@ -1644,6 +1644,24 @@ namespace Cli
             object? updatedValue;
             try
             {
+                if (options.RuntimeHostAuthenticationProvider is not null ||
+                    options.RuntimeHostAuthenticationJwtRolesPath is not null ||
+                    options.RuntimeHostAuthenticationJwtRolesFormat is not null)
+                {
+                    string authenticationProvider = options.RuntimeHostAuthenticationProvider
+                        ?? updatedHostOptions?.Authentication?.Provider
+                        ?? new AuthenticationOptions().Provider;
+                    string? rolesPath = options.RuntimeHostAuthenticationJwtRolesPath
+                        ?? updatedHostOptions?.Authentication?.Jwt?.RolesPath;
+                    string? rolesFormat = options.RuntimeHostAuthenticationJwtRolesFormat
+                        ?? updatedHostOptions?.Authentication?.Jwt?.RolesFormat;
+
+                    if (!ValidateCustomJwtRolesOptions(authenticationProvider, rolesPath, rolesFormat))
+                    {
+                        return false;
+                    }
+                }
+
                 // Runtime.Host.Mode
                 updatedValue = options?.RuntimeHostMode;
                 if (updatedValue != null)

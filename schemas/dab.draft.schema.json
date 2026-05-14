@@ -460,8 +460,7 @@
                     },
                     "rolesPath": {
                       "type": "string",
-                      "description": "Path to the roles claim in the raw JWT payload JSON. Supported for Custom authentication.",
-                      "default": "roles"
+                      "description": "Path to the roles claim in the raw JWT payload JSON. Supported for Custom authentication."
                     },
                     "rolesFormat": {
                       "type": "string",
@@ -471,8 +470,7 @@
                         "string",
                         "space-delimited",
                         "comma-delimited"
-                      ],
-                      "default": "array"
+                      ]
                     }
                   },
                   "required": [ "audience", "issuer" ]
@@ -495,6 +493,27 @@
                   },
                   "then": { "required": [ "jwt" ] },
                   "else": { "properties": { "jwt": false } }
+                },
+                {
+                  "$comment": "Custom JWT role extraction settings are only supported for the Custom provider.",
+                  "if": {
+                    "properties": {
+                      "provider": {
+                        "not": { "const": "Custom" }
+                      }
+                    },
+                    "required": [ "provider" ]
+                  },
+                  "then": {
+                    "properties": {
+                      "jwt": {
+                        "properties": {
+                          "rolesPath": false,
+                          "rolesFormat": false
+                        }
+                      }
+                    }
+                  }
                 }
               ]
             }

@@ -47,6 +47,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         [DataRow("$[app.roles]")]
         [DataRow("$[\"app.roles\"]")]
         [DataRow("$['app.roles")]
+        [DataRow("")]
+        [DataRow("   ")]
         public void IsValidRolesPath_InvalidBracketSyntax_ReturnsFalse(string rolesPath)
         {
             Assert.IsFalse(CustomJwtRoleClaimExtractor.IsValidRolesPath(rolesPath));

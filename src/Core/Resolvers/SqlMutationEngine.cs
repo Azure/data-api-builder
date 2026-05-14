@@ -336,6 +336,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider sqlMetadataProvider)
         {
             GraphQLSubscriptionEvent? subscriptionEvent = ToSubscriptionEvent(mutationOperation);
+            if (subscriptionEvent is null || !IsSubscriptionConfigured(entityName, subscriptionEvent.Value))
+            {
+                return;
+            }
+
             if (mutationOperation is EntityActionOperation.Delete)
             {
                 await PublishSubscriptionEventAsync(entityName, subscriptionEvent, actorRole, GetGraphQLDeleteSubscriptionRecord(entityName, parameters, sqlMetadataProvider));

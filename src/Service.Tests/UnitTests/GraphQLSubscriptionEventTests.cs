@@ -9,6 +9,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
+using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -58,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, object?> parameters = new()
             {
                 ["Id"] = 1,
-                ["filter"] = new object()
+                ["filter"] = new List<IValueNode> { new StringValueNode("ignored") }
             };
             SourceDefinition sourceDefinition = new()
             {

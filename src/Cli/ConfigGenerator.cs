@@ -1650,7 +1650,7 @@ namespace Cli
                 {
                     string authenticationProvider = options.RuntimeHostAuthenticationProvider
                         ?? updatedHostOptions?.Authentication?.Provider
-                        ?? new AuthenticationOptions().Provider;
+                        ?? AuthenticationOptions.UNAUTHENTICATED_AUTHENTICATION;
                     string? rolesPath = options.RuntimeHostAuthenticationJwtRolesPath
                         ?? updatedHostOptions?.Authentication?.Jwt?.RolesPath;
                     string? rolesFormat = options.RuntimeHostAuthenticationJwtRolesFormat

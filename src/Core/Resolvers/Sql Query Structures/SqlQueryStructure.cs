@@ -1144,12 +1144,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // Validate that the current role has read access to the column referenced in orderBy.
                 // Without this check, protected column values could leak through the pagination endCursor.
+                // Pass the exposed field name (fieldName), not the backing column name, since
+                // AreColumnsAllowedForOperation resolves exposed names to backing columns internally.
                 string roleName = Authorization.AuthorizationResolver.GetRoleOfGraphQLRequest(_ctx);
                 if (!AuthorizationResolver.AreColumnsAllowedForOperation(
                         entityName: EntityName,
                         roleName: roleName,
                         operation: EntityActionOperation.Read,
-                        columns: new[] { backingColumnName }))
+                        columns: new[] { fieldName }))
                 {
                     throw new DataApiBuilderException(
                         message: DataApiBuilderException.GRAPHQL_ORDERBY_FIELD_AUTHZ_FAILURE,

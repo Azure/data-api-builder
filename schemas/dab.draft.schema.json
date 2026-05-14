@@ -495,6 +495,31 @@
                   "else": { "properties": { "jwt": false } }
                 },
                 {
+                  "$comment": "Custom JWT role extraction settings default to the standard DAB roles claim shape.",
+                  "if": {
+                    "properties": {
+                      "provider": {
+                        "const": "Custom"
+                      }
+                    },
+                    "required": [ "provider" ]
+                  },
+                  "then": {
+                    "properties": {
+                      "jwt": {
+                        "properties": {
+                          "rolesPath": {
+                            "default": "roles"
+                          },
+                          "rolesFormat": {
+                            "default": "array"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
                   "$comment": "Custom JWT role extraction settings are only supported for the Custom provider.",
                   "if": {
                     "properties": {

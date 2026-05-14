@@ -1,11 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {
@@ -20,9 +23,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         [DataRow(@"{ ""https://example.com/roles"": [""admin"", ""writer""] }", "https://example.com/roles", "array", "admin,writer", DisplayName = "URL claim key")]
         [DataRow(@"{ ""cognito:groups"": [""Staff"", ""Managers""] }", "cognito:groups", "array", "Staff,Managers", DisplayName = "Colon claim key")]
         [DataRow(@"{ ""app.roles"": [""admin"", ""writer""] }", "$['app.roles']", "array", "admin,writer", DisplayName = "Bracket literal claim key with dots")]
+        [DataRow(@"{ ""https://example.com/roles"": [""admin""] }", "$['https://example.com/roles']", "array", "admin", DisplayName = "Bracket literal URL claim key")]
         [DataRow(@"{ ""role"": ""superadmin"" }", "role", "string", "superadmin", DisplayName = "String format")]
         [DataRow(@"{ ""scope"": ""openid read:orders write:orders"" }", "scope", "space-delimited", "openid,read:orders,write:orders", DisplayName = "Space-delimited format")]
+        [DataRow(@"{ ""scope"": ""admin"" }", "scope", "space-delimited", "admin", DisplayName = "Space-delimited format without whitespace")]
         [DataRow(@"{ ""roles_csv"": ""admin,writer,auditor"" }", "roles_csv", "comma-delimited", "admin,writer,auditor", DisplayName = "Comma-delimited format")]
+        [DataRow(@"{ ""roles_csv"": ""admin"" }", "roles_csv", "comma-delimited", "admin", DisplayName = "Comma-delimited format without comma")]
         [DataRow(@"{ ""roles"": [] }", "roles", "array", "", DisplayName = "Empty array")]
         [DataRow(@"{ ""role"": """" }", "role", "string", "", DisplayName = "Empty string")]
         [DataRow(@"{ ""roles"": [""admin"", ""admin"", ""Admin""] }", "roles", "array", "admin,Admin", DisplayName = "Duplicate roles are ordinal and case-sensitive")]
@@ -41,6 +47,44 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             CollectionAssert.AreEqual(
                 expectedRolesCsv.Length == 0 ? new List<string>() : new List<string>(expectedRolesCsv.Split(',')),
                 new List<string>(roles));
+        }
+
+        [TestMethod]
+        public void TryExtractRoles_StringFormatDoesNotSplit()
+        {
+            bool result = CustomJwtRoleClaimExtractor.TryExtractRoles(
+                @"{ ""role"": ""admin writer, auditor"" }",
+                "role",
+                JwtOptions.ROLES_FORMAT_STRING,
+                NullLogger.Instance,
+                out IReadOnlyList<string> roles);
+
+            Assert.IsTrue(result);
+            CollectionAssert.AreEqual(new[] { "admin writer, auditor" }, new List<string>(roles));
+        }
+
+        [TestMethod]
+        public void TryExtractRoles_MissingClaimLogsExpectedError()
+        {
+            Mock<ILogger> logger = new();
+
+            bool result = CustomJwtRoleClaimExtractor.TryExtractRoles(
+                @"{ ""groups"": [""admin""] }",
+                "roles",
+                JwtOptions.ROLES_FORMAT_ARRAY,
+                logger.Object,
+                out IReadOnlyList<string> roles);
+
+            Assert.IsFalse(result);
+            Assert.AreEqual(0, roles.Count);
+            logger.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Equals("Configured rolesPath 'roles' was not found in JWT claims.")),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+                Times.Once);
         }
 
         [DataTestMethod]

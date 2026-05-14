@@ -321,7 +321,7 @@ namespace Cli
 
             if (rolesPath is not null && !CustomJwtRoleClaimExtractor.IsValidRolesPath(rolesPath))
             {
-                _logger.LogError("Invalid jwt.rolesPath bracket literal syntax: '{rolesPath}'.", rolesPath);
+                _logger.LogError("Invalid jwt.rolesPath: '{rolesPath}'.", rolesPath);
                 return false;
             }
 

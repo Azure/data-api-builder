@@ -227,6 +227,64 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
         }
 
+        [DataTestMethod]
+        [DataRow(null, HttpStatusCode.OK, DisplayName = "Header omitted with no extracted Custom JWT roles")]
+        [DataRow("Authenticated", HttpStatusCode.OK, DisplayName = "System Authenticated role is allowed for authenticated Custom JWT")]
+        [DataRow("admin", HttpStatusCode.Forbidden, DisplayName = "Non-system role absent from token is rejected")]
+        public async Task TestCustomJwtNoExtractedRolesClientRoleBehavior(string clientRoleHeader, HttpStatusCode expectedStatusCode)
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            string token = CreateJwt(
+                audience: AUDIENCE,
+                issuer: LOCAL_ISSUER,
+                signingKey: key,
+                claims: new Dictionary<string, object>
+                {
+                    { "roles", Array.Empty<string>() }
+                });
+
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    key,
+                    token,
+                    clientRoleHeader,
+                    authOptions: new AuthenticationOptions(
+                        Provider: AuthenticationOptions.CUSTOM_AUTHENTICATION,
+                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER)),
+                    useAuthorizationMiddleware: true);
+
+            Assert.AreEqual((int)expectedStatusCode, postMiddlewareContext.Response.StatusCode);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.IsFalse(postMiddlewareContext.User.IsInRole("admin"));
+        }
+
+        [DataTestMethod]
+        [DataRow("AzureAD")]
+        [DataRow("EntraID")]
+        public async Task TestNonCustomJwtBehaviorUnchangedWhenCustomRoleSettingsOmitted(string authenticationProvider)
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            string token = CreateJwt(
+                audience: AUDIENCE,
+                issuer: LOCAL_ISSUER,
+                signingKey: key);
+
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    key,
+                    token,
+                    authOptions: new AuthenticationOptions(
+                        Provider: authenticationProvider,
+                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER)));
+
+            Assert.AreEqual((int)HttpStatusCode.OK, postMiddlewareContext.Response.StatusCode);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(
+                expected: AuthorizationType.Authenticated.ToString(),
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
+        }
+
         /// <summary>
         /// JWT is expired and should not be accepted.
         /// </summary>

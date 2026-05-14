@@ -152,49 +152,57 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         private static DocumentNode EnsureQueryHasAtLeastOneField(DocumentNode queryNode, ISchemaBuilder sb)
         {
-            ImmutableArray<IDefinitionNode>.Builder rewritten = ImmutableArray.CreateBuilder<IDefinitionNode>(queryNode.Definitions.Count);
-            bool placeholderInjected = false;
-
-            foreach (IDefinitionNode definition in queryNode.Definitions)
+            // Locate the empty Query definition, if any. HotChocolate's DocumentNode exposes
+            // Definitions as an ordered IReadOnlyList with no by-name index, so this is the
+            // cheapest available lookup. Common case: Query has fields and we return unchanged
+            // without allocating a new definitions list.
+            int emptyQueryIndex = -1;
+            for (int i = 0; i < queryNode.Definitions.Count; i++)
             {
-                if (definition is ObjectTypeDefinitionNode objectType
-                    && objectType.Name.Value == "Query"
-                    && objectType.Fields.Count == 0)
+                if (queryNode.Definitions[i] is ObjectTypeDefinitionNode { Name.Value: "Query", Fields.Count: 0 })
                 {
-                    FieldDefinitionNode placeholderField = new(
-                        location: null,
-                        new NameNode(EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME),
-                        new StringValueNode(
-                            "Internal placeholder; only present when no entity contributes a query field. "
-                            + "Always returns null and is never reachable in normal operation."),
-                        arguments: new List<InputValueDefinitionNode>(),
-                        type: new NamedTypeNode(new NameNode("String")),
-                        directives: new List<DirectiveNode>());
-
-                    rewritten.Add(new ObjectTypeDefinitionNode(
-                        objectType.Location,
-                        objectType.Name,
-                        objectType.Description,
-                        objectType.Directives,
-                        objectType.Interfaces,
-                        new List<FieldDefinitionNode> { placeholderField }));
-                    placeholderInjected = true;
-                }
-                else
-                {
-                    rewritten.Add(definition);
+                    emptyQueryIndex = i;
+                    break;
                 }
             }
 
-            if (placeholderInjected)
+            if (emptyQueryIndex < 0)
             {
-                // HC v16 requires every field to have a resolver; bind a no-op that always
-                // returns null. The field is unreachable in normal operation because callers
-                // for empty-Query configurations never issue GraphQL requests.
-                sb.AddResolver("Query", EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME, _ => null);
+                return queryNode;
             }
 
-            return new DocumentNode(rewritten.ToImmutable());
+            ObjectTypeDefinitionNode emptyQuery = (ObjectTypeDefinitionNode)queryNode.Definitions[emptyQueryIndex];
+
+            FieldDefinitionNode placeholderField = new(
+                location: null,
+                new NameNode(EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME),
+                new StringValueNode(
+                    "Internal placeholder; only present when no entity contributes a query field. "
+                    + "Always returns null and is never reachable in normal operation."),
+                arguments: new List<InputValueDefinitionNode>(),
+                type: new NamedTypeNode(new NameNode("String")),
+                directives: new List<DirectiveNode>());
+
+            ObjectTypeDefinitionNode rewrittenQuery = new(
+                emptyQuery.Location,
+                emptyQuery.Name,
+                emptyQuery.Description,
+                emptyQuery.Directives,
+                emptyQuery.Interfaces,
+                new List<FieldDefinitionNode> { placeholderField });
+
+            // HC v16 requires every field to have a resolver; bind a no-op that always
+            // returns null. The field is unreachable in normal operation because callers
+            // for empty-Query configurations never issue GraphQL requests.
+            sb.AddResolver("Query", EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME, _ => null);
+
+            IDefinitionNode[] newDefinitions = new IDefinitionNode[queryNode.Definitions.Count];
+            for (int i = 0; i < queryNode.Definitions.Count; i++)
+            {
+                newDefinitions[i] = i == emptyQueryIndex ? rewrittenQuery : queryNode.Definitions[i];
+            }
+
+            return new DocumentNode(newDefinitions);
         }
 
         /// <summary>

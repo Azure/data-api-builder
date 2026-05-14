@@ -1001,6 +1001,7 @@ namespace Azure.DataApiBuilder.Service
                         options.MapInboundClaims = false;
                         options.Audience = authOptions.Jwt!.Audience;
                         options.Authority = authOptions.Jwt!.Issuer;
+                        options.RequireHttpsMetadata = mode is HostMode.Production;
                         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                         {
                             // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInRole()

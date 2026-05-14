@@ -49,6 +49,7 @@ public class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearerOptions
         options.MapInboundClaims = false;
         options.Audience = newAuthOptions.Jwt.Audience;
         options.Authority = newAuthOptions.Jwt.Issuer;
+        options.RequireHttpsMetadata = _runtimeConfigProvider.GetConfig().Runtime?.Host?.Mode is HostMode.Production;
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
         {
             ValidAudience = newAuthOptions.Jwt.Audience,

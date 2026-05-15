@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// </summary>
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
-        public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.DeleteRecord == true;
+        public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.DeleteRecord ?? true;
 
         /// <summary>
         /// Gets the metadata for the delete-record tool, including its name, description, and input schema.

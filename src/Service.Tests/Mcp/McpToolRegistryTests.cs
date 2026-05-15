@@ -461,6 +461,39 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.ExecuteEntityTool().IsEnabled(config));
         }
 
+        /// <summary>
+        /// Validates that all built-in tools default to enabled when runtime.mcp is not configured
+        /// (McpDmlTools is null because Runtime.Mcp is null).
+        /// </summary>
+        [TestMethod]
+        public void BuiltInTools_IsEnabled_DefaultsToTrueWhenMcpNotConfigured()
+        {
+            // Arrange - config with no Mcp section at all → McpDmlTools returns null
+            RuntimeConfig config = new(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: null,
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            // Verify precondition: McpDmlTools is null
+            Assert.IsNull(config.McpDmlTools);
+
+            // Act & Assert - all built-in tools should default to enabled
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.CreateRecordTool().IsEnabled(config));
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.DeleteRecordTool().IsEnabled(config));
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.ReadRecordsTool().IsEnabled(config));
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.UpdateRecordTool().IsEnabled(config));
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.DescribeEntitiesTool().IsEnabled(config));
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.AggregateRecordsTool().IsEnabled(config));
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.ExecuteEntityTool().IsEnabled(config));
+        }
+
         #region Private helpers
 
         /// <summary>

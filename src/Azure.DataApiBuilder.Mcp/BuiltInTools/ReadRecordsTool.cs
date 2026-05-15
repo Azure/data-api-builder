@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
     {
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
-        public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.ReadRecords == true;
+        public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.ReadRecords ?? true;
 
         public Tool GetToolMetadata()
         {

@@ -141,7 +141,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Name of the hidden placeholder field added to <c>Query</c> when no entity contributes
         /// a query field, used to keep the schema valid for HC v16's eager validation.
         /// </summary>
-        private const string EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME = "_dab";
+        internal const string EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME = "_dab";
 
         /// <summary>
         /// If the generated <c>Query</c> object type has no fields, append a hidden placeholder
@@ -150,7 +150,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// otherwise-empty schemas (GraphQL globally disabled, all entities opting out,
         /// no entities configured).
         /// </summary>
-        private static DocumentNode EnsureQueryHasAtLeastOneField(DocumentNode queryNode, ISchemaBuilder sb)
+        /// <remarks>
+        /// Marked <c>internal</c> rather than <c>private</c> so the test project (granted access
+        /// via <c>InternalsVisibleTo</c> in <c>SqlMetadataProvider.cs</c>) can exercise the rewrite
+        /// logic directly without spinning up the full schema builder pipeline.
+        /// </remarks>
+        internal static DocumentNode EnsureQueryHasAtLeastOneField(DocumentNode queryNode, ISchemaBuilder sb)
         {
             // Locate the empty Query definition, if any. HotChocolate's DocumentNode exposes
             // Definitions as an ordered IReadOnlyList with no by-name index, so this is the

@@ -27,6 +27,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// </summary>
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
+        public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.DescribeEntities == true;
+
         /// <summary>
         /// Gets the metadata for the describe-entities tool, including its name, description, and input schema.
         /// </summary>

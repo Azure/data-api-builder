@@ -10,6 +10,7 @@ using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -293,6 +294,173 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             );
         }
 
+        /// <summary>
+        /// Parameterized test verifying GetEnabledTools returns only enabled tools.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(1, 1, DisplayName = "Mixed: 1 enabled, 1 disabled → returns 1")]
+        [DataRow(3, 0, DisplayName = "All enabled → returns all")]
+        [DataRow(0, 2, DisplayName = "All disabled → returns 0")]
+        public void GetEnabledTools_ReturnsCorrectCount(int enabledCount, int disabledCount)
+        {
+            // Arrange
+            McpToolRegistry registry = new();
+            for (int i = 0; i < enabledCount; i++)
+            {
+                registry.RegisterTool(new MockMcpTool($"enabled_{i}", ToolType.BuiltIn, isEnabledFunc: _ => true));
+            }
+
+            for (int i = 0; i < disabledCount; i++)
+            {
+                registry.RegisterTool(new MockMcpTool($"disabled_{i}", ToolType.BuiltIn, isEnabledFunc: _ => false));
+            }
+
+            RuntimeConfig config = CreateRuntimeConfig();
+
+            // Act
+            List<Tool> result = registry.GetEnabledTools(config).ToList();
+
+            // Assert
+            Assert.AreEqual(enabledCount, result.Count);
+        }
+
+        /// <summary>
+        /// Test that GetEnabledTools passes the RuntimeConfig to IsEnabled so tools
+        /// can check DmlToolsConfig flags.
+        /// </summary>
+        [TestMethod]
+        public void GetEnabledTools_PassesConfigToIsEnabled()
+        {
+            // Arrange
+            McpToolRegistry registry = new();
+
+            // This tool checks config.McpDmlTools?.CreateRecord
+            IMcpTool configAwareTool = new MockMcpTool(
+                "create_record", ToolType.BuiltIn,
+                isEnabledFunc: config => config.McpDmlTools?.CreateRecord == true);
+
+            registry.RegisterTool(configAwareTool);
+
+            // Config with create-record disabled
+            DmlToolsConfig disabledConfig = new(createRecord: false);
+            RuntimeConfig configDisabled = CreateRuntimeConfig(disabledConfig);
+
+            // Config with create-record enabled
+            DmlToolsConfig enabledConfig = new(createRecord: true);
+            RuntimeConfig configEnabled = CreateRuntimeConfig(enabledConfig);
+
+            // Act & Assert - disabled
+            List<Tool> disabledTools = registry.GetEnabledTools(configDisabled).ToList();
+            Assert.AreEqual(0, disabledTools.Count);
+
+            // Act & Assert - enabled
+            List<Tool> enabledTools = registry.GetEnabledTools(configEnabled).ToList();
+            Assert.AreEqual(1, enabledTools.Count);
+            Assert.AreEqual("create_record", enabledTools[0].Name);
+        }
+
+        /// <summary>
+        /// Test that GetEnabledTools correctly filters a mix of built-in and custom tools.
+        /// Custom tools (always enabled) should remain while disabled built-in tools are excluded.
+        /// </summary>
+        [TestMethod]
+        public void GetEnabledTools_MixedBuiltInAndCustomTools()
+        {
+            // Arrange
+            McpToolRegistry registry = new();
+            registry.RegisterTool(new MockMcpTool("describe_entities", ToolType.BuiltIn, isEnabledFunc: _ => true));
+            registry.RegisterTool(new MockMcpTool("create_record", ToolType.BuiltIn, isEnabledFunc: _ => false));
+            registry.RegisterTool(new MockMcpTool("delete_record", ToolType.BuiltIn, isEnabledFunc: _ => false));
+            registry.RegisterTool(new MockMcpTool("read_records", ToolType.BuiltIn, isEnabledFunc: _ => true));
+            registry.RegisterTool(new MockMcpTool("get_books", ToolType.Custom, isEnabledFunc: _ => true));
+
+            RuntimeConfig config = CreateRuntimeConfig();
+
+            // Act
+            List<Tool> enabledTools = registry.GetEnabledTools(config).ToList();
+
+            // Assert - create_record and delete_record should be filtered out
+            Assert.AreEqual(3, enabledTools.Count);
+            Assert.IsTrue(enabledTools.Any(t => t.Name == "describe_entities"));
+            Assert.IsTrue(enabledTools.Any(t => t.Name == "read_records"));
+            Assert.IsTrue(enabledTools.Any(t => t.Name == "get_books"));
+            Assert.IsFalse(enabledTools.Any(t => t.Name == "create_record"));
+            Assert.IsFalse(enabledTools.Any(t => t.Name == "delete_record"));
+        }
+
+        /// <summary>
+        /// Test that GetAllTools still returns all tools regardless of enabled state.
+        /// </summary>
+        [TestMethod]
+        public void GetAllTools_IncludesDisabledTools()
+        {
+            // Arrange
+            McpToolRegistry registry = new();
+            registry.RegisterTool(new MockMcpTool("enabled_tool", ToolType.BuiltIn, isEnabledFunc: _ => true));
+            registry.RegisterTool(new MockMcpTool("disabled_tool", ToolType.BuiltIn, isEnabledFunc: _ => false));
+
+            // Act
+            List<Tool> allTools = registry.GetAllTools().ToList();
+
+            // Assert - GetAllTools should not filter
+            Assert.AreEqual(2, allTools.Count);
+        }
+
+        /// <summary>
+        /// Validates IsEnabled for each real built-in tool matches the DmlToolsConfig flag value.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, DisplayName = "All DML tools enabled")]
+        [DataRow(false, DisplayName = "All DML tools disabled")]
+        public void BuiltInTools_IsEnabled_MatchesDmlToolsConfigFlag(bool allEnabled)
+        {
+            // Arrange
+            DmlToolsConfig dmlConfig = DmlToolsConfig.FromBoolean(allEnabled);
+            RuntimeConfig config = CreateRuntimeConfig(dmlConfig);
+
+            IMcpTool[] builtInTools = new IMcpTool[]
+            {
+                new Azure.DataApiBuilder.Mcp.BuiltInTools.CreateRecordTool(),
+                new Azure.DataApiBuilder.Mcp.BuiltInTools.DeleteRecordTool(),
+                new Azure.DataApiBuilder.Mcp.BuiltInTools.ReadRecordsTool(),
+                new Azure.DataApiBuilder.Mcp.BuiltInTools.UpdateRecordTool(),
+                new Azure.DataApiBuilder.Mcp.BuiltInTools.DescribeEntitiesTool(),
+                new Azure.DataApiBuilder.Mcp.BuiltInTools.AggregateRecordsTool(),
+                new Azure.DataApiBuilder.Mcp.BuiltInTools.ExecuteEntityTool()
+            };
+
+            // Act & Assert
+            foreach (IMcpTool tool in builtInTools)
+            {
+                Assert.AreEqual(allEnabled, tool.IsEnabled(config),
+                    $"{tool.GetType().Name}.IsEnabled should be {allEnabled}");
+            }
+        }
+
+        /// <summary>
+        /// Validates that individual DML tool flags are respected (e.g., only create-record disabled).
+        /// </summary>
+        [TestMethod]
+        public void BuiltInTools_IsEnabled_RespectsIndividualFlags()
+        {
+            // Arrange - only create-record and delete-record disabled
+            DmlToolsConfig selectiveConfig = new(
+                createRecord: false,
+                deleteRecord: false);
+            RuntimeConfig config = CreateRuntimeConfig(selectiveConfig);
+
+            // Act & Assert - disabled tools
+            Assert.IsFalse(new Azure.DataApiBuilder.Mcp.BuiltInTools.CreateRecordTool().IsEnabled(config));
+            Assert.IsFalse(new Azure.DataApiBuilder.Mcp.BuiltInTools.DeleteRecordTool().IsEnabled(config));
+
+            // Act & Assert - remaining tools should be enabled (default = true)
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.ReadRecordsTool().IsEnabled(config));
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.UpdateRecordTool().IsEnabled(config));
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.DescribeEntitiesTool().IsEnabled(config));
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.AggregateRecordsTool().IsEnabled(config));
+            Assert.IsTrue(new Azure.DataApiBuilder.Mcp.BuiltInTools.ExecuteEntityTool().IsEnabled(config));
+        }
+
         #region Private helpers
 
         /// <summary>
@@ -301,14 +469,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         private class MockMcpTool : IMcpTool
         {
             private readonly string _toolName;
+            private readonly Func<RuntimeConfig, bool>? _isEnabledFunc;
 
-            public MockMcpTool(string toolName, ToolType toolType)
+            public MockMcpTool(string toolName, ToolType toolType, Func<RuntimeConfig, bool>? isEnabledFunc = null)
             {
                 _toolName = toolName;
                 ToolType = toolType;
+                _isEnabledFunc = isEnabledFunc;
             }
 
             public ToolType ToolType { get; }
+
+            public bool IsEnabled(RuntimeConfig config)
+            {
+                return _isEnabledFunc?.Invoke(config) ?? true;
+            }
 
             public Tool GetToolMetadata()
             {
@@ -330,6 +505,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 // Not used in these tests
                 throw new NotImplementedException();
             }
+        }
+
+        /// <summary>
+        /// Creates a RuntimeConfig with the specified DmlToolsConfig for testing.
+        /// </summary>
+        private static RuntimeConfig CreateRuntimeConfig(DmlToolsConfig? dmlTools = null)
+        {
+            return new RuntimeConfig(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(Enabled: true, Path: "/mcp", DmlTools: dmlTools),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
         }
 
         #endregion Private helpers

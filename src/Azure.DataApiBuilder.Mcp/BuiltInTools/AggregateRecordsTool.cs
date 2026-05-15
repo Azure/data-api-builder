@@ -38,6 +38,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
     {
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
+        public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.AggregateRecords == true;
+
         private static readonly HashSet<string> _validFunctions = new(StringComparer.OrdinalIgnoreCase) { "count", "avg", "sum", "min", "max" };
         private static readonly HashSet<string> _validHavingOperators = new(StringComparer.OrdinalIgnoreCase) { "eq", "neq", "gt", "gte", "lt", "lte", "in" };
 

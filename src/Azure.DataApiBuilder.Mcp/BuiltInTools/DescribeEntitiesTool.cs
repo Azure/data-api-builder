@@ -479,10 +479,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <summary>
         /// Builds the parameter list for a stored procedure entity.
         /// Each entry has: name, required, default, description.
-        /// When a parameter exists in both config and DB metadata, config values take precedence.
-        /// When a value is missing from config, the DB value is used.
-        /// description is only available from config.
-        /// When DB metadata is not available, the config parameters are returned as-is.
+        /// Per-field rules agreed in issue #3400:
+        ///   name        - DB metadata is the source of truth (config cannot override).
+        ///   required    - config-only override; defaults to true when not set in config.
+        ///                 (SQL Server's is_nullable describes the type, not whether the
+        ///                  parameter must be supplied at call time, so it is unreliable.)
+        ///   default     - config-only. T-SQL parameter defaults are not exposed as
+        ///                 structured metadata, so they cannot be discovered from the DB.
+        ///   description - config-only. SQL Server has no description column for parameters.
+        /// When DB metadata is unavailable, fall back to the config parameters and apply
+        /// the same per-field rules so the response shape is consistent.
         /// </summary>
         /// <param name="configParameters">Parameters listed in the runtime config. May be null or empty.</param>
         /// <param name="databaseObject">DB metadata for the entity. Expected to be a <see cref="DatabaseStoredProcedure"/>; may be null.</param>
@@ -506,22 +512,22 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             if (dbParameters is { Count: > 0 })
             {
                 List<object> result = new(dbParameters.Count);
-                foreach (KeyValuePair<string, ParameterDefinition> dbEntry in dbParameters)
+                foreach (string parameterName in dbParameters.Keys)
                 {
-                    configByName.TryGetValue(dbEntry.Key, out ParameterMetadata? config);
-                    result.Add(BuildParameterEntry(dbEntry.Key, config, dbEntry.Value));
+                    configByName.TryGetValue(parameterName, out ParameterMetadata? config);
+                    result.Add(BuildParameterEntry(parameterName, config));
                 }
 
                 return result;
             }
 
-            // No DB metadata: return the config parameters as-is.
+            // No DB metadata: emit config parameters with the same per-field rules.
             List<object> configOnly = new();
             if (configParameters is not null)
             {
                 foreach (ParameterMetadata parameter in configParameters)
                 {
-                    configOnly.Add(BuildParameterEntry(parameter.Name, parameter, dbParameter: null));
+                    configOnly.Add(BuildParameterEntry(parameter.Name, parameter));
                 }
             }
 
@@ -530,12 +536,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
         private static Dictionary<string, object?> BuildParameterEntry(
             string name,
-            ParameterMetadata? config,
-            ParameterDefinition? dbParameter) => new()
+            ParameterMetadata? config) => new()
             {
                 ["name"] = name,
-                ["required"] = config?.Required ?? dbParameter?.Required ?? false,
-                ["default"] = config?.Default ?? dbParameter?.Default,
+                ["required"] = config?.Required ?? true,
+                ["default"] = config?.Default,
                 ["description"] = config?.Description ?? string.Empty
             };
 

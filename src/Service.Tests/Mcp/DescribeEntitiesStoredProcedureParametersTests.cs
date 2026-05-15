@@ -35,7 +35,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         private const string TEST_ENTITY_NAME = "GetBook";
 
         /// <summary>
-        /// When config has no parameters, the tool reads parameter metadata from the DB.
+        /// When config has no parameters, the tool discovers parameter NAMES from the DB.
+        /// Per rules 2/3/4 of issue #3400, required defaults to true and default/description
+        /// stay null/empty because they are config-only.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_DiscoversParametersFromMetadata_WhenConfigParametersMissing()
@@ -50,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             Assert.AreEqual(2, parameters.GetArrayLength());
             AssertParameter(parameters, name: "id", expectedRequired: true, expectedDefault: null, expectedDescription: string.Empty);
-            AssertParameter(parameters, name: "locale", expectedRequired: false, expectedDefault: "en-US", expectedDescription: string.Empty);
+            AssertParameter(parameters, name: "locale", expectedRequired: true, expectedDefault: null, expectedDescription: string.Empty);
         }
 
         /// <summary>
@@ -132,6 +134,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         /// <summary>
         /// When the DB reports no parameters, the tool falls back to the config parameters.
+        /// Per rule 2 of issue #3400, a config entry without an explicit Required value
+        /// still defaults to required=true.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_EmptyDbParameters_FallsBackToConfigParameters()
@@ -144,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 dbParameters: new Dictionary<string, ParameterDefinition>());
 
             Assert.AreEqual(1, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "id", expectedRequired: false, expectedDefault: null, expectedDescription: "Book id");
+            AssertParameter(parameters, name: "id", expectedRequired: true, expectedDefault: null, expectedDescription: "Book id");
         }
 
         /// <summary>

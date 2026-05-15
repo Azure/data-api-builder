@@ -26,8 +26,8 @@ using Moq;
 namespace Azure.DataApiBuilder.Service.Tests.Mcp
 {
     /// <summary>
-    /// Validates the stored-procedure parameter merge contract used by
-    /// <see cref="DescribeEntitiesTool.BuildParameterMetadataInfo"/>. See that method's XML doc for the rules.
+    /// Tests how DescribeEntitiesTool merges stored-procedure parameter info from the DB and the config.
+    /// See <see cref="DescribeEntitiesTool.BuildParameterMetadataInfo"/> for the rules.
     /// </summary>
     [TestClass]
     public class DescribeEntitiesStoredProcedureParametersTests
@@ -35,8 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         private const string TEST_ENTITY_NAME = "GetBook";
 
         /// <summary>
-        /// Parameters discovered from DB metadata but absent from config are still surfaced. Their
-        /// <c>required</c> flag defaults to <c>true</c>; <c>default</c> and <c>description</c> are config-only and absent.
+        /// When config has no parameters, the tool reads parameter metadata from the DB.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_DiscoversParametersFromMetadata_WhenConfigParametersMissing()
@@ -45,23 +44,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 configParameters: null,
                 dbParameters: new Dictionary<string, ParameterDefinition>
                 {
-                    ["id"] = new() { Required = true, Description = "Book id (ignored: description is config-only)" },
-                    ["locale"] = new() { Required = false, Default = "en-US", Description = "Locale (ignored)" }
+                    ["id"] = new() { Required = true, Description = "DB description for id" },
+                    ["locale"] = new() { Required = false, Default = "en-US", Description = "DB description for locale" }
                 });
 
             Assert.AreEqual(2, parameters.GetArrayLength());
             AssertParameter(parameters, name: "id", expectedRequired: true, expectedDefault: null, expectedDescription: string.Empty);
-            AssertParameter(parameters, name: "locale", expectedRequired: true, expectedDefault: null, expectedDescription: string.Empty);
+            AssertParameter(parameters, name: "locale", expectedRequired: false, expectedDefault: "en-US", expectedDescription: string.Empty);
         }
 
         /// <summary>
-        /// When a parameter exists in both config and DB, config wins for <c>default</c> and <c>description</c>.
-        /// <c>required</c> is derived from the presence of a config <c>default</c>: a config-supplied default makes
-        /// the parameter optional. Parameters present only in DB default to <c>required: true</c> with no
-        /// <c>default</c> or <c>description</c>.
+        /// When a parameter is in both config and DB, config values take precedence.
+        /// Parameters that are only in the DB use DB values.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_ConfigOverridesDatabaseMetadata_AndDbOnlyParameterDefaultsToRequired()
+        public async Task DescribeEntities_ConfigOverridesDatabaseMetadata_ForRequiredAndDefault()
         {
             JsonElement parameters = await RunDescribeAsync(
                 configParameters: new List<ParameterMetadata>
@@ -70,23 +67,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 },
                 dbParameters: new Dictionary<string, ParameterDefinition>
                 {
-                    ["id"] = new() { Required = false, Default = "1", Description = "Database description" },
-                    ["tenant"] = new() { Required = true, Description = "Tenant from DB (ignored)" }
+                    ["id"] = new() { Required = false, Default = "1", Description = "DB description for id" },
+                    ["tenant"] = new() { Required = true, Description = "DB description for tenant" }
                 });
 
             Assert.AreEqual(2, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "id", expectedRequired: false, expectedDefault: "42", expectedDescription: "Config description");
+            AssertParameter(parameters, name: "id", expectedRequired: true, expectedDefault: "42", expectedDescription: "Config description");
             AssertParameter(parameters, name: "tenant", expectedRequired: true, expectedDefault: null, expectedDescription: string.Empty);
         }
 
         /// <summary>
-        /// A config-supplied <c>default</c> makes the parameter optional in the emitted metadata, regardless of
-        /// what the DB metadata reports for <c>Required</c>. This is the same contract used by
-        /// <c>OpenApiDocumentor</c>, <c>RequestValidator</c> and <c>SqlExecuteQueryStructure</c>
-        /// (the <c>HasConfigDefault</c> signal).
+        /// Config's Required value overrides the DB's Required value.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_ConfigDefaultMakesParameterOptional()
+        public async Task DescribeEntities_ConfigRequiredFalse_OverridesDbRequiredTrue()
         {
             JsonElement parameters = await RunDescribeAsync(
                 configParameters: new List<ParameterMetadata>
@@ -95,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 },
                 dbParameters: new Dictionary<string, ParameterDefinition>
                 {
-                    ["locale"] = new() { Required = true, Description = "DB description (ignored)" }
+                    ["locale"] = new() { Required = true, Description = "DB description for locale" }
                 });
 
             Assert.AreEqual(1, parameters.GetArrayLength());
@@ -103,11 +97,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// A parameter listed in config without a <c>default</c> is reported as required, even when the user did
-        /// not specify <c>required</c> in the JSON (which deserializes the non-nullable bool to <c>false</c>).
+        /// Config's Required value overrides the DB's Required value even when no Default is set.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_ConfigParameterWithoutDefault_IsRequired_EvenWhenRequiredOmitted()
+        public async Task DescribeEntities_ConfigRequiredFalse_OverridesDbRequiredTrue_WhenNoDefault()
         {
             JsonElement parameters = await RunDescribeAsync(
                 configParameters: new List<ParameterMetadata>
@@ -120,12 +113,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 });
 
             Assert.AreEqual(1, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "id", expectedRequired: true, expectedDefault: null, expectedDescription: "Book id");
+            AssertParameter(parameters, name: "id", expectedRequired: false, expectedDefault: null, expectedDescription: "Book id");
         }
 
         /// <summary>
-        /// A stored procedure with no parameters surfaces an empty <c>parameters</c> array when neither
-        /// DB metadata nor config lists any.
+        /// A stored procedure with no parameters returns an empty parameters array.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_StoredProcedureWithNoParameters_EmitsEmptyParametersArray()
@@ -139,9 +131,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Defensive coverage for the empty-DB-parameters branch: when DB metadata reports no parameters
-        /// but config lists some (a degenerate state the metadata provider validates against at startup),
-        /// the config entries are surfaced via the fallback path so the response stays useful.
+        /// When the DB reports no parameters, the tool falls back to the config parameters.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_EmptyDbParameters_FallsBackToConfigParameters()
@@ -154,12 +144,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 dbParameters: new Dictionary<string, ParameterDefinition>());
 
             Assert.AreEqual(1, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "id", expectedRequired: true, expectedDefault: null, expectedDescription: "Book id");
+            AssertParameter(parameters, name: "id", expectedRequired: false, expectedDefault: null, expectedDescription: "Book id");
         }
 
         /// <summary>
-        /// Degraded fallback: when DB metadata is unavailable for the entity, the tool surfaces config-declared
-        /// parameters as-is so the response is still useful.
+        /// When DB metadata is not available, the tool falls back to the config parameters.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_FallsBackToConfigParameters_WhenDatabaseMetadataUnavailable()
@@ -178,12 +167,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Builds the in-memory DI container, executes <see cref="DescribeEntitiesTool"/>, and returns the
-        /// <c>parameters</c> array of the single emitted entity.
+        /// Sets up DI, runs DescribeEntitiesTool, and returns the parameters array of the one entity.
         /// </summary>
-        /// <param name="configParameters">Config-declared parameters for the entity, or <c>null</c> for none.</param>
-        /// <param name="dbParameters">DB-discovered parameters for the entity, or <c>null</c> to simulate the
-        /// metadata provider not having an entry for the entity (degraded path).</param>
+        /// <param name="configParameters">Parameters listed in config, or null for none.</param>
+        /// <param name="dbParameters">Parameters reported by DB metadata, or null to simulate the
+        /// metadata provider not knowing about the entity.</param>
         private static async Task<JsonElement> RunDescribeAsync(
             List<ParameterMetadata>? configParameters,
             Dictionary<string, ParameterDefinition>? dbParameters)
@@ -208,9 +196,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Asserts that a parameter in the emitted JSON array matches the expected merge result.
+        /// Checks that one parameter in the JSON array has the expected required, default, and description.
         /// </summary>
-        /// <param name="expectedDefault">Expected <c>default</c> value as a string, or <c>null</c> to assert that the JSON value is <c>null</c>.</param>
+        /// <param name="expectedDefault">Expected default value, or null to assert the JSON value is null.</param>
         private static void AssertParameter(
             JsonElement parameters,
             string name,
@@ -314,8 +302,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Registers a mock metadata provider. When <paramref name="dbObject"/> is <c>null</c>, the provider
-        /// is wired up but reports no mapping for the entity (simulates the "metadata not available" path).
+        /// Registers a mock metadata provider. If <paramref name="dbObject"/> is null, the provider has
+        /// no entry for the entity (simulates DB metadata not available).
         /// </summary>
         private static void RegisterMetadataProvider(ServiceCollection services, string entityName, DatabaseObject? dbObject)
         {

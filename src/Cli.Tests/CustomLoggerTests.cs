@@ -23,8 +23,8 @@ public class CustomLoggerTests
     public void ResetMcpStaticState()
     {
         Cli.Utils.IsMcpStdioMode = false;
-        Cli.Utils.IsLogLevelOverriddenByCli = false;
-        Cli.Utils.IsLogLevelOverriddenByConfig = false;
+        Cli.Utils.IsCliOverriding = false;
+        Cli.Utils.IsConfigOverriding = false;
         Cli.Utils.CliLogLevel = LogLevel.Information;
         Cli.Utils.ConfigLogLevel = LogLevel.Information;
     }
@@ -114,7 +114,7 @@ public class CustomLoggerTests
     public void Mcp_CliOverride_WritesToStderrAndHonorsCliLevel()
     {
         Cli.Utils.IsMcpStdioMode = true;
-        Cli.Utils.IsLogLevelOverriddenByCli = true;
+        Cli.Utils.IsCliOverriding = true;
         Cli.Utils.CliLogLevel = LogLevel.Warning;
 
         (string stdout, string stderr) = CaptureConsole(() =>
@@ -140,7 +140,7 @@ public class CustomLoggerTests
     public void Mcp_ConfigOverride_WritesToStderrAndHonorsConfigLevel()
     {
         Cli.Utils.IsMcpStdioMode = true;
-        Cli.Utils.IsLogLevelOverriddenByConfig = true;
+        Cli.Utils.IsConfigOverriding = true;
         Cli.Utils.ConfigLogLevel = LogLevel.Information;
 
         (string stdout, string stderr) = CaptureConsole(() =>
@@ -163,9 +163,9 @@ public class CustomLoggerTests
     public void Mcp_CliOverridePrecedesConfigOverride()
     {
         Cli.Utils.IsMcpStdioMode = true;
-        Cli.Utils.IsLogLevelOverriddenByCli = true;
+        Cli.Utils.IsCliOverriding = true;
         Cli.Utils.CliLogLevel = LogLevel.Warning;
-        Cli.Utils.IsLogLevelOverriddenByConfig = true;
+        Cli.Utils.IsConfigOverriding = true;
         Cli.Utils.ConfigLogLevel = LogLevel.Information;
 
         (_, string stderr) = CaptureConsole(() =>

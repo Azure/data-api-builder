@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Service
     {
         public static LogLevel MinimumLogLevel = LogLevel.Error;
 
-        public static bool IsLogLevelOverriddenByCli;
+        public static bool IsCliOverriding;
 
         public static AzureLogAnalyticsCustomLogCollector CustomLogCollector = new();
         public static ApplicationInsightsOptions AppInsightsOptions = new();
@@ -972,7 +972,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider, LogLevelInitializer logLevelInitializer)
         {
-            if (!IsLogLevelOverriddenByCli)
+            if (!IsCliOverriding)
             {
                 // If the log level is not overridden by command line arguments specified through CLI,
                 // attempt to get the runtime config to determine the loglevel based on host.mode.

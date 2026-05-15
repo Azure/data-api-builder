@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service
                     // LogLevelProvider was already initialized in StartEngine before CreateHostBuilder.
                     // Use the already-set values to avoid re-parsing args.
                     Startup.MinimumLogLevel = LogLevelProvider.CurrentLogLevel;
-                    Startup.IsLogLevelOverriddenByCli = LogLevelProvider.IsCliOverriding;
+                    Startup.IsCliOverriding = LogLevelProvider.IsCliOverriding;
                     ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel, stdio: runMcpStdio);
                     ILogger<Startup> startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);

@@ -200,6 +200,39 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Successive agent calls must each succeed and overwrite the previous agent-set level
+        /// — covering the full range from <see cref="LogLevel.Debug"/> (most verbose) to
+        /// <see cref="LogLevel.Critical"/> (most restrictive). This locks in the sticky
+        /// behavior of <see cref="DynamicLogLevelProvider.IsAgentOverriding"/>: once the agent
+        /// has taken control, every subsequent agent call wins, the flag stays set, and no
+        /// hot-reload of the runtime config can sneak in between calls to silently flip the
+        /// level back. The MCP spec doesn't define a "none" level, so the strictest valid
+        /// MCP level <c>"emergency"</c> (which maps to <see cref="LogLevel.Critical"/>) is
+        /// used as the high-end of the range.
+        /// </summary>
+        [TestMethod]
+        public void UpdateFromMcp_SuccessiveCalls_OverwriteAndKeepAgentOverriding()
+        {
+            // Arrange — start in the "no overrides" state.
+            DynamicLogLevelProvider provider = new();
+            provider.SetInitialLogLevel(LogLevel.Information, isCliOverriding: false, isConfigOverriding: false);
+
+            // Act + Assert — Debug → Critical (verbose to most-restrictive).
+            Assert.IsTrue(provider.UpdateFromMcp("debug"));
+            Assert.AreEqual(LogLevel.Debug, provider.CurrentLogLevel);
+            Assert.IsTrue(provider.IsAgentOverriding);
+
+            Assert.IsTrue(provider.UpdateFromMcp("emergency"));
+            Assert.AreEqual(LogLevel.Critical, provider.CurrentLogLevel);
+            Assert.IsTrue(provider.IsAgentOverriding, "Agent override must remain sticky across successive agent calls.");
+
+            // Act + Assert — Critical → Debug (reverse direction).
+            Assert.IsTrue(provider.UpdateFromMcp("debug"));
+            Assert.AreEqual(LogLevel.Debug, provider.CurrentLogLevel);
+            Assert.IsTrue(provider.IsAgentOverriding);
+        }
+
+        /// <summary>
         /// Builds a minimal <see cref="RuntimeConfig"/> whose
         /// <c>runtime.telemetry.log-level</c> dictionary explicitly pins the default level.
         /// Used by hot-reload tests; not intended to model a complete production config.

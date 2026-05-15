@@ -178,9 +178,28 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                         try
                         {
+                            DatabaseObject? databaseObject = null;
+                            if (entity.Source.Type == EntitySourceType.StoredProcedure)
+                            {
+                                databaseObject = McpMetadataHelper.TryResolveDatabaseObject(
+                                    entityName,
+                                    runtimeConfig,
+                                    serviceProvider,
+                                    out string resolveError,
+                                    cancellationToken);
+
+                                if (databaseObject is null)
+                                {
+                                    logger?.LogDebug(
+                                        "Could not resolve metadata for stored procedure entity {EntityName}. Falling back to config parameters. Error: {Error}",
+                                        entityName,
+                                        resolveError);
+                                }
+                            }
+
                             Dictionary<string, object?> entityInfo = nameOnly
                                 ? BuildBasicEntityInfo(entityName, entity)
-                                : BuildFullEntityInfo(entityName, entity, currentUserRole, TryResolveDatabaseObject(entityName, entity, runtimeConfig, serviceProvider, logger, cancellationToken));
+                                : BuildFullEntityInfo(entityName, entity, currentUserRole, databaseObject);
 
                             entityList.Add(entityInfo);
                         }
@@ -433,39 +452,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Tries to resolve the metadata-backed database object for an entity.
-        /// </summary>
-        private static DatabaseObject? TryResolveDatabaseObject(
-            string entityName,
-            Entity entity,
-            RuntimeConfig runtimeConfig,
-            IServiceProvider serviceProvider,
-            ILogger? logger,
-            CancellationToken cancellationToken)
-        {
-            if (entity.Source.Type != EntitySourceType.StoredProcedure)
-            {
-                return null;
-            }
-
-            if (McpMetadataHelper.TryResolveMetadata(
-                    entityName,
-                    runtimeConfig,
-                    serviceProvider,
-                    out _,
-                    out DatabaseObject dbObject,
-                    out _,
-                    out string error,
-                    cancellationToken))
-            {
-                return dbObject;
-            }
-
-            logger?.LogDebug("Could not resolve metadata for stored procedure entity {EntityName}. Falling back to config parameters. Error: {Error}", entityName, error);
-            return null;
-        }
-
-        /// <summary>
         /// Builds a list of metadata information objects from the provided collection of fields.
         /// </summary>
         /// <param name="fields">A list of <see cref="FieldMetadata"/> objects representing the fields to process. Can be null.</param>
@@ -494,7 +480,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// Merges DB-discovered stored-procedure parameters with optional config overlays (see issue #3400):
         /// <list type="bullet">
         ///   <item><description><c>name</c>: from DB metadata.</description></item>
-        ///   <item><description><c>required</c>: from config when the parameter is listed there; defaults to <c>true</c> when config is silent.</description></item>
+        ///   <item><description><c>required</c>: <c>true</c> iff config does not supply a <c>default</c>. Matches the
+        ///   <c>HasConfigDefault</c> contract used elsewhere in the engine.</description></item>
         ///   <item><description><c>default</c>, <c>description</c>: config-only (T-SQL doesn't expose them reliably).</description></item>
         /// </list>
         /// The metadata provider validates at startup that every config-listed parameter exists in DB metadata
@@ -548,7 +535,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         private static Dictionary<string, object?> BuildParameterEntry(string name, ParameterMetadata? config) => new()
         {
             ["name"] = name,
-            ["required"] = config?.Required ?? true,
+            ["required"] = config?.Default is null,
             ["default"] = config?.Default,
             ["description"] = config?.Description ?? string.Empty
         };

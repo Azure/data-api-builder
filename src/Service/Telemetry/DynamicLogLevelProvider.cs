@@ -19,11 +19,11 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
         public LogLevel CurrentLogLevel { get; private set; }
 
-        public bool IsCliOverridden { get; private set; }
+        public bool IsCliOverriding { get; private set; }
 
-        public bool IsConfigOverridden { get; private set; }
+        public bool IsConfigOverriding { get; private set; }
 
-        public bool IsAgentOverridden { get; private set; }
+        public bool IsAgentOverriding { get; private set; }
 
         /// <summary>
         /// Optional logger used to emit an Information line when the agent successfully overrides
@@ -39,21 +39,21 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// agent (MCP) overrides — see <see cref="UpdateFromMcp"/>.
         /// </summary>
         /// <param name="logLevel">The initial log level to set.</param>
-        /// <param name="isCliOverridden">Indicates whether the log level was overridden by the CLI.</param>
-        /// <param name="isConfigOverridden">Indicates whether the log level was overridden by the runtime config.</param>
-        public void SetInitialLogLevel(LogLevel logLevel = LogLevel.Error, bool isCliOverridden = false, bool isConfigOverridden = false)
+        /// <param name="isCliOverriding">Indicates whether the CLI is overriding the log level.</param>
+        /// <param name="isConfigOverriding">Indicates whether the runtime config is overriding the log level.</param>
+        public void SetInitialLogLevel(LogLevel logLevel = LogLevel.Error, bool isCliOverriding = false, bool isConfigOverriding = false)
         {
             lock (_stateLock)
             {
                 CurrentLogLevel = logLevel;
-                IsCliOverridden = isCliOverridden;
-                IsConfigOverridden = isConfigOverridden;
+                IsCliOverriding = isCliOverriding;
+                IsConfigOverriding = isConfigOverriding;
             }
         }
 
         /// <summary>
         /// Updates the current log level from a runtime-config (hot-reload) change.
-        /// Skipped when the CLI or the agent has already overridden, so neither is clobbered.
+        /// Skipped when the CLI or the agent has already overridden, so neither is overwritten.
         /// </summary>
         /// <param name="runtimeConfig">The runtime configuration to use for updating the log level.</param>
         /// <param name="loggerFilter">Optional logger filter to apply when determining the log level.</param>
@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                 // Agent override and CLI override both win over a hot-reloaded Config value.
                 // The check + assignment must be inside the lock so a concurrent UpdateFromMcp
                 // cannot slip in between the guard and the write.
-                if (IsAgentOverridden || IsCliOverridden)
+                if (IsAgentOverriding || IsCliOverriding)
                 {
                     return;
                 }
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
                 // Track if config explicitly set a non-null log level value, so callers can
                 // distinguish a config-pinned level from defaults.
-                IsConfigOverridden = runtimeConfig.HasExplicitLogLevel();
+                IsConfigOverriding = runtimeConfig.HasExplicitLogLevel();
             }
         }
 
@@ -99,19 +99,15 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             lock (_stateLock)
             {
                 CurrentLogLevel = logLevel;
-                IsAgentOverridden = true;
+                IsAgentOverriding = true;
             }
 
             // Surface the override so operators can see the agent moved the level.
             // Logged outside the lock so logger sinks can't deadlock with state mutations.
-            //
-            // Emit at max(Information, newLevel) so the audit line is never filtered by the
-            // freshly-applied level. Without this, an agent that raised the floor to Warning
-            // / Error / Critical would never see its own confirmation message because the
-            // Information line would fall below the new minimum.
-            LogLevel auditLevel = logLevel > LogLevel.Information ? logLevel : LogLevel.Information;
-            Logger?.Log(
-                auditLevel,
+            // Emitted at Information and subject to the operator's configured filter, like
+            // any other log line — the JSON-RPC request/response itself is the protocol-level
+            // audit, so there's no need to bypass the filter here.
+            Logger?.LogInformation(
                 "Log level updated to {LogLevel} via MCP logging/setLevel (agent override).",
                 logLevel);
 

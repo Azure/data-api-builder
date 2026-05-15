@@ -11,22 +11,24 @@ namespace Azure.DataApiBuilder.Core.Telemetry
     public interface ILogLevelController
     {
         /// <summary>
-        /// Gets a value indicating whether the log level was overridden by CLI arguments.
-        /// When true, runtime-config (hot-reload) updates are ignored.
+        /// Gets a value indicating whether the CLI is the source overriding the log level
+        /// (i.e., <c>--LogLevel</c> was supplied). When true, runtime-config (hot-reload)
+        /// updates are ignored.
         /// </summary>
-        bool IsCliOverridden { get; }
+        bool IsCliOverriding { get; }
 
         /// <summary>
-        /// Gets a value indicating whether the log level was explicitly set in the config file.
+        /// Gets a value indicating whether the runtime config is the source overriding the log
+        /// level (i.e., <c>runtime.telemetry.log-level</c> was explicitly set).
         /// </summary>
-        bool IsConfigOverridden { get; }
+        bool IsConfigOverriding { get; }
 
         /// <summary>
-        /// Gets a value indicating whether the log level has been overridden by an MCP
-        /// <c>logging/setLevel</c> request from the agent. When true, runtime-config (hot-reload)
-        /// updates are ignored so the agent's choice remains in effect.
+        /// Gets a value indicating whether the agent is the source overriding the log level via
+        /// an MCP <c>logging/setLevel</c> request. When true, runtime-config (hot-reload) updates
+        /// are ignored so the agent's choice remains in effect.
         /// </summary>
-        bool IsAgentOverridden { get; }
+        bool IsAgentOverriding { get; }
 
         /// <summary>
         /// Updates the log level from an MCP logging/setLevel request.

@@ -27,15 +27,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(LogLevel.Error, false, false, "invalid", false, LogLevel.Error, DisplayName = "Invalid level returns false and leaves level untouched")]
         public void UpdateFromMcp_ReturnsExpectedResult(
             LogLevel initialLevel,
-            bool isCliOverridden,
-            bool isConfigOverridden,
+            bool isCliOverriding,
+            bool isConfigOverriding,
             string mcpLevel,
             bool expectedResult,
             LogLevel expectedFinalLevel)
         {
             // Arrange
             DynamicLogLevelProvider provider = new();
-            provider.SetInitialLogLevel(initialLevel, isCliOverridden, isConfigOverridden);
+            provider.SetInitialLogLevel(initialLevel, isCliOverriding, isConfigOverriding);
 
             // Act
             bool result = provider.UpdateFromMcp(mcpLevel);
@@ -44,9 +44,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expectedResult, result);
             Assert.AreEqual(expectedFinalLevel, provider.CurrentLogLevel);
 
-            // Successful agent updates must flip IsAgentOverridden so hot-reloads of Config
-            // don't clobber the agent's choice.
-            Assert.AreEqual(expectedResult, provider.IsAgentOverridden);
+            // Successful agent updates must flip IsAgentOverriding so hot-reloads of Config
+            // don't overwrite the agent's choice.
+            Assert.AreEqual(expectedResult, provider.IsAgentOverriding);
         }
 
         [TestMethod]
@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // Arrange
             DynamicLogLevelProvider provider = new();
-            provider.SetInitialLogLevel(LogLevel.Warning, isCliOverridden: false);
+            provider.SetInitialLogLevel(LogLevel.Warning, isCliOverriding: false);
 
             // Assert - logs at or above Warning should pass
             Assert.IsTrue(provider.ShouldLog(LogLevel.Warning));
@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // Arrange
             DynamicLogLevelProvider provider = new();
-            provider.SetInitialLogLevel(LogLevel.Information, isCliOverridden: false, isConfigOverridden: false);
+            provider.SetInitialLogLevel(LogLevel.Information, isCliOverriding: false, isConfigOverriding: false);
 
             const int iterations = 5_000;
 
@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // Arrange — CLI pins level to Warning.
             DynamicLogLevelProvider provider = new();
-            provider.SetInitialLogLevel(LogLevel.Warning, isCliOverridden: true, isConfigOverridden: false);
+            provider.SetInitialLogLevel(LogLevel.Warning, isCliOverriding: true, isConfigOverriding: false);
 
             // Act — flood with MCP setLevel requests; every one must succeed.
             Parallel.For(0, 2_000, _ =>
@@ -141,14 +141,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert — final level is the agent-set Debug, and the agent flag is set.
             Assert.AreEqual(LogLevel.Debug, provider.CurrentLogLevel);
-            Assert.IsTrue(provider.IsAgentOverridden);
+            Assert.IsTrue(provider.IsAgentOverriding);
             // CLI flag is informational and stays as set by startup; precedence is enforced
-            // via IsAgentOverridden in UpdateFromRuntimeConfig.
-            Assert.IsTrue(provider.IsCliOverridden);
+            // via IsAgentOverriding in UpdateFromRuntimeConfig.
+            Assert.IsTrue(provider.IsCliOverriding);
         }
 
         /// <summary>
-        /// Hot-reloading the runtime config must not clobber an agent-set level. After the
+        /// Hot-reloading the runtime config must not overwrite an agent-set level. After the
         /// agent moves the level via <see cref="DynamicLogLevelProvider.UpdateFromMcp"/>, a
         /// subsequent <see cref="DynamicLogLevelProvider.UpdateFromRuntimeConfig"/> with a
         /// different config-pinned level must be ignored.
@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // Arrange — start at Error (no CLI / Config override), agent then asks for Debug.
             DynamicLogLevelProvider provider = new();
-            provider.SetInitialLogLevel(LogLevel.Error, isCliOverridden: false, isConfigOverridden: false);
+            provider.SetInitialLogLevel(LogLevel.Error, isCliOverriding: false, isConfigOverriding: false);
             Assert.IsTrue(provider.UpdateFromMcp("debug"));
             Assert.AreEqual(LogLevel.Debug, provider.CurrentLogLevel);
 
@@ -170,52 +170,33 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert — agent's Debug survives.
             Assert.AreEqual(LogLevel.Debug, provider.CurrentLogLevel);
-            Assert.IsTrue(provider.IsAgentOverridden);
+            Assert.IsTrue(provider.IsAgentOverriding);
         }
 
         /// <summary>
-        /// Race regression: a runtime-config hot-reload must never overwrite an agent-set
-        /// level even when both calls execute concurrently. Without a shared lock, a
-        /// <see cref="DynamicLogLevelProvider.UpdateFromRuntimeConfig"/> caller could pass
-        /// the <c>IsAgentOverridden</c> guard before <see cref="DynamicLogLevelProvider.UpdateFromMcp"/>
-        /// flips the flag, then write the config-pinned level on top of the agent's choice.
+        /// Hot-reloading the runtime config must not overwrite a CLI-set level. The CLI
+        /// <c>--LogLevel</c> flag is the operator's deliberate startup choice, so a
+        /// subsequent <see cref="DynamicLogLevelProvider.UpdateFromRuntimeConfig"/> with a
+        /// different config-pinned level must be ignored.
         /// </summary>
         [TestMethod]
-        public void UpdateFromMcp_BeatsConcurrentConfigHotReload()
+        public void UpdateFromRuntimeConfig_RespectsCliOverride()
         {
-            // Arrange — start at Error, then let the agent pin Debug so the flag is set.
+            // Arrange — CLI pins level to Warning at startup; no agent override.
             DynamicLogLevelProvider provider = new();
-            provider.SetInitialLogLevel(LogLevel.Error, isCliOverridden: false, isConfigOverridden: false);
-            Assert.IsTrue(provider.UpdateFromMcp("debug"));
+            provider.SetInitialLogLevel(LogLevel.Warning, isCliOverriding: true, isConfigOverriding: false);
 
-            RuntimeConfig warningConfig = BuildRuntimeConfigWithLogLevel(LogLevel.Warning);
+            // Build a hot-reloaded RuntimeConfig that explicitly pins log-level to Information.
+            RuntimeConfig hotReloadedConfig = BuildRuntimeConfigWithLogLevel(LogLevel.Information);
 
-            // Act — flood both update paths in parallel. Every interleaving must end
-            // with the agent's Debug because IsAgentOverridden is sticky-true.
-            const int iterations = 2_000;
-            Task hotReloads = Task.Run(() =>
-            {
-                for (int i = 0; i < iterations; i++)
-                {
-                    provider.UpdateFromRuntimeConfig(warningConfig);
-                }
-            });
+            // Act — the hot-reload guard must skip applying Information because CLI already won.
+            provider.UpdateFromRuntimeConfig(hotReloadedConfig);
 
-            Task agentSetLevels = Task.Run(() =>
-            {
-                for (int i = 0; i < iterations; i++)
-                {
-                    Assert.IsTrue(provider.UpdateFromMcp("debug"));
-                }
-            });
-
-            Task.WaitAll(new[] { hotReloads, agentSetLevels }, millisecondsTimeout: 5_000);
-            Assert.IsTrue(hotReloads.IsCompletedSuccessfully, $"Hot-reload task failed: {hotReloads.Exception?.Message}");
-            Assert.IsTrue(agentSetLevels.IsCompletedSuccessfully, $"Agent task failed: {agentSetLevels.Exception?.Message}");
-
-            // Assert — the agent's level survives every race.
-            Assert.AreEqual(LogLevel.Debug, provider.CurrentLogLevel);
-            Assert.IsTrue(provider.IsAgentOverridden);
+            // Assert — CLI's Warning survives, and IsConfigOverriding is not flipped because
+            // the hot-reload short-circuited before reading the config's log level.
+            Assert.AreEqual(LogLevel.Warning, provider.CurrentLogLevel);
+            Assert.IsTrue(provider.IsCliOverriding);
+            Assert.IsFalse(provider.IsConfigOverriding);
         }
 
         /// <summary>

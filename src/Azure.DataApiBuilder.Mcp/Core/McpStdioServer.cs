@@ -276,8 +276,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
         ///    <see cref="ILogLevelController.UpdateFromMcp"/> so the audit log line that
         ///    <c>UpdateFromMcp</c> emits is forwarded to the agent rather than dropped.
         /// 2. Call <see cref="ILogLevelController.UpdateFromMcp"/>, which updates the level and
-        ///    flips <see cref="ILogLevelController.IsAgentOverridden"/> so subsequent runtime-config
-        ///    hot-reloads do not clobber the agent's choice.
+        ///    flips <see cref="ILogLevelController.IsAgentOverriding"/> so subsequent runtime-config
+        ///    hot-reloads do not overwrite the agent's choice.
         /// 3. Restore <see cref="Console.Error"/> to the real stderr stream when logging is enabled,
         ///    in case startup redirected it to <see cref="TextWriter.Null"/> (default for
         ///    <c>--mcp-stdio</c> or <c>--LogLevel none</c>).

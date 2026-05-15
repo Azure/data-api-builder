@@ -111,19 +111,19 @@ namespace Cli.Commands
         [Option("runtime.base-route", Default = null, Required = false, HelpText = "Specifies the base route for API requests.")]
         public string? RuntimeBaseRoute { get; }
 
-        [Option("rest.disabled", Default = false, Required = false, HelpText = "Disables REST endpoint for all entities.")]
+        [Option("rest.disabled", Default = false, Required = false, Hidden = true, HelpText = "[Deprecated] Use --rest.enabled false instead. Disables REST endpoint for all entities.")]
         public bool RestDisabled { get; }
 
         [Option("graphql.path", Default = GraphQLRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the GraphQL endpoint's default prefix.")]
         public string GraphQLPath { get; }
 
-        [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
+        [Option("graphql.disabled", Default = false, Required = false, Hidden = true, HelpText = "[Deprecated] Use --graphql.enabled false instead. Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
 
         [Option("mcp.path", Default = McpRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the MCP endpoint's default prefix.")]
         public string McpPath { get; }
 
-        [Option("mcp.disabled", Default = false, Required = false, HelpText = "Disables MCP endpoint for all entities.")]
+        [Option("mcp.disabled", Default = false, Required = false, Hidden = true, HelpText = "[Deprecated] Use --mcp.enabled false instead. Disables MCP endpoint for all entities.")]
         public bool McpDisabled { get; }
 
         [Option("rest.enabled", Required = false, HelpText = "(Default: true) Enables REST endpoint for all entities. Supported values: true, false.")]

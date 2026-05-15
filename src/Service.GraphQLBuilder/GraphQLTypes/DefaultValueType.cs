@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
             descriptor.Field(FLOAT_TYPE).Type<FloatType>();
             descriptor.Field(DECIMAL_TYPE).Type<DecimalType>();
             descriptor.Field(DATETIME_TYPE).Type<DateTimeType>();
-            descriptor.Field(BYTEARRAY_TYPE).Type<ByteArrayType>();
+            descriptor.Field(BYTEARRAY_TYPE).Type<Base64StringType>();
             descriptor.Field(LOCALTIME_TYPE).Type<HotChocolate.Types.NodaTime.LocalTimeType>();
         }
     }

@@ -481,6 +481,14 @@ public class RuntimeConfigValidator : IConfigValidator
                 continue;
             }
 
+            // Fast-path: skip entities with no embed:true parameters entirely.
+            // Avoids the data-source lookup and inner loop for the common case of
+            // entities whose params are all normal pass-through.
+            if (!entity.Source.Parameters.Any(p => p.Embed))
+            {
+                continue;
+            }
+
             // Hoist data source lookup outside the param loop — it's entity-scoped, not param-scoped.
             // Looked up once per entity instead of once per parameter (was duplicated work in Stage 3.5).
             DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
@@ -502,6 +510,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 // For PostgreSQL/MySQL/Cosmos, the request would fail at runtime with a confusing
                 // type error. Reject at startup instead.
                 // Example FAIL: PostgreSQL entity with embed:true → "embed feature only supported for MSSQL"
+                // TODO: Extend to PostgreSQL/MySQL once their metadata providers grow embed-aware type-override logic.
                 if (entityDataSource.DatabaseType != DatabaseType.MSSQL)
                 {
                     HandleOrRecordException(new DataApiBuilderException(

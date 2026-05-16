@@ -24,7 +24,7 @@
     },
     "host": {
       "cors": {
-        "origins": [],
+        "origins": ["*"],
         "allow-credentials": false
       },
       "authentication": {
@@ -33,7 +33,6 @@
       "mode": "development"
     }
   },
-  "entities": {},
   "autoentities": {
     "default": {
       "template": {
@@ -49,7 +48,7 @@
         {
           "role": "anonymous",
           "actions": [
-            "create", "read", "update", "delete"
+            "*"
           ]
         }
       ]

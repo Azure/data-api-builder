@@ -29,26 +29,27 @@ namespace Cli
         public static bool IsMcpStdioMode { get; set; }
 
         /// <summary>
-        /// When true, user explicitly set --LogLevel via CLI (even in MCP mode).
+        /// When true, the CLI is the source overriding the log level (i.e., <c>--LogLevel</c> was supplied).
         /// This allows logs to be written to stderr instead of being completely suppressed.
         /// </summary>
-        public static bool IsLogLevelOverriddenByCli { get; set; }
+        public static bool IsCliOverriding { get; set; }
 
         /// <summary>
         /// The log level specified via CLI --LogLevel flag.
-        /// Only valid when IsLogLevelOverriddenByCli is true.
+        /// Only valid when IsCliOverriding is true.
         /// </summary>
         public static LogLevel CliLogLevel { get; set; } = LogLevel.Information;
 
         /// <summary>
-        /// When true, the runtime config file explicitly set a log-level value.
+        /// When true, the runtime config is the source overriding the log level
+        /// (i.e., <c>runtime.telemetry.log-level</c> was explicitly set).
         /// This allows CLI logs to be written to stderr in MCP mode even when no --LogLevel flag was provided.
         /// </summary>
-        public static bool IsLogLevelOverriddenByConfig { get; set; }
+        public static bool IsConfigOverriding { get; set; }
 
         /// <summary>
         /// The log level specified via runtime config file's log-level setting.
-        /// Only valid when IsLogLevelOverriddenByConfig is true.
+        /// Only valid when IsConfigOverriding is true.
         /// </summary>
         public static LogLevel ConfigLogLevel { get; set; } = LogLevel.Information;
 

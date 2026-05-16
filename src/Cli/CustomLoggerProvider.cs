@@ -34,9 +34,9 @@ public class CustomLoggerProvider : ILoggerProvider
         public CustomConsoleLogger(LogLevel minimumLogLevel = LogLevel.Information)
         {
             _minimumLogLevel = Cli.Utils.IsMcpStdioMode
-                ? (Cli.Utils.IsLogLevelOverriddenByCli
+                ? (Cli.Utils.IsCliOverriding
                     ? Cli.Utils.CliLogLevel
-                    : Cli.Utils.IsLogLevelOverriddenByConfig
+                    : Cli.Utils.IsConfigOverriding
                         ? Cli.Utils.ConfigLogLevel
                         : LogLevel.None)
                 : minimumLogLevel;
@@ -103,7 +103,7 @@ public class CustomLoggerProvider : ILoggerProvider
             // In that case, write to stderr to keep stdout clean for JSON-RPC.
             if (Cli.Utils.IsMcpStdioMode)
             {
-                if (!Cli.Utils.IsLogLevelOverriddenByCli && !Cli.Utils.IsLogLevelOverriddenByConfig)
+                if (!Cli.Utils.IsCliOverriding && !Cli.Utils.IsConfigOverriding)
                 {
                     return; // Suppress entirely when no explicit log level
                 }

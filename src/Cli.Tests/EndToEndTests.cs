@@ -914,17 +914,17 @@ public class EndToEndTests
         Assert.IsTrue(string.IsNullOrEmpty(engineStdOut), $"Expected no output at LogLevel {logLevelOption}, but got: {engineStdOut}");
     }
 
-    /// Validates that `dab start` correctly sets <see cref="Startup.IsLogLevelOverriddenByCli"/>
+    /// Validates that `dab start` correctly sets <see cref="Startup.IsCliOverriding"/>
     /// based on whether the --LogLevel CLI flag is provided.
     ///
-    /// When the --LogLevel flag is provided, IsLogLevelOverriddenByCli should be true.
-    /// When the --LogLevel flag is omitted (log level comes from the config file), IsLogLevelOverriddenByCli should be false.
+    /// When the --LogLevel flag is provided, IsCliOverriding should be true.
+    /// When the --LogLevel flag is omitted (log level comes from the config file), IsCliOverriding should be false.
     /// </summary>
     /// <param name="cliLogLevel">The --LogLevel CLI flag value, or null to omit the flag.</param>
-    /// <param name="expectedIsOverridden">Expected value of Startup.IsLogLevelOverriddenByCli.</param>
+    /// <param name="expectedIsOverridden">Expected value of Startup.IsCliOverriding.</param>
     [DataTestMethod]
-    [DataRow(null, false, DisplayName = "IsLogLevelOverriddenByCli is false")]
-    [DataRow(LogLevel.Error, true, DisplayName = "IsLogLevelOverriddenByCli is true")]
+    [DataRow(null, false, DisplayName = "IsCliOverriding is false")]
+    [DataRow(LogLevel.Error, true, DisplayName = "IsCliOverriding is true")]
     public async Task TestStartCommandResolvesLogLevelFromConfigOrFlag(
         LogLevel? cliLogLevel,
         bool expectedIsOverridden)
@@ -987,7 +987,7 @@ public class EndToEndTests
         // Wait for the engine to finish loading the config.
         await Task.Delay(TimeSpan.FromSeconds(5));
 
-        Assert.AreEqual(expectedIsOverridden, Startup.IsLogLevelOverriddenByCli);
+        Assert.AreEqual(expectedIsOverridden, Startup.IsCliOverriding);
     }
 
     /// <summary>

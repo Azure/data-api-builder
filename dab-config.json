@@ -35,6 +35,10 @@
   },
   "autoentities": {
     "default": {
+      "patterns": {
+        "include": ["%.%"],
+        "name": "{schema}_{object}"
+      },
       "template": {
         "mcp": { "dml-tools": true },
         "rest": { "enabled": true },

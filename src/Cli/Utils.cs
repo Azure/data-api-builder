@@ -23,6 +23,36 @@ namespace Cli
         public const string WILDCARD = "*";
         public static readonly string SEPARATOR = ":";
 
+        /// <summary>
+        /// When true, CLI logging to stdout is suppressed to keep the MCP stdio channel clean.
+        /// </summary>
+        public static bool IsMcpStdioMode { get; set; }
+
+        /// <summary>
+        /// When true, the CLI is the source overriding the log level (i.e., <c>--LogLevel</c> was supplied).
+        /// This allows logs to be written to stderr instead of being completely suppressed.
+        /// </summary>
+        public static bool IsCliOverriding { get; set; }
+
+        /// <summary>
+        /// The log level specified via CLI --LogLevel flag.
+        /// Only valid when IsCliOverriding is true.
+        /// </summary>
+        public static LogLevel CliLogLevel { get; set; } = LogLevel.Information;
+
+        /// <summary>
+        /// When true, the runtime config is the source overriding the log level
+        /// (i.e., <c>runtime.telemetry.log-level</c> was explicitly set).
+        /// This allows CLI logs to be written to stderr in MCP mode even when no --LogLevel flag was provided.
+        /// </summary>
+        public static bool IsConfigOverriding { get; set; }
+
+        /// <summary>
+        /// The log level specified via runtime config file's log-level setting.
+        /// Only valid when IsConfigOverriding is true.
+        /// </summary>
+        public static LogLevel ConfigLogLevel { get; set; } = LogLevel.Information;
+
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private static ILogger<Utils> _logger;
 #pragma warning restore CS8618
@@ -309,19 +339,37 @@ namespace Cli
         public static bool TryGetConfigFileBasedOnCliPrecedence(
             FileSystemRuntimeConfigLoader loader,
             string? userProvidedConfigFile,
-            out string runtimeConfigFile)
+            out string runtimeConfigFile,
+            LogBuffer? logBuffer = null)
         {
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 /// The existence of user provided config file is not checked here.
-                _logger.LogInformation("User provided config file: {userProvidedConfigFile}", userProvidedConfigFile);
+                if (logBuffer is null)
+                {
+                    _logger.LogInformation("User provided config file: {userProvidedConfigFile}", userProvidedConfigFile);
+                }
+                else
+                {
+                    logBuffer.BufferLog(LogLevel.Information, $"User provided config file: {userProvidedConfigFile}");
+                }
+
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
             }
             else
             {
-                _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
-                _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {environment}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
+                if (logBuffer is null)
+                {
+                    _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                    _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {environment}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
+                }
+                else
+                {
+                    logBuffer.BufferLog(LogLevel.Information, "Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                    logBuffer.BufferLog(LogLevel.Information, $"Environment variable DAB_ENVIRONMENT is {Environment.GetEnvironmentVariable("DAB_ENVIRONMENT")}");
+                }
+
                 runtimeConfigFile = loader.GetFileNameForEnvironment(null, considerOverrides: false);
             }
 
@@ -976,10 +1024,10 @@ namespace Cli
         /// <summary>
         /// Returns ILoggerFactory with CLI custom logger provider.
         /// </summary>
-        public static ILoggerFactory GetLoggerFactoryForCli()
+        public static ILoggerFactory GetLoggerFactoryForCli(LogLevel minimumLogLevel = LogLevel.Information)
         {
             ILoggerFactory loggerFactory = new LoggerFactory();
-            loggerFactory.AddProvider(new CustomLoggerProvider());
+            loggerFactory.AddProvider(new CustomLoggerProvider(minimumLogLevel));
             return loggerFactory;
         }
     }

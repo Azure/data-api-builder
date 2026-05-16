@@ -8,18 +8,39 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class CustomLoggerProvider : ILoggerProvider
 {
+    private readonly LogLevel _minimumLogLevel;
+
+    public CustomLoggerProvider(LogLevel minimumLogLevel = LogLevel.Information)
+    {
+        _minimumLogLevel = minimumLogLevel;
+    }
+
     public void Dispose() { }
 
     /// <inheritdoc/>
     public ILogger CreateLogger(string categoryName)
     {
-        return new CustomConsoleLogger();
+        return new CustomConsoleLogger(_minimumLogLevel);
     }
 
     public class CustomConsoleLogger : ILogger
     {
-        // Minimum LogLevel. LogLevel below this would be disabled.
-        private readonly LogLevel _minimumLogLevel = LogLevel.Information;
+        private readonly LogLevel _minimumLogLevel;
+
+        // Minimum LogLevel for CLI output.
+        // For MCP mode: prefer CLI's --LogLevel, fall back to config's log-level, otherwise suppress all.
+        // For non-MCP mode: always use the level passed to the constructor.
+        // Note: --LogLevel is meant for the ENGINE's log level, not CLI's output.
+        public CustomConsoleLogger(LogLevel minimumLogLevel = LogLevel.Information)
+        {
+            _minimumLogLevel = Cli.Utils.IsMcpStdioMode
+                ? (Cli.Utils.IsCliOverriding
+                    ? Cli.Utils.CliLogLevel
+                    : Cli.Utils.IsConfigOverriding
+                        ? Cli.Utils.ConfigLogLevel
+                        : LogLevel.None)
+                : minimumLogLevel;
+        }
 
         //  Color values based on LogLevel
         //  LogLevel    Foreground      Background
@@ -71,9 +92,56 @@ public class CustomLoggerProvider : ILoggerProvider
 
         /// <summary>
         /// Creates Log message by setting console message color based on LogLevel.
+        /// In MCP stdio mode:
+        /// - If user explicitly set --LogLevel (CLI) or log-level (config): write to stderr (colored output)
+        /// - Otherwise: suppress entirely to keep stdout clean for JSON-RPC protocol.
         /// </summary>
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
+            // In MCP stdio mode, only output logs if user explicitly requested a log level
+            // via either the CLI --LogLevel flag or the runtime config file's log-level.
+            // In that case, write to stderr to keep stdout clean for JSON-RPC.
+            if (Cli.Utils.IsMcpStdioMode)
+            {
+                if (!Cli.Utils.IsCliOverriding && !Cli.Utils.IsConfigOverriding)
+                {
+                    return; // Suppress entirely when no explicit log level
+                }
+
+                // User wants logs in MCP mode - write to stderr
+                if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
+                {
+                    return;
+                }
+
+                if (!_logLevelToAbbreviation.TryGetValue(logLevel, out string? mcpAbbreviation))
+                {
+                    return;
+                }
+
+                // In MCP stdio mode, stdout is reserved for JSON-RPC protocol messages.
+                // Logs must go to stderr to avoid corrupting the MCP communication channel.
+                // Apply colors so the abbreviation matches the visual style of engine logs.
+                // try/finally guarantees the original colors are restored even if Write throws,
+                // otherwise the console would be left tinted (e.g. red on error) for subsequent output.
+                ConsoleColor mcpOriginalForeGroundColor = Console.ForegroundColor;
+                ConsoleColor mcpOriginalBackGroundColor = Console.BackgroundColor;
+                try
+                {
+                    Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
+                    Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
+                    Console.Error.Write($"{mcpAbbreviation}:");
+                }
+                finally
+                {
+                    Console.ForegroundColor = mcpOriginalForeGroundColor;
+                    Console.BackgroundColor = mcpOriginalBackGroundColor;
+                }
+
+                Console.Error.WriteLine($" {formatter(state, exception)}");
+                return;
+            }
+
             if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
             {
                 return;
@@ -84,21 +152,32 @@ public class CustomLoggerProvider : ILoggerProvider
                 return;
             }
 
+            TextWriter writer = logLevel >= LogLevel.Error ? Console.Error : Console.Out;
+            // try/finally guarantees the original colors are restored even if Write throws,
+            // otherwise the console would be left tinted (e.g. red on error) for subsequent output.
             ConsoleColor originalForeGroundColor = Console.ForegroundColor;
             ConsoleColor originalBackGroundColor = Console.BackgroundColor;
-            Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
-            Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
-            Console.Write($"{abbreviation}:");
-            Console.ForegroundColor = originalForeGroundColor;
-            Console.BackgroundColor = originalBackGroundColor;
-            Console.WriteLine($" {formatter(state, exception)}");
+            try
+            {
+                Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
+                Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
+                writer.Write($"{abbreviation}:");
+            }
+            finally
+            {
+                Console.ForegroundColor = originalForeGroundColor;
+                Console.BackgroundColor = originalBackGroundColor;
+            }
+
+            writer.WriteLine($" {formatter(state, exception)}");
         }
 
         /// <inheritdoc/>
         public bool IsEnabled(LogLevel logLevel)
         {
-            return true;
+            return logLevel != LogLevel.None && logLevel >= _minimumLogLevel;
         }
+
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         {
             throw new NotImplementedException();

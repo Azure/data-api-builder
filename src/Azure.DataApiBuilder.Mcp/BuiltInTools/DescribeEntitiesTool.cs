@@ -479,43 +479,42 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <summary>
         /// Builds the parameter list for a stored procedure entity.
         /// Each entry has: name, required, default, description.
-        /// Per-field rules agreed in issue #3400:
-        ///   name        - DB metadata is the source of truth (config cannot override).
-        ///   required    - config-only override; defaults to true when not set in config.
+        ///
+        /// The per-field rules are agreed in issue #3400:
+        ///   name        - DB metadata is the source of truth; config cannot override.
+        ///   required    - defaults to true when not set in config.
         ///                 (SQL Server's is_nullable describes the type, not whether the
         ///                  parameter must be supplied at call time, so it is unreliable.)
         ///   default     - config-only. T-SQL parameter defaults are not exposed as
         ///                 structured metadata, so they cannot be discovered from the DB.
         ///   description - config-only. SQL Server has no description column for parameters.
-        /// When DB metadata is unavailable, fall back to the config parameters and apply
-        /// the same per-field rules so the response shape is consistent.
+        ///
+        /// The merge of config onto DB metadata is already performed upstream by
+        /// <see cref="Core.Services.MetadataProviders.SqlMetadataProvider"/> /
+        /// <see cref="Core.Services.MetadataProviders.MsSqlMetadataProvider"/> when populating
+        /// <see cref="DatabaseStoredProcedure"/>. Each <see cref="ParameterDefinition"/> therefore
+        /// already reflects the config overlay; we just project it.
+        ///
+        /// When DB metadata is unavailable (e.g. the metadata provider hasn't initialized
+        /// the entity yet), we fall back to the config-declared parameters so the response
+        /// stays useful.
         /// </summary>
-        /// <param name="configParameters">Parameters listed in the runtime config. May be null or empty.</param>
+        /// <param name="configParameters">Parameters listed in the runtime config. Used only as a fallback when DB metadata is unavailable.</param>
         /// <param name="databaseObject">DB metadata for the entity. Expected to be a <see cref="DatabaseStoredProcedure"/>; may be null.</param>
         /// <returns>One dictionary per parameter with keys name, required, default, description.</returns>
         private static List<object> BuildParameterMetadataInfo(
             List<ParameterMetadata>? configParameters,
             DatabaseObject? databaseObject)
         {
-            Dictionary<string, ParameterMetadata> configByName = new(StringComparer.OrdinalIgnoreCase);
-            if (configParameters is not null)
-            {
-                foreach (ParameterMetadata parameter in configParameters)
-                {
-                    configByName[parameter.Name] = parameter;
-                }
-            }
-
             IReadOnlyDictionary<string, ParameterDefinition>? dbParameters =
                 (databaseObject as DatabaseStoredProcedure)?.StoredProcedureDefinition?.Parameters;
 
             if (dbParameters is { Count: > 0 })
             {
                 List<object> result = new(dbParameters.Count);
-                foreach (string parameterName in dbParameters.Keys)
+                foreach ((string parameterName, ParameterDefinition definition) in dbParameters)
                 {
-                    configByName.TryGetValue(parameterName, out ParameterMetadata? config);
-                    result.Add(BuildParameterEntry(parameterName, config));
+                    result.Add(BuildParameterEntry(parameterName, definition));
                 }
 
                 return result;
@@ -527,7 +526,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 foreach (ParameterMetadata parameter in configParameters)
                 {
-                    configOnly.Add(BuildParameterEntry(parameter.Name, parameter));
+                    configOnly.Add(new Dictionary<string, object?>
+                    {
+                        ["name"] = parameter.Name,
+                        ["required"] = parameter.Required ?? true,
+                        ["default"] = parameter.Default,
+                        ["description"] = parameter.Description ?? string.Empty
+                    });
                 }
             }
 
@@ -536,12 +541,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
         private static Dictionary<string, object?> BuildParameterEntry(
             string name,
-            ParameterMetadata? config) => new()
+            ParameterDefinition definition) => new()
             {
                 ["name"] = name,
-                ["required"] = config?.Required ?? true,
-                ["default"] = config?.Default,
-                ["description"] = config?.Description ?? string.Empty
+                ["required"] = definition.Required ?? true,
+                ["default"] = definition.Default,
+                ["description"] = definition.Description ?? string.Empty
             };
 
         /// <summary>

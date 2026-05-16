@@ -35,19 +35,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         private const string TEST_ENTITY_NAME = "GetBook";
 
         /// <summary>
-        /// When config has no parameters, the tool discovers parameter NAMES from the DB.
-        /// Per rules 2/3/4 of issue #3400, required defaults to true and default/description
-        /// stay null/empty because they are config-only.
+        /// Parameters not declared in config are still surfaced from DB metadata.
+        /// Per rules 2/3/4/5 of issue #3400, required defaults to true and default/description
+        /// stay null/empty because they are config-only and the upstream merge wrote nothing.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_DiscoversParametersFromMetadata_WhenConfigParametersMissing()
+        public async Task DescribeEntities_UnconfiguredParameters_DefaultToRequiredWithNoDefaultOrDescription()
         {
             JsonElement parameters = await RunDescribeAsync(
                 configParameters: null,
                 dbParameters: new Dictionary<string, ParameterDefinition>
                 {
-                    ["id"] = new() { Required = true, Description = "DB description for id" },
-                    ["locale"] = new() { Required = false, Default = "en-US", Description = "DB description for locale" }
+                    ["id"] = new(),
+                    ["locale"] = new()
                 });
 
             Assert.AreEqual(2, parameters.GetArrayLength());
@@ -56,11 +56,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// When a parameter is in both config and DB, config values take precedence.
-        /// Parameters that are only in the DB use DB values.
+        /// Config values supplied per-parameter (merged upstream by SqlMetadataProvider) flow through.
+        /// Parameters absent from config still appear with the default required=true.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_ConfigOverridesDatabaseMetadata_ForRequiredAndDefault()
+        public async Task DescribeEntities_MixedConfiguredAndUnconfiguredParameters_ProjectsBoth()
         {
             JsonElement parameters = await RunDescribeAsync(
                 configParameters: new List<ParameterMetadata>
@@ -69,8 +69,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 },
                 dbParameters: new Dictionary<string, ParameterDefinition>
                 {
-                    ["id"] = new() { Required = false, Default = "1", Description = "DB description for id" },
-                    ["tenant"] = new() { Required = true, Description = "DB description for tenant" }
+                    ["id"] = new() { Required = true, Default = "42", Description = "Config description" },
+                    ["tenant"] = new()
                 });
 
             Assert.AreEqual(2, parameters.GetArrayLength());
@@ -79,10 +79,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Config's Required value overrides the DB's Required value.
+        /// An explicit Required=false from config (already merged onto the ParameterDefinition) is honored.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_ConfigRequiredFalse_OverridesDbRequiredTrue()
+        public async Task DescribeEntities_ExplicitRequiredFalse_IsHonored()
         {
             JsonElement parameters = await RunDescribeAsync(
                 configParameters: new List<ParameterMetadata>
@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 },
                 dbParameters: new Dictionary<string, ParameterDefinition>
                 {
-                    ["locale"] = new() { Required = true, Description = "DB description for locale" }
+                    ["locale"] = new() { Required = false, Default = "en-US", Description = "Locale override" }
                 });
 
             Assert.AreEqual(1, parameters.GetArrayLength());
@@ -99,10 +99,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Config's Required value overrides the DB's Required value even when no Default is set.
+        /// Explicit Required=false is honored even when there is no Default value supplied.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_ConfigRequiredFalse_OverridesDbRequiredTrue_WhenNoDefault()
+        public async Task DescribeEntities_ExplicitRequiredFalse_IsHonored_WhenNoDefault()
         {
             JsonElement parameters = await RunDescribeAsync(
                 configParameters: new List<ParameterMetadata>
@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 },
                 dbParameters: new Dictionary<string, ParameterDefinition>
                 {
-                    ["id"] = new() { Required = true }
+                    ["id"] = new() { Required = false, Description = "Book id" }
                 });
 
             Assert.AreEqual(1, parameters.GetArrayLength());

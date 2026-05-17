@@ -1186,6 +1186,22 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSqlSettingPostStartupConfigurations(string configurationEndpoint)
         {
+            // Other tests in this class set ASPNETCORE_ENVIRONMENT (e.g. to "MsSql") and do not
+            // reset it. MSTest reuses the test process, so a leaked env-var causes the
+            // FileSystemRuntimeConfigLoader to auto-load dab-config.MsSql.json on TestServer
+            // construction. That defeats the "post-startup" premise of this test: the engine
+            // would already be hydrated, isRuntimeReady would be true, and pre-hydration GETs
+            // would not return 503. Clear the env-var so the late-configured branch of
+            // Startup.Configure runs, regardless of which tests ran before this one.
+            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
+
+            // Program.IsHttpsRedirectionDisabled is also static-state-leaky. Other tests
+            // call Program.CreateWebHostBuilder with args that flip this flag based on the
+            // command-line they pass; if a previous test left the flag false, the
+            // UseHttpsRedirection middleware can intercept pre-hydration GETs before the
+            // 503 gating middleware runs. Force-disable HTTPS redirection for this test so
+            // the assertions exercise the real "service unavailable" path.
+            Program.IsHttpsRedirectionDisabled = true;
             using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 

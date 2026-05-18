@@ -111,7 +111,8 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.TinyInt] = typeof(byte),
             [SqlDbType.UniqueIdentifier] = typeof(Guid),
             [SqlDbType.VarBinary] = typeof(byte[]),
-            [SqlDbType.VarChar] = typeof(string)
+            [SqlDbType.VarChar] = typeof(string),
+            [SqlDbType.Xml] = typeof(string)
         };
 
         private static Dictionary<SqlDbType, DbType> _sqlDbDateTimeTypeToDbType = new()

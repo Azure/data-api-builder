@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 sqlMetadataProvider,
                 authorizationResolver,
                 ctx.Selection.Field,
-                ctx.Selection.SyntaxNode,
+                ctx.Selection.RequireFieldNode(),
                 // The outermost query is where we start, so this can define
                 // create the IncrementingInteger that will be shared between
                 // all subqueries in this query.
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IsMultipleCreateOperation = isMultipleCreateOperation;
 
             ObjectField schemaField = _ctx.Selection.Field;
-            FieldNode? queryField = _ctx.Selection.SyntaxNode;
+            FieldNode? queryField = _ctx.Selection.RequireFieldNode();
 
             IOutputType outputType = schemaField.Type;
             _underlyingFieldType = outputType.NamedType<ObjectType>();
@@ -1140,6 +1140,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     throw new DataApiBuilderException(message: "Mapped fieldname could not be found.",
                         statusCode: HttpStatusCode.InternalServerError,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                }
+
+                // Validate that the current role has read access to the column referenced in orderBy.
+                // Without this check, protected column values could leak through the pagination endCursor.
+                // Pass the exposed field name (fieldName), not the backing column name, since
+                // AreColumnsAllowedForOperation resolves exposed names to backing columns internally.
+                string roleName = Authorization.AuthorizationResolver.GetRoleOfGraphQLRequest(_ctx);
+                if (!AuthorizationResolver.AreColumnsAllowedForOperation(
+                        entityName: EntityName,
+                        roleName: roleName,
+                        operation: EntityActionOperation.Read,
+                        columns: new[] { fieldName }))
+                {
+                    throw new DataApiBuilderException(
+                        message: DataApiBuilderException.GRAPHQL_ORDERBY_FIELD_AUTHZ_FAILURE,
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
                 }
 
                 // Validate that the orderBy field is present in the groupBy fields if it's a groupBy query

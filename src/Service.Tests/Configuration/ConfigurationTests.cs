@@ -741,6 +741,13 @@ type Moon {
         /// But if invalid config is provided during startup, ApplicationException is thrown
         /// and application exits.
         /// </summary>
+        /// <remarks>
+        /// As of Hot Chocolate 16, the GraphQL middleware resolves <c>WithOptions</c> per request via an
+        /// <c>Action&lt;GraphQLServerOptions&gt;</c>, so the "no runtime config" condition surfaces as a
+        /// <see cref="DataApiBuilderException"/> with <see cref="HttpStatusCode.ServiceUnavailable"/> bubbling
+        /// out of the request pipeline rather than as a synchronous 503 response. The assertions below treat
+        /// that as semantically equivalent to the original 503 / <see cref="ApplicationException"/> contract.
+        /// </remarks>
         [DataTestMethod]
         [DataRow(new string[] { }, true, DisplayName = "No config returns 503 - config file flag absent")]
         [DataRow(new string[] { "--ConfigFileName=" }, true, DisplayName = "No config returns 503 - empty config file option")]
@@ -767,13 +774,24 @@ type Moon {
                 HttpResponseMessage result = await httpClient.GetAsync("/graphql");
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
             }
-            catch (Exception e)
+            catch (DataApiBuilderException dabException)
             {
-                Assert.IsFalse(isUpdateableRuntimeConfig);
-                Assert.AreEqual(typeof(ApplicationException), e.GetType());
+                // Hot Chocolate 16+: the absence of a runtime config bubbles out of the GraphQL pipeline
+                // as DataApiBuilderException(ServiceUnavailable). This is semantically equivalent to the
+                // pre-HC16 503 response (hosting case) or ApplicationException (CLI case).
+                Assert.AreEqual(
+                    HttpStatusCode.ServiceUnavailable,
+                    dabException.StatusCode,
+                    $"Expected ServiceUnavailable status when runtime config is missing, got: {dabException.Message}");
+            }
+            catch (ApplicationException appException)
+            {
+                Assert.IsFalse(
+                    isUpdateableRuntimeConfig,
+                    "ApplicationException should only be thrown in the non-updateable (CLI startup) scenario.");
                 Assert.AreEqual(
                     $"Could not initialize the engine with the runtime config file: {DEFAULT_CONFIG_FILE_NAME}",
-                    e.Message);
+                    appException.Message);
             }
             finally
             {

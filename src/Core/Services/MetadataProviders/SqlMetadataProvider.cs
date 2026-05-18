@@ -1478,7 +1478,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     && IsGraphQLReservedName(entity, columnName, graphQLEnabledGlobally: runtimeConfig.IsGraphQLEnabled))
                 {
                     throw new DataApiBuilderException(
-                       message: $"The column '{columnName}' from {entityName} violates GraphQL name restrictions.",
+                       message: $"The column '{columnName}' from '{entityName}' violates GraphQL name restrictions.",
                        statusCode: HttpStatusCode.ServiceUnavailable,
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                 }

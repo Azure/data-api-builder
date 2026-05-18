@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,41 +33,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         private const string TEST_ENTITY_NAME = "GetBook";
 
         /// <summary>
-        /// Parameters not declared in config are still surfaced from DB metadata.
-        /// Per rules 2/3/4/5 of issue #3400, required defaults to true and default/description
-        /// stay null/empty because they are config-only and the upstream merge wrote nothing.
-        /// </summary>
-        [TestMethod]
-        public async Task DescribeEntities_UnconfiguredParameters_DefaultToRequiredWithNoDefaultOrDescription()
-        {
-            JsonElement parameters = await RunDescribeAsync(
-                configParameters: null,
-                dbParameters: new Dictionary<string, ParameterDefinition>
-                {
-                    ["id"] = new(),
-                    ["locale"] = new()
-                });
-
-            Assert.AreEqual(2, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "id", expectedRequired: true, expectedDefault: null, expectedDescription: string.Empty);
-            AssertParameter(parameters, name: "locale", expectedRequired: true, expectedDefault: null, expectedDescription: string.Empty);
-        }
-
-        /// <summary>
-        /// Config values supplied per-parameter (merged upstream by SqlMetadataProvider) flow through.
-        /// Parameters absent from config still appear with the default required=true.
+        /// When the upstream merge has copied config values onto some parameters but left others
+        /// untouched, both shapes project correctly side-by-side. This single test exercises
+        /// both the "override applied" branch (id) and the "no override -> defaults" branch
+        /// (tenant) of <see cref="DescribeEntitiesTool.BuildParameterMetadataInfo"/>.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_MixedConfiguredAndUnconfiguredParameters_ProjectsBoth()
         {
-            JsonElement parameters = await RunDescribeAsync(
-                configParameters: new List<ParameterMetadata>
+            JsonElement parameters = await RunWithMergedDbParametersAsync(
+                new Dictionary<string, ParameterDefinition>
                 {
-                    new() { Name = "id", Required = true, Default = "42", Description = "Config description" }
-                },
-                dbParameters: new Dictionary<string, ParameterDefinition>
-                {
+                    // id: upstream merge wrote config values onto the ParameterDefinition.
                     ["id"] = new() { Required = true, Default = "42", Description = "Config description" },
+                    // tenant: not in config, so the upstream merge left ParameterDefinition untouched.
                     ["tenant"] = new()
                 });
 
@@ -79,114 +56,88 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// An explicit Required=false from config (already merged onto the ParameterDefinition) is honored.
+        /// An explicit Required=false written onto the ParameterDefinition by the upstream merge
+        /// is honored both when a Default value is supplied and when it is not.
         /// </summary>
-        [TestMethod]
-        public async Task DescribeEntities_ExplicitRequiredFalse_IsHonored()
+        [DataTestMethod]
+        [DataRow("en-US", DisplayName = "WithDefault")]
+        [DataRow(null, DisplayName = "WithoutDefault")]
+        public async Task DescribeEntities_ExplicitRequiredFalse_IsHonored(string expectedDefault)
         {
-            JsonElement parameters = await RunDescribeAsync(
-                configParameters: new List<ParameterMetadata>
+            JsonElement parameters = await RunWithMergedDbParametersAsync(
+                new Dictionary<string, ParameterDefinition>
                 {
-                    new() { Name = "locale", Required = false, Default = "en-US", Description = "Locale override" }
-                },
-                dbParameters: new Dictionary<string, ParameterDefinition>
-                {
-                    ["locale"] = new() { Required = false, Default = "en-US", Description = "Locale override" }
+                    ["locale"] = new() { Required = false, Default = expectedDefault, Description = "Locale override" }
                 });
 
             Assert.AreEqual(1, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "locale", expectedRequired: false, expectedDefault: "en-US", expectedDescription: "Locale override");
+            AssertParameter(parameters, name: "locale", expectedRequired: false, expectedDefault: expectedDefault, expectedDescription: "Locale override");
+        }
+
+        // ----------------------------------------------------------------------------------
+        // Invariant-violation test.
+        //
+        // BuildParameterMetadataInfo trusts the upstream invariant: for any successfully
+        // initialized stored-procedure entity, the metadata provider has a populated
+        // DatabaseStoredProcedure. SqlMetadataProvider.FillSchemaForStoredProcedureAsync
+        // throws via HandleOrRecordException (aborting startup in non-validate mode) if it
+        // can't populate that schema, so describe_entities never runs against a null/missing
+        // SP metadata entry in production.
+        //
+        // If that invariant ever regresses we throw instead of fabricating empty parameter
+        // info: returning an SP with parameters=[] would lie to the agent (it can't tell
+        // "genuinely zero params" apart from "we don't know"). The surrounding per-entity
+        // catch in DescribeEntitiesTool logs the failure and drops just that entity from the
+        // response. The test below exercises that path.
+        // ----------------------------------------------------------------------------------
+
+        /// <summary>
+        /// When DB metadata is missing for an SP entity, the tool drops the entity from the
+        /// response rather than returning it with an empty parameters array.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_DropsEntity_WhenStoredProcedureMetadataIsMissing()
+        {
+            RuntimeConfig config = CreateRuntimeConfig(CreateStoredProcedureEntity());
+            ServiceCollection services = new();
+            RegisterCommonServices(services, config);
+            // Register metadata provider with no entry for the SP entity.
+            RegisterMetadataProvider(services, TEST_ENTITY_NAME, dbObject: null);
+
+            IServiceProvider serviceProvider = services.BuildServiceProvider();
+            DescribeEntitiesTool tool = new();
+
+            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
+
+            // The only configured entity was dropped, so the tool returns the "no entities"
+            // error result rather than a successful response containing a misleading entry.
+            Assert.IsTrue(result.IsError == true, "Expected an error result when the only entity is dropped.");
+            Assert.IsNotNull(result.Content);
+            Assert.IsInstanceOfType(result.Content[0], typeof(TextContentBlock));
+            string responseText = ((TextContentBlock)result.Content[0]).Text;
+            StringAssert.Contains(responseText, "NoEntitiesConfigured");
         }
 
         /// <summary>
-        /// Explicit Required=false is honored even when there is no Default value supplied.
+        /// Runs DescribeEntitiesTool against an entity whose DB metadata is already populated.
+        /// The dictionary represents the state of <see cref="StoredProcedureDefinition.Parameters"/>
+        /// AFTER the upstream merge in SqlMetadataProvider/MsSqlMetadataProvider has run.
         /// </summary>
-        [TestMethod]
-        public async Task DescribeEntities_ExplicitRequiredFalse_IsHonored_WhenNoDefault()
-        {
-            JsonElement parameters = await RunDescribeAsync(
-                configParameters: new List<ParameterMetadata>
-                {
-                    new() { Name = "id", Required = false, Description = "Book id" }
-                },
-                dbParameters: new Dictionary<string, ParameterDefinition>
-                {
-                    ["id"] = new() { Required = false, Description = "Book id" }
-                });
-
-            Assert.AreEqual(1, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "id", expectedRequired: false, expectedDefault: null, expectedDescription: "Book id");
-        }
-
-        /// <summary>
-        /// A stored procedure with no parameters returns an empty parameters array.
-        /// </summary>
-        [TestMethod]
-        public async Task DescribeEntities_StoredProcedureWithNoParameters_EmitsEmptyParametersArray()
-        {
-            JsonElement parameters = await RunDescribeAsync(
-                configParameters: null,
-                dbParameters: new Dictionary<string, ParameterDefinition>());
-
-            Assert.AreEqual(JsonValueKind.Array, parameters.ValueKind);
-            Assert.AreEqual(0, parameters.GetArrayLength());
-        }
-
-        /// <summary>
-        /// When the DB reports no parameters, the tool falls back to the config parameters.
-        /// Per rule 2 of issue #3400, a config entry without an explicit Required value
-        /// still defaults to required=true.
-        /// </summary>
-        [TestMethod]
-        public async Task DescribeEntities_EmptyDbParameters_FallsBackToConfigParameters()
-        {
-            JsonElement parameters = await RunDescribeAsync(
-                configParameters: new List<ParameterMetadata>
-                {
-                    new() { Name = "id", Description = "Book id" }
-                },
-                dbParameters: new Dictionary<string, ParameterDefinition>());
-
-            Assert.AreEqual(1, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "id", expectedRequired: true, expectedDefault: null, expectedDescription: "Book id");
-        }
-
-        /// <summary>
-        /// When DB metadata is not available, the tool falls back to the config parameters.
-        /// </summary>
-        [TestMethod]
-        public async Task DescribeEntities_FallsBackToConfigParameters_WhenDatabaseMetadataUnavailable()
-        {
-            JsonElement parameters = await RunDescribeAsync(
-                configParameters: new List<ParameterMetadata>
-                {
-                    new() { Name = "id", Required = true, Description = "Book id" },
-                    new() { Name = "locale", Required = false, Default = "en-US", Description = "Locale" }
-                },
-                dbParameters: null);
-
-            Assert.AreEqual(2, parameters.GetArrayLength());
-            AssertParameter(parameters, name: "id", expectedRequired: true, expectedDefault: null, expectedDescription: "Book id");
-            AssertParameter(parameters, name: "locale", expectedRequired: false, expectedDefault: "en-US", expectedDescription: "Locale");
-        }
+        private static Task<JsonElement> RunWithMergedDbParametersAsync(
+            Dictionary<string, ParameterDefinition> mergedDbParameters)
+            => RunDescribeCoreAsync(dbParameters: mergedDbParameters);
 
         /// <summary>
         /// Sets up DI, runs DescribeEntitiesTool, and returns the parameters array of the one entity.
         /// </summary>
-        /// <param name="configParameters">Parameters listed in config, or null for none.</param>
-        /// <param name="dbParameters">Parameters reported by DB metadata, or null to simulate the
-        /// metadata provider not knowing about the entity.</param>
-        private static async Task<JsonElement> RunDescribeAsync(
-            List<ParameterMetadata>? configParameters,
-            Dictionary<string, ParameterDefinition>? dbParameters)
+        private static async Task<JsonElement> RunDescribeCoreAsync(
+            Dictionary<string, ParameterDefinition> dbParameters)
         {
-            RuntimeConfig config = CreateRuntimeConfig(CreateStoredProcedureEntity(parameters: configParameters));
+            RuntimeConfig config = CreateRuntimeConfig(CreateStoredProcedureEntity());
             ServiceCollection services = new();
             RegisterCommonServices(services, config);
 
-            DatabaseObject? dbObject = dbParameters is null
-                ? null
-                : CreateStoredProcedureObject("dbo", "get_book", dbParameters);
+            DatabaseObject dbObject = CreateStoredProcedureObject("dbo", "get_book", dbParameters);
             RegisterMetadataProvider(services, TEST_ENTITY_NAME, dbObject);
 
             IServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -207,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             JsonElement parameters,
             string name,
             bool expectedRequired,
-            string? expectedDefault,
+            string expectedDefault,
             string expectedDescription)
         {
             JsonElement param = parameters.EnumerateArray().Single(p => p.GetProperty("name").GetString() == name);
@@ -247,10 +198,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             );
         }
 
-        private static Entity CreateStoredProcedureEntity(List<ParameterMetadata>? parameters)
+        private static Entity CreateStoredProcedureEntity()
         {
             return new Entity(
-                Source: new("get_book", EntitySourceType.StoredProcedure, parameters, null),
+                Source: new("get_book", EntitySourceType.StoredProcedure, Parameters: null, KeyFields: null),
                 GraphQL: new(TEST_ENTITY_NAME, TEST_ENTITY_NAME),
                 Rest: new(Enabled: true),
                 Fields: null,
@@ -309,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// Registers a mock metadata provider. If <paramref name="dbObject"/> is null, the provider has
         /// no entry for the entity (simulates DB metadata not available).
         /// </summary>
-        private static void RegisterMetadataProvider(ServiceCollection services, string entityName, DatabaseObject? dbObject)
+        private static void RegisterMetadataProvider(ServiceCollection services, string entityName, DatabaseObject dbObject)
         {
             Dictionary<string, DatabaseObject> entityMap = dbObject is null
                 ? new Dictionary<string, DatabaseObject>()
@@ -331,7 +282,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsInstanceOfType(result.Content[0], typeof(TextContentBlock));
 
             TextContentBlock firstContent = (TextContentBlock)result.Content[0];
-            JsonElement root = JsonDocument.Parse(firstContent.Text!).RootElement;
+            JsonElement root = JsonDocument.Parse(firstContent.Text).RootElement;
             JsonElement entities = root.GetProperty("entities");
 
             Assert.AreEqual(1, entities.GetArrayLength());

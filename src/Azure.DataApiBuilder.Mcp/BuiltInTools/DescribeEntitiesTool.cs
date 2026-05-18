@@ -190,10 +190,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                                 if (databaseObject is null)
                                 {
-                                    logger?.LogDebug(
-                                        "Could not resolve metadata for stored procedure entity {EntityName}. Falling back to config parameters. Error: {Error}",
-                                        entityName,
-                                        resolveError);
+                                    // Init normally populates DatabaseStoredProcedure for every SP entity
+                                    // (or throws and aborts startup). Reaching here means an init invariant
+                                    // regressed. Throw so the surrounding catch drops just this entity from
+                                    // the response - returning the SP with no parameter info would mislead
+                                    // the agent into thinking the SP takes no arguments.
+                                    throw new InvalidOperationException(
+                                        $"Could not resolve DB metadata for stored procedure entity '{entityName}'. Error: {resolveError}");
                                 }
                             }
 
@@ -205,7 +208,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         }
                         catch (Exception ex)
                         {
-                            logger?.LogWarning(ex, "Failed to build info for entity {EntityName}", entityName);
+                            logger?.LogWarning(ex, "Failed to build info for entity '{EntityName}'", entityName);
                         }
                     }
                 }
@@ -443,7 +446,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (entity.Source.Type == EntitySourceType.StoredProcedure)
             {
-                info["parameters"] = BuildParameterMetadataInfo(entity.Source.Parameters, databaseObject);
+                info["parameters"] = BuildParameterMetadataInfo(databaseObject);
             }
 
             info["permissions"] = BuildPermissionsInfo(entity, currentUserRole);
@@ -495,48 +498,32 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <see cref="DatabaseStoredProcedure"/>. Each <see cref="ParameterDefinition"/> therefore
         /// already reflects the config overlay; we just project it.
         ///
-        /// When DB metadata is unavailable (e.g. the metadata provider hasn't initialized
-        /// the entity yet), we fall back to the config-declared parameters so the response
-        /// stays useful.
+        /// For an SP entity that successfully initialized, the metadata provider always has a
+        /// populated <see cref="DatabaseStoredProcedure"/>: init throws otherwise (e.g.
+        /// SqlMetadataProvider.FillSchemaForStoredProcedureAsync raises via HandleOrRecordException
+        /// when config declares a parameter the DB doesn't have, and startup aborts). If this
+        /// invariant ever regresses we throw rather than fabricate empty parameter info, so the
+        /// surrounding per-entity catch drops just this entity from the response.
         /// </summary>
-        /// <param name="configParameters">Parameters listed in the runtime config. Used only as a fallback when DB metadata is unavailable.</param>
-        /// <param name="databaseObject">DB metadata for the entity. Expected to be a <see cref="DatabaseStoredProcedure"/>; may be null.</param>
-        /// <returns>One dictionary per parameter with keys name, required, default, description.</returns>
-        private static List<object> BuildParameterMetadataInfo(
-            List<ParameterMetadata>? configParameters,
-            DatabaseObject? databaseObject)
+        /// <param name="databaseObject">DB metadata for the entity. Must be a populated <see cref="DatabaseStoredProcedure"/>.</param>
+        /// <returns>A list whose elements are dictionaries (one per parameter), each with the keys
+        /// <c>name</c>, <c>required</c>, <c>default</c>, and <c>description</c>.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when <paramref name="databaseObject"/> is not a <see cref="DatabaseStoredProcedure"/> with a populated <see cref="StoredProcedureDefinition"/>.</exception>
+        private static List<object> BuildParameterMetadataInfo(DatabaseObject? databaseObject)
         {
             IReadOnlyDictionary<string, ParameterDefinition>? dbParameters =
-                (databaseObject as DatabaseStoredProcedure)?.StoredProcedureDefinition?.Parameters;
+                (databaseObject as DatabaseStoredProcedure)?.StoredProcedureDefinition?.Parameters
+                ?? throw new InvalidOperationException(
+                    "Stored-procedure metadata is missing at describe_entities time. " +
+                    "SqlMetadataProvider.FillSchemaForStoredProcedureAsync should have populated this during init.");
 
-            if (dbParameters is { Count: > 0 })
+            List<object> result = new(dbParameters.Count);
+            foreach ((string parameterName, ParameterDefinition definition) in dbParameters)
             {
-                List<object> result = new(dbParameters.Count);
-                foreach ((string parameterName, ParameterDefinition definition) in dbParameters)
-                {
-                    result.Add(BuildParameterEntry(parameterName, definition));
-                }
-
-                return result;
+                result.Add(BuildParameterEntry(parameterName, definition));
             }
 
-            // No DB metadata: emit config parameters with the same per-field rules.
-            List<object> configOnly = new();
-            if (configParameters is not null)
-            {
-                foreach (ParameterMetadata parameter in configParameters)
-                {
-                    configOnly.Add(new Dictionary<string, object?>
-                    {
-                        ["name"] = parameter.Name,
-                        ["required"] = parameter.Required ?? true,
-                        ["default"] = parameter.Default,
-                        ["description"] = parameter.Description ?? string.Empty
-                    });
-                }
-            }
-
-            return configOnly;
+            return result;
         }
 
         private static Dictionary<string, object?> BuildParameterEntry(

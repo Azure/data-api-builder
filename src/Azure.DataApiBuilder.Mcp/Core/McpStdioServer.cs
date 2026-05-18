@@ -262,17 +262,26 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="root">The root JSON element of the incoming JSON-RPC request.</param>
         /// <remarks>
         /// Log level precedence (highest to lowest):
-        /// 1. CLI --LogLevel flag - cannot be overridden
-        /// 2. Config runtime.telemetry.log-level - cannot be overridden by MCP
-        /// 3. MCP logging/setLevel - only works if neither CLI nor Config explicitly set a level
-        /// 4. Default: None for MCP stdio mode (silent by default to keep stdout clean for JSON-RPC)
-        /// 
-        /// If CLI or Config set the log level, this method accepts the request but silently ignores it.
-        /// The client won't get an error, but CLI/Config wins.
-        /// 
-        /// When MCP sets a level other than "none", this also restores Console.Error to the real stderr
-        /// stream so that logs become visible (Console may have been redirected to null at startup).
-        /// It also enables MCP log notifications so logs are sent to the client via notifications/message.
+        /// 1. MCP <c>logging/setLevel</c> (Agent) - always wins, overrides CLI and Config.
+        /// 2. CLI <c>--LogLevel</c> flag.
+        /// 3. Config <c>runtime.telemetry.log-level</c>.
+        /// 4. Default: <c>None</c> for MCP stdio mode (silent by default to keep stdout clean for JSON-RPC),
+        ///    <c>Error</c> in Production, <c>Debug</c> in Development.
+        ///
+        /// Per MCP spec the response is always success (empty result object) even when the input is
+        /// an unrecognized level — in that case no side effect runs and no state changes.
+        ///
+        /// Side effects performed in order on a valid request:
+        /// 1. Toggle <see cref="IMcpLogNotificationWriter.IsEnabled"/> based on the level
+        ///    (<c>"none"</c> disables, anything else enables). This is done BEFORE
+        ///    <see cref="ILogLevelController.UpdateFromMcp"/> so the audit log line that
+        ///    <c>UpdateFromMcp</c> emits is forwarded to the agent rather than dropped.
+        /// 2. Call <see cref="ILogLevelController.UpdateFromMcp"/>, which updates the level and
+        ///    flips <see cref="ILogLevelController.IsAgentOverriding"/> so subsequent runtime-config
+        ///    hot-reloads do not overwrite the agent's choice.
+        /// 3. Restore <see cref="Console.Error"/> to the real stderr stream when logging is enabled,
+        ///    in case startup redirected it to <see cref="TextWriter.Null"/> (default for
+        ///    <c>--mcp-stdio</c> or <c>--LogLevel none</c>).
         /// </remarks>
         private void HandleSetLogLevel(JsonElement? id, JsonElement root)
         {
@@ -300,33 +309,42 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return;
             }
 
-            // Attempt to update the log level
-            // If CLI or Config overrode, this returns false but we still return success to the client
-            bool updated = logLevelController.UpdateFromMcp(level);
-
-            // Determine if logging is enabled (level != "none")
-            // Note: Even if CLI/Config overrode the level, we still enable notifications
-            // when the client requests logging. They'll get logs at the overridden level.
-            bool isLoggingEnabled = !string.Equals(level, "none", StringComparison.OrdinalIgnoreCase);
-
-            // Only restore stderr when this MCP call actually changed the effective level.
-            // If CLI/Config overrode (updated == false), stderr is already in the correct state:
-            //   - CLI/Config level == "none": stderr was redirected to TextWriter.Null at startup
-            //     and must stay that way; restoring it would re-introduce noisy output even
-            //     though the operator explicitly asked for silence.
-            //   - CLI/Config level != "none": stderr was never redirected, so restoring is a no-op.
-            if (updated && isLoggingEnabled)
+            // Validate the level BEFORE touching any side-effect (notification writer, stderr).
+            // "none" is the disable signal and is not a recognized MCP level; everything else
+            // must round-trip through McpLogLevelConverter so a typo can't silently turn the
+            // notification stream on while UpdateFromMcp ignores the bad value.
+            bool isDisableRequest = string.Equals(level, "none", StringComparison.OrdinalIgnoreCase);
+            bool isValidLevel = isDisableRequest || McpLogLevelConverter.TryConvertFromMcp(level, out _);
+            if (!isValidLevel)
             {
-                RestoreStderrIfNeeded();
+                // Unknown level - return success per MCP spec but make no state changes.
+                WriteResult(id, new { });
+                return;
             }
 
-            // Enable or disable MCP log notifications based on the requested level
-            // When CLI/Config overrode, notifications are still enabled - client asked for logs,
-            // they just get them at the CLI/Config level instead of the requested level.
+            bool isLoggingEnabled = !isDisableRequest;
+
+            // Enable or disable MCP log notifications based on the requested level BEFORE updating
+            // the level. Doing it in this order means the agent-override Information line emitted
+            // by UpdateFromMcp is forwarded to the agent (otherwise it would be dropped because
+            // the notification writer was still disabled at the moment of emission).
             IMcpLogNotificationWriter? notificationWriter = _serviceProvider.GetService<IMcpLogNotificationWriter>();
             if (notificationWriter != null)
             {
                 notificationWriter.IsEnabled = isLoggingEnabled;
+            }
+
+            // Update the log level. Validation above guarantees this returns true for non-"none"
+            // values; for "none" it returns false (no LogLevel mapping) and we just keep
+            // notifications off without touching the current level.
+            bool updated = logLevelController.UpdateFromMcp(level);
+
+            // Restore stderr if the agent successfully turned logging on. When `--mcp-stdio` (or
+            // `--LogLevel none`) was the startup default, stderr was redirected to TextWriter.Null;
+            // re-enable it now so subsequent logs flow.
+            if (updated && isLoggingEnabled)
+            {
+                RestoreStderrIfNeeded();
             }
 
             // Always return success (empty result object) per MCP spec

@@ -86,6 +86,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await QueryTypeColumnFilterAndOrderBy(type, "in", sqlValue, gqlValue, "IN");
         }
 
+        /// <summary>
+        /// PostgreSQL datetime filter tests with timezone offsets.
+        /// Verifies that GraphQL datetime arguments are normalized to UTC before filtering.
+        /// Tests all comparison operators (eq, neq, gt, gte, lt, lte) with offset and offset-less inputs.
+        /// </summary>
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08T05:23:54-05:00\"", "=",
+            DisplayName = "DateTime eq converts -05:00 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08T15:53:54+05:30\"", "=",
+            DisplayName = "DateTime eq converts +05:30 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08T10:23:54Z\"", "=",
+            DisplayName = "DateTime eq preserves UTC input.")]
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08T10:23:54\"", "=",
+            DisplayName = "DateTime eq treats offset-less input as UTC.")]
+        [DataRow(DATETIME_TYPE, "neq", "'1999-01-08 10:23:54'", "\"1999-01-08T05:23:54-05:00\"", "!=",
+            DisplayName = "DateTime neq converts -05:00 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "gt", "'1999-01-08 10:23:53'", "\"1999-01-08T05:23:53-05:00\"", ">",
+            DisplayName = "DateTime gt converts -05:00 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "gte", "'1999-01-08 10:23:54'", "\"1999-01-08T05:23:54-05:00\"", ">=",
+            DisplayName = "DateTime gte converts -05:00 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "lt", "'1999-01-08 10:23:55'", "\"1999-01-08T05:23:55-05:00\"", "<",
+            DisplayName = "DateTime lt converts -05:00 offset to UTC.")]
+        [DataRow(DATETIME_TYPE, "lte", "'1999-01-08 10:23:54'", "\"1999-01-08T05:23:54-05:00\"", "<=",
+            DisplayName = "DateTime lte converts -05:00 offset to UTC.")]
+        [DataTestMethod]
+        public async Task PGSQL_real_graphql_datetime_filter_offset_expectedValues(
+            string type,
+            string filterOperator,
+            string sqlValue,
+            string gqlValue,
+            string queryOperator)
+        {
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
+        }
+
         protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)
         {
             return MakeQueryOnTypeTable(queryFields, filterValue: id.ToString(), filterField: "id");
@@ -99,7 +133,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string orderBy = "id",
             string limit = "1")
         {
-            string formattedSelect = limit.Equals("1") ? "SELECT to_jsonb(subq3) AS DATA" : "SELECT json_agg(to_jsonb(subq3)) AS DATA";
+            string formattedSelect = limit.Equals("1")
+                ? "SELECT to_jsonb(subq3) AS DATA"
+                : "SELECT COALESCE(json_agg(to_jsonb(subq3)), '[]'::json) AS DATA";
 
             return @"
                 " + formattedSelect + @"
@@ -140,16 +176,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 return columnName;
             }
-        }
-
-        /// <summary>
-        /// Bypass DateTime GQL tests for PostreSql
-        /// </summary>
-        [DataTestMethod]
-        [Ignore]
-        public new void QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
-        {
-            Assert.Inconclusive("Test skipped for PostgreSql.");
         }
     }
 }

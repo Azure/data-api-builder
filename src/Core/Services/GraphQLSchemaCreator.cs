@@ -144,8 +144,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 .AddDocument(mutationNode)
                 // Generate the GraphQL subscriptions from the provided objects
                 .AddDocument(subscriptionNode)
-                // Enable the OneOf directive (https://github.com/graphql/graphql-spec/pull/825) to support the DefaultValue type
-                .ModifyOptions(o => o.EnableOneOf = true)
                 // Adds our type interceptor that will create the resolvers.
                 .TryAddTypeInterceptor(new ResolverTypeInterceptor(new ExecutionHelper(
                     _queryEngineFactory,

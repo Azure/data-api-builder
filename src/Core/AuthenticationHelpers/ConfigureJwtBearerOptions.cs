@@ -49,6 +49,10 @@ public class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearerOptions
         options.MapInboundClaims = false;
         options.Audience = newAuthOptions.Jwt.Audience;
         options.Authority = newAuthOptions.Jwt.Issuer;
+        // Require HTTPS for IdP metadata unless explicitly running in Development mode.
+        // Host is guaranteed non-null here because newAuthOptions (Runtime.Host.Authentication) was checked above,
+        // but we keep null-conditional access defensively; a null mode is treated as non-Development (HTTPS required).
+        options.RequireHttpsMetadata = _runtimeConfigProvider.GetConfig().Runtime?.Host?.Mode is not HostMode.Development;
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
         {
             ValidAudience = newAuthOptions.Jwt.Audience,

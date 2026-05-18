@@ -18,6 +18,7 @@ public class DataApiBuilderException : Exception
     public const string GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE = "Access forbidden to a field referenced in the filter.";
     public const string AUTHORIZATION_FAILURE = "Authorization Failure: Access Not Allowed.";
     public const string GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE = "Unauthorized due to one or more fields in this mutation.";
+    public const string GRAPHQL_ORDERBY_FIELD_AUTHZ_FAILURE = "Access forbidden to a field referenced in the orderBy argument.";
     public const string GRAPHQL_GROUPBY_FIELD_AUTHZ_FAILURE = "Access forbidden to field '{0}' referenced in the groupBy argument.";
     public const string GRAPHQL_AGGREGATION_FIELD_AUTHZ_FAILURE = "Access forbidden to field '{0}' referenced in the aggregation function '{1}'.";
     public const string OBO_IDENTITY_CLAIMS_MISSING = "User-delegated authentication failed: Neither 'oid' nor 'sub' claim found in the access token.";

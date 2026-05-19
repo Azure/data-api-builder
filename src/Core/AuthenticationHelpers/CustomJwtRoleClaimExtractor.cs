@@ -5,6 +5,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -15,20 +17,30 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers;
 
 public static class CustomJwtRoleClaimExtractor
 {
-    public const string CUSTOM_JWT_ROLE_SETTINGS_PROVIDER_ERROR = "jwt.rolesPath and jwt.rolesFormat are only supported when authentication.provider is Custom.";
+    public const string CUSTOM_JWT_ROLE_SETTINGS_PROVIDER_ERROR = "jwt.roles-path, jwt.roles-format, and jwt.roles-delimiter are only supported when authentication.provider is Custom.";
+
+    public enum RoleExtractionResult
+    {
+        Success,
+        MissingClaim,
+        InvalidClaimValue
+    }
 
     public static bool IsValidRolesPath(string rolesPath)
     {
-        return !string.IsNullOrWhiteSpace(rolesPath) &&
-            (!rolesPath.StartsWith("$[", StringComparison.Ordinal) || IsBracketLiteralPath(rolesPath));
+        return IsVariableReference(rolesPath) || TryParseRolesPath(rolesPath, out _);
     }
 
     public static bool IsValidRolesFormat(string rolesFormat)
     {
         return rolesFormat is JwtOptions.ROLES_FORMAT_ARRAY
             or JwtOptions.ROLES_FORMAT_STRING
-            or JwtOptions.ROLES_FORMAT_SPACE_DELIMITED
-            or JwtOptions.ROLES_FORMAT_COMMA_DELIMITED;
+            or JwtOptions.ROLES_FORMAT_DELIMITED_STRING;
+    }
+
+    public static bool IsValidRolesDelimiter(string rolesDelimiter)
+    {
+        return !string.IsNullOrEmpty(rolesDelimiter) || IsVariableReference(rolesDelimiter);
     }
 
     public static void ConfigureCustomJwtRoleExtraction(this JwtBearerOptions options, AuthenticationOptions authOptions)
@@ -48,6 +60,13 @@ public static class CustomJwtRoleClaimExtractor
                 .GetRequiredService<ILoggerFactory>()
                 .CreateLogger(typeof(CustomJwtRoleClaimExtractor));
 
+            if (!context.HttpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out var requestedRole) ||
+                requestedRole.Count == 0 ||
+                string.IsNullOrEmpty(requestedRole[0]))
+            {
+                return;
+            }
+
             if (!TryGetPayloadJson(context.SecurityToken, out string? payloadJson))
             {
                 logger.LogError("Unable to read JWT payload for Custom role extraction.");
@@ -55,18 +74,29 @@ public static class CustomJwtRoleClaimExtractor
                 return;
             }
 
-            if (!TryExtractRoles(
+            RoleExtractionResult extractionResult = ExtractRoles(
                 payloadJson!,
                 authOptions.Jwt.ResolvedRolesPath,
                 authOptions.Jwt.ResolvedRolesFormat,
+                authOptions.Jwt.ResolvedRolesDelimiter,
                 logger,
-                out IReadOnlyList<string> roles))
+                out IReadOnlyList<string> roles);
+
+            if (extractionResult == RoleExtractionResult.InvalidClaimValue)
             {
+                LogRoleExtractionFailure(context, authOptions, requestedRole[0]!, extractionResult, logger);
                 context.Fail("Unable to extract configured JWT roles.");
                 return;
             }
 
-            ReplaceRoleClaims(context.Principal, roles);
+            if (extractionResult == RoleExtractionResult.Success)
+            {
+                ReplaceRoleClaims(context.Principal, roles);
+            }
+            else
+            {
+                LogRoleExtractionFailure(context, authOptions, requestedRole[0]!, extractionResult, logger);
+            }
         };
     }
 
@@ -77,27 +107,49 @@ public static class CustomJwtRoleClaimExtractor
         ILogger logger,
         out IReadOnlyList<string> roles)
     {
+        return ExtractRoles(payloadJson, rolesPath, rolesFormat, JwtOptions.DEFAULT_ROLES_DELIMITER, logger, out roles) == RoleExtractionResult.Success;
+    }
+
+    public static bool TryExtractRoles(
+        string payloadJson,
+        string rolesPath,
+        string rolesFormat,
+        string rolesDelimiter,
+        ILogger logger,
+        out IReadOnlyList<string> roles)
+    {
+        return ExtractRoles(payloadJson, rolesPath, rolesFormat, rolesDelimiter, logger, out roles) == RoleExtractionResult.Success;
+    }
+
+    public static RoleExtractionResult ExtractRoles(
+        string payloadJson,
+        string rolesPath,
+        string rolesFormat,
+        string rolesDelimiter,
+        ILogger logger,
+        out IReadOnlyList<string> roles)
+    {
         roles = Array.Empty<string>();
 
         using JsonDocument payload = JsonDocument.Parse(payloadJson);
         if (!TryResolvePath(payload.RootElement, rolesPath, out JsonElement rolesElement))
         {
-            logger.LogError("Configured rolesPath '{path}' was not found in JWT claims.", rolesPath);
-            return false;
+            logger.LogError("Configured roles-path '{path}' was not found in JWT claims.", rolesPath);
+            return RoleExtractionResult.MissingClaim;
         }
 
-        if (!TryParseRolesElement(rolesElement, rolesPath, rolesFormat, logger, out IEnumerable<string>? parsedRoles))
+        if (!TryParseRolesElement(rolesElement, rolesPath, rolesFormat, rolesDelimiter, logger, out IEnumerable<string>? parsedRoles))
         {
-            return false;
+            return RoleExtractionResult.InvalidClaimValue;
         }
 
         roles = NormalizeRoles(parsedRoles!);
         if (roles.Count == 0)
         {
-            logger.LogWarning("JWT rolesPath '{path}' resolved successfully but produced no roles.", rolesPath);
+            logger.LogWarning("JWT roles-path '{path}' resolved successfully but produced no roles.", rolesPath);
         }
 
-        return true;
+        return RoleExtractionResult.Success;
     }
 
     private static bool TryResolvePath(JsonElement payload, string rolesPath, out JsonElement resolvedElement)
@@ -114,35 +166,30 @@ public static class CustomJwtRoleClaimExtractor
             return payload.TryGetProperty(rolesPath, out resolvedElement);
         }
 
-        if (IsBracketLiteralPath(rolesPath))
+        if (!TryParseRolesPath(rolesPath, out IReadOnlyList<string>? pathSegments))
         {
-            string literalKey = rolesPath[3..^2];
-            return payload.TryGetProperty(literalKey, out resolvedElement);
+            return false;
         }
 
-        if (rolesPath.Contains(".", StringComparison.Ordinal))
+        JsonElement current = payload;
+        foreach (string segment in pathSegments!)
         {
-            JsonElement current = payload;
-            foreach (string segment in rolesPath.Split('.'))
+            if (current.ValueKind != JsonValueKind.Object ||
+                !current.TryGetProperty(segment, out current))
             {
-                if (current.ValueKind != JsonValueKind.Object ||
-                    !current.TryGetProperty(segment, out current))
-                {
-                    return false;
-                }
+                return false;
             }
-
-            resolvedElement = current;
-            return true;
         }
 
-        return payload.TryGetProperty(rolesPath, out resolvedElement);
+        resolvedElement = current;
+        return true;
     }
 
     private static bool TryParseRolesElement(
         JsonElement rolesElement,
         string rolesPath,
         string rolesFormat,
+        string rolesDelimiter,
         ILogger logger,
         out IEnumerable<string>? roles)
     {
@@ -174,24 +221,16 @@ public static class CustomJwtRoleClaimExtractor
             case JwtOptions.ROLES_FORMAT_STRING:
                 return TryParseStringRoles(rolesElement, rolesPath, logger, out roles, roleString => new[] { roleString });
 
-            case JwtOptions.ROLES_FORMAT_SPACE_DELIMITED:
+            case JwtOptions.ROLES_FORMAT_DELIMITED_STRING:
                 return TryParseStringRoles(
                     rolesElement,
                     rolesPath,
                     logger,
                     out roles,
-                    roleString => roleString.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-
-            case JwtOptions.ROLES_FORMAT_COMMA_DELIMITED:
-                return TryParseStringRoles(
-                    rolesElement,
-                    rolesPath,
-                    logger,
-                    out roles,
-                    roleString => roleString.Split(',', StringSplitOptions.None));
+                    roleString => roleString.Split(rolesDelimiter, StringSplitOptions.None));
 
             default:
-                logger.LogError("Roles claim at '{path}' has unsupported type '{type}'. Expected {expected}.", rolesPath, rolesFormat, "array, string, space-delimited, or comma-delimited");
+                logger.LogError("Roles claim at '{path}' has unsupported type '{type}'. Expected {expected}.", rolesPath, rolesFormat, "array, string, or delimited-string");
                 return false;
         }
     }
@@ -212,6 +251,23 @@ public static class CustomJwtRoleClaimExtractor
 
         roles = parser(rolesElement.GetString()!);
         return true;
+    }
+
+    private static void LogRoleExtractionFailure(
+        TokenValidatedContext context,
+        AuthenticationOptions authOptions,
+        string requestedRole,
+        RoleExtractionResult extractionResult,
+        ILogger logger)
+    {
+        logger.LogError(
+            "{correlationId} Custom JWT role extraction failed. Provider: {provider}. roles-path: {rolesPath}. roles-format: {rolesFormat}. Requested role: {requestedRole}. Reason: {reason}.",
+            HttpContextExtensions.GetLoggerCorrelationId(context.HttpContext),
+            authOptions.Provider,
+            authOptions.Jwt!.ResolvedRolesPath,
+            authOptions.Jwt.ResolvedRolesFormat,
+            requestedRole,
+            extractionResult);
     }
 
     private static List<string> NormalizeRoles(IEnumerable<string> parsedRoles)
@@ -272,11 +328,90 @@ public static class CustomJwtRoleClaimExtractor
         return payloadJson is not null;
     }
 
-    private static bool IsBracketLiteralPath(string rolesPath)
+    private static bool TryParseRolesPath(string rolesPath, out IReadOnlyList<string>? pathSegments)
     {
-        return rolesPath.Length >= 6 &&
-            rolesPath.StartsWith("$['", StringComparison.Ordinal) &&
-            rolesPath.EndsWith("']", StringComparison.Ordinal);
+        pathSegments = null;
+        if (string.IsNullOrWhiteSpace(rolesPath))
+        {
+            return false;
+        }
+
+        if (rolesPath.StartsWith("http://", StringComparison.Ordinal) ||
+            rolesPath.StartsWith("https://", StringComparison.Ordinal))
+        {
+            pathSegments = new[] { rolesPath };
+            return true;
+        }
+
+        int index = 0;
+        List<string> segments = new();
+        while (index < rolesPath.Length)
+        {
+            if (rolesPath[index] == '.')
+            {
+                return false;
+            }
+
+            if (rolesPath[index] == '[')
+            {
+                if (index + 3 >= rolesPath.Length || rolesPath[index + 1] != '\'')
+                {
+                    return false;
+                }
+
+                int literalEnd = rolesPath.IndexOf("']", index + 2, StringComparison.Ordinal);
+                if (literalEnd < 0 || literalEnd == index + 2)
+                {
+                    return false;
+                }
+
+                segments.Add(rolesPath[(index + 2)..literalEnd]);
+                index = literalEnd + 2;
+            }
+            else
+            {
+                int segmentStart = index;
+                while (index < rolesPath.Length && rolesPath[index] != '.' && rolesPath[index] != '[')
+                {
+                    index++;
+                }
+
+                if (segmentStart == index)
+                {
+                    return false;
+                }
+
+                segments.Add(rolesPath[segmentStart..index]);
+            }
+
+            if (index == rolesPath.Length)
+            {
+                pathSegments = segments;
+                return true;
+            }
+
+            if (rolesPath[index] == '.')
+            {
+                index++;
+                if (index == rolesPath.Length)
+                {
+                    return false;
+                }
+            }
+            else if (rolesPath[index] != '[')
+            {
+                return false;
+            }
+        }
+
+        pathSegments = segments;
+        return segments.Count > 0;
+    }
+
+    private static bool IsVariableReference(string value)
+    {
+        return value.StartsWith("@env('", StringComparison.Ordinal) && value.EndsWith("')", StringComparison.Ordinal) ||
+            value.StartsWith("@akv('", StringComparison.Ordinal) && value.EndsWith("')", StringComparison.Ordinal);
     }
 
     private static void LogUnsupportedType(ILogger logger, string rolesPath, JsonElement rolesElement, string expected)

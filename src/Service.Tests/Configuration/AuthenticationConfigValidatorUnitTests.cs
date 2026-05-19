@@ -90,16 +90,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [DataTestMethod("Custom JWT roles settings validation passes when valid")]
-        [DataRow("realm_access.roles", null)]
-        [DataRow(null, "space-delimited")]
-        [DataRow("$['app.roles']", "array")]
-        public void ValidateCustomJwtRolesSettings(string rolesPath, string rolesFormat)
+        [DataRow("realm_access.roles", null, null)]
+        [DataRow(null, "delimited-string", null)]
+        [DataRow("['app.roles']", "array", null)]
+        [DataRow("resource_access['dab-api'].roles", "array", null)]
+        [DataRow("@env('JWT_ROLES_PATH')", "array", null)]
+        [DataRow("scope", "delimited-string", "@env('JWT_ROLES_DELIMITER')")]
+        [DataRow("scope", "delimited-string", "@akv('jwt-roles-delimiter')")]
+        public void ValidateCustomJwtRolesSettings(string rolesPath, string rolesFormat, string rolesDelimiter)
         {
             JwtOptions jwt = new(
                 Audience: "12345",
                 Issuer: "https://login.microsoftonline.com/common",
                 RolesPath: rolesPath,
-                RolesFormat: rolesFormat);
+                RolesFormat: rolesFormat,
+                RolesDelimiter: rolesDelimiter);
             AuthenticationOptions authNConfig = new(
                 Provider: "Custom",
                 Jwt: jwt);
@@ -148,17 +153,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [DataTestMethod("Custom JWT roles settings fail with invalid values")]
-        [DataRow("$[app.roles]", null)]
-        [DataRow("", null)]
-        [DataRow("   ", null)]
-        [DataRow(null, "semicolon-delimited")]
-        public void ValidateCustomJwtRolesSettingsFailWithInvalidValues(string rolesPath, string rolesFormat)
+        [DataRow("groups[0]", null, null)]
+        [DataRow("realm_access..roles", null, null)]
+        [DataRow("", null, null)]
+        [DataRow("   ", null, null)]
+        [DataRow(null, "semicolon-delimited", null)]
+        [DataRow(null, "@env('JWT_ROLES_FORMAT')", null)]
+        [DataRow(null, "array", ",")]
+        [DataRow(null, "string", ",")]
+        [DataRow(null, "delimited-string", "")]
+        public void ValidateCustomJwtRolesSettingsFailWithInvalidValues(string rolesPath, string rolesFormat, string rolesDelimiter)
         {
             JwtOptions jwt = new(
                 Audience: "12345",
                 Issuer: DEFAULT_ISSUER,
                 RolesPath: rolesPath,
-                RolesFormat: rolesFormat);
+                RolesFormat: rolesFormat,
+                RolesDelimiter: rolesDelimiter);
             AuthenticationOptions authNConfig = new(
                 Provider: "Custom",
                 Jwt: jwt);

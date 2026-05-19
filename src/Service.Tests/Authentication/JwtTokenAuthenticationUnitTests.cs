@@ -116,6 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         [DataTestMethod]
         [DataRow("admin", HttpStatusCode.OK, DisplayName = "X-MS-API-ROLE selects an extracted role")]
         [DataRow("writer", HttpStatusCode.Forbidden, DisplayName = "X-MS-API-ROLE fails for a role absent from the token")]
+        [DataRow("Admin", HttpStatusCode.Forbidden, DisplayName = "X-MS-API-ROLE matching is case-sensitive")]
         public async Task TestCustomJwtExtractedRolesWithClientRoleHeader(string clientRoleHeader, HttpStatusCode expectedStatusCode)
         {
             RsaSecurityKey key = new(RSA.Create(2048));
@@ -159,9 +160,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 await SendRequestAndGetHttpContextState(
                     key,
                     token,
+                    clientRoleHeader: "read:orders",
                     authOptions: new AuthenticationOptions(
                         Provider: AuthenticationOptions.CUSTOM_AUTHENTICATION,
-                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER, RolesPath: "scope", RolesFormat: "space-delimited")));
+                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER, RolesPath: "scope", RolesFormat: JwtOptions.ROLES_FORMAT_DELIMITED_STRING)));
 
             Assert.AreEqual((int)HttpStatusCode.OK, postMiddlewareContext.Response.StatusCode);
             Assert.IsTrue(postMiddlewareContext.User.IsInRole("read:orders"));
@@ -189,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                     clientRoleHeader: "admin",
                     authOptions: new AuthenticationOptions(
                         Provider: AuthenticationOptions.CUSTOM_AUTHENTICATION,
-                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER, RolesPath: "roles_csv", RolesFormat: "comma-delimited")));
+                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER, RolesPath: "roles_csv", RolesFormat: JwtOptions.ROLES_FORMAT_DELIMITED_STRING, RolesDelimiter: ",")));
 
             Dictionary<string, List<Claim>> claimsInRequestContext = AuthorizationResolver.GetAllAuthenticatedUserClaims(postMiddlewareContext);
 
@@ -201,19 +203,62 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 originalRoleClaims.Select(claim => claim.Value).ToArray());
         }
 
-        [DataTestMethod]
-        [DataRow(true, DisplayName = "Missing configured claim fails authentication")]
-        [DataRow(false, DisplayName = "Wrong rolesFormat type fails authentication")]
-        public async Task TestCustomJwtRoleExtractionFailureReturnsUnauthorized(bool useMissingClaim)
+        [TestMethod("Missing configured claim with X-MS-API-ROLE returns Forbidden")]
+        public async Task TestCustomJwtMissingRoleClaimReturnsForbidden()
         {
             RsaSecurityKey key = new(RSA.Create(2048));
             string token = CreateJwt(
                 audience: AUDIENCE,
                 issuer: LOCAL_ISSUER,
                 signingKey: key,
-                claims: useMissingClaim
-                    ? new Dictionary<string, object> { { "groups", new[] { "admin" } } }
-                    : new Dictionary<string, object> { { "roles", "admin" } });
+                claims: new Dictionary<string, object> { { "groups", new[] { "admin" } } });
+
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    key,
+                    token,
+                    clientRoleHeader: "admin",
+                    authOptions: new AuthenticationOptions(
+                        Provider: AuthenticationOptions.CUSTOM_AUTHENTICATION,
+                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER)),
+                    useAuthorizationMiddleware: true);
+
+            Assert.AreEqual((int)HttpStatusCode.Forbidden, postMiddlewareContext.Response.StatusCode);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+        }
+
+        [TestMethod("Wrong rolesFormat type fails authentication")]
+        public async Task TestCustomJwtRoleExtractionFormatFailureReturnsUnauthorized()
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            string token = CreateJwt(
+                audience: AUDIENCE,
+                issuer: LOCAL_ISSUER,
+                signingKey: key,
+                claims: new Dictionary<string, object> { { "roles", "admin" } });
+
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    key,
+                    token,
+                    clientRoleHeader: "admin",
+                    authOptions: new AuthenticationOptions(
+                        Provider: AuthenticationOptions.CUSTOM_AUTHENTICATION,
+                        Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER)));
+
+            Assert.AreEqual((int)HttpStatusCode.Unauthorized, postMiddlewareContext.Response.StatusCode);
+            Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
+        }
+
+        [TestMethod("Missing configured claim without X-MS-API-ROLE uses Authenticated role")]
+        public async Task TestCustomJwtMissingRoleClaimWithoutHeaderUsesAuthenticatedRole()
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            string token = CreateJwt(
+                audience: AUDIENCE,
+                issuer: LOCAL_ISSUER,
+                signingKey: key,
+                claims: new Dictionary<string, object> { { "groups", new[] { "admin" } } });
 
             HttpContext postMiddlewareContext =
                 await SendRequestAndGetHttpContextState(
@@ -223,8 +268,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                         Provider: AuthenticationOptions.CUSTOM_AUTHENTICATION,
                         Jwt: new JwtOptions(AUDIENCE, LOCAL_ISSUER)));
 
-            Assert.AreEqual((int)HttpStatusCode.Unauthorized, postMiddlewareContext.Response.StatusCode);
-            Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual((int)HttpStatusCode.OK, postMiddlewareContext.Response.StatusCode);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(
+                expected: AuthorizationType.Authenticated.ToString(),
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
         }
 
         [DataTestMethod]

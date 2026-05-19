@@ -74,6 +74,7 @@ namespace Cli.Commands
             string? runtimeHostAuthenticationJwtIssuer = null,
             string? runtimeHostAuthenticationJwtRolesPath = null,
             string? runtimeHostAuthenticationJwtRolesFormat = null,
+            string? runtimeHostAuthenticationJwtRolesDelimiter = null,
             int? runtimeHostMaxResponseSizeMb = null,
             string? azureKeyVaultEndpoint = null,
             AKVRetryPolicyMode? azureKeyVaultRetryPolicyMode = null,
@@ -175,6 +176,7 @@ namespace Cli.Commands
             RuntimeHostAuthenticationJwtIssuer = runtimeHostAuthenticationJwtIssuer;
             RuntimeHostAuthenticationJwtRolesPath = runtimeHostAuthenticationJwtRolesPath;
             RuntimeHostAuthenticationJwtRolesFormat = runtimeHostAuthenticationJwtRolesFormat;
+            RuntimeHostAuthenticationJwtRolesDelimiter = runtimeHostAuthenticationJwtRolesDelimiter;
             RuntimeHostMaxResponseSizeMb = runtimeHostMaxResponseSizeMb;
             // Azure Key Vault
             AzureKeyVaultEndpoint = azureKeyVaultEndpoint;
@@ -370,11 +372,14 @@ namespace Cli.Commands
         [Option("runtime.host.authentication.jwt.issuer", Required = false, HelpText = "Configure the entity that issued the Jwt Token.")]
         public string? RuntimeHostAuthenticationJwtIssuer { get; }
 
-        [Option("runtime.host.authentication.jwt.rolesPath", Required = false, HelpText = "Configure the path to the roles claim in the raw JWT payload JSON.")]
+        [Option("runtime.host.authentication.jwt.roles-path", Required = false, HelpText = "Configure the path to the roles claim in the raw JWT payload JSON.")]
         public string? RuntimeHostAuthenticationJwtRolesPath { get; }
 
-        [Option("runtime.host.authentication.jwt.rolesFormat", Required = false, HelpText = "Configure the format used to parse the roles claim.")]
+        [Option("runtime.host.authentication.jwt.roles-format", Required = false, HelpText = "Configure the format used to parse the roles claim.")]
         public string? RuntimeHostAuthenticationJwtRolesFormat { get; }
+
+        [Option("runtime.host.authentication.jwt.roles-delimiter", Required = false, HelpText = "Configure the delimiter used when roles-format is delimited-string.")]
+        public string? RuntimeHostAuthenticationJwtRolesDelimiter { get; }
 
         [Option("runtime.host.max-response-size-mb", Required = false, HelpText = "Maximum response size in megabytes. Use -1 for maximum engine limit. Default: 158.")]
         public int? RuntimeHostMaxResponseSizeMb { get; }

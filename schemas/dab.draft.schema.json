@@ -458,19 +458,22 @@
                       "type": "string",
                       "description": "The expected issuer (iss) claim of incoming JWT tokens."
                     },
-                    "rolesPath": {
+                    "roles-path": {
                       "type": "string",
-                      "description": "Path to the roles claim in the raw JWT payload JSON. Supported for Custom authentication."
+                      "description": "Path to the JWT claim that contains custom roles. Supports dot notation and bracket notation. Supported for Custom authentication."
                     },
-                    "rolesFormat": {
+                    "roles-format": {
                       "type": "string",
-                      "description": "Format used to parse the roles claim. Supported for Custom authentication.",
+                      "description": "Format of the JWT claim that contains custom roles. Supported for Custom authentication.",
                       "enum": [
                         "array",
                         "string",
-                        "space-delimited",
-                        "comma-delimited"
+                        "delimited-string"
                       ]
+                    },
+                    "roles-delimiter": {
+                      "type": "string",
+                      "description": "Delimiter used when roles-format is delimited-string. Supported for Custom authentication."
                     }
                   },
                   "required": [ "audience", "issuer" ]
@@ -508,11 +511,14 @@
                     "properties": {
                       "jwt": {
                         "properties": {
-                          "rolesPath": {
+                          "roles-path": {
                             "default": "roles"
                           },
-                          "rolesFormat": {
+                          "roles-format": {
                             "default": "array"
+                          },
+                          "roles-delimiter": {
+                            "default": " "
                           }
                         }
                       }
@@ -533,9 +539,36 @@
                     "properties": {
                       "jwt": {
                         "properties": {
-                          "rolesPath": false,
-                          "rolesFormat": false
+                          "roles-path": false,
+                          "roles-format": false,
+                          "roles-delimiter": false
                         }
+                      }
+                    }
+                  }
+                },
+                {
+                  "$comment": "roles-delimiter is valid only when Custom JWT roles-format is delimited-string.",
+                  "if": {
+                    "properties": {
+                      "provider": {
+                        "const": "Custom"
+                      },
+                      "jwt": {
+                        "required": [ "roles-delimiter" ]
+                      }
+                    },
+                    "required": [ "provider", "jwt" ]
+                  },
+                  "then": {
+                    "properties": {
+                      "jwt": {
+                        "properties": {
+                          "roles-format": {
+                            "const": "delimited-string"
+                          }
+                        },
+                        "required": [ "roles-format" ]
                       }
                     }
                   }

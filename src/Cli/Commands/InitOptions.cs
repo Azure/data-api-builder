@@ -32,6 +32,7 @@ namespace Cli.Commands
             string? issuer = null,
             string? rolesPath = null,
             string? rolesFormat = null,
+            string? rolesDelimiter = null,
             string restPath = RestRuntimeOptions.DEFAULT_PATH,
             string? runtimeBaseRoute = null,
             bool restDisabled = false,
@@ -61,6 +62,7 @@ namespace Cli.Commands
             Issuer = issuer;
             RolesPath = rolesPath;
             RolesFormat = rolesFormat;
+            RolesDelimiter = rolesDelimiter;
             RestPath = restPath;
             RuntimeBaseRoute = runtimeBaseRoute;
             RestDisabled = restDisabled;
@@ -114,6 +116,9 @@ namespace Cli.Commands
 
         [Option("auth.roles-format", Required = false, HelpText = "Format used to parse the roles claim for Custom authentication.")]
         public string? RolesFormat { get; }
+
+        [Option("auth.roles-delimiter", Required = false, HelpText = "Delimiter used when auth.roles-format is delimited-string for Custom authentication.")]
+        public string? RolesDelimiter { get; }
 
         [Option("rest.path", Default = RestRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
         public string RestPath { get; }

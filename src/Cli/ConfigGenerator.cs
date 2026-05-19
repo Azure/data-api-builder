@@ -218,7 +218,7 @@ namespace Cli
                 return false;
             }
 
-            if (!ValidateCustomJwtRolesOptions(options.AuthenticationProvider, options.RolesPath, options.RolesFormat))
+            if (!ValidateCustomJwtRolesOptions(options.AuthenticationProvider, options.RolesPath, options.RolesFormat, options.RolesDelimiter))
             {
                 return false;
             }
@@ -292,9 +292,9 @@ namespace Cli
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
                             Provider: options.AuthenticationProvider,
-                            Jwt: (options.Audience is null && options.Issuer is null && options.RolesPath is null && options.RolesFormat is null)
+                            Jwt: (options.Audience is null && options.Issuer is null && options.RolesPath is null && options.RolesFormat is null && options.RolesDelimiter is null)
                                 ? null
-                                : new(options.Audience, options.Issuer, options.RolesPath, options.RolesFormat)),
+                                : new(options.Audience, options.Issuer, options.RolesPath, options.RolesFormat, options.RolesDelimiter)),
                         Mode: options.HostMode),
                     BaseRoute: runtimeBaseRoute,
                     Telemetry: new TelemetryOptions(
@@ -310,9 +310,9 @@ namespace Cli
             return true;
         }
 
-        private static bool ValidateCustomJwtRolesOptions(string authenticationProvider, string? rolesPath, string? rolesFormat)
+        private static bool ValidateCustomJwtRolesOptions(string authenticationProvider, string? rolesPath, string? rolesFormat, string? rolesDelimiter)
         {
-            if ((rolesPath is not null || rolesFormat is not null) &&
+            if ((rolesPath is not null || rolesFormat is not null || rolesDelimiter is not null) &&
                 !AuthenticationOptions.CUSTOM_AUTHENTICATION.Equals(authenticationProvider, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogError(CustomJwtRoleClaimExtractor.CUSTOM_JWT_ROLE_SETTINGS_PROVIDER_ERROR);
@@ -321,13 +321,26 @@ namespace Cli
 
             if (rolesPath is not null && !CustomJwtRoleClaimExtractor.IsValidRolesPath(rolesPath))
             {
-                _logger.LogError("Invalid jwt.rolesPath: '{rolesPath}'.", rolesPath);
+                _logger.LogError("Invalid jwt.roles-path: '{rolesPath}'.", rolesPath);
                 return false;
             }
 
             if (rolesFormat is not null && !CustomJwtRoleClaimExtractor.IsValidRolesFormat(rolesFormat))
             {
-                _logger.LogError("Invalid jwt.rolesFormat: '{rolesFormat}'.", rolesFormat);
+                _logger.LogError("Invalid jwt.roles-format: '{rolesFormat}'.", rolesFormat);
+                return false;
+            }
+
+            string resolvedRolesFormat = rolesFormat ?? JwtOptions.DEFAULT_ROLES_FORMAT;
+            if (rolesDelimiter is not null && resolvedRolesFormat != JwtOptions.ROLES_FORMAT_DELIMITED_STRING)
+            {
+                _logger.LogError("jwt.roles-delimiter is only supported when jwt.roles-format is delimited-string.");
+                return false;
+            }
+
+            if (rolesDelimiter is not null && !CustomJwtRoleClaimExtractor.IsValidRolesDelimiter(rolesDelimiter))
+            {
+                _logger.LogError("Invalid jwt.roles-delimiter.");
                 return false;
             }
 
@@ -1105,6 +1118,7 @@ namespace Cli
                 options.RuntimeHostAuthenticationJwtIssuer != null ||
                 options.RuntimeHostAuthenticationJwtRolesPath != null ||
                 options.RuntimeHostAuthenticationJwtRolesFormat != null ||
+                options.RuntimeHostAuthenticationJwtRolesDelimiter != null ||
                 options.RuntimeHostMaxResponseSizeMb != null)
             {
                 HostOptions? updatedHostOptions = runtimeConfig?.Runtime?.Host;
@@ -1646,7 +1660,8 @@ namespace Cli
             {
                 if (options.RuntimeHostAuthenticationProvider is not null ||
                     options.RuntimeHostAuthenticationJwtRolesPath is not null ||
-                    options.RuntimeHostAuthenticationJwtRolesFormat is not null)
+                    options.RuntimeHostAuthenticationJwtRolesFormat is not null ||
+                    options.RuntimeHostAuthenticationJwtRolesDelimiter is not null)
                 {
                     string authenticationProvider = options.RuntimeHostAuthenticationProvider
                         ?? updatedHostOptions?.Authentication?.Provider
@@ -1655,8 +1670,10 @@ namespace Cli
                         ?? updatedHostOptions?.Authentication?.Jwt?.RolesPath;
                     string? rolesFormat = options.RuntimeHostAuthenticationJwtRolesFormat
                         ?? updatedHostOptions?.Authentication?.Jwt?.RolesFormat;
+                    string? rolesDelimiter = options.RuntimeHostAuthenticationJwtRolesDelimiter
+                        ?? updatedHostOptions?.Authentication?.Jwt?.RolesDelimiter;
 
-                    if (!ValidateCustomJwtRolesOptions(authenticationProvider, rolesPath, rolesFormat))
+                    if (!ValidateCustomJwtRolesOptions(authenticationProvider, rolesPath, rolesFormat, rolesDelimiter))
                     {
                         return false;
                     }
@@ -1835,6 +1852,34 @@ namespace Cli
 
                     updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.RolesFormat as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Jwt.RolesDelimiter
+                updatedValue = options?.RuntimeHostAuthenticationJwtRolesDelimiter;
+                if (updatedValue != null)
+                {
+                    JwtOptions jwtOptions;
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null || updatedHostOptions.Authentication?.Jwt == null)
+                    {
+                        jwtOptions = new(null, null, RolesDelimiter: (string)updatedValue);
+                    }
+                    else
+                    {
+                        jwtOptions = updatedHostOptions.Authentication.Jwt with { RolesDelimiter = (string)updatedValue };
+                    }
+
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Jwt: jwtOptions);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Jwt = jwtOptions };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.RolesDelimiter as '{updatedValue}'", updatedValue);
                 }
 
                 // Runtime.Host.MaxResponseSizeMb

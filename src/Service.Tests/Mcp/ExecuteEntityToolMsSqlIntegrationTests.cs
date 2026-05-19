@@ -234,17 +234,5 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(result.IsError != true,
                 $"{message} Content: {GetFirstTextContent(result)}");
         }
-
-        private static string SerializeFirstContent(CallToolResult result)
-        {
-            if (result.Content is null || result.Content.Count == 0)
-            {
-                return "<no content>";
-            }
-
-            return result.Content[0] is TextContentBlock textBlock
-                ? textBlock.Text ?? string.Empty
-                : result.Content[0].GetType().Name;
-        }
     }
 }

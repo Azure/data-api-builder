@@ -63,7 +63,7 @@
     <None Include="..\..\nuget\nuget_core\README.md" Pack="true" PackagePath="\" />
     <None Include="..\..\nuget\nuget_icon.png" Pack="true" PackagePath="\" />
     <None Include="..\..\LICENSE.txt" Pack="true" PackagePath="\" />
-    <None Include="..\..\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\..\NOTICE.txt')" />
+    <None Include="..\..\nuget_core\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\nuget_core\NOTICE.txt')" />
   </ItemGroup>
 
 </Project>

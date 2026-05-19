@@ -165,7 +165,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 7) Validate parameters against DB metadata (StoredProcedureDefinition.Parameters),
                 // which is the source of truth for parameter names. The upstream merge performed by
                 // FillSchemaForStoredProcedureAsync ensures this dictionary contains all valid parameters.
-                StoredProcedureDefinition spDefinition = ((DatabaseStoredProcedure)dbObject).StoredProcedureDefinition;
+                if (dbObject is not DatabaseStoredProcedure storedProcedure)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity '{entity}' is not a stored procedure.", logger);
+                }
+
+                StoredProcedureDefinition spDefinition = storedProcedure.StoredProcedureDefinition;
                 if (parameters != null)
                 {
                     foreach (KeyValuePair<string, object?> param in parameters)

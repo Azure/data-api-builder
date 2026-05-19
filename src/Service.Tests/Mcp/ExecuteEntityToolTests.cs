@@ -61,8 +61,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 dbParameters: dbParams,
                 userParameters: new() { { "id", 1 } });
 
-            Assert.IsTrue(result.IsError == false || result.IsError == null,
-                $"Should accept DB-discovered param 'id'. Content: {GetFirstText(result)}");
+            AssertSuccess(result, "Should accept DB-discovered param 'id'.");
         }
 
         /// <summary>
@@ -108,8 +107,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 dbParameters: dbParams,
                 userParameters: new() { { "title", "Test" }, { "publisher_id", 123 } });
 
-            Assert.IsTrue(result.IsError == false || result.IsError == null,
-                $"Should accept all valid params. Content: {GetFirstText(result)}");
+            AssertSuccess(result, "Should accept all valid params.");
         }
 
         /// <summary>
@@ -150,15 +148,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 ["publisher_id"] = new() { HasConfigDefault = true, ConfigDefaultValue = "999" }
             };
 
-            StoredProcedureRequestContext capturedContext = null;
+            StoredProcedureRequestContext? capturedContext = null;
             CallToolResult result = await ExecuteWithMockedEngineAsync(
                 entityName: TEST_ENTITY,
                 dbParameters: dbParams,
                 userParameters: null,
                 captureContext: ctx => capturedContext = ctx);
 
-            Assert.IsTrue(result.IsError == false || result.IsError == null,
-                $"Should succeed with config defaults. Content: {GetFirstText(result)}");
+            AssertSuccess(result, "Should succeed with config defaults.");
             Assert.IsNotNull(capturedContext, "Query engine should have been called.");
             Assert.IsTrue(capturedContext.ResolvedParameters.ContainsKey("title"));
             Assert.IsTrue(capturedContext.ResolvedParameters.ContainsKey("publisher_id"));
@@ -178,15 +175,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 ["publisher_id"] = new() { HasConfigDefault = true, ConfigDefaultValue = "999" }
             };
 
-            StoredProcedureRequestContext capturedContext = null;
+            StoredProcedureRequestContext? capturedContext = null;
             CallToolResult result = await ExecuteWithMockedEngineAsync(
                 entityName: TEST_ENTITY,
                 dbParameters: dbParams,
                 userParameters: new() { { "title", "UserTitle" } },
                 captureContext: ctx => capturedContext = ctx);
 
-            Assert.IsTrue(result.IsError == false || result.IsError == null,
-                $"Should succeed. Content: {GetFirstText(result)}");
+            AssertSuccess(result, "Should succeed with user-supplied params.");
             Assert.IsNotNull(capturedContext);
             Assert.AreEqual("UserTitle", capturedContext.ResolvedParameters["title"]);
             // publisher_id should get the config default since user didn't supply it
@@ -206,15 +202,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 ["tenant"] = new() { HasConfigDefault = true, ConfigDefaultValue = "default_tenant" }
             };
 
-            StoredProcedureRequestContext capturedContext = null;
+            StoredProcedureRequestContext? capturedContext = null;
             CallToolResult result = await ExecuteWithMockedEngineAsync(
                 entityName: TEST_ENTITY,
                 dbParameters: dbParams,
                 userParameters: new() { { "id", 42 } },
                 captureContext: ctx => capturedContext = ctx);
 
-            Assert.IsTrue(result.IsError == false || result.IsError == null,
-                $"Should succeed. Content: {GetFirstText(result)}");
+            AssertSuccess(result, "Should succeed with partial params.");
             Assert.IsNotNull(capturedContext);
             Assert.IsTrue(capturedContext.ResolvedParameters.ContainsKey("id"));
             Assert.IsTrue(capturedContext.ResolvedParameters.ContainsKey("tenant"));
@@ -230,15 +225,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             Dictionary<string, ParameterDefinition> dbParams = new();
 
-            StoredProcedureRequestContext capturedContext = null;
+            StoredProcedureRequestContext? capturedContext = null;
             CallToolResult result = await ExecuteWithMockedEngineAsync(
                 entityName: TEST_ENTITY,
                 dbParameters: dbParams,
                 userParameters: null,
                 captureContext: ctx => capturedContext = ctx);
 
-            Assert.IsTrue(result.IsError == false || result.IsError == null,
-                $"Should succeed for zero-param SP. Content: {GetFirstText(result)}");
+            AssertSuccess(result, "Should succeed for zero-param SP.");
             Assert.IsNotNull(capturedContext);
             Assert.AreEqual(0, capturedContext.ResolvedParameters.Count);
         }
@@ -428,6 +422,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             services.AddLogging();
 
             return services.BuildServiceProvider();
+        }
+
+        private static void AssertSuccess(CallToolResult result, string message)
+        {
+            Assert.IsTrue(result.IsError != true,
+                $"{message} Content: {GetFirstText(result)}");
         }
 
         private static string GetFirstText(CallToolResult result)

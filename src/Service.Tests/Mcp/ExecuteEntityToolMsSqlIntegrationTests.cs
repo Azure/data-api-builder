@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -71,11 +72,55 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             CallToolResult result = await ExecuteEntityAsync(entityName, parameters);
 
-            Assert.IsTrue(result.IsError == false || result.IsError == null,
-                $"execute_entity failed for entity '{entityName}' with params '{parametersJson}'. Content: {SerializeFirstContent(result)}");
+            AssertSuccess(result,
+                $"execute_entity failed for entity '{entityName}' with params '{parametersJson}'.");
 
+            // Parse response and verify structure
             string content = GetFirstTextContent(result);
             Assert.IsFalse(string.IsNullOrWhiteSpace(content), $"Expected non-empty result for entity '{entityName}'.");
+
+            using JsonDocument doc = JsonDocument.Parse(content);
+            JsonElement root = doc.RootElement;
+            Assert.AreEqual(entityName, root.GetProperty("entity").GetString());
+            Assert.AreEqual("Stored procedure executed successfully", root.GetProperty("message").GetString());
+        }
+
+        /// <summary>
+        /// Verify that GetBook with id=1 returns the actual book record from the database.
+        /// This ensures the parameter value is correctly passed to the stored procedure.
+        /// </summary>
+        [TestMethod]
+        public async Task ExecuteEntity_GetBookById_ReturnsMatchingRecord()
+        {
+            Dictionary<string, object> parameters = new() { { "id", 1 } };
+            CallToolResult result = await ExecuteEntityAsync("GetBook", parameters);
+
+            AssertSuccess(result, "GetBook with id=1 should succeed.");
+
+            using JsonDocument doc = JsonDocument.Parse(GetFirstTextContent(result));
+            JsonElement root = doc.RootElement;
+
+            // Verify the value array contains at least one record with id=1
+            Assert.IsTrue(root.TryGetProperty("value", out JsonElement value), "Response should contain 'value' property.");
+            Assert.AreEqual(JsonValueKind.Array, value.ValueKind);
+            Assert.IsTrue(value.GetArrayLength() > 0, "Expected at least one book record.");
+            Assert.AreEqual(1, value[0].GetProperty("id").GetInt32());
+        }
+
+        /// <summary>
+        /// Verify that InsertBook with no user params applies config defaults (title="randomX", publisher_id="1234").
+        /// The SP inserts using those defaults. We verify the tool reports success (the SP executed without error).
+        /// </summary>
+        [TestMethod]
+        public async Task ExecuteEntity_InsertBookWithDefaults_ExecutesSuccessfully()
+        {
+            CallToolResult result = await ExecuteEntityAsync("InsertBook", parameters: null);
+
+            AssertSuccess(result, "InsertBook with config defaults should succeed.");
+
+            using JsonDocument doc = JsonDocument.Parse(GetFirstTextContent(result));
+            JsonElement root = doc.RootElement;
+            Assert.AreEqual("InsertBook", root.GetProperty("entity").GetString());
         }
 
         /// <summary>
@@ -132,9 +177,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // Real authorization resolver wired by SqlTestBase against the live config + provider.
             services.AddSingleton(_authorizationResolver);
 
-            // Real HttpContext carrying the anonymous role header.
+            // Real HttpContext carrying the anonymous role header and a ClaimsPrincipal
+            // with the anonymous role claim so that AuthorizationResolver.IsValidRoleContext
+            // (which calls httpContext.User.IsInRole) returns true.
             DefaultHttpContext httpContext = new();
             httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = AuthorizationResolver.ROLE_ANONYMOUS;
+            ClaimsIdentity identity = new(
+                authenticationType: "TestAuth",
+                nameType: null,
+                roleType: AuthenticationOptions.ROLE_CLAIM_TYPE);
+            identity.AddClaim(new Claim(AuthenticationOptions.ROLE_CLAIM_TYPE, AuthorizationResolver.ROLE_ANONYMOUS));
+            httpContext.User = new ClaimsPrincipal(identity);
             IHttpContextAccessor httpContextAccessor = new HttpContextAccessor { HttpContext = httpContext };
             services.AddSingleton(httpContextAccessor);
 
@@ -174,6 +227,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             return result.Content[0] is TextContentBlock textBlock
                 ? textBlock.Text ?? string.Empty
                 : string.Empty;
+        }
+
+        private static void AssertSuccess(CallToolResult result, string message)
+        {
+            Assert.IsTrue(result.IsError != true,
+                $"{message} Content: {GetFirstTextContent(result)}");
         }
 
         private static string SerializeFirstContent(CallToolResult result)

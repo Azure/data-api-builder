@@ -22,6 +22,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Controllers;
 using Microsoft.AspNetCore.Authorization;
@@ -190,7 +191,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _gqlFilterParser,
                                 _queryEngineLogger,
                                 runtimeConfigProvider,
-                                cacheService);
+                                cacheService,
+                                NullEmbeddingService.Instance);
                         });
                         services.AddSingleton<IMutationEngine>(implementationFactory: serviceProvider =>
                         {
@@ -201,7 +203,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _authorizationResolver,
                                 _gqlFilterParser,
                                 ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
-                                runtimeConfigProvider);
+                                runtimeConfigProvider,
+                                NullEmbeddingService.Instance);
                         });
                         services.AddSingleton(_sqlMetadataProvider);
                         services.AddSingleton(_authorizationResolver);

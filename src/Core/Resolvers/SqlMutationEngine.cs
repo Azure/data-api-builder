@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
-        private readonly IEmbeddingService? _embeddingService;
+        private readonly IEmbeddingService _embeddingService;
         public const string IS_UPDATE_RESULT_SET = "IsUpdateResultSet";
         private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
         public const string SINGLE_INPUT_ARGUEMENT_NAME = "item";
@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             IHttpContextAccessor httpContextAccessor,
             RuntimeConfigProvider runtimeConfigProvider,
-            IEmbeddingService? embeddingService = null)
+            IEmbeddingService embeddingService)
         {
             _queryManagerFactory = queryManagerFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;

@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization;
@@ -318,7 +319,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 gQLFilterParser,
                 queryEngineLogger.Object,
                 provider,
-                cacheService);
+                cacheService,
+                NullEmbeddingService.Instance);
 
             queryEngineFactory.Setup(x => x.GetQueryEngine(It.IsAny<DatabaseType>())).Returns(queryEngine);
 
@@ -330,7 +332,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 authorizationResolver,
                 gQLFilterParser,
                 httpContextAccessor.Object,
-                provider);
+                provider,
+                NullEmbeddingService.Instance);
 
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
             mutationEngineFactory.Setup(x => x.GetMutationEngine(It.IsAny<DatabaseType>())).Returns(mutationEngine);

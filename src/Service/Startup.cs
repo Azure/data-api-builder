@@ -453,9 +453,16 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
-            // Register embedding service if configured and enabled.
-            // NOTE: IEmbeddingService is only registered when enabled to avoid constructor
-            // failures when config has empty/placeholder values for disabled embeddings.
+            // Register the embedding service. Always registers SOMETHING so consumers
+            // (engines, factories, health check, controller) can take IEmbeddingService
+            // as a non-nullable dependency. DI misconfiguration now fails at startup
+            // rather than as a null-reference on first request.
+            //   - When runtime.embeddings is configured AND enabled: register the real
+            //     EmbeddingService (HTTP-client-backed, talks to the AI provider).
+            //   - Otherwise (section missing or enabled=false): register the
+            //     NullEmbeddingService singleton, which reports IsEnabled=false and
+            //     returns failure results from the Try* methods.
+            //
             // TODO: To support hot-reload for embeddings (toggling enabled on/off at runtime),
             // EmbeddingService would need to read config dynamically from RuntimeConfigProvider
             // and defer constructor validation. Track as a separate work item.
@@ -517,8 +524,13 @@ namespace Azure.DataApiBuilder.Service
                 }
                 else
                 {
+                    services.AddSingleton<IEmbeddingService>(NullEmbeddingService.Instance);
                     _logger.LogInformation("Embeddings service is configured but disabled.");
                 }
+            }
+            else
+            {
+                services.AddSingleton<IEmbeddingService>(NullEmbeddingService.Instance);
             }
 
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);

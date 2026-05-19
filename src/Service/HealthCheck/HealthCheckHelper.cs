@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Dependencies
         private ILogger<HealthCheckHelper> _logger;
         private HttpUtilities _httpUtility;
-        private IEmbeddingService? _embeddingService;
+        private IEmbeddingService _embeddingService;
 
         private const string TIME_EXCEEDED_ERROR_MESSAGE = "The threshold for executing the request has exceeded.";
         private const string DIMENSIONS_MISMATCH_ERROR_MESSAGE = "The embedding dimensions do not match the expected dimensions.";
@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="logger">Logger to track the log statements.</param>
         /// <param name="httpUtility">HttpUtility to call methods from the internal class.</param>
         /// <param name="embeddingService">Optional embedding service for embedding health checks.</param>
-        public HealthCheckHelper(ILogger<HealthCheckHelper> logger, HttpUtilities httpUtility, IEmbeddingService? embeddingService = null)
+        public HealthCheckHelper(ILogger<HealthCheckHelper> logger, HttpUtilities httpUtility, IEmbeddingService embeddingService)
         {
             _logger = logger;
             _httpUtility = httpUtility;
@@ -419,7 +419,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             EmbeddingsHealthCheckConfig? healthConfig = embeddingsOptions?.Health;
 
             // Only run health check if embeddings is enabled, health check is enabled, and embedding service is available
-            if (embeddingsOptions is null || !embeddingsOptions.Enabled || healthConfig is null || !healthConfig.Enabled || _embeddingService is null)
+            if (embeddingsOptions is null || !embeddingsOptions.Enabled || healthConfig is null || !healthConfig.Enabled || !_embeddingService.IsEnabled)
             {
                 return;
             }

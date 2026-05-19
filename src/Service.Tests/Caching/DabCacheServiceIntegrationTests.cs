@@ -23,6 +23,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
@@ -829,7 +830,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                 mockFilterParser.Object,
                 mockLogger.Object,
                 mockRuntimeConfigProvider.Object,
-                cache);
+                cache,
+                NullEmbeddingService.Instance);
         }
 
         /// <summary>

@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly DabCacheService _cache;
         private readonly ILogger<IQueryEngine> _logger;
-        private readonly IEmbeddingService? _embeddingService;
+        private readonly IEmbeddingService _embeddingService;
 
         /// <inheritdoc/>
         public QueryEngineFactory(RuntimeConfigProvider runtimeConfigProvider,
@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             ILogger<IQueryEngine> logger,
             DabCacheService cache,
             HotReloadEventHandler<HotReloadEventArgs>? handler,
-            IEmbeddingService? embeddingService = null)
+            IEmbeddingService embeddingService)
         {
             handler?.Subscribe(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();

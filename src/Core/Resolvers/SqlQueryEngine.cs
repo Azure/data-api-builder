@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly DabCacheService _cache;
-        private readonly IEmbeddingService? _embeddingService;
+        private readonly IEmbeddingService _embeddingService;
 
         // <summary>
         // Constructor.
@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider,
             DabCacheService cache,
-            IEmbeddingService? embeddingService = null)
+            IEmbeddingService embeddingService)
         {
             _queryFactory = queryFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;

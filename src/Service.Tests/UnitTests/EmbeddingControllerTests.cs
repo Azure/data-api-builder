@@ -2218,10 +2218,11 @@ public class EmbeddingControllerTests
             embeddingsOptions: embeddingsOptions,
             hostMode: hostMode);
 
-        // If useClassMockService is true and no explicit service provided, use the class-level mock
-        IEmbeddingService? serviceToUse = useClassMockService && embeddingService is null
+        // If useClassMockService is true and no explicit service provided, use the class-level mock.
+        // Otherwise fall back to NullEmbeddingService.Instance so the non-nullable controller ctor is satisfied.
+        IEmbeddingService serviceToUse = useClassMockService && embeddingService is null
             ? _mockEmbeddingService.Object
-            : embeddingService;
+            : embeddingService ?? NullEmbeddingService.Instance;
 
         EmbeddingController controller = new(
             mockProvider.Object,

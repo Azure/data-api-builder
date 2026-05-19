@@ -1,4 +1,4 @@
-{
+﻿{
   DataSource: {
     DatabaseType: MSSQL
   },
@@ -33,17 +33,20 @@
             {
               Name: param1,
               Required: false,
-              Default: 123
+              Default: 123,
+              AutoEmbed: false
             },
             {
               Name: param2,
               Required: false,
-              Default: hello
+              Default: hello,
+              AutoEmbed: false
             },
             {
               Name: param3,
               Required: false,
-              Default: True
+              Default: True,
+              AutoEmbed: false
             }
           ]
         },

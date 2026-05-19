@@ -50,10 +50,10 @@ public class ParameterEmbeddingHelperTests
     // ─────────────────────────────────────────────────────────────────────
 
     private static ParameterMetadata EmbedParam(string name) =>
-        new() { Name = name, Embed = true };
+        new() { Name = name, AutoEmbed = true };
 
     private static ParameterMetadata NormalParam(string name) =>
-        new() { Name = name, Embed = false };
+        new() { Name = name, AutoEmbed = false };
 
     /// <summary>
     /// Parses a JSON literal into a standalone <see cref="JsonElement"/> that survives
@@ -263,7 +263,7 @@ public class ParameterEmbeddingHelperTests
 
         Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
         StringAssert.Contains(ex.Message, "Number");
-        StringAssert.Contains(ex.Message, "embed: true");
+        StringAssert.Contains(ex.Message, "auto-embed: true");
     }
 
     /// <summary>

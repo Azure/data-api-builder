@@ -1281,7 +1281,7 @@
                               "required": { "$ref": "#/$defs/boolean-or-string", "description": "Is parameter required" },
                               "default": { "type": ["string", "number", "boolean", "null"], "description": "Default value" },
                               "description": { "type": "string", "description": "Parameter description. Since descriptions for multiple parameters are provided as a comma-separated string, individual parameter descriptions must not contain a comma (',')." },
-                              "embed": { "type": "boolean", "description": "When true, the parameter text is automatically converted to an embedding vector via the configured embedding service before being passed to the stored procedure. Requires runtime.embeddings to be configured. Only valid on stored-procedure entities. The target stored procedure parameter must be declared as VECTOR(N) — DAB cannot detect non-VECTOR misconfigurations at startup due to SQL Server metadata limitations.", "default": false }
+                              "auto-embed": { "$ref": "#/$defs/boolean-or-string", "description": "When true, the parameter value (text) is automatically converted to an embedding vector via the configured embedding service before being passed to the stored procedure. The target stored-procedure parameter must be declared as VECTOR(N). Requires runtime.embeddings to be configured and enabled.", "default": false }
                             }
                           }
                         }

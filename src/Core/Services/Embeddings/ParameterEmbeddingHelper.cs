@@ -10,7 +10,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 
 /// <summary>
-/// Substitutes text values with embedding vectors for stored procedure parameters marked with embed:true.
+/// Substitutes text values with embedding vectors for stored procedure parameters marked with auto-embed:true.
 ///
 /// Called before SqlExecuteStructure construction — the substituted values flow through
 /// the normal String type conversion path (thanks to the metadata type override that
@@ -23,27 +23,27 @@ namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 public static class ParameterEmbeddingHelper
 {
     /// <summary>
-    /// For each parameter marked embed:true in config, replaces the text value in
+    /// For each parameter marked auto-embed:true in config, replaces the text value in
     /// resolvedParams with a serialized vector string.
     ///
-    /// Implementation uses 3 phases for efficiency when a sproc has multiple embed params:
-    ///   1. COLLECT — validate all embed param values, build a list of texts to embed
+    /// Implementation uses 3 phases for efficiency when a sproc has multiple auto-embed params:
+    ///   1. COLLECT — validate all auto-embed param values, build a list of texts to embed
     ///   2. BATCH   — single TryEmbedBatchAsync call instead of N sequential TryEmbedAsync calls
     ///   3. SUBSTITUTE — serialize each returned vector and write back into resolvedParams
     ///
-    /// For the common single-embed-param case, batch of 1 is equivalent to sequential.
-    /// For multi-embed sprocs, this saves ~(N-1) × API_LATENCY on cache miss.
+    /// For the common single-auto-embed-param case, batch of 1 is equivalent to sequential.
+    /// For multi-auto-embed sprocs, this saves ~(N-1) × API_LATENCY on cache miss.
     ///
     /// The embedding call goes through EmbeddingService which has built-in FusionCache,
     /// so repeated identical texts return instantly without calling the AI provider.
     /// </summary>
     /// <param name="resolvedParams">
     /// The parameter dictionary from the request (REST body/query string or GraphQL args).
-    /// Modified in-place: text values for embed params are replaced with vector JSON strings.
+    /// Modified in-place: text values for auto-embed params are replaced with vector JSON strings.
     /// </param>
     /// <param name="configParams">
     /// Parameter metadata from dab-config.json for this entity.
-    /// Contains the embed:true flag for each parameter.
+    /// Contains the auto-embed:true flag for each parameter.
     /// </param>
     /// <param name="embeddingService">The embedding service to call for text → vector conversion.</param>
     /// <param name="cancellationToken">Cancellation token from the HTTP request.</param>
@@ -59,58 +59,58 @@ public static class ParameterEmbeddingHelper
             return;
         }
 
-        // Quick exit: are there any embed params at all in config?
-        bool hasEmbedParams = configParams.Any(p => p.Embed);
+        // Quick exit: are there any auto-embed params at all in config?
+        bool hasEmbedParams = configParams.Any(p => p.AutoEmbed);
         if (!hasEmbedParams)
         {
             return;
         }
 
-        // If we have embed params in config but no embedding service, fail loudly.
+        // If we have auto-embed params in config but no embedding service, fail loudly.
         // This catches DI misconfiguration and future code paths that construct engines
         // without the service. Without this check, the silent-skip behavior would send
         // raw text to SQL, producing confusing errors or silently wrong results.
         //
         // Note: Startup config validation already requires runtime.embeddings to be
-        // configured and enabled when embed:true is present (see ValidateEmbedParameters).
+        // configured and enabled when auto-embed:true is present (see ValidateEmbedParameters).
         // This is defense-in-depth for unexpected DI states at runtime.
         if (embeddingService is null)
         {
             throw new DataApiBuilderException(
-                message: "An embed parameter is configured but the embedding service is not available. Verify runtime.embeddings is configured and enabled.",
+                message: "An auto-embed parameter is configured but the embedding service is not available. Verify runtime.embeddings is configured and enabled.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // PHASE 1: COLLECT — validate each embed param's value and gather texts
+        // PHASE 1: COLLECT — validate each auto-embed param's value and gather texts
         // ─────────────────────────────────────────────────────────────────────
         // We validate eagerly (per-param) so error messages stay specific:
-        //   "Parameter 'foo' has embed:true but received a non-string value..."
+        //   "Parameter 'foo' has auto-embed:true but received a non-string value..."
         // rather than the batch-level "embed failed for params X, Y, Z."
         //
-        // After this phase: embedRequests has (paramName, text) for every embed
+        // After this phase: embedRequests has (paramName, text) for every auto-embed
         // param the user supplied. Param metadata defines order; we preserve it.
 
         List<(string paramName, string text)> embedRequests = new();
 
         foreach (ParameterMetadata configParam in configParams)
         {
-            // Skip non-embed params — they pass through unchanged
-            // Example: "top_k" has Embed=false → skip
-            if (!configParam.Embed)
+            // Skip non-auto-embed params — they pass through unchanged
+            // Example: "top_k" has AutoEmbed=false → skip
+            if (!configParam.AutoEmbed)
             {
                 continue;
             }
 
-            // Skip embed params not supplied in the request. We don't enforce
+            // Skip auto-embed params not supplied in the request. We don't enforce
             // required-ness here because DAB's request validation for sprocs only
             // checks for extra fields, not missing ones — see RequestValidator
             // .ValidateStoredProcedureRequestContext, which delegates required-param
             // detection to SQL Server (no easy way to read default-value metadata
             // from sys.parameters in a portable way).
             //
-            // When a required embed param is missing entirely, SqlExecuteStructure
+            // When a required auto-embed param is missing entirely, SqlExecuteStructure
             // also won't bind it, and SQL Server returns "expects parameter X, which
             // was not supplied." MsSqlDbExceptionParser translates that to a 400
             // DatabaseInputError for the client. So missing values still produce a
@@ -119,7 +119,7 @@ public static class ParameterEmbeddingHelper
             //
             // (Explicit null or empty string DOES reach this helper, via the
             // IsNullOrWhiteSpace check below — that path produces our own 400 with
-            // the friendlier "has 'embed: true' but the provided text is empty or
+            // the friendlier "has 'auto-embed: true' but the provided text is empty or
             // whitespace" message.)
             if (!resolvedParams.TryGetValue(configParam.Name, out object? value))
             {
@@ -133,7 +133,7 @@ public static class ParameterEmbeddingHelper
             if (string.IsNullOrWhiteSpace(text))
             {
                 throw new DataApiBuilderException(
-                    message: $"Parameter '{configParam.Name}' has 'embed: true' but the provided text is empty or whitespace.",
+                    message: $"Parameter '{configParam.Name}' has 'auto-embed: true' but the provided text is empty or whitespace.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
@@ -261,7 +261,7 @@ public static class ParameterEmbeddingHelper
             }
 
             throw new DataApiBuilderException(
-                message: $"Parameter '{paramName}' has 'embed: true' but received a non-string JSON value of kind '{jsonElement.ValueKind}'. Embed parameters must be JSON strings.",
+                message: $"Parameter '{paramName}' has 'auto-embed: true' but received a non-string JSON value of kind '{jsonElement.ValueKind}'. Auto-embed parameters must be JSON strings.",
                 statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
         }
@@ -269,7 +269,7 @@ public static class ParameterEmbeddingHelper
         if (value is not null)
         {
             throw new DataApiBuilderException(
-                message: $"Parameter '{paramName}' has 'embed: true' but received a non-string value of type '{value.GetType().Name}'. Embed parameters must be JSON strings.",
+                message: $"Parameter '{paramName}' has 'auto-embed: true' but received a non-string value of type '{value.GetType().Name}'. Auto-embed parameters must be JSON strings.",
                 statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
         }

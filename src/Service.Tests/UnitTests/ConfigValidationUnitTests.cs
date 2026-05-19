@@ -3627,7 +3627,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Object: sprocObject,
                     Parameters: new List<ParameterMetadata>
                     {
-                        new() { Name = paramName, Embed = embed, Default = defaultValue }
+                        new() { Name = paramName, AutoEmbed = embed, Default = defaultValue }
                     },
                     KeyFields: null),
                 Fields: null,
@@ -3659,7 +3659,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Object: objectName,
                     Parameters: new List<ParameterMetadata>
                     {
-                        new() { Name = paramName, Embed = true }
+                        new() { Name = paramName, AutoEmbed = true }
                     },
                     KeyFields: null),
                 Fields: null,
@@ -3730,8 +3730,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Sanity: the entity under test is wired correctly so a future refactor
             // can't make this test pass by accidentally short-circuiting.
             Assert.AreEqual(EntitySourceType.StoredProcedure, config.Entities["SearchProducts"].Source.Type);
-            Assert.IsTrue(config.Entities["SearchProducts"].Source.Parameters!.Any(p => p.Embed),
-                "Test setup expected at least one embed:true parameter");
+            Assert.IsTrue(config.Entities["SearchProducts"].Source.Parameters!.Any(p => p.AutoEmbed),
+                "Test setup expected at least one auto-embed:true parameter");
         }
 
         /// <summary>
@@ -3847,10 +3847,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(0, validator.ConfigValidationExceptions.Count,
                 "Expected no validation exceptions when embed:true is paired with no default");
 
-            // Sanity: the embed param under test was set up with no default, as intended.
+            // Sanity: the auto-embed param under test was set up with no default, as intended.
             ParameterMetadata embedParam = config.Entities["SearchProducts"].Source.Parameters!
-                .Single(p => p.Embed);
-            Assert.IsNull(embedParam.Default, "Test setup expected the embed param to have no default");
+                .Single(p => p.AutoEmbed);
+            Assert.IsNull(embedParam.Default, "Test setup expected the auto-embed param to have no default");
         }
 
         /// <summary>

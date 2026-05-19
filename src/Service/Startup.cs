@@ -1043,8 +1043,11 @@ namespace Azure.DataApiBuilder.Service
                 HostMode mode = runtimeConfig.Runtime.Host.Mode;
                 if (authOptions.IsJwtConfiguredIdentityProvider())
                 {
-                    services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                    .AddJwtBearer(options =>
+                    string jwtAuthenticationScheme = authOptions.IsCustomAuthenticationProvider()
+                        ? GenericOAuthDefaults.AUTHENTICATIONSCHEME
+                        : JwtBearerDefaults.AuthenticationScheme;
+                    services.AddAuthentication(jwtAuthenticationScheme)
+                    .AddJwtBearer(jwtAuthenticationScheme, options =>
                     {
                         options.MapInboundClaims = false;
                         options.Audience = authOptions.Jwt!.Audience;
@@ -1055,6 +1058,7 @@ namespace Azure.DataApiBuilder.Service
                             // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole#remarks
                             RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
                         };
+                        options.ConfigureCustomJwtRoleExtraction(authOptions);
                     });
                 }
                 else if (authOptions.IsEasyAuthAuthenticationProvider())
@@ -1120,10 +1124,12 @@ namespace Azure.DataApiBuilder.Service
         private static void ConfigureAuthenticationV2(IServiceCollection services, RuntimeConfigProvider runtimeConfigProvider)
         {
             services.AddSingleton<IOptionsChangeTokenSource<JwtBearerOptions>>(new JwtBearerOptionsChangeTokenSource(runtimeConfigProvider));
+            services.AddSingleton<IOptionsChangeTokenSource<JwtBearerOptions>>(new JwtBearerOptionsChangeTokenSource(runtimeConfigProvider, GenericOAuthDefaults.AUTHENTICATIONSCHEME));
             services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>();
             services.AddAuthentication()
                     .AddEnvDetectedEasyAuth()
                     .AddJwtBearer()
+                    .AddJwtBearer(GenericOAuthDefaults.AUTHENTICATIONSCHEME, _ => { })
                     .AddSimulatorAuthentication()
                     .AddUnauthenticatedAuthentication();
         }

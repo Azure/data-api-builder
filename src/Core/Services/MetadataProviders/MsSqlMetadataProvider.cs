@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Humanizer;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -410,7 +411,42 @@ namespace Azure.DataApiBuilder.Core.Services
                 dataReaderHandler: QueryExecutor.GetJsonArrayAsync,
                 dataSourceName: _dataSourceName);
 
+            if (resultArray is null)
+            {
+                return null;
+            }
+
+            foreach (JsonObject? resultObject in resultArray)
+            {
+                if (resultObject is null)
+                {
+                    continue;
+                }
+
+                string? objectName = resultObject["object"]?.ToString();
+                string? schemaName = resultObject["schema"]?.ToString();
+                if (string.IsNullOrWhiteSpace(objectName) || string.IsNullOrWhiteSpace(schemaName))
+                {
+                    continue;
+                }
+
+                resultObject["entity_name"] = BuildAutoentityName(namePattern, schemaName, objectName);
+            }
+
             return resultArray;
+        }
+
+        internal static string BuildAutoentityName(string namePattern, string schemaName, string objectName)
+        {
+            string sanitizedObjectName = objectName.Dehumanize();
+            if (string.IsNullOrWhiteSpace(namePattern))
+            {
+                return sanitizedObjectName;
+            }
+
+            return namePattern
+                .Replace("{schema}", schemaName)
+                .Replace("{object}", sanitizedObjectName);
         }
     }
 }

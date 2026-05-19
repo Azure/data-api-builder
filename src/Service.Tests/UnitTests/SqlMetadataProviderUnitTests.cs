@@ -57,6 +57,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expected, actual);
         }
 
+        [DataTestMethod]
+        [DataRow("{schema}_{object}", "dbo", "Order Items", "dbo_OrderItems")]
+        [DataRow("{object}", "dbo", "Order Items", "OrderItems")]
+        [DataRow("", "dbo", "Order Items", "OrderItems")]
+        public void BuildAutoentityName_ReplacesObjectTokenWithSanitizedGraphQLName(string namePattern, string schemaName, string objectName, string expected)
+        {
+            string actual = MsSqlMetadataProvider.BuildAutoentityName(namePattern, schemaName, objectName);
+
+            Assert.AreEqual(expected, actual);
+        }
+
         /// <summary>
         /// <code>Do: </code> Fills the table definition with information of the foreign keys
         /// for all the tables based on the entities relationship.

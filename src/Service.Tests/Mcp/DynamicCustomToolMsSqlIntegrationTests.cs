@@ -55,9 +55,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow("InsertBook", null, DisplayName = "Config defaults applied when no params supplied")]
         [DataRow("InsertBook", "{\"title\": \"Custom Tool Test\", \"publisher_id\": 2345}", DisplayName = "User params override defaults")]
         [DataRow("GetBooks", null, DisplayName = "Zero-param SP succeeds")]
-        public async Task DynamicCustomTool_SuccessfulExecution(string entityName, string parametersJson)
+        public async Task DynamicCustomTool_SuccessfulExecution(string entityName, string? parametersJson)
         {
-            Dictionary<string, object> parameters = parametersJson != null
+            Dictionary<string, object>? parameters = parametersJson != null
                 ? JsonSerializer.Deserialize<Dictionary<string, object>>(parametersJson)
                 : null;
 
@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// <summary>
         /// Executes a DynamicCustomTool for the given entity using the shared test fixture.
         /// </summary>
-        private static async Task<CallToolResult> ExecuteCustomToolAsync(string entityName, Dictionary<string, object> parameters)
+        private static async Task<CallToolResult> ExecuteCustomToolAsync(string entityName, Dictionary<string, object>? parameters)
         {
             IServiceProvider serviceProvider = BuildServiceProvider();
 

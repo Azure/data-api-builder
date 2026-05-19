@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             AssertSuccess(result, "Should succeed with config defaults.");
             Assert.IsNotNull(capturedContext, "Query engine should have been called.");
-            Assert.IsTrue(capturedContext.ResolvedParameters.ContainsKey("title"));
+            Assert.IsTrue(capturedContext!.ResolvedParameters.ContainsKey("title"));
             Assert.IsTrue(capturedContext.ResolvedParameters.ContainsKey("publisher_id"));
             Assert.AreEqual("defaultTitle", capturedContext.ResolvedParameters["title"]);
             Assert.AreEqual("999", capturedContext.ResolvedParameters["publisher_id"]);
@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             AssertSuccess(result, "Should succeed with user-supplied params.");
             Assert.IsNotNull(capturedContext);
-            Assert.AreEqual("UserTitle", capturedContext.ResolvedParameters["title"]);
+            Assert.AreEqual("UserTitle", capturedContext!.ResolvedParameters["title"]);
             // publisher_id should get the config default since user didn't supply it
             Assert.AreEqual("999", capturedContext.ResolvedParameters["publisher_id"]);
         }
@@ -211,7 +211,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             AssertSuccess(result, "Should succeed with partial params.");
             Assert.IsNotNull(capturedContext);
-            Assert.IsTrue(capturedContext.ResolvedParameters.ContainsKey("id"));
+            Assert.IsTrue(capturedContext!.ResolvedParameters.ContainsKey("id"));
             Assert.IsTrue(capturedContext.ResolvedParameters.ContainsKey("tenant"));
             Assert.AreEqual("default_tenant", capturedContext.ResolvedParameters["tenant"]);
         }
@@ -234,7 +234,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             AssertSuccess(result, "Should succeed for zero-param SP.");
             Assert.IsNotNull(capturedContext);
-            Assert.AreEqual(0, capturedContext.ResolvedParameters.Count);
+            Assert.AreEqual(0, capturedContext!.ResolvedParameters.Count);
         }
 
         #endregion
@@ -292,8 +292,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         private static async Task<CallToolResult> ExecuteWithMockedEngineAsync(
             string entityName,
             Dictionary<string, ParameterDefinition> dbParameters,
-            Dictionary<string, object> userParameters,
-            Action<StoredProcedureRequestContext> captureContext = null)
+            Dictionary<string, object>? userParameters,
+            Action<StoredProcedureRequestContext>? captureContext = null)
         {
             IServiceProvider sp = BuildServiceProvider(
                 entityName: entityName,

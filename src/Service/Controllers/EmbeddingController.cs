@@ -64,9 +64,11 @@ public class EmbeddingController : ControllerBase
     /// <see cref="EmbeddingsEndpointOptions.Path"/> so it wins over RestController's
     /// global catch-all route (<c>{*route}</c>) by route specificity.
     /// </remarks>
+    // NOTE: [Consumes]/[Produces] attributes are intentionally NOT applied here because this
+    // action is marked [NonAction] and is invoked manually from Startup.Configure's UseEndpoints
+    // MapPost delegate (see EmbeddingController architectural note in Startup.cs). MVC filters,
+    // including content-negotiation attributes, do not run for [NonAction] methods.
     [NonAction]
-    [Consumes("text/plain", "application/json")]
-    [Produces("application/json", "text/plain")]
     public async Task<IActionResult> PostAsync(string path)
     {
         // Get embeddings configuration

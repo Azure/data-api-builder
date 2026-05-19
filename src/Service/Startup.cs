@@ -458,10 +458,9 @@ namespace Azure.DataApiBuilder.Service
                     ConfigureEmbeddingsCache(services, embeddingsOptions, runtimeConfigAvailable);
 
                     // Register a named HttpClient for EmbeddingService. The IEmbeddingService
-                    // registration below resolves this client by name via IHttpClientFactory.
-                    // We register the typed client by EmbeddingService (the concrete type) so the
-                    // factory name matches the typed-client convention (typeof(EmbeddingService).Name).
-                    services.AddHttpClient<EmbeddingService>();
+                    // registration below resolves this client by name via IHttpClientFactory using
+                    // nameof(EmbeddingService), which matches the name passed here.
+                    services.AddHttpClient(nameof(EmbeddingService));
 
                     // Register IEmbeddingService as a singleton that uses the named FusionCache
                     // ("EmbeddingsCache") when embeddings caching is enabled, or falls back to the
@@ -475,7 +474,7 @@ namespace Azure.DataApiBuilder.Service
 
                         ILogger<EmbeddingService> logger = serviceProvider.GetRequiredService<ILogger<EmbeddingService>>();
                         IHttpClientFactory httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
-                        HttpClient httpClient = httpClientFactory.CreateClient(typeof(EmbeddingService).Name);
+                        HttpClient httpClient = httpClientFactory.CreateClient(nameof(EmbeddingService));
 
                         return new EmbeddingService(httpClient, embeddingsOptions, logger, cache);
                     });
@@ -1549,19 +1548,31 @@ namespace Azure.DataApiBuilder.Service
                     throw new Exception("Embeddings internal L2 cache requires a valid connection-string.");
                 }
 
-                // Create connection multiplexer for embeddings Azure Managed Redis cache
-                Task<IConnectionMultiplexer> connectionMultiplexerTask =
-                    CreateConnectionMultiplexerAsync(level2Options.ConnectionString);
+                // Create connection multiplexer for embeddings Azure Managed Redis cache.
+                // The factory is invoked lazily by FusionCache; we wrap it so that any connection
+                // failure (including transient errors after StackExchange.Redis' own ConnectRetry
+                // exhausts) is logged and surfaced as a distributed-cache exception. Because the
+                // embeddings cache is configured with ReThrowDistributedCacheExceptions = false,
+                // FusionCache will transparently fall back to the L1 (in-memory) cache when L2
+                // is unavailable, so a Redis outage does not break embeddings.
+                Task<IConnectionMultiplexer>? connectionMultiplexerTask = null;
+                Func<Task<IConnectionMultiplexer>> connectionFactory = () =>
+                {
+                    // Cache the task so the connection (and any retry sequence) is shared by the
+                    // distributed cache and the backplane.
+                    connectionMultiplexerTask ??= CreateEmbeddingsRedisConnectionAsync(level2Options.ConnectionString);
+                    return connectionMultiplexerTask;
+                };
 
                 embeddingsCacheBuilder
                     .WithSerializer(new FusionCacheSystemTextJsonSerializer())
                     .WithDistributedCache(new RedisCache(new RedisCacheOptions
                     {
-                        ConnectionMultiplexerFactory = async () => await connectionMultiplexerTask
+                        ConnectionMultiplexerFactory = connectionFactory
                     }))
                     .WithBackplane(new RedisBackplane(new RedisBackplaneOptions
                     {
-                        ConnectionMultiplexerFactory = async () => await connectionMultiplexerTask
+                        ConnectionMultiplexerFactory = connectionFactory
                     }));
 
                 _logger.LogInformation("Embeddings L2 (internal) cache enabled");
@@ -1570,6 +1581,103 @@ namespace Azure.DataApiBuilder.Service
             {
                 _logger.LogInformation("Embeddings using L1 (memory) cache only");
             }
+        }
+
+        /// <summary>
+        /// Creates a Redis connection for the embeddings L2 cache with retry on transient failure.
+        /// StackExchange.Redis applies its own ConnectRetry per attempt; this wrapper adds a small
+        /// number of additional attempts with exponential backoff to absorb longer transient outages
+        /// (DNS, brief network blips, AAD token acquisition). If all attempts fail the exception is
+        /// re-thrown so FusionCache can mark the distributed cache as unavailable and fall back to L1.
+        /// </summary>
+        private async Task<IConnectionMultiplexer> CreateEmbeddingsRedisConnectionAsync(string connectionString)
+        {
+            return await ConnectWithRetryAsync(
+                () => CreateConnectionMultiplexerAsync(connectionString),
+                maxAttempts: EMBEDDINGS_REDIS_MAX_CONNECT_ATTEMPTS,
+                initialDelay: TimeSpan.FromMilliseconds(EMBEDDINGS_REDIS_INITIAL_RETRY_DELAY_MS),
+                logger: _logger);
+        }
+
+        // Retry knobs for embeddings L2 Redis connection. Exposed as constants so tests can
+        // reference the same values without duplication.
+        internal const int EMBEDDINGS_REDIS_MAX_CONNECT_ATTEMPTS = 3;
+        internal const int EMBEDDINGS_REDIS_INITIAL_RETRY_DELAY_MS = 500;
+
+        /// <summary>
+        /// Invokes <paramref name="connectFactory"/> with retry-on-exception and exponential backoff.
+        /// Logs each failed attempt as a warning (with the originating exception) and, after all
+        /// attempts are exhausted, logs an error and re-throws the last exception so the caller
+        /// (e.g. FusionCache) can mark the distributed cache as unavailable and fall back to L1.
+        /// Exposed as <c>internal static</c> so unit tests can exercise the retry behavior without
+        /// taking a real Redis dependency.
+        /// </summary>
+        /// <param name="connectFactory">Delegate that performs a single connection attempt.</param>
+        /// <param name="maxAttempts">Maximum number of attempts. Must be >= 1.</param>
+        /// <param name="initialDelay">Delay before the second attempt. Doubled for each subsequent attempt.</param>
+        /// <param name="logger">Logger used to record retry diagnostics. May be null.</param>
+        /// <param name="delayAsync">Optional delay function for tests to avoid real waits.</param>
+        internal static async Task<IConnectionMultiplexer> ConnectWithRetryAsync(
+            Func<Task<IConnectionMultiplexer>> connectFactory,
+            int maxAttempts,
+            TimeSpan initialDelay,
+            ILogger? logger,
+            Func<TimeSpan, Task>? delayAsync = null)
+        {
+            if (connectFactory is null)
+            {
+                throw new ArgumentNullException(nameof(connectFactory));
+            }
+
+            if (maxAttempts < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxAttempts), "maxAttempts must be >= 1.");
+            }
+
+            delayAsync ??= Task.Delay;
+            TimeSpan delay = initialDelay;
+            Exception? lastException = null;
+
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
+                {
+                    IConnectionMultiplexer multiplexer = await connectFactory();
+                    if (attempt > 1)
+                    {
+                        logger?.LogInformation(
+                            "Embeddings L2 Redis cache connected on attempt {Attempt}/{MaxAttempts}.",
+                            attempt, maxAttempts);
+                    }
+
+                    return multiplexer;
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    logger?.LogWarning(
+                        ex,
+                        "Embeddings L2 Redis cache connection attempt {Attempt}/{MaxAttempts} failed: {Message}",
+                        attempt, maxAttempts, ex.Message);
+
+                    if (attempt < maxAttempts)
+                    {
+                        await delayAsync(delay);
+                        delay = TimeSpan.FromMilliseconds(delay.TotalMilliseconds * 2);
+                    }
+                }
+            }
+
+            logger?.LogError(
+                lastException,
+                "Embeddings L2 Redis cache connection failed after {MaxAttempts} attempts. " +
+                "Falling back to L1 (in-memory) cache only.",
+                maxAttempts);
+
+            // Re-throw so FusionCache treats the distributed cache as unavailable. With
+            // ReThrowDistributedCacheExceptions = false on the embeddings cache entry options,
+            // this fallback is transparent to callers.
+            throw lastException!;
         }
 
         /// <summary>

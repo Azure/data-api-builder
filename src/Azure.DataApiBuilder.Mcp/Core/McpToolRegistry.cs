@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Exceptions;
 using ModelContextProtocol.Protocol;
@@ -61,11 +62,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
         }
 
         /// <summary>
-        /// Gets all registered tools
+        /// Gets metadata for all registered tools that are enabled in the given runtime configuration.
         /// </summary>
-        public IEnumerable<Tool> GetAllTools()
+        public IEnumerable<Tool> GetEnabledTools(RuntimeConfig config)
         {
-            return _tools.Values.Select(t => t.GetToolMetadata());
+            return _tools.Values
+                .Where(t => t.IsEnabled(config))
+                .Select(t => t.GetToolMetadata());
         }
 
         /// <summary>

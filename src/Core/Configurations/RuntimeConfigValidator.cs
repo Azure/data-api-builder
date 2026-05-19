@@ -98,6 +98,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateAzureLogAnalyticsAuth(runtimeConfig);
         ValidateFileSinkPath(runtimeConfig);
         ValidateEmbeddingsOptions(runtimeConfig);
+        ValidateEmbedParameters(runtimeConfig);
     }
 
     /// <summary>
@@ -421,7 +422,155 @@ public class RuntimeConfigValidator : IConfigValidator
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
         }
+    }
 
+    /// <summary>
+    /// Validates that parameters with auto-embed=true are only used on stored-procedure entities
+    /// on a supported (MSSQL) data source, that runtime.embeddings is configured when auto-embed
+    /// parameters are present, and that auto-embed parameters do not declare a default value.
+    /// </summary>
+    /// <remarks>
+    /// Internal (rather than private) to allow direct unit testing via the
+    /// <c>InternalsVisibleTo</c> attribute on Azure.DataApiBuilder.Core. Callers outside
+    /// the assembly should still go through <see cref="ValidateConfigProperties"/>.
+    /// </remarks>
+    internal void ValidateEmbedParameters(RuntimeConfig runtimeConfig)
+    {
+        // Check once whether the embedding service is configured and enabled.
+        // Example: "runtime": { "embeddings": { "enabled": true, "provider": "azure-openai" } } → true
+        // Example: embeddings section missing or "enabled": false → false
+        bool embeddingsConfigured = runtimeConfig.Runtime?.Embeddings is not null
+            && runtimeConfig.Runtime.Embeddings.Enabled;
+
+        // Loop through every entity in the config.
+        // Example entities: "Product" (table), "Category" (table), "SearchProducts" (sproc)
+        foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+        {
+            // Skip entities that have no parameters defined.
+            // Tables and views typically don't have parameters.
+            // Example: "Product": { "source": { "type": "table" } } → Parameters is null → skip
+            if (entity.Source.Parameters is null)
+            {
+                continue;
+            }
+
+            // Fast-path: skip entities with no auto-embed:true parameters entirely.
+            // Avoids the data-source lookup and inner loop for the common case of
+            // entities whose params are all normal pass-through.
+            if (!entity.Source.Parameters.Any(p => p.AutoEmbed))
+            {
+                continue;
+            }
+
+            // Hoist data source lookup outside the param loop — it's entity-scoped, not param-scoped.
+            // Looked up once per entity instead of once per parameter (was duplicated work in Stage 3.5).
+            DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
+
+            // Check each parameter for the auto-embed flag.
+            // Example: iterates over { "name": "query_vector", "auto-embed": true } and { "name": "top_k", "default": "5" }
+            foreach (ParameterMetadata param in entity.Source.Parameters)
+            {
+                // Skip parameters that don't have auto-embed: true. Most params are normal pass-through.
+                // Example: "top_k" has AutoEmbed=false (default) → skip
+                // Example: "query_vector" has AutoEmbed=true → continue to validation checks
+                if (!param.AutoEmbed)
+                {
+                    continue;
+                }
+
+                // Rule 0: auto-embed:true is only supported on Azure SQL / SQL Server data sources.
+                // The metadata type override (Byte[] → String) only exists in MsSqlMetadataProvider.
+                // For PostgreSQL/MySQL/Cosmos, the request would fail at runtime with a confusing
+                // type error. Reject at startup instead.
+                // Example FAIL: PostgreSQL entity with auto-embed:true → "auto-embed feature only supported for MSSQL"
+                // TODO: Extend to PostgreSQL/MySQL once their metadata providers grow embed-aware type-override logic.
+                if (entityDataSource.DatabaseType != DatabaseType.MSSQL)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}': parameter '{param.Name}' has 'auto-embed: true' but the data source type is '{entityDataSource.DatabaseType}'. The auto-embed feature is currently only supported for Azure SQL / SQL Server.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                // Rule 1: auto-embed:true is only valid on stored-procedure entities.
+                // Tables/views don't have user-supplied parameters that get passed to SQL.
+                // Example PASS: "SearchProducts": { "source": { "type": "stored-procedure" } }
+                // Example FAIL: "Product": { "source": { "type": "table", "parameters": [{"name":"x","auto-embed":true}] } }
+                //   → Error: "Entity 'Product': parameter 'x' has 'auto-embed: true' but is only valid on stored-procedure entities."
+                if (entity.Source.Type is not EntitySourceType.StoredProcedure)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}': parameter '{param.Name}' has 'auto-embed: true' but is only valid on stored-procedure entities.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                // Rule 2: auto-embed:true requires runtime.embeddings to be configured and enabled.
+                // Can't convert text to vectors without an embedding service.
+                // Example PASS: "embeddings": { "enabled": true, "provider": "azure-openai", "api-key": "..." }
+                // Example FAIL: "embeddings": { "enabled": false } or embeddings section missing
+                //   → Error: "parameter 'query_vector' has 'auto-embed: true' but runtime.embeddings is not configured or not enabled."
+                if (!embeddingsConfigured)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}': parameter '{param.Name}' has 'auto-embed: true' but runtime.embeddings is not configured or not enabled.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                // Rule 3: auto-embed:true with a default value is not supported.
+                //
+                // An auto-embed parameter represents the user's text input that gets converted
+                // to a vector at request time — typically a semantic-search query.
+                //
+                // Setting a default for an auto-embed parameter would mean: if the client doesn't
+                // supply a search query, the server invents one (e.g., "wireless headphones"),
+                // embeds it, and runs a semantic search the user never asked for. That isn't
+                // a fallback — it's the server fabricating user input. In any real UX, a
+                // missing search query indicates a client bug or an empty search box, not an
+                // invitation for the server to substitute a canned query on the user's behalf.
+                //
+                // (Defaults on non-auto-embed parameters of the same sproc are unaffected by this
+                // rule and continue to work as before.)
+                //
+                // Even setting aside the UX concern, supporting auto-embed-defaults would be
+                // non-trivial:
+                //   - GraphQL schema defaults are baked in at startup as typed literals
+                //     (GraphQLStoredProcedureBuilder.ConvertValueToGraphQLType). There is no
+                //     VECTOR literal type in GraphQL, and the literal text would surface in
+                //     introspection as a misleading default value for an embedded parameter.
+                //   - REST/MCP defaults are injected as plain text into the resolved-parameter
+                //     dictionary, then would be re-embedded by ParameterEmbeddingHelper on
+                //     every request — a hidden per-request cost for a value the client never
+                //     sent.
+                //   - Embedding the default once at startup would couple application startup
+                //     to the embedding provider's network availability (validation runs in
+                //     CLI / startup contexts that may not have outbound access).
+                //
+                // What happens today if a client forgets to supply an auto-embed parameter:
+                //   - {"query_vector": null} or "" → 400 BadRequest "has 'auto-embed: true' but
+                //     the provided text is empty or whitespace." (caught by ParameterEmbeddingHelper)
+                //   - field omitted entirely → 400 DatabaseInputError "expects parameter
+                //     '@query_vector', which was not supplied." (SQL Server error, parsed
+                //     by MsSqlDbExceptionParser)
+                // Both produce a clear, actionable client error — no silent failure.
+                //
+                // If a real use case for auto-embed-defaults ever emerges, this rule can be lifted
+                // with the matching runtime support added. For now, auto-embed parameters should
+                // always be supplied by the client.
+                //
+                // Example PASS: { "name": "query_vector", "auto-embed": true }  (no default)
+                // Example FAIL: { "name": "query_vector", "auto-embed": true, "default": "wireless headphones" }
+                //   → Error: "parameter 'query_vector' has both 'auto-embed: true' and a 'default' value. Auto-embed parameters cannot have default values."
+                if (param.Default is not null)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}': parameter '{param.Name}' has both 'auto-embed: true' and a 'default' value. Auto-embed parameters cannot have default values.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+            }
+        }
     }
 
     /// <summary>

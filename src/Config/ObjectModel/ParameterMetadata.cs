@@ -24,5 +24,17 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         /// Gets or sets the default value of the parameter, if any.
         /// </summary>
         public string? Default { get; set; }
+
+        /// <summary>
+        /// When true, the value supplied for this parameter (a text string) is automatically
+        /// converted to an embedding vector via the configured embedding service before being
+        /// passed to the stored procedure. The target stored-procedure parameter must be declared
+        /// as VECTOR(N); DAB validates this at startup and rejects misconfigurations with a
+        /// clear error.
+        ///
+        /// Only valid on stored-procedure entities when runtime.embeddings is configured and
+        /// enabled. Currently supported on Azure SQL / SQL Server data sources only.
+        /// </summary>
+        public bool AutoEmbed { get; set; }
     }
 }

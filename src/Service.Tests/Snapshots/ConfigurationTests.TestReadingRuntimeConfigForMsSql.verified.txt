@@ -2930,12 +2930,14 @@
             {
               Name: title,
               Required: false,
-              Default: randomX
+              Default: randomX,
+              AutoEmbed: false
             },
             {
               Name: publisher_id,
               Required: false,
-              Default: 1234
+              Default: 1234,
+              AutoEmbed: false
             }
           ]
         },
@@ -3056,12 +3058,14 @@
             {
               Name: id,
               Required: false,
-              Default: 1
+              Default: 1,
+              AutoEmbed: false
             },
             {
               Name: title,
               Required: false,
-              Default: Testing Tonight
+              Default: Testing Tonight,
+              AutoEmbed: false
             }
           ]
         },
@@ -3106,7 +3110,8 @@
             {
               Name: firstName,
               Required: false,
-              Default: Aaron
+              Default: Aaron,
+              AutoEmbed: false
             }
           ]
         },
@@ -3151,12 +3156,14 @@
             {
               Name: title,
               Required: false,
-              Default: MyTitle
+              Default: MyTitle,
+              AutoEmbed: false
             },
             {
               Name: publisher_name,
               Required: false,
-              Default: MyPublisher
+              Default: MyPublisher,
+              AutoEmbed: false
             }
           ]
         },

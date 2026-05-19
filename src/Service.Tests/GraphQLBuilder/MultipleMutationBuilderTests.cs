@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
@@ -441,7 +442,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 gQLFilterParser: graphQLFilterParser,
                 logger: queryEngineLogger.Object,
                 cache: cacheService,
-                handler: null);
+                handler: null,
+                embeddingService: NullEmbeddingService.Instance);
 
             // Setup mock mutation engine factory.
             Mock<IMutationEngineFactory> mutationEngineFactory = new();

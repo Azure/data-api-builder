@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 x => x.Log(
                     LogLevel.Error,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((o, t) => o.ToString() != null && o.ToString()!.Equals("Configured roles-path 'roles' was not found in JWT claims.")),
+                    It.Is<It.IsAnyType>((o, t) => object.Equals(o.ToString(), "Configured roles-path 'roles' was not found in JWT claims.")),
                     It.IsAny<Exception>(),
                     (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
                 Times.Once);

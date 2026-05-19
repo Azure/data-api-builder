@@ -82,21 +82,18 @@ public static class CustomJwtRoleClaimExtractor
                 logger,
                 out IReadOnlyList<string> roles);
 
-            if (extractionResult == RoleExtractionResult.InvalidClaimValue)
+            if (extractionResult != RoleExtractionResult.Success)
             {
                 LogRoleExtractionFailure(context, authOptions, requestedRole[0]!, extractionResult, logger);
-                context.Fail("Unable to extract configured JWT roles.");
+                if (extractionResult == RoleExtractionResult.InvalidClaimValue)
+                {
+                    context.Fail("Unable to extract configured JWT roles.");
+                }
+
                 return;
             }
 
-            if (extractionResult == RoleExtractionResult.Success)
-            {
-                ReplaceRoleClaims(context.Principal, roles);
-            }
-            else
-            {
-                LogRoleExtractionFailure(context, authOptions, requestedRole[0]!, extractionResult, logger);
-            }
+            ReplaceRoleClaims(context.Principal, roles);
         };
     }
 
@@ -410,8 +407,8 @@ public static class CustomJwtRoleClaimExtractor
 
     private static bool IsVariableReference(string value)
     {
-        return value.StartsWith("@env('", StringComparison.Ordinal) && value.EndsWith("')", StringComparison.Ordinal) ||
-            value.StartsWith("@akv('", StringComparison.Ordinal) && value.EndsWith("')", StringComparison.Ordinal);
+        return (value.StartsWith("@env('", StringComparison.Ordinal) && value.EndsWith("')", StringComparison.Ordinal)) ||
+            (value.StartsWith("@akv('", StringComparison.Ordinal) && value.EndsWith("')", StringComparison.Ordinal));
     }
 
     private static void LogUnsupportedType(ILogger logger, string rolesPath, JsonElement rolesElement, string expected)

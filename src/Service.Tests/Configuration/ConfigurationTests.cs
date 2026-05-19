@@ -5669,7 +5669,7 @@ type Planet @model(name:""PlanetAlias"") {
                     "PublisherAutoEntity", new Autoentity(
                         Patterns: new AutoentityPatterns(
                             Include: null,
-                            Exclude: new[] { "dbo.GQLmappings", "dbo.graphql_incompatible", "dbo.brokers" },
+                            Exclude: new[] { "dbo.GQLmappings", "dbo.brokers" },
                             Name: null
                         ),
                         Template: new AutoentityTemplate(

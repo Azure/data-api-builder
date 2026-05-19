@@ -1588,7 +1588,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         }
                     }
 
-                    return IsIntrospectionField(databaseColumnName);
+                    // Possible naming violations are if the field starts with '__' or if it contains whitespace characters.
+                    return IsIntrospectionField(databaseColumnName) || IsGraphQLNameWhiteSpace(databaseColumnName);
                 }
             }
 

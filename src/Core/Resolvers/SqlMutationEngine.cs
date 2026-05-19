@@ -15,8 +15,8 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures;
 using Azure.DataApiBuilder.Core.Services;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.Embeddings;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
@@ -352,12 +352,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
             IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
 
-            // Phase 3: substitute embed:true parameters with embedding vectors (REST mutation path)
-            // Helper handles the case where embed params exist but service is null (throws 503).
-            Entity entity = _runtimeConfigProvider.GetConfig().Entities[context.EntityName];
+            // Phase 3: substitute auto-embed:true parameters with embedding vectors (REST mutation path).
+            // Helper handles entity lookup, null-service detection, and per-param validation.
             await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
                 context.ResolvedParameters,
-                entity.Source.Parameters,
+                _runtimeConfigProvider.GetConfig(),
+                context.EntityName,
                 _embeddingService,
                 _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None);
 

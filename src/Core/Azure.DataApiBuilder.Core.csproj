@@ -68,10 +68,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Azure.DataApiBuilder.Service.Tests" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="..\..\nuget\nuget_core\README.md" Pack="true" PackagePath="\" />
     <None Include="..\..\nuget\nuget_icon.png" Pack="true" PackagePath="\" />
     <None Include="..\..\LICENSE.txt" Pack="true" PackagePath="\" />

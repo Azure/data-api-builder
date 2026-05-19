@@ -2814,7 +2814,7 @@ namespace Cli
                             {
                                 Name = newParam.Name,
                                 Description = newParam.Description != null ? newParam.Description : match.Description,
-                                Required = newParam.Required,
+                                Required = newParam.Required != null ? newParam.Required : match.Required,
                                 Default = newParam.Default != null ? newParam.Default : match.Default
                             });
                         }

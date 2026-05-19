@@ -97,11 +97,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             using JsonDocument doc = JsonDocument.Parse(GetFirstTextContent(result));
             JsonElement root = doc.RootElement;
 
-            // Verify the value array contains at least one record with id=1
-            Assert.IsTrue(root.TryGetProperty("value", out JsonElement value), "Response should contain 'value' property.");
-            Assert.AreEqual(JsonValueKind.Array, value.ValueKind);
-            Assert.IsTrue(value.GetArrayLength() > 0, "Expected at least one book record.");
-            Assert.AreEqual(1, value[0].GetProperty("id").GetInt32());
+            // Verify the value property contains the SP result with at least one record with id=1.
+            // SqlResponseHelpers.OkResponse wraps results in { value: [...] }, and
+            // BuildExecuteSuccessResponse serializes that as-is into the "value" field.
+            Assert.IsTrue(root.TryGetProperty("value", out JsonElement valueWrapper), "Response should contain 'value' property.");
+
+            // The value may be the wrapper object { "value": [...] } or directly an array.
+            JsonElement records = valueWrapper.ValueKind == JsonValueKind.Object
+                ? valueWrapper.GetProperty("value")
+                : valueWrapper;
+
+            Assert.AreEqual(JsonValueKind.Array, records.ValueKind);
+            Assert.IsTrue(records.GetArrayLength() > 0, "Expected at least one book record.");
+            Assert.AreEqual(1, records[0].GetProperty("id").GetInt32());
         }
 
         /// <summary>

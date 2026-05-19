@@ -1258,7 +1258,7 @@
                         "type": "string"
                       },
                       "description": "DEPRECATED. Use the 'fields' array and set 'primary-key: true' on each key field instead. List of fields to be used as primary keys."
-                    },
+                    }
                   },
                   "required": ["type", "object"]
                 }

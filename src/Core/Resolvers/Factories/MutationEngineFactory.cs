@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly GQLFilterParser _gQLFilterParser;
-        private readonly IEmbeddingService? _embeddingService;
+        private readonly IEmbeddingService _embeddingService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MutationEngineFactory"/> class.
@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             HotReloadEventHandler<HotReloadEventArgs>? handler,
-            IEmbeddingService? embeddingService = null)
+            IEmbeddingService embeddingService)
 
         {
             handler?.Subscribe(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);

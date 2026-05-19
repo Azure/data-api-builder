@@ -43,6 +43,9 @@ public class ParameterEmbeddingHelperTests
     public void Setup()
     {
         _mockService = new Mock<IEmbeddingService>(MockBehavior.Strict);
+        // All real-service tests assume the service is enabled. Tests that exercise the
+        // disabled-service path use NullEmbeddingService.Instance directly.
+        _mockService.Setup(s => s.IsEnabled).Returns(true);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -128,7 +131,7 @@ public class ParameterEmbeddingHelperTests
     /// <summary>
     /// When embed params are configured but none are supplied in the request, the
     /// helper should reach the early-return after Phase 1 collect (embedRequests.Count == 0)
-    /// without calling the service.
+    /// without making any batch API call to the embedding provider.
     /// </summary>
     [TestMethod]
     public async Task EmbedParamsConfiguredButNoneSupplied_ReturnsAfterCollect_NoServiceCall()
@@ -139,7 +142,11 @@ public class ParameterEmbeddingHelperTests
         await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
             resolvedParams, configParams, _mockService.Object, CancellationToken.None);
 
-        _mockService.VerifyNoOtherCalls();
+        // The helper consults IsEnabled before doing work; that's an implementation detail.
+        // The behavioral assertion is "no batch embedding call was made to the provider."
+        _mockService.Verify(
+            s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         Assert.AreEqual(5, resolvedParams["other"]);
     }
 
@@ -164,18 +171,20 @@ public class ParameterEmbeddingHelperTests
     #region Service Availability
 
     /// <summary>
-    /// When the embedding service is null AND embed params are configured, the helper
-    /// should throw a 503 immediately (defense-in-depth check beyond config validation).
+    /// When the embedding service reports IsEnabled=false (e.g., NullEmbeddingService
+    /// is injected because runtime.embeddings is absent or disabled) AND embed params
+    /// are configured, the helper should throw a 503 immediately (defense-in-depth
+    /// check beyond startup config validation).
     /// </summary>
     [TestMethod]
-    public async Task NullService_WithEmbedParams_Throws503()
+    public async Task DisabledService_WithEmbedParams_Throws503()
     {
         Dictionary<string, object?> resolvedParams = new() { { "q", "hello" } };
         List<ParameterMetadata> configParams = new() { EmbedParam("q") };
 
         DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
             () => ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
-                resolvedParams, configParams, embeddingService: null, CancellationToken.None));
+                resolvedParams, configParams, NullEmbeddingService.Instance, CancellationToken.None));
 
         Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
         StringAssert.Contains(ex.Message, "embed parameter");
@@ -183,19 +192,20 @@ public class ParameterEmbeddingHelperTests
     }
 
     /// <summary>
-    /// When the embedding service is null but no embed params are configured, the helper
-    /// should NOT throw — the no-op early exit fires before the null-service check.
-    /// (Backward compat: existing entities without embed params work without an embedding service.)
+    /// When the embedding service is disabled (NullEmbeddingService) but no embed params
+    /// are configured, the helper should NOT throw — the no-op early exit fires before
+    /// the IsEnabled check. (Backward compat: existing entities without embed params
+    /// work fine when embeddings are disabled.)
     /// </summary>
     [TestMethod]
-    public async Task NullService_WithoutEmbedParams_NoThrow()
+    public async Task DisabledService_WithoutEmbedParams_NoThrow()
     {
         Dictionary<string, object?> resolvedParams = new() { { "x", "value" } };
         List<ParameterMetadata> configParams = new() { NormalParam("x") };
 
         // Should not throw
         await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
-            resolvedParams, configParams, embeddingService: null, CancellationToken.None);
+            resolvedParams, configParams, NullEmbeddingService.Instance, CancellationToken.None);
 
         Assert.AreEqual("value", resolvedParams["x"]);
     }

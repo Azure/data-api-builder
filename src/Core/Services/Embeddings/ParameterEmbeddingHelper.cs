@@ -42,7 +42,7 @@ public static class ParameterEmbeddingHelper
         IDictionary<string, object?> resolvedParams,
         RuntimeConfig runtimeConfig,
         string entityName,
-        IEmbeddingService? embeddingService,
+        IEmbeddingService embeddingService,
         CancellationToken cancellationToken)
     {
         Entity entity = runtimeConfig.Entities[entityName];
@@ -81,7 +81,7 @@ public static class ParameterEmbeddingHelper
     public static async Task SubstituteEmbedParametersAsync(
         IDictionary<string, object?> resolvedParams,
         List<ParameterMetadata>? configParams,
-        IEmbeddingService? embeddingService,
+        IEmbeddingService embeddingService,
         CancellationToken cancellationToken)
     {
         // Nothing to do if no config params defined
@@ -97,15 +97,12 @@ public static class ParameterEmbeddingHelper
             return;
         }
 
-        // If we have auto-embed params in config but no embedding service, fail loudly.
-        // This catches DI misconfiguration and future code paths that construct engines
-        // without the service. Without this check, the silent-skip behavior would send
-        // raw text to SQL, producing confusing errors or silently wrong results.
-        //
-        // Note: Startup config validation already requires runtime.embeddings to be
-        // configured and enabled when auto-embed:true is present (see ValidateEmbedParameters).
-        // This is defense-in-depth for unexpected DI states at runtime.
-        if (embeddingService is null)
+        // If we have auto-embed params in config but the embedding service is disabled
+        // (NullEmbeddingService injected because runtime.embeddings is absent or disabled),
+        // fail loudly. This is the runtime counterpart of the startup config validation
+        // (see ValidateEmbedParameters) and catches scenarios where the service was
+        // toggled off after startup or where a hot-reload changed the embeddings state.
+        if (!embeddingService.IsEnabled)
         {
             throw new DataApiBuilderException(
                 message: "An auto-embed parameter is configured but the embedding service is not available. Verify runtime.embeddings is configured and enabled.",

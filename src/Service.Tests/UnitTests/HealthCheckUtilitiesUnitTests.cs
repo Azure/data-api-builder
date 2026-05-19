@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Service.HealthCheck;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -299,7 +300,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<ILogger<HealthCheckHelper>> loggerMock = new();
             // HttpUtilities is not invoked by the methods under test (GetCurrentRole, ReadRoleHeaders),
             // so passing null is safe here.
-            return new HealthCheckHelper(loggerMock.Object, null!);
+            return new HealthCheckHelper(loggerMock.Object, null!, NullEmbeddingService.Instance);
         }
     }
 }

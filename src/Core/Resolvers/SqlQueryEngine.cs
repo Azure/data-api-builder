@@ -11,8 +11,8 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.Embeddings;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -144,12 +144,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name, out string? entityName))
             {
-                // Phase 3: substitute embed:true parameters with embedding vectors (GraphQL path)
-                // Helper handles the case where embed params exist but service is null (throws 503).
-                Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
+                // Phase 3: substitute auto-embed:true parameters with embedding vectors (GraphQL path).
+                // Helper handles entity lookup, null-service detection, and per-param validation.
                 await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
                     parameters,
-                    entity.Source.Parameters,
+                    _runtimeConfigProvider.GetConfig(),
+                    entityName,
                     _embeddingService,
                     _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None);
 
@@ -211,14 +211,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName)
         {
-            // Phase 3: substitute embed:true parameters with embedding vectors
-            // before SqlExecuteStructure reads them. The helper replaces text values
-            // (e.g., "wireless headphones") with vector JSON strings (e.g., "[0.012,...]").
-            // Helper handles the case where embed params exist but service is null (throws 503).
-            Entity entity = _runtimeConfigProvider.GetConfig().Entities[context.EntityName];
+            // Phase 3: substitute auto-embed:true parameters with embedding vectors (REST query path).
+            // The helper replaces text values (e.g., "wireless headphones") with vector JSON strings
+            // (e.g., "[0.012,...]") before SqlExecuteStructure reads them. Helper handles entity
+            // lookup, null-service detection, and per-param validation.
             await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
                 context.ResolvedParameters,
-                entity.Source.Parameters,
+                _runtimeConfigProvider.GetConfig(),
+                context.EntityName,
                 _embeddingService,
                 _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None);
 

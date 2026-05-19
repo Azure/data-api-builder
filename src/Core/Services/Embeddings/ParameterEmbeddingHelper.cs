@@ -23,6 +23,37 @@ namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 public static class ParameterEmbeddingHelper
 {
     /// <summary>
+    /// Convenience overload that resolves the entity's <see cref="ParameterMetadata"/> from
+    /// the runtime config by entity name, then delegates to the parameter-list overload.
+    ///
+    /// All three engine call sites (SqlQueryEngine GraphQL path, SqlQueryEngine REST path,
+    /// SqlMutationEngine REST path) follow the same lookup-then-substitute pattern; this
+    /// overload centralizes it so the engines don't each carry the boilerplate.
+    /// </summary>
+    /// <param name="resolvedParams">
+    /// The parameter dictionary from the request. Modified in-place: text values for
+    /// auto-embed params are replaced with vector JSON strings.
+    /// </param>
+    /// <param name="runtimeConfig">The active runtime config (resolved via the provider at the call site).</param>
+    /// <param name="entityName">Name of the stored-procedure entity whose parameters may need embedding.</param>
+    /// <param name="embeddingService">The embedding service to call for text → vector conversion.</param>
+    /// <param name="cancellationToken">Cancellation token from the HTTP request.</param>
+    public static Task SubstituteEmbedParametersAsync(
+        IDictionary<string, object?> resolvedParams,
+        RuntimeConfig runtimeConfig,
+        string entityName,
+        IEmbeddingService? embeddingService,
+        CancellationToken cancellationToken)
+    {
+        Entity entity = runtimeConfig.Entities[entityName];
+        return SubstituteEmbedParametersAsync(
+            resolvedParams,
+            entity.Source.Parameters,
+            embeddingService,
+            cancellationToken);
+    }
+
+    /// <summary>
     /// For each parameter marked auto-embed:true in config, replaces the text value in
     /// resolvedParams with a serialized vector string.
     ///
@@ -162,12 +193,17 @@ public static class ParameterEmbeddingHelper
 
         if (!batchResult.Success || batchResult.Embeddings is null)
         {
-            // Batch failure: we lose per-param error specificity here, but the
-            // batch result's ErrorMessage typically explains the underlying issue.
-            // Naming all involved params helps the user identify the request context.
+            // Batch failure: include the provider's ErrorMessage when available so the caller
+            // sees the actual reason (e.g., quota exhausted, model not found, authentication
+            // failed) rather than only the generic "Failed to generate embeddings" line.
+            // Per-param specificity is lost at the batch level, so naming all involved params
+            // helps identify the request context.
             string paramNames = string.Join(", ", embedRequests.Select(r => $"'{r.paramName}'"));
+            string providerDetail = string.IsNullOrWhiteSpace(batchResult.ErrorMessage)
+                ? string.Empty
+                : $" Provider error: {batchResult.ErrorMessage}";
             throw new DataApiBuilderException(
-                message: $"Failed to generate embeddings for parameter(s) {paramNames}.",
+                message: $"Failed to generate embeddings for parameter(s) {paramNames}.{providerDetail}",
                 statusCode: HttpStatusCode.InternalServerError,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
         }

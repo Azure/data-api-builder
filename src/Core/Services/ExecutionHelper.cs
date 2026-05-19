@@ -181,24 +181,46 @@ namespace Azure.DataApiBuilder.Service.Services
         public async ValueTask<ISourceStream> SubscribeAsync(IResolverContext context)
         {
             string entityName = GraphQLUtils.GetEntityNameFromContext(context);
-            GraphQLSubscriptionEvent subscriptionEvent = GetSubscriptionEvent(entityName, context.Selection.Field.Name);
+            string subscriptionFieldName = context.Selection.Field.Name;
+            string? operationName = context.Operation.Definition.Name?.Value;
+            GraphQLSubscriptionEvent subscriptionEvent = GetSubscriptionEvent(entityName, subscriptionFieldName);
 
-            ISourceStream<JsonElement> stream = await _subscriptionEventPublisher.SubscribeAsync(entityName, subscriptionEvent, context.RequestAborted);
-            TelemetryMetricsHelper.IncrementActiveGraphQLSubscriptions(entityName, subscriptionEvent.ToString());
-
-            _logger.LogInformation(
-                "GraphQLSubscriptionCreated entity {EntityName}, event {EventType}",
-                entityName,
-                subscriptionEvent);
-
-            if (_logger.IsEnabled(LogLevel.Debug))
+            ISourceStream<JsonElement> stream;
+            try
             {
-                _logger.LogDebug(
-                    "GraphQLSubscriptionCreated document {Document}",
-                    context.Operation.Document.ToString());
+                stream = await _subscriptionEventPublisher.SubscribeAsync(entityName, subscriptionEvent, context.RequestAborted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "GraphQLSubscriptionFailed entity {EntityName}, event {EventType}, operation {OperationName}, field {SubscriptionField}, success {Success}",
+                    entityName,
+                    subscriptionEvent,
+                    operationName,
+                    subscriptionFieldName,
+                    false);
+                throw;
             }
 
-            return new ActiveSubscriptionSourceStream(stream, entityName, subscriptionEvent.ToString());
+            long activeSubscriptionCount = TelemetryMetricsHelper.IncrementActiveGraphQLSubscriptions(entityName, subscriptionEvent.ToString());
+
+            _logger.LogInformation(
+                "GraphQLSubscriptionCreated entity {EntityName}, event {EventType}, operation {OperationName}, field {SubscriptionField}, active subscriptions {ActiveSubscriptionCount}, success {Success}",
+                entityName,
+                subscriptionEvent,
+                operationName,
+                subscriptionFieldName,
+                activeSubscriptionCount,
+                true);
+
+            return new ActiveSubscriptionSourceStream(
+                stream,
+                entityName,
+                subscriptionEvent.ToString(),
+                operationName,
+                subscriptionFieldName,
+                _logger);
         }
 
         public static ValueTask<object?> ResolveSubscriptionEventAsync(IResolverContext context) =>
@@ -241,12 +263,26 @@ namespace Azure.DataApiBuilder.Service.Services
             private readonly ISourceStream<JsonElement> _inner;
             private readonly string _entityName;
             private readonly string _eventType;
+            private readonly string? _operationName;
+            private readonly string _subscriptionFieldName;
+            private readonly ILogger<ExecutionHelper> _logger;
+            private readonly long _startedAt;
 
-            public ActiveSubscriptionSourceStream(ISourceStream<JsonElement> inner, string entityName, string eventType)
+            public ActiveSubscriptionSourceStream(
+                ISourceStream<JsonElement> inner,
+                string entityName,
+                string eventType,
+                string? operationName,
+                string subscriptionFieldName,
+                ILogger<ExecutionHelper> logger)
             {
                 _inner = inner;
                 _entityName = entityName;
                 _eventType = eventType;
+                _operationName = operationName;
+                _subscriptionFieldName = subscriptionFieldName;
+                _logger = logger;
+                _startedAt = Stopwatch.GetTimestamp();
             }
 
             public IAsyncEnumerable<JsonElement> ReadEventsAsync() => _inner.ReadEventsAsync();
@@ -255,8 +291,47 @@ namespace Azure.DataApiBuilder.Service.Services
 
             public async ValueTask DisposeAsync()
             {
-                await _inner.DisposeAsync();
-                TelemetryMetricsHelper.DecrementActiveGraphQLSubscriptions(_entityName, _eventType);
+                Exception? disposeException = null;
+                try
+                {
+                    await _inner.DisposeAsync();
+                }
+                catch (Exception ex)
+                {
+                    disposeException = ex;
+                    throw;
+                }
+                finally
+                {
+                    long activeSubscriptionCount = TelemetryMetricsHelper.DecrementActiveGraphQLSubscriptions(_entityName, _eventType);
+                    TimeSpan duration = Stopwatch.GetElapsedTime(_startedAt);
+
+                    if (disposeException is null)
+                    {
+                        _logger.LogInformation(
+                            "GraphQLSubscriptionClosed entity {EntityName}, event {EventType}, operation {OperationName}, field {SubscriptionField}, active subscriptions {ActiveSubscriptionCount}, duration {Duration}, success {Success}",
+                            _entityName,
+                            _eventType,
+                            _operationName,
+                            _subscriptionFieldName,
+                            activeSubscriptionCount,
+                            duration,
+                            true);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            disposeException,
+                            "GraphQLSubscriptionClosed entity {EntityName}, event {EventType}, operation {OperationName}, field {SubscriptionField}, active subscriptions {ActiveSubscriptionCount}, duration {Duration}, success {Success}",
+                            _entityName,
+                            _eventType,
+                            _operationName,
+                            _subscriptionFieldName,
+                            activeSubscriptionCount,
+                            duration,
+                            false);
+                    }
+                }
             }
         }
 

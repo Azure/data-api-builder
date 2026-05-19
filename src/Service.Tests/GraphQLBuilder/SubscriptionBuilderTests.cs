@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Subscriptions;
@@ -58,6 +59,18 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 CreateRoot(),
                 CreateEntities(new EntityGraphQLSubscriptionOptions(events: new[] { GraphQLSubscriptionEvent.Deleted })),
                 CreatePermissions(EntityActionOperation.Update));
+
+            Assert.AreEqual(0, result.Definitions.Count);
+        }
+
+        [TestMethod]
+        public void BuildOmitsFieldsForCosmosEntities()
+        {
+            DocumentNode result = SubscriptionBuilder.Build(
+                CreateRoot(),
+                CreateEntities(new EntityGraphQLSubscriptionOptions(events: new[] { GraphQLSubscriptionEvent.Created })),
+                CreatePermissions(EntityActionOperation.Create),
+                new Dictionary<string, DatabaseType> { ["Actor"] = DatabaseType.CosmosDB_NoSQL });
 
             Assert.AreEqual(0, result.Definitions.Count);
         }

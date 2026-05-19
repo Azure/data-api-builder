@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
@@ -21,7 +22,8 @@ public static class SubscriptionBuilder
     public static DocumentNode Build(
         DocumentNode root,
         RuntimeEntities entities,
-        Dictionary<string, EntityMetadata>? entityPermissionsMap = null)
+        Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
+        IReadOnlyDictionary<string, DatabaseType>? entityToDatabaseType = null)
     {
         List<IDefinitionNode> definitionNodes = new();
         List<FieldDefinitionNode> subscriptionFields = new();
@@ -37,6 +39,13 @@ public static class SubscriptionBuilder
             Entity entity = entities[entityName];
 
             if (!IsSubscriptionEnabled(entity) || entity.Source.Type is EntitySourceType.StoredProcedure)
+            {
+                continue;
+            }
+
+            if (entityToDatabaseType is not null &&
+                entityToDatabaseType.TryGetValue(entityName, out DatabaseType databaseType) &&
+                databaseType is DatabaseType.CosmosDB_NoSQL)
             {
                 continue;
             }

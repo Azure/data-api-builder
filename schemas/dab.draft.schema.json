@@ -1366,7 +1366,8 @@
                             "type": "string",
                             "enum": ["created", "updated", "deleted"]
                           },
-                          "uniqueItems": true
+                          "uniqueItems": true,
+                          "default": []
                         }
                       }
                     }

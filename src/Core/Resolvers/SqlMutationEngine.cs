@@ -128,6 +128,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // READ permission is inherited by other roles from Anonymous role when present.
             bool isReadPermissionConfigured = _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, roleName, EntityActionOperation.Read)
                                               || _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, AuthorizationType.Anonymous.ToString(), EntityActionOperation.Read);
+            List<IReadOnlyDictionary<string, object?>>? subscriptionRecords = null;
+            bool publishGraphQLResultForSubscriptions = false;
+            bool shouldPublishGraphQLDelete = false;
 
             try
             {
@@ -181,7 +184,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         }
                         else if (context.Selection.Type.TypeName() == GraphQLUtils.DB_OPERATION_RESULT_TYPE)
                         {
+                            shouldPublishGraphQLDelete = true;
                             result = GetDbOperationResultJsonDocument("success");
+                        }
+                        else
+                        {
+                            shouldPublishGraphQLDelete = true;
                         }
                     }
                     // This code block contains logic for handling multiple create mutation operations.
@@ -195,6 +203,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     parameters,
                                     sqlMetadataProvider,
                                     !isPointMutation);
+                        subscriptionRecords = primaryKeysOfCreatedItems
+                            .Select(primaryKeyValues => (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(primaryKeyValues))
+                            .ToList();
+                        publishGraphQLResultForSubscriptions = isReadPermissionConfigured;
 
                         // For point create multiple mutation operation, a single item is created in the
                         // table backing the top level entity. So, the PK of the created item is fetched and
@@ -228,6 +240,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 parameters,
                                 sqlMetadataProvider,
                                 context);
+                        if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0)
+                        {
+                            subscriptionRecords = new()
+                            {
+                                new Dictionary<string, object?>(mutationResultRow.Columns)
+                            };
+                        }
 
                         // When read permission is not configured, an error response is returned. So, the mutation result needs to
                         // be computed only when the read permission is configured.
@@ -255,7 +274,29 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     transactionScope.Complete();
                 }
 
-                if (result?.Item1 is not null)
+                if (mutationOperation is EntityActionOperation.Delete && shouldPublishGraphQLDelete)
+                {
+                    await PublishGraphQLMutationSubscriptionEventsAsync(
+                        entityName,
+                        mutationOperation,
+                        roleName,
+                        parameters,
+                        result?.Item1?.RootElement ?? default,
+                        sqlMetadataProvider);
+                }
+                else if (publishGraphQLResultForSubscriptions && result?.Item1 is not null)
+                {
+                    await PublishGraphQLMutationSubscriptionEventsAsync(entityName, mutationOperation, roleName, parameters, result.Item1.RootElement, sqlMetadataProvider);
+                }
+                else if (subscriptionRecords is not null)
+                {
+                    GraphQLSubscriptionEvent? subscriptionEvent = ToSubscriptionEvent(mutationOperation);
+                    foreach (IReadOnlyDictionary<string, object?> subscriptionRecord in subscriptionRecords)
+                    {
+                        await PublishSubscriptionEventAsync(entityName, subscriptionEvent, roleName, subscriptionRecord);
+                    }
+                }
+                else if (result?.Item1 is not null)
                 {
                     await PublishGraphQLMutationSubscriptionEventsAsync(entityName, mutationOperation, roleName, parameters, result.Item1.RootElement, sqlMetadataProvider);
                 }
@@ -410,6 +451,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private bool IsSubscriptionConfigured(string entityName, GraphQLSubscriptionEvent subscriptionEvent) =>
             _runtimeConfigProvider.GetConfig().Entities.TryGetValue(entityName, out Entity? entity) &&
+            entity.Source.Type is not EntitySourceType.StoredProcedure &&
             SubscriptionBuilder.IsSubscriptionEnabled(entity) &&
             entity.GraphQL.Subscription!.Events.Contains(subscriptionEvent);
 
@@ -779,6 +821,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         }
 
                         Dictionary<string, object?> resultRow = upsertOperationResultSetRow.Columns;
+                        Dictionary<string, object?> subscriptionResultRow = new(resultRow);
 
                         // For all SQL database types, when an upsert operation results in an update operation, an entry <IsUpdateResultSet,true> is added to the result set dictionary.
                         // For MsSQL and MySQL database types, the "IsUpdateResultSet" field is sufficient to determine whether the resultant operation was an insert or an update.
@@ -808,7 +851,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // When the upsert operation results in the creation of a new record, an HTTP 201 CreatedResult response is returned.
                         if (!hasPerformedUpdate)
                         {
-                            await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Created, roleName, resultRow);
+                            await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Created, roleName, subscriptionResultRow);
 
                             // Location Header is made up of the Base URL of the request and the primary key of the item created.
                             // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
@@ -818,7 +861,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         }
 
                         // When the upsert operation results in the update of an existing record, an HTTP 200 OK response is returned.
-                        await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Updated, roleName, resultRow);
+                        await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Updated, roleName, subscriptionResultRow);
                         return SqlResponseHelpers.ConstructOkMutationResponse(resultRow, selectOperationResponse, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
                     }
                     else
@@ -914,6 +957,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             throw _dabExceptionWithTransactionErrorMessage;
                         }
 
+                        Dictionary<string, object?> subscriptionResultRow = new(mutationResultRow!.Columns);
+
                         // When read permission is configured without a database policy, a subsequent select query will not be executed.
                         // So, if the read action has include/exclude fields configured, additional fields present in the response
                         // need to be removed.
@@ -934,7 +979,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                         if (effectiveOperationType is EntityActionOperation.Insert)
                         {
-                            await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Created, roleName, mutationResultRow!.Columns);
+                            await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Created, roleName, subscriptionResultRow);
 
                             // Location Header is made up of the Base URL of the request and the primary key of the item created.
                             // For POST requests and keyless PUT/PATCH requests, the primary key info would not be available
@@ -955,7 +1000,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                         if (effectiveOperationType is EntityActionOperation.Update || effectiveOperationType is EntityActionOperation.UpdateIncremental)
                         {
-                            await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Updated, roleName, mutationResultRow!.Columns);
+                            await PublishSubscriptionEventAsync(context.EntityName, GraphQLSubscriptionEvent.Updated, roleName, subscriptionResultRow);
 
                             return SqlResponseHelpers.ConstructOkMutationResponse(
                                 mutationResultRow!.Columns,

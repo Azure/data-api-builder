@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Net;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Config.Utilities;
@@ -32,6 +34,7 @@ using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Subscriptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
@@ -568,6 +571,54 @@ namespace Azure.DataApiBuilder.Service
             services.AddControllers();
         }
 
+        private static bool HasConfiguredGraphQLSubscriptions(RuntimeConfig? runtimeConfig, IAuthorizationResolver? authorizationResolver = null) =>
+            runtimeConfig is not null &&
+            runtimeConfig.IsGraphQLEnabled &&
+            runtimeConfig.Entities.Any(entity =>
+                IsEntityEligibleForGraphQLSubscriptions(runtimeConfig, entity.Key, entity.Value, authorizationResolver));
+
+        private static bool IsEntityEligibleForGraphQLSubscriptions(
+            RuntimeConfig runtimeConfig,
+            string entityName,
+            Entity entity,
+            IAuthorizationResolver? authorizationResolver)
+        {
+            if (entity.Source.Type is EntitySourceType.StoredProcedure ||
+                !SubscriptionBuilder.IsSubscriptionEnabled(entity))
+            {
+                return false;
+            }
+
+            string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+            if (runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType is DatabaseType.CosmosDB_NoSQL)
+            {
+                return false;
+            }
+
+            if (authorizationResolver is null)
+            {
+                return true;
+            }
+
+            foreach (GraphQLSubscriptionEvent subscriptionEvent in entity.GraphQL.Subscription!.Events)
+            {
+                EntityActionOperation operation = subscriptionEvent switch
+                {
+                    GraphQLSubscriptionEvent.Created => EntityActionOperation.Create,
+                    GraphQLSubscriptionEvent.Updated => EntityActionOperation.Update,
+                    GraphQLSubscriptionEvent.Deleted => EntityActionOperation.Delete,
+                    _ => EntityActionOperation.None
+                };
+
+                if (IAuthorizationResolver.GetRolesForOperation(entityName, operation, authorizationResolver.EntityPermissionsMap).Any())
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Creates a ConnectionMultiplexer for Redis with support for Azure Entra authentication.
         /// </summary>
@@ -902,6 +953,62 @@ namespace Azure.DataApiBuilder.Service
 
             app.UseRouting();
             app.UseWebSockets();
+            app.Use(async (context, next) =>
+            {
+                if (context.WebSockets.IsWebSocketRequest &&
+                    context.Request.Path.StartsWithSegments(GraphQLRuntimeOptions.DEFAULT_PATH, StringComparison.OrdinalIgnoreCase))
+                {
+                    IAuthorizationResolver? authorizationResolver = context.RequestServices.GetService<IAuthorizationResolver>();
+                    if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? currentConfig) ||
+                        !HasConfiguredGraphQLSubscriptions(currentConfig, authorizationResolver))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status404NotFound;
+                        return;
+                    }
+
+                    long startedAt = Stopwatch.GetTimestamp();
+                    Exception? connectionException = null;
+                    _logger.LogInformation(
+                        "GraphQLSubscriptionWebSocketConnectionEstablished path {GraphQLPath}, success {Success}",
+                        currentConfig.GraphQLPath,
+                        true);
+
+                    try
+                    {
+                        await next.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        connectionException = ex;
+                        throw;
+                    }
+                    finally
+                    {
+                        TimeSpan duration = Stopwatch.GetElapsedTime(startedAt);
+                        if (connectionException is null)
+                        {
+                            _logger.LogInformation(
+                                "GraphQLSubscriptionWebSocketConnectionClosed path {GraphQLPath}, duration {Duration}, success {Success}",
+                                currentConfig.GraphQLPath,
+                                duration,
+                                true);
+                        }
+                        else
+                        {
+                            _logger.LogWarning(
+                                connectionException,
+                                "GraphQLSubscriptionWebSocketConnectionClosed path {GraphQLPath}, duration {Duration}, success {Success}",
+                                currentConfig.GraphQLPath,
+                                duration,
+                                false);
+                        }
+                    }
+
+                    return;
+                }
+
+                await next.Invoke();
+            });
 
             // Adding CORS Middleware
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Cors is not null)

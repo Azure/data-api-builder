@@ -259,7 +259,7 @@ namespace Azure.DataApiBuilder.Core.Services
             DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isMultipleCreateOperationEnabled);
 
             // Generate the GraphQL subscriptions from the provided objects
-            DocumentNode subscriptionNode = SubscriptionBuilder.Build(root, _entities, _authorizationResolver.EntityPermissionsMap);
+            DocumentNode subscriptionNode = SubscriptionBuilder.Build(root, _entities, _authorizationResolver.EntityPermissionsMap, entityToDatabaseType);
 
             return (queryNode, mutationNode, subscriptionNode);
         }

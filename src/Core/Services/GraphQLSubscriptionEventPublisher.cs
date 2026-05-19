@@ -62,11 +62,27 @@ public sealed class GraphQLSubscriptionEventPublisher : IGraphQLSubscriptionEven
         activity?.SetTag("dab.graphql.subscription.event", subscriptionEvent.ToString());
         activity?.SetTag("dab.actor.role", actorRole);
         activity?.SetTag("dab.graphql.subscription.event_id", eventId);
+        activity?.SetTag("dab.graphql.subscription.publish_success", true);
 
-        await _sender.SendAsync(
-            SubscriptionBuilder.GenerateTopicName(entityName, subscriptionEvent),
-            payload.RootElement.Clone(),
-            cancellationToken);
+        try
+        {
+            await _sender.SendAsync(
+                SubscriptionBuilder.GenerateTopicName(entityName, subscriptionEvent),
+                payload.RootElement.Clone(),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            activity?.SetTag("dab.graphql.subscription.publish_success", false);
+            _logger.LogWarning(
+                ex,
+                "GraphQL subscription event publish failed for entity {EntityName}, event {EventType}, actor role {ActorRole}, eventId {EventId}",
+                entityName,
+                subscriptionEvent,
+                actorRole,
+                eventId);
+            return;
+        }
 
         _logger.LogInformation(
             "GraphQL subscription event published for entity {EntityName}, event {EventType}, actor role {ActorRole}, eventId {EventId}",

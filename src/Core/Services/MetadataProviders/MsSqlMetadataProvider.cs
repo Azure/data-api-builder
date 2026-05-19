@@ -4,6 +4,7 @@
 using System.Data;
 using System.Data.Common;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -333,6 +334,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         continue;
                     }
 
+                    entityName = SanitizeGeneratedEntityName(entityName);
+
                     // Create the entity using the template settings and permissions from the autoentity configuration.
                     // Currently the source type is always Table for auto-generated entities from database objects.
                     Entity generatedEntity = new(
@@ -411,6 +414,26 @@ namespace Azure.DataApiBuilder.Core.Services
                 dataSourceName: _dataSourceName);
 
             return resultArray;
+        }
+
+        internal static string SanitizeGeneratedEntityName(string name)
+        {
+            StringBuilder sanitizedName = new(name.Length);
+            bool capitalizeNext = false;
+
+            foreach (char character in name)
+            {
+                if (char.IsWhiteSpace(character))
+                {
+                    capitalizeNext = true;
+                    continue;
+                }
+
+                sanitizedName.Append(capitalizeNext ? char.ToUpperInvariant(character) : character);
+                capitalizeNext = false;
+            }
+
+            return sanitizedName.ToString();
         }
     }
 }

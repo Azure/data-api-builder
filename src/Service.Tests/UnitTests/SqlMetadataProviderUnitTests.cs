@@ -611,6 +611,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Ensures autoentity-generated entity names are sanitized for whitespace.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("dbo_Order Items", "dbo_OrderItems")]
+        [DataRow("Order   Items", "OrderItems")]
+        [DataRow("NoWhitespace", "NoWhitespace")]
+        public void SanitizeGeneratedEntityName_SanitizesWhitespace(string input, string expected)
+        {
+            string actual = MsSqlMetadataProvider.SanitizeGeneratedEntityName(input);
+            Assert.AreEqual(expected, actual);
+        }
+
+        /// <summary>
         /// Ensures that the query that returns the tables that will be generated
         /// into entities from the autoentities configuration returns the expected result.
         /// </summary>

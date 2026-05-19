@@ -62,14 +62,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
         }
 
         /// <summary>
-        /// Gets all registered tools
-        /// </summary>
-        public IEnumerable<Tool> GetAllTools()
-        {
-            return _tools.Values.Select(t => t.GetToolMetadata());
-        }
-
-        /// <summary>
         /// Gets metadata for all registered tools that are enabled in the given runtime configuration.
         /// </summary>
         public IEnumerable<Tool> GetEnabledTools(RuntimeConfig config)

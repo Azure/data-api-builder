@@ -44,8 +44,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             registry.RegisterTool(tool3);
 
             // Verify all tools were registered
-            IEnumerable<Tool> allTools = registry.GetAllTools();
-            Assert.AreEqual(3, allTools.Count());
+            Assert.IsTrue(registry.TryGetTool("tool_one", out _));
+            Assert.IsTrue(registry.TryGetTool("tool_two", out _));
+            Assert.IsTrue(registry.TryGetTool("tool_three", out _));
         }
 
         /// <summary>
@@ -158,8 +159,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             registry.RegisterTool(tool);
 
             // Assert - Tool should be registered only once
-            IEnumerable<Tool> allTools = registry.GetAllTools();
-            Assert.AreEqual(1, allTools.Count());
+            Assert.IsTrue(registry.TryGetTool("my_tool", out _));
         }
 
         /// <summary>
@@ -184,28 +184,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             Assert.IsTrue(exception.Message.Contains("Duplicate MCP tool name 'my_tool' detected"));
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
-        }
-
-        /// <summary>
-        /// Test that GetAllTools returns all registered tools.
-        /// </summary>
-        [TestMethod]
-        public void GetAllTools_ReturnsAllRegisteredTools()
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            registry.RegisterTool(new MockMcpTool("tool_a", ToolType.BuiltIn));
-            registry.RegisterTool(new MockMcpTool("tool_b", ToolType.Custom));
-            registry.RegisterTool(new MockMcpTool("tool_c", ToolType.BuiltIn));
-
-            // Act
-            IEnumerable<Tool> allTools = registry.GetAllTools();
-
-            // Assert
-            Assert.AreEqual(3, allTools.Count());
-            Assert.IsTrue(allTools.Any(t => t.Name == "tool_a"));
-            Assert.IsTrue(allTools.Any(t => t.Name == "tool_b"));
-            Assert.IsTrue(allTools.Any(t => t.Name == "tool_c"));
         }
 
         /// <summary>
@@ -386,24 +364,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(enabledTools.Any(t => t.Name == "get_books"));
             Assert.IsFalse(enabledTools.Any(t => t.Name == "create_record"));
             Assert.IsFalse(enabledTools.Any(t => t.Name == "delete_record"));
-        }
-
-        /// <summary>
-        /// Test that GetAllTools still returns all tools regardless of enabled state.
-        /// </summary>
-        [TestMethod]
-        public void GetAllTools_IncludesDisabledTools()
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            registry.RegisterTool(new MockMcpTool("enabled_tool", ToolType.BuiltIn, isEnabledFunc: _ => true));
-            registry.RegisterTool(new MockMcpTool("disabled_tool", ToolType.BuiltIn, isEnabledFunc: _ => false));
-
-            // Act
-            List<Tool> allTools = registry.GetAllTools().ToList();
-
-            // Assert - GetAllTools should not filter
-            Assert.AreEqual(2, allTools.Count);
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Subscriptions;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Configuration;
 using HotChocolate.Language;
@@ -16,7 +17,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
     private readonly PureFieldDelegate _leafFieldResolver;
     private readonly PureFieldDelegate _objectFieldResolver;
     private readonly PureFieldDelegate _listFieldResolver;
-    private readonly PureFieldDelegate _subscriptionEventFieldResolver;
+    private readonly PureFieldDelegate _subscriptionEventRecordFieldResolver;
 
     private ObjectType? _queryType;
     private ObjectType? _mutationType;
@@ -45,7 +46,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
         _listFieldResolver = executionHelper.ExecuteListField;
         _subscriptionResolver = executionHelper.SubscribeAsync;
         _subscriptionFieldResolver = ExecutionHelper.ResolveSubscriptionEventAsync;
-        _subscriptionEventFieldResolver = ExecutionHelper.ExecuteSubscriptionEventField;
+        _subscriptionEventRecordFieldResolver = ExecutionHelper.ExecuteSubscriptionEventField;
     }
 
     public override void OnAfterResolveRootType(
@@ -106,11 +107,22 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
             }
         }
         else if (objectTypeConfig.Interfaces.Any(interfaceType =>
-            string.Equals(interfaceType.ToString(), "SubscriptionEvent", StringComparison.Ordinal)))
+            string.Equals(interfaceType.ToString(), SubscriptionBuilder.SUBSCRIPTION_EVENT_INTERFACE_NAME, StringComparison.Ordinal)))
         {
             foreach (ObjectFieldConfiguration field in objectTypeConfig.Fields)
             {
-                field.PureResolver = _subscriptionEventFieldResolver;
+                if (string.Equals(field.Name, SubscriptionBuilder.RECORD_FIELD_NAME, StringComparison.Ordinal))
+                {
+                    field.PureResolver = _subscriptionEventRecordFieldResolver;
+                    continue;
+                }
+
+                if (field.Type is not null &&
+                    completionContext.TryGetType(field.Type, out IType? type) &&
+                    type.IsLeafType())
+                {
+                    field.PureResolver = _leafFieldResolver;
+                }
             }
         }
         else

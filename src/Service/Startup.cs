@@ -32,7 +32,6 @@ using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Subscriptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
@@ -304,10 +303,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IQueryEngineFactory, QueryEngineFactory>();
 
             services.AddSingleton<IMutationEngineFactory, MutationEngineFactory>();
-            services.AddSingleton<IGraphQLSubscriptionEventPublisher>(serviceProvider =>
-                HasConfiguredGraphQLSubscriptions(runtimeConfig)
-                    ? ActivatorUtilities.CreateInstance<GraphQLSubscriptionEventPublisher>(serviceProvider)
-                    : NullGraphQLSubscriptionEventPublisher.Instance);
+            services.AddSingleton<IGraphQLSubscriptionEventPublisher, GraphQLSubscriptionEventPublisher>();
 
             services.AddSingleton<IMetadataProviderFactory, MetadataProviderFactory>();
 
@@ -486,7 +482,7 @@ namespace Azure.DataApiBuilder.Service
                 }
             }
 
-            AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL, HasConfiguredGraphQLSubscriptions(runtimeConfig));
+            AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
 
             // Subscribe the GraphQL schema refresh method to the specific hot-reload event
             _hotReloadEventHandler.Subscribe(
@@ -654,13 +650,6 @@ namespace Azure.DataApiBuilder.Service
             _logBuffer.BufferLog(LogLevel.Information, $"Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.");
         }
 
-        private static bool HasConfiguredGraphQLSubscriptions(RuntimeConfig? runtimeConfig) =>
-            runtimeConfig is not null &&
-            runtimeConfig.IsGraphQLEnabled &&
-            runtimeConfig.Entities.Any(entity =>
-                entity.Value.Source.Type is not EntitySourceType.StoredProcedure &&
-                SubscriptionBuilder.IsSubscriptionEnabled(entity.Value));
-
         /// <summary>
         /// Configure GraphQL services within the service collection of the
         /// request pipeline.
@@ -670,7 +659,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="services">Service Collection</param>
         /// <param name="graphQLRuntimeOptions">The GraphQL runtime options.</param>
-        private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions, bool enableSubscriptions)
+        private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
                 // Defer schema construction to the first GraphQL request so the runtime config
@@ -727,10 +716,7 @@ namespace Azure.DataApiBuilder.Service
                 .AddTypeConverter<TimeOnly, LocalTime>(
                     from => new LocalTime(from.Hour, from.Minute, from.Second, from.Millisecond));
 
-            if (enableSubscriptions)
-            {
-                server = server.AddInMemorySubscriptions();
-            }
+            server = server.AddInMemorySubscriptions();
 
             // Conditionally adds a maximum depth rule to the GraphQL queries/mutation selection set.
             // This rule is only added if a positive depth limit is specified, ensuring that the server
@@ -792,7 +778,7 @@ namespace Azure.DataApiBuilder.Service
             // Re-add GraphQL services with updated config.
             RuntimeConfig runtimeConfig = _configProvider!.GetConfig();
             Console.WriteLine("Updating GraphQL service.");
-            AddGraphQLService(services, runtimeConfig.Runtime?.GraphQL, HasConfiguredGraphQLSubscriptions(runtimeConfig));
+            AddGraphQLService(services, runtimeConfig.Runtime?.GraphQL);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -915,10 +901,7 @@ namespace Azure.DataApiBuilder.Service
             }
 
             app.UseRouting();
-            if (HasConfiguredGraphQLSubscriptions(runtimeConfig))
-            {
-                app.UseWebSockets();
-            }
+            app.UseWebSockets();
 
             // Adding CORS Middleware
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Cors is not null)

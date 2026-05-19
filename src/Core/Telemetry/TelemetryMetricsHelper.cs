@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry
         private static readonly Counter<long> _errorCounter = _meter.CreateCounter<long>("total_errors");
         private static readonly Counter<long> _totalRequests = _meter.CreateCounter<long>("total_requests");
         private static readonly Histogram<double> _requestDuration = _meter.CreateHistogram<double>("request_duration", "ms");
-        private static readonly UpDownCounter<long> _activeGraphQLSubscriptions = _meter.CreateUpDownCounter<long>("dab.graphql.subscriptions.active");
+        private static readonly UpDownCounter<long> _activeGraphQLSubscriptions = _meter.CreateUpDownCounter<long>("active_graphql_subscriptions");
 
         public static void IncrementActiveRequests(ApiType kind) => _activeRequests.Add(1, new KeyValuePair<string, object?>("api_type", kind));
 

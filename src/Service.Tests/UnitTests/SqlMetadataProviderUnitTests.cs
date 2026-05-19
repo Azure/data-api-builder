@@ -699,7 +699,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Name = "query_vector",
                 SystemType = typeof(byte[])
             };
-            ParameterMetadata meta = new() { Name = "query_vector", Embed = true };
+            ParameterMetadata meta = new() { Name = "query_vector", AutoEmbed = true };
 
             MsSqlMetadataProvider.ApplyEmbedTypeOverride(
                 def, meta, schemaName: "dbo", storedProcedureName: "sp_search", parameterName: "query_vector");
@@ -722,7 +722,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Name = "query_text",
                 SystemType = typeof(string)
             };
-            ParameterMetadata meta = new() { Name = "query_text", Embed = true };
+            ParameterMetadata meta = new() { Name = "query_text", AutoEmbed = true };
 
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                 MsSqlMetadataProvider.ApplyEmbedTypeOverride(
@@ -748,7 +748,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Name = "top_k",
                 SystemType = typeof(int)
             };
-            ParameterMetadata meta = new() { Name = "top_k", Embed = true };
+            ParameterMetadata meta = new() { Name = "top_k", AutoEmbed = true };
 
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                 MsSqlMetadataProvider.ApplyEmbedTypeOverride(
@@ -775,7 +775,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 DbType = System.Data.DbType.Binary,
                 SqlDbType = System.Data.SqlDbType.VarBinary
             };
-            ParameterMetadata meta = new() { Name = "image_blob", Embed = false };
+            ParameterMetadata meta = new() { Name = "image_blob", AutoEmbed = false };
 
             MsSqlMetadataProvider.ApplyEmbedTypeOverride(
                 def, meta, schemaName: "dbo", storedProcedureName: "sp_upload", parameterName: "image_blob");
@@ -787,9 +787,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Edge case: embed:true behavior is independent of <see cref="ParameterDefinition.Required"/>
+        /// Edge case: auto-embed:true behavior is independent of <see cref="ParameterDefinition.Required"/>
         /// and <see cref="ParameterDefinition.Default"/>. The override fires purely on
-        /// <see cref="ParameterMetadata.Embed"/> + <see cref="Type"/> being byte[]. Other
+        /// <see cref="ParameterMetadata.AutoEmbed"/> + <see cref="Type"/> being byte[]. Other
         /// metadata fields are not affected.
         /// </summary>
         [TestMethod]
@@ -804,7 +804,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 HasConfigDefault = true,
                 ConfigDefaultValue = "should-be-untouched-by-override"
             };
-            ParameterMetadata meta = new() { Name = "v", Embed = true };
+            ParameterMetadata meta = new() { Name = "v", AutoEmbed = true };
 
             MsSqlMetadataProvider.ApplyEmbedTypeOverride(
                 def, meta, schemaName: "dbo", storedProcedureName: "sp_v", parameterName: "v");
@@ -850,18 +850,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             MsSqlMetadataProvider.ApplyEmbedTypeOverride(
                 embedDef,
-                new ParameterMetadata { Name = "primary_query", Embed = true },
+                new ParameterMetadata { Name = "primary_query", AutoEmbed = true },
                 schemaName: "dbo", storedProcedureName: "sp_hybrid", parameterName: "primary_query");
             MsSqlMetadataProvider.ApplyEmbedTypeOverride(
                 normalDef,
-                new ParameterMetadata { Name = "top_k", Embed = false },
+                new ParameterMetadata { Name = "top_k", AutoEmbed = false },
                 schemaName: "dbo", storedProcedureName: "sp_hybrid", parameterName: "top_k");
             MsSqlMetadataProvider.ApplyEmbedTypeOverride(
                 anotherEmbedDef,
-                new ParameterMetadata { Name = "secondary_query", Embed = true },
+                new ParameterMetadata { Name = "secondary_query", AutoEmbed = true },
                 schemaName: "dbo", storedProcedureName: "sp_hybrid", parameterName: "secondary_query");
 
-            // Both embed:true params overridden to String pipeline
+            // Both auto-embed:true params overridden to String pipeline
             Assert.AreEqual(typeof(string), embedDef.SystemType);
             Assert.AreEqual(typeof(string), anotherEmbedDef.SystemType);
 

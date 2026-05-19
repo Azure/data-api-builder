@@ -40,11 +40,17 @@ foreach ($targetFramework in $dotnetTargetFrameworks)
 }
 
 # Generating hash for nuget
-$nugetFileName = "Microsoft.DataApiBuilder.$DabVersion.nupkg"
-$nugetFilePath = "$BuildOutputDir/nupkg/$nugetFileName"
-$fileHashInfo = Get-FileHash $nugetFilePath
-$nuget_file_hash = $fileHashInfo.Hash
-$download_url_nuget = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$nugetFileName"
+$nugetCliFileName = "Microsoft.DataApiBuilder.$DabVersion.nupkg"
+$nugetCliFilePath = "$BuildOutputDir/nupkg/$nugetCliFileName"
+$fileCliHashInfo = Get-FileHash $nugetCliFilePath
+$nuget_cli_file_hash = $fileCliHashInfo.Hash
+$download_url_nuget_cli = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$nugetCliFileName"
+
+$nugetCoreFileName = "Microsoft.DataApiBuilder.Core.$DabVersion.nupkg"
+$nugetCoreFilePath = "$BuildOutputDir/nupkg/$nugetCoreFileName"
+$fileCoreHashInfo = Get-FileHash $nugetCoreFilePath
+$nuget_core_file_hash = $fileCoreHashInfo.Hash
+$download_url_nuget_core = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$nugetCoreFileName"
 
 # Creating new block to insert latest version 
 # String substitution requires hashtable to be wrapped in $( $hashtable['key'] ) to avoid parsing issues.
@@ -68,8 +74,12 @@ $latestBlock = @'
             "sha": "$($frameworkPlatformFileHashMetadata["net8.0_osx-x64"])"
         },
         "nuget": {
-            "url": "${download_url_nuget}",
-            "sha": "${nuget_file_hash}"
+            "url": "${download_url_nuget_cli}",
+            "sha": "${nuget_cli_file_hash}"
+        },
+        "nuget-core": {
+            "url": "${download_url_nuget_core}",
+            "sha": "${nuget_core_file_hash}"
         }
     }
 }

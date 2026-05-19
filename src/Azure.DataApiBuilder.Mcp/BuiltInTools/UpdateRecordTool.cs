@@ -38,6 +38,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// </summary>
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
+        public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.UpdateRecord ?? true;
+
         /// <summary>
         /// Gets the metadata for the update_record tool, including its name, description, and input schema.
         /// </summary>

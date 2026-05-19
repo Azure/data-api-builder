@@ -236,11 +236,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
             List<object> toolsWire = new();
             int count = 0;
 
-            // Tools are expected to be registered during application startup only.
-            // If this ever changes and tools can be added/removed at runtime while
-            // requests are being handled, we may need to introduce locking here or
-            // have the registry return a thread-safe snapshot.
-            foreach (Tool tool in _toolRegistry.GetAllTools())
+            // Resolve runtime config to filter out disabled tools.
+            RuntimeConfigProvider runtimeConfigProvider = _serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+            IEnumerable<Tool> tools = _toolRegistry.GetEnabledTools(runtimeConfig);
+
+            foreach (Tool tool in tools)
             {
                 count++;
                 toolsWire.Add(new

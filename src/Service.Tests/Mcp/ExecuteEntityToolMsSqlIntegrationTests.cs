@@ -41,14 +41,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class ExecuteEntityToolMsSqlIntegrationTests : SqlTestBase
     {
-        private static RuntimeConfig _baseConfig;
-
         [ClassInitialize]
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.MSSQL;
             await InitializeTestFixture();
-            _baseConfig = SqlTestHelper.SetupRuntimeConfig();
         }
 
         /// <summary>
@@ -143,7 +140,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         private static async Task<CallToolResult> ExecuteEntityAsync(string entityName, Dictionary<string, object> parameters)
         {
-            IServiceProvider serviceProvider = BuildExecuteEntityServiceProvider(_baseConfig);
+            IServiceProvider serviceProvider = BuildExecuteEntityServiceProvider();
             ExecuteEntityTool tool = new();
 
             var args = new Dictionary<string, object> { { "entity", entityName } };
@@ -162,13 +159,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// Builds a service provider that wires ExecuteEntityTool to the shared fixture's
         /// real ISqlMetadataProvider, real IQueryEngine (SqlQueryEngine), and real
         /// authorization resolver, with a DefaultHttpContext carrying the anonymous role header.
+        /// Uses the RuntimeConfigProvider from the WebApplicationFactory so that the datasource
+        /// name matches what the real MsSqlQueryExecutor was initialized with.
         /// </summary>
-        private static IServiceProvider BuildExecuteEntityServiceProvider(RuntimeConfig config)
+        private static IServiceProvider BuildExecuteEntityServiceProvider()
         {
             ServiceCollection services = new();
 
-            // Real RuntimeConfigProvider populated from the provided config snapshot.
-            RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
+            // Use the RuntimeConfigProvider from the WebApplicationFactory — this is the same
+            // provider that initialized _queryExecutor, so its DefaultDataSourceName matches
+            // the key in _queryExecutor.ConnectionStringBuilders.
+            RuntimeConfigProvider configProvider = _application.Services.GetRequiredService<RuntimeConfigProvider>();
             services.AddSingleton(configProvider);
 
             // Real metadata-provider factory backed by the shared fixture's live provider.

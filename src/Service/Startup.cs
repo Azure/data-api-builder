@@ -1621,7 +1621,7 @@ namespace Azure.DataApiBuilder.Service
             Func<Task<IConnectionMultiplexer>> connectFactory,
             int maxAttempts,
             TimeSpan initialDelay,
-            ILogger? logger,
+            Microsoft.Extensions.Logging.ILogger? logger,
             Func<TimeSpan, Task>? delayAsync = null)
         {
             if (connectFactory is null)

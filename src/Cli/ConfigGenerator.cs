@@ -2809,7 +2809,7 @@ namespace Cli
                             {
                                 Name = newParam.Name,
                                 Description = newParam.Description != null ? newParam.Description : match.Description,
-                                Required = newParam.Required,
+                                Required = newParam.Required != null ? newParam.Required : match.Required,
                                 Default = newParam.Default != null ? newParam.Default : match.Default
                             });
                         }
@@ -3002,7 +3002,7 @@ namespace Cli
 
             // Reset the config-based override flag so stale state from a prior call
             // (these are static) cannot leak into the current run.
-            Utils.IsLogLevelOverriddenByConfig = false;
+            Utils.IsConfigOverriding = false;
             Utils.ConfigLogLevel = LogLevel.Information;
 
             if (options.LogLevel is not null)
@@ -3029,7 +3029,7 @@ namespace Cli
                 // when the user expressed intent via the config file rather than --LogLevel.
                 if (deserializedRuntimeConfig.HasExplicitLogLevel())
                 {
-                    Utils.IsLogLevelOverriddenByConfig = true;
+                    Utils.IsConfigOverriding = true;
                     Utils.ConfigLogLevel = minimumLogLevel;
                 }
             }

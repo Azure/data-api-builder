@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -32,6 +31,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly string _protocolVersion;
 
         private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
+
+        // Omit null-valued properties (e.g. SDK ContentBlock.Annotations, ContentBlock._meta) so
+        // strict MCP clients never see explicit JSON nulls for optional metadata fields.
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        };
 
         public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider)
         {
@@ -518,7 +524,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         }
                         else
                         {
-                            list.Add(SanitizeContentBlock(item));
+                            list.Add(item);
                         }
                     }
 
@@ -545,45 +551,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // Fallback: serialize to text.
             string text = SafeToString(callResult);
             return new object[] { new { type = "text", text } };
-        }
-
-        /// <summary>
-        /// Removes null optional metadata fields that strict MCP clients reject.
-        /// Specifically omits null "annotations" and "_meta" when serializing content blocks.
-        /// </summary>
-        private static object SanitizeContentBlock(object item)
-        {
-            JsonNode? jsonNode;
-            try
-            {
-                jsonNode = JsonSerializer.SerializeToNode(item);
-            }
-            catch (NotSupportedException)
-            {
-                return item;
-            }
-
-            if (jsonNode is not JsonObject contentBlock ||
-                !contentBlock.ContainsKey("type"))
-            {
-                return item;
-            }
-
-            RemovePropertyIfJsonNull(contentBlock, "annotations");
-            RemovePropertyIfJsonNull(contentBlock, "_meta");
-
-            return contentBlock;
-        }
-
-        /// <summary>
-        /// Removes a JSON object property when its value is explicitly null.
-        /// </summary>
-        private static void RemovePropertyIfJsonNull(JsonObject jsonObject, string propertyName)
-        {
-            if (jsonObject.TryGetPropertyValue(propertyName, out JsonNode? value) && value is null)
-            {
-                jsonObject.Remove(propertyName);
-            }
         }
 
         /// <summary>
@@ -632,7 +599,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 result = resultObject
             };
 
-            _stdoutWriter.WriteLine(JsonSerializer.Serialize(response));
+            _stdoutWriter.WriteLine(JsonSerializer.Serialize(response, _jsonOptions));
         }
 
         /// <summary>

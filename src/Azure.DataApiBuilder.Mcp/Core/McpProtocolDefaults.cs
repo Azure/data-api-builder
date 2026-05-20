@@ -1,3 +1,4 @@
+using System.Globalization;
 using Azure.DataApiBuilder.Product;
 using Microsoft.Extensions.Configuration;
 
@@ -19,7 +20,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <summary>
         /// Default MCP protocol version advertised when no configuration override is provided.
         /// </summary>
-        public const string DEFAULT_PROTOCOL_VERSION = "2025-06-18";
+        public const string DEFAULT_PROTOCOL_VERSION = "2025-11-25";
 
         /// <summary>
         /// Configuration key used to override the MCP protocol version.
@@ -34,6 +35,36 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             return configuration?.GetValue<string>(PROTOCOL_VERSION_CONFIG_KEY) ?? DEFAULT_PROTOCOL_VERSION;
         }
+
+        /// <summary>
+        /// Resolves the protocol version to send in initialize response as the
+        /// greatest version that does not exceed the client requested version.
+        /// </summary>
+        /// <param name="supportedProtocolVersion">The server's effective supported protocol version.</param>
+        /// <param name="clientRequestedProtocolVersion">The protocol version requested by the client.</param>
+        /// <returns>The protocol version to return to the client.</returns>
+        public static string ResolveInitializeResponseProtocolVersion(string supportedProtocolVersion, string? clientRequestedProtocolVersion)
+        {
+            if (string.IsNullOrWhiteSpace(clientRequestedProtocolVersion))
+            {
+                return supportedProtocolVersion;
+            }
+
+            return CompareProtocolVersions(supportedProtocolVersion, clientRequestedProtocolVersion) <= 0
+                ? supportedProtocolVersion
+                : clientRequestedProtocolVersion;
+        }
+
+        private static int CompareProtocolVersions(string leftVersion, string rightVersion)
+        {
+            const string FORMAT = "yyyy-MM-dd";
+            if (DateOnly.TryParseExact(leftVersion, FORMAT, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly leftDate) &&
+                DateOnly.TryParseExact(rightVersion, FORMAT, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly rightDate))
+            {
+                return leftDate.CompareTo(rightDate);
+            }
+
+            return string.Compare(leftVersion, rightVersion, StringComparison.Ordinal);
+        }
     }
 }
-

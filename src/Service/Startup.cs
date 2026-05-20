@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service
     {
         public static LogLevel MinimumLogLevel = LogLevel.Error;
 
-        public static bool IsLogLevelOverriddenByCli;
+        public static bool IsCliOverriding;
 
         public static AzureLogAnalyticsCustomLogCollector CustomLogCollector = new();
         public static ApplicationInsightsOptions AppInsightsOptions = new();
@@ -737,6 +737,17 @@ namespace Azure.DataApiBuilder.Service
             bool isRuntimeReady = false;
             RuntimeConfig? runtimeConfig = null;
 
+            // Wire a logger on the DynamicLogLevelProvider as soon as ILoggerFactory is available
+            // — ahead of any config-load branch — so an early MCP logging/setLevel call (which can
+            // arrive before runtime config in the late-configured path) still surfaces its audit
+            // log line through the standard logging pipeline.
+            DynamicLogLevelProvider? logLevelProviderForAudit = app.ApplicationServices.GetService<DynamicLogLevelProvider>();
+            ILoggerFactory? earlyLoggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
+            if (logLevelProviderForAudit is not null && earlyLoggerFactory is not null)
+            {
+                logLevelProviderForAudit.Logger = earlyLoggerFactory.CreateLogger<DynamicLogLevelProvider>();
+            }
+
             try
             {
                 if (runtimeConfigProvider.TryGetConfig(out runtimeConfig))
@@ -951,7 +962,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider, LogLevelInitializer logLevelInitializer)
         {
-            if (!IsLogLevelOverriddenByCli)
+            if (!IsCliOverriding)
             {
                 // If the log level is not overridden by command line arguments specified through CLI,
                 // attempt to get the runtime config to determine the loglevel based on host.mode.

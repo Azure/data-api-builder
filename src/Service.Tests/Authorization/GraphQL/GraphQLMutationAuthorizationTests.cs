@@ -136,7 +136,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 _gQLFilterParser.Object,
                 httpContextAccessor.Object,
                 provider,
-                NullEmbeddingService.Instance);
+                NullEmbeddingService.Instance,
+                Mock.Of<ILogger<IMutationEngine>>());
         }
     }
 }

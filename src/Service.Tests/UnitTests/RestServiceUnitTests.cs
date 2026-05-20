@@ -333,7 +333,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 gQLFilterParser,
                 httpContextAccessor.Object,
                 provider,
-                NullEmbeddingService.Instance);
+                NullEmbeddingService.Instance,
+                Mock.Of<ILogger<IMutationEngine>>());
 
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
             mutationEngineFactory.Setup(x => x.GetMutationEngine(It.IsAny<DatabaseType>())).Returns(mutationEngine);

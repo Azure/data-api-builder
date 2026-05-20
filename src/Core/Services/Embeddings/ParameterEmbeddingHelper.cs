@@ -1,11 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 
@@ -19,6 +21,11 @@ namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 /// Example:
 ///   Input:  resolvedParams["query_vector"] = "wireless headphones"  (user's text)
 ///   Output: resolvedParams["query_vector"] = "[0.012,-0.045,...,0.083]"  (vector JSON string)
+///
+/// Telemetry: when the helper does meaningful work (has at least one auto-embed param
+/// configured), it emits an Activity span and metrics via
+/// <see cref="ParameterEmbeddingTelemetryHelper"/>. Early-exit no-ops (no params,
+/// no auto-embed params) are not instrumented.
 /// </summary>
 public static class ParameterEmbeddingHelper
 {
@@ -38,19 +45,29 @@ public static class ParameterEmbeddingHelper
     /// <param name="entityName">Name of the stored-procedure entity whose parameters may need embedding.</param>
     /// <param name="embeddingService">The embedding service to call for text → vector conversion.</param>
     /// <param name="cancellationToken">Cancellation token from the HTTP request.</param>
+    /// <param name="logger">Optional logger for structured per-operation diagnostics. Engines pass their own ILogger; tests may omit.</param>
     public static Task SubstituteEmbedParametersAsync(
         IDictionary<string, object?> resolvedParams,
         RuntimeConfig runtimeConfig,
         string entityName,
         IEmbeddingService embeddingService,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ILogger? logger = null)
     {
         Entity entity = runtimeConfig.Entities[entityName];
+        string? sprocName = entity.Source.Object;
+        string? provider = runtimeConfig.Runtime?.Embeddings?.Provider.ToString().ToLowerInvariant();
+        string? model = runtimeConfig.Runtime?.Embeddings?.EffectiveModel;
         return SubstituteEmbedParametersAsync(
             resolvedParams,
             entity.Source.Parameters,
             embeddingService,
-            cancellationToken);
+            cancellationToken,
+            entityName,
+            logger,
+            sprocName,
+            provider,
+            model);
     }
 
     /// <summary>
@@ -78,25 +95,84 @@ public static class ParameterEmbeddingHelper
     /// </param>
     /// <param name="embeddingService">The embedding service to call for text → vector conversion.</param>
     /// <param name="cancellationToken">Cancellation token from the HTTP request.</param>
+    /// <param name="entityName">Optional entity name used as a low-cardinality telemetry tag and log property.</param>
+    /// <param name="logger">Optional logger for structured per-operation diagnostics.</param>
+    /// <param name="sprocName">Optional stored procedure name for telemetry (passed by the convenience overload).</param>
+    /// <param name="provider">Optional embedding provider name for telemetry (e.g., "azure-openai").</param>
+    /// <param name="model">Optional embedding model name for telemetry (e.g., "text-embedding-3-small").</param>
     public static async Task SubstituteEmbedParametersAsync(
         IDictionary<string, object?> resolvedParams,
         List<ParameterMetadata>? configParams,
         IEmbeddingService embeddingService,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? entityName = null,
+        ILogger? logger = null,
+        string? sprocName = null,
+        string? provider = null,
+        string? model = null)
     {
-        // Nothing to do if no config params defined
+        // Nothing to do if no config params defined. Early-exit no-ops are not instrumented.
         if (configParams is null)
         {
             return;
         }
 
-        // Quick exit: are there any auto-embed params at all in config?
+        // Quick exit: are there any auto-embed params at all in config? Also not instrumented.
         bool hasEmbedParams = configParams.Any(p => p.AutoEmbed);
         if (!hasEmbedParams)
         {
             return;
         }
 
+        // From here on, this is a real substitution operation worth observing.
+        Stopwatch sw = Stopwatch.StartNew();
+        using Activity? activity = ParameterEmbeddingTelemetryHelper.StartSubstituteActivity(entityName, sprocName);
+
+        try
+        {
+            await SubstituteEmbedParametersCoreAsync(
+                resolvedParams, configParams, embeddingService, cancellationToken,
+                entityName, logger, sw, activity, provider, model);
+        }
+        catch (DataApiBuilderException)
+        {
+            // Per-site emission already recorded a classified outcome. Just rethrow.
+            throw;
+        }
+        catch (Exception unexpectedEx)
+        {
+            // Defensive: any non-classified exception (NRE, OOM, infrastructure failure)
+            // still gets a metric so dashboards/alerts don't go silent. Mirrors Phase 1's
+            // EmbeddingService catch-all pattern.
+            sw.Stop();
+            ParameterEmbeddingTelemetryHelper.RecordFailure(
+                activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeUnexpectedError,
+                sw.Elapsed.TotalMilliseconds, unexpectedEx);
+            logger?.LogError(
+                unexpectedEx,
+                "Auto-embed substitution failed unexpectedly for entity '{EntityName}'.",
+                entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Inner implementation after the no-op early exits and telemetry scope setup.
+    /// Split out so the outer method can wrap this in a defensive try/catch for
+    /// telemetry continuity.
+    /// </summary>
+    private static async Task SubstituteEmbedParametersCoreAsync(
+        IDictionary<string, object?> resolvedParams,
+        List<ParameterMetadata> configParams,
+        IEmbeddingService embeddingService,
+        CancellationToken cancellationToken,
+        string? entityName,
+        ILogger? logger,
+        Stopwatch sw,
+        Activity? activity,
+        string? provider,
+        string? model)
+    {
         // If we have auto-embed params in config but the embedding service is disabled
         // (NullEmbeddingService injected because runtime.embeddings is absent or disabled),
         // fail loudly. This is the runtime counterpart of the startup config validation
@@ -104,10 +180,18 @@ public static class ParameterEmbeddingHelper
         // toggled off after startup or where a hot-reload changed the embeddings state.
         if (!embeddingService.IsEnabled)
         {
-            throw new DataApiBuilderException(
+            DataApiBuilderException disabledEx = new(
                 message: "An auto-embed parameter is configured but the embedding service is not available. Verify runtime.embeddings is configured and enabled.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            sw.Stop();
+            ParameterEmbeddingTelemetryHelper.RecordFailure(
+                activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeServiceDisabled,
+                sw.Elapsed.TotalMilliseconds, disabledEx);
+            logger?.LogError(
+                "Auto-embed substitution failed for entity '{EntityName}': embedding service is not available.",
+                entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+            throw disabledEx;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -155,25 +239,68 @@ public static class ParameterEmbeddingHelper
             }
 
             // Validate type and extract text (throws 400 for non-strings)
-            string? text = ExtractTextValue(configParam.Name, value);
+            string? text;
+            try
+            {
+                text = ExtractTextValue(configParam.Name, value);
+            }
+            catch (DataApiBuilderException nonStringEx)
+            {
+                sw.Stop();
+                ParameterEmbeddingTelemetryHelper.RecordFailure(
+                    activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeNonString,
+                    sw.Elapsed.TotalMilliseconds, nonStringEx);
+                logger?.LogWarning(
+                    "Auto-embed parameter '{ParamName}' on entity '{EntityName}' rejected: {Reason}",
+                    configParam.Name,
+                    entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown,
+                    nonStringEx.Message);
+                throw;
+            }
 
             // Validate non-empty (throws 400 for empty/whitespace/null)
             if (string.IsNullOrWhiteSpace(text))
             {
-                throw new DataApiBuilderException(
+                DataApiBuilderException emptyEx = new(
                     message: $"Parameter '{configParam.Name}' has 'auto-embed: true' but the provided text is empty or whitespace.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                sw.Stop();
+                ParameterEmbeddingTelemetryHelper.RecordFailure(
+                    activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeEmptyInput,
+                    sw.Elapsed.TotalMilliseconds, emptyEx);
+                logger?.LogWarning(
+                    "Auto-embed parameter '{ParamName}' on entity '{EntityName}' rejected: empty or whitespace input.",
+                    configParam.Name,
+                    entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+                throw emptyEx;
             }
 
             embedRequests.Add((configParam.Name, text!));
         }
 
-        // No embed param values supplied in this request — nothing to embed
+        // No embed param values supplied in this request — nothing to embed. This is a
+        // legitimate no-op (e.g., sproc with auto-embed param + non-auto-embed params,
+        // client called only the latter), so we record it as a successful 0-param substitution.
         if (embedRequests.Count == 0)
         {
+            sw.Stop();
+            ParameterEmbeddingTelemetryHelper.RecordSuccess(activity, entityName, paramCount: 0, sw.Elapsed.TotalMilliseconds);
             return;
         }
+
+        logger?.LogDebug(
+            "Substituting {Count} auto-embed parameter(s) for entity '{EntityName}'.",
+            embedRequests.Count,
+            entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+
+        // Enrich the activity span with parameter names and provider/model metadata
+        // so trace viewers show which params were embedded and which provider was used.
+        ParameterEmbeddingTelemetryHelper.SetActivityParamAndProviderTags(
+            activity,
+            embedRequests.Select(r => r.paramName),
+            provider,
+            model);
 
         // ─────────────────────────────────────────────────────────────────────
         // PHASE 2: BATCH — single API call for all texts at once
@@ -199,19 +326,34 @@ public static class ParameterEmbeddingHelper
             string providerDetail = string.IsNullOrWhiteSpace(batchResult.ErrorMessage)
                 ? string.Empty
                 : $" Provider error: {batchResult.ErrorMessage}";
-            throw new DataApiBuilderException(
+            DataApiBuilderException batchEx = new(
                 message: $"Failed to generate embeddings for parameter(s) {paramNames}.{providerDetail}",
                 statusCode: HttpStatusCode.InternalServerError,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            sw.Stop();
+            ParameterEmbeddingTelemetryHelper.RecordFailure(
+                activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeBatchFailure,
+                sw.Elapsed.TotalMilliseconds, batchEx);
+            logger?.LogError(
+                "Embedding batch failed for entity '{EntityName}', parameter(s) {ParamNames}.{ProviderDetail}",
+                entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown,
+                paramNames,
+                providerDetail);
+            throw batchEx;
         }
 
         // Defensive: TryEmbedBatchAsync should return one embedding per input text
         if (batchResult.Embeddings.Length != embedRequests.Count)
         {
-            throw new DataApiBuilderException(
+            DataApiBuilderException lengthEx = new(
                 message: $"Embedding service returned {batchResult.Embeddings.Length} embeddings but {embedRequests.Count} were requested.",
                 statusCode: HttpStatusCode.InternalServerError,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            sw.Stop();
+            ParameterEmbeddingTelemetryHelper.RecordFailure(
+                activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeBatchFailure,
+                sw.Elapsed.TotalMilliseconds, lengthEx);
+            throw lengthEx;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -224,10 +366,15 @@ public static class ParameterEmbeddingHelper
             float[] embedding = batchResult.Embeddings[i];
             if (embedding is null || embedding.Length == 0)
             {
-                throw new DataApiBuilderException(
+                DataApiBuilderException emptyVecEx = new(
                     message: $"Embedding service returned an empty vector for parameter '{embedRequests[i].paramName}'.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                sw.Stop();
+                ParameterEmbeddingTelemetryHelper.RecordFailure(
+                    activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeBatchFailure,
+                    sw.Elapsed.TotalMilliseconds, emptyVecEx);
+                throw emptyVecEx;
             }
 
             // Serialize float[] to JSON string that Azure SQL accepts as VECTOR
@@ -251,6 +398,14 @@ public static class ParameterEmbeddingHelper
             // and pass it through to SQL, which auto-casts to VECTOR(N)
             resolvedParams[embedRequests[i].paramName] = vectorJson;
         }
+
+        sw.Stop();
+        ParameterEmbeddingTelemetryHelper.RecordSuccess(activity, entityName, embedRequests.Count, sw.Elapsed.TotalMilliseconds);
+        logger?.LogDebug(
+            "Substituted {Count} auto-embed parameter(s) for entity '{EntityName}' in {DurationMs}ms.",
+            embedRequests.Count,
+            entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown,
+            sw.Elapsed.TotalMilliseconds);
     }
 
     /// <summary>

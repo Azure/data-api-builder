@@ -151,7 +151,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     _runtimeConfigProvider.GetConfig(),
                     entityName,
                     _embeddingService,
-                    _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None);
+                    _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None,
+                    _logger);
 
                 SqlExecuteStructure sqlExecuteStructure = new(
                     entityName,
@@ -220,7 +221,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _runtimeConfigProvider.GetConfig(),
                 context.EntityName,
                 _embeddingService,
-                _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None);
+                _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None,
+                _logger);
 
             SqlExecuteStructure structure = new(
                 context.EntityName,

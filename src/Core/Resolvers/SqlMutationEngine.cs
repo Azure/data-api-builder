@@ -26,6 +26,7 @@ using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -43,6 +44,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly IEmbeddingService _embeddingService;
+        private readonly ILogger<IMutationEngine> _logger;
         public const string IS_UPDATE_RESULT_SET = "IsUpdateResultSet";
         private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
         public const string SINGLE_INPUT_ARGUEMENT_NAME = "item";
@@ -63,7 +65,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             IHttpContextAccessor httpContextAccessor,
             RuntimeConfigProvider runtimeConfigProvider,
-            IEmbeddingService embeddingService)
+            IEmbeddingService embeddingService,
+            ILogger<IMutationEngine> logger)
         {
             _queryManagerFactory = queryManagerFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
@@ -73,6 +76,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _gQLFilterParser = gQLFilterParser;
             _runtimeConfigProvider = runtimeConfigProvider;
             _embeddingService = embeddingService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -359,7 +363,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _runtimeConfigProvider.GetConfig(),
                 context.EntityName,
                 _embeddingService,
-                _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None);
+                _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None,
+                _logger);
 
             SqlExecuteStructure executeQueryStructure = new(
                 context.EntityName,

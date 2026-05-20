@@ -4,6 +4,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -753,6 +754,169 @@ public class ParameterEmbeddingHelperTests
                 It.IsAny<string[]>(),
                 It.Is<CancellationToken>(ct => ct == token)),
             Times.Once);
+    }
+
+    #endregion
+
+    #region Telemetry
+
+    /// <summary>
+    /// On a successful substitution, the helper must emit an Activity span with
+    /// expected telemetry tags: entity, sproc, param_names, outcome=success, and
+    /// a non-negative duration_ms. This test uses an <see cref="ActivityListener"/>
+    /// to capture the span created by the helper.
+    /// </summary>
+    [TestMethod]
+    public async Task SuccessfulSubstitution_EmitsActivityWithExpectedTags()
+    {
+        // Arrange
+        Dictionary<string, object?> resolvedParams = new() { { "q", "wireless headphones" } };
+        List<ParameterMetadata> configParams = new() { EmbedParam("q") };
+        SetupBatch(new[] { 0.5f, 0.25f });
+
+        Activity? captured = null;
+        using ActivityListener listener = new()
+        {
+            ShouldListenTo = source => source.Name == "DataApiBuilder",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = a =>
+            {
+                if (a.OperationName == "AutoEmbed.Substitute")
+                {
+                    captured = a;
+                }
+            }
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        // Act
+        await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+            resolvedParams, configParams, _mockService.Object, CancellationToken.None,
+            entityName: "SearchProducts",
+            sprocName: "dbo.SearchProducts",
+            provider: "azure-openai",
+            model: "text-embedding-3-small");
+
+        // Assert
+        Assert.IsNotNull(captured, "Expected an AutoEmbed.Substitute activity to be emitted");
+        Assert.AreEqual(ActivityStatusCode.Ok, captured.Status);
+        Assert.AreEqual("SearchProducts", captured.GetTagItem("entity"));
+        Assert.AreEqual("dbo.SearchProducts", captured.GetTagItem("sproc"));
+        Assert.AreEqual("q", captured.GetTagItem("param_names"));
+        Assert.AreEqual("success", captured.GetTagItem("outcome"));
+        Assert.AreEqual("azure-openai", captured.GetTagItem("embedding.provider"));
+        Assert.AreEqual("text-embedding-3-small", captured.GetTagItem("embedding.model"));
+        Assert.IsNotNull(captured.GetTagItem("duration_ms"), "Expected duration_ms tag");
+        Assert.IsTrue((double)captured.GetTagItem("duration_ms")! >= 0, "Duration should be non-negative");
+        Assert.AreEqual(1, captured.GetTagItem("param_count"));
+    }
+
+    /// <summary>
+    /// When the embedding batch fails, the helper must emit an Activity span with
+    /// outcome=batch_failure and error tags (type + message).
+    /// </summary>
+    [TestMethod]
+    public async Task FailedSubstitution_EmitsActivityWithErrorTags()
+    {
+        // Arrange
+        Dictionary<string, object?> resolvedParams = new() { { "q", "hello" } };
+        List<ParameterMetadata> configParams = new() { EmbedParam("q") };
+        _mockService
+            .Setup(s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingBatchResult(false, null, "Quota exceeded"));
+
+        Activity? captured = null;
+        using ActivityListener listener = new()
+        {
+            ShouldListenTo = source => source.Name == "DataApiBuilder",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = a =>
+            {
+                if (a.OperationName == "AutoEmbed.Substitute")
+                {
+                    captured = a;
+                }
+            }
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        // Act + Assert (throws)
+        await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
+            () => ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+                resolvedParams, configParams, _mockService.Object, CancellationToken.None,
+                entityName: "SearchProducts"));
+
+        // Assert activity
+        Assert.IsNotNull(captured, "Expected an AutoEmbed.Substitute activity to be emitted on failure");
+        Assert.AreEqual(ActivityStatusCode.Error, captured.Status);
+        Assert.AreEqual("batch_failure", captured.GetTagItem("outcome"));
+        Assert.AreEqual("DataApiBuilderException", captured.GetTagItem("error.type"));
+        StringAssert.Contains((string)captured.GetTagItem("error.message")!, "Quota exceeded");
+    }
+
+    /// <summary>
+    /// The telemetry must NEVER include the original input text or the embedding
+    /// vector values in Activity tags, events, or status descriptions. This is
+    /// an explicit spec requirement (#3331, "Never include" section) to prevent
+    /// sensitive user data from leaking into trace backends.
+    /// </summary>
+    [TestMethod]
+    public async Task Telemetry_NeverIncludesInputTextOrEmbeddingValue()
+    {
+        // Arrange — use distinctive text and vector values that are easy to search for
+        string sensitiveInput = "SENSITIVE_USER_SEARCH_QUERY_12345";
+        float[] sensitiveVector = new[] { 0.999f, -0.888f, 0.777f };
+        Dictionary<string, object?> resolvedParams = new() { { "q", sensitiveInput } };
+        List<ParameterMetadata> configParams = new() { EmbedParam("q") };
+        SetupBatch(sensitiveVector);
+
+        Activity? captured = null;
+        using ActivityListener listener = new()
+        {
+            ShouldListenTo = source => source.Name == "DataApiBuilder",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = a =>
+            {
+                if (a.OperationName == "AutoEmbed.Substitute")
+                {
+                    captured = a;
+                }
+            }
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        // Act
+        await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+            resolvedParams, configParams, _mockService.Object, CancellationToken.None,
+            entityName: "TestEntity");
+
+        // Assert
+        Assert.IsNotNull(captured, "Expected an activity to be captured");
+
+        // Collect ALL tag values and the status description into one searchable string
+        string allTagValues = string.Join("|",
+            captured.Tags.Select(t => $"{t.Key}={t.Value}"));
+        string statusDesc = captured.StatusDescription ?? string.Empty;
+        string allEvents = string.Join("|",
+            captured.Events.SelectMany(e => e.Tags.Select(t => $"{t.Key}={t.Value}")));
+        string fullTrace = $"{allTagValues}|{statusDesc}|{allEvents}";
+
+        // The original input text must not appear anywhere in the trace
+        Assert.IsFalse(fullTrace.Contains(sensitiveInput),
+            $"Telemetry must not contain original input text. Found in: {fullTrace}");
+
+        // The embedding vector values must not appear anywhere in the trace
+        string vectorJson = resolvedParams["q"] as string ?? string.Empty;
+        Assert.IsFalse(fullTrace.Contains(vectorJson),
+            $"Telemetry must not contain embedding vector values. Found in: {fullTrace}");
+
+        // Individual float components should also not appear
+        foreach (float f in sensitiveVector)
+        {
+            string floatStr = f.ToString("G9", CultureInfo.InvariantCulture);
+            Assert.IsFalse(fullTrace.Contains(floatStr),
+                $"Telemetry must not contain embedding component '{floatStr}'. Found in: {fullTrace}");
+        }
     }
 
     #endregion

@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
@@ -31,6 +32,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly IEmbeddingService _embeddingService;
+        private readonly ILogger<IMutationEngine> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MutationEngineFactory"/> class.
@@ -44,7 +46,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             HotReloadEventHandler<HotReloadEventArgs>? handler,
-            IEmbeddingService embeddingService)
+            IEmbeddingService embeddingService,
+            ILogger<IMutationEngine> logger)
 
         {
             handler?.Subscribe(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
@@ -57,6 +60,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             _runtimeConfigProvider = runtimeConfigProvider;
             _gQLFilterParser = gQLFilterParser;
             _embeddingService = embeddingService;
+            _logger = logger;
             _mutationEngines = new Dictionary<DatabaseType, IMutationEngine>();
             ConfigureMutationEngines();
         }
@@ -75,7 +79,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                     _gQLFilterParser,
                     _httpContextAccessor,
                     _runtimeConfigProvider,
-                    _embeddingService);
+                    _embeddingService,
+                    _logger);
                 _mutationEngines.Add(DatabaseType.MySQL, mutationEngine);
                 _mutationEngines.Add(DatabaseType.MSSQL, mutationEngine);
                 _mutationEngines.Add(DatabaseType.PostgreSQL, mutationEngine);

@@ -3591,12 +3591,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         // ─────────────────────────────────────────────────────────────────
         // Tests for RuntimeConfigValidator.ValidateEmbedParameters (Phase 3)
-        // Covers the four startup rules:
-        //   Rule 0 — embed:true requires MSSQL data source
-        //   Rule 1 — embed:true requires stored-procedure entity
-        //   Rule 2 — embed:true requires runtime.embeddings configured & enabled
-        //   Rule 3 — embed:true cannot be combined with a `default` value
-        // Plus multi-entity / message-content checks.
+        // Covers the two startup rules (per spec #3331):
+        //   Rule 1 — auto-embed:true requires stored-procedure entity
+        //   Rule 2 — auto-embed:true requires runtime.embeddings configured & enabled
+        // Plus multi-entity / message-content checks, defaults-allowed, and
+        // provider-neutrality assertions.
         // ─────────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -3613,12 +3612,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Builds a stored-procedure <see cref="Entity"/> with one parameter whose
-        /// Embed flag and Default value are caller-controlled.
+        /// AutoEmbed flag and Default value are caller-controlled.
         /// </summary>
         private static Entity BuildSprocEntity(
             string sprocObject,
             string paramName,
-            bool embed,
+            bool autoEmbed,
             string defaultValue = null)
         {
             return new(
@@ -3627,7 +3626,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Object: sprocObject,
                     Parameters: new List<ParameterMetadata>
                     {
-                        new() { Name = paramName, AutoEmbed = embed, Default = defaultValue }
+                        new() { Name = paramName, AutoEmbed = autoEmbed, Default = defaultValue }
                     },
                     KeyFields: null),
                 Fields: null,
@@ -3645,7 +3644,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Builds an entity of the given source type (Table / View / StoredProcedure)
-        /// with one embed:true parameter. Used to test that embed:true is rejected
+        /// with one auto-embed:true parameter. Used to test that auto-embed:true is rejected
         /// on non-stored-procedure entities (Rule 1).
         /// </summary>
         private static Entity BuildEntityWithSourceType(
@@ -3701,7 +3700,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Rule 1: embed:true on a stored-procedure entity (with all other rules satisfied)
+        /// Rule 1: auto-embed:true on a stored-procedure entity (with all other rules satisfied)
         /// is the happy path. The validator should NOT throw and should record no
         /// validation exceptions.
         /// </summary>
@@ -3710,7 +3709,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             Dictionary<string, Entity> entities = new()
             {
-                { "SearchProducts", BuildSprocEntity("sp_search", "q", embed: true) }
+                { "SearchProducts", BuildSprocEntity("sp_search", "q", autoEmbed: true) }
             };
             RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, embeddings: BuildEmbeddingsEnabled());
 
@@ -3735,12 +3734,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Rule 1: embed:true on a Table or View entity must throw a config-validation
+        /// Rule 1: auto-embed:true on a Table or View entity must throw a config-validation
         /// exception naming the offending entity, parameter, and source-type constraint.
         /// </summary>
         [DataTestMethod]
-        [DataRow(EntitySourceType.Table, DisplayName = "Rule 1: embed:true on Table → 503")]
-        [DataRow(EntitySourceType.View, DisplayName = "Rule 1: embed:true on View → 503")]
+        [DataRow(EntitySourceType.Table, DisplayName = "Rule 1: auto-embed:true on Table → 503")]
+        [DataRow(EntitySourceType.View, DisplayName = "Rule 1: auto-embed:true on View → 503")]
         public void ValidateEmbedParameters_EmbedOnNonSproc_ThrowsConfigError(EntitySourceType sourceType)
         {
             Dictionary<string, Entity> entities = new()
@@ -3762,7 +3761,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Rule 2: embed:true with embeddings disabled (or absent) must throw a
+        /// Rule 2: auto-embed:true with embeddings disabled (or absent) must throw a
         /// config-validation exception. Two flavors: section present but enabled=false,
         /// and section completely absent (null).
         /// </summary>
@@ -3781,7 +3780,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Dictionary<string, Entity> entities = new()
             {
-                { "SearchProducts", BuildSprocEntity("sp_search", "q", embed: true) }
+                { "SearchProducts", BuildSprocEntity("sp_search", "q", autoEmbed: true) }
             };
             RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, embeddings: embeddings);
 
@@ -3798,35 +3797,33 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Rule 3: embed:true combined with a default value is not supported.
-        /// Should throw a config-validation exception even though all other rules pass.
+        /// Per spec #3331: auto-embed:true with a default value IS allowed. The validator
+        /// should NOT throw and should record no validation exceptions. Defaults are embedded
+        /// at request time when the caller omits the parameter.
         /// </summary>
         [TestMethod]
-        public void ValidateEmbedParameters_EmbedTrue_WithDefault_ThrowsConfigError()
+        public void ValidateEmbedParameters_EmbedTrue_WithDefault_NoError()
         {
             Dictionary<string, Entity> entities = new()
             {
                 {
                     "SearchProducts",
-                    BuildSprocEntity("sp_search", "q", embed: true, defaultValue: "wireless headphones")
+                    BuildSprocEntity("sp_search", "q", autoEmbed: true, defaultValue: "electronics")
                 }
             };
             RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, embeddings: BuildEmbeddingsEnabled());
 
             RuntimeConfigValidator validator = InitializeRuntimeConfigValidator();
 
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
-                () => validator.ValidateEmbedParameters(config));
+            // Per spec #3331: defaults are allowed on auto-embed params. Should NOT throw.
+            validator.ValidateEmbedParameters(config);
 
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            StringAssert.Contains(ex.Message, "SearchProducts");
-            StringAssert.Contains(ex.Message, "q");
-            StringAssert.Contains(ex.Message, "default");
+            Assert.AreEqual(0, validator.ConfigValidationExceptions.Count,
+                "Expected no validation exceptions when auto-embed:true is paired with a default");
         }
 
         /// <summary>
-        /// Rule 3 happy path: embed:true with no default value is allowed. The validator
+        /// auto-embed:true with no default is allowed. The validator
         /// should NOT throw and should record no validation exceptions.
         /// </summary>
         [TestMethod]
@@ -3834,7 +3831,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             Dictionary<string, Entity> entities = new()
             {
-                { "SearchProducts", BuildSprocEntity("sp_search", "q", embed: true, defaultValue: null) }
+                { "SearchProducts", BuildSprocEntity("sp_search", "q", autoEmbed: true, defaultValue: null) }
             };
             RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, embeddings: BuildEmbeddingsEnabled());
 
@@ -3845,7 +3842,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // And no validation exceptions should have been recorded.
             Assert.AreEqual(0, validator.ConfigValidationExceptions.Count,
-                "Expected no validation exceptions when embed:true is paired with no default");
+                "Expected no validation exceptions when auto-embed:true is paired with no default");
 
             // Sanity: the auto-embed param under test was set up with no default, as intended.
             ParameterMetadata embedParam = config.Entities["SearchProducts"].Source.Parameters!
@@ -3854,29 +3851,27 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Rule 0: embed:true is only supported on MSSQL data sources. The validator
-        /// should reject embed:true on PostgreSQL, MySQL, DWSQL, or CosmosDB.
+        /// Per spec #3331: auto-embed is provider-neutral. The validator should NOT reject
+        /// auto-embed:true on non-MSSQL data sources (PostgreSQL, MySQL, etc.).
+        /// String-compatibility is validated at metadata-discovery time, not config validation.
         /// </summary>
         [DataTestMethod]
-        [DataRow(DatabaseType.PostgreSQL, DisplayName = "Rule 0: embed:true on PostgreSQL → 503")]
-        [DataRow(DatabaseType.MySQL, DisplayName = "Rule 0: embed:true on MySQL → 503")]
-        public void ValidateEmbedParameters_EmbedTrue_NonMssqlDataSource_ThrowsConfigError(DatabaseType dbType)
+        [DataRow(DatabaseType.PostgreSQL, DisplayName = "auto-embed on PostgreSQL accepted")]
+        [DataRow(DatabaseType.MySQL, DisplayName = "auto-embed on MySQL accepted")]
+        public void ValidateEmbedParameters_EmbedTrue_NonMssqlDataSource_NoError(DatabaseType dbType)
         {
             Dictionary<string, Entity> entities = new()
             {
-                { "SearchProducts", BuildSprocEntity("sp_search", "q", embed: true) }
+                { "SearchProducts", BuildSprocEntity("sp_search", "q", autoEmbed: true) }
             };
             RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, databaseType: dbType, embeddings: BuildEmbeddingsEnabled());
 
             RuntimeConfigValidator validator = InitializeRuntimeConfigValidator();
 
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
-                () => validator.ValidateEmbedParameters(config));
+            // Per spec #3331: auto-embed is provider-neutral. Should NOT throw.
+            validator.ValidateEmbedParameters(config);
 
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            StringAssert.Contains(ex.Message, dbType.ToString());
-            StringAssert.Contains(ex.Message, "Azure SQL");
+            Assert.AreEqual(0, validator.ConfigValidationExceptions.Count);
         }
 
         /// <summary>
@@ -3890,9 +3885,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, Entity> entities = new()
             {
                 // Healthy entities
-                { "OkProducts", BuildSprocEntity("sp_ok", "q", embed: true) },
-                { "AlsoOk", BuildSprocEntity("sp_other", "input", embed: true) },
-                // The violator: embed:true on a table
+                { "OkProducts", BuildSprocEntity("sp_ok", "q", autoEmbed: true) },
+                { "AlsoOk", BuildSprocEntity("sp_other", "input", autoEmbed: true) },
+                // The violator: auto-embed:true on a table
                 { "BadEntity", BuildEntityWithSourceType(EntitySourceType.Table, "bad_table", "queryParam") }
             };
             RuntimeConfig config = BuildRuntimeConfigForEmbedTest(entities, embeddings: BuildEmbeddingsEnabled());

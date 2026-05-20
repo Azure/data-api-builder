@@ -671,202 +671,42 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
-        #region Embed Type Override
-
-        // ─────────────────────────────────────────────────────────────────
-        // Tests for MsSqlMetadataProvider.ApplyEmbedTypeOverride (Phase 3)
-        //
-        // The helper is invoked at startup for each parameter defined in
-        // config for a stored procedure. When embed:true is set, it:
-        //   - validates the parameter is VECTOR-shaped (SystemType == byte[])
-        //   - overrides SystemType/DbType/SqlDbType to flow as String
-        //
-        // These tests construct ParameterDefinition / ParameterMetadata
-        // pairs directly and invoke the helper — no DB, no DI container,
-        // no full metadata-provider construction.
-        // ─────────────────────────────────────────────────────────────────
+        #region Auto-Embed String Compatibility
 
         /// <summary>
-        /// embed:true on a parameter that SQL Server reports as Byte[] (i.e., VECTOR(N)
-        /// surfaced via INFORMATION_SCHEMA.PARAMETERS as varbinary) overrides the
-        /// metadata type so the vector JSON string flows through DAB's String pipeline.
+        /// Per spec #3331: auto-embed params must be string-compatible. The validator
+        /// rejects non-string types (byte[], int, DateTime) and accepts string types.
+        /// When AutoEmbed is false, the check is skipped regardless of type.
         /// </summary>
-        [TestMethod]
-        public void ApplyEmbedTypeOverride_ByteArrayParam_WithEmbedTrue_OverridesToString()
+        [DataTestMethod]
+        [DataRow(typeof(string), true, false, DisplayName = "NVARCHAR (string) + auto-embed → accepted")]
+        [DataRow(typeof(byte[]), true, true, DisplayName = "VECTOR (byte[]) + auto-embed → rejected")]
+        [DataRow(typeof(int), true, true, DisplayName = "INT + auto-embed → rejected")]
+        [DataRow(typeof(byte[]), false, false, DisplayName = "byte[] without auto-embed → not checked")]
+        public void ValidateAutoEmbedStringCompatibility(Type systemType, bool autoEmbed, bool expectThrow)
         {
-            ParameterDefinition def = new()
+            ParameterDefinition def = new() { Name = "p", SystemType = systemType };
+            ParameterMetadata meta = new() { Name = "p", AutoEmbed = autoEmbed };
+
+            if (expectThrow)
             {
-                Name = "query_vector",
-                SystemType = typeof(byte[])
-            };
-            ParameterMetadata meta = new() { Name = "query_vector", AutoEmbed = true };
-
-            MsSqlMetadataProvider.ApplyEmbedTypeOverride(
-                def, meta, schemaName: "dbo", storedProcedureName: "sp_search", parameterName: "query_vector");
-
-            Assert.AreEqual(typeof(string), def.SystemType);
-            Assert.AreEqual(System.Data.DbType.String, def.DbType);
-            Assert.AreEqual(System.Data.SqlDbType.NVarChar, def.SqlDbType);
-        }
-
-        /// <summary>
-        /// embed:true on a parameter that the SQL Server reports as something other than
-        /// Byte[] — e.g., a real string param — must throw at startup with a 503 and
-        /// a clear message naming the schema/sproc/parameter and saying VECTOR(N) is required.
-        /// </summary>
-        [TestMethod]
-        public void ApplyEmbedTypeOverride_StringParam_WithEmbedTrue_ThrowsAtStartup()
-        {
-            ParameterDefinition def = new()
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                    MsSqlMetadataProvider.ValidateAutoEmbedStringCompatibility(
+                        meta, def, "dbo", "sp_test", "p"));
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                StringAssert.Contains(ex.Message, "dbo.sp_test");
+                StringAssert.Contains(ex.Message, "p");
+                StringAssert.Contains(ex.Message, systemType.Name);
+                StringAssert.Contains(ex.Message, "string-compatible");
+            }
+            else
             {
-                Name = "query_text",
-                SystemType = typeof(string)
-            };
-            ParameterMetadata meta = new() { Name = "query_text", AutoEmbed = true };
-
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                MsSqlMetadataProvider.ApplyEmbedTypeOverride(
-                    def, meta, schemaName: "dbo", storedProcedureName: "sp_test", parameterName: "query_text"));
-
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
-            StringAssert.Contains(ex.Message, "dbo.sp_test");
-            StringAssert.Contains(ex.Message, "query_text");
-            StringAssert.Contains(ex.Message, "String");
-            StringAssert.Contains(ex.Message, "VECTOR");
-        }
-
-        /// <summary>
-        /// embed:true on a numeric parameter (e.g., INT) is also rejected with the same
-        /// 503. Catches a common misconfiguration where embed is applied to a count param.
-        /// </summary>
-        [TestMethod]
-        public void ApplyEmbedTypeOverride_IntParam_WithEmbedTrue_ThrowsAtStartup()
-        {
-            ParameterDefinition def = new()
-            {
-                Name = "top_k",
-                SystemType = typeof(int)
-            };
-            ParameterMetadata meta = new() { Name = "top_k", AutoEmbed = true };
-
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                MsSqlMetadataProvider.ApplyEmbedTypeOverride(
-                    def, meta, schemaName: "dbo", storedProcedureName: "sp_top", parameterName: "top_k"));
-
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
-            StringAssert.Contains(ex.Message, "Int32");
-            StringAssert.Contains(ex.Message, "VECTOR");
-        }
-
-        /// <summary>
-        /// embed:false on a Byte[] parameter (e.g., a real varbinary blob like an image)
-        /// must NOT be touched — the override only fires for embed:true params. The
-        /// parameter's metadata should be returned exactly as it came in.
-        /// </summary>
-        [TestMethod]
-        public void ApplyEmbedTypeOverride_ByteArrayParam_WithEmbedFalse_NoChange()
-        {
-            ParameterDefinition def = new()
-            {
-                Name = "image_blob",
-                SystemType = typeof(byte[]),
-                DbType = System.Data.DbType.Binary,
-                SqlDbType = System.Data.SqlDbType.VarBinary
-            };
-            ParameterMetadata meta = new() { Name = "image_blob", AutoEmbed = false };
-
-            MsSqlMetadataProvider.ApplyEmbedTypeOverride(
-                def, meta, schemaName: "dbo", storedProcedureName: "sp_upload", parameterName: "image_blob");
-
-            // Original type metadata preserved exactly
-            Assert.AreEqual(typeof(byte[]), def.SystemType);
-            Assert.AreEqual(System.Data.DbType.Binary, def.DbType);
-            Assert.AreEqual(System.Data.SqlDbType.VarBinary, def.SqlDbType);
-        }
-
-        /// <summary>
-        /// Edge case: auto-embed:true behavior is independent of <see cref="ParameterDefinition.Required"/>
-        /// and <see cref="ParameterDefinition.Default"/>. The override fires purely on
-        /// <see cref="ParameterMetadata.AutoEmbed"/> + <see cref="Type"/> being byte[]. Other
-        /// metadata fields are not affected.
-        /// </summary>
-        [TestMethod]
-        public void ApplyEmbedTypeOverride_ByteArrayWithRequiredAndDefault_OnlyTypeMetadataChanges()
-        {
-            ParameterDefinition def = new()
-            {
-                Name = "v",
-                SystemType = typeof(byte[]),
-                Required = true,
-                Default = "should-be-untouched-by-override",
-                HasConfigDefault = true,
-                ConfigDefaultValue = "should-be-untouched-by-override"
-            };
-            ParameterMetadata meta = new() { Name = "v", AutoEmbed = true };
-
-            MsSqlMetadataProvider.ApplyEmbedTypeOverride(
-                def, meta, schemaName: "dbo", storedProcedureName: "sp_v", parameterName: "v");
-
-            // Type metadata overridden
-            Assert.AreEqual(typeof(string), def.SystemType);
-            Assert.AreEqual(System.Data.DbType.String, def.DbType);
-            Assert.AreEqual(System.Data.SqlDbType.NVarChar, def.SqlDbType);
-
-            // Other fields untouched (note: validator separately rejects embed:true + default
-            // before request execution; this test confirms the metadata helper itself is
-            // narrow-scoped and doesn't mutate fields outside its concern).
-            Assert.AreEqual(true, def.Required);
-            Assert.AreEqual("should-be-untouched-by-override", def.Default);
-            Assert.AreEqual(true, def.HasConfigDefault);
-            Assert.AreEqual("should-be-untouched-by-override", def.ConfigDefaultValue);
-        }
-
-        /// <summary>
-        /// Multi-parameter scenario: in a real metadata-loading loop, the helper is
-        /// called once per parameter. Calling it on a mix of embed:true Byte[] params
-        /// (overridden) and embed:false params (untouched) confirms the helper has no
-        /// cross-call state.
-        /// </summary>
-        [TestMethod]
-        public void ApplyEmbedTypeOverride_MultipleParams_OnlyEmbedTrueOnesOverridden()
-        {
-            ParameterDefinition embedDef = new()
-            {
-                Name = "primary_query",
-                SystemType = typeof(byte[])
-            };
-            ParameterDefinition normalDef = new()
-            {
-                Name = "top_k",
-                SystemType = typeof(int)
-            };
-            ParameterDefinition anotherEmbedDef = new()
-            {
-                Name = "secondary_query",
-                SystemType = typeof(byte[])
-            };
-
-            MsSqlMetadataProvider.ApplyEmbedTypeOverride(
-                embedDef,
-                new ParameterMetadata { Name = "primary_query", AutoEmbed = true },
-                schemaName: "dbo", storedProcedureName: "sp_hybrid", parameterName: "primary_query");
-            MsSqlMetadataProvider.ApplyEmbedTypeOverride(
-                normalDef,
-                new ParameterMetadata { Name = "top_k", AutoEmbed = false },
-                schemaName: "dbo", storedProcedureName: "sp_hybrid", parameterName: "top_k");
-            MsSqlMetadataProvider.ApplyEmbedTypeOverride(
-                anotherEmbedDef,
-                new ParameterMetadata { Name = "secondary_query", AutoEmbed = true },
-                schemaName: "dbo", storedProcedureName: "sp_hybrid", parameterName: "secondary_query");
-
-            // Both auto-embed:true params overridden to String pipeline
-            Assert.AreEqual(typeof(string), embedDef.SystemType);
-            Assert.AreEqual(typeof(string), anotherEmbedDef.SystemType);
-
-            // Non-embed param's type unchanged
-            Assert.AreEqual(typeof(int), normalDef.SystemType);
+                // No exception expected — if ValidateAutoEmbedStringCompatibility throws,
+                // MSTest fails the test automatically with the full exception details.
+                MsSqlMetadataProvider.ValidateAutoEmbedStringCompatibility(
+                    meta, def, "dbo", "sp_test", "p");
+            }
         }
 
         #endregion

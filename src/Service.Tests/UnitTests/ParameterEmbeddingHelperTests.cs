@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -329,25 +330,6 @@ public class ParameterEmbeddingHelperTests
     }
 
     /// <summary>
-    /// A JsonElement of kind Null falls through to the IsNullOrWhiteSpace check and
-    /// is rejected as empty/whitespace (400). The helper does not throw a different
-    /// "non-string kind" message for Null since null is semantically "no value supplied".
-    /// </summary>
-    [TestMethod]
-    public async Task JsonElementNull_Throws400AsEmpty()
-    {
-        Dictionary<string, object?> resolvedParams = new() { { "q", JsonElementFrom("null") } };
-        List<ParameterMetadata> configParams = new() { EmbedParam("q") };
-
-        DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
-            () => ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
-                resolvedParams, configParams, _mockService.Object, CancellationToken.None));
-
-        Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
-        StringAssert.Contains(ex.Message, "empty or whitespace");
-    }
-
-    /// <summary>
     /// A non-string, non-JsonElement value (e.g., a boxed int) must be rejected
     /// with a 400 BadRequest naming the offending CLR type.
     /// </summary>
@@ -367,59 +349,84 @@ public class ParameterEmbeddingHelperTests
 
     #endregion
 
-    #region Empty And Whitespace Validation
+    #region Empty, Whitespace, Null, and Default Handling
 
     /// <summary>
-    /// An explicit empty string value for an embed parameter is rejected with a 400.
+    /// Per spec #3331 Value behavior: null, empty, whitespace-only, and JsonElement.Null
+    /// all skip embedding and pass "" to the stored procedure. Consolidated into a single
+    /// data-driven test to avoid repetition — all four hit the same IsNullOrWhiteSpace path.
     /// </summary>
-    [TestMethod]
-    public async Task EmptyString_Throws400()
+    [DataTestMethod]
+    [DataRow("empty", DisplayName = "empty string → passes empty string to sproc")]
+    [DataRow("whitespace", DisplayName = "whitespace → passes empty string to sproc")]
+    [DataRow("null", DisplayName = "C# null → passes empty string to sproc")]
+    [DataRow("json-null", DisplayName = "JsonElement Null → passes empty string to sproc")]
+    public async Task NullOrEmptyInput_PassesEmptyStringToSproc(string inputKind)
     {
-        Dictionary<string, object?> resolvedParams = new() { { "q", "" } };
+        object? value = inputKind switch
+        {
+            "empty" => "",
+            "whitespace" => "   ",
+            "null" => null,
+            "json-null" => JsonElementFrom("null"),
+            _ => throw new ArgumentException($"Unknown input kind: {inputKind}")
+        };
+
+        Dictionary<string, object?> resolvedParams = new() { { "q", value } };
         List<ParameterMetadata> configParams = new() { EmbedParam("q") };
 
-        DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
-            () => ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
-                resolvedParams, configParams, _mockService.Object, CancellationToken.None));
+        await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+            resolvedParams, configParams, _mockService.Object, CancellationToken.None);
 
-        Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
-        StringAssert.Contains(ex.Message, "empty or whitespace");
+        Assert.AreEqual(string.Empty, resolvedParams["q"],
+            $"Input kind '{inputKind}' should pass empty string to sproc without embedding");
     }
 
     /// <summary>
-    /// A whitespace-only string value for an embed parameter is rejected with a 400.
-    /// (IsNullOrWhiteSpace covers strings of only spaces, tabs, etc.)
+    /// Per spec #3331: when the caller omits an auto-embed param that has a non-empty
+    /// configured default, DAB injects the default and embeds it.
     /// </summary>
     [TestMethod]
-    public async Task WhitespaceString_Throws400()
+    public async Task DefaultValue_EmbeddedWhenCallerOmitsParam()
     {
-        Dictionary<string, object?> resolvedParams = new() { { "q", "   " } };
-        List<ParameterMetadata> configParams = new() { EmbedParam("q") };
+        Dictionary<string, object?> resolvedParams = new();
+        ParameterMetadata embedParam = new() { Name = "q", AutoEmbed = true, Default = "electronics" };
+        List<ParameterMetadata> configParams = new() { embedParam };
+        SetupBatch(new[] { 0.5f, 0.25f });
 
-        DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
-            () => ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
-                resolvedParams, configParams, _mockService.Object, CancellationToken.None));
+        await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+            resolvedParams, configParams, _mockService.Object, CancellationToken.None);
 
-        Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
-        StringAssert.Contains(ex.Message, "empty or whitespace");
+        // The default "electronics" was injected and embedded
+        Assert.IsTrue(resolvedParams.ContainsKey("q"), "Default should be injected into resolvedParams");
+        string result = (string)resolvedParams["q"]!;
+        Assert.AreEqual("[0.5,0.25]", result, "Default should be embedded to vector JSON matching mock setup");
+
+        // Verify the embedding service was called with the default text
+        _mockService.Verify(
+            s => s.TryEmbedBatchAsync(
+                It.Is<string[]>(texts => texts.Length == 1 && texts[0] == "electronics"),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "Embedding service should be called with the default value 'electronics'");
     }
 
     /// <summary>
-    /// A C# null value (not JsonElement Null) for an embed parameter is rejected with a 400.
-    /// ExtractTextValue returns null for a null input; the IsNullOrWhiteSpace check then fires.
+    /// Per spec #3331: when the caller omits a param whose configured default is empty,
+    /// DAB injects "" without embedding.
     /// </summary>
     [TestMethod]
-    public async Task NullValue_Throws400()
+    public async Task EmptyDefault_PassesEmptyStringWhenCallerOmitsParam()
     {
-        Dictionary<string, object?> resolvedParams = new() { { "q", null } };
-        List<ParameterMetadata> configParams = new() { EmbedParam("q") };
+        Dictionary<string, object?> resolvedParams = new();
+        ParameterMetadata embedParam = new() { Name = "q", AutoEmbed = true, Default = "" };
+        List<ParameterMetadata> configParams = new() { embedParam };
 
-        DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
-            () => ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
-                resolvedParams, configParams, _mockService.Object, CancellationToken.None));
+        await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+            resolvedParams, configParams, _mockService.Object, CancellationToken.None);
 
-        Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
-        StringAssert.Contains(ex.Message, "empty or whitespace");
+        Assert.IsTrue(resolvedParams.ContainsKey("q"), "Empty default should inject \"\" into resolvedParams");
+        Assert.AreEqual(string.Empty, resolvedParams["q"]);
     }
 
     #endregion

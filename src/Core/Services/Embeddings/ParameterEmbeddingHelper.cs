@@ -215,27 +215,41 @@ public static class ParameterEmbeddingHelper
                 continue;
             }
 
-            // Skip auto-embed params not supplied in the request. We don't enforce
-            // required-ness here because DAB's request validation for sprocs only
-            // checks for extra fields, not missing ones — see RequestValidator
-            // .ValidateStoredProcedureRequestContext, which delegates required-param
-            // detection to SQL Server (no easy way to read default-value metadata
-            // from sys.parameters in a portable way).
-            //
-            // When a required auto-embed param is missing entirely, SqlExecuteStructure
-            // also won't bind it, and SQL Server returns "expects parameter X, which
-            // was not supplied." MsSqlDbExceptionParser translates that to a 400
-            // DatabaseInputError for the client. So missing values still produce a
-            // clear, actionable error — just via the SQL-error-relay path rather
-            // than this helper.
-            //
-            // (Explicit null or empty string DOES reach this helper, via the
-            // IsNullOrWhiteSpace check below — that path produces our own 400 with
-            // the friendlier "has 'auto-embed: true' but the provided text is empty or
-            // whitespace" message.)
+            // Handle auto-embed params not supplied in the request.
+            // Per spec #3331 Value behavior:
+            //   - If the param has a configured default that resolves to a non-empty string,
+            //     inject it and embed it.
+            //   - If the default is null/empty/whitespace, inject "" (skip embedding).
+            //   - If no default at all, use existing DAB behavior (SQL Server will raise
+            //     "expects parameter X which was not supplied" if required).
             if (!resolvedParams.TryGetValue(configParam.Name, out object? value))
             {
-                continue;
+                if (configParam.Default is not null)
+                {
+                    string defaultText = configParam.Default.ToString() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(defaultText))
+                    {
+                        resolvedParams[configParam.Name] = defaultText;
+                        value = defaultText;
+                        logger?.LogDebug(
+                            "Auto-embed parameter '{ParamName}' on entity '{EntityName}': caller omitted, using configured default.",
+                            configParam.Name,
+                            entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+                    }
+                    else
+                    {
+                        resolvedParams[configParam.Name] = string.Empty;
+                        logger?.LogDebug(
+                            "Auto-embed parameter '{ParamName}' on entity '{EntityName}': default is empty, passing empty string.",
+                            configParam.Name,
+                            entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+                        continue;
+                    }
+                }
+                else
+                {
+                    continue;
+                }
             }
 
             // Validate type and extract text (throws 400 for non-strings)
@@ -258,22 +272,17 @@ public static class ParameterEmbeddingHelper
                 throw;
             }
 
-            // Validate non-empty (throws 400 for empty/whitespace/null)
+            // Per spec #3331 Value behavior: null, empty, and whitespace-only values
+            // skip embedding and pass "" to the stored procedure. The sproc decides
+            // how to handle empty input (e.g., return empty results, raise SQL error).
             if (string.IsNullOrWhiteSpace(text))
             {
-                DataApiBuilderException emptyEx = new(
-                    message: $"Parameter '{configParam.Name}' has 'auto-embed: true' but the provided text is empty or whitespace.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                sw.Stop();
-                ParameterEmbeddingTelemetryHelper.RecordFailure(
-                    activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeEmptyInput,
-                    sw.Elapsed.TotalMilliseconds, emptyEx);
-                logger?.LogWarning(
-                    "Auto-embed parameter '{ParamName}' on entity '{EntityName}' rejected: empty or whitespace input.",
+                resolvedParams[configParam.Name] = string.Empty;
+                logger?.LogDebug(
+                    "Auto-embed parameter '{ParamName}' on entity '{EntityName}': value is null/empty/whitespace, passing empty string to sproc.",
                     configParam.Name,
                     entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
-                throw emptyEx;
+                continue;
             }
 
             embedRequests.Add((configParam.Name, text!));

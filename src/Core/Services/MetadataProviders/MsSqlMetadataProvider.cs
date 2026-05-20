@@ -240,16 +240,9 @@ namespace Azure.DataApiBuilder.Core.Services
                         parameterDefinition.HasConfigDefault = paramMetadata.Default is not null;
                         parameterDefinition.ConfigDefaultValue = paramMetadata.Default?.ToString();
 
-                        // Phase 3: validate and override types for embed:true parameters.
-                        // Logic extracted into a testable helper. See ApplyEmbedTypeOverride
-                        // for the full rationale (Byte[] is our VECTOR(N) signal, override
-                        // applies the String type pipeline, etc.).
-                        ApplyEmbedTypeOverride(
-                            parameterDefinition,
-                            paramMetadata,
-                            schemaName: schemaName,
-                            storedProcedureName: storedProcedureSourceName,
-                            parameterName: configParamKey);
+                        // Phase 3: validate that auto-embed params are string-compatible.
+                        ValidateAutoEmbedStringCompatibility(
+                            paramMetadata, parameterDefinition, schemaName, storedProcedureSourceName, configParamKey);
                     }
                 }
             }
@@ -259,59 +252,13 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Phase 3: For a stored procedure parameter declared with <c>auto-embed: true</c> in config,
-        /// validates that the parameter is VECTOR-shaped (reported by SQL Server as <c>Byte[]</c>)
-        /// and overrides its metadata type so the embedding-substituted JSON string flows through
-        /// DAB's <c>String</c> type pipeline at request time. SQL Server auto-casts NVARCHAR → VECTOR
-        /// at execution time.
+        /// Per spec #3331, auto-embed parameters must be string-compatible (nvarchar, varchar,
+        /// etc.) so DAB can pass the embedding JSON as a plain string. The stored procedure
+        /// is responsible for any CAST to VECTOR. Rejects non-string types at startup.
         /// </summary>
-        /// <param name="parameterDefinition">
-        /// The parameter definition to mutate. On entry, its <c>SystemType</c> reflects the SQL
-        /// Server-reported type (typeof(byte[]) for VECTOR(N) params). On exit, if
-        /// <paramref name="paramMetadata"/>.AutoEmbed is true and the type was Byte[], the SystemType,
-        /// DbType, and SqlDbType are overridden to String / String / NVarChar respectively.
-        /// </param>
-        /// <param name="paramMetadata">The config-side metadata; auto-embed flag determines behavior.</param>
-        /// <param name="schemaName">Schema name (e.g. "dbo"), for error messages.</param>
-        /// <param name="storedProcedureName">Stored-procedure name, for error messages.</param>
-        /// <param name="parameterName">Parameter name (without leading @), for error messages.</param>
-        /// <exception cref="DataApiBuilderException">
-        /// Thrown at startup with HTTP 503 if <c>auto-embed: true</c> is set but the parameter is not
-        /// VECTOR-shaped (i.e., not Byte[]). Catches NVARCHAR/INT/DATETIME misconfigurations
-        /// before they cause silent wrong results or confusing errors at request time.
-        /// </exception>
-        /// <remarks>
-        /// SQL Server reports VECTOR(N) as "varbinary" via INFORMATION_SCHEMA.PARAMETERS,
-        /// which DAB maps to typeof(byte[]). We use this Byte[] mapping as our signal
-        /// that the parameter is VECTOR-shaped. If the param is NOT Byte[], the
-        /// developer has misconfigured — auto-embed only makes sense for VECTOR parameters.
-        ///
-        /// Why fail at startup instead of letting it silently break at request time:
-        ///   - auto-embed:true on NVARCHAR → vector JSON treated as text → empty/wrong results, no error
-        ///   - auto-embed:true on INT/DATETIME → SQL conversion error at request time
-        ///   - auto-embed:true on VECTOR(N) → works correctly (SQL reports as Byte[])
-        /// Catching this at startup gives a clear error message before any user is impacted.
-        ///
-        /// KNOWN LIMITATION: SQL Server's INFORMATION_SCHEMA.PARAMETERS reports both
-        /// VECTOR(N) and varbinary(N) as the same "varbinary" type. We cannot
-        /// distinguish them here. If a developer mistakenly applies auto-embed:true to
-        /// a real varbinary parameter (e.g., image blob), this override will fire
-        /// and the request will fail at SQL execution with an "implicit conversion
-        /// not allowed" error. That failure is loud and clear, so we accept it.
-        ///
-        /// (Detection IS possible via sys.parameters which distinguishes vector
-        /// from varbinary by user_type_id, but adding a separate query for this
-        /// would require infrastructure changes beyond Phase 3 scope. Filed as
-        /// future enhancement.)
-        ///
-        /// Follows the same pattern as the DateTime DbType override above.
-        ///
-        /// Internal static (rather than private inline) to enable direct unit testing
-        /// via the InternalsVisibleTo attribute on Azure.DataApiBuilder.Core.
-        /// </remarks>
-        internal static void ApplyEmbedTypeOverride(
-            ParameterDefinition parameterDefinition,
+        internal static void ValidateAutoEmbedStringCompatibility(
             ParameterMetadata paramMetadata,
+            ParameterDefinition parameterDefinition,
             string schemaName,
             string storedProcedureName,
             string parameterName)
@@ -321,26 +268,16 @@ namespace Azure.DataApiBuilder.Core.Services
                 return;
             }
 
-            // Reject auto-embed:true on non-VECTOR-shaped params at startup with a
-            // clear error. This catches NVARCHAR/INT/DATETIME misconfigurations
-            // that would otherwise silently produce wrong results at request time.
-            if (parameterDefinition.SystemType != typeof(byte[]))
+            if (parameterDefinition.SystemType != typeof(string))
             {
                 throw new DataApiBuilderException(
                     message: $"Procedure '{schemaName}.{storedProcedureName}': " +
                              $"parameter '{parameterName}' has 'auto-embed: true' in config but is " +
                              $"declared as '{parameterDefinition.SystemType.Name}' in the stored procedure. " +
-                             $"Auto-embed parameters must be declared as VECTOR(N).",
+                             $"Auto-embed parameters must be string-compatible (nvarchar, varchar, etc.).",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
-
-            // Override the metadata type so the vector JSON string flows through
-            // DAB's String type pipeline. SQL Server auto-casts NVARCHAR → VECTOR
-            // at execution time.
-            parameterDefinition.SystemType = typeof(string);
-            parameterDefinition.DbType = System.Data.DbType.String;
-            parameterDefinition.SqlDbType = System.Data.SqlDbType.NVarChar;
         }
 
         /// <inheritdoc/>

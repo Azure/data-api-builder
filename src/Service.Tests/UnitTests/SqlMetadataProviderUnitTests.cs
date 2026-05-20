@@ -611,19 +611,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Ensures autoentity-generated entity names are sanitized for whitespace.
-        /// </summary>
-        [DataTestMethod]
-        [DataRow("dbo_Order Items", "dbo_OrderItems")]
-        [DataRow("Order   Items", "OrderItems")]
-        [DataRow("NoWhitespace", "NoWhitespace")]
-        public void SanitizeGeneratedEntityName_SanitizesWhitespace(string input, string expected)
-        {
-            string actual = MsSqlMetadataProvider.SanitizeGeneratedEntityName(input);
-            Assert.AreEqual(expected, actual);
-        }
-
-        /// <summary>
         /// Ensures that the query that returns the tables that will be generated
         /// into entities from the autoentities configuration returns the expected result.
         /// </summary>
@@ -633,6 +620,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(new string[] { "dbo.%book%" }, new string[] { "dbo.%books%" }, "{schema}_{object}_exclude_books", new string[] { "book" }, "books")]
         [DataRow(new string[] { "dbo.%book%", "dbo.%publish%" }, new string[] { }, "{object}", new string[] { "book", "publish" }, "")]
         [DataRow(new string[] { }, new string[] { "dbo.%book%" }, "{object}s", new string[] { "" }, "book")]
+        [DataRow(new string[] { "dbo.Order Items" }, new string[] { }, "{schema}_{object}", new string[] { "OrderItems" }, "")]
         public async Task CheckAutoentitiesQuery(string[] include, string[] exclude, string name, string[] includeObject, string excludeObject)
         {
             // Arrange

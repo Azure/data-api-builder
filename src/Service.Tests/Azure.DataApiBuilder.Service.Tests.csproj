@@ -3,7 +3,14 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
-    <Nullable>disable</Nullable>
+    <!--
+      Nullable=annotations permits nullable reference type syntax (e.g. `string?`)
+      everywhere without emitting CS8632, while keeping nullable flow-analysis
+      warnings (CS8600/CS8602/etc.) suppressed for the bulk of the legacy test code.
+      Individual files that have been audited may opt in to full nullable checks
+      via `#nullable enable`. See issue #3543.
+    -->
+    <Nullable>annotations</Nullable>
     <OutputPath>$(BaseOutputPath)\tests</OutputPath>
     <NoWarn>NU1603</NoWarn>
   </PropertyGroup>

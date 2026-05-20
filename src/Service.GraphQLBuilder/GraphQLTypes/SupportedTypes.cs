@@ -11,7 +11,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
     public static class SupportedHotChocolateTypes
     {
         public const string UUID_TYPE = "UUID";
-        public const string BYTE_TYPE = "Byte";
+        // HC v16 split the legacy Byte scalar into:
+        //  - ByteType         (runtime: sbyte, range -128..127)
+        //  - UnsignedByteType (runtime: byte,  range 0..255)
+        // SQL Server's tinyint maps to .NET byte (0..255), so DAB targets UnsignedByte.
+        // The GraphQL type name visible in the generated schema therefore changed from
+        // "Byte" to "UnsignedByte" with the HC v16 upgrade.
+        public const string BYTE_TYPE = "UnsignedByte";
         public const string SHORT_TYPE = "Short";
         public const string INT_TYPE = "Int";
         public const string LONG_TYPE = "Long";
@@ -20,7 +26,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         public const string DECIMAL_TYPE = "Decimal";
         public const string STRING_TYPE = "String";
         public const string BOOLEAN_TYPE = "Boolean";
-        public const string BYTEARRAY_TYPE = "ByteArray";
+        // HC v16 marked the legacy ByteArrayType ([Obsolete]) in favor of Base64StringType.
+        // Both serialize byte[] as a base64-encoded JSON string (identical wire format), but
+        // the GraphQL scalar name is now "Base64String" (was "ByteArray"). DAB targets the
+        // new name so the generated schema does not depend on a deprecated scalar.
+        public const string BYTEARRAY_TYPE = "Base64String";
         public const string DATETIME_TYPE = "DateTime";
         public const string DATETIMEOFFSET_TYPE = "DateTimeOffset";
         public const string LOCALTIME_TYPE = "LocalTime";

@@ -62,7 +62,7 @@ namespace Cli
                 }
                 else if (string.Equals(arg, "--LogLevel", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                 {
-                    Utils.IsLogLevelOverriddenByCli = true;
+                    Utils.IsCliOverriding = true;
                     if (Enum.TryParse<LogLevel>(args[i + 1], ignoreCase: true, out LogLevel cliLogLevel))
                     {
                         Utils.CliLogLevel = cliLogLevel;

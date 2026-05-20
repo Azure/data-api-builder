@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service
     {
         public static LogLevel MinimumLogLevel = LogLevel.Error;
 
-        public static bool IsLogLevelOverriddenByCli;
+        public static bool IsCliOverriding;
 
         public static AzureLogAnalyticsCustomLogCollector CustomLogCollector = new();
         public static ApplicationInsightsOptions AppInsightsOptions = new();
@@ -614,16 +614,50 @@ namespace Azure.DataApiBuilder.Service
         private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
+                // Defer schema construction to the first GraphQL request so the runtime config
+                // is available for both file-based and POST /configuration (hosted) scenarios.
+                // See docs/design/HC16-upgrade.md for the full rationale.
+                .ModifyOptions(options => options.LazyInitialization = true)
                 .AddInstrumentation()
-                .AddType(new DateTimeType(disableFormatCheck: graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true))
+                .AddType(new DateTimeType(new DateTimeOptions { ValidateInputFormat = !(graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true) }))
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
-                    // The GraphQLSchemaCreator is an application service that is not available on 
-                    // the schema specific service provider, this means we have to get it with 
-                    // the GetRootServiceProvider helper.
-                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRootServiceProvider().GetRequiredService<GraphQLSchemaCreator>();
-                    graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                    // Runs on first GraphQL request (LazyInitialization). The placeholder
+                    // fallback covers GraphQL-disabled configs and schema-construction failures.
+                    RuntimeConfigProvider configProvider = serviceProvider.GetRootServiceProvider()
+                        .GetRequiredService<RuntimeConfigProvider>();
+                    if (!configProvider.TryGetConfig(out RuntimeConfig? loadedConfig))
+                    {
+                        EmitPlaceholderSchema(schemaBuilder);
+                        return;
+                    }
+
+                    if (!loadedConfig.IsGraphQLEnabled)
+                    {
+                        EmitPlaceholderSchema(schemaBuilder);
+                        return;
+                    }
+
+                    try
+                    {
+                        // The GraphQLSchemaCreator is an application service that is not available on 
+                        // the schema specific service provider, this means we have to get it with 
+                        // the GetRootServiceProvider helper.
+                        GraphQLSchemaCreator graphQLService = serviceProvider.GetRootServiceProvider().GetRequiredService<GraphQLSchemaCreator>();
+                        graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Schema construction failed (e.g. metadata provider was not initialized
+                        // due to a config validation error). Fall back to the placeholder schema
+                        // so the host can still start; the underlying error will have already
+                        // been surfaced by Startup.PerformOnConfigChangeAsync.
+                        _logger.LogWarning(
+                            exception: ex,
+                            message: "Failed to build GraphQL schema; emitting placeholder schema. The error will surface on first GraphQL request and is typically caused by a runtime config that failed validation.");
+                        EmitPlaceholderSchema(schemaBuilder);
+                    }
                 })
                 .AddHttpRequestInterceptor<IntrospectionInterceptor>()
                 .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
@@ -702,6 +736,17 @@ namespace Azure.DataApiBuilder.Service
         {
             bool isRuntimeReady = false;
             RuntimeConfig? runtimeConfig = null;
+
+            // Wire a logger on the DynamicLogLevelProvider as soon as ILoggerFactory is available
+            // — ahead of any config-load branch — so an early MCP logging/setLevel call (which can
+            // arrive before runtime config in the late-configured path) still surfaces its audit
+            // log line through the standard logging pipeline.
+            DynamicLogLevelProvider? logLevelProviderForAudit = app.ApplicationServices.GetService<DynamicLogLevelProvider>();
+            ILoggerFactory? earlyLoggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
+            if (logLevelProviderForAudit is not null && earlyLoggerFactory is not null)
+            {
+                logLevelProviderForAudit.Logger = earlyLoggerFactory.CreateLogger<DynamicLogLevelProvider>();
+            }
 
             try
             {
@@ -872,23 +917,11 @@ namespace Azure.DataApiBuilder.Service
 
                 endpoints
                     .MapGraphQL()
-                    .WithOptions(new GraphQLServerOptions
+                    .WithOptions(options =>
                     {
-                        Tool = {
-                            // Determines if accessing the endpoint from a browser
-                            // will load the GraphQL Banana Cake Pop IDE.
-                            Enable = IsUIEnabled(runtimeConfig, env)
-                        }
-                    });
-
-                // In development mode, Nitro is enabled at /graphql endpoint by default.
-                // Need to disable mapping Nitro explicitly as well to avoid ability to query
-                // at an additional endpoint: /graphql/ui.
-                endpoints
-                    .MapNitroApp()
-                    .WithOptions(new GraphQLToolOptions
-                    {
-                        Enable = false
+                        // Determines if accessing the endpoint from a browser
+                        // will load the GraphQL Banana Cake Pop / Nitro IDE.
+                        options.Tool.Enable = IsUIEnabled(runtimeConfig, env);
                     });
 
                 endpoints.MapHealthChecks("/", new HealthCheckOptions
@@ -908,13 +941,28 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
+        /// Registers a minimal valid GraphQL schema (a single placeholder field with a no-op
+        /// resolver) on the supplied <paramref name="schemaBuilder"/>. Used to satisfy Hot
+        /// Chocolate v16's eager schema validation when the real schema cannot be constructed
+        /// at startup (no runtime config loaded yet, or a config validation failure prevented
+        /// metadata provider initialization). The placeholder is unreachable in normal
+        /// operation: it is shadowed once a real config is hot-reloaded via the
+        /// <c>GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED</c> event.
+        /// </summary>
+        private static void EmitPlaceholderSchema(ISchemaBuilder schemaBuilder)
+        {
+            schemaBuilder.AddDocumentFromString("type Query { _dab: String }");
+            schemaBuilder.AddResolver("Query", "_dab", _ => null);
+        }
+
+        /// <summary>
         /// If LogLevel is NOT overridden by CLI, attempts to find the
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
         /// </summary>
         public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider, LogLevelInitializer logLevelInitializer)
         {
-            if (!IsLogLevelOverriddenByCli)
+            if (!IsCliOverriding)
             {
                 // If the log level is not overridden by command line arguments specified through CLI,
                 // attempt to get the runtime config to determine the loglevel based on host.mode.

@@ -997,7 +997,7 @@
           "properties": {
             "description": {
               "type": "string",
-              "description": "Optional description for the entity. Will be surfaced in generated API documentation and GraphQL schema as comments."
+              "description": "Optional description for the entity. Will be surfaced in MCP tool discovery, generated API documentation, and GraphQL schema as comments."
             },
             "health": {
               "description": "Health check configuration for entity",
@@ -1088,10 +1088,6 @@
                         "type": "string"
                       },
                       "description": "DEPRECATED. Use the 'fields' array and set 'primary-key: true' on each key field instead. List of fields to be used as primary keys."
-                    },
-                    "description": {
-                      "type": "string",
-                      "description": "Human-readable description of the database object, used for MCP tool discovery and documentation."
                     }
                   },
                   "required": ["type", "object"]

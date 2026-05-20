@@ -20,6 +20,9 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <NoWarn>NU1603</NoWarn>
+
+    <!-- Run custom target during pack to add dependency files into the package. -->
+    <TargetsForTfmSpecificContentInPackage>IncludeInternalDependenciesInPackage</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 
   <ItemGroup>
@@ -53,9 +56,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
-    <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
-    <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
+    <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
@@ -64,5 +67,11 @@
     <None Include="..\..\LICENSE.txt" Pack="true" PackagePath="\" />
     <None Include="..\..\nuget_core\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\nuget_core\NOTICE.txt')" />
   </ItemGroup>
+
+  <Target Name="IncludeInternalDependenciesInPackage">
+      <ItemGroup>
+        <TfmSpecificPackageFile Include="@(ReferenceCopyLocalPaths)" PackagePath="lib/$(TargetFramework)" Condition="'%(ReferenceCopyLocalPaths.Extension)' != '.pdb'" />
+    </ItemGroup>
+  </Target>
 
 </Project>

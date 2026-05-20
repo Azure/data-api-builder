@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -517,7 +518,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         }
                         else
                         {
-                            list.Add(item);
+                            list.Add(SanitizeContentBlock(item));
                         }
                     }
 
@@ -544,6 +545,51 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // Fallback: serialize to text.
             string text = SafeToString(callResult);
             return new object[] { new { type = "text", text } };
+        }
+
+        /// <summary>
+        /// Removes null optional metadata fields that strict MCP clients reject.
+        /// Specifically omits null "annotations" and "_meta" when serializing content blocks.
+        /// </summary>
+        private static object SanitizeContentBlock(object item)
+        {
+            JsonElement jsonElement;
+            try
+            {
+                jsonElement = JsonSerializer.SerializeToElement(item);
+            }
+            catch
+            {
+                return item;
+            }
+
+            if (jsonElement.ValueKind is not JsonValueKind.Object ||
+                !jsonElement.TryGetProperty("type", out _))
+            {
+                return item;
+            }
+
+            JsonObject? contentBlock = JsonNode.Parse(jsonElement.GetRawText()) as JsonObject;
+            if (contentBlock is null)
+            {
+                return item;
+            }
+
+            RemovePropertyIfJsonNull(contentBlock, "annotations");
+            RemovePropertyIfJsonNull(contentBlock, "_meta");
+
+            return contentBlock;
+        }
+
+        /// <summary>
+        /// Removes a JSON object property when its value is explicitly null.
+        /// </summary>
+        private static void RemovePropertyIfJsonNull(JsonObject jsonObject, string propertyName)
+        {
+            if (jsonObject.TryGetPropertyValue(propertyName, out JsonNode? value) && value is null)
+            {
+                jsonObject.Remove(propertyName);
+            }
         }
 
         /// <summary>

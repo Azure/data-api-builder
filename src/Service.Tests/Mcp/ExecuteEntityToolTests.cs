@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -324,7 +326,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             string sourceObject,
             EntitySourceType sourceType,
             Dictionary<string, ParameterDefinition> dbParameters,
-            Action<StoredProcedureRequestContext> captureContext = null)
+            Action<StoredProcedureRequestContext>? captureContext = null)
         {
             Entity entity = new(
                 Source: new(sourceObject, sourceType, Parameters: null, KeyFields: null),

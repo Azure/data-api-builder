@@ -172,13 +172,15 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 // 6) Validate parameters against DB metadata (StoredProcedureDefinition.Parameters),
                 // which is the source of truth for parameter names.
+                // Note: Comparison is case-sensitive (default Dictionary<string,...> comparer),
+                // consistent with the existing REST/GraphQL SP execution path.
                 if (dbObject is not DatabaseStoredProcedure storedProcedure)
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity '{EntityName}' is not a stored procedure.", logger);
                 }
 
                 StoredProcedureDefinition spDefinition = storedProcedure.StoredProcedureDefinition;
-                if (parameters.Count > 0)
+                if (parameters.Count > 0 && spDefinition.Parameters is not null)
                 {
                     foreach (KeyValuePair<string, object?> param in parameters)
                     {
@@ -217,11 +219,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 // Apply config-declared defaults from the merged ParameterDefinitions.
                 // This covers all parameters (including DB-discovered ones with config defaults)
                 // and applies them per-missing-parameter when the user didn't supply a value.
-                foreach ((string paramName, ParameterDefinition paramDef) in spDefinition.Parameters)
+                if (spDefinition.Parameters is not null)
                 {
-                    if (!context.FieldValuePairsInBody.ContainsKey(paramName) && paramDef.HasConfigDefault)
+                    foreach ((string paramName, ParameterDefinition paramDef) in spDefinition.Parameters)
                     {
-                        context.FieldValuePairsInBody[paramName] = paramDef.ConfigDefaultValue;
+                        if (!context.FieldValuePairsInBody.ContainsKey(paramName) && paramDef.HasConfigDefault)
+                        {
+                            context.FieldValuePairsInBody[paramName] = paramDef.ConfigDefaultValue;
+                        }
                     }
                 }
 

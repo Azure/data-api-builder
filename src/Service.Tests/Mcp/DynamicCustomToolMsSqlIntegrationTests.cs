@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -77,6 +79,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         /// <summary>
         /// Verify GetBook with id=1 returns a matching record through DynamicCustomTool.
+        /// Unlike SuccessfulExecution data rows (which validate response structure only),
+        /// this test validates the actual returned data content (id field in the result).
         /// </summary>
         [TestMethod]
         public async Task DynamicCustomTool_GetBookById_ReturnsMatchingRecord()

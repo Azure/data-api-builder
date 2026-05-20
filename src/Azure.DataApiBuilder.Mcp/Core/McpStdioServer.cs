@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </remarks>
         private void HandleInitialize(JsonElement? id, JsonElement root)
         {
-            string? clientRequestedProtocolVersion = TryGetClientProtocolVersion(root);
+            string? clientRequestedProtocolVersion = GetClientProtocolVersion(root);
             string negotiatedProtocolVersion =
                 McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(_protocolVersion, clientRequestedProtocolVersion);
 
@@ -230,7 +230,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             WriteResult(id, result);
         }
 
-        private static string? TryGetClientProtocolVersion(JsonElement root)
+        private static string? GetClientProtocolVersion(JsonElement root)
         {
             if (!root.TryGetProperty("params", out JsonElement paramsElement) || paramsElement.ValueKind != JsonValueKind.Object)
             {

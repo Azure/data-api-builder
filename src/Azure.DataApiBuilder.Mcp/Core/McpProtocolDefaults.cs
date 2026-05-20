@@ -57,9 +57,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         private static int CompareProtocolVersions(string leftVersion, string rightVersion)
         {
-            const string FORMAT = "yyyy-MM-dd";
-            if (DateOnly.TryParseExact(leftVersion, FORMAT, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly leftDate) &&
-                DateOnly.TryParseExact(rightVersion, FORMAT, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly rightDate))
+            const string PROTOCOL_VERSION_DATE_FORMAT = "yyyy-MM-dd";
+            if (DateOnly.TryParseExact(leftVersion, PROTOCOL_VERSION_DATE_FORMAT, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly leftDate) &&
+                DateOnly.TryParseExact(rightVersion, PROTOCOL_VERSION_DATE_FORMAT, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly rightDate))
             {
                 return leftDate.CompareTo(rightDate);
             }

@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
-        public void ResolveInitializeResponseProtocolVersion_ClientRequestsNewerVersion_ReturnsSupportedVersion()
+        public void ResolveInitializeResponseProtocolVersion_ClientRequestsNewerVersion_ReturnsServerSupportedVersion()
         {
             string resolved = McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(
                 supportedProtocolVersion: "2025-11-25",
@@ -48,6 +48,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 clientRequestedProtocolVersion: null);
 
             Assert.AreEqual("2025-11-25", resolved);
+        }
+
+        [TestMethod]
+        public void ResolveInitializeResponseProtocolVersion_NonDateVersionFormat_UsesOrdinalFallbackComparison()
+        {
+            string resolved = McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(
+                supportedProtocolVersion: "a-version",
+                clientRequestedProtocolVersion: "z-version");
+
+            Assert.AreEqual("a-version", resolved);
         }
     }
 }

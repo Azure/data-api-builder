@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -61,9 +63,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow("InsertBook", null, DisplayName = "Config defaults applied when no params supplied")]
         [DataRow("InsertBook", "{\"title\": \"Integration Test Book\", \"publisher_id\": 2345}", DisplayName = "User-supplied params override defaults")]
         [DataRow("GetBooks", null, DisplayName = "Zero-param SP succeeds")]
-        public async Task ExecuteEntity_SuccessfulExecution(string entityName, string parametersJson)
+        public async Task ExecuteEntity_SuccessfulExecution(string entityName, string? parametersJson)
         {
-            Dictionary<string, object> parameters = parametersJson != null
+            Dictionary<string, object>? parameters = parametersJson != null
                 ? JsonSerializer.Deserialize<Dictionary<string, object>>(parametersJson)
                 : null;
 
@@ -146,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             StringAssert.Contains(content, paramName);
         }
 
-        private static async Task<CallToolResult> ExecuteEntityAsync(string entityName, Dictionary<string, object> parameters)
+        private static async Task<CallToolResult> ExecuteEntityAsync(string entityName, Dictionary<string, object>? parameters)
         {
             IServiceProvider serviceProvider = BuildExecuteEntityServiceProvider();
             ExecuteEntityTool tool = new();

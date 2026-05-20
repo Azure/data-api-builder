@@ -19,8 +19,7 @@ $sqlClientSNILicenseFilePath = "$BuildSourcesDir/external_licenses/Microsoft.Dat
 $sqlClientSNILicense = Get-Content -Path $sqlClientSNILicenseFilePath -Raw
 
 # Replace erroneous copyright, using [System.IO.File] for better performance than Get-Content and Set-Content
-$content = [System.IO.File]::ReadAllText($noticeFilePath).Replace("(c) Microsoft 2023`r`n", "")
-$content = [System.IO.File]::ReadAllText($noticeFilePath).Replace("(c) Microsoft 2024`r`n", "")
+$content = [System.IO.File]::ReadAllText($noticeFilePath) -replace "\(c\) Microsoft (2023|2024)`r`n", ""
 
 # Prepare license content for writing to file.
 $sqlClientSNIComponentName = "`r`nMICROSOFT.DATA.SQLCLIENT.SNI`r`n`r`n"

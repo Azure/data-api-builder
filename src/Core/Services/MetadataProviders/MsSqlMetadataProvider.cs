@@ -4,6 +4,7 @@
 using System.Data;
 using System.Data.Common;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -333,6 +334,9 @@ namespace Azure.DataApiBuilder.Core.Services
                         continue;
                     }
 
+                    // Sanitize the entity name by ensuring all whitespace characters are removed.
+                    entityName = SanitizeGeneratedEntityName(entityName);
+
                     // Create the entity using the template settings and permissions from the autoentity configuration.
                     // Currently the source type is always Table for auto-generated entities from database objects.
                     Entity generatedEntity = new(
@@ -386,6 +390,12 @@ namespace Azure.DataApiBuilder.Core.Services
             _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);
         }
 
+        /// <summary>
+        /// Queries the database for autoentities based on the provided autoentity definition.
+        /// </summary>
+        /// <param name="autoentityName">The name of the autoentity definition.</param>
+        /// <param name="autoentity">The autoentity definition containing patterns for inclusion, exclusion, and name.</param>
+        /// <returns>A JsonArray containing the queried autoentities, or null if none are found.</returns>
         public async Task<JsonArray?> QueryAutoentitiesAsync(string autoentityName, Autoentity autoentity)
         {
             string include = string.Join(",", autoentity.Patterns.Include);

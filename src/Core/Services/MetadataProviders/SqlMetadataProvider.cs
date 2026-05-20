@@ -733,6 +733,31 @@ namespace Azure.DataApiBuilder.Core.Services
             _runtimeConfigProvider.RemoveGeneratedAutoentitiesFromConfig();
         }
 
+        /// <summary>
+        /// Sanitizes the generated entity name by removing whitespace and capitalizing the next character after whitespace.
+        /// </summary>
+        /// <param name="name">The entity name to be sanitized.</param>
+        /// <returns>The sanitized entity name.</returns>
+        protected static string SanitizeGeneratedEntityName(string name)
+        {
+            StringBuilder sanitizedName = new(name.Length);
+            bool capitalizeNext = false;
+
+            foreach (char character in name)
+            {
+                if (char.IsWhiteSpace(character))
+                {
+                    capitalizeNext = true;
+                    continue;
+                }
+
+                sanitizedName.Append(capitalizeNext ? char.ToUpperInvariant(character) : character);
+                capitalizeNext = false;
+            }
+
+            return sanitizedName.ToString();
+        }
+
         protected void PopulateDatabaseObjectForEntity(
             Entity entity,
             string entityName,

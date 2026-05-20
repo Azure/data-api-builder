@@ -64,6 +64,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         public ToolType ToolType { get; } = ToolType.Custom;
 
+        public bool IsEnabled(RuntimeConfig config) => true;
+
         /// <summary>
         /// Gets the entity name associated with this custom tool.
         /// </summary>

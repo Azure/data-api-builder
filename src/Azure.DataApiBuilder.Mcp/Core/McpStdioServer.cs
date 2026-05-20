@@ -553,24 +553,18 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         private static object SanitizeContentBlock(object item)
         {
-            JsonElement jsonElement;
+            JsonNode? jsonNode;
             try
             {
-                jsonElement = JsonSerializer.SerializeToElement(item);
+                jsonNode = JsonSerializer.SerializeToNode(item);
             }
-            catch
+            catch (NotSupportedException)
             {
                 return item;
             }
 
-            if (jsonElement.ValueKind is not JsonValueKind.Object ||
-                !jsonElement.TryGetProperty("type", out _))
-            {
-                return item;
-            }
-
-            JsonObject? contentBlock = JsonNode.Parse(jsonElement.GetRawText()) as JsonObject;
-            if (contentBlock is null)
+            if (jsonNode is not JsonObject contentBlock ||
+                !contentBlock.ContainsKey("type"))
             {
                 return item;
             }

@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static string ProperlyFormatTypeTableColumn(string columnName)
         {
-            if (columnName.Contains(BYTEARRAY_TYPE.ToLowerInvariant()))
+            if (columnName.Contains("bytearray"))
             {
                 return $"encode({columnName}, 'base64')";
             }

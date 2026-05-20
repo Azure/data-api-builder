@@ -170,7 +170,28 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     return McpErrorHelpers.PermissionDenied(toolName, EntityName, "execute", authError, logger);
                 }
 
-                // 6) Build request payload
+                // 6) Validate parameters against DB metadata (StoredProcedureDefinition.Parameters),
+                // which is the source of truth for parameter names.
+                // Note: Comparison is case-sensitive (default Dictionary<string,...> comparer),
+                // consistent with the existing REST/GraphQL SP execution path.
+                if (dbObject is not DatabaseStoredProcedure storedProcedure)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity '{EntityName}' is not a stored procedure.", logger);
+                }
+
+                StoredProcedureDefinition spDefinition = storedProcedure.StoredProcedureDefinition;
+                if (parameters.Count > 0 && spDefinition.Parameters is not null)
+                {
+                    foreach (KeyValuePair<string, object?> param in parameters)
+                    {
+                        if (!spDefinition.Parameters.ContainsKey(param.Key))
+                        {
+                            return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", $"Invalid parameter: {param.Key}", logger);
+                        }
+                    }
+                }
+
+                // 7) Build request payload
                 JsonElement? requestPayloadRoot = null;
                 if (parameters.Count > 0)
                 {
@@ -195,14 +216,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     }
                 }
 
-                // Add default parameters from configuration if not provided
-                if (entityConfig.Source.Parameters != null)
+                // Apply config-declared defaults from the merged ParameterDefinitions.
+                // This covers all parameters (including DB-discovered ones with config defaults)
+                // and applies them per-missing-parameter when the user didn't supply a value.
+                if (spDefinition.Parameters is not null)
                 {
-                    foreach (ParameterMetadata param in entityConfig.Source.Parameters)
+                    foreach ((string paramName, ParameterDefinition paramDef) in spDefinition.Parameters)
                     {
-                        if (!context.FieldValuePairsInBody.ContainsKey(param.Name))
+                        if (!context.FieldValuePairsInBody.ContainsKey(paramName) && paramDef.HasConfigDefault)
                         {
-                            context.FieldValuePairsInBody[param.Name] = param.Default;
+                            context.FieldValuePairsInBody[paramName] = paramDef.ConfigDefaultValue;
                         }
                     }
                 }

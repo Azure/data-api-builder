@@ -38,11 +38,6 @@ public class EmbeddingService : IEmbeddingService
     public const int MAX_BATCH_TEXT_COUNT = 2048;
 
     /// <summary>
-    /// Default cache TTL in hours. Set high since embeddings are deterministic and don't get outdated.
-    /// </summary>
-    private const int DEFAULT_CACHE_TTL_HOURS = 24;
-
-    /// <summary>
     /// JSON serializer options for request/response handling.
     /// </summary>
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
@@ -414,14 +409,13 @@ public class EmbeddingService : IEmbeddingService
             float[] embedding = textToEmbedding[text];
             string cacheKey = cacheKeys[kvp.Value[0]]; // All duplicate texts have the same cache key
 
-            // Cache the embedding once
+            // Cache the embedding once. Do NOT override the entry duration here: the
+            // FusionCache instance injected by Startup.ConfigureEmbeddingsCache is already
+            // configured with DefaultEntryOptions.Duration = cache.ttl-hours, so user-
+            // configured TTL takes effect for every entry.
             _cache.Set(
                 key: cacheKey,
-                value: embedding,
-                options =>
-                {
-                    options.SetDuration(TimeSpan.FromHours(DEFAULT_CACHE_TTL_HOURS));
-                });
+                value: embedding);
 
             // Populate results for all indices that had this text
             foreach (int originalIndex in kvp.Value)
@@ -457,8 +451,9 @@ public class EmbeddingService : IEmbeddingService
                     throw new InvalidOperationException("API returned empty embedding array.");
                 }
 
-                // Respect configured cache layers (L1 and optional L2).
-                ctx.Options.SetDuration(TimeSpan.FromHours(DEFAULT_CACHE_TTL_HOURS));
+                // The injected FusionCache instance carries the user-configured TTL
+                // (cache.ttl-hours) on its DefaultEntryOptions, so we intentionally do
+                // NOT override the per-entry duration here.
 
                 return result;
             },

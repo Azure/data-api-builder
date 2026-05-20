@@ -52,6 +52,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -91,6 +92,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -133,6 +135,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -179,6 +182,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -220,6 +224,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -267,6 +272,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -310,6 +316,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: ["This is a test parameter description."],
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -352,6 +359,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -390,6 +398,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -455,6 +464,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -525,6 +535,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -571,6 +582,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -620,6 +632,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -695,6 +708,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -739,6 +753,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -780,6 +795,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -821,6 +837,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -862,6 +879,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -910,6 +928,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
@@ -925,5 +944,72 @@ namespace Cli.Tests
         }
 
         #endregion MCP Entity Configuration Tests
+
+        #region Auto-Embed CLI Tests
+
+        /// <summary>
+        /// Verify that --parameters.auto-embed correctly sets AutoEmbed on the resulting
+        /// ParameterMetadata, both with and without default values.
+        /// Per spec #3331, defaults are allowed on auto-embed parameters.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("query_text,top_k", "true,false", null, 0, true, null,
+            DisplayName = "auto-embed true/false on two params, no defaults")]
+        [DataRow("query_text", "true", "electronics", 0, true, "electronics",
+            DisplayName = "auto-embed with default value")]
+        public void AddEntityWithAutoEmbedParameter(
+            string paramNames,
+            string autoEmbedFlags,
+            string? defaultValues,
+            int assertIndex,
+            bool expectedAutoEmbed,
+            string? expectedDefault)
+        {
+            AddOptions options = new(
+                source: "dbo.SearchProducts",
+                permissions: new string[] { "anonymous", "execute" },
+                entity: "SearchProducts",
+                description: null,
+                sourceType: "stored-procedure",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: Array.Empty<string>(),
+                fieldsToExclude: Array.Empty<string>(),
+                policyRequest: null,
+                policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtlSeconds: null,
+                cacheLevel: null,
+                healthEnabled: null,
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null,
+                parametersNameCollection: paramNames.Split(','),
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: defaultValues?.Split(','),
+                parametersAutoEmbedCollection: autoEmbedFlags.Split(','),
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
+            );
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedConfig));
+
+            Entity entity = updatedConfig.Entities["SearchProducts"];
+            Assert.IsNotNull(entity.Source.Parameters);
+
+            ParameterMetadata param = entity.Source.Parameters[assertIndex];
+            Assert.AreEqual(expectedAutoEmbed, param.AutoEmbed,
+                $"Parameter '{param.Name}' AutoEmbed should be {expectedAutoEmbed}");
+            Assert.AreEqual(expectedDefault, param.Default,
+                $"Parameter '{param.Name}' Default should be '{expectedDefault}'");
+        }
+
+        #endregion Auto-Embed CLI Tests
     }
 }

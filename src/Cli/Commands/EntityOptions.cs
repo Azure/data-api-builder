@@ -32,6 +32,7 @@ namespace Cli.Commands
             IEnumerable<string>? parametersDescriptionCollection,
             IEnumerable<string>? parametersRequiredCollection,
             IEnumerable<string>? parametersDefaultCollection,
+            IEnumerable<string>? parametersAutoEmbedCollection,
             IEnumerable<string>? fieldsNameCollection,
             IEnumerable<string>? fieldsAliasCollection,
             IEnumerable<string>? fieldsDescriptionCollection,
@@ -63,6 +64,7 @@ namespace Cli.Commands
             ParametersDescriptionCollection = parametersDescriptionCollection;
             ParametersRequiredCollection = parametersRequiredCollection;
             ParametersDefaultCollection = parametersDefaultCollection;
+            ParametersAutoEmbedCollection = parametersAutoEmbedCollection;
             FieldsNameCollection = fieldsNameCollection;
             FieldsAliasCollection = fieldsAliasCollection;
             FieldsDescriptionCollection = fieldsDescriptionCollection;
@@ -134,6 +136,9 @@ namespace Cli.Commands
 
         [Option("parameters.default", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter default values for stored procedure.")]
         public IEnumerable<string>? ParametersDefaultCollection { get; }
+
+        [Option("parameters.auto-embed", Required = false, Separator = ',', HelpText = "Stored procedures only. Comma-separated list of true/false values aligned to --parameters.name. When true, DAB sends the parameter value to the configured embedding subsystem and passes the returned embedding string to the stored procedure.")]
+        public IEnumerable<string>? ParametersAutoEmbedCollection { get; }
 
         [Option("fields.name", Required = false, Separator = ',', HelpText = "Name of the database column to expose as a field.")]
         public IEnumerable<string>? FieldsNameCollection { get; }

@@ -537,5 +537,272 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: null)
             );
         }
+
+        #region Schema Alignment Tests (DB Metadata)
+
+        /// <summary>
+        /// After InitializeMetadata is called with valid DB metadata,
+        /// GetToolMetadata returns a schema with typed parameters from SP definition.
+        /// </summary>
+        [TestMethod]
+        public void GetToolMetadata_UsesDbMetadata_WhenInitialized()
+        {
+            // Arrange
+            Dictionary<string, ParameterDefinition> dbParams = new()
+            {
+                ["id"] = new() { SystemType = typeof(int) },
+                ["name"] = new() { SystemType = typeof(string) }
+            };
+
+            // Act
+            JsonElement props = InitializeAndGetSchemaProperties(dbParams);
+
+            // Assert
+            Assert.AreEqual("integer", props.GetProperty("id").GetProperty("type").GetString());
+            Assert.AreEqual("string", props.GetProperty("name").GetProperty("type").GetString());
+        }
+
+        /// <summary>
+        /// When InitializeMetadata cannot resolve DB metadata, tool falls back to config schema.
+        /// </summary>
+        [TestMethod]
+        public void GetToolMetadata_FallsBackToConfig_WhenDbMetadataUnavailable()
+        {
+            // Arrange - use a service provider without metadata factory
+            ParameterMetadata[] parameters = new[]
+            {
+                new ParameterMetadata { Name = "userId", Description = "User ID" }
+            };
+            Entity entity = CreateTestStoredProcedureEntity(parameters: parameters);
+            DynamicCustomTool tool = new("GetUser", entity);
+
+            ServiceCollection services = new();
+            services.AddLogging();
+
+            // Act
+            tool.InitializeMetadata(services.BuildServiceProvider());
+            JsonElement props = ParseSchemaProperties(tool.GetToolMetadata());
+
+            // Assert - should use config-based permissive type array
+            Assert.AreEqual(JsonValueKind.Array, props.GetProperty("userId").GetProperty("type").ValueKind,
+                "Fallback schema should use multi-type array.");
+        }
+
+        /// <summary>
+        /// Without calling InitializeMetadata, tool uses config-based schema.
+        /// </summary>
+        [TestMethod]
+        public void GetToolMetadata_UsesConfigSchema_WhenNotInitialized()
+        {
+            // Arrange
+            ParameterMetadata[] parameters = new[]
+            {
+                new ParameterMetadata { Name = "bookId", Description = "Book identifier" }
+            };
+            Entity entity = CreateTestStoredProcedureEntity(parameters: parameters);
+            DynamicCustomTool tool = new("GetBook", entity);
+
+            // Act - no InitializeMetadata call
+            JsonElement props = ParseSchemaProperties(tool.GetToolMetadata());
+
+            // Assert
+            JsonElement param = props.GetProperty("bookId");
+            Assert.AreEqual(JsonValueKind.Array, param.GetProperty("type").ValueKind, "Config schema uses multi-type array.");
+            Assert.AreEqual("Book identifier", param.GetProperty("description").GetString());
+        }
+
+        /// <summary>
+        /// DB metadata parameters NOT in config are still discovered and included in schema.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_IncludesAllDbDiscoveredParams()
+        {
+            // Arrange - config has no parameters, but DB has them
+            Dictionary<string, ParameterDefinition> dbParams = new()
+            {
+                ["id"] = new() { SystemType = typeof(int) },
+                ["title"] = new() { SystemType = typeof(string) },
+                ["price"] = new() { SystemType = typeof(decimal) }
+            };
+
+            // Act
+            JsonElement props = InitializeAndGetSchemaProperties(dbParams);
+
+            // Assert - all 3 DB-discovered params should appear
+            Assert.AreEqual(3, props.EnumerateObject().Count());
+            Assert.IsTrue(props.TryGetProperty("id", out _));
+            Assert.IsTrue(props.TryGetProperty("title", out _));
+            Assert.IsTrue(props.TryGetProperty("price", out _));
+        }
+
+        /// <summary>
+        /// Verifies type mapping for common .NET types to JSON Schema types.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(typeof(int), "integer")]
+        [DataRow(typeof(long), "integer")]
+        [DataRow(typeof(short), "integer")]
+        [DataRow(typeof(byte), "integer")]
+        [DataRow(typeof(float), "number")]
+        [DataRow(typeof(double), "number")]
+        [DataRow(typeof(decimal), "number")]
+        [DataRow(typeof(bool), "boolean")]
+        [DataRow(typeof(string), "string")]
+        [DataRow(typeof(Guid), "string")]
+        [DataRow(typeof(DateTime), "string")]
+        [DataRow(typeof(DateTimeOffset), "string")]
+        public void InitializeMetadata_MapsSystemTypesToJsonSchemaTypes(Type systemType, string expectedJsonType)
+        {
+            // Arrange & Act
+            Dictionary<string, ParameterDefinition> dbParams = new()
+            {
+                ["param1"] = new() { SystemType = systemType }
+            };
+            JsonElement props = InitializeAndGetSchemaProperties(dbParams);
+
+            // Assert
+            Assert.AreEqual(expectedJsonType, props.GetProperty("param1").GetProperty("type").GetString());
+        }
+
+        /// <summary>
+        /// When SystemType is null, schema uses a permissive multi-type array.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_UsesPermissiveType_WhenSystemTypeIsNull()
+        {
+            // Arrange & Act
+            Dictionary<string, ParameterDefinition> dbParams = new()
+            {
+                ["unknown_param"] = new() { SystemType = null! }
+            };
+            JsonElement props = InitializeAndGetSchemaProperties(dbParams);
+
+            // Assert
+            Assert.AreEqual(JsonValueKind.Array, props.GetProperty("unknown_param").GetProperty("type").ValueKind);
+        }
+
+        /// <summary>
+        /// When a parameter has HasConfigDefault=true, the description includes the default value.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_IncludesDefaultInDescription()
+        {
+            // Arrange & Act
+            Dictionary<string, ParameterDefinition> dbParams = new()
+            {
+                ["tenant"] = new() { SystemType = typeof(string), HasConfigDefault = true, ConfigDefaultValue = "default_tenant" }
+            };
+            JsonElement props = InitializeAndGetSchemaProperties(dbParams);
+
+            // Assert
+            string desc = props.GetProperty("tenant").GetProperty("description").GetString()!;
+            StringAssert.Contains(desc, "default: default_tenant");
+        }
+
+        /// <summary>
+        /// Zero-parameter SP with DB metadata returns empty properties object.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_ZeroParamSP_ReturnsEmptyProperties()
+        {
+            // Arrange & Act
+            JsonElement props = InitializeAndGetSchemaProperties(new Dictionary<string, ParameterDefinition>());
+
+            // Assert
+            Assert.AreEqual(0, props.EnumerateObject().Count());
+        }
+
+        /// <summary>
+        /// Helper: Creates a DynamicCustomTool, initializes it with mocked DB metadata, and returns
+        /// the "properties" element from the resulting input schema.
+        /// </summary>
+        private static JsonElement InitializeAndGetSchemaProperties(
+            Dictionary<string, ParameterDefinition> dbParameters,
+            string entityName = "TestSP")
+        {
+            Entity entity = CreateTestStoredProcedureEntity();
+            DynamicCustomTool tool = new(entityName, entity);
+            IServiceProvider sp = BuildServiceProviderForMetadata(entityName, dbParameters);
+
+            tool.InitializeMetadata(sp);
+            return ParseSchemaProperties(tool.GetToolMetadata());
+        }
+
+        /// <summary>
+        /// Helper: Parses the "properties" element from a tool's input schema.
+        /// </summary>
+        private static JsonElement ParseSchemaProperties(ModelContextProtocol.Protocol.Tool metadata)
+        {
+            JsonDocument schemaObj = JsonDocument.Parse(metadata.InputSchema.GetRawText());
+            return schemaObj.RootElement.GetProperty("properties");
+        }
+
+        /// <summary>
+        /// Builds a service provider with mocked metadata infrastructure for schema tests.
+        /// </summary>
+        private static IServiceProvider BuildServiceProviderForMetadata(
+            string entityName,
+            Dictionary<string, ParameterDefinition> dbParameters)
+        {
+            Entity entity = new(
+                Source: new("test_procedure", EntitySourceType.StoredProcedure, Parameters: null, KeyFields: null),
+                GraphQL: new(entityName, entityName),
+                Rest: new(Enabled: true),
+                Fields: null,
+                Permissions: new[]
+                {
+                    new EntityPermission(
+                        Role: "anonymous",
+                        Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) })
+                },
+                Relationships: null,
+                Mappings: null,
+                Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: null));
+
+            Dictionary<string, Entity> entities = new() { [entityName] = entity };
+
+            RuntimeConfig config = new(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(Enabled: true, Path: "/mcp", DmlTools: null),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
+                ),
+                Entities: new(entities));
+
+            ServiceCollection services = new();
+
+            RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
+            services.AddSingleton(configProvider);
+
+            // Mock metadata provider with DB object
+            DatabaseStoredProcedure dbObject = new("dbo", "test_procedure")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new StoredProcedureDefinition
+                {
+                    Parameters = dbParameters
+                }
+            };
+
+            Mock<ISqlMetadataProvider> mockSqlMetadataProvider = new();
+            mockSqlMetadataProvider
+                .Setup(x => x.EntityToDatabaseObject)
+                .Returns(new Dictionary<string, DatabaseObject> { [entityName] = dbObject });
+
+            Mock<IMetadataProviderFactory> mockMetadataProviderFactory = new();
+            mockMetadataProviderFactory
+                .Setup(x => x.GetMetadataProvider(It.IsAny<string>()))
+                .Returns(mockSqlMetadataProvider.Object);
+            services.AddSingleton(mockMetadataProviderFactory.Object);
+
+            services.AddLogging();
+
+            return services.BuildServiceProvider();
+        }
+
+        #endregion
     }
 }

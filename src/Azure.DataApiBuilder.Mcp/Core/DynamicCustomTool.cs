@@ -39,6 +39,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
     public class DynamicCustomTool : IMcpTool
     {
         private readonly Entity _entity;
+        private JsonElement? _cachedInputSchema;
 
         /// <summary>
         /// Initializes a new instance of DynamicCustomTool.
@@ -70,6 +71,18 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// Gets the entity name associated with this custom tool.
         /// </summary>
         public string EntityName { get; }
+
+        /// <summary>
+        /// Initializes the tool's input schema using DB metadata from the service provider.
+        /// Called after DI initialization to enrich the tool schema with DB-discovered parameters
+        /// and type information that aren't available at construction time.
+        /// Falls back silently to config-based schema if DB metadata is unavailable.
+        /// </summary>
+        /// <param name="serviceProvider">The application service provider with initialized metadata providers.</param>
+        public void InitializeMetadata(IServiceProvider serviceProvider)
+        {
+            _cachedInputSchema = BuildInputSchemaFromDbMetadata(serviceProvider);
+        }
 
         /// <summary>
         /// Gets the metadata for this custom tool, including name, description, and input schema.
@@ -291,9 +304,87 @@ namespace Azure.DataApiBuilder.Mcp.Core
         }
 
         /// <summary>
-        /// Builds the input schema for the tool based on entity parameters.
+        /// Builds the input schema for the tool. Returns cached DB-metadata-based schema
+        /// if available (set by InitializeMetadata), otherwise falls back to config-based schema.
         /// </summary>
         private JsonElement BuildInputSchema()
+        {
+            if (_cachedInputSchema.HasValue)
+            {
+                return _cachedInputSchema.Value;
+            }
+
+            return BuildInputSchemaFromConfig();
+        }
+
+        /// <summary>
+        /// Builds the input schema from DB metadata (StoredProcedureDefinition.Parameters).
+        /// Returns null if metadata cannot be resolved (caller should fall back to config-based schema).
+        /// </summary>
+        private JsonElement? BuildInputSchemaFromDbMetadata(IServiceProvider serviceProvider)
+        {
+            RuntimeConfigProvider? configProvider = serviceProvider.GetService<RuntimeConfigProvider>();
+            if (configProvider is null)
+            {
+                return null;
+            }
+
+            RuntimeConfig config = configProvider.GetConfig();
+
+            if (!McpMetadataHelper.TryResolveMetadata(
+                    EntityName,
+                    config,
+                    serviceProvider,
+                    out _,
+                    out DatabaseObject dbObject,
+                    out _,
+                    out _))
+            {
+                return null;
+            }
+
+            if (dbObject is not DatabaseStoredProcedure storedProcedure)
+            {
+                return null;
+            }
+
+            StoredProcedureDefinition spDefinition = storedProcedure.StoredProcedureDefinition;
+            if (spDefinition.Parameters is null || spDefinition.Parameters.Count == 0)
+            {
+                // Zero-param SP: return empty properties schema
+                return JsonSerializer.SerializeToElement(new Dictionary<string, object>
+                {
+                    ["type"] = "object",
+                    ["properties"] = new Dictionary<string, object>()
+                });
+            }
+
+            Dictionary<string, object> properties = new();
+            foreach ((string paramName, ParameterDefinition paramDef) in spDefinition.Parameters)
+            {
+                Dictionary<string, object> paramSchema = new()
+                {
+                    ["type"] = MapSystemTypeToJsonSchemaType(paramDef.SystemType),
+                    ["description"] = BuildParameterDescription(paramName, paramDef)
+                };
+
+                properties[paramName] = paramSchema;
+            }
+
+            Dictionary<string, object> schema = new()
+            {
+                ["type"] = "object",
+                ["properties"] = properties
+            };
+
+            return JsonSerializer.SerializeToElement(schema);
+        }
+
+        /// <summary>
+        /// Builds the input schema from config-side ParameterMetadata.
+        /// Used as fallback when DB metadata is not available.
+        /// </summary>
+        private JsonElement BuildInputSchemaFromConfig()
         {
             Dictionary<string, object> schema = new()
             {
@@ -307,9 +398,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 foreach (ParameterMetadata param in _entity.Source.Parameters)
                 {
-                    // Note: Parameter type information is not available in ParameterMetadata,
-                    // so we allow multiple JSON types to match the behavior of GetParameterValue
-                    // that handles string, number, boolean, and null values.
                     properties[param.Name] = new Dictionary<string, object>
                     {
                         ["type"] = new[] { "string", "number", "boolean", "null" },
@@ -319,6 +407,62 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             return JsonSerializer.SerializeToElement(schema);
+        }
+
+        /// <summary>
+        /// Maps a .NET System.Type to the appropriate JSON Schema type string.
+        /// </summary>
+        private static object MapSystemTypeToJsonSchemaType(Type? systemType)
+        {
+            if (systemType is null)
+            {
+                return new[] { "string", "number", "boolean", "null" };
+            }
+
+            // Handle nullable types
+            Type underlyingType = Nullable.GetUnderlyingType(systemType) ?? systemType;
+
+            if (underlyingType == typeof(int) || underlyingType == typeof(long) ||
+                underlyingType == typeof(short) || underlyingType == typeof(byte) ||
+                underlyingType == typeof(sbyte) || underlyingType == typeof(uint) ||
+                underlyingType == typeof(ulong) || underlyingType == typeof(ushort))
+            {
+                return "integer";
+            }
+
+            if (underlyingType == typeof(float) || underlyingType == typeof(double) ||
+                underlyingType == typeof(decimal))
+            {
+                return "number";
+            }
+
+            if (underlyingType == typeof(bool))
+            {
+                return "boolean";
+            }
+
+            if (underlyingType == typeof(string) || underlyingType == typeof(Guid) ||
+                underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset))
+            {
+                return "string";
+            }
+
+            // Default: permissive multi-type
+            return new[] { "string", "number", "boolean", "null" };
+        }
+
+        /// <summary>
+        /// Builds a description string for a parameter using DB metadata.
+        /// </summary>
+        private static string BuildParameterDescription(string paramName, ParameterDefinition paramDef)
+        {
+            string description = $"Parameter {paramName}";
+            if (paramDef.HasConfigDefault)
+            {
+                description += $" (default: {paramDef.ConfigDefaultValue})";
+            }
+
+            return description;
         }
 
         /// <summary>

@@ -27,6 +27,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
             IEnumerable<IMcpTool> tools = _serviceProvider.GetServices<IMcpTool>();
             foreach (IMcpTool tool in tools)
             {
+                // Initialize DB-metadata-based schema for custom tools before registration,
+                // so GetToolMetadata() returns the enriched schema from the start.
+                if (tool is DynamicCustomTool customTool)
+                {
+                    customTool.InitializeMetadata(_serviceProvider);
+                }
+
                 _toolRegistry.RegisterTool(tool);
             }
 

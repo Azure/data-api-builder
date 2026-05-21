@@ -56,9 +56,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" PrivateAssets="all" />
-    <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" PrivateAssets="all" />
-    <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj">
+        <PrivateAssets Condition="'$(PackRelease)' == 'true'">all</PrivateAssets>
+    </ProjectReference>
+    <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj">
+        <PrivateAssets Condition="'$(PackRelease)' == 'true'">all</PrivateAssets>
+    </ProjectReference>
+    <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj">
+        <PrivateAssets Condition="'$(PackRelease)' == 'true'">all</PrivateAssets>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
@@ -69,8 +75,8 @@
   </ItemGroup>
 
   <Target Name="IncludeInternalDependenciesInPackage">
-      <ItemGroup>
-        <TfmSpecificPackageFile Include="@(ReferenceCopyLocalPaths)" PackagePath="lib/$(TargetFramework)" Condition="'%(ReferenceCopyLocalPaths.Extension)' != '.pdb'" />
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="@(ReferenceCopyLocalPaths)" PackagePath="lib/$(TargetFramework)" Condition="'%(ReferenceCopyLocalPaths.Extension)' != '.pdb'" />
     </ItemGroup>
   </Target>
 

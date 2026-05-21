@@ -78,5 +78,25 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             return _tools.TryGetValue(toolName, out tool);
         }
+
+        /// <summary>
+        /// Initializes and registers all MCP tools, enriching custom tools with DB metadata schemas.
+        /// Shared by both HTTP hosted-service and stdio startup paths.
+        /// </summary>
+        public static void InitializeAndRegisterTools(
+            IEnumerable<IMcpTool> tools,
+            McpToolRegistry registry,
+            IServiceProvider serviceProvider)
+        {
+            foreach (IMcpTool tool in tools)
+            {
+                if (tool is DynamicCustomTool customTool)
+                {
+                    customTool.InitializeMetadata(serviceProvider);
+                }
+
+                registry.RegisterTool(tool);
+            }
+        }
     }
 }

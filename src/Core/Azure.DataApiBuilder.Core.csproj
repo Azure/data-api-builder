@@ -22,7 +22,7 @@
     <NoWarn>NU1603</NoWarn>
 
     <!-- Run custom target during pack to add dependency files into the package. -->
-    <TargetsForTfmSpecificContentInPackage>IncludeInternalDependenciesInPackage</TargetsForTfmSpecificContentInPackage>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeInternalDependenciesInPackage</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 
   <ItemGroup>
@@ -57,13 +57,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj">
-        <PrivateAssets Condition="'$(PackRelease)' == 'true'">all</PrivateAssets>
+      <PrivateAssets Condition="'$(PRIVATIZE_ASSETS)' == 'true'">all</PrivateAssets>
     </ProjectReference>
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj">
-        <PrivateAssets Condition="'$(PackRelease)' == 'true'">all</PrivateAssets>
+      <PrivateAssets Condition="'$(PRIVATIZE_ASSETS)' == 'true'">all</PrivateAssets>
     </ProjectReference>
     <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj">
-        <PrivateAssets Condition="'$(PackRelease)' == 'true'">all</PrivateAssets>
+      <PrivateAssets Condition="'$(PRIVATIZE_ASSETS)' == 'true'">all</PrivateAssets>
     </ProjectReference>
   </ItemGroup>
 
@@ -76,7 +76,12 @@
 
   <Target Name="IncludeInternalDependenciesInPackage">
     <ItemGroup>
-      <TfmSpecificPackageFile Include="@(ReferenceCopyLocalPaths)" PackagePath="lib/$(TargetFramework)" Condition="'%(ReferenceCopyLocalPaths.Extension)' != '.pdb'" />
+      <_InternalAssembly Include="$(OutputPath)Azure.DataApiBuilder.Auth.dll" />
+      <_InternalAssembly Include="$(OutputPath)Azure.DataApiBuilder.Config.dll" />
+      <_InternalAssembly Include="$(OutputPath)Azure.DataApiBuilder.Service.GraphQLBuilder.dll" />
+      <_InternalAssembly Include="$(OutputPath)Azure.DataApiBuilder.Product.dll" />
+
+      <TfmSpecificPackageFile Include="@(_InternalAssembly)" PackagePath="lib/$(TargetFramework)" />
     </ItemGroup>
   </Target>
 

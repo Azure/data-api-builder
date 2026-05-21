@@ -187,7 +187,8 @@ namespace Azure.DataApiBuilder.Service
                             configure.Protocol = OtlpExportProtocol.Grpc;
                         })
                         .AddMeter(TelemetryMetricsHelper.MeterName)
-                        .AddMeter(EmbeddingTelemetryHelper.MeterName);
+                        .AddMeter(EmbeddingTelemetryHelper.MeterName)
+                        .AddMeter(ParameterEmbeddingTelemetryHelper.MeterName);
                 })
                 .WithTracing(tracing =>
                 {

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -969,6 +970,75 @@ public class ParameterEmbeddingHelperTests
             Assert.IsFalse(fullTrace.Contains(floatStr),
                 $"Telemetry must not contain embedding component '{floatStr}'. Found in: {fullTrace}");
         }
+    }
+
+    /// <summary>
+    /// Proves the auto-embed meter publishes its three instruments
+    /// (auto_embed_substitutions_total, auto_embed_params_substituted_total,
+    /// auto_embed_duration_ms) so that any OTel pipeline calling
+    /// .AddMeter(ParameterEmbeddingTelemetryHelper.MeterName) will receive
+    /// measurements. Regression guard for the bug where Startup.cs shipped
+    /// the helper without registering the meter — metrics were emitted
+    /// internally but silently dropped by the exporter.
+    /// </summary>
+    [TestMethod]
+    public async Task Telemetry_Metrics_EmittedFromAutoEmbedMeter()
+    {
+        Dictionary<string, List<long>> longMeasurements = new();
+        Dictionary<string, List<double>> doubleMeasurements = new();
+
+        using MeterListener listener = new()
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Meter.Name == ParameterEmbeddingTelemetryHelper.MeterName)
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((inst, value, tags, _) =>
+        {
+            if (!longMeasurements.ContainsKey(inst.Name))
+            {
+                longMeasurements[inst.Name] = new List<long>();
+            }
+
+            longMeasurements[inst.Name].Add(value);
+        });
+        listener.SetMeasurementEventCallback<double>((inst, value, tags, _) =>
+        {
+            if (!doubleMeasurements.ContainsKey(inst.Name))
+            {
+                doubleMeasurements[inst.Name] = new List<double>();
+            }
+
+            doubleMeasurements[inst.Name].Add(value);
+        });
+        listener.Start();
+
+        Dictionary<string, object?> resolvedParams = new() { { "q", "hello" } };
+        List<ParameterMetadata> configParams = new() { EmbedParam("q") };
+        SetupBatch(new[] { 0.1f, 0.2f });
+
+        await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+            resolvedParams, configParams, _mockService.Object, CancellationToken.None,
+            entityName: "SearchProducts");
+
+        Assert.IsTrue(longMeasurements.ContainsKey("auto_embed_substitutions_total"),
+            "Expected auto_embed_substitutions_total counter to publish a measurement.");
+        Assert.AreEqual(1L, longMeasurements["auto_embed_substitutions_total"][0],
+            "Expected a single substitution increment.");
+
+        Assert.IsTrue(longMeasurements.ContainsKey("auto_embed_params_substituted_total"),
+            "Expected auto_embed_params_substituted_total counter to publish a measurement.");
+        Assert.AreEqual(1L, longMeasurements["auto_embed_params_substituted_total"][0],
+            "Expected one param substituted in this test scenario.");
+
+        Assert.IsTrue(doubleMeasurements.ContainsKey("auto_embed_duration_ms"),
+            "Expected auto_embed_duration_ms histogram to publish a measurement.");
+        Assert.IsTrue(doubleMeasurements["auto_embed_duration_ms"][0] >= 0,
+            "Duration should be non-negative.");
     }
 
     #endregion

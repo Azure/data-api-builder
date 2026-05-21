@@ -59,5 +59,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual("a-version", resolved);
         }
+
+        [TestMethod]
+        public void ShouldUseServerInfoDescription_AtOrAboveThreshold_ReturnsTrue()
+        {
+            Assert.IsTrue(McpProtocolDefaults.ShouldUseServerInfoDescription("2025-11-25"));
+            Assert.IsTrue(McpProtocolDefaults.ShouldUseServerInfoDescription("2025-12-01"));
+        }
+
+        [TestMethod]
+        public void ShouldUseServerInfoDescription_BelowThreshold_ReturnsFalse()
+        {
+            Assert.IsFalse(McpProtocolDefaults.ShouldUseServerInfoDescription("2025-06-18"));
+        }
     }
 }

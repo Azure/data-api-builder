@@ -28,6 +28,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public const string PROTOCOL_VERSION_CONFIG_KEY = "MCP:ProtocolVersion";
 
         /// <summary>
+        /// Protocol version where MCP initialize server description is expected under serverInfo.description.
+        /// </summary>
+        public const string SERVER_INFO_DESCRIPTION_PROTOCOL_VERSION = "2025-11-25";
+
+        /// <summary>
         /// Helper to resolve the effective protocol version from configuration.
         /// Falls back to <see cref="DEFAULT_PROTOCOL_VERSION"/> when the key is not set.
         /// </summary>
@@ -53,6 +58,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
             return CompareProtocolVersions(supportedProtocolVersion, clientRequestedProtocolVersion) <= 0
                 ? supportedProtocolVersion
                 : clientRequestedProtocolVersion;
+        }
+
+        /// <summary>
+        /// Indicates whether initialize response metadata should use serverInfo.description instead of top-level instructions.
+        /// </summary>
+        public static bool ShouldUseServerInfoDescription(string protocolVersion)
+        {
+            return CompareProtocolVersions(protocolVersion, SERVER_INFO_DESCRIPTION_PROTOCOL_VERSION) >= 0;
         }
 
         private static int CompareProtocolVersions(string leftVersion, string rightVersion)

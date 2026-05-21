@@ -173,14 +173,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(_protocolVersion, clientRequestedProtocolVersion);
 
             // Get the description from runtime config if available
-            string? instructions = null;
+            string? description = null;
             RuntimeConfigProvider? runtimeConfigProvider = _serviceProvider.GetService<RuntimeConfigProvider>();
             if (runtimeConfigProvider != null)
             {
                 try
                 {
                     RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-                    instructions = runtimeConfig.Runtime?.Mcp?.Description;
+                    description = runtimeConfig.Runtime?.Mcp?.Description;
                 }
                 catch (Exception)
                 {
@@ -189,9 +189,29 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
             }
 
-            // Create the initialize response - only include instructions if non-empty
+            bool shouldUseServerInfoDescription = McpProtocolDefaults.ShouldUseServerInfoDescription(negotiatedProtocolVersion);
+
+            // Create the initialize response - only include description/instructions if non-empty
             object result;
-            if (!string.IsNullOrWhiteSpace(instructions))
+            if (!string.IsNullOrWhiteSpace(description) && shouldUseServerInfoDescription)
+            {
+                result = new
+                {
+                    protocolVersion = negotiatedProtocolVersion,
+                    capabilities = new
+                    {
+                        tools = new { listChanged = true },
+                        logging = new { }
+                    },
+                    serverInfo = new
+                    {
+                        name = McpProtocolDefaults.MCP_SERVER_NAME,
+                        version = McpProtocolDefaults.MCP_SERVER_VERSION,
+                        description = description
+                    }
+                };
+            }
+            else if (!string.IsNullOrWhiteSpace(description))
             {
                 result = new
                 {
@@ -206,7 +226,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         name = McpProtocolDefaults.MCP_SERVER_NAME,
                         version = McpProtocolDefaults.MCP_SERVER_VERSION
                     },
-                    instructions = instructions
+                    instructions = description
                 };
             }
             else

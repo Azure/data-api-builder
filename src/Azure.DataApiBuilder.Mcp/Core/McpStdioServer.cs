@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         switch (method)
                         {
                             case "initialize":
-                                HandleInitialize(id);
+                                HandleInitialize(id, root);
                                 break;
 
                             case "notifications/initialized":
@@ -160,22 +160,27 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="id">
         /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
         /// </param>
+        /// <param name="root">The incoming initialize request payload.</param>
         /// <remarks>
-        /// This method constructs and writes the MCP "initialize" response to STDOUT. It uses the protocol version defined by <c>PROTOCOL_VERSION</c>
-        /// and includes supported capabilities and server information. No notifications are sent here; the server waits for the client to send
-        /// "notifications/initialized" before sending any notifications.
+        /// This method constructs and writes the MCP "initialize" response to STDOUT. It negotiates the response protocol version from the
+        /// server-supported version and client-requested version, and includes supported capabilities and server information. No notifications
+        /// are sent here; the server waits for the client to send "notifications/initialized" before sending any notifications.
         /// </remarks>
-        private void HandleInitialize(JsonElement? id)
+        private void HandleInitialize(JsonElement? id, JsonElement root)
         {
+            string? clientRequestedProtocolVersion = GetClientProtocolVersion(root);
+            string negotiatedProtocolVersion =
+                McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(_protocolVersion, clientRequestedProtocolVersion);
+
             // Get the description from runtime config if available
-            string? instructions = null;
+            string? description = null;
             RuntimeConfigProvider? runtimeConfigProvider = _serviceProvider.GetService<RuntimeConfigProvider>();
             if (runtimeConfigProvider != null)
             {
                 try
                 {
                     RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-                    instructions = runtimeConfig.Runtime?.Mcp?.Description;
+                    description = runtimeConfig.Runtime?.Mcp?.Description;
                 }
                 catch (Exception)
                 {
@@ -184,13 +189,33 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
             }
 
-            // Create the initialize response - only include instructions if non-empty
+            bool shouldUseServerInfoDescription = McpProtocolDefaults.ShouldUseServerInfoDescription(negotiatedProtocolVersion);
+
+            // Create the initialize response - only include description/instructions if non-empty
             object result;
-            if (!string.IsNullOrWhiteSpace(instructions))
+            if (!string.IsNullOrWhiteSpace(description) && shouldUseServerInfoDescription)
             {
                 result = new
                 {
-                    protocolVersion = _protocolVersion,
+                    protocolVersion = negotiatedProtocolVersion,
+                    capabilities = new
+                    {
+                        tools = new { listChanged = true },
+                        logging = new { }
+                    },
+                    serverInfo = new
+                    {
+                        name = McpProtocolDefaults.MCP_SERVER_NAME,
+                        version = McpProtocolDefaults.MCP_SERVER_VERSION,
+                        description = description
+                    }
+                };
+            }
+            else if (!string.IsNullOrWhiteSpace(description))
+            {
+                result = new
+                {
+                    protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
                         tools = new { listChanged = true },
@@ -201,14 +226,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         name = McpProtocolDefaults.MCP_SERVER_NAME,
                         version = McpProtocolDefaults.MCP_SERVER_VERSION
                     },
-                    instructions = instructions
+                    instructions = description
                 };
             }
             else
             {
                 result = new
                 {
-                    protocolVersion = _protocolVersion,
+                    protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
                         tools = new { listChanged = true },
@@ -223,6 +248,22 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             WriteResult(id, result);
+        }
+
+        private static string? GetClientProtocolVersion(JsonElement root)
+        {
+            if (!root.TryGetProperty("params", out JsonElement paramsElement) || paramsElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            if (!paramsElement.TryGetProperty("protocolVersion", out JsonElement protocolVersionElement) ||
+                protocolVersionElement.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            return protocolVersionElement.GetString();
         }
 
         /// <summary>

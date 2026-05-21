@@ -480,7 +480,17 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 // otherwise we wrap into a single text block.
                 object[] content = CoerceToMcpContentBlocks(callResult);
 
-                WriteResult(id, new { content });
+                // Propagate isError so MCP clients can distinguish tool errors from successes.
+                // _jsonOptions has WhenWritingNull, so a null isError is omitted from the wire.
+                bool? isError = callResult.IsError;
+                if (isError == true)
+                {
+                    WriteResult(id, new { content, isError });
+                }
+                else
+                {
+                    WriteResult(id, new { content });
+                }
             }
             finally
             {

@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Text;
@@ -1333,7 +1334,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     if (hasPostOperation || hasPutPatchOperation)
                     {
                         DatabaseStoredProcedure spObject = (DatabaseStoredProcedure)dbObject;
-                        schemas.Add(entityName + SP_REQUEST_SUFFIX, CreateSpRequestComponentSchema(fields: spObject.StoredProcedureDefinition.Parameters, isRequestBodyStrict: isRequestBodyStrict));
+                        schemas.Add(entityName + SP_REQUEST_SUFFIX, CreateSpRequestComponentSchema(fields: spObject.StoredProcedureDefinition.Parameters, configParams: entity.Source.Parameters, isRequestBodyStrict: isRequestBodyStrict));
                     }
 
                     // Response body schema whose properties map to the stored procedure's first result set columns
@@ -1404,7 +1405,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="fields">Collection of stored procedure parameter metadata.</param>
         /// <param name="isRequestBodyStrict">When true, sets additionalProperties to false.</param>
         /// <returns>OpenApiSchema object representing a stored procedure's request body.</returns>
-        private static OpenApiSchema CreateSpRequestComponentSchema(Dictionary<string, ParameterDefinition> fields, bool isRequestBodyStrict = true)
+        private static OpenApiSchema CreateSpRequestComponentSchema(Dictionary<string, ParameterDefinition> fields, List<ParameterMetadata>? configParams = null, bool isRequestBodyStrict = true)
         {
             Dictionary<string, OpenApiSchema> properties = new();
             HashSet<string> required = new();
@@ -1415,10 +1416,15 @@ namespace Azure.DataApiBuilder.Core.Services
                 ParameterDefinition def = kvp.Value;
                 string typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(def.SystemType).ToString().ToLower();
 
+                bool isAutoEmbed = configParams?.FirstOrDefault(p => p.Name == parameter)?.AutoEmbed ?? false;
+                string? description = isAutoEmbed
+                    ? (def.Description ?? string.Empty) + " (auto-embed: DAB converts this value to an embedding before execution)"
+                    : def.Description;
+
                 properties.Add(parameter, new OpenApiSchema()
                 {
                     Type = typeMetadata,
-                    Description = def.Description,
+                    Description = description,
                     Default = def.Default is not null ? new OpenApiString(def.Default) : null
                 });
 

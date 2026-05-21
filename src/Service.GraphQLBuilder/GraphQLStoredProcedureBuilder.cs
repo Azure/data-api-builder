@@ -83,13 +83,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                         parameterTypeNode = new NonNullTypeNode((INullableTypeNode)parameterTypeNode);
                     }
 
+                    // Build description, appending auto-embed indicator when configured.
+                    string baseDescription = definition.Description
+                        ?? $"parameters for {name.Value} stored-procedure";
+                    bool isAutoEmbed = paramMetadata?.AutoEmbed ?? false;
+                    string fullDescription = isAutoEmbed
+                        ? $"{baseDescription} (auto-embed: DAB converts this value to an embedding before execution)"
+                        : baseDescription;
+
                     inputValues.Add(
                         new(
                             location: null,
                             name: new(param),
-                            description: definition.Description != null
-                                        ? new StringValueNode(definition.Description)
-                                        : new StringValueNode($"parameters for {name.Value} stored-procedure"),
+                            description: new StringValueNode(fullDescription),
                             type: parameterTypeNode,
                             defaultValue: defaultValueNode,
                             directives: new List<DirectiveNode>())

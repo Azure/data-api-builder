@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Linq;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -448,7 +449,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (entity.Source.Type == EntitySourceType.StoredProcedure)
             {
-                info["parameters"] = BuildParameterMetadataInfo(databaseObject);
+                info["parameters"] = BuildParameterMetadataInfo(databaseObject, entity.Source.Parameters);
             }
 
             info["permissions"] = BuildPermissionsInfo(entity, currentUserRole);
@@ -511,7 +512,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <returns>A list whose elements are dictionaries (one per parameter), each with the keys
         /// <c>name</c>, <c>required</c>, <c>default</c>, and <c>description</c>.</returns>
         /// <exception cref="InvalidOperationException">Thrown when <paramref name="databaseObject"/> is not a <see cref="DatabaseStoredProcedure"/> with a populated <see cref="StoredProcedureDefinition"/>.</exception>
-        private static List<object> BuildParameterMetadataInfo(DatabaseObject? databaseObject)
+        private static List<object> BuildParameterMetadataInfo(DatabaseObject? databaseObject, List<ParameterMetadata>? configParams)
         {
             IReadOnlyDictionary<string, ParameterDefinition>? dbParameters =
                 (databaseObject as DatabaseStoredProcedure)?.StoredProcedureDefinition?.Parameters
@@ -522,7 +523,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             List<object> result = new(dbParameters.Count);
             foreach ((string parameterName, ParameterDefinition definition) in dbParameters)
             {
-                result.Add(BuildParameterEntry(parameterName, definition));
+                bool autoEmbed = configParams?.FirstOrDefault(p => p.Name == parameterName)?.AutoEmbed ?? false;
+                result.Add(BuildParameterEntry(parameterName, definition, autoEmbed));
             }
 
             return result;
@@ -530,12 +532,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
         private static Dictionary<string, object?> BuildParameterEntry(
             string name,
-            ParameterDefinition definition) => new()
+            ParameterDefinition definition,
+            bool autoEmbed) => new()
             {
                 ["name"] = name,
                 ["required"] = definition.Required ?? true,
                 ["default"] = definition.Default,
-                ["description"] = definition.Description ?? string.Empty
+                ["description"] = definition.Description ?? string.Empty,
+                ["autoEmbed"] = autoEmbed
             };
 
         /// <summary>

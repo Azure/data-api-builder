@@ -16,6 +16,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
@@ -397,6 +398,65 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             ObjectTypeDefinitionNode queryNode = QueryBuilderTests.GetQueryNode(queryRoot);
             return queryNode.Fields.First(f => f.Name.Value.StartsWith($"execute{graphQLTypeName}"));
+        }
+
+        /// <summary>
+        /// When a stored procedure parameter has AutoEmbed=true in config, the GraphQL
+        /// argument description should contain the "(auto-embed: ...)" indicator.
+        /// Non-auto-embed params should have their original description without the indicator.
+        /// </summary>
+        [TestMethod]
+        public void GenerateStoredProcedureSchema_AutoEmbedParam_DescriptionContainsIndicator()
+        {
+            string entityName = "SearchProducts";
+            string paramName = "query_text";
+            string normalParamName = "top_k";
+
+            Entity entity = new(
+                Source: new("dbo.SearchProducts", EntitySourceType.StoredProcedure,
+                    Parameters: new List<ParameterMetadata>
+                    {
+                        new() { Name = paramName, AutoEmbed = true, Description = "Search query" },
+                        new() { Name = normalParamName, AutoEmbed = false }
+                    },
+                    KeyFields: null),
+                GraphQL: new(entityName, entityName),
+                Rest: new(Enabled: true),
+                Fields: null,
+                Permissions: new[]
+                {
+                    new EntityPermission(Role: "anonymous",
+                        Actions: new[] { new EntityAction(EntityActionOperation.Execute, null, null) })
+                },
+                Relationships: null,
+                Mappings: null
+            );
+
+            DatabaseStoredProcedure dbObject = new("dbo", "SearchProducts")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new StoredProcedureDefinition
+                {
+                    Parameters = new Dictionary<string, ParameterDefinition>
+                    {
+                        [paramName] = new() { SystemType = typeof(string), Description = "Search query" },
+                        [normalParamName] = new() { SystemType = typeof(int) }
+                    }
+                }
+            };
+
+            FieldDefinitionNode field = GenerateStoredProcedureSchema(
+                new NameNode(entityName), entity, dbObject);
+
+            // Auto-embed param should have the indicator in its description
+            InputValueDefinitionNode embedArg = field.Arguments.Single(a => a.Name.Value == paramName);
+            StringAssert.Contains(embedArg.Description.Value, "auto-embed",
+                "Auto-embed param description should contain the auto-embed indicator");
+
+            // Non-auto-embed param should NOT have the indicator
+            InputValueDefinitionNode normalArg = field.Arguments.Single(a => a.Name.Value == normalParamName);
+            Assert.IsFalse(normalArg.Description.Value.Contains("auto-embed"),
+                "Non-auto-embed param description should not contain the auto-embed indicator");
         }
     }
 }

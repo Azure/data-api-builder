@@ -32,6 +32,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
 
+        // Omit null-valued properties (e.g. SDK ContentBlock.Annotations, ContentBlock._meta) so
+        // strict MCP clients never see explicit JSON nulls for optional metadata fields.
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        };
+
         public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider)
         {
             _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
@@ -633,7 +640,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 result = resultObject
             };
 
-            _stdoutWriter.WriteLine(JsonSerializer.Serialize(response));
+            _stdoutWriter.WriteLine(JsonSerializer.Serialize(response, _jsonOptions));
         }
 
         /// <summary>

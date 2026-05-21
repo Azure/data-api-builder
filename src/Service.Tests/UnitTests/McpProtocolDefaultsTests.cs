@@ -20,44 +20,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual("2025-11-25", resolved);
         }
 
-        [TestMethod]
-        public void ResolveInitializeResponseProtocolVersion_ClientRequestsNewerVersion_ReturnsServerSupportedVersion()
+        [DataTestMethod]
+        [DataRow("2025-11-25", "2026-01-01", "2025-11-25")]
+        [DataRow("2025-11-25", "2025-06-18", "2025-06-18")]
+        [DataRow("2025-11-25", "2025-11-25", "2025-11-25")]
+        [DataRow("2025-11-25", null, "2025-11-25")]
+        [DataRow("a-version", "z-version", "a-version")]
+        public void ResolveInitializeResponseProtocolVersion_ReturnsExpectedNegotiatedVersion(
+            string supportedProtocolVersion,
+            string clientRequestedProtocolVersion,
+            string expectedVersion)
         {
             string resolved = McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(
-                supportedProtocolVersion: "2025-11-25",
-                clientRequestedProtocolVersion: "2026-01-01");
+                supportedProtocolVersion,
+                clientRequestedProtocolVersion);
 
-            Assert.AreEqual("2025-11-25", resolved);
-        }
-
-        [TestMethod]
-        public void ResolveInitializeResponseProtocolVersion_ClientRequestsOlderVersion_ReturnsClientVersion()
-        {
-            string resolved = McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(
-                supportedProtocolVersion: "2025-11-25",
-                clientRequestedProtocolVersion: "2025-06-18");
-
-            Assert.AreEqual("2025-06-18", resolved);
-        }
-
-        [TestMethod]
-        public void ResolveInitializeResponseProtocolVersion_WithoutClientVersion_ReturnsSupportedVersion()
-        {
-            string resolved = McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(
-                supportedProtocolVersion: "2025-11-25",
-                clientRequestedProtocolVersion: null);
-
-            Assert.AreEqual("2025-11-25", resolved);
-        }
-
-        [TestMethod]
-        public void ResolveInitializeResponseProtocolVersion_NonDateVersionFormat_UsesOrdinalFallbackComparison()
-        {
-            string resolved = McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(
-                supportedProtocolVersion: "a-version",
-                clientRequestedProtocolVersion: "z-version");
-
-            Assert.AreEqual("a-version", resolved);
+            Assert.AreEqual(expectedVersion, resolved);
         }
 
         [TestMethod]

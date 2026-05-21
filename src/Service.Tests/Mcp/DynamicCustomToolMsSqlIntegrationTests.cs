@@ -121,6 +121,80 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             StringAssert.Contains(content, paramName);
         }
 
+        #region Schema Alignment Integration Tests
+
+        /// <summary>
+        /// Validates that InitializeMetadata maps DB parameter types to JSON Schema types.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("GetBook", "id", "integer", DisplayName = "int param maps to integer")]
+        [DataRow("InsertBook", "title", "string", DisplayName = "varchar param maps to string")]
+        [DataRow("InsertBook", "publisher_id", "integer", DisplayName = "int param maps to integer (multi-param SP)")]
+        public void InitializeMetadata_SchemaReflectsDbParameterTypes(string entityName, string paramName, string expectedType)
+        {
+            IServiceProvider serviceProvider = BuildServiceProvider();
+            RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+            Entity entity = configProvider.GetConfig().Entities[entityName];
+
+            DynamicCustomTool tool = new(entityName, entity);
+            tool.InitializeMetadata(serviceProvider);
+
+            JsonElement properties = tool.GetToolMetadata().InputSchema.GetProperty("properties");
+
+            Assert.IsTrue(properties.TryGetProperty(paramName, out JsonElement paramProp),
+                $"Schema should contain '{paramName}' property.");
+            Assert.AreEqual(expectedType, paramProp.GetProperty("type").GetString(),
+                $"'{paramName}' should map to JSON Schema type '{expectedType}'.");
+        }
+
+        /// <summary>
+        /// Validates that zero-param SP produces an empty properties object.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_ZeroParamSP_HasEmptyProperties()
+        {
+            IServiceProvider serviceProvider = BuildServiceProvider();
+            RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+            Entity entity = configProvider.GetConfig().Entities["GetBooks"];
+
+            DynamicCustomTool tool = new("GetBooks", entity);
+            tool.InitializeMetadata(serviceProvider);
+
+            JsonElement properties = tool.GetToolMetadata().InputSchema.GetProperty("properties");
+
+            int paramCount = 0;
+            foreach (JsonProperty _ in properties.EnumerateObject())
+            {
+                paramCount++;
+            }
+
+            Assert.AreEqual(0, paramCount, "Zero-param SP should produce empty properties.");
+        }
+
+        /// <summary>
+        /// Validates that config default values appear in parameter descriptions.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("InsertBook", "title", "randomX", DisplayName = "title description includes default 'randomX'")]
+        [DataRow("InsertBook", "publisher_id", "1234", DisplayName = "publisher_id description includes default '1234'")]
+        public void InitializeMetadata_DescriptionIncludesConfigDefaults(string entityName, string paramName, string expectedDefault)
+        {
+            IServiceProvider serviceProvider = BuildServiceProvider();
+            RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+            Entity entity = configProvider.GetConfig().Entities[entityName];
+
+            DynamicCustomTool tool = new(entityName, entity);
+            tool.InitializeMetadata(serviceProvider);
+
+            JsonElement properties = tool.GetToolMetadata().InputSchema.GetProperty("properties");
+            string description = properties.GetProperty(paramName).GetProperty("description").GetString()!;
+
+            StringAssert.Contains(description, expectedDefault,
+                $"'{paramName}' description should mention config default '{expectedDefault}'.");
+        }
+
+        #endregion
+
         /// <summary>
         /// Executes a DynamicCustomTool for the given entity using the shared test fixture.
         /// </summary>

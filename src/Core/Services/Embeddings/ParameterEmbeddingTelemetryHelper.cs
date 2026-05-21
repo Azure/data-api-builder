@@ -29,9 +29,9 @@ namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 ///     embedding API call. Use p50/p95/p99 to spot latency outliers.
 ///
 /// Outcome values (low cardinality, stable string constants):
-///   <see cref="OutcomeSuccess"/>, <see cref="OutcomeEmptyInput"/>,
-///   <see cref="OutcomeNonString"/>, <see cref="OutcomeBatchFailure"/>,
-///   <see cref="OutcomeServiceDisabled"/>.
+///   <see cref="OUTCOME_SUCCESS"/>, <see cref="OUTCOME_EMPTY_INPUT"/>,
+///   <see cref="OUTCOME_NON_STRING"/>, <see cref="OUTCOME_BATCH_FAILURE"/>,
+///   <see cref="OUTCOME_SERVICE_DISABLED"/>.
 /// </summary>
 public static class ParameterEmbeddingTelemetryHelper
 {
@@ -42,18 +42,18 @@ public static class ParameterEmbeddingTelemetryHelper
     public static readonly string MeterName = "DataApiBuilder.AutoEmbedSubstitution";
 
     // Outcome tag values — kept as constants so callers and queries align.
-    public const string OutcomeSuccess = "success";
-    public const string OutcomeEmptyInput = "empty_input";
-    public const string OutcomeNonString = "non_string";
-    public const string OutcomeBatchFailure = "batch_failure";
-    public const string OutcomeProviderInvalidResponse = "provider_invalid_response";
-    public const string OutcomeServiceDisabled = "service_disabled";
-    public const string OutcomeUnexpectedError = "unexpected_error";
+    public const string OUTCOME_SUCCESS = "success";
+    public const string OUTCOME_EMPTY_INPUT = "empty_input";
+    public const string OUTCOME_NON_STRING = "non_string";
+    public const string OUTCOME_BATCH_FAILURE = "batch_failure";
+    public const string OUTCOME_PROVIDER_INVALID_RESPONSE = "provider_invalid_response";
+    public const string OUTCOME_SERVICE_DISABLED = "service_disabled";
+    public const string OUTCOME_UNEXPECTED_ERROR = "unexpected_error";
 
     // Tag value used when the entity name is not known to the caller. Should be rare;
     // engines always have it. Kept as a constant rather than null to avoid losing
     // these data points in tag-required backends.
-    public const string EntityUnknown = "(unknown)";
+    public const string ENTITY_UNKNOWN = "(unknown)";
 
     private static readonly Meter _meter = new(MeterName);
 
@@ -82,7 +82,7 @@ public static class ParameterEmbeddingTelemetryHelper
             kind: ActivityKind.Internal);
         if (activity is not null && activity.IsAllDataRequested)
         {
-            activity.SetTag("entity", entityName ?? EntityUnknown);
+            activity.SetTag("entity", entityName ?? ENTITY_UNKNOWN);
             if (!string.IsNullOrEmpty(sprocName))
             {
                 activity.SetTag("sproc", sprocName);
@@ -131,20 +131,20 @@ public static class ParameterEmbeddingTelemetryHelper
     /// </summary>
     public static void RecordSuccess(Activity? activity, string? entityName, int paramCount, double durationMs)
     {
-        string entity = entityName ?? EntityUnknown;
+        string entity = entityName ?? ENTITY_UNKNOWN;
         _substitutions.Add(1,
             new KeyValuePair<string, object?>("entity", entity),
-            new KeyValuePair<string, object?>("outcome", OutcomeSuccess));
+            new KeyValuePair<string, object?>("outcome", OUTCOME_SUCCESS));
         _paramsSubstituted.Add(paramCount,
             new KeyValuePair<string, object?>("entity", entity));
         _duration.Record(durationMs,
             new KeyValuePair<string, object?>("entity", entity),
-            new KeyValuePair<string, object?>("outcome", OutcomeSuccess));
+            new KeyValuePair<string, object?>("outcome", OUTCOME_SUCCESS));
 
         if (activity is not null && activity.IsAllDataRequested)
         {
             activity.SetTag("param_count", paramCount);
-            activity.SetTag("outcome", OutcomeSuccess);
+            activity.SetTag("outcome", OUTCOME_SUCCESS);
             activity.SetTag("duration_ms", durationMs);
             activity.SetStatus(ActivityStatusCode.Ok);
         }
@@ -158,7 +158,7 @@ public static class ParameterEmbeddingTelemetryHelper
     /// </summary>
     public static void RecordFailure(Activity? activity, string? entityName, string outcome, double durationMs, Exception? exception = null)
     {
-        string entity = entityName ?? EntityUnknown;
+        string entity = entityName ?? ENTITY_UNKNOWN;
         _substitutions.Add(1,
             new KeyValuePair<string, object?>("entity", entity),
             new KeyValuePair<string, object?>("outcome", outcome));

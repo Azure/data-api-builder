@@ -146,12 +146,12 @@ public static class ParameterEmbeddingHelper
             // EmbeddingService catch-all pattern.
             sw.Stop();
             ParameterEmbeddingTelemetryHelper.RecordFailure(
-                activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeUnexpectedError,
+                activity, entityName, ParameterEmbeddingTelemetryHelper.OUTCOME_UNEXPECTED_ERROR,
                 sw.Elapsed.TotalMilliseconds, unexpectedEx);
             logger?.LogError(
                 unexpectedEx,
                 "Auto-embed substitution failed unexpectedly for entity '{EntityName}'.",
-                entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+                entityName ?? ParameterEmbeddingTelemetryHelper.ENTITY_UNKNOWN);
             throw;
         }
     }
@@ -186,11 +186,11 @@ public static class ParameterEmbeddingHelper
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             sw.Stop();
             ParameterEmbeddingTelemetryHelper.RecordFailure(
-                activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeServiceDisabled,
+                activity, entityName, ParameterEmbeddingTelemetryHelper.OUTCOME_SERVICE_DISABLED,
                 sw.Elapsed.TotalMilliseconds, disabledEx);
             logger?.LogError(
                 "Auto-embed substitution failed for entity '{EntityName}': embedding service is not available.",
-                entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+                entityName ?? ParameterEmbeddingTelemetryHelper.ENTITY_UNKNOWN);
             throw disabledEx;
         }
 
@@ -234,7 +234,7 @@ public static class ParameterEmbeddingHelper
                         logger?.LogDebug(
                             "Auto-embed parameter '{ParamName}' on entity '{EntityName}': caller omitted, using configured default.",
                             configParam.Name,
-                            entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+                            entityName ?? ParameterEmbeddingTelemetryHelper.ENTITY_UNKNOWN);
                     }
                     else
                     {
@@ -242,7 +242,7 @@ public static class ParameterEmbeddingHelper
                         logger?.LogDebug(
                             "Auto-embed parameter '{ParamName}' on entity '{EntityName}': default is empty, passing empty string.",
                             configParam.Name,
-                            entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+                            entityName ?? ParameterEmbeddingTelemetryHelper.ENTITY_UNKNOWN);
                         continue;
                     }
                 }
@@ -262,12 +262,12 @@ public static class ParameterEmbeddingHelper
             {
                 sw.Stop();
                 ParameterEmbeddingTelemetryHelper.RecordFailure(
-                    activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeNonString,
+                    activity, entityName, ParameterEmbeddingTelemetryHelper.OUTCOME_NON_STRING,
                     sw.Elapsed.TotalMilliseconds, nonStringEx);
                 logger?.LogWarning(
                     "Auto-embed parameter '{ParamName}' on entity '{EntityName}' rejected: {Reason}",
                     configParam.Name,
-                    entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown,
+                    entityName ?? ParameterEmbeddingTelemetryHelper.ENTITY_UNKNOWN,
                     nonStringEx.Message);
                 throw;
             }
@@ -281,7 +281,7 @@ public static class ParameterEmbeddingHelper
                 logger?.LogDebug(
                     "Auto-embed parameter '{ParamName}' on entity '{EntityName}': value is null/empty/whitespace, passing empty string to sproc.",
                     configParam.Name,
-                    entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+                    entityName ?? ParameterEmbeddingTelemetryHelper.ENTITY_UNKNOWN);
                 continue;
             }
 
@@ -301,7 +301,7 @@ public static class ParameterEmbeddingHelper
         logger?.LogDebug(
             "Substituting {Count} auto-embed parameter(s) for entity '{EntityName}'.",
             embedRequests.Count,
-            entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown);
+            entityName ?? ParameterEmbeddingTelemetryHelper.ENTITY_UNKNOWN);
 
         // Enrich the activity span with parameter names and provider/model metadata
         // so trace viewers show which params were embedded and which provider was used.
@@ -341,11 +341,11 @@ public static class ParameterEmbeddingHelper
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             sw.Stop();
             ParameterEmbeddingTelemetryHelper.RecordFailure(
-                activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeBatchFailure,
+                activity, entityName, ParameterEmbeddingTelemetryHelper.OUTCOME_BATCH_FAILURE,
                 sw.Elapsed.TotalMilliseconds, batchEx);
             logger?.LogError(
                 "Embedding batch failed for entity '{EntityName}', parameter(s) {ParamNames}.{ProviderDetail}",
-                entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown,
+                entityName ?? ParameterEmbeddingTelemetryHelper.ENTITY_UNKNOWN,
                 paramNames,
                 providerDetail);
             throw batchEx;
@@ -360,7 +360,7 @@ public static class ParameterEmbeddingHelper
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             sw.Stop();
             ParameterEmbeddingTelemetryHelper.RecordFailure(
-                activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeProviderInvalidResponse,
+                activity, entityName, ParameterEmbeddingTelemetryHelper.OUTCOME_PROVIDER_INVALID_RESPONSE,
                 sw.Elapsed.TotalMilliseconds, lengthEx);
             throw lengthEx;
         }
@@ -381,7 +381,7 @@ public static class ParameterEmbeddingHelper
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                 sw.Stop();
                 ParameterEmbeddingTelemetryHelper.RecordFailure(
-                    activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeProviderInvalidResponse,
+                    activity, entityName, ParameterEmbeddingTelemetryHelper.OUTCOME_PROVIDER_INVALID_RESPONSE,
                     sw.Elapsed.TotalMilliseconds, emptyVecEx);
                 throw emptyVecEx;
             }
@@ -413,7 +413,7 @@ public static class ParameterEmbeddingHelper
         logger?.LogDebug(
             "Substituted {Count} auto-embed parameter(s) for entity '{EntityName}' in {DurationMs}ms.",
             embedRequests.Count,
-            entityName ?? ParameterEmbeddingTelemetryHelper.EntityUnknown,
+            entityName ?? ParameterEmbeddingTelemetryHelper.ENTITY_UNKNOWN,
             sw.Elapsed.TotalMilliseconds);
     }
 

@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 /// </summary>
 public sealed class NullEmbeddingService : IEmbeddingService
 {
-    private const string DisabledMessage =
+    private const string DISABLED_MESSAGE =
         "Embedding service is not configured. Set runtime.embeddings.enabled = true in dab-config.json to enable embeddings.";
 
     /// <summary>
@@ -47,17 +47,17 @@ public sealed class NullEmbeddingService : IEmbeddingService
 
     /// <inheritdoc/>
     public Task<EmbeddingResult> TryEmbedAsync(string text, CancellationToken cancellationToken = default)
-        => Task.FromResult(new EmbeddingResult(Success: false, Embedding: null, ErrorMessage: DisabledMessage));
+        => Task.FromResult(new EmbeddingResult(Success: false, Embedding: null, ErrorMessage: DISABLED_MESSAGE));
 
     /// <inheritdoc/>
     public Task<EmbeddingBatchResult> TryEmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
-        => Task.FromResult(new EmbeddingBatchResult(Success: false, Embeddings: null, ErrorMessage: DisabledMessage));
+        => Task.FromResult(new EmbeddingBatchResult(Success: false, Embeddings: null, ErrorMessage: DISABLED_MESSAGE));
 
     /// <inheritdoc/>
     public Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken = default)
-        => throw new InvalidOperationException(DisabledMessage);
+        => throw new InvalidOperationException(DISABLED_MESSAGE);
 
     /// <inheritdoc/>
     public Task<float[][]> EmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
-        => throw new InvalidOperationException(DisabledMessage);
+        => throw new InvalidOperationException(DISABLED_MESSAGE);
 }

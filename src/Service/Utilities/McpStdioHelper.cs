@@ -83,17 +83,7 @@ namespace Azure.DataApiBuilder.Service.Utilities
             IEnumerable<Mcp.Model.IMcpTool> tools =
                 host.Services.GetServices<Mcp.Model.IMcpTool>();
 
-            foreach (Mcp.Model.IMcpTool tool in tools)
-            {
-                // Initialize DB-metadata-based schema for custom tools before registration,
-                // so GetToolMetadata() returns the enriched schema from the start.
-                if (tool is Mcp.Core.DynamicCustomTool customTool)
-                {
-                    customTool.InitializeMetadata(host.Services);
-                }
-
-                registry.RegisterTool(tool);
-            }
+            Mcp.Core.McpToolRegistry.InitializeAndRegisterTools(tools, registry, host.Services);
 
             IHostApplicationLifetime lifetime =
                 host.Services.GetRequiredService<IHostApplicationLifetime>();

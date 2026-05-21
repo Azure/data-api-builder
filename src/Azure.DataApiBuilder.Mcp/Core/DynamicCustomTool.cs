@@ -81,6 +81,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="serviceProvider">The application service provider with initialized metadata providers.</param>
         public void InitializeMetadata(IServiceProvider serviceProvider)
         {
+            ArgumentNullException.ThrowIfNull(serviceProvider);
             _cachedInputSchema = BuildInputSchemaFromDbMetadata(serviceProvider);
         }
 
@@ -453,10 +454,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         /// <summary>
         /// Builds a description string for a parameter using DB metadata.
+        /// Uses ParameterDefinition.Description when available, falling back to generic text.
         /// </summary>
         private static string BuildParameterDescription(string paramName, ParameterDefinition paramDef)
         {
-            string description = $"Parameter {paramName}";
+            string description = paramDef.Description ?? $"Parameter {paramName}";
             if (paramDef.HasConfigDefault)
             {
                 description += $" (default: {paramDef.ConfigDefaultValue})";

@@ -733,8 +733,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// </summary>
         private static JsonElement ParseSchemaProperties(ModelContextProtocol.Protocol.Tool metadata)
         {
-            JsonDocument schemaObj = JsonDocument.Parse(metadata.InputSchema.GetRawText());
-            return schemaObj.RootElement.GetProperty("properties");
+            return metadata.InputSchema.GetProperty("properties");
         }
 
         /// <summary>

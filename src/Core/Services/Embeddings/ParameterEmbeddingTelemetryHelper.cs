@@ -46,6 +46,7 @@ public static class ParameterEmbeddingTelemetryHelper
     public const string OutcomeEmptyInput = "empty_input";
     public const string OutcomeNonString = "non_string";
     public const string OutcomeBatchFailure = "batch_failure";
+    public const string OutcomeProviderInvalidResponse = "provider_invalid_response";
     public const string OutcomeServiceDisabled = "service_disabled";
     public const string OutcomeUnexpectedError = "unexpected_error";
 

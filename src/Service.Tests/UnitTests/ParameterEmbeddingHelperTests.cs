@@ -617,11 +617,12 @@ public class ParameterEmbeddingHelperTests
     }
 
     /// <summary>
-    /// A failed batch result (Success: false) should throw a 500 InternalServerError
+    /// A failed batch result (Success: false) should throw a 502 BadGateway
     /// listing all involved param names so the caller can identify request context.
+    /// 502 reflects an upstream provider failure (e.g., quota, auth, model not found).
     /// </summary>
     [TestMethod]
-    public async Task BatchFailure_Throws500_WithAllParamNames()
+    public async Task BatchFailure_Throws502_WithAllParamNames()
     {
         Dictionary<string, object?> resolvedParams = new() { { "p1", "a" }, { "p2", "b" } };
         List<ParameterMetadata> configParams = new() { EmbedParam("p1"), EmbedParam("p2") };
@@ -633,18 +634,18 @@ public class ParameterEmbeddingHelperTests
             () => ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
                 resolvedParams, configParams, _mockService.Object, CancellationToken.None));
 
-        Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+        Assert.AreEqual(HttpStatusCode.BadGateway, ex.StatusCode);
         StringAssert.Contains(ex.Message, "p1");
         StringAssert.Contains(ex.Message, "p2");
     }
 
     /// <summary>
-    /// A successful batch result with the wrong embedding count (service contract violation)
-    /// should throw a 500 InternalServerError mentioning the count mismatch, instead of
-    /// silently using the wrong vectors.
+    /// A successful batch result with the wrong embedding count (provider contract violation)
+    /// should throw a 502 BadGateway mentioning the count mismatch, instead of
+    /// silently using the wrong vectors. 502 reflects an invalid provider response.
     /// </summary>
     [TestMethod]
-    public async Task BatchLengthMismatch_Throws500()
+    public async Task BatchLengthMismatch_Throws502()
     {
         Dictionary<string, object?> resolvedParams = new() { { "p1", "a" }, { "p2", "b" } };
         List<ParameterMetadata> configParams = new() { EmbedParam("p1"), EmbedParam("p2") };
@@ -655,17 +656,18 @@ public class ParameterEmbeddingHelperTests
             () => ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
                 resolvedParams, configParams, _mockService.Object, CancellationToken.None));
 
-        Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+        Assert.AreEqual(HttpStatusCode.BadGateway, ex.StatusCode);
         StringAssert.Contains(ex.Message, "1");
         StringAssert.Contains(ex.Message, "2");
     }
 
     /// <summary>
     /// A batch with one valid and one empty embedding (e.g., empty array slot) should
-    /// throw a 500 naming the specific param whose embedding was empty.
+    /// throw a 502 naming the specific param whose embedding was empty.
+    /// 502 reflects an invalid provider response.
     /// </summary>
     [TestMethod]
-    public async Task IndividualEmbeddingEmpty_Throws500_NamingFailedParam()
+    public async Task IndividualEmbeddingEmpty_Throws502_NamingFailedParam()
     {
         Dictionary<string, object?> resolvedParams = new() { { "p1", "a" }, { "p2", "b" } };
         List<ParameterMetadata> configParams = new() { EmbedParam("p1"), EmbedParam("p2") };
@@ -676,7 +678,7 @@ public class ParameterEmbeddingHelperTests
             () => ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
                 resolvedParams, configParams, _mockService.Object, CancellationToken.None));
 
-        Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+        Assert.AreEqual(HttpStatusCode.BadGateway, ex.StatusCode);
         StringAssert.Contains(ex.Message, "p2");
     }
 
@@ -859,6 +861,49 @@ public class ParameterEmbeddingHelperTests
         Assert.AreEqual("batch_failure", captured.GetTagItem("outcome"));
         Assert.AreEqual("DataApiBuilderException", captured.GetTagItem("error.type"));
         StringAssert.Contains((string)captured.GetTagItem("error.message")!, "Quota exceeded");
+    }
+
+    /// <summary>
+    /// When the embedding provider returns a malformed response (here: an empty vector
+    /// for one of the requested params), the helper must emit an Activity span with
+    /// outcome=provider_invalid_response — a distinct outcome from batch_failure
+    /// so operators can differentiate "provider down/erroring" from "provider returned
+    /// bad data" in dashboards.
+    /// </summary>
+    [TestMethod]
+    public async Task FailedSubstitution_InvalidProviderResponse_EmitsProviderInvalidResponseOutcome()
+    {
+        // Arrange — second embedding is empty, simulating a malformed provider response
+        Dictionary<string, object?> resolvedParams = new() { { "p1", "a" }, { "p2", "b" } };
+        List<ParameterMetadata> configParams = new() { EmbedParam("p1"), EmbedParam("p2") };
+        SetupBatch(new[] { 0.1f }, System.Array.Empty<float>());
+
+        Activity? captured = null;
+        using ActivityListener listener = new()
+        {
+            ShouldListenTo = source => source.Name == "DataApiBuilder",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = a =>
+            {
+                if (a.OperationName == "AutoEmbed.Substitute")
+                {
+                    captured = a;
+                }
+            }
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        // Act + Assert (throws)
+        await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
+            () => ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+                resolvedParams, configParams, _mockService.Object, CancellationToken.None,
+                entityName: "SearchProducts"));
+
+        // Assert activity
+        Assert.IsNotNull(captured, "Expected an AutoEmbed.Substitute activity to be emitted on failure");
+        Assert.AreEqual(ActivityStatusCode.Error, captured.Status);
+        Assert.AreEqual("provider_invalid_response", captured.GetTagItem("outcome"));
+        Assert.AreEqual("DataApiBuilderException", captured.GetTagItem("error.type"));
     }
 
     /// <summary>

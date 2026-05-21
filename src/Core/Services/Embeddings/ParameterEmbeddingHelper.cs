@@ -337,7 +337,7 @@ public static class ParameterEmbeddingHelper
                 : $" Provider error: {batchResult.ErrorMessage}";
             DataApiBuilderException batchEx = new(
                 message: $"Failed to generate embeddings for parameter(s) {paramNames}.{providerDetail}",
-                statusCode: HttpStatusCode.InternalServerError,
+                statusCode: HttpStatusCode.BadGateway,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             sw.Stop();
             ParameterEmbeddingTelemetryHelper.RecordFailure(
@@ -356,11 +356,11 @@ public static class ParameterEmbeddingHelper
         {
             DataApiBuilderException lengthEx = new(
                 message: $"Embedding service returned {batchResult.Embeddings.Length} embeddings but {embedRequests.Count} were requested.",
-                statusCode: HttpStatusCode.InternalServerError,
+                statusCode: HttpStatusCode.BadGateway,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             sw.Stop();
             ParameterEmbeddingTelemetryHelper.RecordFailure(
-                activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeBatchFailure,
+                activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeProviderInvalidResponse,
                 sw.Elapsed.TotalMilliseconds, lengthEx);
             throw lengthEx;
         }
@@ -377,11 +377,11 @@ public static class ParameterEmbeddingHelper
             {
                 DataApiBuilderException emptyVecEx = new(
                     message: $"Embedding service returned an empty vector for parameter '{embedRequests[i].paramName}'.",
-                    statusCode: HttpStatusCode.InternalServerError,
+                    statusCode: HttpStatusCode.BadGateway,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                 sw.Stop();
                 ParameterEmbeddingTelemetryHelper.RecordFailure(
-                    activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeBatchFailure,
+                    activity, entityName, ParameterEmbeddingTelemetryHelper.OutcomeProviderInvalidResponse,
                     sw.Elapsed.TotalMilliseconds, emptyVecEx);
                 throw emptyVecEx;
             }

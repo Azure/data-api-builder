@@ -364,10 +364,15 @@ namespace Azure.DataApiBuilder.Mcp.Core
             List<string> requiredParameters = new();
             foreach ((string paramName, ParameterDefinition paramDef) in spDefinition.Parameters)
             {
+                // Surface the auto-embed indicator in the description when the config marks
+                // this parameter as auto-embed:true. DB metadata doesn't carry this flag, so
+                // we cross-reference the config-side ParameterMetadata.
+                bool isAutoEmbed = _entity.Source.Parameters?.FirstOrDefault(p => p.Name == paramName)?.AutoEmbed ?? false;
+
                 Dictionary<string, object> paramSchema = new()
                 {
                     ["type"] = MapSystemTypeToJsonSchemaType(paramDef.SystemType),
-                    ["description"] = BuildParameterDescription(paramName, paramDef)
+                    ["description"] = BuildParameterDescription(paramName, paramDef, isAutoEmbed)
                 };
 
                 properties[paramName] = paramSchema;
@@ -413,10 +418,21 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 foreach (ParameterMetadata param in _entity.Source.Parameters)
                 {
+                    // Note: Parameter type information is not available in ParameterMetadata,
+                    // so we allow multiple JSON types to match the behavior of GetParameterValue
+                    // that handles string, number, boolean, and null values. Runtime
+                    // validation (ParameterEmbeddingHelper for auto-embed, SQL Server for the
+                    // rest) rejects values that the sproc parameter can't accept.
+                    string description = param.Description ?? $"Parameter {param.Name}";
+                    if (param.AutoEmbed)
+                    {
+                        description += " (auto-embed: DAB converts this value to an embedding before execution)";
+                    }
+
                     properties[param.Name] = new Dictionary<string, object>
                     {
                         ["type"] = new[] { "string", "number", "boolean", "null" },
-                        ["description"] = param.Description ?? $"Parameter {param.Name}"
+                        ["description"] = description
                     };
 
                     // A parameter is required unless config marks it optional or supplies a default.
@@ -497,13 +513,21 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <summary>
         /// Builds a description string for a parameter using DB metadata.
         /// Uses ParameterDefinition.Description when available, falling back to generic text.
+        /// When <paramref name="isAutoEmbed"/> is true, appends the auto-embed indicator
+        /// so MCP clients see that DAB will convert the value to an embedding before
+        /// executing the stored procedure.
         /// </summary>
-        private static string BuildParameterDescription(string paramName, ParameterDefinition paramDef)
+        private static string BuildParameterDescription(string paramName, ParameterDefinition paramDef, bool isAutoEmbed = false)
         {
             string description = paramDef.Description ?? $"Parameter {paramName}";
             if (paramDef.HasConfigDefault)
             {
                 description += $" (default: {paramDef.ConfigDefaultValue})";
+            }
+
+            if (isAutoEmbed)
+            {
+                description += " (auto-embed: DAB converts this value to an embedding before execution)";
             }
 
             return description;

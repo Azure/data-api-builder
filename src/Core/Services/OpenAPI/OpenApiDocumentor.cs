@@ -356,7 +356,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         entityName: entityName,
                         sourceDefinition: sourceDefinition,
                         configuredRestOperations: configuredRestOperations,
-                        tags: tags);
+                        tags: tags,
+                        configParams: entity.Source.Parameters);
 
                     if (operations.Count > 0)
                     {
@@ -558,12 +559,16 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="configuredRestOperations">Collection of which operations should be created for the stored procedure. </param>
         /// <param name="tags">Tags denoting how the operations should be categorized.
         /// Typically one tag value, the entity's REST path.</param>
+        /// <param name="configParams">Optional config-level parameter metadata; when provided,
+        /// per-parameter properties such as <c>auto-embed</c> are surfaced in the generated
+        /// OpenAPI parameter descriptions.</param>
         /// <returns>Collection of operation types and associated definitions.</returns>
         private Dictionary<OperationType, OpenApiOperation> CreateStoredProcedureOperations(
             string entityName,
             SourceDefinition sourceDefinition,
             Dictionary<OperationType, bool> configuredRestOperations,
-            List<OpenApiTag> tags)
+            List<OpenApiTag> tags,
+            List<ParameterMetadata>? configParams = null)
         {
             Dictionary<OperationType, OpenApiOperation> openApiPathItemOperations = new();
             string spRequestObjectSchemaName = entityName + SP_REQUEST_SUFFIX;
@@ -572,7 +577,7 @@ namespace Azure.DataApiBuilder.Core.Services
             if (configuredRestOperations[OperationType.Get])
             {
                 OpenApiOperation getOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
-                AddStoredProcedureInputParameters(getOperation, (StoredProcedureDefinition)sourceDefinition);
+                AddStoredProcedureInputParameters(getOperation, (StoredProcedureDefinition)sourceDefinition, configParams);
                 getOperation.Responses.Add(
                     HttpStatusCode.OK.ToString("D"),
                     CreateOpenApiResponse(
@@ -681,15 +686,32 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// This method adds the input parameters from the stored procedure definition to the OpenApi operation parameters.
         /// A input parameter will be marked REQUIRED if default value is not available.
+        /// When <paramref name="configParams"/> is provided, the description for an
+        /// <c>auto-embed: true</c> parameter is augmented with the auto-embed indicator
+        /// (mirroring the POST body path in <see cref="CreateSpRequestComponentSchema"/>).
         /// </summary>
-        private static void AddStoredProcedureInputParameters(OpenApiOperation operation, StoredProcedureDefinition spDefinition)
+        /// <remarks>
+        /// Internal (not private) so tests can validate the description-augmentation logic
+        /// without bootstrapping the full <see cref="OpenApiDocumentor"/> + DI graph.
+        /// Accessibility is controlled by <c>InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")</c>.
+        /// </remarks>
+        internal static void AddStoredProcedureInputParameters(
+            OpenApiOperation operation,
+            StoredProcedureDefinition spDefinition,
+            List<ParameterMetadata>? configParams = null)
         {
+            const string BaseDescription = "Input parameter for stored procedure arguments";
+            const string AutoEmbedSuffix = " (auto-embed: DAB converts this value to an embedding before execution)";
+
             foreach ((string paramKey, ParameterDefinition parameterDefinition) in spDefinition.Parameters)
             {
+                bool isAutoEmbed = configParams?.FirstOrDefault(p => p.Name == paramKey)?.AutoEmbed ?? false;
+                string description = isAutoEmbed ? BaseDescription + AutoEmbedSuffix : BaseDescription;
+
                 operation.Parameters.Add(
                     GetOpenApiQueryParameter(
                         name: paramKey,
-                        description: "Input parameter for stored procedure arguments",
+                        description: description,
                         required: false,
                         type: TypeHelper.GetJsonDataTypeFromSystemType(parameterDefinition.SystemType).ToString().ToLower()
                     )

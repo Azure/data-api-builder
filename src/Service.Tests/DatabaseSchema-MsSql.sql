@@ -399,7 +399,7 @@ CREATE TABLE default_books(
 
 CREATE TABLE [Order Items](
     id INT PRIMARY KEY,
-    productname VARCHAR(100),
+    productname VARCHAR(100)
 );
 
 ALTER TABLE books

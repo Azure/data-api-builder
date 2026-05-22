@@ -5762,7 +5762,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// Ensures that autoentities are properly generated into in-memory entities when entities have unusual elements such as non-default schemas or spaces in their names.
         /// </summary>
         /// <param name="includePattern">The pattern to include for autoentities</param>
-        /// <param name="isPatternFoo">Boolean that indicates if the pattern is for the foo schema</param>
+        /// <param name="patternType">Integer that indicates which input pattern is being used</param>
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]

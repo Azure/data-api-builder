@@ -12,15 +12,17 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 
 /// <summary>
-/// Substitutes text values with embedding vectors for stored procedure parameters marked with auto-embed:true.
+/// Substitutes text values with embedding vectors for stored procedure parameters
+/// marked with auto-embed:true.
 ///
-/// Called before SqlExecuteStructure construction — the substituted values flow through
-/// the normal String type conversion path (thanks to the metadata type override that
-/// changes VECTOR params from Byte[] to String during startup).
+/// Called before SqlExecuteStructure construction. DAB acts as a pure string-substitution
+/// layer: the sproc parameter must be a string-compatible type (NVARCHAR/VARCHAR), and
+/// the sproc itself is responsible for any CAST(... AS VECTOR(N)) needed for vector
+/// arithmetic.
 ///
 /// Example:
-///   Input:  resolvedParams["query_vector"] = "wireless headphones"  (user's text)
-///   Output: resolvedParams["query_vector"] = "[0.012,-0.045,...,0.083]"  (vector JSON string)
+///   Input:  resolvedParams["query_text"] = "wireless headphones"  (user's text)
+///   Output: resolvedParams["query_text"] = "[0.012,-0.045,...,0.083]"  (vector JSON string)
 ///
 /// Telemetry: when the helper does meaningful work (has at least one auto-embed param
 /// configured), it emits an Activity span and metrics via
@@ -386,7 +388,9 @@ public static class ParameterEmbeddingHelper
                 throw emptyVecEx;
             }
 
-            // Serialize float[] to JSON string that Azure SQL accepts as VECTOR
+            // Serialize float[] to a JSON array string (e.g., "[0.012,-0.045,0.083]"). The sproc
+            // receives this as a plain string and is responsible for any conversion to a native
+            // vector type (e.g., CAST(@param AS VECTOR(N)) on Azure SQL).
             // Example: float[] { 0.012f, -0.045f, 0.083f } → "[0.012,-0.045,0.083]"
             //
             // Uses InvariantCulture to prevent European locales from using comma as decimal separator
@@ -402,9 +406,9 @@ public static class ParameterEmbeddingHelper
                 + string.Join(",", embedding.Select(f => f.ToString("G9", CultureInfo.InvariantCulture)))
                 + "]";
 
-            // Replace the text value with the vector string in-place
-            // SqlExecuteStructure will see this as a String value (thanks to metadata override)
-            // and pass it through to SQL, which auto-casts to VECTOR(N)
+            // Replace the text value with the vector JSON string in-place. SqlExecuteStructure
+            // sees this as a plain String value and passes it through to the sproc, which is
+            // responsible for any conversion to a native vector type if needed.
             resolvedParams[embedRequests[i].paramName] = vectorJson;
         }
 
@@ -434,9 +438,10 @@ public static class ParameterEmbeddingHelper
     /// Example FAIL: { "query_vector": {"foo":"bar"} } → JsonElement(Object) → 400 "must be a string"
     /// Example PASS: { "query_vector": "headphones" } → JsonElement(String) or string → returns text
     ///
-    /// Note: GraphQL is automatically protected since the embed param is exposed as
-    /// GraphQL String type (via Stage 2 metadata override) — non-strings are rejected
-    /// by the GraphQL parser before reaching this code.
+    /// Note: GraphQL is automatically protected since the sproc param must be a
+    /// string-compatible type (validated at startup), and so the embed param is exposed
+    /// as a GraphQL String — non-strings are rejected by the GraphQL parser before
+    /// reaching this code.
     /// </summary>
     private static string? ExtractTextValue(string paramName, object? value)
     {

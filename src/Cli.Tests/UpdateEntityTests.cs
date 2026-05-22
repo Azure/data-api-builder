@@ -1856,6 +1856,57 @@ namespace Cli.Tests
                 "param3 should default to AutoEmbed=false (not specified in auto-embed list)");
         }
 
+        /// <summary>
+        /// Regression matrix for the dab-update auto-embed merge. The previous merge used
+        /// `newParam.AutoEmbed || match.AutoEmbed`, which made `true` sticky — running
+        /// `dab update entity --parameters.auto-embed:false` could not disable auto-embed on
+        /// an existing parameter. Covers every meaningful (existing × CLI) combination via
+        /// a single data-driven test:
+        ///   - existing=true,  CLI="false"   → false  (the fix — disables the stuck-true bug)
+        ///   - existing=true,  CLI omitted   → true   (preserve existing)
+        ///   - existing=false, CLI="true"    → true   (enable)
+        ///   - existing=false, CLI omitted   → false  (preserve existing)
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, "false", false, DisplayName = "existing=true, CLI=false → false (the bug fix)")]
+        [DataRow(true, null, true, DisplayName = "existing=true, CLI=omitted → true (preserve)")]
+        [DataRow(false, "true", true, DisplayName = "existing=false, CLI=true → true (enable)")]
+        [DataRow(false, null, false, DisplayName = "existing=false, CLI=omitted → false (preserve)")]
+        public void UpdateEntity_AutoEmbedMerge(bool initialAutoEmbed, string? cliAutoEmbed, bool expectedAutoEmbed)
+        {
+            string[]? cliAutoEmbedArr = cliAutoEmbed is null ? null : new[] { cliAutoEmbed };
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                permissions: new string[] { "anonymous", "execute" },
+                parametersNameOverride: new[] { "param1" },
+                parametersAutoEmbedOverride: cliAutoEmbedArr);
+
+            string initialAutoEmbedLiteral = initialAutoEmbed ? "true" : "false";
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, $@"{{
+                ""entities"": {{
+                    ""MyEntity"": {{
+                        ""source"": {{
+                            ""type"": ""stored-procedure"",
+                            ""object"": ""dbo.SearchProducts"",
+                            ""parameters"": [
+                                {{ ""name"": ""param1"", ""auto-embed"": {initialAutoEmbedLiteral} }}
+                            ]
+                        }},
+                        ""permissions"": [
+                            {{ ""role"": ""anonymous"", ""actions"": [""execute""] }}
+                        ]
+                    }}
+                }}
+            }}");
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedConfig));
+
+            Entity entity = updatedConfig.Entities["MyEntity"];
+            Assert.IsNotNull(entity.Source.Parameters);
+            Assert.AreEqual(expectedAutoEmbed, entity.Source.Parameters[0].AutoEmbed,
+                $"Initial AutoEmbed={initialAutoEmbed}, CLI input='{cliAutoEmbed ?? "(omitted)"}', expected={expectedAutoEmbed}.");
+        }
+
         #endregion Auto-Embed CLI Tests
     }
 }

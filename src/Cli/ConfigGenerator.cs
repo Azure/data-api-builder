@@ -2754,6 +2754,13 @@ namespace Cli
             // Support for new parameter format
             bool hasOldParams = options.SourceParameters is not null && options.SourceParameters.Any();
             bool hasNewParams = options.ParametersNameCollection is not null && options.ParametersNameCollection.Any();
+            // Track whether the user supplied --parameters.auto-embed at all. If not, the
+            // merge logic below preserves existing AutoEmbed values instead of overriding
+            // them with the CLI build's default `false`. Without this flag, the `||` merge
+            // (now replaced) couldn't distinguish "user supplied false" from "user supplied
+            // nothing" — both produced AutoEmbed=false in the new ParameterMetadata, so
+            // `dab update --parameters.auto-embed:false` was silently dropped.
+            bool autoEmbedFlagSupplied = options.ParametersAutoEmbedCollection is not null && options.ParametersAutoEmbedCollection.Any();
 
             // If SourceType provided by user is not null, update type
             if (options.SourceType is not null)
@@ -2889,7 +2896,7 @@ namespace Cli
                                 Description = newParam.Description != null ? newParam.Description : match.Description,
                                 Required = newParam.Required != null ? newParam.Required : match.Required,
                                 Default = newParam.Default != null ? newParam.Default : match.Default,
-                                AutoEmbed = newParam.AutoEmbed || match.AutoEmbed
+                                AutoEmbed = autoEmbedFlagSupplied ? newParam.AutoEmbed : match.AutoEmbed
                             });
                         }
                         else

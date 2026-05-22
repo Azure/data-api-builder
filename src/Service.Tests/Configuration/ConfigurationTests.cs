@@ -5759,16 +5759,17 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
-        /// Ensures that autoentities are properly generated into in-memory entities when entities have non-default schemas.
+        /// Ensures that autoentities are properly generated into in-memory entities when entities have unusual elements such as non-default schemas or spaces in their names.
         /// </summary>
         /// <param name="includePattern">The pattern to include for autoentities</param>
         /// <param name="isPatternFoo">Boolean that indicates if the pattern is for the foo schema</param>
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow("foo.%", true, DisplayName = "Test Autoentities with foo schema")]
-        [DataRow("bar.%", false, DisplayName = "Test Autoentities with bar schema")]
-        public async Task TestAutoentitiesGeneratedWithDifferentSchemas(string includePattern, bool isPatternFoo)
+        [DataRow("foo.%", 0, DisplayName = "Test Autoentities with foo schema")]
+        [DataRow("bar.%", 1, DisplayName = "Test Autoentities with bar schema")]
+        [DataRow("dbo.Order Items", 2, DisplayName = "Test Autoentities with object with spaces")]
+        public async Task TestAutoentitiesGeneratedWithUnusualElements(string includePattern, int patternType)
         {
             // Arrange
             Dictionary<string, Autoentity> autoentityMap = new()
@@ -5826,11 +5827,33 @@ type Planet @model(name:""PlanetAlias"") {
             using (HttpClient client = server.CreateClient())
             {
                 // Act
-                string path = isPatternFoo ? "foo_magazines" : "bar_magazines";
+                string path;
+                string item;
+                string expectedResponseFragment;
+                switch (patternType)
+                {
+                    case 0:
+                        path = "foo_magazines";
+                        item = "title";
+                        expectedResponseFragment = @"""title"":""Vogue""";
+                        break;
+                    case 1:
+                        path = "bar_magazines";
+                        item = "comic_name";
+                        expectedResponseFragment = @"""comic_name"":""NotVogue""";
+                        break;
+                    case 2:
+                        path = "dbo_OrderItems";
+                        item = "productname";
+                        expectedResponseFragment = @"""productname"":""Sample Product""";
+                        break;
+                    default:
+                        throw new ArgumentException("Invalid pattern type");
+                }
+
                 using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{path}");
                 using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 
-                string item = isPatternFoo ? "title" : "comic_name";
                 string graphqlQuery = $@"
                 {{
                     {path} {{
@@ -5848,8 +5871,6 @@ type Planet @model(name:""PlanetAlias"") {
                 HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
 
                 // Assert
-                string expectedResponseFragment = isPatternFoo ? @"""title"":""Vogue""" : @"""comic_name"":""NotVogue""";
-
                 // Verify REST response
                 Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, "REST request to auto-generated entity should succeed");
 

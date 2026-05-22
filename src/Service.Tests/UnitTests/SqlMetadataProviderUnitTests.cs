@@ -620,7 +620,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(new string[] { "dbo.%book%" }, new string[] { "dbo.%books%" }, "{schema}_{object}_exclude_books", new string[] { "book" }, "books")]
         [DataRow(new string[] { "dbo.%book%", "dbo.%publish%" }, new string[] { }, "{object}", new string[] { "book", "publish" }, "")]
         [DataRow(new string[] { }, new string[] { "dbo.%book%" }, "{object}s", new string[] { "" }, "book")]
-        [DataRow(new string[] { "dbo.Order Items" }, new string[] { }, "{schema}_{object}", new string[] { "OrderItems" }, "")]
         public async Task CheckAutoentitiesQuery(string[] include, string[] exclude, string name, string[] includeObject, string excludeObject)
         {
             // Arrange

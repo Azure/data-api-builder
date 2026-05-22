@@ -57,13 +57,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj">
-      <PrivateAssets Condition="'$(PRIVATIZE_ASSETS)' == 'true'">all</PrivateAssets>
+      <PrivateAssets Condition="'$(PrivatizeAssets)' == 'true'">all</PrivateAssets>
     </ProjectReference>
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj">
-      <PrivateAssets Condition="'$(PRIVATIZE_ASSETS)' == 'true'">all</PrivateAssets>
+      <PrivateAssets Condition="'$(PrivatizeAssets)' == 'true'">all</PrivateAssets>
     </ProjectReference>
     <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj">
-      <PrivateAssets Condition="'$(PRIVATIZE_ASSETS)' == 'true'">all</PrivateAssets>
+      <PrivateAssets Condition="'$(PrivatizeAssets)' == 'true'">all</PrivateAssets>
     </ProjectReference>
   </ItemGroup>
 

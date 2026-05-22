@@ -110,27 +110,26 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             (McpStdioServer server, MemoryStream memoryStream, McpStdoutWriter stdoutWriter) = CreateServerWithCapturedOutput();
 
             // Use a real CallToolResult (the actual type returned by every tool's error path)
-            // to match exactly what HandleCallTool receives from McpTelemetryHelper.
+            // to match exactly what HandleCallToolAsync receives from McpTelemetryHelper.
             CallToolResult callToolResult = new()
             {
                 IsError = true,
                 Content = new List<ContentBlock> { new TextContentBlock { Text = "{\"status\":\"error\"}" } }
             };
 
-            // Replicate the HandleCallTool logic: coerce content blocks then conditionally
-            // include isError only when true — this is the exact code path being tested.
-            object[] contentBlocks = InvokeCoerceToMcpContentBlocks(callToolResult);
-            bool? isError = callToolResult.IsError;
-
             JsonElement id = JsonDocument.Parse("1").RootElement;
-            if (isError == true)
-            {
-                InvokeWriteResult(server, id, new { content = contentBlocks, isError });
-            }
-            else
-            {
-                InvokeWriteResult(server, id, new { content = contentBlocks });
-            }
+            MethodInfo? handleCallToolAsync = typeof(McpStdioServer).GetMethod(
+                "HandleCallToolAsync",
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                binder: null,
+                types: new[] { typeof(JsonElement), typeof(CallToolResult) },
+                modifiers: null);
+
+            Assert.IsNotNull(handleCallToolAsync, "Expected to find McpStdioServer.HandleCallToolAsync(JsonElement, CallToolResult).");
+
+            object? handleCallTask = handleCallToolAsync.Invoke(server, new object[] { id, callToolResult });
+            Assert.IsNotNull(handleCallTask, "HandleCallToolAsync should return a Task.");
+            ((System.Threading.Tasks.Task)handleCallTask).GetAwaiter().GetResult();
 
             string wireOutput = ReadCapturedOutput(stdoutWriter, memoryStream);
 

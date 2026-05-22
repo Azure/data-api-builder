@@ -39,11 +39,11 @@ switch (aspireDB)
 
         if (sqlDbContainer is null)
         {
-            mssqlService.WithEnvironment("ConnectionStrings__Database", databaseConnectionString);
+            mssqlService.WithEnvironment("DAB_CONNSTRING", databaseConnectionString);
         }
         else
         {
-            mssqlService.WithEnvironment("ConnectionStrings__Database", sqlDbContainer)
+            mssqlService.WithEnvironment("DAB_CONNSTRING", sqlDbContainer)
                 .WaitFor(sqlDbContainer);
         }
 
@@ -79,11 +79,11 @@ switch (aspireDB)
 
         if (postgresDB is null)
         {
-            pgService.WithEnvironment("ConnectionStrings__Database", databaseConnectionString);
+            pgService.WithEnvironment("DAB_CONNSTRING", databaseConnectionString);
         }
         else
         {
-            pgService.WithEnvironment("ConnectionStrings__Database", postgresDB)
+            pgService.WithEnvironment("DAB_CONNSTRING", postgresDB)
                 .WaitFor(postgresDB);
         }
 

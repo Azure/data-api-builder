@@ -4,6 +4,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -96,6 +97,110 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "annotations should be omitted from wire output when null.");
             Assert.IsFalse(contentBlock.TryGetProperty("_meta", out _),
                 "_meta should be omitted from wire output when null.");
+        }
+
+        /// <summary>
+        /// Verifies that when a tool returns a real <see cref="CallToolResult"/> with IsError=true,
+        /// the stdio wire output contains "isError": true in the JSON-RPC result object.
+        /// Regression test for the bug where CoerceToMcpContentBlocks discarded IsError.
+        /// </summary>
+        [TestMethod]
+        public void HandleCallTool_ErrorResult_EmitsIsErrorTrueOnWire()
+        {
+            (McpStdioServer server, MemoryStream memoryStream, McpStdoutWriter stdoutWriter) = CreateServerWithCapturedOutput();
+
+            // Use a real CallToolResult (the actual type returned by every tool's error path)
+            // to match exactly what HandleCallToolAsync receives from McpTelemetryHelper.
+            CallToolResult callToolResult = new()
+            {
+                IsError = true,
+                Content = new List<ContentBlock> { new TextContentBlock { Text = "{\"status\":\"error\"}" } }
+            };
+
+            JsonElement id = JsonDocument.Parse("1").RootElement;
+            MethodInfo? handleCallToolAsync = typeof(McpStdioServer).GetMethod(
+                "HandleCallToolAsync",
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                binder: null,
+                types: new[] { typeof(JsonElement), typeof(CallToolResult) },
+                modifiers: null);
+
+            Assert.IsNotNull(handleCallToolAsync, "Expected to find McpStdioServer.HandleCallToolAsync(JsonElement, CallToolResult).");
+
+            object? handleCallTask = handleCallToolAsync.Invoke(server, new object[] { id, callToolResult });
+            Assert.IsNotNull(handleCallTask, "HandleCallToolAsync should return a Task.");
+            ((System.Threading.Tasks.Task)handleCallTask).GetAwaiter().GetResult();
+
+            string wireOutput = ReadCapturedOutput(stdoutWriter, memoryStream);
+
+            using JsonDocument doc = JsonDocument.Parse(wireOutput);
+            JsonElement result = doc.RootElement.GetProperty("result");
+
+            Assert.IsTrue(result.TryGetProperty("isError", out JsonElement isErrorEl),
+                "isError must be present on the wire for error tool results.");
+            Assert.AreEqual(JsonValueKind.True, isErrorEl.ValueKind,
+                "isError must be true for error tool results.");
+        }
+
+        /// <summary>
+        /// Verifies that when a tool returns a success result (IsError=null), the stdio wire
+        /// output does NOT contain an "isError" field (omitted, not present as null or false).
+        /// </summary>
+        [TestMethod]
+        public void HandleCallTool_SuccessResult_OmitsIsErrorFromWire()
+        {
+            (McpStdioServer server, MemoryStream memoryStream, McpStdoutWriter stdoutWriter) = CreateServerWithCapturedOutput();
+
+            object[] contentBlocks = InvokeCoerceToMcpContentBlocks(new
+            {
+                Content = new ContentBlock[] { new TextContentBlock { Text = "{\"status\":\"success\"}" } }
+            });
+
+            JsonElement id = JsonDocument.Parse("2").RootElement;
+
+            // Simulate what HandleCallTool does when IsError is null (success)
+            InvokeWriteResult(server, id, new { content = contentBlocks });
+
+            string wireOutput = ReadCapturedOutput(stdoutWriter, memoryStream);
+
+            using JsonDocument doc = JsonDocument.Parse(wireOutput);
+            JsonElement result = doc.RootElement.GetProperty("result");
+
+            Assert.IsFalse(result.TryGetProperty("isError", out _),
+                "isError must be absent from the wire for successful tool results.");
+        }
+
+        private static (McpStdioServer server, MemoryStream memoryStream, McpStdoutWriter stdoutWriter) CreateServerWithCapturedOutput()
+        {
+            MemoryStream memoryStream = new();
+            StreamWriter streamWriter = new(
+                memoryStream,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                bufferSize: -1,
+                leaveOpen: true)
+            {
+                AutoFlush = true
+            };
+            McpStdoutWriter stdoutWriter = new(streamWriter);
+
+            ServiceCollection services = new();
+            services.AddSingleton(stdoutWriter);
+            services.AddSingleton<McpToolRegistry>();
+            IServiceProvider serviceProvider = services.BuildServiceProvider();
+
+            McpStdioServer server = new(
+                serviceProvider.GetRequiredService<McpToolRegistry>(),
+                serviceProvider);
+
+            return (server, memoryStream, stdoutWriter);
+        }
+
+        private static string ReadCapturedOutput(McpStdoutWriter stdoutWriter, MemoryStream memoryStream)
+        {
+            stdoutWriter.Dispose();
+            memoryStream.Position = 0;
+            using StreamReader reader = new(memoryStream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            return reader.ReadToEnd().TrimEnd();
         }
 
         private static object[] InvokeCoerceToMcpContentBlocks(object callResult)

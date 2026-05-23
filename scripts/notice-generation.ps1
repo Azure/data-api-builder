@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 param (
+    [Parameter (Mandatory=$true)][string] $noticeFilePath,
     [Parameter (Mandatory=$true)][string] $BuildArtifactStagingDir,
     [Parameter (Mandatory=$true)][string] $BuildSourcesDir
 )
@@ -17,12 +18,8 @@ Invoke-WebRequest $chiliCreamLicenseMetadataURL -UseBasicParsing |
 $sqlClientSNILicenseFilePath = "$BuildSourcesDir/external_licenses/Microsoft.Data.SqlClient.SNI.5.2.0.License.txt"
 $sqlClientSNILicense = Get-Content -Path $sqlClientSNILicenseFilePath -Raw
 
-# Path of notice file generated in CI/CD pipeline.
-$noticeFilePath = "$BuildSourcesDir/NOTICE.txt"
-
 # Replace erroneous copyright, using [System.IO.File] for better performance than Get-Content and Set-Content
-$content = [System.IO.File]::ReadAllText($noticeFilePath).Replace("(c) Microsoft 2023`r`n", "")
-$content = [System.IO.File]::ReadAllText($noticeFilePath).Replace("(c) Microsoft 2024`r`n", "")
+$content = [System.IO.File]::ReadAllText($noticeFilePath) -replace "\(c\) Microsoft (2023|2024)`r`n", ""
 
 # Prepare license content for writing to file.
 $sqlClientSNIComponentName = "`r`nMICROSOFT.DATA.SQLCLIENT.SNI`r`n`r`n"

@@ -517,26 +517,40 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         tool, toolName!, argsDoc, _serviceProvider, ct);
                 }
 
-                // Normalize to MCP content blocks (array). We try to pass through if a 'Content' property exists,
-                // otherwise we wrap into a single text block.
-                object[] content = CoerceToMcpContentBlocks(callResult);
-
-                // Propagate isError so MCP clients can distinguish tool errors from successes.
-                // _jsonOptions has WhenWritingNull, so a null isError is omitted from the wire.
-                bool? isError = callResult.IsError;
-                if (isError == true)
-                {
-                    WriteResult(id, new { content, isError });
-                }
-                else
-                {
-                    WriteResult(id, new { content });
-                }
+                await HandleCallToolAsync(id ?? default, callResult);
             }
             finally
             {
                 argsDoc?.Dispose();
             }
+        }
+
+        /// <summary>
+        /// Writes the JSON-RPC result for a completed tool call, propagating <see cref="CallToolResult.IsError"/>
+        /// to the wire so MCP clients can distinguish tool errors from successes.
+        /// Extracted as a separate overload so it can be exercised directly in unit tests.
+        /// </summary>
+        /// <param name="id">The request identifier used to correlate the response.</param>
+        /// <param name="callResult">The result returned by the tool execution.</param>
+        private Task HandleCallToolAsync(JsonElement id, CallToolResult callResult)
+        {
+            // Normalize to MCP content blocks (array). We try to pass through if a 'Content' property exists,
+            // otherwise we wrap into a single text block.
+            object[] content = CoerceToMcpContentBlocks(callResult);
+
+            // Propagate isError so MCP clients can distinguish tool errors from successes.
+            // _jsonOptions has WhenWritingNull, so a null isError is omitted from the wire.
+            bool? isError = callResult.IsError;
+            if (isError == true)
+            {
+                WriteResult(id, new { content, isError });
+            }
+            else
+            {
+                WriteResult(id, new { content });
+            }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>

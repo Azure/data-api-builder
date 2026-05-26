@@ -351,6 +351,7 @@ public abstract class RuntimeConfigLoader
 
         // Add EmbeddingsOptionsConverterFactory to handle embeddings configuration
         options.Converters.Add(new EmbeddingsOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new EmbeddingsCacheOptionsConverterFactory());
 
         // Only add the extensible string converter if we have replacement settings
         if (replacementSettings is not null)

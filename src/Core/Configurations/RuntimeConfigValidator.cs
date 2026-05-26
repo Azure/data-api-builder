@@ -422,6 +422,33 @@ public class RuntimeConfigValidator : IConfigValidator
             }
         }
 
+        // Validate cache configuration. JSON schema enforces value ranges at parse time, but
+        // configurations constructed programmatically (e.g. via the CLI or via hot-reload) can
+        // bypass schema validation, so the runtime must also guard against invalid values.
+        if (embeddingsOptions.Cache is not null && embeddingsOptions.IsCachingEnabled)
+        {
+            EmbeddingsCacheOptions cacheOptions = embeddingsOptions.Cache;
+
+            // ttl-hours, when explicitly provided, must be a positive integer.
+            if (cacheOptions.UserProvidedTtlHours && cacheOptions.TtlHours <= 0)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Embeddings cache 'ttl-hours' must be a positive integer. Got: {cacheOptions.TtlHours}",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            // Level-2 cache, when enabled, requires a non-empty connection string.
+            if (cacheOptions.IsLevel2Enabled
+                && string.IsNullOrWhiteSpace(cacheOptions.Level2?.ConnectionString))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Embeddings cache 'level-2.connection-string' cannot be null or empty when level-2 cache is enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+
     }
 
     /// <summary>

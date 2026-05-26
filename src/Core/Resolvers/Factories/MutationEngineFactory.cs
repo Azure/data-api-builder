@@ -37,6 +37,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         /// <summary>
         /// Initializes a new instance of the <see cref="MutationEngineFactory"/> class.
         /// </summary>
+        /// <param name="runtimeConfigProvider">Provides runtime configuration access.</param>
+        /// <param name="queryManagerFactory">Factory for database-specific query managers.</param>
+        /// <param name="metadataProviderFactory">Factory for database-specific metadata providers.</param>
+        /// <param name="cosmosClientProvider">Provider for CosmosDB client instances.</param>
+        /// <param name="queryEngineFactory">Factory for database-specific query engines.</param>
+        /// <param name="httpContextAccessor">Accessor for the current HTTP context.</param>
+        /// <param name="authorizationResolver">Resolver for authorization rules and policies.</param>
+        /// <param name="gQLFilterParser">Parser for GraphQL filter expressions.</param>
+        /// <param name="handler">Optional hot-reload event handler for runtime config changes.</param>
+        /// <param name="embeddingService">Embedding service for auto-embed parameter substitution; use NullEmbeddingService when embeddings are not configured.</param>
+        /// <param name="logger">Logger for mutation engine diagnostics.</param>
         public MutationEngineFactory(RuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
             IMetadataProviderFactory metadataProviderFactory,

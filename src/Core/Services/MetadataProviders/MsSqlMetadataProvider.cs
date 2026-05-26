@@ -240,7 +240,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         parameterDefinition.HasConfigDefault = paramMetadata.Default is not null;
                         parameterDefinition.ConfigDefaultValue = paramMetadata.Default?.ToString();
 
-                        // Phase 3: validate that auto-embed params are string-compatible.
+                        // Validate that auto-embed params are string-compatible.
                         ValidateAutoEmbedStringCompatibility(
                             paramMetadata, parameterDefinition, schemaName, storedProcedureSourceName, configParamKey);
                     }
@@ -252,7 +252,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Per spec #3331, auto-embed parameters must be string-compatible (nvarchar, varchar,
+        /// Auto-embed parameters must be string-compatible (nvarchar, varchar,
         /// etc.) so DAB can pass the embedding JSON as a plain string. The stored procedure
         /// is responsible for any CAST to VECTOR. Rejects non-string types at startup.
         /// </summary>

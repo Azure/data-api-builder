@@ -144,7 +144,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name, out string? entityName))
             {
-                // Phase 3: substitute auto-embed:true parameters with embedding vectors (GraphQL path).
+                // Substitute auto-embed:true parameters with embedding vectors (GraphQL path).
                 // Helper handles entity lookup, null-service detection, and per-param validation.
                 await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
                     parameters,
@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName)
         {
-            // Phase 3: substitute auto-embed:true parameters with embedding vectors (REST query path).
+            // Substitute auto-embed:true parameters with embedding vectors (REST query path).
             // The helper replaces text values (e.g., "wireless headphones") with vector JSON strings
             // (e.g., "[0.012,...]") before SqlExecuteStructure reads them. Helper handles entity
             // lookup, null-service detection, and per-param validation.

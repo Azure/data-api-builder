@@ -218,7 +218,7 @@ public static class ParameterEmbeddingHelper
             }
 
             // Handle auto-embed params not supplied in the request.
-            // Per spec #3331 Value behavior:
+            // Value behavior:
             //   - If the param has a configured default that resolves to a non-empty string,
             //     inject it and embed it.
             //   - If the default is null/empty/whitespace, inject "" (skip embedding).
@@ -274,7 +274,7 @@ public static class ParameterEmbeddingHelper
                 throw;
             }
 
-            // Per spec #3331 Value behavior: null, empty, and whitespace-only values
+            // Value behavior: null, empty, and whitespace-only values
             // skip embedding and pass "" to the stored procedure. The sproc decides
             // how to handle empty input (e.g., return empty results, raise SQL error).
             if (string.IsNullOrWhiteSpace(text))

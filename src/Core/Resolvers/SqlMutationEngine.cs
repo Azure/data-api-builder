@@ -356,7 +356,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
             IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
 
-            // Phase 3: substitute auto-embed:true parameters with embedding vectors (REST mutation path).
+            // Substitute auto-embed:true parameters with embedding vectors (REST mutation path).
             // Helper handles entity lookup, null-service detection, and per-param validation.
             await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
                 context.ResolvedParameters,

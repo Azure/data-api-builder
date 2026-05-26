@@ -455,8 +455,8 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <summary>
     /// Validates that parameters with auto-embed=true are only used on stored-procedure
     /// entities and that runtime.embeddings is configured when auto-embed parameters are
-    /// present. Per spec #3331, auto-embed is provider-neutral (no database-type gate)
-    /// and defaults are allowed on auto-embed parameters.
+    /// present. Auto-embed is provider-neutral (no database-type gate) and defaults are
+    /// allowed on auto-embed parameters.
     /// </summary>
     /// <remarks>
     /// Internal (rather than private) to allow direct unit testing via the

@@ -3753,7 +3753,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
                 () => validator.ValidateEmbedParameters(config));
 
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             StringAssert.Contains(ex.Message, "Product");
             StringAssert.Contains(ex.Message, "q");
@@ -3766,8 +3766,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// and section completely absent (null).
         /// </summary>
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Rule 2: embeddings.enabled=false → 503")]
-        [DataRow(true, DisplayName = "Rule 2: embeddings section missing → 503")]
+        [DataRow(false, DisplayName = "Rule 2: embeddings.enabled=false → 400")]
+        [DataRow(true, DisplayName = "Rule 2: embeddings section missing → 400")]
         public void ValidateEmbedParameters_EmbedTrue_EmbeddingsNotConfigured_ThrowsConfigError(bool nullEmbeddings)
         {
             EmbeddingsOptions embeddings = nullEmbeddings
@@ -3789,7 +3789,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
                 () => validator.ValidateEmbedParameters(config));
 
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             StringAssert.Contains(ex.Message, "SearchProducts");
             StringAssert.Contains(ex.Message, "q");

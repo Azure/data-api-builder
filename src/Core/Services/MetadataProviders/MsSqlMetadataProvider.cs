@@ -275,7 +275,7 @@ namespace Azure.DataApiBuilder.Core.Services
                              $"parameter '{parameterName}' has 'auto-embed: true' in config but is " +
                              $"declared as '{parameterDefinition.SystemType.Name}' in the stored procedure. " +
                              $"Auto-embed parameters must be string-compatible (nvarchar, varchar, etc.).",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
         }

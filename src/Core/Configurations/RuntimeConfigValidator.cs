@@ -512,7 +512,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 {
                     HandleOrRecordException(new DataApiBuilderException(
                         message: $"Entity '{entityName}': parameter '{param.Name}' has 'auto-embed: true' but is only valid on stored-procedure entities.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
 
@@ -525,7 +525,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 {
                     HandleOrRecordException(new DataApiBuilderException(
                         message: $"Entity '{entityName}': parameter '{param.Name}' has 'auto-embed: true' but runtime.embeddings is not configured or not enabled.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
             }

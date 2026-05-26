@@ -693,7 +693,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                     MsSqlMetadataProvider.ValidateAutoEmbedStringCompatibility(
                         meta, def, "dbo", "sp_test", "p"));
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
                 StringAssert.Contains(ex.Message, "dbo.sp_test");
                 StringAssert.Contains(ex.Message, "p");

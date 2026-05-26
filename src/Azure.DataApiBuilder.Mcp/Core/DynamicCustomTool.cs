@@ -423,11 +423,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     // that handles string, number, boolean, and null values. Runtime
                     // validation (ParameterEmbeddingHelper for auto-embed, SQL Server for the
                     // rest) rejects values that the sproc parameter can't accept.
-                    string description = param.Description ?? $"Parameter {param.Name}";
-                    if (param.AutoEmbed)
-                    {
-                        description += " (auto-embed: DAB converts this value to an embedding before execution)";
-                    }
+                    string baseDescription = param.Description ?? $"Parameter {param.Name}";
+                    string description = AutoEmbedDescription.Append(baseDescription, param.AutoEmbed)!;
 
                     properties[param.Name] = new Dictionary<string, object>
                     {
@@ -525,12 +522,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 description += $" (default: {paramDef.ConfigDefaultValue})";
             }
 
-            if (isAutoEmbed)
-            {
-                description += " (auto-embed: DAB converts this value to an embedding before execution)";
-            }
-
-            return description;
+            return AutoEmbedDescription.Append(description, isAutoEmbed)!;
         }
 
         /// <summary>

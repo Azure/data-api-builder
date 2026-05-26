@@ -701,12 +701,11 @@ namespace Azure.DataApiBuilder.Core.Services
             List<ParameterMetadata>? configParams = null)
         {
             const string BaseDescription = "Input parameter for stored procedure arguments";
-            const string AutoEmbedSuffix = " (auto-embed: DAB converts this value to an embedding before execution)";
 
             foreach ((string paramKey, ParameterDefinition parameterDefinition) in spDefinition.Parameters)
             {
                 bool isAutoEmbed = configParams?.FirstOrDefault(p => p.Name == paramKey)?.AutoEmbed ?? false;
-                string description = isAutoEmbed ? BaseDescription + AutoEmbedSuffix : BaseDescription;
+                string description = AutoEmbedDescription.Append(BaseDescription, isAutoEmbed)!;
 
                 operation.Parameters.Add(
                     GetOpenApiQueryParameter(
@@ -1438,9 +1437,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(def.SystemType).ToString().ToLower();
 
                 bool isAutoEmbed = configParams?.FirstOrDefault(p => p.Name == parameter)?.AutoEmbed ?? false;
-                string? description = isAutoEmbed
-                    ? (def.Description ?? string.Empty) + " (auto-embed: DAB converts this value to an embedding before execution)"
-                    : def.Description;
+                string? description = AutoEmbedDescription.Append(def.Description, isAutoEmbed);
 
                 properties.Add(parameter, new OpenApiSchema()
                 {

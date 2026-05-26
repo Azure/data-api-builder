@@ -87,9 +87,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     string baseDescription = definition.Description
                         ?? $"parameters for {name.Value} stored-procedure";
                     bool isAutoEmbed = paramMetadata?.AutoEmbed ?? false;
-                    string fullDescription = isAutoEmbed
-                        ? $"{baseDescription} (auto-embed: DAB converts this value to an embedding before execution)"
-                        : baseDescription;
+                    string fullDescription = AutoEmbedDescription.Append(baseDescription, isAutoEmbed)!;
 
                     inputValues.Add(
                         new(

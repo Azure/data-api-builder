@@ -227,7 +227,7 @@ public static class CustomJwtRoleClaimExtractor
                     roleString => roleString.Split(rolesDelimiter, StringSplitOptions.None));
 
             default:
-                logger.LogError("Roles claim at '{path}' has unsupported type '{type}'. Expected {expected}.", rolesPath, rolesFormat, "array, string, or delimited-string");
+                logger.LogError("Roles claim at '{path}' has unsupported roles-format value '{rolesFormat}'. Expected {expected}.", rolesPath, rolesFormat, "array, string, or delimited-string");
                 return false;
         }
     }

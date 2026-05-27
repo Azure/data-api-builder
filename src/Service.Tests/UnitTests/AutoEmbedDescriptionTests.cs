@@ -24,11 +24,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ///   so OpenAPI schema callers can distinguish "no description" from "empty".
         /// </summary>
         [DataTestMethod]
-        [DataRow(null, true, AutoEmbedDescription.Suffix,
+        [DataRow(null, true, AutoEmbedDescription.INDICATOR_SUFFIX,
             DisplayName = "null base + autoEmbed=true → suffix only (null treated as empty)")]
-        [DataRow("foo", true, "foo" + AutoEmbedDescription.Suffix,
+        [DataRow("foo", true, "foo" + AutoEmbedDescription.INDICATOR_SUFFIX,
             DisplayName = "non-null base + autoEmbed=true → base + suffix")]
-        [DataRow("", true, AutoEmbedDescription.Suffix,
+        [DataRow("", true, AutoEmbedDescription.INDICATOR_SUFFIX,
             DisplayName = "empty base + autoEmbed=true → suffix only")]
         [DataRow("foo", false, "foo",
             DisplayName = "non-null base + autoEmbed=false → unchanged")]

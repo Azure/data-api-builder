@@ -468,70 +468,65 @@ namespace Azure.DataApiBuilder.Service
             // EmbeddingService would need to read config dynamically from RuntimeConfigProvider
             // and defer constructor validation. Track as a separate work item.
             if (runtimeConfigAvailable
-                && runtimeConfig?.Runtime?.IsEmbeddingsConfigured == true)
+                && runtimeConfig?.Runtime?.IsEmbeddingsConfigured == true
+                && runtimeConfig.Runtime.Embeddings.Enabled)
             {
                 EmbeddingsOptions embeddingsOptions = runtimeConfig.Runtime.Embeddings;
                 services.AddSingleton(embeddingsOptions);
 
                 string providerName = embeddingsOptions.Provider.ToString().ToLowerInvariant();
 
-                if (embeddingsOptions.Enabled)
+                // Configure dedicated FusionCache for embeddings
+                ConfigureEmbeddingsCache(services, embeddingsOptions, runtimeConfigAvailable);
+
+                // Register a named HttpClient for EmbeddingService. The IEmbeddingService
+                // registration below resolves this client by name via IHttpClientFactory using
+                // nameof(EmbeddingService), which matches the name passed here.
+                services.AddHttpClient(nameof(EmbeddingService));
+
+                // Register IEmbeddingService as a singleton that uses the named FusionCache
+                // ("EmbeddingsCache") when embeddings caching is enabled, or falls back to the
+                // default IFusionCache otherwise. The factory pattern is required because we need
+                // to select between two IFusionCache instances at resolution time.
+                services.AddSingleton<IEmbeddingService>(serviceProvider =>
                 {
-                    // Configure dedicated FusionCache for embeddings
-                    ConfigureEmbeddingsCache(services, embeddingsOptions, runtimeConfigAvailable);
+                    IFusionCache cache = embeddingsOptions.IsCachingEnabled
+                        ? serviceProvider.GetRequiredService<IFusionCacheProvider>().GetCache("EmbeddingsCache")
+                        : serviceProvider.GetRequiredService<IFusionCache>(); // Fallback to default cache
 
-                    // Register a named HttpClient for EmbeddingService. The IEmbeddingService
-                    // registration below resolves this client by name via IHttpClientFactory using
-                    // nameof(EmbeddingService), which matches the name passed here.
-                    services.AddHttpClient(nameof(EmbeddingService));
+                    ILogger<EmbeddingService> logger = serviceProvider.GetRequiredService<ILogger<EmbeddingService>>();
+                    IHttpClientFactory httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                    HttpClient httpClient = httpClientFactory.CreateClient(nameof(EmbeddingService));
 
-                    // Register IEmbeddingService as a singleton that uses the named FusionCache
-                    // ("EmbeddingsCache") when embeddings caching is enabled, or falls back to the
-                    // default IFusionCache otherwise. The factory pattern is required because we need
-                    // to select between two IFusionCache instances at resolution time.
-                    services.AddSingleton<IEmbeddingService>(serviceProvider =>
-                    {
-                        IFusionCache cache = embeddingsOptions.IsCachingEnabled
-                            ? serviceProvider.GetRequiredService<IFusionCacheProvider>().GetCache("EmbeddingsCache")
-                            : serviceProvider.GetRequiredService<IFusionCache>(); // Fallback to default cache
+                    return new EmbeddingService(httpClient, embeddingsOptions, logger, cache);
+                });
 
-                        ILogger<EmbeddingService> logger = serviceProvider.GetRequiredService<ILogger<EmbeddingService>>();
-                        IHttpClientFactory httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
-                        HttpClient httpClient = httpClientFactory.CreateClient(nameof(EmbeddingService));
+                _logger.LogInformation(
+                    "Embeddings service enabled with provider: {Provider}, model: {Model}, base-url: {BaseUrl}",
+                    providerName,
+                    embeddingsOptions.EffectiveModel ?? "(default)",
+                    embeddingsOptions.BaseUrl);
 
-                        return new EmbeddingService(httpClient, embeddingsOptions, logger, cache);
-                    });
-
+                // Endpoint is only available if both embeddings and endpoint are enabled
+                if (embeddingsOptions.IsEndpointEnabled)
+                {
                     _logger.LogInformation(
-                        "Embeddings service enabled with provider: {Provider}, model: {Model}, base-url: {BaseUrl}",
-                        providerName,
-                        embeddingsOptions.EffectiveModel ?? "(default)",
-                        embeddingsOptions.BaseUrl);
-
-                    // Endpoint is only available if both embeddings and endpoint are enabled
-                    if (embeddingsOptions.IsEndpointEnabled)
-                    {
-                        _logger.LogInformation(
-                            "Embeddings endpoint enabled at path: {Path}",
-                            EmbeddingsEndpointOptions.DEFAULT_PATH);
-                    }
-
-                    if (embeddingsOptions.IsHealthCheckEnabled)
-                    {
-                        _logger.LogInformation(
-                            "Embeddings health check enabled with threshold: {ThresholdMs}ms",
-                            embeddingsOptions.Health!.ThresholdMs);
-                    }
+                        "Embeddings endpoint enabled at path: {Path}",
+                        EmbeddingsEndpointOptions.DEFAULT_PATH);
                 }
-                else
+
+                if (embeddingsOptions.IsHealthCheckEnabled)
                 {
-                    services.AddSingleton<IEmbeddingService>(NullEmbeddingService.Instance);
-                    _logger.LogInformation("Embeddings service is configured but disabled.");
+                    _logger.LogInformation(
+                        "Embeddings health check enabled with threshold: {ThresholdMs}ms",
+                        embeddingsOptions.Health!.ThresholdMs);
                 }
             }
             else
             {
+                // Register the null implementation when embeddings are not enabled.
                 services.AddSingleton<IEmbeddingService>(NullEmbeddingService.Instance);
+                _logger.LogInformation("Embeddings service is not configured or is disabled.");
             }
 
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);

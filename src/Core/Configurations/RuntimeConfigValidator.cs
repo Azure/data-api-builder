@@ -491,6 +491,35 @@ public class RuntimeConfigValidator : IConfigValidator
                 continue;
             }
 
+            // Rule 3 (entity-level): auto-embed:true requires a database provider that
+            // can perform the required metadata checks (string-compatibility of the
+            // parameter type). Today this is the MSSQL T-SQL family — MSSQL itself
+            // plus DWSQL which shares MsSqlMetadataProvider. PG, MySQL, and CosmosDB
+            // don't implement the auto-embed metadata path, so DAB rejects auto-embed
+            // on those providers at startup rather than failing cryptically at request
+            // time. Checked once per entity (not per param) since data source type is
+            // an entity-level property.
+            // Example PASS: data source declared as "database-type": "mssql" → allowed
+            // Example FAIL: data source declared as "database-type": "postgresql"
+            //   → Error: "Entity 'X' has auto-embed parameter(s) but the data source
+            //             is of type 'PostgreSQL'. ..."
+            string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+            DatabaseType databaseType = runtimeConfig
+                .GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            if (databaseType is not DatabaseType.MSSQL and not DatabaseType.DWSQL)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Entity '{entityName}' has auto-embed parameter(s) but the data source " +
+                             $"is of type '{databaseType}'. " +
+                             $"auto-embed is currently only supported on MSSQL data sources.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+
+                // Skip per-param Rules 1+2 — they'd report redundant noise for an entity
+                // that's fundamentally invalid for auto-embed regardless of param shape.
+                continue;
+            }
+
             // Check each parameter for the auto-embed flag.
             // Example: iterates over { "name": "query_vector", "auto-embed": true } and { "name": "top_k", "default": "5" }
             foreach (ParameterMetadata param in entity.Source.Parameters)

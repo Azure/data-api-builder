@@ -3851,14 +3851,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Per spec #3331: auto-embed is provider-neutral. The validator should NOT reject
-        /// auto-embed:true on non-MSSQL data sources (PostgreSQL, MySQL, etc.).
-        /// String-compatibility is validated at metadata-discovery time, not config validation.
+        /// Per spec #3331: "the database provider can support the required metadata checks".
+        /// auto-embed today depends on MsSqlMetadataProvider which implements the
+        /// string-compatibility check (ValidateAutoEmbedStringCompatibility). The MSSQL
+        /// T-SQL family — MSSQL and DWSQL (which shares MsSqlMetadataProvider) — is
+        /// allowed. Other providers (PostgreSQL, MySQL, CosmosDB) don't implement the
+        /// metadata path and are rejected at config validation time so the failure is
+        /// fast and clear rather than cryptic at request time.
         /// </summary>
         [DataTestMethod]
-        [DataRow(DatabaseType.PostgreSQL, DisplayName = "auto-embed on PostgreSQL accepted")]
-        [DataRow(DatabaseType.MySQL, DisplayName = "auto-embed on MySQL accepted")]
-        public void ValidateEmbedParameters_EmbedTrue_NonMssqlDataSource_NoError(DatabaseType dbType)
+        [DataRow(DatabaseType.MSSQL,          false, DisplayName = "MSSQL accepted")]
+        [DataRow(DatabaseType.DWSQL,          false, DisplayName = "DWSQL accepted (shares MsSqlMetadataProvider)")]
+        [DataRow(DatabaseType.PostgreSQL,     true,  DisplayName = "PostgreSQL rejected")]
+        [DataRow(DatabaseType.MySQL,          true,  DisplayName = "MySQL rejected")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, true,  DisplayName = "CosmosDB_NoSQL rejected")]
+        public void ValidateEmbedParameters_EmbedTrue_ProviderSupport(DatabaseType dbType, bool expectRejection)
         {
             Dictionary<string, Entity> entities = new()
             {
@@ -3868,10 +3875,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfigValidator validator = InitializeRuntimeConfigValidator();
 
-            // Per spec #3331: auto-embed is provider-neutral. Should NOT throw.
-            validator.ValidateEmbedParameters(config);
-
-            Assert.AreEqual(0, validator.ConfigValidationExceptions.Count);
+            if (expectRejection)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => validator.ValidateEmbedParameters(config));
+                StringAssert.Contains(ex.Message, "SearchProducts");
+                StringAssert.Contains(ex.Message, "auto-embed");
+                StringAssert.Contains(ex.Message, dbType.ToString());
+                Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                validator.ValidateEmbedParameters(config);
+                Assert.AreEqual(0, validator.ConfigValidationExceptions.Count);
+            }
         }
 
         /// <summary>

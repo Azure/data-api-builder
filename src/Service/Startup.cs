@@ -995,9 +995,14 @@ namespace Azure.DataApiBuilder.Service
                 HostMode mode = runtimeConfig.Runtime.Host.Mode;
                 if (authOptions.IsJwtConfiguredIdentityProvider())
                 {
-                    string jwtAuthenticationScheme = authOptions.IsCustomAuthenticationProvider()
-                        ? GenericOAuthDefaults.AUTHENTICATIONSCHEME
-                        : JwtBearerDefaults.AuthenticationScheme;
+                    bool useBearerAuthenticationScheme =
+                        string.Equals(authOptions.Provider, "AzureAD", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(authOptions.Provider, "EntraID", StringComparison.OrdinalIgnoreCase);
+
+                    string jwtAuthenticationScheme = useBearerAuthenticationScheme
+                        ? JwtBearerDefaults.AuthenticationScheme
+                        : GenericOAuthDefaults.AUTHENTICATIONSCHEME;
+
                     services.AddAuthentication(jwtAuthenticationScheme)
                     .AddJwtBearer(jwtAuthenticationScheme, options =>
                     {

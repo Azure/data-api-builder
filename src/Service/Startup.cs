@@ -52,6 +52,7 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -80,7 +81,7 @@ namespace Azure.DataApiBuilder.Service
     {
         public static LogLevel MinimumLogLevel = LogLevel.Error;
 
-        public static bool IsLogLevelOverriddenByCli;
+        public static bool IsCliOverriding;
 
         public static AzureLogAnalyticsCustomLogCollector CustomLogCollector = new();
         public static ApplicationInsightsOptions AppInsightsOptions = new();
@@ -453,7 +454,31 @@ namespace Azure.DataApiBuilder.Service
 
                 if (embeddingsOptions.Enabled)
                 {
-                    services.AddHttpClient<IEmbeddingService, EmbeddingService>();
+                    // Configure dedicated FusionCache for embeddings
+                    ConfigureEmbeddingsCache(services, embeddingsOptions, runtimeConfigAvailable);
+
+                    // Register a named HttpClient for EmbeddingService. The IEmbeddingService
+                    // registration below resolves this client by name via IHttpClientFactory using
+                    // nameof(EmbeddingService), which matches the name passed here.
+                    services.AddHttpClient(nameof(EmbeddingService));
+
+                    // Register IEmbeddingService as a singleton that uses the named FusionCache
+                    // ("EmbeddingsCache") when embeddings caching is enabled, or falls back to the
+                    // default IFusionCache otherwise. The factory pattern is required because we need
+                    // to select between two IFusionCache instances at resolution time.
+                    services.AddSingleton<IEmbeddingService>(serviceProvider =>
+                    {
+                        IFusionCache cache = embeddingsOptions.IsCachingEnabled
+                            ? serviceProvider.GetRequiredService<IFusionCacheProvider>().GetCache("EmbeddingsCache")
+                            : serviceProvider.GetRequiredService<IFusionCache>(); // Fallback to default cache
+
+                        ILogger<EmbeddingService> logger = serviceProvider.GetRequiredService<ILogger<EmbeddingService>>();
+                        IHttpClientFactory httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                        HttpClient httpClient = httpClientFactory.CreateClient(nameof(EmbeddingService));
+
+                        return new EmbeddingService(httpClient, embeddingsOptions, logger, cache);
+                    });
+
                     _logger.LogInformation(
                         "Embeddings service enabled with provider: {Provider}, model: {Model}, base-url: {BaseUrl}",
                         providerName,
@@ -661,16 +686,50 @@ namespace Azure.DataApiBuilder.Service
         private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
+                // Defer schema construction to the first GraphQL request so the runtime config
+                // is available for both file-based and POST /configuration (hosted) scenarios.
+                // See docs/design/HC16-upgrade.md for the full rationale.
+                .ModifyOptions(options => options.LazyInitialization = true)
                 .AddInstrumentation()
-                .AddType(new DateTimeType(disableFormatCheck: graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true))
+                .AddType(new DateTimeType(new DateTimeOptions { ValidateInputFormat = !(graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true) }))
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
-                    // The GraphQLSchemaCreator is an application service that is not available on 
-                    // the schema specific service provider, this means we have to get it with 
-                    // the GetRootServiceProvider helper.
-                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRootServiceProvider().GetRequiredService<GraphQLSchemaCreator>();
-                    graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                    // Runs on first GraphQL request (LazyInitialization). The placeholder
+                    // fallback covers GraphQL-disabled configs and schema-construction failures.
+                    RuntimeConfigProvider configProvider = serviceProvider.GetRootServiceProvider()
+                        .GetRequiredService<RuntimeConfigProvider>();
+                    if (!configProvider.TryGetConfig(out RuntimeConfig? loadedConfig))
+                    {
+                        EmitPlaceholderSchema(schemaBuilder);
+                        return;
+                    }
+
+                    if (!loadedConfig.IsGraphQLEnabled)
+                    {
+                        EmitPlaceholderSchema(schemaBuilder);
+                        return;
+                    }
+
+                    try
+                    {
+                        // The GraphQLSchemaCreator is an application service that is not available on 
+                        // the schema specific service provider, this means we have to get it with 
+                        // the GetRootServiceProvider helper.
+                        GraphQLSchemaCreator graphQLService = serviceProvider.GetRootServiceProvider().GetRequiredService<GraphQLSchemaCreator>();
+                        graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Schema construction failed (e.g. metadata provider was not initialized
+                        // due to a config validation error). Fall back to the placeholder schema
+                        // so the host can still start; the underlying error will have already
+                        // been surfaced by Startup.PerformOnConfigChangeAsync.
+                        _logger.LogWarning(
+                            exception: ex,
+                            message: "Failed to build GraphQL schema; emitting placeholder schema. The error will surface on first GraphQL request and is typically caused by a runtime config that failed validation.");
+                        EmitPlaceholderSchema(schemaBuilder);
+                    }
                 })
                 .AddHttpRequestInterceptor<IntrospectionInterceptor>()
                 .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
@@ -749,6 +808,17 @@ namespace Azure.DataApiBuilder.Service
         {
             bool isRuntimeReady = false;
             RuntimeConfig? runtimeConfig = null;
+
+            // Wire a logger on the DynamicLogLevelProvider as soon as ILoggerFactory is available
+            // — ahead of any config-load branch — so an early MCP logging/setLevel call (which can
+            // arrive before runtime config in the late-configured path) still surfaces its audit
+            // log line through the standard logging pipeline.
+            DynamicLogLevelProvider? logLevelProviderForAudit = app.ApplicationServices.GetService<DynamicLogLevelProvider>();
+            ILoggerFactory? earlyLoggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
+            if (logLevelProviderForAudit is not null && earlyLoggerFactory is not null)
+            {
+                logLevelProviderForAudit.Logger = earlyLoggerFactory.CreateLogger<DynamicLogLevelProvider>();
+            }
 
             try
             {
@@ -912,6 +982,43 @@ namespace Azure.DataApiBuilder.Service
 
             app.UseEndpoints(endpoints =>
             {
+                // Map the embeddings POST endpoint with a literal path BEFORE MapControllers
+                // so it wins over RestController's global catch-all attribute route ({*route})
+                // by route specificity. The path is taken from runtime config
+                // (runtime.embeddings.endpoint.path), defaulting to "/embed".
+                if (runtimeConfig?.Runtime?.Embeddings is { Enabled: true } embeddingsOptions
+                    && embeddingsOptions.Endpoint is { Enabled: true } embeddingsEndpoint)
+                {
+                    string embedPath = embeddingsEndpoint.EffectivePath;
+                    if (!embedPath.StartsWith('/'))
+                    {
+                        embedPath = "/" + embedPath;
+                    }
+
+                    // ARCHITECTURAL NOTE: This MapPost delegate manually instantiates EmbeddingController
+                    // via ActivatorUtilities so the embeddings endpoint can be served on a configurable,
+                    // literal path that wins over RestController's global catch-all attribute route
+                    // ({*route}) by route-specificity. This intentionally bypasses the MVC controller
+                    // pipeline, which means:
+                    //   * MVC action filters, [Authorize], [Consumes]/[Produces], and model-binding/
+                    //     validation attributes on EmbeddingController are NOT executed here.
+                    //   * Authentication & authorization are still enforced because the ASP.NET Core
+                    //     auth middleware (UseAuthentication/UseAuthorization and the DAB client-role
+                    //     header authorization middleware) runs earlier in the pipeline, before
+                    //     UseEndpoints. EmbeddingController.PostAsync performs its own role/permission
+                    //     checks against HttpContext.User.
+                    // If future work adds new filter/authorization attributes to EmbeddingController,
+                    // those will NOT take effect on this path; either replicate the behavior here or
+                    // move to a standard attribute-routed controller mapping.
+                    endpoints.MapPost(embedPath, async context =>
+                    {
+                        EmbeddingController controller = ActivatorUtilities.CreateInstance<EmbeddingController>(context.RequestServices);
+                        controller.ControllerContext = new ControllerContext { HttpContext = context };
+                        IActionResult result = await controller.PostAsync(embedPath.TrimStart('/'));
+                        await result.ExecuteResultAsync(controller.ControllerContext);
+                    });
+                }
+
                 endpoints.MapControllers();
 
                 // Special for MCP
@@ -919,23 +1026,11 @@ namespace Azure.DataApiBuilder.Service
 
                 endpoints
                     .MapGraphQL()
-                    .WithOptions(new GraphQLServerOptions
+                    .WithOptions(options =>
                     {
-                        Tool = {
-                            // Determines if accessing the endpoint from a browser
-                            // will load the GraphQL Banana Cake Pop IDE.
-                            Enable = IsUIEnabled(runtimeConfig, env)
-                        }
-                    });
-
-                // In development mode, Nitro is enabled at /graphql endpoint by default.
-                // Need to disable mapping Nitro explicitly as well to avoid ability to query
-                // at an additional endpoint: /graphql/ui.
-                endpoints
-                    .MapNitroApp()
-                    .WithOptions(new GraphQLToolOptions
-                    {
-                        Enable = false
+                        // Determines if accessing the endpoint from a browser
+                        // will load the GraphQL Banana Cake Pop / Nitro IDE.
+                        options.Tool.Enable = IsUIEnabled(runtimeConfig, env);
                     });
 
                 endpoints.MapHealthChecks("/", new HealthCheckOptions
@@ -955,13 +1050,28 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
+        /// Registers a minimal valid GraphQL schema (a single placeholder field with a no-op
+        /// resolver) on the supplied <paramref name="schemaBuilder"/>. Used to satisfy Hot
+        /// Chocolate v16's eager schema validation when the real schema cannot be constructed
+        /// at startup (no runtime config loaded yet, or a config validation failure prevented
+        /// metadata provider initialization). The placeholder is unreachable in normal
+        /// operation: it is shadowed once a real config is hot-reloaded via the
+        /// <c>GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED</c> event.
+        /// </summary>
+        private static void EmitPlaceholderSchema(ISchemaBuilder schemaBuilder)
+        {
+            schemaBuilder.AddDocumentFromString("type Query { _dab: String }");
+            schemaBuilder.AddResolver("Query", "_dab", _ => null);
+        }
+
+        /// <summary>
         /// If LogLevel is NOT overridden by CLI, attempts to find the
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
         /// </summary>
         public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider, LogLevelInitializer logLevelInitializer)
         {
-            if (!IsLogLevelOverriddenByCli)
+            if (!IsCliOverriding)
             {
                 // If the log level is not overridden by command line arguments specified through CLI,
                 // attempt to get the runtime config to determine the loglevel based on host.mode.
@@ -1440,6 +1550,186 @@ namespace Azure.DataApiBuilder.Service
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.CustomTableName)
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DcrImmutableId)
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DceEndpoint);
+        }
+
+        /// <summary>
+        /// Configures a dedicated FusionCache instance for embeddings with optional L2 Azure Managed Redis cache.
+        /// </summary>
+        /// <param name="services">The service collection.</param>
+        /// <param name="embeddingsOptions">The embeddings configuration options.</param>
+        /// <param name="runtimeConfigAvailable">Whether the runtime config is available.</param>
+        private void ConfigureEmbeddingsCache(
+            IServiceCollection services,
+            EmbeddingsOptions embeddingsOptions,
+            bool runtimeConfigAvailable)
+        {
+            if (!embeddingsOptions.IsCachingEnabled)
+            {
+                _logger.LogInformation("Embeddings caching is disabled");
+                return;
+            }
+
+            EmbeddingsCacheOptions cacheOptions = embeddingsOptions.Cache ?? new EmbeddingsCacheOptions();
+            int ttlHours = cacheOptions.EffectiveTtlHours;
+
+            IFusionCacheBuilder embeddingsCacheBuilder = services.AddFusionCache("EmbeddingsCache")
+                .WithOptions(options =>
+                {
+                    options.FactoryErrorsLogLevel = LogLevel.Debug;
+                    options.EventHandlingErrorsLogLevel = LogLevel.Debug;
+                })
+                .WithDefaultEntryOptions(new FusionCacheEntryOptions
+                {
+                    Duration = TimeSpan.FromHours(ttlHours),
+                    ReThrowBackplaneExceptions = false,
+                    ReThrowDistributedCacheExceptions = false,
+                    ReThrowSerializationExceptions = false,
+                });
+
+            _logger.LogInformation(
+                "Embeddings cache configured with TTL: {TtlHours} hours",
+                ttlHours);
+
+            // Configure L2 Redis cache if enabled
+            if (embeddingsOptions.IsLevel2CacheEnabled && runtimeConfigAvailable)
+            {
+                EmbeddingsCacheLevel2Options level2Options = cacheOptions.Level2!;
+
+                if (string.IsNullOrWhiteSpace(level2Options.ConnectionString))
+                {
+                    throw new Exception("Embeddings internal L2 cache requires a valid connection-string.");
+                }
+
+                // Create connection multiplexer for embeddings Azure Managed Redis cache.
+                // The factory is invoked lazily by FusionCache; we wrap it so that any connection
+                // failure (including transient errors after StackExchange.Redis' own ConnectRetry
+                // exhausts) is logged and surfaced as a distributed-cache exception. Because the
+                // embeddings cache is configured with ReThrowDistributedCacheExceptions = false,
+                // FusionCache will transparently fall back to the L1 (in-memory) cache when L2
+                // is unavailable, so a Redis outage does not break embeddings.
+                Task<IConnectionMultiplexer>? connectionMultiplexerTask = null;
+                Func<Task<IConnectionMultiplexer>> connectionFactory = () =>
+                {
+                    // Cache the task so the connection (and any retry sequence) is shared by the
+                    // distributed cache and the backplane.
+                    connectionMultiplexerTask ??= CreateEmbeddingsRedisConnectionAsync(level2Options.ConnectionString);
+                    return connectionMultiplexerTask;
+                };
+
+                embeddingsCacheBuilder
+                    .WithSerializer(new FusionCacheSystemTextJsonSerializer())
+                    .WithDistributedCache(new RedisCache(new RedisCacheOptions
+                    {
+                        ConnectionMultiplexerFactory = connectionFactory
+                    }))
+                    .WithBackplane(new RedisBackplane(new RedisBackplaneOptions
+                    {
+                        ConnectionMultiplexerFactory = connectionFactory
+                    }));
+
+                _logger.LogInformation("Embeddings L2 (internal) cache enabled");
+            }
+            else
+            {
+                _logger.LogInformation("Embeddings using L1 (memory) cache only");
+            }
+        }
+
+        /// <summary>
+        /// Creates a Redis connection for the embeddings L2 cache with retry on transient failure.
+        /// StackExchange.Redis applies its own ConnectRetry per attempt; this wrapper adds a small
+        /// number of additional attempts with exponential backoff to absorb longer transient outages
+        /// (DNS, brief network blips, AAD token acquisition). If all attempts fail the exception is
+        /// re-thrown so FusionCache can mark the distributed cache as unavailable and fall back to L1.
+        /// </summary>
+        private async Task<IConnectionMultiplexer> CreateEmbeddingsRedisConnectionAsync(string connectionString)
+        {
+            return await ConnectWithRetryAsync(
+                () => CreateConnectionMultiplexerAsync(connectionString),
+                maxAttempts: EMBEDDINGS_REDIS_MAX_CONNECT_ATTEMPTS,
+                initialDelay: TimeSpan.FromMilliseconds(EMBEDDINGS_REDIS_INITIAL_RETRY_DELAY_MS),
+                logger: _logger);
+        }
+
+        // Retry knobs for embeddings L2 Redis connection. Exposed as constants so tests can
+        // reference the same values without duplication.
+        internal const int EMBEDDINGS_REDIS_MAX_CONNECT_ATTEMPTS = 3;
+        internal const int EMBEDDINGS_REDIS_INITIAL_RETRY_DELAY_MS = 500;
+
+        /// <summary>
+        /// Invokes <paramref name="connectFactory"/> with retry-on-exception and exponential backoff.
+        /// Logs each failed attempt as a warning (with the originating exception) and, after all
+        /// attempts are exhausted, logs an error and re-throws the last exception so the caller
+        /// (e.g. FusionCache) can mark the distributed cache as unavailable and fall back to L1.
+        /// Exposed as <c>internal static</c> so unit tests can exercise the retry behavior without
+        /// taking a real Redis dependency.
+        /// </summary>
+        /// <param name="connectFactory">Delegate that performs a single connection attempt.</param>
+        /// <param name="maxAttempts">Maximum number of attempts. Must be >= 1.</param>
+        /// <param name="initialDelay">Delay before the second attempt. Doubled for each subsequent attempt.</param>
+        /// <param name="logger">Logger used to record retry diagnostics. May be null.</param>
+        /// <param name="delayAsync">Optional delay function for tests to avoid real waits.</param>
+        internal static async Task<IConnectionMultiplexer> ConnectWithRetryAsync(
+            Func<Task<IConnectionMultiplexer>> connectFactory,
+            int maxAttempts,
+            TimeSpan initialDelay,
+            Microsoft.Extensions.Logging.ILogger? logger,
+            Func<TimeSpan, Task>? delayAsync = null)
+        {
+            if (connectFactory is null)
+            {
+                throw new ArgumentNullException(nameof(connectFactory));
+            }
+
+            if (maxAttempts < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxAttempts), "maxAttempts must be >= 1.");
+            }
+
+            delayAsync ??= Task.Delay;
+            TimeSpan delay = initialDelay;
+            Exception? lastException = null;
+
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
+                {
+                    IConnectionMultiplexer multiplexer = await connectFactory();
+                    if (attempt > 1)
+                    {
+                        logger?.LogInformation(
+                            "Embeddings L2 Redis cache connected on attempt {Attempt}/{MaxAttempts}.",
+                            attempt, maxAttempts);
+                    }
+
+                    return multiplexer;
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    logger?.LogWarning(
+                        ex,
+                        "Embeddings L2 Redis cache connection attempt {Attempt}/{MaxAttempts} failed: {Message}",
+                        attempt, maxAttempts, ex.Message);
+
+                    if (attempt < maxAttempts)
+                    {
+                        await delayAsync(delay);
+                        delay = TimeSpan.FromMilliseconds(delay.TotalMilliseconds * 2);
+                    }
+                }
+            }
+
+            logger?.LogError(
+                lastException,
+                "Embeddings L2 Redis cache connection failed after {MaxAttempts} attempts. " +
+                "Falling back to L1 (in-memory) cache only.",
+                maxAttempts);
+
+            // Re-throw so FusionCache treats the distributed cache as unavailable. With
+            // ReThrowDistributedCacheExceptions = false on the embeddings cache entry options,
+            // this fallback is transparent to callers.
+            throw lastException!;
         }
 
         /// <summary>

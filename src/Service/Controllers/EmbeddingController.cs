@@ -58,10 +58,17 @@ public class EmbeddingController : ControllerBase
     /// or [{ "key": "...", "data": [[...], [...]] }] for document arrays.
     /// </summary>
     /// <returns>Embedding vector(s) as JSON, or an error response.</returns>
-    [HttpPost]
-    [Route("{*path}", Order = int.MaxValue)]
-    [Consumes("text/plain", "application/json")]
-    [Produces("application/json", "text/plain")]
+    /// <remarks>
+    /// This action is NOT bound to an attribute route. The endpoint is registered
+    /// explicitly in Startup.Configure (UseEndpoints) using the configured
+    /// <see cref="EmbeddingsEndpointOptions.Path"/> so it wins over RestController's
+    /// global catch-all route (<c>{*route}</c>) by route specificity.
+    /// </remarks>
+    // NOTE: [Consumes]/[Produces] attributes are intentionally NOT applied here because this
+    // action is marked [NonAction] and is invoked manually from Startup.Configure's UseEndpoints
+    // MapPost delegate (see EmbeddingController architectural note in Startup.cs). MVC filters,
+    // including content-negotiation attributes, do not run for [NonAction] methods.
+    [NonAction]
     public async Task<IActionResult> PostAsync(string path)
     {
         // Get embeddings configuration

@@ -3860,11 +3860,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// fast and clear rather than cryptic at request time.
         /// </summary>
         [DataTestMethod]
-        [DataRow(DatabaseType.MSSQL,          false, DisplayName = "MSSQL accepted")]
-        [DataRow(DatabaseType.DWSQL,          false, DisplayName = "DWSQL accepted (shares MsSqlMetadataProvider)")]
-        [DataRow(DatabaseType.PostgreSQL,     true,  DisplayName = "PostgreSQL rejected")]
-        [DataRow(DatabaseType.MySQL,          true,  DisplayName = "MySQL rejected")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, true,  DisplayName = "CosmosDB_NoSQL rejected")]
+        [DataRow(DatabaseType.MSSQL, false, DisplayName = "MSSQL accepted")]
+        [DataRow(DatabaseType.DWSQL, false, DisplayName = "DWSQL accepted (shares MsSqlMetadataProvider)")]
+        [DataRow(DatabaseType.PostgreSQL, true, DisplayName = "PostgreSQL rejected")]
+        [DataRow(DatabaseType.MySQL, true, DisplayName = "MySQL rejected")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, true, DisplayName = "CosmosDB_NoSQL rejected")]
         public void ValidateEmbedParameters_EmbedTrue_ProviderSupport(DatabaseType dbType, bool expectRejection)
         {
             Dictionary<string, Entity> entities = new()

@@ -2983,7 +2983,10 @@
             }
           ]
         }
-      ]
+      ],
+      "mcp": {
+        "custom-tool": true
+      }
     },
     "GetBook": {
       "source": {
@@ -3022,7 +3025,10 @@
             }
           ]
         }
-      ]
+      ],
+      "mcp": {
+        "custom-tool": true
+      }
     },
     "GetPublisher": {
       "source": {
@@ -3061,7 +3067,10 @@
             }
           ]
         }
-      ]
+      ],
+      "mcp": {
+        "custom-tool": true
+      }
     },
     "InsertBook": {
       "source": {
@@ -3112,7 +3121,10 @@
             }
           ]
         }
-      ]
+      ],
+      "mcp": {
+        "custom-tool": true
+      }
     },
     "CountBooks": {
       "source": {
@@ -3151,7 +3163,10 @@
             }
           ]
         }
-      ]
+      ],
+      "mcp": {
+        "custom-tool": true
+      }
     },
     "DeleteLastInsertedBook": {
       "source": {

@@ -61,17 +61,20 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task RunAsync(CancellationToken cancellationToken)
         {
-            // Use UTF-8 WITHOUT BOM for stdin. Stdout is owned by McpStdoutWriter,
-            // which serializes all writes from McpStdioServer and the MCP logging
-            // pipeline so JSON-RPC frames cannot interleave at the byte level.
-            UTF8Encoding utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
-
-            using Stream stdin = Console.OpenStandardInput();
-            using StreamReader reader = new(stdin, utf8NoBom);
+            // Read through Console.In so tests can inject stdin and the process
+            // still follows the configured console input encoding in stdio mode.
+            TextReader reader = Console.In;
 
             while (!cancellationToken.IsCancellationRequested)
             {
                 string? line = await reader.ReadLineAsync(cancellationToken);
+
+                // EOF (stdin pipe closed) is a normal shutdown signal for stdio mode.
+                if (line is null)
+                {
+                    return;
+                }
+
                 if (string.IsNullOrWhiteSpace(line))
                 {
                     continue;

@@ -23,9 +23,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     /// (4) collection with next page (REST), (5) collection with next page (MCP).
     ///
     /// Test 6 documents that rows containing array-valued columns (the shape enabled by
-    /// SQL Server's JSON/vector types) round-trip through the response pipeline unchanged.
+    /// SQL Server's JSON/vector types) round-trip through the response pipeline unchanged
+    /// on the no-pagination path. Test 7 extends that coverage to the paginated path,
+    /// confirming the <c>nextLink</c> envelope is still produced when array-typed columns
+    /// are present.
     ///
-    /// Test 7 is the load-bearing regression guard for the shape-sentinel removal:
+    /// Test 8 is the load-bearing regression guard for the shape-sentinel removal:
     /// it pins that a result whose last top-level element is itself a JSON array — the
     /// exact trigger the pre-refactor <see cref="SqlResponseHelpers.OkResponse"/> used to
     /// detect a pagination sentinel — is now correctly treated as ordinary data.
@@ -216,6 +219,58 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual("sci-fi", value[0].GetProperty("tags")[0].GetString());
             Assert.AreEqual(1, value[1].GetProperty("tags").GetArrayLength());
             Assert.AreEqual("fantasy", value[1].GetProperty("tags")[0].GetString());
+        }
+
+        /// <summary>
+        /// Pagination + array-valued columns: rows that contain array-typed columns (e.g. SQL Server
+        /// JSON arrays, vector/collection types) must still produce a correctly paginated envelope
+        /// when <c>$first</c> is exceeded. Pins that (a) the +1 probe row is trimmed, (b) the
+        /// <c>nextLink</c> field is emitted on the REST path, and (c) the surviving row's array
+        /// column round-trips intact. Coverage gap surfaced in PR review (companion to
+        /// <see cref="FormatFindResult_RowWithArrayColumn_RoundTripsUnchanged"/>, which only exercises
+        /// the no-pagination path).
+        /// </summary>
+        [TestMethod]
+        public void FormatFindResult_RowWithArrayColumn_WithNextPage_Rest_ReturnsNextLinkEnvelope()
+        {
+            // first = 1, 2 rows: HasNext is true, last (probe) row is dropped.
+            JsonElement input = ParseJson(@"[
+                { ""id"": 1, ""tags"": [ ""sci-fi"", ""classic"" ] },
+                { ""id"": 2, ""tags"": [ ""fantasy"" ] }
+            ]");
+            FindRequestContext context = CreateContext(
+                fieldsToBeReturned: new List<string> { "id", "tags" },
+                first: 1);
+
+            DefaultHttpContext httpContext = new();
+            httpContext.Request.Scheme = "https";
+            httpContext.Request.Host = new HostString("localhost");
+            httpContext.Request.Path = "/api/Book";
+
+            OkObjectResult result = SqlResponseHelpers.FormatFindResult(
+                findOperationResponse: input,
+                context: context,
+                sqlMetadataProvider: CreateMetadataProviderWithIdPrimaryKey(),
+                runtimeConfig: CreateRuntimeConfig(),
+                httpContext: httpContext);
+
+            JsonElement envelope = SerializeValue(result);
+            JsonElement value = envelope.GetProperty("value");
+            Assert.AreEqual(1, value.GetArrayLength(), "Probe row should have been removed.");
+            Assert.AreEqual(1, value[0].GetProperty("id").GetInt32());
+
+            // Array-typed column on the surviving row must round-trip unchanged.
+            JsonElement tags = value[0].GetProperty("tags");
+            Assert.AreEqual(JsonValueKind.Array, tags.ValueKind, "Array-typed column must remain an array.");
+            Assert.AreEqual(2, tags.GetArrayLength());
+            Assert.AreEqual("sci-fi", tags[0].GetString());
+            Assert.AreEqual("classic", tags[1].GetString());
+
+            Assert.IsTrue(envelope.TryGetProperty("nextLink", out JsonElement nextLink),
+                "REST paginated response with array-valued columns must still carry a 'nextLink' field.");
+            Assert.IsTrue(nextLink.GetString()!.Contains("$after="), "nextLink should encode the $after cursor.");
+            Assert.IsFalse(envelope.TryGetProperty("after", out _),
+                "REST paginated response must NOT carry an 'after' field.");
         }
 
         /// <summary>

@@ -1,8 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Text.Json;
+using System.Web;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
@@ -271,6 +274,39 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(nextLink.GetString()!.Contains("$after="), "nextLink should encode the $after cursor.");
             Assert.IsFalse(envelope.TryGetProperty("after", out _),
                 "REST paginated response must NOT carry an 'after' field.");
+
+            // Round-trip the cursor: feed the $after token from the page-1 nextLink into a second
+            // FormatFindResult call simulating the next-page database response. With only the
+            // remaining row left, the envelope must contain { id: 2, tags: [fantasy] } and no
+            // further pagination metadata.
+            NameValueCollection afterQuery = HttpUtility.ParseQueryString(new Uri(nextLink.GetString()!).Query);
+            Assert.IsFalse(string.IsNullOrEmpty(afterQuery["$after"]),
+                "$after cursor must be present in nextLink query string.");
+
+            JsonElement nextPageInput = ParseJson(@"[ { ""id"": 2, ""tags"": [ ""fantasy"" ] } ]");
+            FindRequestContext nextPageContext = CreateContext(
+                fieldsToBeReturned: new List<string> { "id", "tags" },
+                first: 1);
+            nextPageContext.ParsedQueryString = afterQuery;
+
+            OkObjectResult nextPageResult = SqlResponseHelpers.FormatFindResult(
+                findOperationResponse: nextPageInput,
+                context: nextPageContext,
+                sqlMetadataProvider: CreateMetadataProviderWithIdPrimaryKey(),
+                runtimeConfig: CreateRuntimeConfig(),
+                httpContext: httpContext);
+
+            JsonElement nextPageEnvelope = SerializeValue(nextPageResult);
+            AssertHasNoPaginationFields(nextPageEnvelope);
+
+            JsonElement nextPageValue = nextPageEnvelope.GetProperty("value");
+            Assert.AreEqual(1, nextPageValue.GetArrayLength(), "Page 2 must contain exactly one row.");
+            Assert.AreEqual(2, nextPageValue[0].GetProperty("id").GetInt32());
+
+            JsonElement nextPageTags = nextPageValue[0].GetProperty("tags");
+            Assert.AreEqual(JsonValueKind.Array, nextPageTags.ValueKind, "Array-typed column must remain an array on page 2.");
+            Assert.AreEqual(1, nextPageTags.GetArrayLength());
+            Assert.AreEqual("fantasy", nextPageTags[0].GetString());
         }
 
         /// <summary>

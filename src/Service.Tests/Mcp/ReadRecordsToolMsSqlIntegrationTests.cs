@@ -59,23 +59,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Reads records with an OData filter expression and verifies all results match.
+        /// Reads records with an OData filter expression and verifies filtered results are returned.
         /// </summary>
         [TestMethod]
         public async Task ReadRecords_WithFilter_ReturnsFilteredResults()
         {
-            CallToolResult result = await ExecuteReadAsync("Book", filter: "publisher_id eq 1234");
+            CallToolResult result = await ExecuteReadAsync("Book", filter: "id gt 5");
 
             AssertSuccess(result, "ReadRecords with filter should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            JsonElement records = root.GetProperty("result").GetProperty("value");
+            JsonElement resultElement = root.GetProperty("result");
+            JsonElement records = resultElement.ValueKind == JsonValueKind.Object && resultElement.TryGetProperty("value", out JsonElement valueElement)
+                ? valueElement
+                : resultElement;
             Assert.IsTrue(records.GetArrayLength() > 0, "Expected filtered results.");
 
             foreach (JsonElement record in records.EnumerateArray())
             {
-                Assert.AreEqual(1234, record.GetProperty("publisher_id").GetInt32(),
-                    "All filtered records should have publisher_id = 1234.");
+                Assert.IsTrue(record.GetProperty("id").GetInt32() > 5,
+                    "All filtered records should have id > 5.");
             }
         }
 
@@ -128,7 +131,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "ReadRecords with id filter should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            JsonElement records = root.GetProperty("result").GetProperty("value");
+            JsonElement resultElement = root.GetProperty("result");
+            JsonElement records = resultElement.ValueKind == JsonValueKind.Object && resultElement.TryGetProperty("value", out JsonElement valueElement)
+                ? valueElement
+                : resultElement;
             Assert.AreEqual(1, records.GetArrayLength(), "Expected exactly one record with id=1.");
             Assert.AreEqual(1, records[0].GetProperty("id").GetInt32());
         }

@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             try
             {
                 var keys = new Dictionary<string, object> { { "id", createdId } };
-                var fields = new Dictionary<string, object> { { "publisher_id", 9999 } };
+                var fields = new Dictionary<string, object> { { "publisher_id", 2345 } };
 
                 CallToolResult result = await ExecuteUpdateAsync("Book", keys, fields);
 
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 if (root.TryGetProperty("result", out JsonElement resultElement) &&
                     resultElement.TryGetProperty("publisher_id", out JsonElement pubElement))
                 {
-                    Assert.AreEqual(9999, pubElement.GetInt32());
+                    Assert.AreEqual(2345, pubElement.GetInt32());
                 }
             }
             finally

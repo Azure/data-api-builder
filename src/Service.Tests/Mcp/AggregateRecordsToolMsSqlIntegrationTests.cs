@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -43,10 +41,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             JsonElement root = ParseResultRoot(result);
             Assert.AreEqual("Book", root.GetProperty("entity").GetString());
-            Assert.IsTrue(root.TryGetProperty("count", out JsonElement countElement),
-                "Response should contain 'count' property for COUNT(*).");
-            Assert.IsTrue(countElement.GetInt32() >= 21,
-                $"Expected at least 21 books (seed data), got {countElement.GetInt32()}.");
+            JsonElement resultArray = root.GetProperty("result");
+            Assert.AreEqual(JsonValueKind.Array, resultArray.ValueKind, "Simple aggregate result should be an array.");
+            int count = resultArray[0].GetProperty("count").GetInt32();
+            Assert.IsTrue(count >= 21,
+                $"Expected at least 21 books (seed data), got {count}.");
         }
 
         /// <summary>
@@ -61,9 +60,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "COUNT with filter should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            Assert.IsTrue(root.TryGetProperty("count", out JsonElement countElement));
-            Assert.IsTrue(countElement.GetInt32() >= 10,
-                $"Expected at least 10 books with publisher_id=1234, got {countElement.GetInt32()}.");
+            JsonElement resultArray = root.GetProperty("result");
+            int count = resultArray[0].GetProperty("count").GetInt32();
+            Assert.IsTrue(count >= 10,
+                $"Expected at least 10 books with publisher_id=1234, got {count}.");
         }
 
         /// <summary>
@@ -78,18 +78,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "COUNT DISTINCT should succeed.");
 
             JsonElement root = ParseResultRoot(result);
+            JsonElement resultArray = root.GetProperty("result");
+            Assert.AreEqual(JsonValueKind.Array, resultArray.ValueKind, "Result should be an array.");
+            Assert.IsTrue(resultArray.GetArrayLength() > 0, "Result array should not be empty.");
+
+            JsonElement firstRow = resultArray[0];
             int count = 0;
-            if (root.TryGetProperty("count", out JsonElement countElement))
+            if (firstRow.TryGetProperty("count", out JsonElement countElement))
             {
                 count = countElement.GetInt32();
             }
-            else if (root.TryGetProperty("count_publisher_id", out JsonElement aliasElement))
+            else if (firstRow.TryGetProperty("count_publisher_id", out JsonElement aliasElement))
             {
                 count = aliasElement.GetInt32();
-            }
-            else if (root.TryGetProperty("result", out JsonElement resultElem))
-            {
-                count = resultElem.GetInt32();
             }
 
             Assert.IsTrue(count >= 6, $"Expected at least 6 distinct publisher_ids, got {count}.");
@@ -127,11 +128,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "MIN should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            if (root.TryGetProperty("min_publisher_id", out JsonElement minElement))
-            {
-                Assert.AreEqual(1234, minElement.GetInt32(),
-                    "MIN publisher_id should be 1234 (from seed data).");
-            }
+            JsonElement resultArray = root.GetProperty("result");
+            Assert.AreEqual(JsonValueKind.Array, resultArray.ValueKind);
+            Assert.IsTrue(resultArray.GetArrayLength() > 0, "Result array should not be empty.");
+            Assert.AreEqual(1234, resultArray[0].GetProperty("min_publisher_id").GetInt32(),
+                "MIN publisher_id should be 1234 (from seed data).");
         }
 
         /// <summary>
@@ -144,11 +145,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "MAX should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            if (root.TryGetProperty("max_publisher_id", out JsonElement maxElement))
-            {
-                Assert.AreEqual(2345, maxElement.GetInt32(),
-                    "MAX publisher_id should be 2345 (from seed data).");
-            }
+            JsonElement resultArray = root.GetProperty("result");
+            Assert.AreEqual(JsonValueKind.Array, resultArray.ValueKind);
+            Assert.IsTrue(resultArray.GetArrayLength() > 0, "Result array should not be empty.");
+            Assert.AreEqual(2345, resultArray[0].GetProperty("max_publisher_id").GetInt32(),
+                "MAX publisher_id should be 2345 (from seed data).");
         }
 
         #endregion
@@ -167,15 +168,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "COUNT with GROUP BY should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            if (root.TryGetProperty("items", out JsonElement itemsElement))
-            {
-                Assert.AreEqual(JsonValueKind.Array, itemsElement.ValueKind);
-                Assert.IsTrue(itemsElement.GetArrayLength() > 1, "Expected multiple groups.");
-            }
-            else if (root.TryGetProperty("result", out JsonElement resultElement) &&
-                     resultElement.ValueKind == JsonValueKind.Array)
+            JsonElement resultElement = root.GetProperty("result");
+
+            // Non-paginated GROUP BY returns result as an array
+            if (resultElement.ValueKind == JsonValueKind.Array)
             {
                 Assert.IsTrue(resultElement.GetArrayLength() > 1, "Expected multiple groups.");
+            }
+            else if (resultElement.ValueKind == JsonValueKind.Object &&
+                     resultElement.TryGetProperty("items", out JsonElement itemsElement))
+            {
+                Assert.IsTrue(itemsElement.GetArrayLength() > 1, "Expected multiple groups.");
+            }
+            else
+            {
+                Assert.Fail("Unexpected result shape for GROUP BY response.");
             }
         }
 
@@ -191,11 +198,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "COUNT with GROUP BY and first should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            if (root.TryGetProperty("items", out JsonElement itemsElement))
-            {
-                Assert.IsTrue(itemsElement.GetArrayLength() <= 2, "Expected at most 2 items when first=2.");
-                Assert.IsTrue(root.TryGetProperty("hasNextPage", out _), "Paginated response should include hasNextPage.");
-            }
+            JsonElement resultElement = root.GetProperty("result");
+
+            // Paginated GROUP BY returns result as { items: [...], endCursor, hasNextPage }
+            Assert.AreEqual(JsonValueKind.Object, resultElement.ValueKind,
+                "Paginated GROUP BY result should be an object.");
+            Assert.IsTrue(resultElement.TryGetProperty("items", out JsonElement itemsElement),
+                "Paginated response should contain 'items' property.");
+            Assert.IsTrue(itemsElement.GetArrayLength() <= 2, "Expected at most 2 items when first=2.");
+            Assert.IsTrue(resultElement.TryGetProperty("hasNextPage", out _),
+                "Paginated response should include hasNextPage.");
         }
 
         #endregion

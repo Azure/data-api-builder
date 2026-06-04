@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -28,48 +26,64 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Updates an existing book record (id=1) with new title and verifies success.
+        /// Creates a dedicated record, updates its title, verifies success, then cleans up.
         /// </summary>
         [TestMethod]
         public async Task UpdateRecord_ValidKeysAndFields_ReturnsSuccess()
         {
-            var keys = new Dictionary<string, object> { { "id", 1 } };
-            var fields = new Dictionary<string, object> { { "title", "Updated Title via MCP" } };
-
-            CallToolResult result = await ExecuteUpdateAsync("Book", keys, fields);
-
-            AssertSuccess(result, "UpdateRecord should succeed for existing record.");
-
-            JsonElement root = ParseResultRoot(result);
-            Assert.AreEqual("Book", root.GetProperty("entity").GetString());
-            Assert.IsTrue(root.GetProperty("message").GetString()!.Contains("Successfully updated"),
-                "Response message should indicate success.");
-
-            if (root.TryGetProperty("result", out JsonElement resultElement) &&
-                resultElement.TryGetProperty("title", out JsonElement titleElement))
+            int createdId = await CreateBookForUpdate("Book Before Update");
+            try
             {
-                Assert.AreEqual("Updated Title via MCP", titleElement.GetString());
+                var keys = new Dictionary<string, object> { { "id", createdId } };
+                var fields = new Dictionary<string, object> { { "title", "Updated Title via MCP" } };
+
+                CallToolResult result = await ExecuteUpdateAsync("Book", keys, fields);
+
+                AssertSuccess(result, "UpdateRecord should succeed for existing record.");
+
+                JsonElement root = ParseResultRoot(result);
+                Assert.AreEqual("Book", root.GetProperty("entity").GetString());
+                Assert.IsTrue(root.GetProperty("message").GetString()!.Contains("Successfully updated"),
+                    "Response message should indicate success.");
+
+                if (root.TryGetProperty("result", out JsonElement resultElement) &&
+                    resultElement.TryGetProperty("title", out JsonElement titleElement))
+                {
+                    Assert.AreEqual("Updated Title via MCP", titleElement.GetString());
+                }
+            }
+            finally
+            {
+                await DeleteBook(createdId);
             }
         }
 
         /// <summary>
-        /// Updates publisher_id field of an existing record and verifies the change.
+        /// Creates a dedicated record, updates its publisher_id, verifies the change, then cleans up.
         /// </summary>
         [TestMethod]
         public async Task UpdateRecord_UpdateNumericField_ReturnsUpdatedValue()
         {
-            var keys = new Dictionary<string, object> { { "id", 2 } };
-            var fields = new Dictionary<string, object> { { "publisher_id", 9999 } };
-
-            CallToolResult result = await ExecuteUpdateAsync("Book", keys, fields);
-
-            AssertSuccess(result, "UpdateRecord should succeed for numeric field update.");
-
-            JsonElement root = ParseResultRoot(result);
-            if (root.TryGetProperty("result", out JsonElement resultElement) &&
-                resultElement.TryGetProperty("publisher_id", out JsonElement pubElement))
+            int createdId = await CreateBookForUpdate("Numeric Field Update Book");
+            try
             {
-                Assert.AreEqual(9999, pubElement.GetInt32());
+                var keys = new Dictionary<string, object> { { "id", createdId } };
+                var fields = new Dictionary<string, object> { { "publisher_id", 9999 } };
+
+                CallToolResult result = await ExecuteUpdateAsync("Book", keys, fields);
+
+                AssertSuccess(result, "UpdateRecord should succeed for numeric field update.");
+
+                JsonElement root = ParseResultRoot(result);
+                if (root.TryGetProperty("result", out JsonElement resultElement) &&
+                    resultElement.TryGetProperty("publisher_id", out JsonElement pubElement))
+                {
+                    Assert.AreEqual(9999, pubElement.GetInt32());
+                }
+            }
+            finally
+            {
+                await DeleteBook(createdId);
             }
         }
 
@@ -156,6 +170,53 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             };
 
             return await ExecuteToolAsync(tool, serviceProvider, args);
+        }
+
+        private static async Task<int> CreateBookForUpdate(string title)
+        {
+            IServiceProvider serviceProvider = BuildMutationServiceProvider();
+            CreateRecordTool createTool = new();
+
+            var args = new Dictionary<string, object?>
+            {
+                { "entity", "Book" },
+                { "data", new Dictionary<string, object> { { "title", title }, { "publisher_id", 1234 } } }
+            };
+
+            CallToolResult createResult = await ExecuteToolAsync(createTool, serviceProvider, args);
+            Assert.IsTrue(createResult.IsError != true, $"Setup: Failed to create book for update test. {GetFirstTextContent(createResult)}");
+
+            JsonElement root = ParseResultRoot(createResult);
+            if (root.TryGetProperty("result", out JsonElement resultElement) &&
+                resultElement.ValueKind == JsonValueKind.Object &&
+                resultElement.TryGetProperty("value", out JsonElement valueArray) &&
+                valueArray.ValueKind == JsonValueKind.Array &&
+                valueArray.GetArrayLength() > 0)
+            {
+                return valueArray[0].GetProperty("id").GetInt32();
+            }
+
+            if (resultElement.ValueKind == JsonValueKind.Array && resultElement.GetArrayLength() > 0)
+            {
+                return resultElement[0].GetProperty("id").GetInt32();
+            }
+
+            Assert.Fail("Could not extract created book ID from response.");
+            return -1;
+        }
+
+        private static async Task DeleteBook(int id)
+        {
+            IServiceProvider serviceProvider = BuildMutationServiceProvider();
+            DeleteRecordTool deleteTool = new();
+
+            var args = new Dictionary<string, object?>
+            {
+                { "entity", "Book" },
+                { "keys", new Dictionary<string, object> { { "id", id } } }
+            };
+
+            await ExecuteToolAsync(deleteTool, serviceProvider, args);
         }
     }
 }

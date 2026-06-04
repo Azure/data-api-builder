@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -126,13 +124,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             var readArgs = new Dictionary<string, object?> { { "entity", "Book" }, { "filter", $"id eq {createdId}" } };
             CallToolResult readResult = await ExecuteToolAsync(readTool, readProvider, readArgs);
 
-            if (readResult.IsError != true)
-            {
-                JsonElement root = ParseResultRoot(readResult);
-                JsonElement records = root.GetProperty("result").GetProperty("value");
-                Assert.AreEqual(0, records.GetArrayLength(),
-                    "Deleted record should not be found in subsequent read.");
-            }
+            Assert.IsTrue(readResult.IsError != true, "Follow-up read after delete should succeed.");
+
+            JsonElement root = ParseResultRoot(readResult);
+            JsonElement records = root.GetProperty("result").GetProperty("value");
+            Assert.AreEqual(0, records.GetArrayLength(),
+                "Deleted record should not be found in subsequent read.");
         }
 
         /// <summary>

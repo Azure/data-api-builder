@@ -249,3 +249,8 @@ git config --global commit.gpgsign true
 - [Feature Roadmap](https://github.com/Azure/data-api-builder/discussions/1377)
 - [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md)
 - [GraphQL Specification](https://graphql.org/)
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->

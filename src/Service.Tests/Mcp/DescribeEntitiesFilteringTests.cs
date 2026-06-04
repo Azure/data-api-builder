@@ -8,9 +8,12 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -474,10 +477,52 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
             services.AddSingleton(mockHttpContextAccessor.Object);
 
+            // Register a stub IMetadataProviderFactory that returns a populated DatabaseStoredProcedure
+            // for every stored-procedure entity in the config. DescribeEntitiesTool requires DB metadata
+            // for SP entities (an init invariant); these filtering tests only exercise the filter logic,
+            // so an empty-parameter populated entry is enough to satisfy the invariant without affecting
+            // what is being tested.
+            RegisterStubMetadataProvider(services, config);
+
             // Add logging
             services.AddLogging();
 
             return services.BuildServiceProvider();
+        }
+
+        /// <summary>
+        /// Registers a stub <see cref="IMetadataProviderFactory"/> that exposes a populated
+        /// <see cref="DatabaseStoredProcedure"/> (with an empty <see cref="StoredProcedureDefinition.Parameters"/>
+        /// dictionary) for every stored-procedure entity in <paramref name="config"/>. Mirrors the production
+        /// invariant that init populates DB metadata for every SP entity before describe_entities runs.
+        /// </summary>
+        private static void RegisterStubMetadataProvider(ServiceCollection services, RuntimeConfig config)
+        {
+            Dictionary<string, DatabaseObject> entityMap = new();
+            foreach (KeyValuePair<string, Entity> entry in config.Entities)
+            {
+                if (entry.Value.Source.Type == EntitySourceType.StoredProcedure)
+                {
+                    entityMap[entry.Key] = new DatabaseStoredProcedure(schemaName: "dbo", tableName: entry.Value.Source.Object)
+                    {
+                        SourceType = EntitySourceType.StoredProcedure,
+                        StoredProcedureDefinition = new StoredProcedureDefinition
+                        {
+                            Parameters = new Dictionary<string, ParameterDefinition>()
+                        }
+                    };
+                }
+            }
+
+            Mock<ISqlMetadataProvider> mockSqlMetadataProvider = new();
+            mockSqlMetadataProvider.Setup(x => x.EntityToDatabaseObject).Returns(entityMap);
+            mockSqlMetadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.MSSQL);
+
+            Mock<IMetadataProviderFactory> mockMetadataProviderFactory = new();
+            mockMetadataProviderFactory
+                .Setup(x => x.GetMetadataProvider(It.IsAny<string>()))
+                .Returns(mockSqlMetadataProvider.Object);
+            services.AddSingleton(mockMetadataProviderFactory.Object);
         }
 
         /// <summary>

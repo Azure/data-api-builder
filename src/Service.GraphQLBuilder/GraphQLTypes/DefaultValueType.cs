@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         {
             descriptor.Name("DefaultValue");
             descriptor.OneOf();
-            descriptor.Field(BYTE_TYPE).Type<ByteType>();
+            descriptor.Field(BYTE_TYPE).Type<UnsignedByteType>();
             descriptor.Field(SHORT_TYPE).Type<ShortType>();
             descriptor.Field(INT_TYPE).Type<IntType>();
             descriptor.Field(LONG_TYPE).Type<LongType>();
@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
             descriptor.Field(FLOAT_TYPE).Type<FloatType>();
             descriptor.Field(DECIMAL_TYPE).Type<DecimalType>();
             descriptor.Field(DATETIME_TYPE).Type<DateTimeType>();
-            descriptor.Field(BYTEARRAY_TYPE).Type<ByteArrayType>();
+            descriptor.Field(BYTEARRAY_TYPE).Type<Base64StringType>();
             descriptor.Field(LOCALTIME_TYPE).Type<HotChocolate.Types.NodaTime.LocalTimeType>();
         }
     }

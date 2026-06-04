@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -26,6 +27,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// Gets the type of the tool, which is BuiltIn for this implementation.
         /// </summary>
         public ToolType ToolType { get; } = ToolType.BuiltIn;
+
+        public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.DescribeEntities ?? true;
 
         /// <summary>
         /// Gets the metadata for the describe-entities tool, including its name, description, and input schema.
@@ -177,15 +180,37 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                         try
                         {
+                            DatabaseObject? databaseObject = null;
+                            if (entity.Source.Type == EntitySourceType.StoredProcedure)
+                            {
+                                databaseObject = McpMetadataHelper.TryResolveDatabaseObject(
+                                    entityName,
+                                    runtimeConfig,
+                                    serviceProvider,
+                                    out string resolveError,
+                                    cancellationToken);
+
+                                if (databaseObject is null)
+                                {
+                                    // Init normally populates DatabaseStoredProcedure for every SP entity
+                                    // (or throws and aborts startup). Reaching here means an init invariant
+                                    // regressed. Throw so the surrounding catch drops just this entity from
+                                    // the response - returning the SP with no parameter info would mislead
+                                    // the agent into thinking the SP takes no arguments.
+                                    throw new InvalidOperationException(
+                                        $"Could not resolve DB metadata for stored procedure entity '{entityName}'. Error: {resolveError}");
+                                }
+                            }
+
                             Dictionary<string, object?> entityInfo = nameOnly
                                 ? BuildBasicEntityInfo(entityName, entity)
-                                : BuildFullEntityInfo(entityName, entity, currentUserRole);
+                                : BuildFullEntityInfo(entityName, entity, currentUserRole, databaseObject);
 
                             entityList.Add(entityInfo);
                         }
                         catch (Exception ex)
                         {
-                            logger?.LogWarning(ex, "Failed to build info for entity {EntityName}", entityName);
+                            logger?.LogWarning(ex, "Failed to build info for entity '{EntityName}'", entityName);
                         }
                     }
                 }
@@ -403,10 +428,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <param name="entityName">The name of the entity to include in the dictionary.</param>
         /// <param name="entity">The entity object from which to extract additional information.</param>
         /// <param name="currentUserRole">The role of the current user, used to determine permissions.</param>
+        /// <param name="databaseObject">The resolved database object metadata if available.</param>
         /// <returns>
         /// A dictionary containing the entity's name, description, fields, parameters (if applicable), and permissions.
         /// </returns>
-        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string? currentUserRole)
+        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string? currentUserRole, DatabaseObject? databaseObject)
         {
             // Use GraphQL singular name as alias if available, otherwise use entity name
             string displayName = !string.IsNullOrWhiteSpace(entity.GraphQL?.Singular)
@@ -422,7 +448,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (entity.Source.Type == EntitySourceType.StoredProcedure)
             {
-                info["parameters"] = BuildParameterMetadataInfo(entity.Source.Parameters);
+                info["parameters"] = BuildParameterMetadataInfo(databaseObject);
             }
 
             info["permissions"] = BuildPermissionsInfo(entity, currentUserRole);
@@ -456,32 +482,61 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Builds a list of parameter metadata objects containing information about each parameter.
+        /// Builds the parameter list for a stored procedure entity.
+        /// Each entry has: name, required, default, description.
+        ///
+        /// The per-field rules are agreed in issue #3400:
+        ///   name        - DB metadata is the source of truth; config cannot override.
+        ///   required    - defaults to true when not set in config.
+        ///                 (SQL Server's is_nullable describes the type, not whether the
+        ///                  parameter must be supplied at call time, so it is unreliable.)
+        ///   default     - config-only. T-SQL parameter defaults are not exposed as
+        ///                 structured metadata, so they cannot be discovered from the DB.
+        ///   description - config-only. SQL Server has no description column for parameters.
+        ///
+        /// The merge of config onto DB metadata is already performed upstream by
+        /// <see cref="Core.Services.MetadataProviders.SqlMetadataProvider"/> /
+        /// <see cref="Core.Services.MetadataProviders.MsSqlMetadataProvider"/> when populating
+        /// <see cref="DatabaseStoredProcedure"/>. Each <see cref="ParameterDefinition"/> therefore
+        /// already reflects the config overlay; we just project it.
+        ///
+        /// For an SP entity that successfully initialized, the metadata provider always has a
+        /// populated <see cref="DatabaseStoredProcedure"/>: init throws otherwise (e.g.
+        /// SqlMetadataProvider.FillSchemaForStoredProcedureAsync raises via HandleOrRecordException
+        /// when config declares a parameter the DB doesn't have, and startup aborts). If this
+        /// invariant ever regresses we throw rather than fabricate empty parameter info, so the
+        /// surrounding per-entity catch drops just this entity from the response.
         /// </summary>
-        /// <param name="parameters">A list of <see cref="ParameterMetadata"/> objects representing the parameters to process. Can be null.</param>
-        /// <returns>A list of dictionaries, each containing the parameter's name, whether it is required, its default
-        /// value, and its description. Returns an empty list if <paramref name="parameters"/> is null.</returns>
-        private static List<object> BuildParameterMetadataInfo(List<ParameterMetadata>? parameters)
+        /// <param name="databaseObject">DB metadata for the entity. Must be a populated <see cref="DatabaseStoredProcedure"/>.</param>
+        /// <returns>A list whose elements are dictionaries (one per parameter), each with the keys
+        /// <c>name</c>, <c>required</c>, <c>default</c>, and <c>description</c>.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when <paramref name="databaseObject"/> is not a <see cref="DatabaseStoredProcedure"/> with a populated <see cref="StoredProcedureDefinition"/>.</exception>
+        private static List<object> BuildParameterMetadataInfo(DatabaseObject? databaseObject)
         {
-            List<object> result = new();
+            IReadOnlyDictionary<string, ParameterDefinition>? dbParameters =
+                (databaseObject as DatabaseStoredProcedure)?.StoredProcedureDefinition?.Parameters
+                ?? throw new InvalidOperationException(
+                    "Stored-procedure metadata is missing at describe_entities time. " +
+                    "SqlMetadataProvider.FillSchemaForStoredProcedureAsync should have populated this during init.");
 
-            if (parameters != null)
+            List<object> result = new(dbParameters.Count);
+            foreach ((string parameterName, ParameterDefinition definition) in dbParameters)
             {
-                foreach (ParameterMetadata param in parameters)
-                {
-                    Dictionary<string, object?> paramInfo = new()
-                    {
-                        ["name"] = param.Name,
-                        ["required"] = param.Required,
-                        ["default"] = param.Default,
-                        ["description"] = param.Description ?? string.Empty
-                    };
-                    result.Add(paramInfo);
-                }
+                result.Add(BuildParameterEntry(parameterName, definition));
             }
 
             return result;
         }
+
+        private static Dictionary<string, object?> BuildParameterEntry(
+            string name,
+            ParameterDefinition definition) => new()
+            {
+                ["name"] = name,
+                ["required"] = definition.Required ?? true,
+                ["default"] = definition.Default,
+                ["description"] = definition.Description ?? string.Empty
+            };
 
         /// <summary>
         /// Build a list of permission metadata info for the current user's role

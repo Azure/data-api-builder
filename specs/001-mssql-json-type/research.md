@@ -12,11 +12,15 @@ and the verified answers from the codebase. Each entry follows the
 
 ## R1 — Microsoft.Data.SqlClient: does `SqlDbType.Json` exist on our pinned version?
 
-**Decision**: Bump `Microsoft.Data.SqlClient` from `5.2.3` to a version that
-includes `SqlDbType.Json` (Microsoft.Data.SqlClient `6.x`) as part of this
-feature. Wire SQL Server `JSON` columns through the existing
-`SqlDbType` → CLR-type → DAB string path by adding a single entry to
-`TypeHelper._sqlDbTypeToType`: `[SqlDbType.Json] = typeof(string)`.
+**Decision**: `Microsoft.Data.SqlClient >= 6.0.0` is a **prerequisite**
+for this feature and is delivered by a **separate dependency PR**
+(out of scope for this feature's `tasks.md`). Once that PR is merged
+to the same target branch, this feature wires SQL Server `JSON`
+columns through the existing `SqlDbType` → CLR-type → DAB string path
+by adding a single entry to `TypeHelper._sqlDbTypeToType`:
+`[SqlDbType.Json] = typeof(string)`. A pre-flight task in this
+feature's `tasks.md` verifies the dependency is in place and fails
+fast (referencing the prerequisite PR) if not.
 
 **Rationale**:
 
@@ -54,15 +58,24 @@ feature. Wire SQL Server `JSON` columns through the existing
   `SqlDbType.Json` and complicates a hypothetical future "real JSON
   parameter binding" feature. Rejected for symmetry.
 
-**Affected files** (one-line edits each):
+**Affected files** (within the scope of this feature):
 
-- [src/Directory.Packages.props](src/Directory.Packages.props) — bump
-  `Microsoft.Data.SqlClient` version (and update the license-URL comment
-  per the in-file note).
 - [src/Core/Services/TypeHelper.cs](src/Core/Services/TypeHelper.cs#L88) —
-  add `[SqlDbType.Json] = typeof(string)` to `_sqlDbTypeToType`.
-- `scripts/notice-generation.ps1` — update SqlClient license URL per the
-  TODO comment in `Directory.Packages.props`.
+  add `[SqlDbType.Json] = typeof(string)` to `_sqlDbTypeToType`. **One
+  line.**
+
+**Files NOT touched by this feature** (delivered by the prerequisite
+dependency PR, not by `tasks.md`):
+
+- `src/Directory.Packages.props` — Microsoft.Data.SqlClient `5.2.3 → 6.x`
+  version bump (and license-URL comment refresh).
+- `external_licenses/` — refreshed SqlClient SNI license file.
+- `scripts/notice-generation.ps1` — license URL refresh and NOTICE
+  regeneration.
+
+A pre-flight task in this feature's `tasks.md` MUST assert the
+prerequisite (`Microsoft.Data.SqlClient >= 6.0.0`) and fail with a
+clear message pointing at the dependency PR if absent.
 
 ---
 
@@ -389,18 +402,26 @@ declarations in config already accept any database type opaquely.
 
 ## Summary: total touchpoint count
 
+**This feature's scope:**
+
 | File | Lines changed (estimate) |
 |------|--------------------------|
-| `src/Directory.Packages.props` | 1 (version bump) |
 | `src/Core/Services/TypeHelper.cs` | 1 (dictionary entry) |
 | `src/Core/Resolvers/MsSqlDbExceptionParser.cs` | 1–7 (add JSON error numbers) |
 | `src/Core/Parsers/ODataASTVisitor.cs` | ~10 (operator gate) |
 | `src/Azure.DataApiBuilder.Mcp/BuiltInTools/DescribeEntitiesTool.cs` | ~5 (description hint) |
 | `src/Azure.DataApiBuilder.Mcp/Core/DynamicCustomTool.cs` | ~5 (description hint) |
-| `scripts/notice-generation.ps1` | 1 (license URL) |
 | `src/Service.Tests/DatabaseSchema-MsSql.sql` | ~12 (table + seed) |
 | `src/Service.Tests/dab-config.MsSql.json` | ~15 (Profile entity) |
 | `src/Service.Tests/...` integration tests (new) | several hundred (test code) |
 
 Production code delta is small and surgical, in keeping with
 Constitution Principle VII.
+
+**Delivered by the prerequisite dependency PR (NOT in this feature):**
+
+| File | Lines changed (estimate) |
+|------|--------------------------|
+| `src/Directory.Packages.props` | 1 (Microsoft.Data.SqlClient 5.2.3 → 6.x) |
+| `external_licenses/Microsoft.Data.SqlClient.SNI.*.License.txt` | refresh |
+| `scripts/notice-generation.ps1` | 1 (license URL) + regenerate NOTICE |

@@ -13,21 +13,39 @@ DAB treats the value as an opaque JSON-encoded string in both
 directions and delegates JSON syntax validation to SQL Server. Scope
 is **MSSQL only**; other engines are unaffected.
 
-The implementation is intentionally small-surface: a Microsoft.Data.SqlClient
-package bump unlocks `SqlDbType.Json`, after which the column flows
-through the existing string-type path with five surgical edits
-(TypeHelper dictionary entry, MsSql exception-parser error-code list,
-OData visitor operator gate, two MCP description hints) plus the test
-fixture additions. See [research.md](./research.md) for the per-file
-analysis.
+The implementation is intentionally small-surface. It **depends on** a
+Microsoft.Data.SqlClient upgrade to a `6.x` line that exposes
+`SqlDbType.Json`; that upgrade is delivered as a **separate prerequisite
+PR** (see "Upstream Dependency" below) and is **out of scope** for this
+feature's task list. Once the dependency is in place, this feature
+adds five surgical edits (TypeHelper dictionary entry, MsSql
+exception-parser error-code list, OData visitor operator gate, two MCP
+description hints) plus the test fixture additions. See
+[research.md](./research.md) for the per-file analysis.
+
+### Upstream Dependency (separate PR)
+
+**Prerequisite**: `Microsoft.Data.SqlClient >= 6.0.0` in
+[src/Directory.Packages.props](../../src/Directory.Packages.props). This
+bump (and its license-notice refresh) is delivered by a **separate,
+behavior-preserving dependency PR** so it can be reviewed, validated
+against the full multi-engine CI matrix, and merged independently of
+this feature. This PR's `tasks.md` MUST NOT include the package bump
+or any of its companion edits (license URL, NOTICE regeneration).
+
+**Blocking**: This feature's implementation tasks cannot be completed
+until the dependency PR is merged into the same target branch. A
+pre-flight task verifies the installed version and fails fast with a
+clear message if the prerequisite is missing.
 
 ## Technical Context
 
 **Language/Version**: C# 12 / .NET 8 (per [global.json](../../global.json)).
 
-**Primary Dependencies**: Hot Chocolate (GraphQL), Microsoft.OData.UriParser
-(REST filter), Microsoft.Data.SqlClient → upgrade from `5.2.3` to
-`6.x` (research R1; required for `SqlDbType.Json`).
+**Primary Dependencies**: Hot Chocolate (GraphQL),
+Microsoft.OData.UriParser (REST filter), Microsoft.Data.SqlClient
+**>= 6.0.0** (prerequisite — required for `SqlDbType.Json`; delivered
+by a separate dependency PR, see Summary and research R1).
 
 **Storage**: SQL Server 2025+ / Azure SQL DB (target). No other engines
 in scope.
@@ -81,9 +99,11 @@ is expected.
 
 **Post-design re-check (after Phase 1)**: PASS — contract documents
 and data model do not introduce any new abstractions or cross-engine
-touchpoints. The decision to bump Microsoft.Data.SqlClient (R1) is the
-only non-trivial decision; rationale is recorded in research.md and is
-narrower than the rejected alternatives.
+touchpoints. The Microsoft.Data.SqlClient `6.x` upgrade (R1) is
+carried by a **separate prerequisite PR** and is therefore not a
+decision tracked by this feature's task list; it is recorded here
+purely as a dependency note. This feature's diff stays at the
+~5-line code edits + tests envelope described in Principle VII.
 
 ## Project Structure
 
@@ -112,10 +132,9 @@ Single project; no new project introduced. Concrete touchpoints
 
 ```text
 src/
-├── Directory.Packages.props                       # R1: bump Microsoft.Data.SqlClient
 ├── Core/
 │   ├── Services/
-│   │   └── TypeHelper.cs                          # R1: SqlDbType.Json -> typeof(string)
+│   │   └── TypeHelper.cs                          # R1: SqlDbType.Json -> typeof(string) (single dictionary entry)
 │   ├── Resolvers/
 │   │   └── MsSqlDbExceptionParser.cs              # R4: add JSON error codes to BadRequest set
 │   └── Parsers/
@@ -129,10 +148,13 @@ src/
     ├── DatabaseSchema-MsSql.sql                   # R6: profiles table + seed rows
     ├── dab-config.MsSql.json                      # R6: Profile entity entry
     └── ...                                        # New MSSQL integration tests (see tasks.md)
-
-scripts/
-└── notice-generation.ps1                          # R1: update SqlClient license URL
 ```
+
+**Delivered by the prerequisite dependency PR (NOT in this feature's tasks)**:
+
+- `src/Directory.Packages.props` — Microsoft.Data.SqlClient `5.2.3 → 6.x`
+- `external_licenses/` — refreshed SqlClient SNI license file
+- `scripts/notice-generation.ps1` — license URL refresh and NOTICE regeneration
 
 **Files explicitly NOT touched** (constitutional guard rails):
 
@@ -155,8 +177,11 @@ Principle VII).
 
 See [research.md](./research.md). Eleven research items resolved:
 
-- **R1** — Bump `Microsoft.Data.SqlClient` `5.2.3 → 6.x` to unlock
-  `SqlDbType.Json`; add one dictionary entry.
+- **R1** — `Microsoft.Data.SqlClient >= 6.0.0` (prerequisite; delivered
+  by a separate PR) unlocks `SqlDbType.Json`. This feature contributes
+  the single dictionary entry `[SqlDbType.Json] = typeof(string)` in
+  `TypeHelper._sqlDbTypeToType`, gated by a pre-flight task that
+  verifies the dependency is in place.
 - **R2** — Confirmed downstream pipeline (OpenAPI, GraphQL,
   resolvers, EDM, metadata) handles `typeof(string)` columns without
   further changes.
@@ -200,30 +225,40 @@ All NEEDS CLARIFICATION resolved (none remained from the spec after
 contracts, and the data model. Expected task families (preview only —
 authoritative list is produced by `/speckit.tasks`):
 
-1. **Dependency bump & type-mapping foundation** (R1, R2).
-2. **Operator allow-list gate** (R3) — code + unit tests + MSSQL
+1. **Pre-flight: verify upstream dependency** — assert
+   `Microsoft.Data.SqlClient >= 6.0.0` in
+   [src/Directory.Packages.props](../../src/Directory.Packages.props)
+   and that `SqlDbType.Json` resolves at compile time. Fail fast with
+   a message pointing at the prerequisite dependency PR if not met.
+   **Does NOT modify** `Directory.Packages.props`, `external_licenses/`,
+   or `scripts/notice-generation.ps1` — those edits live in the
+   separate prerequisite PR.
+2. **Type-mapping foundation** (R1, R2) — add the single
+   `[SqlDbType.Json] = typeof(string)` entry in
+   [src/Core/Services/TypeHelper.cs](../../src/Core/Services/TypeHelper.cs).
+3. **Operator allow-list gate** (R3) — code + unit tests + MSSQL
    integration tests for FR-009 + REST/GraphQL parity tests.
-3. **Error mapping** (R4) — code + integration tests for FR-007 (REST
+4. **Error mapping** (R4) — code + integration tests for FR-007 (REST
    400 + GraphQL `BAD_REQUEST`).
-4. **MCP description hints** (R5/FR-017) — code + integration tests
+5. **MCP description hints** (R5/FR-017) — code + integration tests
    asserting the description string in `describe_entities` and
    `dynamic_custom_tool` output.
-5. **Test fixture & happy-path integration tests** (R6, FR-001…FR-008)
+6. **Test fixture & happy-path integration tests** (R6, FR-001…FR-008)
    — schema additions, `Profile` entity, REST + GraphQL CRUD tests,
    NULL handling, OpenAPI/GraphQL introspection tests.
-6. **Regression guard** — explicit verification (e.g., row-count
+7. **Regression guard** — explicit verification (e.g., row-count
    smoke tests or noted CI check) that PostgreSQL, MySQL, Cosmos, and
    DwSql categories remain at their pre-change pass counts (SC-002).
-7. **Docs & release note** — note minimum supported SQL Server version
+8. **Docs & release note** — note minimum supported SQL Server version
    in the appropriate `docs/` page; release note line for the JSON
    feature.
 
 ## Complexity Tracking
 
 *Empty intentionally — no Constitution violations to justify.* The
-single notable decision (Microsoft.Data.SqlClient version bump) is
-recorded in research.md R1 with alternatives; it is not a Principle
-violation but a deliberate, narrower-than-alternatives choice.
+Microsoft.Data.SqlClient `6.x` upgrade is delivered by a **separate
+prerequisite PR** (see Summary → Upstream Dependency) and is therefore
+not a decision carried by this feature's scope.
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|--------------------------------------|

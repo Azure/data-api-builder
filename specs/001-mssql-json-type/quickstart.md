@@ -24,6 +24,12 @@ For the test fixture schema see
 - A SQL client (e.g., `sqlcmd`, Azure Data Studio, or the VS Code MSSQL
   extension).
 - This branch of the DAB repo checked out.
+- **`Microsoft.Data.SqlClient >= 6.0.0`** in
+  [src/Directory.Packages.props](../../src/Directory.Packages.props).
+  This is a **prerequisite delivered by a separate dependency PR**;
+  if this branch does not yet contain it, merge or rebase that PR
+  before running the quickstart. The repo will not compile-time
+  recognize `SqlDbType.Json` without it.
 
 ---
 

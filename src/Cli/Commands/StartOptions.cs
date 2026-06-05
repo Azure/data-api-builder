@@ -21,11 +21,12 @@ namespace Cli.Commands
 
         public LogBuffer CliBuffer { get; }
 
-        public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, bool mcpStdio, string? mcpRole, string config)
+        public StartOptions(bool verbose, LogLevel? logLevel, LogLevel? logLevelLegacy, bool isHttpsRedirectionDisabled, bool mcpStdio, string? mcpRole, string config)
             : base(config)
         {
             // When verbose is true we set LogLevel to information.
             LogLevel = verbose is true ? Microsoft.Extensions.Logging.LogLevel.Information : logLevel;
+            LogLevelLegacy = logLevelLegacy;
             IsHttpsRedirectionDisabled = isHttpsRedirectionDisabled;
             McpStdio = mcpStdio;
             McpRole = mcpRole;
@@ -37,8 +38,11 @@ namespace Cli.Commands
         [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specifies logging level as informational.")]
         public bool Verbose { get; }
 
-        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = LOGLEVEL_HELPTEXT)]
+        [Option("log-level", SetName = "loglevel", Required = false, HelpText = LOGLEVEL_HELPTEXT)]
         public LogLevel? LogLevel { get; }
+
+        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = LOGLEVEL_HELPTEXT, Hidden = true)]
+        public LogLevel? LogLevelLegacy { get; }
 
         [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
         public bool IsHttpsRedirectionDisabled { get; }

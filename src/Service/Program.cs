@@ -222,9 +222,9 @@ namespace Azure.DataApiBuilder.Service
 
         /// <summary>
         /// Extracts the log level from the command line arguments and optionally from config.
-        /// When --LogLevel is present, returns that value with CLI override flag set.
-        /// When in MCP stdio mode without explicit --LogLevel, reads the config file to check for log level.
-        /// When in normal mode without explicit --LogLevel, defaults to Error (UpdateFromRuntimeConfig()
+        /// When --log-level is present, returns that value with CLI override flag set.
+        /// When in MCP stdio mode without explicit --log-level, reads the config file to check for log level.
+        /// When in normal mode without explicit --log-level, defaults to Error (UpdateFromRuntimeConfig()
         /// will later adjust based on config: Debug for Development mode, Error for Production mode).
         /// </summary>
         /// <param name="args">Array that may contain log level information.</param>
@@ -237,19 +237,19 @@ namespace Azure.DataApiBuilder.Service
             LogLevel logLevel;
             isConfigOverriding = false;
 
-            // Check if --LogLevel was explicitly specified via CLI (case-insensitive parsing)
-            int logLevelIndex = Array.FindIndex(args, a => string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));
+            // Check if --log-level was explicitly specified via CLI (case-insensitive parsing)
+            int logLevelIndex = Array.FindIndex(args, a => string.Equals(a, "--log-level", StringComparison.OrdinalIgnoreCase));
             bool hasCliLogLevel = logLevelIndex >= 0 && logLevelIndex + 1 < args.Length;
 
             if (hasCliLogLevel && Enum.TryParse(args[logLevelIndex + 1], ignoreCase: true, out LogLevel cliLogLevel))
             {
-                // User explicitly set --LogLevel via CLI (highest priority)
+                // User explicitly set --log-level via CLI (highest priority)
                 logLevel = cliLogLevel;
                 isCliOverriding = true;
             }
             else if (runMcpStdio)
             {
-                // MCP stdio mode without explicit --LogLevel: check config for log level (second priority)
+                // MCP stdio mode without explicit --log-level: check config for log level (second priority)
                 isCliOverriding = false;
                 logLevel = LogLevel.None; // Default if config doesn't have log level
 
@@ -269,7 +269,7 @@ namespace Azure.DataApiBuilder.Service
             }
             else
             {
-                // Normal (non-MCP) mode without explicit --LogLevel:
+                // Normal (non-MCP) mode without explicit --log-level:
                 // Start with Error as fallback. UpdateFromRuntimeConfig() will later
                 // adjust based on config: Debug for Development mode, Error for Production mode.
                 // This initial value is used before config is loaded.

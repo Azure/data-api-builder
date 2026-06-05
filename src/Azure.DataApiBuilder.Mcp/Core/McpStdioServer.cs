@@ -388,7 +388,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             bool updated = logLevelController.UpdateFromMcp(level);
 
             // Restore stderr if the agent successfully turned logging on. When `--mcp-stdio` (or
-            // `--LogLevel none`) was the startup default, stderr was redirected to TextWriter.Null;
+            // `--log-level none`) was the startup default, stderr was redirected to TextWriter.Null;
             // re-enable it now so subsequent logs flow.
             if (updated && isLoggingEnabled)
             {

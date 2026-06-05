@@ -113,6 +113,7 @@ namespace Cli
                 StartOptions startOptions = new(
                     verbose: false,
                     logLevel: LogLevel.None,
+                    logLevelLegacy: null,
                     isHttpsRedirectionDisabled: false,
                     config: options.Config!,
                     mcpStdio: false,

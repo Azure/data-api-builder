@@ -977,6 +977,7 @@ public class EndToEndTests
         StartOptions options = new(
             verbose: false,
             logLevel: cliLogLevel,
+            logLevelLegacy: null,
             isHttpsRedirectionDisabled: false,
             mcpStdio: false,
             mcpRole: null,

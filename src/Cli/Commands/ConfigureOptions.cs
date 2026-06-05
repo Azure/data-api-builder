@@ -53,6 +53,8 @@ namespace Cli.Commands
             int? runtimeMcpDmlToolsAggregateRecordsQueryTimeout = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
+            string? runtimeCacheLevel2Provider = null,
+            string? runtimeCacheLevel2ConnectionString = null,
             CompressionLevel? runtimeCompressionLevel = null,
             HostMode? runtimeHostMode = null,
             IEnumerable<string>? runtimeHostCorsOrigins = null,
@@ -117,6 +119,8 @@ namespace Cli.Commands
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
+            RuntimeCacheLevel2Provider = runtimeCacheLevel2Provider;
+            RuntimeCacheLevel2ConnectionString = runtimeCacheLevel2ConnectionString;
             // Compression
             RuntimeCompressionLevel = runtimeCompressionLevel;
             // Host
@@ -241,6 +245,12 @@ namespace Cli.Commands
 
         [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize the DAB cache's global default time to live in seconds. Default: 5 seconds (Integer).")]
         public int? RuntimeCacheTTL { get; }
+
+        [Option("runtime.cache.level-2.provider", Required = false, HelpText = "Set level-2 cache provider. Allowed values: redis.")]
+        public string? RuntimeCacheLevel2Provider { get; }
+
+        [Option("runtime.cache.level-2.connection-string", Required = false, HelpText = "Set level-2 cache connection string.")]
+        public string? RuntimeCacheLevel2ConnectionString { get; }
 
         [Option("runtime.compression.level", Required = false, HelpText = "Set the response compression level. Allowed values: optimal (default), fastest, none.")]
         public CompressionLevel? RuntimeCompressionLevel { get; }

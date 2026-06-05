@@ -95,6 +95,31 @@ public abstract class RestRequestContext
     /// </summary>
 
     public int? First { get; set; }
+
+    /// <summary>
+    /// Optional semantic search input provided by the caller.
+    /// </summary>
+    public string? SemanticSearch { get; set; }
+
+    /// <summary>
+    /// Optional semantic threshold override provided by the caller.
+    /// </summary>
+    public double? SemanticThreshold { get; set; }
+
+    /// <summary>
+    /// True when semantic distance should be included in REST output.
+    /// </summary>
+    public bool IncludeSemanticDistanceInResponse { get; set; }
+
+    /// <summary>
+    /// Semantic distance keyed by a stable primary-key signature generated from result rows.
+    /// </summary>
+    public Dictionary<string, double>? SemanticDistanceByPrimaryKeySignature { get; set; }
+
+    /// <summary>
+    /// True when user explicitly requested semantic distance in the projection.
+    /// </summary>
+    public bool IsSemanticDistanceExplicitlySelected { get; set; }
     /// <summary>
     /// Is the result supposed to be multiple values or not.
     /// </summary>

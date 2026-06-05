@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Services.SemanticSearch;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly DabCacheService _cache;
+        private readonly ISemanticSearchService _semanticSearchService;
         private readonly ILogger<IQueryEngine> _logger;
 
         /// <inheritdoc/>
@@ -42,6 +44,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IHttpContextAccessor contextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
+            ISemanticSearchService semanticSearchService,
             ILogger<IQueryEngine> logger,
             DabCacheService cache,
             HotReloadEventHandler<HotReloadEventArgs>? handler)
@@ -55,6 +58,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             _contextAccessor = contextAccessor;
             _authorizationResolver = authorizationResolver;
             _gQLFilterParser = gQLFilterParser;
+            _semanticSearchService = semanticSearchService;
             _cache = cache;
             _logger = logger;
 
@@ -75,7 +79,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                     _gQLFilterParser,
                     _logger,
                     _runtimeConfigProvider,
-                    _cache);
+                    _cache,
+                    _semanticSearchService);
                 _queryEngines.Add(DatabaseType.MSSQL, queryEngine);
                 _queryEngines.Add(DatabaseType.MySQL, queryEngine);
                 _queryEngines.Add(DatabaseType.PostgreSQL, queryEngine);

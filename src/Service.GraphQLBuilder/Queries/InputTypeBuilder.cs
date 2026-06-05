@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using HotChocolate.Language;
@@ -50,6 +51,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             List<InputValueDefinitionNode> inputFields = new();
             foreach (FieldDefinitionNode field in node.Fields)
             {
+                if (string.Equals(field.Name.Value, QueryBuilder.SEMANTIC_DISTANCE_FIELD_NAME, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
                 if (IsBuiltInType(field.Type))
                 {
                     inputFields.Add(
@@ -110,6 +116,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             List<InputValueDefinitionNode> inputFields = new();
             foreach (FieldDefinitionNode field in objectTypeDefinitionNode.Fields)
             {
+                if (string.Equals(field.Name.Value, QueryBuilder.SEMANTIC_DISTANCE_FIELD_NAME, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
                 string fieldTypeName = field.Type.NamedType().Name.Value;
                 if (IsBuiltInType(field.Type))
                 {

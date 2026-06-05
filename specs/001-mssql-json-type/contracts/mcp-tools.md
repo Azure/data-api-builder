@@ -1,13 +1,17 @@
 # MCP Contract: JSON Column Surface
 
-**Tools affected**: `describe_entities`, `dynamic_custom_tool`
-(per-SP), `create_record`, `update_record`.
+**Annotation surface**: `describe_entities` (per-field) and
+`dynamic_custom_tool` (per-SP parameter).
+**`create_record` and `update_record`**: input schema is intentionally
+unchanged — the existing tool descriptions already mandate calling
+`describe_entities` first (STEP 1), which is where JSON-column
+agents discover the annotation.
 **Scope**: Per FR-017, how SQL Server `JSON` columns are annotated in
 MCP tool schemas so calling LLM agents know to embed valid JSON text.
 
 This document defines the **per-column annotation contract**; it does
-NOT add new tool actions, change existing tool schemas beyond
-annotation, or alter CRUD execution paths (which route through the
+NOT add new tool actions, change `create_record` / `update_record`
+input schemas, or alter CRUD execution paths (which route through the
 shared engines unchanged).
 
 ---
@@ -19,7 +23,7 @@ exposed in an MCP tool schema:
 
 ```text
 JSON-encoded string; embed valid JSON text (e.g., a JSON object or array
-serialized as a string). Do not send a nested object.
+serialized as a string). Do not send a nested object or array.
 ```
 
 Implementation MAY define this as a constant in
@@ -54,7 +58,7 @@ unchanged.
           "type": "String",
           "nullable": true,
           "isPrimaryKey": false,
-          "description": "JSON-encoded string; embed valid JSON text (e.g., a JSON object or array serialized as a string). Do not send a nested object."
+          "description": "JSON-encoded string; embed valid JSON text (e.g., a JSON object or array serialized as a string). Do not send a nested object or array."
         }
       ],
       "permissions": [ /* ... */ ]
@@ -85,7 +89,7 @@ canonical annotation as its `description`.
   "properties": {
     "payload": {
       "type": "string",
-      "description": "JSON-encoded string; embed valid JSON text (e.g., a JSON object or array serialized as a string). Do not send a nested object."
+      "description": "JSON-encoded string; embed valid JSON text (e.g., a JSON object or array serialized as a string). Do not send a nested object or array."
     }
   }
 }
@@ -134,7 +138,7 @@ is:
 Required fields and values for the new record. For fields whose
 describe_entities metadata indicates a JSON-encoded string, supply the
 value as a string containing valid JSON text — do not send a nested
-object.
+object or array.
 ```
 
 This is OPTIONAL; the FR-017 contract is satisfied by the

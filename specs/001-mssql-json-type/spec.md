@@ -48,13 +48,17 @@ nullable string in OpenAPI and as `String` in the SDL.
    **Then** the `metadata` field is typed `String` (nullable) on the entity
    type and as `String` in `create`/`update` input types.
 3. **Given** the same entity exposed via MCP,
-   **When** an MCP client lists tools (DescribeEntitiesTool) or inspects
-   the input schema of `CreateRecordTool` / `UpdateRecordTool` /
-   `DynamicCustomTool` for the entity,
-   **Then** the `metadata` field is `type: string` with a `description`
-   instructing the agent that the value is a JSON-encoded string
-   containing valid JSON text (and that nested objects/arrays are not
-   accepted).
+   **When** an MCP client invokes `DescribeEntitiesTool` for the
+   entity (and, where applicable, inspects the input schema of a
+   `DynamicCustomTool` whose stored procedure has a JSON parameter),
+   **Then** the JSON field / parameter is `type: string` with a
+   `description` instructing the agent that the value is a
+   JSON-encoded string containing valid JSON text and that nested
+   objects or arrays are not accepted.
+   `CreateRecordTool` and `UpdateRecordTool` input schemas are NOT
+   modified by this feature; agents are expected to call
+   `DescribeEntitiesTool` first (per the existing tool descriptions)
+   to discover JSON columns and the embed instruction.
 
 ---
 
@@ -401,16 +405,27 @@ is a 400 identifying that the operator is not supported on JSON columns.
   without DAB-specific translation. Documentation MUST state the
   minimum supported server versions (Azure SQL DB current; SQL Server
   2025+).
-- **FR-017**: MCP tool schemas (DescribeEntitiesTool output, and the
-  input schemas of CreateRecordTool, UpdateRecordTool, and
-  DynamicCustomTool) MUST surface JSON columns as `type: string` with a
-  `description` that explicitly instructs the calling agent: (a) the
-  value is a JSON-encoded string containing valid JSON text; (b) nested
-  JSON objects or arrays are not accepted as input. DAB MUST NOT emit a
-  non-standard JSON Schema `format` value (e.g., `format: "json"`) for
-  these columns. Integration tests under `TestCategory=MsSql` MUST
-  assert the presence and substance of this `description` for at least
-  one JSON column.
+- **FR-017**: MCP tool schemas MUST surface SQL Server `JSON` columns
+  to calling LLM agents with a `description` that explicitly states
+  (a) the value is a JSON-encoded string containing valid JSON text
+  and (b) nested JSON objects or arrays are not accepted as input.
+  Annotation surface:
+    - `DescribeEntitiesTool` output: each field whose underlying
+      column type is JSON MUST carry the `description`.
+    - `DynamicCustomTool` per-SP input schema: each stored-procedure
+      parameter whose type is JSON MUST carry the `description`.
+    - `CreateRecordTool` and `UpdateRecordTool` input schemas are
+      intentionally NOT modified by this feature — their `data`
+      property is an opaque object with no per-column slot. Agents
+      discover JSON columns via `DescribeEntitiesTool`, which the
+      existing tool descriptions already mandate as STEP 1 before
+      constructing a `data` payload.
+  DAB MUST NOT emit a non-standard JSON Schema `format` value (e.g.,
+  `format: "json"`) for these columns. Integration tests under
+  `TestCategory=MsSql` MUST assert the presence and substance of the
+  `description` on (i) at least one JSON field in `DescribeEntitiesTool`
+  output and (ii) at least one JSON parameter in a `DynamicCustomTool`
+  per-SP input schema.
 
 ### Key Entities
 

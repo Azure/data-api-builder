@@ -211,7 +211,7 @@ call (e.g., via MCP Inspector per `docs/testing-guide/mcp-inspector-testing.md`)
 
 Expected: the `metadata` field metadata for the `Profile` entity
 includes a `description` string mentioning "JSON-encoded string" and
-"do not send a nested object". See
+"do not send a nested object or array". See
 [contracts/mcp-tools.md](./contracts/mcp-tools.md) for the canonical
 text.
 

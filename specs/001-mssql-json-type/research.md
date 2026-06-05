@@ -231,7 +231,7 @@ path so the raw SQL message is not leaked in production.
 1. **`DescribeEntitiesTool` output** — when emitting per-entity field
    metadata, attach `"description": "JSON-encoded string; embed valid
    JSON text (e.g., a JSON object or array serialized as a string). Do
-   not send a nested object."` to fields whose underlying
+   not send a nested object or array."` to fields whose underlying
    `columnDefinition.SqlDbType == SqlDbType.Json`.
 2. **`DynamicCustomTool.BuildInputSchemaFromDbMetadata`** — same
    description, attached at the per-parameter slot when

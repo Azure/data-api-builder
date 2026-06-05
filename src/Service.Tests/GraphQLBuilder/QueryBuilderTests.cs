@@ -230,6 +230,54 @@ type Foo @model(name:""Foo"") {
         }
 
         [TestMethod]
+        [TestCategory("Query Generation")]
+        [TestCategory("Collection access")]
+        public void CollectionQueryAddsSemanticArgumentsWhenEnabled()
+        {
+            string gql =
+                @"
+type Foo @model(name:""Foo"") {
+    id: ID!
+}
+                ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
+
+            RuntimeEntities entities = new(new Dictionary<string, Entity>
+            {
+                {
+                    "Foo",
+                    new Entity(
+                        Source: new("Foo", EntitySourceType.Table, null, null),
+                        GraphQL: new("Foo", "Foos"),
+                        Fields: null,
+                        Rest: new(),
+                        Permissions: [],
+                        Mappings: null,
+                        Relationships: null,
+                        SemanticSearch: new EntitySemanticSearchOptions { Enabled = true, RedisIndexName = "idx:foo" })
+                }
+            });
+
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                entityNameToDatabaseType,
+                entities,
+                inputTypes: new(),
+                entityPermissionsMap: _entityPermissions
+                );
+
+            ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
+            FieldDefinitionNode collectionField = query.Fields.First(f => f.Name.Value == "foos");
+            Assert.IsTrue(collectionField.Arguments.Any(a => a.Name.Value == QueryBuilder.SEMANTIC_SEARCH_ARGUMENT_NAME));
+            Assert.IsTrue(collectionField.Arguments.Any(a => a.Name.Value == QueryBuilder.SEMANTIC_THRESHOLD_ARGUMENT_NAME));
+        }
+
+        [TestMethod]
         public void PrimaryKeyFieldAsQueryInput()
         {
             string gql =

@@ -7,6 +7,7 @@ using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -326,6 +327,58 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             primaryKeyRoute = "id//title/";
             PerformRequestParserPrimaryKeyTest(findRequestContext, primaryKeyRoute, expectsException: true);
+        }
+
+        [TestMethod]
+        public void InsertRequestBodyCannotSetSemanticDistanceField()
+        {
+            RuntimeConfig mockConfig = new(
+                Schema: "",
+                DataSource: new(DatabaseType.PostgreSQL, "", new()),
+                Runtime: new(
+                    Rest: new(Path: "/api"),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null)
+                    ),
+                Entities: new(new Dictionary<string, Entity>
+                {
+                    {
+                        DEFAULT_NAME,
+                        new Entity(
+                            Source: new(DEFAULT_NAME, EntitySourceType.Table, null, null),
+                            GraphQL: new(DEFAULT_NAME, DEFAULT_NAME),
+                            Fields: null,
+                            Rest: new(),
+                            Permissions: [],
+                            Mappings: null,
+                            Relationships: null)
+                    }
+                })
+                );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_mockMetadataStore.Object);
+            RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);
+
+            using JsonDocument body = JsonDocument.Parse("{\"semantic_distance\":0.81}");
+            InsertRequestContext context = new(
+                entityName: DEFAULT_NAME,
+                dbo: GetDbo(DEFAULT_SCHEMA, DEFAULT_NAME),
+                insertPayloadRoot: body.RootElement,
+                operationType: EntityActionOperation.Insert);
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => requestValidator.ValidateInsertRequestContext(context));
+
+            Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.BadRequest, ex.SubStatusCode);
+            StringAssert.Contains(ex.Message, "semantic_distance is read-only.");
         }
         #endregion
         #region Helper Methods

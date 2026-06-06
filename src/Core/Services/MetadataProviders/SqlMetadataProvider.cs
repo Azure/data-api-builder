@@ -123,16 +123,19 @@ namespace Azure.DataApiBuilder.Core.Services
             _databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
             _logger = logger;
             _isValidateOnly = isValidateOnly;
-            foreach ((string entityName, Entity entityMetatdata) in Entities)
+            if (!_isValidateOnly)
             {
-                if (runtimeConfig.IsRestEnabled)
+                foreach ((string entityName, Entity entityMetatdata) in Entities)
                 {
-                    string restPath = entityMetatdata.Rest?.Path ?? entityName;
-                    _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
-                }
-                else
-                {
-                    _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
+                    if (runtimeConfig.IsRestEnabled)
+                    {
+                        string restPath = entityMetatdata.Rest?.Path ?? entityName;
+                        _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
+                    }
+                    else
+                    {
+                        _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
+                    }
                 }
             }
 

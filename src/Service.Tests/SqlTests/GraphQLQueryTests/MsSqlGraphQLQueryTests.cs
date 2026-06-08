@@ -732,8 +732,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <summary>
         /// Checks failure on providing arguments with no default in runtimeconfig.
         /// In this test, there is no default value for the argument 'id' in runtimeconfig, nor is it specified in the query.
-        /// Stored procedure expects id argument to be provided.
-        /// The expected error message contents align with the expected "Development" mode response.
+        /// GraphQL validation should reject the request because required argument 'id' is missing.
         /// </summary>
         [TestMethod]
         public async Task TestStoredProcedureQueryWithNoDefaultInConfig()
@@ -746,7 +745,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "Procedure or function 'get_publisher_by_id' expects parameter '@id', which was not supplied.");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "The argument `id` is required.");
         }
 
         /// <summary>

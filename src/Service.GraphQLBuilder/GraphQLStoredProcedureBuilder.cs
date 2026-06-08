@@ -25,6 +25,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// It uses the parameters to build the arguments and returns a list
         /// of the StoredProcedure GraphQL object.
         /// </summary>
+        /// <remarks>
+        /// Each input argument's GraphQL type is wrapped in <see cref="NonNullTypeNode"/> when the
+        /// parameter is required, so introspection (<c>String!</c> vs <c>String</c>) reflects whether
+        /// the caller must supply a value. A parameter is treated as required unless the runtime
+        /// config explicitly sets <c>required: false</c> for it.
+        /// </remarks>
         /// <param name="name">Name used for InputValueDefinition name.</param>
         /// <param name="entity">Entity's runtime config metadata.</param>
         /// <param name="dbObject">Stored procedure database schema metadata.</param>
@@ -55,16 +61,26 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     // Without database metadata, there is no way to know to cast 1 to a decimal versus an integer.
 
                     IValueNode? defaultValueNode = null;
-                    if (entity.Source.Parameters is not null)
-                    {
-                        ParameterMetadata? paramMetadata = entity.Source.Parameters
-                            .FirstOrDefault(p => p.Name == param);
+                    ParameterMetadata? paramMetadata = entity.Source.Parameters?
+                        .FirstOrDefault(p => p.Name == param);
 
-                        if (paramMetadata is not null && paramMetadata.Default is not null)
-                        {
-                            Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(paramMetadata.Default.ToString()!, parameterDefinition: spdef.Parameters[param]);
-                            defaultValueNode = defaultGraphQLValue.Item2;
-                        }
+                    if (paramMetadata is not null && paramMetadata.Default is not null)
+                    {
+                        Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(paramMetadata.Default.ToString()!, parameterDefinition: spdef.Parameters[param]);
+                        defaultValueNode = defaultGraphQLValue.Item2;
+                    }
+
+                    // Default to required so the schema doesn't silently mark a mandatory parameter as
+                    // optional. T-SQL nullability does not indicate whether a caller must supply a value,
+                    // so we only relax this when the config explicitly opts out.
+                    bool isRequired = paramMetadata?.Required ?? true;
+
+                    ITypeNode parameterTypeNode = new NamedTypeNode(
+                        SchemaConverter.GetGraphQLTypeFromSystemType(type: definition.SystemType));
+
+                    if (isRequired)
+                    {
+                        parameterTypeNode = new NonNullTypeNode((INullableTypeNode)parameterTypeNode);
                     }
 
                     inputValues.Add(
@@ -74,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                             description: definition.Description != null
                                         ? new StringValueNode(definition.Description)
                                         : new StringValueNode($"parameters for {name.Value} stored-procedure"),
-                            type: new NamedTypeNode(SchemaConverter.GetGraphQLTypeFromSystemType(type: definition.SystemType)),
+                            type: parameterTypeNode,
                             defaultValue: defaultValueNode,
                             directives: new List<DirectiveNode>())
                         );

@@ -28,6 +28,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly McpToolRegistry _toolRegistry;
         private readonly IServiceProvider _serviceProvider;
         private readonly McpStdoutWriter _stdoutWriter;
+        private readonly TextReader? _inputReader;
         private readonly string _protocolVersion;
 
         private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
@@ -39,10 +40,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         };
 
-        public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider)
+        public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider, TextReader? inputReader = null)
         {
             _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            _inputReader = inputReader;
 
             // Resolve the shared stdout writer so JSON-RPC responses and
             // notifications/message frames are serialized through one lock.
@@ -61,9 +63,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task RunAsync(CancellationToken cancellationToken)
         {
-            // Read through Console.In so tests can inject stdin and the process
-            // still follows the configured console input encoding in stdio mode.
-            TextReader reader = Console.In;
+            // By default read via Console.In so the loop honors the configured
+            // Console.InputEncoding in stdio mode.
+            TextReader reader = _inputReader ?? Console.In;
 
             while (!cancellationToken.IsCancellationRequested)
             {

@@ -237,8 +237,10 @@ namespace Azure.DataApiBuilder.Service
             LogLevel logLevel;
             isConfigOverriding = false;
 
-            // Check if --log-level was explicitly specified via CLI (case-insensitive parsing)
-            int logLevelIndex = Array.FindIndex(args, a => string.Equals(a, "--log-level", StringComparison.OrdinalIgnoreCase));
+            // Check if --log-level or --LogLevel was explicitly specified via CLI (case-insensitive parsing)
+            int logLevelIndex = Array.FindIndex(args, a =>
+                string.Equals(a, "--log-level", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));
             bool hasCliLogLevel = logLevelIndex >= 0 && logLevelIndex + 1 < args.Length;
 
             if (hasCliLogLevel && Enum.TryParse(args[logLevelIndex + 1], ignoreCase: true, out LogLevel cliLogLevel))

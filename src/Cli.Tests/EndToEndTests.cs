@@ -831,8 +831,8 @@ public class EndToEndTests
     [DataRow("--log-level tRace", DisplayName = "Case sensitivity: LogLevel Trace from command line.")]
     [DataRow("--log-level DebUG", DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
     [DataRow("--log-level information", DisplayName = "Case sensitivity: LogLevel Information from command line.")]
-    [DataRow("--LogLevel 0", DisplayName = "Case sensitivity: LogLevel legacy Information from command line.")]
-    [DataRow("--LogLevel information", DisplayName = "Case sensitivity: LogLevel legacy Information from command line.")]
+    [DataRow("--LogLevel 0", DisplayName = "Case sensitivity: LogLevel 0 legacy from command line.")]
+    [DataRow("--LogLevel information", DisplayName = "Case sensitivity: LogLevel Information legacy from command line.")]
     public void TestEngineStartUpWithVerboseAndLogLevelOptions(string logLevelOption)
     {
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);

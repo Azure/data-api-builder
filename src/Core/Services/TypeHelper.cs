@@ -8,6 +8,7 @@ using System.Net;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
+using Microsoft.Data;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Services
@@ -77,7 +78,8 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(TimeOnly)] = JsonDataType.String,
             [typeof(object)] = JsonDataType.Object,
             [typeof(DateTime)] = JsonDataType.String,
-            [typeof(DateTimeOffset)] = JsonDataType.String
+            [typeof(DateTimeOffset)] = JsonDataType.String,
+            [typeof(float[])] = JsonDataType.Array
         };
 
         /// <summary>
@@ -111,7 +113,8 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.TinyInt] = typeof(byte),
             [SqlDbType.UniqueIdentifier] = typeof(Guid),
             [SqlDbType.VarBinary] = typeof(byte[]),
-            [SqlDbType.VarChar] = typeof(string)
+            [SqlDbType.VarChar] = typeof(string),
+            [SqlDbTypeExtensions.Vector] = typeof(float[])
         };
 
         private static Dictionary<SqlDbType, DbType> _sqlDbDateTimeTypeToDbType = new()

@@ -734,13 +734,15 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Sanitizes the generated entity name by removing whitespace and capitalizing the next character after whitespace.
+        /// Removes whitespace from the generated entity name and capitalizes the character
+        /// immediately following each removed whitespace (camelCase join).
+        /// For example, "Order Items" becomes "OrderItems" and "dbo_Order Items" becomes "dbo_OrderItems".
         /// </summary>
-        /// <param name="name">The entity name to be sanitized.</param>
-        /// <returns>The sanitized entity name.</returns>
-        protected static string SanitizeGeneratedEntityName(string name)
+        /// <param name="name">The entity name to process.</param>
+        /// <returns>The entity name with whitespace removed and following characters capitalized.</returns>
+        protected static string RemoveWhitespaceAndCamelCase(string name)
         {
-            StringBuilder sanitizedName = new(name.Length);
+            StringBuilder result = new(name.Length);
             bool capitalizeNext = false;
 
             foreach (char character in name)
@@ -751,11 +753,11 @@ namespace Azure.DataApiBuilder.Core.Services
                     continue;
                 }
 
-                sanitizedName.Append(capitalizeNext ? char.ToUpperInvariant(character) : character);
+                result.Append(capitalizeNext ? char.ToUpperInvariant(character) : character);
                 capitalizeNext = false;
             }
 
-            return sanitizedName.ToString();
+            return result.ToString();
         }
 
         protected void PopulateDatabaseObjectForEntity(

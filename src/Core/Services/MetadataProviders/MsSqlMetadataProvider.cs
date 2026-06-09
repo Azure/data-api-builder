@@ -333,8 +333,25 @@ namespace Azure.DataApiBuilder.Core.Services
                         continue;
                     }
 
-                    // Sanitize the entity name by ensuring all whitespace characters are removed.
-                    entityName = SanitizeGeneratedEntityName(entityName);
+                    // Remove whitespace from the entity name and camelCase-join words so the result is
+                    // a valid identifier for REST paths and GraphQL singular/plural names.
+                    string rawEntityName = entityName;
+                    entityName = RemoveWhitespaceAndCamelCase(entityName);
+
+                    if (string.IsNullOrEmpty(entityName))
+                    {
+                        _logger.LogError(
+                            "Skipping autoentity generation: entity name '{rawEntityName}' for schema '{schemaName}' resolves to an empty string after whitespace removal for autoentities definition '{autoentityName}'.",
+                            rawEntityName, schemaName, autoentityName);
+                        continue;
+                    }
+
+                    if (rawEntityName != entityName)
+                    {
+                        _logger.LogDebug(
+                            "Entity name '{rawEntityName}' was normalized to '{entityName}' by removing whitespace.",
+                            rawEntityName, entityName);
+                    }
 
                     // Create the entity using the template settings and permissions from the autoentity configuration.
                     // Currently the source type is always Table for auto-generated entities from database objects.
@@ -357,10 +374,15 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     // Add the generated entity to the linking entities dictionary.
                     // This allows the entity to be processed later during metadata population.
+                    // A collision can occur when two database objects produce the same entity name after
+                    // whitespace removal (e.g. "Order Item" and "OrderItem" both yield "OrderItem").
                     if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddGeneratedAutoentityNameToDataSourceName(entityName, autoentityName))
                     {
+                        string collisionMessage = rawEntityName != entityName
+                            ? $"Entity '{entityName}' (normalized from '{rawEntityName}' in schema '{schemaName}') conflicts with autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it."
+                            : $"Entity '{entityName}' conflicts with autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it.";
                         throw new DataApiBuilderException(
-                            message: $"Entity '{entityName}' conflicts with autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it.",
+                            message: collisionMessage,
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }

@@ -5759,7 +5759,7 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
-        /// Ensures that autoentities are properly generated into in-memory entities when entities have unusual elements such as non-default schemas or spaces in their names.
+        /// Ensures that autoentities are properly generated into in-memory entities when entities have unusual elements such as non-default schemas.
         /// </summary>
         /// <param name="includePattern">The pattern to include for autoentities</param>
         /// <param name="patternType">Integer that indicates which input pattern is being used</param>
@@ -5768,7 +5768,6 @@ type Planet @model(name:""PlanetAlias"") {
         [DataTestMethod]
         [DataRow("foo.%", 0, DisplayName = "Test Autoentities with foo schema")]
         [DataRow("bar.%", 1, DisplayName = "Test Autoentities with bar schema")]
-        [DataRow("dbo.Order Items", 2, DisplayName = "Test Autoentities with object with spaces")]
         public async Task TestAutoentitiesGeneratedWithUnusualElements(string includePattern, int patternType)
         {
             // Arrange
@@ -5842,11 +5841,6 @@ type Planet @model(name:""PlanetAlias"") {
                         item = "comic_name";
                         expectedResponseFragment = @"""comic_name"":""NotVogue""";
                         break;
-                    case 2:
-                        path = "dbo_OrderItems";
-                        item = "productname";
-                        expectedResponseFragment = @"""productname"":""Sample Product""";
-                        break;
                     default:
                         throw new ArgumentException("Invalid pattern type");
                 }
@@ -5885,6 +5879,116 @@ type Planet @model(name:""PlanetAlias"") {
                 Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");
                 Assert.IsFalse(graphqlResponseBody.Contains("errors"), "GraphQL response should not contain errors");
                 Assert.IsTrue(graphqlResponseBody.Contains(expectedResponseFragment));
+            }
+        }
+
+        /// <summary>
+        /// Ensures that autoentities are generated with valid names when the SQL object name contains spaces.
+        /// Whitespace is removed and the following character is capitalized (camelCase join), so that the
+        /// resulting entity name is a valid REST path segment and GraphQL type name.
+        /// For example, "dbo.[Order Items]" with the default pattern "{schema}_{object}" produces the
+        /// entity name "dbo_OrderItems" — not "dbo_Order Items".
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod]
+        public async Task TestAutoentitiesGeneratedWithSpacesInObjectName()
+        {
+            // Arrange
+            const string EXPECTED_ENTITY_NAME = "dbo_OrderItems";
+            const string EXPECTED_ITEM_FIELD = "productname";
+            const string EXPECTED_RESPONSE_FRAGMENT = @"""productname"":""Sample Product""";
+
+            Dictionary<string, Autoentity> autoentityMap = new()
+            {
+                {
+                    "SpacedObjectAutoEntity", new Autoentity(
+                        Patterns: new AutoentityPatterns(
+                            Include: new[] { "dbo.Order Items" },
+                            Exclude: null,
+                            Name: null
+                        ),
+                        Template: new AutoentityTemplate(
+                            Rest: new EntityRestOptions(Enabled: true),
+                            GraphQL: new EntityGraphQLOptions(
+                                Singular: string.Empty,
+                                Plural: string.Empty,
+                                Enabled: true
+                            ),
+                            Health: null,
+                            Cache: null
+                        ),
+                        Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) }
+                    )
+                }
+            };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = new(
+                Schema: "TestAutoentitiesSpacesSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: false),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new Config.ObjectModel.AuthenticationOptions(
+                            Provider: nameof(EasyAuthType.StaticWebApps),
+                            Jwt: null
+                        )
+                    )
+                ),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new RuntimeAutoentities(autoentityMap)
+            );
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Assert that the sanitized entity name "dbo_OrderItems" is reachable via REST,
+                // explicitly confirming the generated name is EXPECTED_ENTITY_NAME and not "dbo_Order Items".
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{EXPECTED_ENTITY_NAME}");
+                using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                Assert.AreEqual(
+                    HttpStatusCode.OK,
+                    restResponse.StatusCode,
+                    $"REST path '/api/{EXPECTED_ENTITY_NAME}' should exist; the entity name must be sanitized from 'dbo_Order Items' to '{EXPECTED_ENTITY_NAME}'.");
+
+                string restResponseBody = await restResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
+                Assert.IsTrue(restResponseBody.Contains(EXPECTED_RESPONSE_FRAGMENT));
+
+                // Also verify via GraphQL using the sanitized name as the query root field.
+                string graphqlQuery = $@"
+                {{
+                    {EXPECTED_ENTITY_NAME} {{
+                        items {{
+                            {EXPECTED_ITEM_FIELD}
+                        }}
+                    }}
+                }}";
+
+                object graphqlPayload = new { query = graphqlQuery };
+                HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(graphqlPayload)
+                };
+                HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
+
+                Assert.AreEqual(
+                    HttpStatusCode.OK,
+                    graphqlResponse.StatusCode,
+                    $"GraphQL query for '{EXPECTED_ENTITY_NAME}' should succeed with the sanitized entity name.");
+
+                string graphqlResponseBody = await graphqlResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");
+                Assert.IsFalse(graphqlResponseBody.Contains("errors"), "GraphQL response should not contain errors");
+                Assert.IsTrue(graphqlResponseBody.Contains(EXPECTED_RESPONSE_FRAGMENT));
             }
         }
 

@@ -119,160 +119,138 @@ for `string`-typed columns.
 
 ---
 
-## R3 — Filter operator allow-list: where does the gate live and how is it enforced?
+## R3 — Filter operator allow-list (SUPERSEDED 2026-06-09)
 
-**Decision**: Add an operator allow-list check in
+**Status**: **SUPERSEDED** by the 2026-06-09 Clarifications session in
+[spec.md](./spec.md). DAB no longer maintains a JSON-specific operator
+allow-list. Every `$filter` operator the client submits is forwarded to
+SQL Server exactly as for any other string-typed column; SQL Server is
+the authority on which operators are supported on the native JSON
+type. Operators SQL Server does not support produce a SQL Server error
+that DAB surfaces via R4 / FR-007.
+
+**Original decision retained below for audit only — NOT IMPLEMENTED.**
+
+---
+
+### Original decision (not implemented)
+
+Add an operator allow-list check in
 [src/Core/Parsers/ODataASTVisitor.cs](src/Core/Parsers/ODataASTVisitor.cs#L35)
 inside `Visit(BinaryOperatorNode)`, immediately after the existing
-`PopulateDbTypeForProperty(nodeIn)` call (the point at which the
-visitor already knows the underlying `SqlDbType` of the property side).
-When that `SqlDbType` is `SqlDbType.Json` and the `BinaryOperatorKind`
-is not `Equal` or `NotEqual` (the only two we allow, with null checks
-naturally falling out of `Equal`/`NotEqual` against `NULL`), throw
-`DataApiBuilderException` with `HttpStatusCode.BadRequest` and
-sub-status `BadRequest`. Throwing from the visitor aborts query-string
-parsing before any SQL is generated and surfaces through the existing
-REST and GraphQL error pipelines.
+`PopulateDbTypeForProperty(nodeIn)` call. When the `SqlDbType` is
+`SqlDbType.Json` and the `BinaryOperatorKind` is not `Equal` or
+`NotEqual`, throw `DataApiBuilderException` with
+`HttpStatusCode.BadRequest`.
 
-**Rationale**:
+**Why superseded**: PM directive 2026-06-09 — "We allow ALL filter
+operations against a JSON field. ALL of them. Then we let SQL fail if
+they are not supported. This is IMPORTANT because if SQL adds support
+for some operator, we do not need to change DAB." Forward-compatibility
+with future SQL Server releases is the primary motivation; the design
+also eliminates the maintenance burden of tracking SQL Server's
+operator-support matrix in DAB.
 
-- The visitor *already* extracts `SqlDbType` for the column at this exact
-  point ([ODataASTVisitor.cs](src/Core/Parsers/ODataASTVisitor.cs#L273)),
-  so the check is a few lines with zero new wiring.
-- Throwing here covers REST `$filter` and GraphQL `filter` arguments
-  uniformly — both surfaces parse `$filter` through this visitor.
-- The `IsSimpleBinaryExpression` guard ensures we only inspect simple
-  `field op constant` (and `constant op field`) expressions; complex
-  nested expressions degrade to no-check, which is acceptable because
-  every operator branch will recursively visit until it hits a simple
-  expression. **Refinement**: We must lift the check above the
-  `IsSimpleBinaryExpression` gate (i.e., check before recursion descent
-  uses the parameter), OR perform the check at every BinaryOperatorNode
-  whose operand is a SingleValuePropertyAccessNode referencing a JSON
-  column. The cleanest place is inside `PopulateDbTypeForProperty`
-  itself — after it sets `SqlDbType`, validate the operator against the
-  type.
-- `NullValue` handling: `metadata eq null` and `metadata ne null` flow
-  through `CreateNullResult`
-  ([ODataASTVisitor.cs](src/Core/Parsers/ODataASTVisitor.cs#L190)) and
-  are emitted as `IS NULL` / `IS NOT NULL`. These already use only
-  `Equal` / `NotEqual` operators, so they are naturally allowed.
+**Affected files (no longer touched)**: `src/Core/Parsers/ODataASTVisitor.cs`.
 
-**Alternatives considered**:
-
-- **Reject at SQL generation time** (in `MsSqlQueryBuilder` or similar)
-  — gates would scatter across multiple query builders and need
-  duplication for joins/projections. Rejected.
-- **Reject in a new validation pass before the visitor** — duplicates the
-  metadata lookup the visitor already performs. Rejected.
-- **Allow all operators and let SQL Server fail** — produces 500-class
-  errors when SQL Server can't compare `JSON > something`, violating
-  FR-007's "no 5xx" guarantee and SC-004. Rejected.
-
-**Affected files**:
-
-- [src/Core/Parsers/ODataASTVisitor.cs](src/Core/Parsers/ODataASTVisitor.cs)
-  — add JSON-operator gate inside `PopulateDbTypeForProperty` (or a
-  helper called from it).
-
+---
 ---
 
 ## R4 — Error mapping for SQL Server JSON validation failure
 
-**Decision**: Add SQL Server error numbers `13608`, `13609`, `13614`
-(JSON syntax / JSON value / JSON content errors) to
-`MsSqlDbExceptionParser.BadRequestExceptionCodes`. Sanitize the message
-via the existing `GetMessage(DbException)` developer-mode/production-mode
-path so the raw SQL message is not leaked in production.
+**Updated 2026-06-09**: This research item now carries the full weight
+of the JSON-column error contract because R3 (operator allow-list) was
+superseded. The same `BadRequestExceptionCodes` set extension now
+produces the 400 response for BOTH (a) malformed-JSON writes and (b)
+filter / order-by operators that SQL Server does not support on the
+JSON type. Per FR-007, the response body MUST include the SQL Server
+error number.
+
+**Decision**: Append SQL Server JSON error numbers (currently
+`{13608, 13609, 13610, 13611, 13612, 13613, 13614}`; final set
+verified during implementation against the target SQL Server 2025
+build) to `MsSqlDbExceptionParser.BadRequestExceptionCodes`. Verify
+that the existing error-envelope serialization includes the SQL
+Server error number; if it does not, extend the envelope (smallest
+possible change). Reuse the existing `GetMessage(DbException)`
+developer-mode / production-mode path; do not introduce a new
+JSON-specific message template.
 
 **Rationale**:
 
 - `MsSqlDbExceptionParser.GetHttpStatusCodeForException`
   ([src/Core/Resolvers/MsSqlDbExceptionParser.cs](src/Core/Resolvers/MsSqlDbExceptionParser.cs#L67))
-  already maps known error numbers to `HttpStatusCode.BadRequest` via a
-  hash set; we extend the set rather than introducing new code paths.
-- The MSSQL error numbers for JSON validation are in the **13600 range**
-  (`Msg 13608: "JSON text is not properly formatted."`, `Msg 13609`,
-  `Msg 13614`). The exact set MUST be re-verified against the target
-  SQL Server 2025 build during implementation (Phase 2 task). For
-  planning purposes, the set is enumerated as
-  `{13608, 13609, 13610, 13611, 13612, 13613, 13614}` and pruned by
-  test.
+  already maps known error numbers to `HttpStatusCode.BadRequest` via
+  a hash set. Extending that set is the established DAB pattern.
+- The same code numbers cover SQL Server's JSON validation errors
+  raised by `OPENJSON`, `JSON_VALUE`, `JSON_QUERY`, and JSON-column
+  insert/update validation. Whether the trigger is a malformed-JSON
+  write or an unsupported operator on the column, the resulting error
+  flows through the same path.
 - The GraphQL surface picks up the 400 mapping automatically via the
   existing `DataApiBuilderException` → GraphQL error translation,
-  resulting in extension `code: "BAD_REQUEST"` (FR-007).
+  resulting in `extensions.code = "BAD_REQUEST"` (FR-007).
 - `GetMessage(DbException)` already gates whether the raw message
-  surfaces by `_developerMode`, satisfying "MUST NOT leak the raw SQL
-  message" in production.
+  surfaces by `_developerMode`. FR-007's requirement to include the
+  SQL Server error number applies in both modes — the number itself
+  is not sensitive; only the raw message text is.
 
 **Alternatives considered**:
 
 - **Catch a specific exception type for JSON errors** — SqlClient does
-  not expose a distinct exception subclass for JSON validation; we'd be
-  pattern-matching on `SqlException.Number` either way. Adding numbers
-  to the existing set is the established pattern.
+  not expose a distinct exception subclass; pattern-matching on
+  `SqlException.Number` is the established approach.
 - **Translate to a custom DAB-specific message identifying the field by
-  name** — requires plumbing the offending field/value back through the
-  exception, which is non-trivial. Defer to a follow-up; the SQL
-  message in developer mode already names the column, and production
-  mode returns a generic 400 with the standard DAB error envelope.
+  name** — requires plumbing the offending field name back through
+  the exception. Out of scope; the SQL error number plus the standard
+  error envelope is sufficient per the 2026-06-09 directive ("treat
+  it like a string column. Nothing special.").
 
 **Affected files**:
 
 - [src/Core/Resolvers/MsSqlDbExceptionParser.cs](src/Core/Resolvers/MsSqlDbExceptionParser.cs#L20)
-  — extend `BadRequestExceptionCodes`.
+  — extend `BadRequestExceptionCodes` by 7 numbers.
+- Possibly the error-envelope serializer, if it does not already emit
+  the SQL Server error number. Verify during implementation.
 
 ---
 
-## R5 — MCP surface: where does the JSON-column `description` hint live?
+## R5 — MCP surface: JSON column annotation (SUPERSEDED 2026-06-09)
 
-**Decision**: Per FR-017, surface the JSON-column hint in two places:
+**Status**: **SUPERSEDED** by the 2026-06-09 Clarifications session in
+[spec.md](./spec.md). A JSON column appears in all MCP tool schemas
+(`DescribeEntitiesTool`, `DynamicCustomTool`, `CreateRecordTool`,
+`UpdateRecordTool`) exactly as a plain string column does. No
+JSON-specific `description`, `format`, or other annotation is added.
+DAB does not edit any MCP tool source file for this feature.
 
-1. **`DescribeEntitiesTool` output** — when emitting per-entity field
-   metadata, attach `"description": "JSON-encoded string; embed valid
-   JSON text (e.g., a JSON object or array serialized as a string). Do
-   not send a nested object or array."` to fields whose underlying
+**Why superseded**: PM directive 2026-06-09 — "We treat it like a string
+column. Every time." The MCP annotation introduced JSON-specific
+behavior that conflicted with the principle. Integration tests instead
+assert the column appears in MCP output with **no** JSON-specific
+annotation, guarding against accidental future divergence.
+
+**Original decision retained below for audit only — NOT IMPLEMENTED.**
+
+---
+
+### Original decision (not implemented)
+
+Per FR-017 (original 2026-06-04 wording), surface the JSON-column hint
+in two places:
+
+1. **`DescribeEntitiesTool` output** — attach
+   `"description": "JSON-encoded string; embed valid JSON text (e.g.,
+   a JSON object or array serialized as a string). Do not send a
+   nested object or array."` to fields whose underlying
    `columnDefinition.SqlDbType == SqlDbType.Json`.
 2. **`DynamicCustomTool.BuildInputSchemaFromDbMetadata`** — same
-   description, attached at the per-parameter slot when
-   `paramDef.SystemType == typeof(string)` and the parameter's
-   `SqlDbType` is JSON
-   ([src/Azure.DataApiBuilder.Mcp/Core/DynamicCustomTool.cs](src/Azure.DataApiBuilder.Mcp/Core/DynamicCustomTool.cs#L325)).
+   description, attached at the per-parameter slot when the
+   parameter's `SqlDbType` is JSON.
 
-**Re-scoping note for FR-017** (record in plan, no spec change required):
-`CreateRecordTool` and `UpdateRecordTool` emit a coarse fixed input
-schema with `data: { type: "object" }` — they do NOT enumerate per-column
-slots ([src/Azure.DataApiBuilder.Mcp/BuiltInTools/CreateRecordTool.cs](src/Azure.DataApiBuilder.Mcp/BuiltInTools/CreateRecordTool.cs#L36)).
-Per-column descriptions cannot be attached to their input schemas
-without a refactor that violates Principle VII. The agent contract is
-already that `describe_entities` MUST be called first (the tool
-descriptions on both CreateRecord and UpdateRecord explicitly say
-"STEP 1: describe_entities -> ... STEP 2: call this tool"); annotating
-the column metadata in `describe_entities` therefore reaches the agent
-before it constructs the `data` payload, achieving the same correctness
-outcome FR-017 requires.
-
-**Rationale**: Single point of truth for column annotations
-(`describe_entities`), plus per-parameter slots for SP-backed dynamic
-tools where the input schema is column-aware. Touches exactly two files.
-
-**Alternatives considered**:
-
-- **Refactor `CreateRecordTool` / `UpdateRecordTool` to emit per-column
-  input schemas.** Substantial change to MCP tool shape and would
-  require parallel work on every MCP client. Rejected; out of scope.
-- **Add `format: "json"`.** Spec Q5 chose **B** (description only); the
-  `format` value is non-standard. Rejected.
-
-**Affected files**:
-
-- [src/Azure.DataApiBuilder.Mcp/BuiltInTools/DescribeEntitiesTool.cs](src/Azure.DataApiBuilder.Mcp/BuiltInTools/DescribeEntitiesTool.cs)
-  — when serializing field metadata, attach `description` for JSON
-  columns. Locate the field-emission code (search for `fields` /
-  `columnDefinition` in this file during implementation).
-- [src/Azure.DataApiBuilder.Mcp/Core/DynamicCustomTool.cs](src/Azure.DataApiBuilder.Mcp/Core/DynamicCustomTool.cs#L368)
-  — extend `BuildInputSchemaFromDbMetadata` to attach the description
-  when the parameter's `SqlDbType` is JSON.
+**Affected files (no longer touched)**:
+`src/Azure.DataApiBuilder.Mcp/BuiltInTools/DescribeEntitiesTool.cs`,
+`src/Azure.DataApiBuilder.Mcp/Core/DynamicCustomTool.cs`.
 
 ---
 

@@ -110,19 +110,23 @@ query {
 }
 ```
 
-Allowed `metadata` filter operators (per StringFilterInput, but
-**restricted by the JSON-column gate**):
+All operators that GraphQL's `StringFilterInput` exposes (`eq`, `ne`,
+`contains`, `startsWith`, `endsWith`, `gt`, `lt`, `gte`, `lte`,
+`isNull`) are forwarded to SQL Server. DAB does **not** maintain a
+JSON-specific allow-list (FR-009; 2026-06-09 Clarifications):
 
-| Filter op | Status |
-|-----------|--------|
-| `eq` | Allowed |
-| `ne` | Allowed |
-| `isNull: true` / `isNull: false` (or `eq: null` / `ne: null`) | Allowed |
-| `contains`, `startsWith`, `endsWith` | **Rejected** — GraphQL error, extension `code: "BAD_REQUEST"` |
-| `gt`, `lt`, `gte`, `lte` | **Rejected** — same |
+| Filter op | DAB behavior | Outcome (current SQL Server JSON support) |
+|-----------|--------------|-------------------------------------------|
+| `eq` | Forwarded | Succeeds: string compare on stored JSON text |
+| `ne` | Forwarded | Succeeds: string compare on stored JSON text |
+| `isNull: true` / `isNull: false` (or `eq: null` / `ne: null`) | Forwarded | Succeeds: `IS NULL` / `IS NOT NULL` |
+| `contains`, `startsWith`, `endsWith` | Forwarded | Fails with SQL Server error → GraphQL error with `extensions.code = "BAD_REQUEST"` and the SQL error number in the message (FR-007) |
+| `gt`, `lt`, `gte`, `lte` | Forwarded | Fails the same way |
 
-Rejection occurs in the same shared OData visitor that backs the REST
-`$filter` (R3), so REST and GraphQL share the gate.
+This design intentionally avoids hard-coding SQL Server's operator
+support matrix. If SQL Server adds support for additional operators
+on the native JSON type in a future release, DAB inherits the new
+behavior with no code change.
 
 ---
 
@@ -196,7 +200,13 @@ Unchanged behavior; JSON column does not affect delete.
 
 ---
 
-## Error handling for malformed JSON on write (User Story 7, FR-007)
+## Error handling for SQL Server JSON errors on write or filter (User Story 7, FR-007)
+
+When SQL Server returns a JSON-related error on a JSON column —
+whether the cause is malformed JSON text on write or an unsupported
+filter operator — DAB returns a GraphQL error with
+`extensions.code = "BAD_REQUEST"`. The error message contains the SQL
+Server error number so the customer can diagnose the cause.
 
 ```graphql
 mutation {
@@ -208,16 +218,19 @@ mutation {
 {
   "errors": [
     {
-      "message": "The value provided for 'metadata' is not valid JSON.",
+      "message": "Database error: SQL Server error 13608.",
       "extensions": { "code": "BAD_REQUEST" }
     }
   ]
 }
 ```
 
-`extensions.code` is `BAD_REQUEST` (spec Clarification Q2). The
-underlying SQL Server error (13608/13609/etc., per R4) is suppressed in
-production mode.
+The specific error number (and exact message text) depends on which
+SQL Server JSON validation rule was violated; the contract is that the
+response contains a SQL Server error number from the list
+`MsSqlDbExceptionParser.BadRequestExceptionCodes` includes for JSON
+validation (currently 13608–13614). DAB does not rewrite the message
+beyond the standard envelope.
 
 ---
 

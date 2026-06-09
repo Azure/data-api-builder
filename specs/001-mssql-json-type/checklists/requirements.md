@@ -131,3 +131,30 @@ listed artifacts.
 - [ ] CHK067 - Is Principle VI (Formatting & Style) satisfied — does [plan.md](../plan.md) name `dotnet format … --verify-no-changes` as a gate, and does [research.md](../research.md) §R10 confirm the diff is small enough to not perturb formatting? [Constitution §VI, plan.md, research.md §R10]
 - [ ] CHK068 - Is Principle VII (Minimal-Surface Changes) satisfied — does [research.md](../research.md) bound production-code delta (~5 line edits across ≤6 files) and reject parallel pipelines (R1 alternatives, R5 CreateRecord refactor)? [Constitution §VII, research.md §R1, §R5, plan.md]
 
+---
+
+## 2026-06-09 Supersession Update
+
+The 2026-06-09 Clarifications session in [spec.md](../spec.md) changed
+the design so that DAB treats a SQL Server `JSON` column exactly like
+a string column. This update reclassifies the checklist items that no
+longer apply, and revises the items whose target text has moved.
+
+**Obsolete — n/a after 2026-06-09**
+
+- CHK020 — FR-004 no longer specifies a DAB-side rejection signal for a nested-object REST input; rejection is delegated to the REST deserializer for a string-typed property. No DAB-specific assertion is required.
+- CHK021 — FR-005 no longer specifies a DAB-side rejection for nested-object GraphQL input; rejection is delegated to Hot Chocolate's built-in `String` input validation.
+- CHK033 — FR-017 no longer specifies a description SUBSTANCE; the description is intentionally absent.
+- CHK042 — Still valid in spirit: the `CreateRecordTool` / `UpdateRecordTool` input schemas remain unchanged. But [contracts/mcp-tools.md](../contracts/mcp-tools.md) was rewritten to drop ALL MCP-side JSON-specific annotation, so the "no per-column slot" non-goal is now a corollary of the broader "no annotation anywhere" rule.
+- CHK043, CHK044 — FR-009 no longer maintains an operator allow-list. Every operator is forwarded to SQL Server; SQL Server is authoritative. The new contract tables in [contracts/rest-openapi.md](../contracts/rest-openapi.md) and [contracts/graphql.md](../contracts/graphql.md) document pass-through behavior.
+- CHK046, CHK047, CHK048 — The canonical MCP description string is deleted. There is no per-field or per-parameter annotation in MCP. The negative-assertion test obligation replaces the earlier presence-assertion obligation.
+
+**Revised — items still apply, with new wording / targets**
+
+- CHK022 — FR-006 ("no DAB-side JSON-schema validation") now follows naturally from the broader 2026-06-09 rule that DAB has no JSON-specific code path. Covered by the type-mapping unit test (Phase 3 of [tasks.md](../tasks.md)) and the integration tests in Phase 5.
+- CHK023 — FR-007 still cites `400` (REST) and `BAD_REQUEST` (GraphQL). NEW obligation: the response body MUST include the SQL Server error number that was raised. The contracts have been updated to reflect this; CHK023 should be re-verified against the new contract text.
+- CHK037 — Earlier guidance "raw SQL error MUST NOT be leaked in production" is **superseded**. After 2026-06-09 the SQL Server error number is INCLUDED in the response body to support diagnosis. CHK037 should be marked n/a or rewritten to reflect the new contract.
+- CHK045 — Error-code set in [research.md §R4](../research.md) (13608–13614) now carries the FULL JSON-column error contract — both malformed writes AND filter operators SQL Server cannot evaluate. The "verify exact set at implementation" caveat remains and is reinforced in T006 / T020 / T024 of [tasks.md](../tasks.md).
+- CHK052 — Spec.md Clarifications Q1 (strict string write) is itself superseded by the 2026-06-09 session. CHK052 should now compare FR-004 / FR-005 against the 2026-06-09 Q&A block, not the 2026-06-04 block.
+- CHK068 — Production-code delta is now **smaller** than the original ~5-line / ≤6-file estimate. The current bound is 2 production edits across 2 files (`TypeHelper.cs`, `MsSqlDbExceptionParser.cs`) plus the optional error-envelope serializer touch flagged in R4.
+

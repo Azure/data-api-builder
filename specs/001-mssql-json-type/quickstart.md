@@ -5,6 +5,14 @@
 a real SQL Server 2025+ / Azure SQL DB target. Mirrors what the
 automated MSSQL integration tests assert.
 
+> **Revision 2026-06-09**: Per the Clarifications session in
+> [spec.md](./spec.md), DAB treats a SQL Server `JSON` column exactly
+> like a string column. Step 7 below has been updated so the error
+> body explicitly contains the SQL Server error number; Step 8 has
+> been updated so unsupported filter operators are forwarded to SQL
+> rather than rejected by DAB; Step 10 has been replaced with a
+> negative-assertion MCP check.
+
 This is a **validation guide**, not implementation. For exact request
 shapes see:
 
@@ -150,36 +158,41 @@ GraphQL equivalents — see [contracts/graphql.md](./contracts/graphql.md).
 ## 7. Verify error paths (User Story 7)
 
 ```powershell
-# Malformed JSON text — expect 400
+# Malformed JSON text — expect 400 with SQL Server error number in body
 curl -i -X POST http://localhost:5000/api/Profile `
   -H 'Content-Type: application/json' `
   -d '{"metadata":"{not valid json"}'
 
-# Nested object on input — expect 400 (FR-004, Q1)
+# Non-string token on input — expect 400 from the REST deserializer
+# (no DAB-specific check; `metadata` is a string-typed property)
 curl -i -X POST http://localhost:5000/api/Profile `
   -H 'Content-Type: application/json' `
   -d '{"metadata":{"role":"guest"}}'
 ```
 
-Both should return `HTTP 400`. The error body should identify
-`metadata` and indicate the value is not a valid JSON string. No 5xx
-should surface.
+Both should return `HTTP 400`. The malformed-JSON body should contain
+the SQL Server JSON-validation error number that was raised (currently
+in the 13608–13614 range). No 5xx should surface.
 
 ---
 
 ## 8. Filter and orderby contract (User Story 9)
 
+DAB forwards every `$filter` operator to SQL Server. SQL Server
+decides which ones succeed against the JSON type.
+
 ```powershell
-# Allowed: equality
+# Currently succeeds: equality
 curl 'http://localhost:5000/api/Profile?$filter=metadata%20eq%20%27%7B%22role%22%3A%22admin%22%2C%22tier%22%3A3%7D%27'
 
-# Allowed: null check
+# Currently succeeds: null check
 curl 'http://localhost:5000/api/Profile?$filter=metadata%20eq%20null'
 
-# Rejected: contains() — expect 400
+# Forwarded to SQL Server; currently fails — expect 400 with the
+# SQL error number in the body (DAB does NOT pre-reject)
 curl -i 'http://localhost:5000/api/Profile?$filter=contains(metadata,%27admin%27)'
 
-# Allowed: orderby
+# orderby is forwarded; currently succeeds with string-order semantics
 curl 'http://localhost:5000/api/Profile?$orderby=metadata'
 ```
 
@@ -204,16 +217,18 @@ curl http://localhost:5000/api/Profile/id/1
 
 ---
 
-## 10. MCP annotation check (FR-017)
+## 10. MCP plain-string surface check (FR-017)
 
 With MCP enabled in the fixture config, run an MCP `describe_entities`
-call (e.g., via MCP Inspector per `docs/testing-guide/mcp-inspector-testing.md`):
+call (e.g., via MCP Inspector per
+[docs/testing-guide/mcp-inspector-testing.md](../../docs/testing-guide/mcp-inspector-testing.md)):
 
-Expected: the `metadata` field metadata for the `Profile` entity
-includes a `description` string mentioning "JSON-encoded string" and
-"do not send a nested object or array". See
-[contracts/mcp-tools.md](./contracts/mcp-tools.md) for the canonical
-text.
+Expected (negative assertion): the `metadata` field metadata for the
+`Profile` entity is shaped **identically to a plain string column**.
+It MUST NOT contain a `description`, `format`, or any other
+JSON-specific annotation. This is the 2026-06-09 design — see
+[contracts/mcp-tools.md](./contracts/mcp-tools.md) for the rationale.
+If you see an annotation, that is a regression of the design.
 
 ---
 

@@ -7,21 +7,35 @@
 ## Summary
 
 Add first-class support for the SQL Server 2025+ / Azure SQL DB native
-`JSON` column type to DAB. The column surfaces as a String in REST
-(OpenAPI), GraphQL (built-in `String` scalar), and MCP tool schemas;
-DAB treats the value as an opaque JSON-encoded string in both
-directions and delegates JSON syntax validation to SQL Server. Scope
-is **MSSQL only**; other engines are unaffected.
+`JSON` column type to DAB. The column surfaces as a `String` in REST
+(OpenAPI `type: string`), GraphQL (built-in `String` scalar), and MCP
+tool schemas with **no JSON-specific annotation**. DAB treats the
+value as an opaque string in both directions and delegates JSON
+syntax validation, operator support, and version compatibility to SQL
+Server. Scope is **MSSQL only**; other engines are unaffected.
 
-The implementation is intentionally small-surface. It **depends on** a
-Microsoft.Data.SqlClient upgrade to a `6.x` line that exposes
-`SqlDbType.Json`; that upgrade is delivered as a **separate prerequisite
-PR** (see "Upstream Dependency" below) and is **out of scope** for this
-feature's task list. Once the dependency is in place, this feature
-adds five surgical edits (TypeHelper dictionary entry, MsSql
-exception-parser error-code list, OData visitor operator gate, two MCP
-description hints) plus the test fixture additions. See
-[research.md](./research.md) for the per-file analysis.
+Per the 2026-06-09 Clarifications session, a JSON column is treated
+exactly like a string column. DAB does **not** maintain a JSON-specific
+operator allow-list, does **not** add JSON-specific input validation,
+and does **not** annotate MCP tool schemas. When SQL Server returns an
+error on a JSON column (malformed JSON write, unsupported operator on
+filter / order-by, etc.) DAB surfaces it as HTTP `400 Bad Request`
+(REST) or GraphQL `extensions.code = "BAD_REQUEST"` and includes the
+SQL Server error number in the response body.
+
+The implementation reduces to two production code edits:
+
+1. Single dictionary entry in `TypeHelper.cs` mapping
+   `SqlDbType.Json` to `typeof(string)`.
+2. Append the SQL Server JSON-validation error numbers (currently
+   13608–13614) to the existing
+   `MsSqlDbExceptionParser.BadRequestExceptionCodes` list, so JSON
+   errors map to 400 rather than 500.
+
+The feature **depends on** a Microsoft.Data.SqlClient upgrade to a
+`6.x` line that exposes `SqlDbType.Json`; that upgrade is delivered as
+a **separate prerequisite PR** and is out of scope for this feature's
+task list. See [research.md](./research.md) for the per-file analysis.
 
 ### Upstream Dependency (separate PR)
 
@@ -135,20 +149,23 @@ src/
 ├── Core/
 │   ├── Services/
 │   │   └── TypeHelper.cs                          # R1: SqlDbType.Json -> typeof(string) (single dictionary entry)
-│   ├── Resolvers/
-│   │   └── MsSqlDbExceptionParser.cs              # R4: add JSON error codes to BadRequest set
-│   └── Parsers/
-│       └── ODataASTVisitor.cs                     # R3: operator allow-list gate for JSON columns
-├── Azure.DataApiBuilder.Mcp/
-│   ├── BuiltInTools/
-│   │   └── DescribeEntitiesTool.cs                # R5/FR-017: JSON column description
-│   └── Core/
-│       └── DynamicCustomTool.cs                   # R5/FR-017: JSON SP-parameter description
+│   └── Resolvers/
+│       └── MsSqlDbExceptionParser.cs              # R4: append JSON validation error numbers (13608-13614) to BadRequestExceptionCodes
 └── Service.Tests/
     ├── DatabaseSchema-MsSql.sql                   # R6: profiles table + seed rows
     ├── dab-config.MsSql.json                      # R6: Profile entity entry
     └── ...                                        # New MSSQL integration tests (see tasks.md)
 ```
+
+**Superseded by 2026-06-09 Clarifications** (no longer touched):
+
+- `src/Core/Parsers/ODataASTVisitor.cs` — R3 operator allow-list gate
+  was dropped. DAB forwards every filter operator to SQL; SQL Server
+  is the authority on supported operators.
+- `src/Azure.DataApiBuilder.Mcp/BuiltInTools/DescribeEntitiesTool.cs`
+  and `src/Azure.DataApiBuilder.Mcp/Core/DynamicCustomTool.cs` — R5
+  MCP description hint was dropped. A JSON column appears in MCP tool
+  schemas as a plain string with no annotation.
 
 **Delivered by the prerequisite dependency PR (NOT in this feature's tasks)**:
 
@@ -175,7 +192,10 @@ Principle VII).
 
 ## Phase 0 — Outline & Research (complete)
 
-See [research.md](./research.md). Eleven research items resolved:
+See [research.md](./research.md). Eleven research items resolved.
+The 2026-06-09 Clarifications session **supersedes R3 and R5** (the
+operator gate and MCP annotation are no longer implemented) and
+**simplifies R4** to a one-line list extension.
 
 - **R1** — `Microsoft.Data.SqlClient >= 6.0.0` (prerequisite; delivered
   by a separate PR) unlocks `SqlDbType.Json`. This feature contributes
@@ -185,12 +205,14 @@ See [research.md](./research.md). Eleven research items resolved:
 - **R2** — Confirmed downstream pipeline (OpenAPI, GraphQL,
   resolvers, EDM, metadata) handles `typeof(string)` columns without
   further changes.
-- **R3** — Operator allow-list gate in `ODataASTVisitor.PopulateDbTypeForProperty`.
-- **R4** — JSON validation error codes (`13608`–`13614` range) into
-  `MsSqlDbExceptionParser.BadRequestExceptionCodes`.
-- **R5** — MCP description hint in `DescribeEntitiesTool` and
-  `DynamicCustomTool.BuildInputSchemaFromDbMetadata`; CreateRecord/
-  UpdateRecord input schemas are intentionally not refactored.
+- **R3** — **Superseded by 2026-06-09 Clarifications.** No operator
+  allow-list gate. DAB forwards every filter operator to SQL.
+- **R4** — Append JSON validation error numbers (currently 13608–13614,
+  verified at implementation time) to
+  `MsSqlDbExceptionParser.BadRequestExceptionCodes`. The response body
+  contains the SQL Server error number per FR-007.
+- **R5** — **Superseded by 2026-06-09 Clarifications.** No MCP
+  annotation. JSON columns appear in MCP tools as plain string slots.
 - **R6** — `profiles` table in `DatabaseSchema-MsSql.sql`; other engine
   schemas untouched.
 - **R7** — No SQL Server version probe (FR-016).
@@ -201,18 +223,21 @@ See [research.md](./research.md). Eleven research items resolved:
 - **R11** — No `dab.draft.schema.json` change.
 
 All NEEDS CLARIFICATION resolved (none remained from the spec after
-`/speckit.clarify`).
+the 2026-06-09 Clarifications session).
 
 ## Phase 1 — Design & Contracts (complete)
 
 - [data-model.md](./data-model.md) — `profiles` test-fixture table and
   the `Profile` DAB entity (no production data model changes).
 - [contracts/rest-openapi.md](./contracts/rest-openapi.md) — exact
-  request/response shapes, filter/orderby allow-list, error envelope.
+  request/response shapes; SQL-Server-driven filter/orderby behavior
+  (no DAB-side allow-list); 400 error envelope with the SQL error
+  number.
 - [contracts/graphql.md](./contracts/graphql.md) — generated SDL,
   query and mutation shapes, introspection contract.
-- [contracts/mcp-tools.md](./contracts/mcp-tools.md) — JSON-column
-  description annotation in `describe_entities` and `dynamic_custom_tool`.
+- [contracts/mcp-tools.md](./contracts/mcp-tools.md) — a JSON column
+  appears in MCP tools as a plain string slot; no annotation, no
+  description, no format.
 - [quickstart.md](./quickstart.md) — manual end-to-end validation
   walkthrough mapped to success criteria.
 - Agent context — to be refreshed by `speckit.agent-context.update` so
@@ -223,7 +248,8 @@ All NEEDS CLARIFICATION resolved (none remained from the spec after
 
 `/speckit.tasks` will derive an ordered task list from this plan, the
 contracts, and the data model. Expected task families (preview only —
-authoritative list is produced by `/speckit.tasks`):
+authoritative list is produced by `/speckit.tasks` and lives in
+[tasks.md](./tasks.md)):
 
 1. **Pre-flight: verify upstream dependency** — assert
    `Microsoft.Data.SqlClient >= 6.0.0` in
@@ -233,24 +259,26 @@ authoritative list is produced by `/speckit.tasks`):
    **Does NOT modify** `Directory.Packages.props`, `external_licenses/`,
    or `scripts/notice-generation.ps1` — those edits live in the
    separate prerequisite PR.
-2. **Type-mapping foundation** (R1, R2) — add the single
+2. **Test fixture** (R6, FR-015) — add `profiles` table and seed rows to
+   `DatabaseSchema-MsSql.sql`; add `Profile` entity to
+   `dab-config.MsSql.json`.
+3. **Type-mapping foundation** (R1, R2) — add the single
    `[SqlDbType.Json] = typeof(string)` entry in
    [src/Core/Services/TypeHelper.cs](../../src/Core/Services/TypeHelper.cs).
-3. **Operator allow-list gate** (R3) — code + unit tests + MSSQL
-   integration tests for FR-009 + REST/GraphQL parity tests.
-4. **Error mapping** (R4) — code + integration tests for FR-007 (REST
-   400 + GraphQL `BAD_REQUEST`).
-5. **MCP description hints** (R5/FR-017) — code + integration tests
-   asserting the description string in `describe_entities` and
-   `dynamic_custom_tool` output.
-6. **Test fixture & happy-path integration tests** (R6, FR-001…FR-008)
-   — schema additions, `Profile` entity, REST + GraphQL CRUD tests,
-   NULL handling, OpenAPI/GraphQL introspection tests.
-7. **Regression guard** — explicit verification (e.g., row-count
-   smoke tests or noted CI check) that PostgreSQL, MySQL, Cosmos, and
-   DwSql categories remain at their pre-change pass counts (SC-002).
-8. **Docs & release note** — note minimum supported SQL Server version
-   in the appropriate `docs/` page; release note line for the JSON
+4. **Error code list extension** (R4, FR-007) — append the SQL Server
+   JSON validation error numbers (13608–13614) to
+   `MsSqlDbExceptionParser.BadRequestExceptionCodes`.
+5. **Integration tests** (FR-001…FR-011, FR-015, FR-017) — REST +
+   GraphQL CRUD tests, NULL handling, OpenAPI/GraphQL introspection
+   tests, MCP "plain string" negative-assertion test, malformed-JSON
+   400 test, and filter/order-by tests confirming that DAB forwards
+   operators to SQL and surfaces SQL errors as 400.
+6. **Regression guard** — explicit verification that PostgreSQL, MySQL,
+   Cosmos, and DwSql categories remain at their pre-change pass counts
+   (SC-002), plus a static diff guard on foreign fixtures and
+   `schemas/dab.draft.schema.json`.
+7. **Docs & release note** — minimum supported SQL Server version in
+   the appropriate `docs/` page; release note line for the JSON
    feature.
 
 ## Complexity Tracking

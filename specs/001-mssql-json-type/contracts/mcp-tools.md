@@ -1,49 +1,47 @@
 # MCP Contract: JSON Column Surface
 
-**Annotation surface**: `describe_entities` (per-field) and
-`dynamic_custom_tool` (per-SP parameter).
-**`create_record` and `update_record`**: input schema is intentionally
-unchanged — the existing tool descriptions already mandate calling
-`describe_entities` first (STEP 1), which is where JSON-column
-agents discover the annotation.
-**Scope**: Per FR-017, how SQL Server `JSON` columns are annotated in
-MCP tool schemas so calling LLM agents know to embed valid JSON text.
+**Scope**: How SQL Server `JSON` columns appear in MCP tool schemas.
 
-This document defines the **per-column annotation contract**; it does
-NOT add new tool actions, change `create_record` / `update_record`
-input schemas, or alter CRUD execution paths (which route through the
-shared engines unchanged).
+Per the 2026-06-09 Clarifications session in [spec.md](../spec.md), a
+JSON column is treated exactly like a plain string column at the MCP
+layer. **No JSON-specific annotation, description, or `format` is
+added** to any MCP tool. This document pins that "no annotation"
+contract so future implementations do not accidentally introduce
+JSON-specific behavior.
+
+This document does not change CRUD execution paths. MCP tools route
+through the same `IQueryEngine` / `IMutationEngine` / `IQueryExecutor`
+used by REST and GraphQL.
 
 ---
 
-## Annotation string (canonical)
+## Governing principle
 
-A single shared description string is used wherever a JSON column is
-exposed in an MCP tool schema:
+A SQL Server `JSON` column appears in every MCP tool schema
+indistinguishably from an `nvarchar(max)` column whose CLR type maps
+to `string`. The column's `type` is `"string"`; there is no
+`description`, no `format`, no `x-dab-*` extension, no other
+JSON-specific property.
 
-```text
-JSON-encoded string; embed valid JSON text (e.g., a JSON object or array
-serialized as a string). Do not send a nested object or array.
-```
+Rationale (per FR-009 and FR-017 as updated 2026-06-09):
 
-Implementation MAY define this as a constant in
-`src/Azure.DataApiBuilder.Mcp/Utils/` and reuse it across the two
-emission sites.
-
-No non-standard `format` value is used (Spec Clarification Q5 chose
-option B — description only).
+- DAB does not maintain JSON-specific behavior anywhere. The MCP
+  surface follows the same rule.
+- When SQL Server adds richer JSON support in future releases, no MCP
+  tool schema needs to be updated.
+- Agents that handle string columns correctly handle JSON columns
+  correctly with no additional learning.
 
 ---
 
 ## `describe_entities` output
 
-For each field whose underlying `ColumnDefinition.SqlDbType ==
-SqlDbType.Json`, the per-field metadata MUST include a `description`
-property set to the canonical annotation string above. Existing field
-metadata properties (name, type, nullable, isPrimaryKey, etc.) are
-unchanged.
+For a field whose underlying `ColumnDefinition.SqlDbType ==
+SqlDbType.Json`, the per-field metadata is identical to a string
+column. No `description` property is added by this feature.
 
-**Example response excerpt for the `Profile` entity:**
+**Example response excerpt for the `Profile` entity** (`metadata`
+column is JSON):
 
 ```json
 {
@@ -53,13 +51,7 @@ unchanged.
       "type": "Table",
       "fields": [
         { "name": "id",       "type": "Int32",  "nullable": false, "isPrimaryKey": true },
-        {
-          "name": "metadata",
-          "type": "String",
-          "nullable": true,
-          "isPrimaryKey": false,
-          "description": "JSON-encoded string; embed valid JSON text (e.g., a JSON object or array serialized as a string). Do not send a nested object or array."
-        }
+        { "name": "metadata", "type": "String", "nullable": true,  "isPrimaryKey": false }
       ],
       "permissions": [ /* ... */ ]
     }
@@ -67,19 +59,18 @@ unchanged.
 }
 ```
 
-This is the **primary annotation surface** — the existing tool
-descriptions on `create_record` and `update_record` instruct agents to
-call `describe_entities` first, so the annotation reaches the agent
-before it constructs the `data` payload.
+Integration tests MUST assert the `metadata` field carries no
+JSON-specific annotation (no `description`, no `format`) in
+`describe_entities` output. The assertion guards against accidental
+future divergence.
 
 ---
 
 ## `dynamic_custom_tool` (per-SP) input schema
 
-`DynamicCustomTool.BuildInputSchemaFromDbMetadata` emits a JSON Schema
-property for each stored-procedure parameter. When a parameter's
-`SqlDbType` is `Json`, the per-parameter schema MUST include the
-canonical annotation as its `description`.
+For a stored-procedure parameter whose `SqlDbType` is `Json`, the
+per-parameter schema is identical to a `string`-typed parameter. No
+JSON-specific `description` is added.
 
 **Example** — SP with one JSON-typed parameter `@payload`:
 
@@ -88,77 +79,43 @@ canonical annotation as its `description`.
   "type": "object",
   "properties": {
     "payload": {
-      "type": "string",
-      "description": "JSON-encoded string; embed valid JSON text (e.g., a JSON object or array serialized as a string). Do not send a nested object or array."
+      "type": "string"
     }
   }
 }
 ```
 
-If the SP-emission path already produces a generic per-parameter
-description (e.g., "Parameter @payload"), the JSON-column description
-REPLACES it. (Implementation note: the existing
-`BuildParameterDescription` helper may be extended, or the JSON-column
-case may short-circuit it.)
+Any generic per-parameter description the existing
+`BuildInputSchemaFromDbMetadata` already attaches (for example
+`"Parameter @payload"`) is preserved unchanged. No JSON-specific
+substitution is performed.
 
 ---
 
 ## `create_record` and `update_record` input schemas
 
-These tools currently emit a **coarse** input schema:
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "entity": { "type": "string", "description": "Entity name with CREATE permission." },
-    "data":   { "type": "object", "description": "Required fields and values for the new record." }
-  },
-  "required": ["entity", "data"]
-}
-```
-
-`data` is an opaque `object` — there are no per-column slots in which
-to attach a JSON-column annotation. Per R5 (research note), this is
-**intentionally not refactored** under FR-017. The contract is:
-
-- The `data` schema shape is **unchanged** by this feature.
-- Agents discover JSON columns via `describe_entities`, which annotates
-  them per the section above.
-- The existing tool descriptions on `create_record` and `update_record`
-  already mandate `describe_entities` as STEP 1; no change to those
-  descriptions is required, though implementers MAY append a line to
-  the `data` description noting that JSON columns expect JSON-encoded
-  strings.
-
-If implementation decides to append such a line, the canonical wording
-is:
-
-```
-Required fields and values for the new record. For fields whose
-describe_entities metadata indicates a JSON-encoded string, supply the
-value as a string containing valid JSON text — do not send a nested
-object or array.
-```
-
-This is OPTIONAL; the FR-017 contract is satisfied by the
-`describe_entities` annotation alone.
+Unchanged by this feature. These tools already emit a coarse `data:
+{ type: "object" }` schema; per-column slots are not introduced.
 
 ---
 
-## CRUD execution paths — unchanged
+## What MCP error responses look like
 
-`CreateRecordTool.ExecuteAsync`, `UpdateRecordTool.ExecuteAsync`,
-`ReadRecordsTool.ExecuteAsync`, `DeleteRecordTool.ExecuteAsync`,
-`AggregateRecordsTool.ExecuteAsync`, and `ExecuteEntityTool.ExecuteAsync`
-route through the shared SQL engines (`SqlMutationEngine`,
-`SqlQueryEngine`) and therefore inherit all read/write/error behavior
-defined by the REST/GraphQL contracts:
+MCP tools surface server errors through the same DAB error envelope as
+REST and GraphQL. When a tool invocation triggers a SQL Server JSON
+error (for example, malformed JSON text passed to a write tool, or a
+filter predicate SQL Server cannot evaluate against a JSON column),
+the tool response includes the SQL Server error number, consistent
+with FR-007. No MCP-specific error mapping is added.
 
-- Malformed JSON text → `HTTP 400`-equivalent MCP error result.
-- Read responses serialize `metadata` as a JSON string (the underlying
-  REST/GraphQL pipeline output).
-- NULL handling matches the REST/GraphQL contract.
+---
 
-No MCP-tool-specific code changes are required to achieve the above —
-only the annotation additions documented in this contract.
+## Files changed by this feature in the MCP namespace
+
+None. `src/Azure.DataApiBuilder.Mcp/**` is **not modified** by this
+feature.
+
+The previous design (2026-06-04) added a canonical description to
+`DescribeEntitiesTool` and `DynamicCustomTool`. That design was
+superseded by the 2026-06-09 Clarifications session; see
+[research.md §R5](../research.md) for the audit trail.

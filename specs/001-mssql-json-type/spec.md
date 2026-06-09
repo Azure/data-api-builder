@@ -10,7 +10,19 @@
 
 ## Clarifications
 
-### Session 2026-06-04
+### Session 2026-06-09 (supersedes 2026-06-04 answers below)
+
+Product Management consolidated the following directive, which **supersedes** the 2026-06-04 answers wherever the two conflict. The governing principle is: **a JSON column is treated exactly like a string column. DAB adds no JSON-specific behavior, gating, or annotation. If SQL Server rejects something, DAB surfaces the SQL Server error code through the existing error pipeline as HTTP 400.** Rationale: when SQL Server adds support for additional operators on JSON columns in future releases, DAB inherits that support with zero code changes.
+
+- Q: How does DAB validate the payload of a write to a JSON column? → A: It does not validate at all. DAB binds the incoming value via the existing string-column path. Hot Chocolate enforces the `String` input type for GraphQL; the REST deserializer rejects non-string JSON tokens for a string-typed property. No DAB-specific JSON rejection code is added.
+- Q: What `$filter` operators are permitted on a JSON column? → A: **All of them.** DAB does not gate operators. Whatever the customer supplies is translated to SQL exactly as for any other string-typed column. SQL Server rejects operators it does not support, and the resulting error flows through the standard DAB error pipeline.
+- Q: When SQL Server returns an error on a JSON column write, filter, or order-by, what does DAB return? → A: HTTP `400 Bad Request` (REST) / GraphQL error with `extensions.code = "BAD_REQUEST"`. The response body MUST include the SQL Server error number so the customer can diagnose the cause. This is achieved by appending the SQL Server JSON-validation error codes (13608–13614) to the existing `MsSqlDbExceptionParser.BadRequestExceptionCodes` list — the only DAB code change related to errors.
+- Q: Are MCP tool schemas annotated for JSON columns? → A: **No.** A JSON column appears in `DescribeEntitiesTool`, `DynamicCustomTool`, `CreateRecordTool`, and `UpdateRecordTool` exactly as a plain string column does. No `description`, no `format`, no MCP-specific hint.
+- Q: How does DAB behave against a SQL Server build that does not support the native JSON type? → A: No version probe. SQL Server returns its own error; DAB surfaces it through the existing pipeline. (Unchanged from 2026-06-04.)
+
+### Session 2026-06-04 (historical — several answers superseded above)
+
+Answers below are preserved for audit. Where they conflict with the 2026-06-09 session, the 2026-06-09 answer governs.
 
 - Q: When a client sends a write (REST POST/PUT/PATCH or GraphQL mutation) for a JSON column, what payload shape does DAB accept? → A: Strict string only. The field MUST be a JSON string; sending a nested object or array MUST be rejected with a 4xx error (REST) / GraphQL input-validation error before reaching SQL Server.
 - Q: What HTTP status code does DAB return on the REST surface when SQL Server rejects a write for invalid JSON syntax? → A: 400 Bad Request (GraphQL: error extension `code: "BAD_REQUEST"`), matching DAB's existing column-type / parse-failure mapping.
@@ -49,17 +61,13 @@ nullable string in OpenAPI and as `String` in the SDL.
    type and as `String` in `create`/`update` input types.
 3. **Given** the same entity exposed via MCP,
    **When** an MCP client invokes `DescribeEntitiesTool` for the
-   entity (and, where applicable, inspects the input schema of a
-   `DynamicCustomTool` whose stored procedure has a JSON parameter),
-   **Then** the JSON field / parameter is `type: string` with a
-   `description` instructing the agent that the value is a
-   JSON-encoded string containing valid JSON text and that nested
-   objects or arrays are not accepted.
-   `CreateRecordTool` and `UpdateRecordTool` input schemas are NOT
-   modified by this feature; agents are expected to call
-   `DescribeEntitiesTool` first (per the existing tool descriptions)
-   to discover JSON columns and the embed instruction.
-
+   entity (or inspects the input schema of any other MCP tool that
+   surfaces the column, such as `DynamicCustomTool`,
+   `CreateRecordTool`, or `UpdateRecordTool`),
+   **Then** the JSON field / parameter appears as a plain `type:
+   string` slot with no JSON-specific `description`, `format`, or
+   other extension. The column is indistinguishable from an
+   ordinary string column at the MCP layer.
 ---
 
 ### User Story 2 - Read a single row by primary key (Priority: P1)
@@ -203,37 +211,41 @@ row is removed; ensure no error is raised and other rows are unaffected.
 
 ---
 
-### User Story 7 - Malformed JSON on write surfaces a 4xx error (Priority: P1)
+### User Story 7 - Malformed JSON on write surfaces a 400 with the SQL error code (Priority: P1)
 
 When a client submits a `metadata` value that is *not* valid JSON text, SQL
-Server rejects the insert/update. DAB surfaces this rejection as a 4xx
-HTTP response (REST) or a GraphQL error with a user-actionable message; the
-underlying SQL error is not leaked verbatim but the error indicates that
-the JSON value is invalid.
+Server rejects the insert/update with one of its JSON-validation error
+numbers (13608–13614 in current SQL Server builds). DAB surfaces the
+rejection as HTTP `400 Bad Request` (REST) or a GraphQL error with
+`extensions.code = "BAD_REQUEST"`, and the response body MUST include the
+SQL Server error number so the customer can identify the cause.
 
-**Why this priority**: Without a clean error path, malformed input causes
-500-class failures and a poor developer experience; the feature cannot ship
-without it.
+**Why this priority**: Without a clean 400 response, malformed input
+causes 5xx failures and a poor developer experience. The mapping reuses
+DAB's existing parse-failure error pipeline; the only addition is
+appending the JSON error numbers to the existing
+`MsSqlDbExceptionParser.BadRequestExceptionCodes` list.
 
 **Independent Test**: `POST /api/profiles` with body
-`{ "id": 3, "metadata": "{not valid json" }`. Verify the response is a 4xx
-status with a body that identifies the offending field/value as invalid
-JSON. Repeat via GraphQL and verify a GraphQL error of equivalent
-specificity.
+`{ "id": 3, "metadata": "{not valid json" }`. Verify the response is
+`400 Bad Request` and the response body contains the SQL Server error
+number that was raised. Repeat via GraphQL and verify a GraphQL error
+of equivalent specificity.
 
 **Acceptance Scenarios**:
 
 1. **Given** the `Profiles` entity,
-   **When** the client POSTs a body whose `metadata` value is not valid JSON
-   text,
+   **When** the client POSTs a body whose `metadata` value is not valid
+   JSON text,
    **Then** the response status is `400 Bad Request`, the row is not
-   persisted, and the error body identifies that the `metadata` value is
-   not valid JSON.
+   persisted, and the error body contains the SQL Server error number
+   raised by the failed insert.
 2. **Given** the same entity,
    **When** the client issues a GraphQL mutation with an invalid JSON
    string for `metadata`,
-   **Then** the mutation returns a GraphQL error of equivalent specificity
-   and no row is persisted.
+   **Then** the mutation returns a GraphQL error with
+   `extensions.code = "BAD_REQUEST"` whose message likewise contains
+   the SQL Server error number, and no row is persisted.
 
 ---
 
@@ -264,36 +276,45 @@ the rows and verify the JSON response renders `null`.
 
 ---
 
-### User Story 9 - Documented filter and orderby behavior (Priority: P2)
+### User Story 9 - Filter and orderby behavior on a JSON column (Priority: P2)
 
-The product documents — and tests pin — the exact behavior of `$filter`
-and `$orderby` against JSON columns. Initial scope: the column is treated
-as a SQL string for these operations.
+DAB exposes the JSON column to `$filter` and `$orderby` identically to
+any other string-typed column. **Every** OData operator that DAB supports
+on string columns is permitted; DAB performs no JSON-specific gating.
+SQL Server is the authority on which operators are valid against the
+native `JSON` type and returns its own error when an operator is not
+supported — that error flows through the standard DAB pipeline as HTTP
+`400 Bad Request` (REST) or `extensions.code = "BAD_REQUEST"` (GraphQL)
+with the SQL Server error number included in the body.
 
-- **Filter**: only the equality operators `eq` and `ne` are supported on a
-  JSON column, including null checks (`metadata eq null`, `metadata ne
-  null`). The value compares against the stored JSON text as a string.
-  All other operators — string operators (`startswith`, `contains`,
-  `endswith`), relational operators (`gt`, `lt`, `ge`, `le`), and any
-  JSON-path-style predicate — MUST be rejected with a 400 error
-  identifying that the operator is not supported on JSON columns.
-- **OrderBy**: ordering on a JSON column orders by the underlying string
-  representation. This is permitted but documented as "string-order, not
-  semantic-JSON order."
+- **Filter**: `eq`, `ne`, null checks, and any other operator the client
+  submits are translated to SQL and forwarded. Operators that SQL Server
+  supports (currently `eq`, `ne`, null comparison against the stored
+  JSON text as a string) succeed; operators SQL Server does not support
+  (currently `startswith`, `contains`, `endswith`, `gt`, `lt`, `ge`,
+  `le`, JSON-path predicates) cause a SQL Server error that DAB surfaces
+  as 400.
+- **OrderBy**: forwarded to SQL unchanged. Ordering succeeds if SQL
+  Server supports it on the column.
 
-**Why this priority**: Without explicit documentation and test coverage,
-users will assume rich JSON path support exists and file bugs when it does
-not. The contract must be pinned even though the implementation is mostly
-a documentation + test exercise.
+This design intentionally avoids hard-coding the SQL Server operator
+support matrix in DAB. When SQL Server extends operator support in a
+future release, DAB inherits the new behavior with no code change.
+
+**Why this priority**: Filter and order-by support must work, but the
+implementation requires no DAB code beyond the type mapping in User
+Story 1. Test coverage pins the documented behavior so future
+regressions are caught.
 
 **Independent Test**: Issue `GET /api/profiles?$filter=metadata eq
-'{"role":"admin"}'` and verify it returns only the matching rows. Issue
-`GET /api/profiles?$filter=metadata eq null` and verify only rows whose
-column is `NULL` are returned. Issue `GET /api/profiles?$orderby=metadata`
-and verify the ordering matches a plain string sort of the stored text.
-Issue a `$filter` using an unsupported operator (e.g., `contains`,
-`startswith`, or a `JSON_VALUE`-style predicate) and verify the response
-is a 400 identifying that the operator is not supported on JSON columns.
+'{"role":"admin"}'` and verify only the matching rows are returned.
+Issue `GET /api/profiles?$filter=metadata eq null` and verify rows whose
+column is `NULL` are returned. Issue `GET
+/api/profiles?$orderby=metadata` and verify the ordering matches the
+string sort SQL Server applies. Issue a `$filter` using an operator SQL
+Server does not support on the JSON type (for example,
+`contains(metadata,'x')`) and verify the response is `400 Bad Request`
+whose body includes the SQL Server error number.
 
 **Acceptance Scenarios**:
 
@@ -306,14 +327,14 @@ is a 400 identifying that the operator is not supported on JSON columns.
    **Then** rows are filtered by SQL `NULL` semantics on the JSON column.
 3. **Given** the same collection,
    **When** the client orders by `metadata`,
-   **Then** results are sorted by the string value of the column.
+   **Then** results are sorted by the string value of the column as SQL
+   Server orders it.
 4. **Given** the same collection,
-   **When** the client uses any operator other than `eq` / `ne` (e.g.,
-   `contains`, `startswith`, `gt`, or a JSON-path predicate) on the JSON
-   column,
-   **Then** the response is a 400 error stating that the operator is not
-   supported on JSON columns and the request is not executed against the
-   database.
+   **When** the client uses an operator SQL Server does not support on
+   the JSON type (for example `contains`, `startswith`, `gt`),
+   **Then** the response is a 400 error whose body contains the SQL
+   Server error number for the rejected operation, and the request
+   reaches the database (DAB does not pre-filter).
 
 ---
 
@@ -351,35 +372,42 @@ is a 400 identifying that the operator is not supported on JSON columns.
 - **FR-003**: GraphQL responses MUST render a JSON column's value as a
   `String` whose content is the exact JSON text returned by SQL Server.
 - **FR-004**: REST write operations (POST/PUT/PATCH) MUST accept a JSON
-  column value strictly as a JSON string in the request body and pass
-  that string to SQL Server unchanged. If the field is supplied as a
-  nested JSON object or array, DAB MUST reject the request with a 4xx
-  response identifying the offending field, before the value reaches
-  SQL Server. DAB MUST NOT auto-serialize nested objects into strings.
-- **FR-005**: GraphQL mutations MUST accept a JSON column value strictly
-  as a `String` argument and pass that string to SQL Server unchanged.
-  The GraphQL input type for the field MUST be `String` so that nested
-  object inputs are rejected by the GraphQL parser/validator.
+  column value through the existing string-column write path and pass
+  the value to SQL Server unchanged. DAB MUST NOT add JSON-specific
+  validation, rejection, or transformation logic. If the request body
+  supplies a non-string JSON token (object, array, number, boolean)
+  where a string is expected, the existing JSON deserializer for
+  string-typed properties rejects the request — DAB inherits that
+  behavior; it does not add a parallel check.
+- **FR-005**: GraphQL mutations MUST accept a JSON column value as a
+  `String` argument and pass the value to SQL Server unchanged. The
+  GraphQL input type for the field MUST be `String` so that nested
+  object inputs are rejected by Hot Chocolate's built-in input
+  validation. DAB MUST NOT add JSON-specific input validation.
 - **FR-006**: DAB MUST NOT perform JSON-schema validation on inbound
   values; SQL Server is the authority on JSON syntax validity.
-- **FR-007**: When SQL Server rejects a value for invalid JSON syntax, DAB
-  MUST return HTTP `400 Bad Request` (REST) or a GraphQL error whose
-  extension `code` is `BAD_REQUEST` (GraphQL). The error body MUST
-  identify the offending field and indicate that the value is not valid
-  JSON. The raw SQL error MUST NOT be leaked verbatim. This mapping
-  matches DAB's existing behavior for other column-type / parse
-  failures (e.g., a non-numeric string sent to an `int` column).
+- **FR-007**: When SQL Server returns a JSON-related error on a JSON
+  column (for example a JSON-syntax validation error on write, or an
+  unsupported-operator error on filter / order-by), DAB MUST return
+  HTTP `400 Bad Request` (REST) or a GraphQL error with
+  `extensions.code = "BAD_REQUEST"` (GraphQL). The response body MUST
+  include the SQL Server error number so the customer can diagnose the
+  cause. This is achieved by appending the SQL Server JSON-validation
+  error codes (currently 13608–13614; final list verified against the
+  target SQL Server 2025 build during implementation) to the existing
+  `MsSqlDbExceptionParser.BadRequestExceptionCodes` list. No other
+  changes to the error pipeline are made.
 - **FR-008**: A nullable JSON column MUST accept `null` on insert, update
   (PUT/PATCH), and GraphQL mutations; reads MUST render `null` for `NULL`
   database values.
-- **FR-009**: `$filter` against a JSON column MUST support `eq` and `ne`
-  (including null checks `metadata eq null` / `metadata ne null`)
-  comparing the stored JSON text as a string. All other operators —
-  string operators (`startswith`, `contains`, `endswith`), relational
-  operators (`gt`, `lt`, `ge`, `le`), and JSON-path-style predicates
-  (e.g., `JSON_VALUE(...)`) — MUST be rejected with a 400 error that
-  identifies the operator as unsupported on JSON columns. The request
-  MUST NOT reach the database.
+- **FR-009**: `$filter` against a JSON column MUST be processed by DAB
+  exactly as for any other string-typed column. DAB MUST NOT maintain
+  a JSON-specific operator allow-list or rejection list. Every operator
+  the client submits is translated to SQL and forwarded. Operators SQL
+  Server supports succeed; operators SQL Server does not support cause
+  a SQL Server error that DAB surfaces via FR-007. Rationale: when SQL
+  Server extends operator support on the native JSON type in a future
+  release, DAB inherits that support with no code change.
 - **FR-010**: `$orderby` against a JSON column MUST be permitted and MUST
   order by the underlying string representation.
 - **FR-011**: DELETE on a row containing a JSON column MUST behave
@@ -405,27 +433,14 @@ is a 400 identifying that the operator is not supported on JSON columns.
   without DAB-specific translation. Documentation MUST state the
   minimum supported server versions (Azure SQL DB current; SQL Server
   2025+).
-- **FR-017**: MCP tool schemas MUST surface SQL Server `JSON` columns
-  to calling LLM agents with a `description` that explicitly states
-  (a) the value is a JSON-encoded string containing valid JSON text
-  and (b) nested JSON objects or arrays are not accepted as input.
-  Annotation surface:
-    - `DescribeEntitiesTool` output: each field whose underlying
-      column type is JSON MUST carry the `description`.
-    - `DynamicCustomTool` per-SP input schema: each stored-procedure
-      parameter whose type is JSON MUST carry the `description`.
-    - `CreateRecordTool` and `UpdateRecordTool` input schemas are
-      intentionally NOT modified by this feature — their `data`
-      property is an opaque object with no per-column slot. Agents
-      discover JSON columns via `DescribeEntitiesTool`, which the
-      existing tool descriptions already mandate as STEP 1 before
-      constructing a `data` payload.
-  DAB MUST NOT emit a non-standard JSON Schema `format` value (e.g.,
-  `format: "json"`) for these columns. Integration tests under
-  `TestCategory=MsSql` MUST assert the presence and substance of the
-  `description` on (i) at least one JSON field in `DescribeEntitiesTool`
-  output and (ii) at least one JSON parameter in a `DynamicCustomTool`
-  per-SP input schema.
+- **FR-017**: MCP tool schemas MUST surface a SQL Server `JSON` column
+  identically to a string column. No JSON-specific `description`,
+  `format`, or other MCP annotation is added by this feature.
+  `DescribeEntitiesTool`, `DynamicCustomTool`, `CreateRecordTool`, and
+  `UpdateRecordTool` are all unchanged for JSON columns. Integration
+  tests under `TestCategory=MsSql` MUST assert that the column appears
+  in `DescribeEntitiesTool` output without any JSON-specific
+  annotation, to guard against accidental future divergence.
 
 ### Key Entities
 
@@ -452,9 +467,12 @@ is a 400 identifying that the operator is not supported on JSON columns.
 - **SC-003**: A round-trip write→read of a JSON value preserves the exact
   text returned by `SELECT` against SQL Server in 100% of test cases,
   across object, array, nested, and Unicode payloads.
-- **SC-004**: Malformed-JSON writes return HTTP `400 Bad Request` (REST)
-  or a GraphQL error with extension `code: "BAD_REQUEST"` (GraphQL) in
-  100% of malformed-input test cases; no 5xx surfaces.
+- **SC-004**: Any write, filter, or order-by request that SQL Server
+  rejects with a JSON-validation or JSON-unsupported-operator error
+  number returns HTTP `400 Bad Request` (REST) or GraphQL
+  `extensions.code: "BAD_REQUEST"` (GraphQL), with the SQL Server
+  error number included in the response body, in 100% of integration
+  test cases. No 5xx surfaces for these error paths.
 - **SC-005**: A client developer can, given only the published OpenAPI
   document and GraphQL SDL, correctly identify how to send and receive
   JSON-typed columns without consulting DAB-specific documentation
@@ -472,10 +490,12 @@ is a 400 identifying that the operator is not supported on JSON columns.
   Changes principle.
 - Column-level authorization, request size limits, and existing error
   middleware are reused as-is; no new error-mapping infrastructure is
-  introduced solely for this feature.
-- The decision between "reject path-style JSON predicates" vs.
-  "fall back to string equality" is left to the implementation plan; the
-  spec only requires that the chosen behavior be documented and pinned
-  by a test (FR-009).
+  introduced solely for this feature. The single concession is
+  appending JSON-validation SQL error numbers (currently 13608–13614)
+  to `MsSqlDbExceptionParser.BadRequestExceptionCodes`, per FR-007.
+- DAB does **not** maintain any JSON-specific knowledge of which SQL
+  operators are supported on the native JSON type. The supported-
+  operator matrix is SQL Server's responsibility (per FR-009 and the
+  2026-06-09 Clarifications session).
 - No CLI changes (`dab init` / `dab add` flags) are introduced; the
   config schema is unchanged in shape.

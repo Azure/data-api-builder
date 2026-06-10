@@ -61,6 +61,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsHealthEnabled);
         // Ignore the global RuntimeOptions.IsHealthCheckEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsHealthCheckEnabled);
+        // Ignore the global RuntimeOptions.IsEmbeddingsConfigured as that's a computed property, not serialized.
+        VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsEmbeddingsConfigured);
         // Ignore the entity IsEntityHealthEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<Entity>(entity => entity.IsEntityHealthEnabled);
         // Ignore the entity EntityThresholdMs as that's unimportant from a test standpoint.
@@ -117,6 +119,14 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
         // Ignore DefaultDataSourceName as that's not serialized in our config file.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DefaultDataSourceName);
+        // Ignore IsRootConfig as that's a computed property for validation, not serialized.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRootConfig);
+        // Ignore IsChildConfig as that's a runtime flag for validation, not serialized.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsChildConfig);
+        // Ignore AutoentityResolutionCounts as that's populated at runtime during metadata initialization.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AutoentityResolutionCounts);
+        // Ignore ChildConfigs as that's populated at runtime during child config loading.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.ChildConfigs);
         // Ignore MaxResponseSizeMB as as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<HostOptions>(options => options.MaxResponseSizeMB);
         // Ignore UserProvidedMaxResponseSizeMB as that's not serialized in our config file.

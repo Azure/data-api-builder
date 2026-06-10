@@ -441,7 +441,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
-            NamedTypeNode fieldType = new(GetGraphQLTypeFromSystemType(column.SystemType));
+            NamedTypeNode namedType = new(GetGraphQLTypeFromSystemType(column.SystemType));
+
+            // For array columns, wrap the element type in a ListTypeNode (e.g., [Int], [String]).
+            INullableTypeNode fieldType = column.IsArrayType
+                ? new ListTypeNode(namedType)
+                : namedType;
+
             FieldDefinitionNode field = new(
                 location: null,
                 new(exposedColumnName),
@@ -541,6 +547,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// GraphQL type.</exception>"
         public static string GetGraphQLTypeFromSystemType(Type type)
         {
+            // For array types (e.g., int[], string[]), resolve the element type.
+            // byte[] is excluded as it maps to the ByteArray scalar type.
+            if (type.IsArray && type != typeof(byte[]))
+            {
+                type = type.GetElementType()!;
+            }
+            else if (type == typeof(Array))
+            {
+                // Npgsql may report abstract System.Array for unresolved PostgreSQL array columns.
+                // Default to String if the element type hasn't been resolved yet.
+                return STRING_TYPE;
+            }
+
             return type.Name switch
             {
                 "String" => STRING_TYPE,
@@ -582,16 +601,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 short value => new ObjectValueNode(new ObjectFieldNode(SHORT_TYPE, new IntValueNode(value))),
                 int value => new ObjectValueNode(new ObjectFieldNode(INT_TYPE, value)),
                 long value => new ObjectValueNode(new ObjectFieldNode(LONG_TYPE, new IntValueNode(value))),
-                Guid value => new ObjectValueNode(new ObjectFieldNode(UUID_TYPE, new UuidType().ParseValue(value))),
+                Guid value => new ObjectValueNode(new ObjectFieldNode(UUID_TYPE, new UuidType().ValueToLiteral(value))),
                 string value => new ObjectValueNode(new ObjectFieldNode(STRING_TYPE, value)),
                 bool value => new ObjectValueNode(new ObjectFieldNode(BOOLEAN_TYPE, value)),
-                float value => new ObjectValueNode(new ObjectFieldNode(SINGLE_TYPE, new SingleType().ParseValue(value))),
+                float value => new ObjectValueNode(new ObjectFieldNode(SINGLE_TYPE, new SingleType().ValueToLiteral(value))),
                 double value => new ObjectValueNode(new ObjectFieldNode(FLOAT_TYPE, value)),
                 decimal value => new ObjectValueNode(new ObjectFieldNode(DECIMAL_TYPE, new FloatValueNode(value))),
-                DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
-                DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
-                byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
-                TimeOnly value => new ObjectValueNode(new ObjectFieldNode(LOCALTIME_TYPE, new HotChocolate.Types.NodaTime.LocalTimeType().ParseResult(value))),
+                DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ValueToLiteral(value))),
+                DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ValueToLiteral(
+                    value.Kind == DateTimeKind.Unspecified ? new DateTimeOffset(value, TimeSpan.Zero) : new DateTimeOffset(value)))),
+                byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new Base64StringType().ValueToLiteral(value))),
+                TimeOnly value => new ObjectValueNode(new ObjectFieldNode(LOCALTIME_TYPE, new HotChocolate.Types.NodaTime.LocalTimeType().ValueToLiteral(value))),
                 _ => throw new DataApiBuilderException(
                     message: $"The type {metadataValue.GetType()} is not supported as a GraphQL default value",
                     statusCode: HttpStatusCode.InternalServerError,

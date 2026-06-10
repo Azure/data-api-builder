@@ -68,7 +68,7 @@ public class EndToEndTests
 
         Assert.IsNotNull(runtimeConfig);
         Assert.IsTrue(runtimeConfig.AllowIntrospection);
-        Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource.DatabaseType);
+        Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource!.DatabaseType);
         CosmosDbNoSQLDataSourceOptions? cosmosDataSourceOptions = runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
         Assert.IsNotNull(cosmosDataSourceOptions);
         Assert.AreEqual("graphqldb", cosmosDataSourceOptions.Database);
@@ -96,7 +96,7 @@ public class EndToEndTests
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
 
         Assert.IsNotNull(runtimeConfig);
-        Assert.AreEqual(DatabaseType.CosmosDB_PostgreSQL, runtimeConfig.DataSource.DatabaseType);
+        Assert.AreEqual(DatabaseType.CosmosDB_PostgreSQL, runtimeConfig.DataSource!.DatabaseType);
         Assert.IsNotNull(runtimeConfig.Runtime);
         Assert.IsNotNull(runtimeConfig.Runtime.Rest);
         Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest.Path);
@@ -127,7 +127,7 @@ public class EndToEndTests
             out RuntimeConfig? runtimeConfig,
             replacementSettings: replacementSettings));
 
-        SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
+        SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource!.ConnectionString);
         Assert.AreEqual(ProductInfo.GetDataApiBuilderUserAgent(), builder.ApplicationName);
 
         Assert.IsNotNull(runtimeConfig);
@@ -208,7 +208,7 @@ public class EndToEndTests
             replacementSettings: replacementSettings));
 
         Assert.IsNotNull(runtimeConfig);
-        Assert.AreEqual(expectedDbType, runtimeConfig.DataSource.DatabaseType);
+        Assert.AreEqual(expectedDbType, runtimeConfig.DataSource!.DatabaseType);
         Assert.IsNotNull(runtimeConfig.Runtime);
         Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
         if (runtimeConfig.DataSource.DatabaseType is DatabaseType.MSSQL && isMultipleCreateEnabled is not CliBool.None)
@@ -247,7 +247,7 @@ public class EndToEndTests
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? addRuntimeConfig));
         Assert.IsNotNull(addRuntimeConfig);
-        Assert.AreEqual(TEST_ENV_CONN_STRING, addRuntimeConfig.DataSource.ConnectionString);
+        Assert.AreEqual(TEST_ENV_CONN_STRING, addRuntimeConfig.DataSource!.ConnectionString);
         Assert.AreEqual(1, addRuntimeConfig.Entities.Count()); // 1 new entity added
         Assert.IsTrue(addRuntimeConfig.Entities.ContainsKey("todo"));
         Entity entity = addRuntimeConfig.Entities["todo"];
@@ -729,7 +729,7 @@ public class EndToEndTests
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updateRuntimeConfig));
         Assert.IsNotNull(updateRuntimeConfig);
-        Assert.AreEqual(TEST_ENV_CONN_STRING, updateRuntimeConfig.DataSource.ConnectionString);
+        Assert.AreEqual(TEST_ENV_CONN_STRING, updateRuntimeConfig.DataSource!.ConnectionString);
         Assert.AreEqual(2, updateRuntimeConfig.Entities.Count()); // No new entity added
 
         Assert.IsTrue(updateRuntimeConfig.Entities.ContainsKey("todo"));
@@ -914,17 +914,17 @@ public class EndToEndTests
         Assert.IsTrue(string.IsNullOrEmpty(engineStdOut), $"Expected no output at LogLevel {logLevelOption}, but got: {engineStdOut}");
     }
 
-    /// Validates that `dab start` correctly sets <see cref="Startup.IsLogLevelOverriddenByCli"/>
+    /// Validates that `dab start` correctly sets <see cref="Startup.IsCliOverriding"/>
     /// based on whether the --LogLevel CLI flag is provided.
     ///
-    /// When the --LogLevel flag is provided, IsLogLevelOverriddenByCli should be true.
-    /// When the --LogLevel flag is omitted (log level comes from the config file), IsLogLevelOverriddenByCli should be false.
+    /// When the --LogLevel flag is provided, IsCliOverriding should be true.
+    /// When the --LogLevel flag is omitted (log level comes from the config file), IsCliOverriding should be false.
     /// </summary>
     /// <param name="cliLogLevel">The --LogLevel CLI flag value, or null to omit the flag.</param>
-    /// <param name="expectedIsOverridden">Expected value of Startup.IsLogLevelOverriddenByCli.</param>
+    /// <param name="expectedIsOverridden">Expected value of Startup.IsCliOverriding.</param>
     [DataTestMethod]
-    [DataRow(null, false, DisplayName = "IsLogLevelOverriddenByCli is false")]
-    [DataRow(LogLevel.Error, true, DisplayName = "IsLogLevelOverriddenByCli is true")]
+    [DataRow(null, false, DisplayName = "IsCliOverriding is false")]
+    [DataRow(LogLevel.Error, true, DisplayName = "IsCliOverriding is true")]
     public async Task TestStartCommandResolvesLogLevelFromConfigOrFlag(
         LogLevel? cliLogLevel,
         bool expectedIsOverridden)
@@ -987,7 +987,7 @@ public class EndToEndTests
         // Wait for the engine to finish loading the config.
         await Task.Delay(TimeSpan.FromSeconds(5));
 
-        Assert.AreEqual(expectedIsOverridden, Startup.IsLogLevelOverriddenByCli);
+        Assert.AreEqual(expectedIsOverridden, Startup.IsCliOverriding);
     }
 
     /// <summary>
@@ -1288,6 +1288,11 @@ public class EndToEndTests
     [DataRow(ApiType.GraphQL, true, false, true, false, DisplayName = "Validate that GraphQL endpoint is disabled when enabled option is omitted and disabled option is included in the init command.")]
     [DataRow(ApiType.GraphQL, true, true, false, false, DisplayName = "Validate that GraphQL endpoint is disabled when enabled option is set to false and disabled option is included in the init command.")]
     [DataRow(ApiType.GraphQL, true, true, true, true, true, DisplayName = "Validate that config generation fails when enabled and disabled options provide conflicting values for GraphQL endpoint.")]
+    [DataRow(ApiType.MCP, false, false, true, true, DisplayName = "Validate that MCP endpoint is enabled when both enabled and disabled options are omitted from the init command.")]
+    [DataRow(ApiType.MCP, false, true, true, true, DisplayName = "Validate that MCP endpoint is enabled when enabled option is set to true and disabled option is omitted from the init command.")]
+    [DataRow(ApiType.MCP, true, false, true, false, DisplayName = "Validate that MCP endpoint is disabled when enabled option is omitted and disabled option is included in the init command.")]
+    [DataRow(ApiType.MCP, true, true, false, false, DisplayName = "Validate that MCP endpoint is disabled when enabled option is set to false and disabled option is included in the init command.")]
+    [DataRow(ApiType.MCP, true, true, true, true, true, DisplayName = "Validate that config generation fails when enabled and disabled options provide conflicting values for MCP endpoint.")]
     public void TestEnabledDisabledFlagsForApis(
         ApiType apiType,
         bool includeDisabledFlag,
@@ -1333,11 +1338,21 @@ public class EndToEndTests
                 Assert.IsNotNull(runtimeConfig.Runtime.Rest);
                 Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.Rest.Enabled);
             }
-            else
+            else if (apiType is ApiType.GraphQL)
             {
                 Assert.IsNotNull(runtimeConfig.Runtime);
                 Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
                 Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.GraphQL.Enabled);
+            }
+            else if (apiType is ApiType.MCP)
+            {
+                Assert.IsNotNull(runtimeConfig.Runtime);
+                Assert.IsNotNull(runtimeConfig.Runtime.Mcp);
+                Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.Mcp.Enabled);
+            }
+            else
+            {
+                Assert.Fail($"Unexpected ApiType value '{apiType}' in test.");
             }
         }
     }

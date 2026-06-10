@@ -1156,6 +1156,60 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
+        /// Validates that single quote characters embedded in a string-typed claim value are
+        /// escaped (doubled) per OData 4.01 ABNF when substituted into a database authorization
+        /// policy. Without escaping, an attacker who can influence a referenced JWT claim could
+        /// break out of the string literal and inject additional OData predicates - bypassing
+        /// row-level authorization. The substituted claim must remain enclosed in a single
+        /// string literal regardless of its contents.
+        /// </summary>
+        /// <param name="claimValue">The raw claim value (as it appears in the JWT) to substitute.</param>
+        /// <param name="expectedParsedPolicy">The parsed policy after safe substitution.</param>
+        [DataTestMethod]
+        [DataRow(
+            "alice' or 1 eq 1 or '",
+            "col1 eq 'alice'' or 1 eq 1 or '''",
+            DisplayName = "Injection attempt with OR predicate is neutralized by escaping single quotes")]
+        [DataRow(
+            "O'Brien",
+            "col1 eq 'O''Brien'",
+            DisplayName = "Legitimate single-quote-bearing value (e.g. surname) is safely escaped")]
+        [DataRow(
+            "''",
+            "col1 eq ''''''",
+            DisplayName = "Value composed solely of single quotes is fully escaped")]
+        [DataRow(
+            "no quotes here",
+            "col1 eq 'no quotes here'",
+            DisplayName = "Value without single quotes is unchanged aside from enclosing quotes")]
+        public void DbPolicy_StringClaim_SingleQuotesEscaped_PreventsODataInjection(
+            string claimValue,
+            string expectedParsedPolicy)
+        {
+            const string policyDefinition = "@item.col1 eq @claims.userId";
+
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                entityName: TEST_ENTITY,
+                roleName: TEST_ROLE,
+                operation: TEST_OPERATION,
+                includedCols: new HashSet<string> { "col1" },
+                databasePolicy: policyDefinition);
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            Mock<HttpContext> context = new();
+
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            identity.AddClaim(new Claim("userId", claimValue, ClaimValueTypes.String));
+            ClaimsPrincipal principal = new(identity);
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+
+            Assert.AreEqual(expectedParsedPolicy, parsedPolicy);
+        }
+
+        /// <summary>
         /// Tests authorization policy processing mechanism by validating value type compatibility
         /// of claims present in HttpContext.User.Claims.
         /// </summary>

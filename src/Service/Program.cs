@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Mcp.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
@@ -37,6 +39,34 @@ namespace Azure.DataApiBuilder.Service
     {
         public static bool IsHttpsRedirectionDisabled { get; private set; }
         public static DynamicLogLevelProvider LogLevelProvider = new();
+
+        /// <summary>
+        /// Process-wide owner of the MCP stdio process's stdout stream.
+        /// Both the JSON-RPC server (<see cref="Azure.DataApiBuilder.Mcp.Core.McpStdioServer"/>) and the notification writer share this
+        /// instance so concurrent writes to stdout are serialized through one lock.
+        /// </summary>
+        private static readonly McpStdoutWriter _mcpStdoutWriter = new();
+
+        /// <summary>
+        /// MCP log notification writer for sending logs to MCP clients via notifications/message.
+        /// Created once and shared between logging pipeline and MCP server.
+        /// </summary>
+        private static readonly McpLogNotificationWriter _mcpNotificationWriter = new(_mcpStdoutWriter);
+
+        /// <summary>
+        /// Ensures the shared MCP stdout writer is flushed and disposed on
+        /// process exit. The writer is registered with DI as an externally
+        /// owned singleton instance (<c>AddSingleton(instance)</c>), and
+        /// <see cref="Microsoft.Extensions.DependencyInjection"/> does not
+        /// dispose externally constructed instances. Hooking
+        /// <see cref="AppDomain.ProcessExit"/> guarantees the underlying
+        /// <see cref="StreamWriter"/> is released even when the host shuts
+        /// down via signal or unhandled exception path.
+        /// </summary>
+        static Program()
+        {
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => _mcpStdoutWriter.Dispose();
+        }
 
         public static void Main(string[] args)
         {
@@ -68,9 +98,9 @@ namespace Azure.DataApiBuilder.Service
                 // Initialize log level EARLY, before building the host.
                 // This ensures logging filters are effective during the entire host build process.
                 // For MCP mode, we also read the config file early to check for log level override.
-                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverridden, out bool isConfigOverridden);
+                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding);
 
-                LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverridden, isConfigOverridden);
+                LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverriding, isConfigOverriding);
 
                 // For MCP stdio mode, redirect Console.Out to keep stdout clean for JSON-RPC.
                 // MCP SDK uses Console.OpenStandardOutput() which gets the real stdout, unaffected by this redirect.
@@ -138,6 +168,13 @@ namespace Azure.DataApiBuilder.Service
                 {
                     services.AddSingleton(LogLevelProvider);
                     services.AddSingleton<ILogLevelController>(LogLevelProvider);
+
+                    // For MCP stdio mode, register the notification writer for sending logs to MCP clients
+                    if (runMcpStdio)
+                    {
+                        services.AddSingleton(_mcpStdoutWriter);
+                        services.AddSingleton<IMcpLogNotificationWriter>(_mcpNotificationWriter);
+                    }
                 })
                 .ConfigureLogging(logging =>
                 {
@@ -147,6 +184,10 @@ namespace Azure.DataApiBuilder.Service
                     // For non-MCP mode, use the configured level directly.
                     if (runMcpStdio)
                     {
+                        // Clear all default providers (Console, Debug, EventSource, EventLog)
+                        // to ensure stdout remains pure JSON-RPC for MCP protocol compliance.
+                        logging.ClearProviders();
+
                         // Allow all logs through framework, filter dynamically
                         logging.SetMinimumLevel(LogLevel.Trace);
                     }
@@ -159,13 +200,19 @@ namespace Azure.DataApiBuilder.Service
                     logging.AddFilter(logLevel => LogLevelProvider.ShouldLog(logLevel));
                     logging.AddFilter("Microsoft", logLevel => LogLevelProvider.ShouldLog(logLevel));
                     logging.AddFilter("Microsoft.Hosting.Lifetime", logLevel => LogLevelProvider.ShouldLog(logLevel));
+
+                    // For MCP stdio mode, add the MCP logger provider to send logs as notifications
+                    if (runMcpStdio)
+                    {
+                        logging.AddProvider(new McpLoggerProvider(_mcpNotificationWriter));
+                    }
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     // LogLevelProvider was already initialized in StartEngine before CreateHostBuilder.
                     // Use the already-set values to avoid re-parsing args.
                     Startup.MinimumLogLevel = LogLevelProvider.CurrentLogLevel;
-                    Startup.IsLogLevelOverriddenByCli = LogLevelProvider.IsCliOverridden;
+                    Startup.IsCliOverriding = LogLevelProvider.IsCliOverriding;
                     ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel, stdio: runMcpStdio);
                     ILogger<Startup> startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
@@ -182,13 +229,13 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="args">Array that may contain log level information.</param>
         /// <param name="runMcpStdio">Whether running in MCP stdio mode.</param>
-        /// <param name="isLogLevelOverridenByCli">Sets if log level is found in the args from CLI.</param>
-        /// <param name="isConfigOverridden">Sets if log level is found in the config file (MCP mode only).</param>
+        /// <param name="isCliOverriding">Set to true if log level is supplied via CLI args.</param>
+        /// <param name="isConfigOverriding">Set to true if log level is supplied via the config file (MCP mode only).</param>
         /// <returns>Appropriate log level.</returns>
-        private static LogLevel GetLogLevelFromCommandLineArgsOrConfig(string[] args, bool runMcpStdio, out bool isLogLevelOverridenByCli, out bool isConfigOverridden)
+        private static LogLevel GetLogLevelFromCommandLineArgsOrConfig(string[] args, bool runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding)
         {
             LogLevel logLevel;
-            isConfigOverridden = false;
+            isConfigOverriding = false;
 
             // Check if --LogLevel was explicitly specified via CLI (case-insensitive parsing)
             int logLevelIndex = Array.FindIndex(args, a => string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));
@@ -198,12 +245,12 @@ namespace Azure.DataApiBuilder.Service
             {
                 // User explicitly set --LogLevel via CLI (highest priority)
                 logLevel = cliLogLevel;
-                isLogLevelOverridenByCli = true;
+                isCliOverriding = true;
             }
             else if (runMcpStdio)
             {
                 // MCP stdio mode without explicit --LogLevel: check config for log level (second priority)
-                isLogLevelOverridenByCli = false;
+                isCliOverriding = false;
                 logLevel = LogLevel.None; // Default if config doesn't have log level
 
                 // Find --config or --ConfigFileName argument, or use default dab-config.json
@@ -217,7 +264,7 @@ namespace Azure.DataApiBuilder.Service
                 if (!string.IsNullOrWhiteSpace(configFilePath) && TryGetLogLevelFromConfig(configFilePath, out LogLevel configLogLevel))
                 {
                     logLevel = configLogLevel;
-                    isConfigOverridden = true;
+                    isConfigOverriding = true;
                 }
             }
             else
@@ -227,7 +274,7 @@ namespace Azure.DataApiBuilder.Service
                 // adjust based on config: Debug for Development mode, Error for Production mode.
                 // This initial value is used before config is loaded.
                 logLevel = LogLevel.Error;
-                isLogLevelOverridenByCli = false;
+                isCliOverriding = false;
             }
 
             if (logLevel is > LogLevel.None or < LogLevel.Trace)

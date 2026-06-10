@@ -162,6 +162,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 "Date" => EdmPrimitiveTypeKind.Date,
                 "TimeOnly" => EdmPrimitiveTypeKind.TimeOfDay,
                 "TimeSpan" => EdmPrimitiveTypeKind.TimeOfDay,
+                "SqlVector`1" => EdmPrimitiveTypeKind.String,
                 _ => throw new ArgumentException($"Column type" +
                         $" {columnSystemType.Name} not yet supported.")
             };

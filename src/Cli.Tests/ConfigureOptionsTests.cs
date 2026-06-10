@@ -542,6 +542,54 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running "dab configure --runtime.semantic-search.embedding-endpoint {value}" updates runtime semantic-search embedding endpoint.
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateEmbeddingEndpointForSemanticSearchRuntimeSettings()
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+            string updatedEmbeddingEndpoint = "https://example.org/embed";
+
+            // Act: Attempts to update embedding endpoint value
+            ConfigureOptions options = new(
+                runtimeSemanticSearchEmbeddingEndpoint: updatedEmbeddingEndpoint,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the embedding endpoint value is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.AreEqual(updatedEmbeddingEndpoint, runtimeConfig.Runtime?.SemanticSearch?.EmbeddingEndpoint);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.semantic-search.embedding-api-key {value}" updates runtime semantic-search embedding API key.
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateEmbeddingApiKeyForSemanticSearchRuntimeSettings()
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+            string updatedEmbeddingApiKey = "test-api-key";
+
+            // Act: Attempts to update embedding API key value
+            ConfigureOptions options = new(
+                runtimeSemanticSearchEmbeddingApiKey: updatedEmbeddingApiKey,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the embedding API key value is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.AreEqual(updatedEmbeddingApiKey, runtimeConfig.Runtime?.SemanticSearch?.EmbeddingApiKey);
+        }
+
+        /// <summary>
         /// Tests that running "dab configure --runtime.compression.level {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for compression.level and
         /// validates whether the runtime config reflects those updated values.

@@ -68,6 +68,9 @@ public class RuntimeConfigValidator : IConfigValidator
     private const string SEMANTIC_SEARCH_REDIS_REQUIREMENT_ERR_MSG =
         "Semantic search requires runtime.cache.level-2.provider to be 'redis' and runtime.cache.level-2.connection-string to be configured.";
 
+    private const string SEMANTIC_SEARCH_EMBEDDING_REQUIREMENT_ERR_MSG =
+        "Semantic search requires runtime.semantic-search.embedding-endpoint to be configured.";
+
     private static readonly HashSet<string> _reservedSemanticRestNames =
     [
         "semantic_search",
@@ -764,6 +767,14 @@ public class RuntimeConfigValidator : IConfigValidator
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
 
+        if (!HasValidSemanticEmbeddingConfiguration(runtimeConfig))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: SEMANTIC_SEARCH_EMBEDDING_REQUIREMENT_ERR_MSG,
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
         if (semantic.RedisIndexMultiplier < 1 || semantic.RedisIndexMultiplier > 10)
         {
             HandleOrRecordException(new DataApiBuilderException(
@@ -792,6 +803,16 @@ public class RuntimeConfigValidator : IConfigValidator
         return level2 is not null
             && string.Equals(level2.Provider, EntityCacheOptions.L2_CACHE_PROVIDER, StringComparison.OrdinalIgnoreCase)
             && !string.IsNullOrWhiteSpace(level2.ConnectionString);
+    }
+
+    /// <summary>
+    /// Validates embedding endpoint prerequisites for semantic-search.
+    /// </summary>
+    private static bool HasValidSemanticEmbeddingConfiguration(RuntimeConfig runtimeConfig)
+    {
+        RuntimeSemanticSearchOptions? semanticSearch = runtimeConfig.Runtime?.SemanticSearch;
+        return semanticSearch is not null
+            && !string.IsNullOrWhiteSpace(semanticSearch.EmbeddingEndpoint);
     }
 
     /// <summary>

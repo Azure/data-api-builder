@@ -15,6 +15,8 @@ public record RuntimeOptions
     public string? BaseRoute { get; init; }
     public TelemetryOptions? Telemetry { get; init; }
     public RuntimeCacheOptions? Cache { get; init; }
+    [JsonPropertyName("semantic-search")]
+    public RuntimeSemanticSearchOptions? SemanticSearch { get; init; }
     public PaginationOptions? Pagination { get; init; }
     public RuntimeHealthCheckConfig? Health { get; init; }
     public CompressionOptions? Compression { get; init; }
@@ -28,6 +30,7 @@ public record RuntimeOptions
         string? BaseRoute = null,
         TelemetryOptions? Telemetry = null,
         RuntimeCacheOptions? Cache = null,
+        RuntimeSemanticSearchOptions? SemanticSearch = null,
         PaginationOptions? Pagination = null,
         RuntimeHealthCheckConfig? Health = null,
         CompressionOptions? Compression = null)
@@ -39,6 +42,7 @@ public record RuntimeOptions
         this.BaseRoute = BaseRoute;
         this.Telemetry = Telemetry;
         this.Cache = Cache;
+        this.SemanticSearch = SemanticSearch;
         this.Pagination = Pagination;
         this.Health = Health;
         this.Compression = Compression;

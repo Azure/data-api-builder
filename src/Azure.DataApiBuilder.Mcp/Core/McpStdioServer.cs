@@ -28,6 +28,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly McpToolRegistry _toolRegistry;
         private readonly IServiceProvider _serviceProvider;
         private readonly McpStdoutWriter _stdoutWriter;
+        private readonly TextReader? _inputReader;
         private readonly string _protocolVersion;
 
         private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
@@ -39,10 +40,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         };
 
-        public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider)
+        public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider, TextReader? inputReader = null)
         {
             _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            _inputReader = inputReader;
 
             // Resolve the shared stdout writer so JSON-RPC responses and
             // notifications/message frames are serialized through one lock.
@@ -61,17 +63,20 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task RunAsync(CancellationToken cancellationToken)
         {
-            // Use UTF-8 WITHOUT BOM for stdin. Stdout is owned by McpStdoutWriter,
-            // which serializes all writes from McpStdioServer and the MCP logging
-            // pipeline so JSON-RPC frames cannot interleave at the byte level.
-            UTF8Encoding utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
-
-            using Stream stdin = Console.OpenStandardInput();
-            using StreamReader reader = new(stdin, utf8NoBom);
+            // By default read via Console.In so the loop honors the configured
+            // Console.InputEncoding in stdio mode.
+            TextReader reader = _inputReader ?? Console.In;
 
             while (!cancellationToken.IsCancellationRequested)
             {
                 string? line = await reader.ReadLineAsync(cancellationToken);
+
+                // EOF (stdin pipe closed) is a normal shutdown signal for stdio mode.
+                if (line is null)
+                {
+                    return;
+                }
+
                 if (string.IsNullOrWhiteSpace(line))
                 {
                     continue;

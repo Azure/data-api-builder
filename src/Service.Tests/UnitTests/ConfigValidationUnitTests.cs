@@ -3653,6 +3653,45 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
+        public void ValidateSemanticSearchRequiresEmbeddingEndpointConfiguration()
+        {
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            Entity entity = new(
+                Source: new EntitySource(Object: "dbo.Product", Type: EntitySourceType.Table, Parameters: null, KeyFields: null),
+                Fields: null,
+                GraphQL: new EntityGraphQLOptions("Product", "Products"),
+                Rest: new EntityRestOptions(),
+                Permissions: [new EntityPermission("anonymous", [new EntityAction(EntityActionOperation.Read, null, null)])],
+                Mappings: null,
+                Relationships: null,
+                SemanticSearch: new EntitySemanticSearchOptions
+                {
+                    Enabled = true,
+                    RedisIndexName = "idx:product-semantic"
+                });
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "Server=.", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null),
+                    Cache: new RuntimeCacheOptions
+                    {
+                        Level2 = new RuntimeCacheLevel2Options(Provider: "redis", ConnectionString: "localhost:6379")
+                    }),
+                Entities: new(new Dictionary<string, Entity> { ["Product"] = entity }));
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
+            Assert.AreEqual(
+                "Semantic search requires runtime.semantic-search.embedding-endpoint to be configured.",
+                ex.Message);
+        }
+
+        [TestMethod]
         public void ValidateSemanticSearchRejectsReservedFieldName()
         {
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
@@ -3682,7 +3721,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Cache: new RuntimeCacheOptions
                     {
                         Level2 = new RuntimeCacheLevel2Options(Provider: "redis", ConnectionString: "localhost:6379")
-                    }),
+                    },
+                    SemanticSearch: new RuntimeSemanticSearchOptions(EmbeddingEndpoint: "https://example.org/embed")),
                 Entities: new(new Dictionary<string, Entity> { ["Product"] = entity }));
 
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));

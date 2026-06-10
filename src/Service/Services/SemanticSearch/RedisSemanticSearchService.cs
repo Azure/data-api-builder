@@ -31,8 +31,6 @@ namespace Azure.DataApiBuilder.Service.Services.SemanticSearch;
 /// </summary>
 public sealed class RedisSemanticSearchService : ISemanticSearchService
 {
-    private const string EMBED_ENDPOINT_ENV = "DAB_SEMANTIC_EMBED_ENDPOINT";
-    private const string EMBED_API_KEY_ENV = "DAB_SEMANTIC_EMBED_API_KEY";
     private const string VECTOR_SCORE_FIELD = "__vector_score";
     private const string DEFAULT_VECTOR_FIELD = "embedding";
 
@@ -71,7 +69,7 @@ public sealed class RedisSemanticSearchService : ISemanticSearchService
             return [];
         }
 
-        float[] embedding = await GetEmbeddingAsync(semanticSearchValue);
+        float[] embedding = await GetEmbeddingAsync(runtimeConfig, semanticSearchValue);
         if (embedding.Length == 0)
         {
             return [];
@@ -124,21 +122,21 @@ public sealed class RedisSemanticSearchService : ISemanticSearchService
         return bytes;
     }
 
-    private async Task<float[]> GetEmbeddingAsync(string semanticSearchValue)
+    private async Task<float[]> GetEmbeddingAsync(RuntimeConfig runtimeConfig, string semanticSearchValue)
     {
         if (TryParseVectorText(semanticSearchValue, out float[]? parsedVector) && parsedVector is not null)
         {
             return parsedVector;
         }
 
-        string? endpoint = Environment.GetEnvironmentVariable(EMBED_ENDPOINT_ENV);
+        string? endpoint = runtimeConfig.Runtime?.SemanticSearch?.EmbeddingEndpoint;
         if (string.IsNullOrWhiteSpace(endpoint))
         {
             return [];
         }
 
         HttpClient client = _httpClientFactory.CreateClient();
-        string? apiKey = Environment.GetEnvironmentVariable(EMBED_API_KEY_ENV);
+        string? apiKey = runtimeConfig.Runtime?.SemanticSearch?.EmbeddingApiKey;
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);

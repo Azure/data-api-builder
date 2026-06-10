@@ -1060,6 +1060,22 @@ namespace Cli
                 runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Pagination = updatedPaginationOptions } };
             }
 
+            // Semantic Search: Embedding endpoint and API key
+            if (options.RuntimeSemanticSearchEmbeddingEndpoint != null ||
+                options.RuntimeSemanticSearchEmbeddingApiKey != null)
+            {
+                RuntimeSemanticSearchOptions? updatedSemanticSearchOptions = runtimeConfig?.Runtime?.SemanticSearch ?? new();
+                bool status = TryUpdateConfiguredSemanticSearchValues(options, ref updatedSemanticSearchOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { SemanticSearch = updatedSemanticSearchOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             // Compression: Level
             if (options.RuntimeCompressionLevel != null)
             {
@@ -1612,6 +1628,47 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError("Failed to update RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the semantic-search runtime settings based on the provided value.
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedSemanticSearchOptions">updatedSemanticSearchOptions.</param>
+        /// <returns>True if updates succeed, else false.</returns>
+        private static bool TryUpdateConfiguredSemanticSearchValues(
+            ConfigureOptions options,
+            ref RuntimeSemanticSearchOptions? updatedSemanticSearchOptions)
+        {
+            try
+            {
+                if (options?.RuntimeSemanticSearchEmbeddingEndpoint is not null)
+                {
+                    RuntimeSemanticSearchOptions current = updatedSemanticSearchOptions ?? new();
+                    updatedSemanticSearchOptions = current with
+                    {
+                        EmbeddingEndpoint = options.RuntimeSemanticSearchEmbeddingEndpoint
+                    };
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.semantic-search.embedding-endpoint.");
+                }
+
+                if (options?.RuntimeSemanticSearchEmbeddingApiKey is not null)
+                {
+                    RuntimeSemanticSearchOptions current = updatedSemanticSearchOptions ?? new();
+                    updatedSemanticSearchOptions = current with
+                    {
+                        EmbeddingApiKey = options.RuntimeSemanticSearchEmbeddingApiKey
+                    };
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.semantic-search.embedding-api-key.");
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.SemanticSearch with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }

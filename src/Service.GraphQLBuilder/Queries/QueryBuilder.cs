@@ -30,8 +30,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public const string GROUP_BY_AGGREGATE_FIELD_ARG_NAME = "field";
         public const string GROUP_BY_AGGREGATE_FIELD_DISTINCT_NAME = "distinct";
         public const string GROUP_BY_AGGREGATE_FIELD_HAVING_NAME = "having";
-        public const string SEMANTIC_SEARCH_ARGUMENT_NAME = SemanticSearchConstants.GRAPHQL_SEARCH_ARGUMENT;
-        public const string SEMANTIC_THRESHOLD_ARGUMENZT_NAME = SemanticSearchConstants.GRAPHQL_THRESHOLD_ARGUMENT;
+        public const string SEMANTIC_SEARCH_ARGUMENT_NAME = "semanticSearch";
+        public const string SEMANTIC_THRESHOLD_ARGUMENT_NAME = "semanticThreshold";
+        public const string SEMANTIC_DISTANCE_FIELD_NAME = "semanticDistance";
 
         // Define the enabled database types for aggregation
         public static readonly HashSet<DatabaseType> AggregationEnabledDatabaseTypes = new()

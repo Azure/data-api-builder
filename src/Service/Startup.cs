@@ -814,6 +814,11 @@ namespace Azure.DataApiBuilder.Service
             // arrive before runtime config in the late-configured path) still surfaces its audit
             // log line through the standard logging pipeline.
             DynamicLogLevelProvider? logLevelProviderForAudit = app.ApplicationServices.GetService<DynamicLogLevelProvider>();
+            if (logLevelProviderForAudit?.IsLogLevelLegacy is true)
+            {
+                _logBuffer.BufferLog(LogLevel.Warning, "--LogLevel is deprecated, please use --log-level instead.");
+            }
+
             ILoggerFactory? earlyLoggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
             if (logLevelProviderForAudit is not null && earlyLoggerFactory is not null)
             {

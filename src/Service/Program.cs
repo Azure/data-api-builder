@@ -98,9 +98,9 @@ namespace Azure.DataApiBuilder.Service
                 // Initialize log level EARLY, before building the host.
                 // This ensures logging filters are effective during the entire host build process.
                 // For MCP mode, we also read the config file early to check for log level override.
-                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding);
+                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding, out bool isLogLevelLegacy);
 
-                LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverriding, isConfigOverriding);
+                LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverriding, isConfigOverriding, isLogLevelLegacy);
 
                 // For MCP stdio mode, redirect Console.Out to keep stdout clean for JSON-RPC.
                 // MCP SDK uses Console.OpenStandardOutput() which gets the real stdout, unaffected by this redirect.
@@ -232,12 +232,23 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="isCliOverriding">Set to true if log level is supplied via CLI args.</param>
         /// <param name="isConfigOverriding">Set to true if log level is supplied via the config file (MCP mode only).</param>
         /// <returns>Appropriate log level.</returns>
-        private static LogLevel GetLogLevelFromCommandLineArgsOrConfig(string[] args, bool runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding)
+        private static LogLevel GetLogLevelFromCommandLineArgsOrConfig(string[] args, bool runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding, out bool isLogLevelLegacy)
         {
             LogLevel logLevel;
             isConfigOverriding = false;
 
+            args[2] = "--LogLevel";
             // Check if --log-level or --LogLevel was explicitly specified via CLI (case-insensitive parsing)
+            isLogLevelLegacy = false;
+            foreach (string argument in args)
+            {
+                if (string.Equals(argument, "--LogLevel", StringComparison.OrdinalIgnoreCase))
+                {
+                    isLogLevelLegacy = true;
+                    break;
+                }
+            }
+
             int logLevelIndex = Array.FindIndex(args, a =>
                 string.Equals(a, "--log-level", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));

@@ -977,10 +977,10 @@ public class EndToEndTests
         StartOptions options = new(
             verbose: false,
             logLevel: cliLogLevel,
-            logLevelLegacy: null,
             isHttpsRedirectionDisabled: false,
             mcpStdio: false,
             mcpRole: null,
+            logLevelLegacy: null,
             config: TEST_RUNTIME_CONFIG_FILE);
 
         // Run TryStartEngineWithOptions on a background task because StartEngine blocks until the host shuts down.

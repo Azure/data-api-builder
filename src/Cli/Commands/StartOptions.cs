@@ -21,7 +21,7 @@ namespace Cli.Commands
 
         public LogBuffer CliBuffer { get; }
 
-        public StartOptions(bool verbose, LogLevel? logLevel, LogLevel? logLevelLegacy, bool isHttpsRedirectionDisabled, bool mcpStdio, string? mcpRole, string config)
+        public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, bool mcpStdio, string? mcpRole, LogLevel? logLevelLegacy, string config)
             : base(config)
         {
             // When verbose is true we set LogLevel to information.
@@ -41,9 +41,6 @@ namespace Cli.Commands
         [Option("log-level", SetName = "loglevel", Required = false, HelpText = LOGLEVEL_HELPTEXT)]
         public LogLevel? LogLevel { get; }
 
-        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = LOGLEVEL_HELPTEXT, Hidden = true)]
-        public LogLevel? LogLevelLegacy { get; }
-
         [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
         public bool IsHttpsRedirectionDisabled { get; }
 
@@ -52,6 +49,9 @@ namespace Cli.Commands
 
         [Value(0, MetaName = "role", Required = false, HelpText = "Optional MCP permissions role, e.g. role:anonymous. If omitted, defaults to anonymous.")]
         public string? McpRole { get; }
+
+        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = LOGLEVEL_HELPTEXT, Hidden = true)]
+        public LogLevel? LogLevelLegacy { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

@@ -237,7 +237,6 @@ namespace Azure.DataApiBuilder.Service
             LogLevel logLevel;
             isConfigOverriding = false;
 
-            args[2] = "--LogLevel";
             // Check if --log-level or --LogLevel was explicitly specified via CLI (case-insensitive parsing)
             isLogLevelLegacy = false;
             foreach (string argument in args)

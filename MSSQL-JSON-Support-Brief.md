@@ -3,7 +3,7 @@
 **Audience**: Product Management and Engineering
 **Issue**: [Azure/data-api-builder#2768](https://github.com/Azure/data-api-builder/issues/2768)
 **Feature branch**: `Usr/sogh/speckit-jsontypesupport`
-**Status**: Specification and plan approved (revised 2026-06-09); implementation pending one prerequisite PR
+**Status**: Specification and plan approved (revised 2026-06-09); implementation pending one joint prerequisite PR (.NET 10 runtime bump + Microsoft.Data.SqlClient 6.x)
 **Scope**: Backend engine change, SQL Server only. No host-specific or platform-specific work.
 
 > **Revision 2026-06-09 — design simplification.** A Product Management
@@ -254,31 +254,62 @@ startup gate or warning.
 
 ### Why it exists
 
-DAB currently pins `Microsoft.Data.SqlClient` at version **5.2.3**.
-The `SqlDbType.Json` enum value that this feature depends on first
-appears in version **6.0.0**.
+The `SqlDbType.Json` enum value (numeric value `35`) that this
+feature depends on lives in the .NET **Base Class Library**
+(`System.Data.Common.dll`, namespace `System.Data`), not in
+Microsoft.Data.SqlClient. The BCL added that enum value in **.NET 9**
+and carries it forward to **.NET 10**; on .NET 8 the `SqlDbType` enum
+stops at `DateTimeOffset = 34`.
+
+DAB currently pins **two things** that together prevent
+`SqlDbType.Json` from compiling and resolving:
+
+- `Microsoft.Data.SqlClient` at version **5.2.3** (lacks the
+  SqlClient-side JSON wire-protocol support and the
+  `Microsoft.Data.SqlTypes.SqlJson` runtime type).
+- Target framework **.NET 8** (lacks the BCL `SqlDbType.Json` enum
+  value, so `Enum.TryParse<SqlDbType>("json", …)` in
+  `TypeHelper.GetSystemTypeFromSqlDbType` returns `false`).
+
+A SqlClient bump alone is **not** sufficient. The runtime must also
+advance.
 
 ### Why it is a separate PR
 
-The SqlClient major version bump affects every database engine that
-goes through SqlClient, not just SQL Server. The bump touches three
-non-feature files: `src/Directory.Packages.props`, `external_licenses/`,
-and `scripts/notice-generation.ps1`. It must be validated against the
-full multi-engine CI matrix (PostgreSQL, MySQL, Cosmos DB, SQL DW) in
-isolation. Bundling that risk with a feature PR would make review and
-bisecting harder if a regression appears.
+The joint upgrade affects every database engine that goes through
+SqlClient (not just SQL Server) and the runtime itself. It touches
+these non-feature files:
+
+- `src/Directory.Packages.props` (SqlClient `5.2.3 → 6.x`).
+- Every `src/**/*.csproj` (`<TargetFramework>net8.0</TargetFramework> → net10.0`).
+- `global.json` (SDK pin `8.0.420 → 10.0.x`).
+- `.github/workflows/*.yml` (`dotnet-version: '8.0.x' → '10.0.x'`).
+- `external_licenses/` (refreshed SqlClient SNI license).
+- `scripts/notice-generation.ps1` (license URL refresh and NOTICE regeneration).
+
+.NET 10 is chosen over .NET 9 because .NET 10 is the current
+Long-Term Support release; .NET 9 is a Standard-Term Support release
+with EOL May 2026, and DAB's current .NET 8 line reaches EOL November
+2026. Bundling SqlClient + runtime together lets the full multi-engine
+CI matrix (PostgreSQL, MySQL, Cosmos DB, SQL DW, SQL Server) validate
+the combined risk profile in isolation. Bundling that risk with a
+feature PR would make review and bisecting harder if a regression
+appears.
 
 ### Sequencing
 
-1. Prerequisite PR (SqlClient 6.x bump) is opened, reviewed across all
-   engine categories, and merged to `main`.
+1. Joint prerequisite PR (.NET 10 runtime bump **and** SqlClient 6.x
+   bump) is opened, reviewed across all engine categories, and merged
+   to `main`.
 2. This feature branch rebases on top.
 3. This feature's first task (T001) is a read-only pre-flight that
-   verifies `Microsoft.Data.SqlClient >= 6.0.0` is in place. If the
-   prerequisite is missing, T001 halts implementation with a clear
-   message.
+   verifies BOTH conditions — `Microsoft.Data.SqlClient >= 6.0.0`
+   AND `<TargetFramework>net10.0</TargetFramework>` plus the matching
+   `global.json` SDK pin. If either prerequisite is missing, T001
+   halts implementation with a clear message linking to the joint
+   prerequisite PR.
 
-This feature's task list explicitly forbids editing the three files
+This feature's task list explicitly forbids editing any of the files
 the prerequisite PR owns. The boundary is enforced by the task
 definitions themselves.
 
@@ -294,13 +325,14 @@ requirement maps to at least one SQL Server integration test under
 maintained in `specs/001-mssql-json-type/tasks.md`.
 
 **Multi-engine regression guard.** Because the underlying SqlClient
-upgrade affects more than just SQL Server, the merge gate runs the
-PostgreSQL, MySQL, Cosmos DB NoSQL, and SQL DW test categories and
-asserts pass/fail counts are identical to the pre-change baseline. A
-static `git diff --stat` guard additionally asserts zero lines changed
-under foreign-engine fixture files (`DatabaseSchema-PostgreSql.sql`,
-`DatabaseSchema-MySql.sql`, `DatabaseSchema-DwSql.sql`, and the
-Cosmos DB configuration and schema files).
+upgrade and the .NET 10 runtime bump affect more than just SQL
+Server, the merge gate runs the PostgreSQL, MySQL, Cosmos DB NoSQL,
+and SQL DW test categories and asserts pass/fail counts are identical
+to the pre-change baseline. A static `git diff --stat` guard
+additionally asserts zero lines changed under foreign-engine fixture
+files (`DatabaseSchema-PostgreSql.sql`, `DatabaseSchema-MySql.sql`,
+`DatabaseSchema-DwSql.sql`, and the Cosmos DB configuration and
+schema files).
 
 **Formatting gate.** `dotnet format src/Azure.DataApiBuilder.sln
 --verify-no-changes` must pass. This check is enforced in CI.
@@ -325,7 +357,7 @@ green.
 
 | Phase | Output | Verification gate |
 |---|---|---|
-| 1. Pre-flight | Read-only check that `Microsoft.Data.SqlClient >= 6.0.0` is present | Halt with a clear message if the prerequisite PR has not been merged |
+| 1. Pre-flight | Read-only check that **both** `Microsoft.Data.SqlClient >= 6.0.0` **and** target framework `net10.0` (with matching `global.json` SDK pin) are present | Halt with a clear message if either part of the joint prerequisite PR has not been merged |
 | 2. Test fixtures | Adds a `profiles` table (`id INT PK`, `metadata JSON NULL`) and five representative seed rows to `DatabaseSchema-MsSql.sql`, plus a `Profile` entity to `dab-config.MsSql.json` | `dab validate` passes; existing SQL Server test suite remains green |
 | 3. Type mapping | Single dictionary entry in `TypeHelper.cs` mapping `SqlDbType.Json` to `typeof(string)`. Triggers correct behavior in OpenAPI generation, GraphQL schema, MCP tool emission, and the read pipeline | TypeHelper unit tests plus the read-path integration tests |
 | 4. Error-code list extension | Appends the SQL Server JSON-validation error codes (currently 13608–13614) to `MsSqlDbExceptionParser.BadRequestExceptionCodes` so they map to HTTP 400 and GraphQL `BAD_REQUEST`. Covers BOTH malformed writes AND filter operators SQL Server cannot evaluate against a JSON column | Malformed-JSON integration test and filter-pass-through-failure integration test both return 400 with the SQL error number in the body |
@@ -350,7 +382,7 @@ MCP negative-assertion test work then follow as additional batches.
 
 | Risk | Mitigation |
 |---|---|
-| SqlClient 6.x bump destabilizes existing engines | Delivered as a separate prerequisite PR; the full multi-engine CI matrix runs on it in isolation |
+| SqlClient 6.x bump and .NET 10 runtime bump destabilize existing engines | Delivered as a single joint prerequisite PR; the full multi-engine CI matrix runs on it in isolation |
 | Wrong subset of SQL JSON error codes mapped to HTTP 400 | Integration tests for malformed JSON (write path) AND unsupported filter operators (read path) are the source of truth. The speculative code list (13608–13614) is pruned to the actually-triggered numbers during implementation |
 | Accidental edits to foreign-engine fixtures | The regression-guard phase includes an explicit `git diff --stat` static guard plus four engine test runs with baseline-equivalence assertion |
 | Future SQL Server changes shift the JSON error code set | The exact code set is verified at implementation time against a live SQL Server 2025+ build. The specification carries an explicit caveat. Note that future operator additions on the JSON type require **no** DAB change, because there is no operator allow-list to update |

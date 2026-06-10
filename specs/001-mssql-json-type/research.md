@@ -10,53 +10,85 @@ and the verified answers from the codebase. Each entry follows the
 
 ---
 
-## R1 — Microsoft.Data.SqlClient: does `SqlDbType.Json` exist on our pinned version?
+## R1 — Microsoft.Data.SqlClient AND .NET runtime: where does `SqlDbType.Json` come from?
 
-**Decision**: `Microsoft.Data.SqlClient >= 6.0.0` is a **prerequisite**
-for this feature and is delivered by a **separate dependency PR**
-(out of scope for this feature's `tasks.md`). Once that PR is merged
-to the same target branch, this feature wires SQL Server `JSON`
-columns through the existing `SqlDbType` → CLR-type → DAB string path
-by adding a single entry to `TypeHelper._sqlDbTypeToType`:
-`[SqlDbType.Json] = typeof(string)`. A pre-flight task in this
-feature's `tasks.md` verifies the dependency is in place and fails
-fast (referencing the prerequisite PR) if not.
+**Decision** (revised 2026-06-10): The prerequisite PR delivers
+**TWO** coupled bumps, not one:
 
-**Rationale**:
+1. **`Microsoft.Data.SqlClient`** `5.2.3 → 6.x` (introduces
+   `Microsoft.Data.SqlTypes.SqlJson` and JSON-type wire-protocol
+   support).
+2. **Target framework `net8.0` → `net10.0`** across every `.csproj`
+   in the solution, plus the SDK pin in `global.json`.
 
-- `src/Directory.Packages.props` pins `Microsoft.Data.SqlClient` at
-  `5.2.3` ([src/Directory.Packages.props](src/Directory.Packages.props#L46)).
-  `SqlDbType.Json` is a new enum value added in the SqlClient `6.x` line
-  alongside the SQL Server 2025 / Azure SQL DB native JSON type.
-- The downstream `TypeHelper.GetSystemTypeFromSqlDbType` parses incoming
-  column-type strings via `Enum.TryParse<SqlDbType>` and then dictionary-
-  looks up the CLR type ([src/Core/Services/TypeHelper.cs](src/Core/Services/TypeHelper.cs#L267)).
-  With the dep bump, `"json"` parses cleanly to `SqlDbType.Json`; one
-  dictionary entry is the only line of code required to surface JSON
-  columns as `typeof(string)` end-to-end.
-- After that, the existing `string` path in `MsSqlMetadataProvider`,
-  `MsSqlQueryBuilder`, parameter binding, `SchemaConverter`, and
-  `OpenApiDocumentor` handles JSON without further plumbing (Principle VII:
-  Minimal-Surface Changes).
-- The SqlClient bump is a small, behavior-preserving package upgrade
-  whose existing test suites (PostgreSQL etc.) remain unaffected because
-  no PostgreSQL/MySQL/Cosmos engine code consumes this package.
+Both bumps are necessary and neither alone is sufficient. Once the
+prerequisite PR is merged to the same target branch, this feature
+wires SQL Server `JSON` columns through the existing
+`SqlDbType → CLR-type → DAB string` path by adding a single entry to
+`TypeHelper._sqlDbTypeToType`: `[SqlDbType.Json] = typeof(string)`.
+A pre-flight task in this feature's `tasks.md` verifies BOTH
+prerequisites are in place and fails fast (referencing the
+prerequisite PR) if either is missing.
+
+**Rationale — why both bumps are required**:
+
+- The `SqlDbType.Json` enum value lives in the **BCL**
+  (`System.Data.Common.dll` / `System.Data.SqlDbType`), not in the
+  SqlClient package. SqlClient 6.x ships the wire/protocol support
+  and the `SqlJson` runtime type, but the enum literal
+  `SqlDbType.Json` is added in **.NET 9 (value `35`)** and carried
+  forward to .NET 10. .NET 8 does not contain it.
+- DAB's [TypeHelper.GetSystemTypeFromSqlDbType](src/Core/Services/TypeHelper.cs#L267)
+  resolves a column's type via `Enum.TryParse<SqlDbType>(baseType, ignoreCase: true, ...)`
+  and then dictionary-looks up the CLR type
+  ([src/Core/Services/TypeHelper.cs](src/Core/Services/TypeHelper.cs#L267)).
+  On .NET 8, `Enum.TryParse<SqlDbType>("json", true, out _)` returns
+  `false` regardless of which SqlClient version is installed.
+- Bumping to **.NET 10** (current LTS as of November 2025) makes
+  `SqlDbType.Json` resolve at compile time AND at runtime through
+  `Enum.TryParse`. The single dictionary entry then handles JSON
+  end-to-end with no other code change.
+- The SqlClient 6.x bump is necessary for the wire-level handling
+  of the native `JSON` type during read and parameter binding;
+  without it, even on .NET 10, sending a JSON-typed parameter would
+  not negotiate correctly with SQL Server 2025+.
+- After both bumps, the existing `string` path in
+  `MsSqlMetadataProvider`, `MsSqlQueryBuilder`, parameter binding,
+  `SchemaConverter`, and `OpenApiDocumentor` handles JSON without
+  further plumbing (Principle VII: Minimal-Surface Changes).
+
+**Why .NET 10 (not .NET 9)**:
+
+- .NET 10 is the current LTS; .NET 9 is STS and reaches end-of-life
+  in May 2026.
+- .NET 8 (DAB's current pin) reaches end-of-life November 2026 — the
+  team will need to bump regardless of issue #2768.
+- Bundling the runtime bump with the SqlClient bump in a single
+  prerequisite PR validates the multi-engine CI matrix once, in
+  isolation from this feature.
 
 **Alternatives considered**:
 
-- **No dep bump; add a string-name fallback in `GetSystemTypeFromSqlDbType`**
+- **Stay on .NET 8; cast `(SqlDbType)35` in the dictionary plus a
+  string-name fallback in `GetSystemTypeFromSqlDbType`**
   (`if (baseType.Equals("json", OrdinalIgnoreCase)) return typeof(string)`)
   and bind writes as `SqlDbType.NVarChar(max)`. SQL Server implicitly
-  converts `nvarchar(max)` → `json` and runs JSON validation as part of
+  converts `nvarchar(max) → json` and runs JSON validation as part of
   the conversion, so functional behavior matches. **Rejected** because
-  it forks the type-resolution path (string-name override instead of enum
-  lookup), which is exactly the kind of single-use parallel pipeline
-  Principle VII prohibits. Keeping the resolution path enum-based keeps
-  parity with the rest of the type table.
-- **Map JSON to `SqlDbType.NVarChar` at parameter-binding time even after
-  the dep bump.** Functionally equivalent; loses the documentary value of
-  `SqlDbType.Json` and complicates a hypothetical future "real JSON
-  parameter binding" feature. Rejected for symmetry.
+  the magic-number cast obscures intent, the string-name override
+  forks the type-resolution path (exactly the single-use parallel
+  pipeline Principle VII prohibits), and the team would still owe
+  the .NET upgrade within months. Bundling the upgrade with the
+  prerequisite PR removes both the workaround and the future
+  upgrade in one step.
+- **Bump to .NET 9 only.** Functionally sufficient for this feature
+  but lands on an STS release that EOLs months before .NET 8 does.
+  Rejected as bad timing.
+- **Map JSON to `SqlDbType.NVarChar` at parameter-binding time even
+  after the dep + runtime bumps.** Functionally equivalent on the
+  read side; loses the documentary value of `SqlDbType.Json` and
+  blocks a future "real JSON parameter binding" optimization that
+  SqlClient 6.x makes available. Rejected for symmetry.
 
 **Affected files** (within the scope of this feature):
 
@@ -69,9 +101,14 @@ dependency PR, not by `tasks.md`):
 
 - `src/Directory.Packages.props` — Microsoft.Data.SqlClient `5.2.3 → 6.x`
   version bump (and license-URL comment refresh).
+- `global.json` — SDK pin `8.0.420 → 10.0.x`.
+- Every `.csproj` in `src/**` — `<TargetFramework>` `net8.0 → net10.0`
+  (and any `net8.0`-conditioned `<PackageReference>` blocks).
 - `external_licenses/` — refreshed SqlClient SNI license file.
 - `scripts/notice-generation.ps1` — license URL refresh and NOTICE
   regeneration.
+- CI workflow files referencing `dotnet-version: '8.0.x'` — bumped to
+  `'10.0.x'`.
 
 A pre-flight task in this feature's `tasks.md` MUST assert the
 prerequisite (`Microsoft.Data.SqlClient >= 6.0.0`) and fail with a

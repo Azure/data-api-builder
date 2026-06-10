@@ -29,13 +29,26 @@ below are therefore **required**, not optional.
 
 ## Upstream Dependency — **NOT in this task list**
 
-`Microsoft.Data.SqlClient >= 6.0.0` (and its companion edits to
-[src/Directory.Packages.props](../../src/Directory.Packages.props),
-`external_licenses/`, and
-[scripts/notice-generation.ps1](../../scripts/notice-generation.ps1))
-is delivered by a **separate prerequisite PR**. Tasks in this file
-MUST NOT touch those three files. T001 verifies the prerequisite is
-in place and fails fast if not.
+A **joint prerequisite PR** delivers two coupled bumps:
+
+1. `Microsoft.Data.SqlClient 5.2.3 → 6.x` in
+   [src/Directory.Packages.props](../../src/Directory.Packages.props)
+   (SqlClient-side JSON support / `Microsoft.Data.SqlTypes.SqlJson`).
+2. Target framework `net8.0 → net10.0` across every
+   `src/**/*.csproj`, the SDK pin in [global.json](../../global.json)
+   (`8.0.420 → 10.0.x`), and `dotnet-version` in `.github/workflows/*.yml`
+   — required because `SqlDbType.Json = 35` is a **BCL enum value**
+   (added in .NET 9, current LTS in .NET 10) and `Enum.TryParse<SqlDbType>("json", …)`
+   in `TypeHelper.GetSystemTypeFromSqlDbType` returns `false` on .NET 8
+   regardless of which SqlClient version is installed.
+
+Companion edits delivered by the same prerequisite PR:
+
+- `external_licenses/` — refreshed SqlClient SNI license file.
+- [scripts/notice-generation.ps1](../../scripts/notice-generation.ps1) — license URL refresh and NOTICE regeneration.
+
+Tasks in this file MUST NOT touch any of these files. T001 verifies
+both prerequisites and fails fast if either is missing.
 
 ---
 
@@ -45,7 +58,11 @@ in place and fails fast if not.
 any code in this feature is written. Read-only — modifies no source
 files.
 
-- [ ] T001 Verify `Microsoft.Data.SqlClient >= 6.0.0` in [src/Directory.Packages.props](../../src/Directory.Packages.props) (read-only assertion; grep for `<PackageVersion Include="Microsoft.Data.SqlClient"` and confirm version >= 6.0.0). Verify `SqlDbType.Json` resolves at compile time by adding a one-line scratch build probe (then removing it) or by inspecting the SqlClient assembly via `dotnet list package`. **If absent, halt and link to the prerequisite PR.** MUST NOT modify [src/Directory.Packages.props](../../src/Directory.Packages.props), `external_licenses/`, or [scripts/notice-generation.ps1](../../scripts/notice-generation.ps1).
+- [ ] T001 Verify the **joint** upstream prerequisite is in place:
+      (a) `Microsoft.Data.SqlClient >= 6.0.0` in [src/Directory.Packages.props](../../src/Directory.Packages.props) (read-only assertion; grep for `<PackageVersion Include="Microsoft.Data.SqlClient"` and confirm version `>= 6.0.0`);
+      (b) `<TargetFramework>net10.0</TargetFramework>` in every `src/**/*.csproj` (or, if a single shared property exists, `<TargetFramework>net10.0</TargetFramework>` in [src/Directory.Build.props](../../src/Directory.Build.props));
+      (c) `sdk.version` matches `10.0.x` in [global.json](../../global.json);
+      (d) `SqlDbType.Json` resolves at compile time — confirm by inspecting `dotnet --list-sdks` reports a `10.0.x` SDK installed locally **AND** by adding a one-line scratch build probe (e.g. a throwaway `_ = SqlDbType.Json;` line in any test project) that compiles, then removing it. **If any of (a)–(d) is absent, halt and link to the joint prerequisite dependency PR.** MUST NOT modify [src/Directory.Packages.props](../../src/Directory.Packages.props), [src/Directory.Build.props](../../src/Directory.Build.props), [global.json](../../global.json), any `.csproj` under `src/`, any file under `external_licenses/`, [scripts/notice-generation.ps1](../../scripts/notice-generation.ps1), or any CI workflow under `.github/workflows/`.
 
 **Checkpoint**: Prerequisite confirmed. Implementation may begin.
 

@@ -32,34 +32,64 @@ The implementation reduces to two production code edits:
    `MsSqlDbExceptionParser.BadRequestExceptionCodes` list, so JSON
    errors map to 400 rather than 500.
 
-The feature **depends on** a Microsoft.Data.SqlClient upgrade to a
-`6.x` line that exposes `SqlDbType.Json`; that upgrade is delivered as
-a **separate prerequisite PR** and is out of scope for this feature's
-task list. See [research.md](./research.md) for the per-file analysis.
+The feature **depends on a single, joint prerequisite PR** that
+delivers two coupled bumps:
+
+1. **Microsoft.Data.SqlClient `5.2.3 → 6.x`** — adds the SqlClient-side
+   JSON wire-protocol support (and the `Microsoft.Data.SqlTypes.SqlJson`
+   runtime type).
+2. **Target framework `net8.0 → net10.0`** across the solution
+   (every `src/**/*.csproj`, the SDK pin in [global.json](../../global.json),
+   and the `dotnet-version` in CI workflow files) — required because
+   `SqlDbType.Json = 35` is a **BCL enum value** in `System.Data`,
+   added in .NET 9 and present in .NET 10. .NET 8's `SqlDbType` enum
+   stops at `DateTimeOffset = 34`, so `Enum.TryParse<SqlDbType>("json", …)`
+   in `TypeHelper.GetSystemTypeFromSqlDbType` returns `false` regardless
+   of which SqlClient version is installed.
+
+Both bumps are delivered as a **single separate prerequisite PR** and
+are out of scope for this feature's task list. .NET 10 is the current
+Long-Term Support release (chosen over .NET 9 STS, which is EOL May
+2026). See [research.md](./research.md) R1 for the full analysis.
 
 ### Upstream Dependency (separate PR)
 
-**Prerequisite**: `Microsoft.Data.SqlClient >= 6.0.0` in
-[src/Directory.Packages.props](../../src/Directory.Packages.props). This
-bump (and its license-notice refresh) is delivered by a **separate,
-behavior-preserving dependency PR** so it can be reviewed, validated
-against the full multi-engine CI matrix, and merged independently of
-this feature. This PR's `tasks.md` MUST NOT include the package bump
-or any of its companion edits (license URL, NOTICE regeneration).
+**Prerequisites** (delivered jointly by ONE separate PR):
+
+- `Microsoft.Data.SqlClient >= 6.0.0` in
+  [src/Directory.Packages.props](../../src/Directory.Packages.props).
+- `<TargetFramework>net10.0</TargetFramework>` in every
+  `src/**/*.csproj`.
+- `sdk.version: "10.0.x"` in [global.json](../../global.json).
+- CI workflow `dotnet-version: "10.0.x"` in `.github/workflows/*.yml`.
+- License-notice refresh for SqlClient SNI native asset.
+
+Bundling these in one PR lets the multi-engine CI matrix (MsSql,
+PostgreSql, MySql, CosmosDb_NoSql) validate the runtime + driver
+upgrade together. This feature's `tasks.md` MUST NOT include any of
+these bumps or their companion edits (license URL, NOTICE regeneration,
+TFM edits, SDK pin edits).
 
 **Blocking**: This feature's implementation tasks cannot be completed
-until the dependency PR is merged into the same target branch. A
-pre-flight task verifies the installed version and fails fast with a
-clear message if the prerequisite is missing.
+until the joint dependency PR is merged into the same target branch.
+A pre-flight task verifies BOTH the installed SqlClient version AND
+the target framework, and fails fast with a clear message if either
+prerequisite is missing.
 
 ## Technical Context
 
-**Language/Version**: C# 12 / .NET 8 (per [global.json](../../global.json)).
+**Language/Version**: C# 12 / **.NET 10** (post-prerequisite-PR; per
+[global.json](../../global.json)). The current main branch ships on
+.NET 8; the joint prerequisite PR bumps the SDK pin and every
+`src/**/*.csproj` `<TargetFramework>` to `net10.0` to surface the
+BCL `SqlDbType.Json` enum value (added in .NET 9, current LTS in
+.NET 10).
 
 **Primary Dependencies**: Hot Chocolate (GraphQL),
 Microsoft.OData.UriParser (REST filter), Microsoft.Data.SqlClient
-**>= 6.0.0** (prerequisite — required for `SqlDbType.Json`; delivered
-by a separate dependency PR, see Summary and research R1).
+**>= 6.0.0** (prerequisite — required for SqlClient-side JSON
+support; delivered by the joint .NET 10 + SqlClient 6.x dependency
+PR, see Summary and research R1).
 
 **Storage**: SQL Server 2025+ / Azure SQL DB (target). No other engines
 in scope.
@@ -167,9 +197,12 @@ src/
   MCP description hint was dropped. A JSON column appears in MCP tool
   schemas as a plain string with no annotation.
 
-**Delivered by the prerequisite dependency PR (NOT in this feature's tasks)**:
+**Delivered by the joint prerequisite dependency PR (NOT in this feature's tasks)**:
 
 - `src/Directory.Packages.props` — Microsoft.Data.SqlClient `5.2.3 → 6.x`
+- Every `src/**/*.csproj` — `<TargetFramework>net8.0</TargetFramework> → net10.0`
+- [global.json](../../global.json) — SDK pin `8.0.420 → 10.0.x`
+- `.github/workflows/*.yml` — `dotnet-version: '8.0.x' → '10.0.x'`
 - `external_licenses/` — refreshed SqlClient SNI license file
 - `scripts/notice-generation.ps1` — license URL refresh and NOTICE regeneration
 
@@ -197,11 +230,14 @@ The 2026-06-09 Clarifications session **supersedes R3 and R5** (the
 operator gate and MCP annotation are no longer implemented) and
 **simplifies R4** to a one-line list extension.
 
-- **R1** — `Microsoft.Data.SqlClient >= 6.0.0` (prerequisite; delivered
-  by a separate PR) unlocks `SqlDbType.Json`. This feature contributes
-  the single dictionary entry `[SqlDbType.Json] = typeof(string)` in
-  `TypeHelper._sqlDbTypeToType`, gated by a pre-flight task that
-  verifies the dependency is in place.
+- **R1** — Joint prerequisite (delivered by a separate PR):
+  Microsoft.Data.SqlClient `6.x` for SqlClient-side JSON support **AND**
+  target framework `net10.0` to surface `SqlDbType.Json = 35` (a BCL
+  enum value added in .NET 9, current LTS in .NET 10). This feature
+  contributes the single dictionary entry
+  `[SqlDbType.Json] = typeof(string)` in `TypeHelper._sqlDbTypeToType`,
+  gated by a pre-flight task that verifies BOTH prerequisites are in
+  place.
 - **R2** — Confirmed downstream pipeline (OpenAPI, GraphQL,
   resolvers, EDM, metadata) handles `typeof(string)` columns without
   further changes.
@@ -253,12 +289,16 @@ authoritative list is produced by `/speckit.tasks` and lives in
 
 1. **Pre-flight: verify upstream dependency** — assert
    `Microsoft.Data.SqlClient >= 6.0.0` in
-   [src/Directory.Packages.props](../../src/Directory.Packages.props)
-   and that `SqlDbType.Json` resolves at compile time. Fail fast with
-   a message pointing at the prerequisite dependency PR if not met.
-   **Does NOT modify** `Directory.Packages.props`, `external_licenses/`,
-   or `scripts/notice-generation.ps1` — those edits live in the
-   separate prerequisite PR.
+   [src/Directory.Packages.props](../../src/Directory.Packages.props),
+   `<TargetFramework>net10.0</TargetFramework>` in every
+   `src/**/*.csproj`, and `sdk.version: "10.0.x"` in
+   [global.json](../../global.json). Verify `SqlDbType.Json` resolves
+   at compile time (BCL enum value, requires .NET 9+). Fail fast with
+   a message pointing at the joint prerequisite dependency PR if any
+   condition is not met. **Does NOT modify**
+   `Directory.Packages.props`, `global.json`, any `.csproj`,
+   `external_licenses/`, `scripts/notice-generation.ps1`, or CI
+   workflow files — those edits live in the separate prerequisite PR.
 2. **Test fixture** (R6, FR-015) — add `profiles` table and seed rows to
    `DatabaseSchema-MsSql.sql`; add `Profile` entity to
    `dab-config.MsSql.json`.
@@ -284,9 +324,10 @@ authoritative list is produced by `/speckit.tasks` and lives in
 ## Complexity Tracking
 
 *Empty intentionally — no Constitution violations to justify.* The
-Microsoft.Data.SqlClient `6.x` upgrade is delivered by a **separate
-prerequisite PR** (see Summary → Upstream Dependency) and is therefore
-not a decision carried by this feature's scope.
+joint Microsoft.Data.SqlClient `6.x` + .NET 10 runtime upgrade is
+delivered by a **separate prerequisite PR** (see Summary → Upstream
+Dependency) and is therefore not a decision carried by this feature's
+scope.
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|--------------------------------------|

@@ -159,8 +159,8 @@ public class SemanticSearchTextFlowTests
         //     double Distance);                                         // 0.92
 
         var mockCandidate = new SemanticSearchCandidate(
-            new Dictionary<string, object?> { { "id", 1 } }.AsReadOnly(),
-            new Dictionary<string, object?> { { "name", "Laptop" } }.AsReadOnly(),
+            new Dictionary<string, object?> { { "id", 1 } },
+            new Dictionary<string, object?> { { "name", "Laptop" } },
             0.92
         );
 
@@ -190,14 +190,14 @@ public class SemanticSearchTextFlowTests
         // 4. Result rows are enriched with semantic_distance from stored distances
 
         var candidate1 = new SemanticSearchCandidate(
-            new Dictionary<string, object?> { { "id", 1 } }.AsReadOnly(),
-            new Dictionary<string, object?> { { "name", "Laptop" } }.AsReadOnly(),
+            new Dictionary<string, object?> { { "id", 1 } },
+            new Dictionary<string, object?> { { "name", "Laptop" } },
             0.92
         );
 
         var candidate2 = new SemanticSearchCandidate(
-            new Dictionary<string, object?> { { "id", 2 } }.AsReadOnly(),
-            new Dictionary<string, object?> { { "name", "Desktop" } }.AsReadOnly(),
+            new Dictionary<string, object?> { { "id", 2 } },
+            new Dictionary<string, object?> { { "name", "Desktop" } },
             0.85
         );
 

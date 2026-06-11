@@ -70,7 +70,7 @@ public class RuntimeConfigValidator : IConfigValidator
         "Semantic search requires runtime.cache.level-2.provider to be 'redis' and runtime.cache.level-2.connection-string to be configured.";
 
     private const string SEMANTIC_SEARCH_EMBEDDING_REQUIREMENT_ERR_MSG =
-        "Semantic search requires runtime.semantic-search.embedding-endpoint to be configured.";
+        "Semantic search requires runtime.embeddings to be configured and enabled.";
 
     private static readonly HashSet<string> _reservedSemanticRestNames =
     [
@@ -1111,13 +1111,12 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
-    /// Validates embedding endpoint prerequisites for semantic-search.
+    /// Validates embeddings prerequisites for semantic-search.
     /// </summary>
     private static bool HasValidSemanticEmbeddingConfiguration(RuntimeConfig runtimeConfig)
     {
-        RuntimeSemanticSearchOptions? semanticSearch = runtimeConfig.Runtime?.SemanticSearch;
-        return semanticSearch is not null
-            && !string.IsNullOrWhiteSpace(semanticSearch.EmbeddingEndpoint);
+        EmbeddingsOptions? embeddings = runtimeConfig.Runtime?.Embeddings;
+        return embeddings is not null && embeddings.Enabled;
     }
 
     /// <summary>

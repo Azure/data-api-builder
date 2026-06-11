@@ -3653,7 +3653,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
-        public void ValidateSemanticSearchRequiresEmbeddingEndpointConfiguration()
+        public void ValidateSemanticSearchRequiresEmbeddingsConfiguration()
         {
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
@@ -3687,7 +3687,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
             Assert.AreEqual(
-                "Semantic search requires runtime.semantic-search.embedding-endpoint to be configured.",
+                "Semantic search requires runtime.embeddings to be configured and enabled.",
                 ex.Message);
         }
 
@@ -3722,7 +3722,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     {
                         Level2 = new RuntimeCacheLevel2Options(Provider: "redis", ConnectionString: "localhost:6379")
                     },
-                    SemanticSearch: new RuntimeSemanticSearchOptions(EmbeddingEndpoint: "https://example.org/embed")),
+                    Embeddings: new EmbeddingsOptions(
+                        Provider: EmbeddingProviderType.OpenAI,
+                        BaseUrl: "https://api.openai.com",
+                        ApiKey: "test-api-key",
+                        Enabled: true)),
                 Entities: new(new Dictionary<string, Entity> { ["Product"] = entity }));
 
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));

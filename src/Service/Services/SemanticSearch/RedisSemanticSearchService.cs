@@ -4,20 +4,17 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.SemanticSearch;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
-using Microsoft.Azure.StackExchangeRedis;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
@@ -36,18 +33,18 @@ public sealed class RedisSemanticSearchService : ISemanticSearchService
 
     private readonly RuntimeConfigProvider _runtimeConfigProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IEmbeddingService? _embeddingService;
     private readonly ILogger<RedisSemanticSearchService> _logger;
 
     public RedisSemanticSearchService(
         RuntimeConfigProvider runtimeConfigProvider,
         IMetadataProviderFactory metadataProviderFactory,
-        IHttpClientFactory httpClientFactory,
+        IEmbeddingService? embeddingService,
         ILogger<RedisSemanticSearchService> logger)
     {
         _runtimeConfigProvider = runtimeConfigProvider;
         _metadataProviderFactory = metadataProviderFactory;
-        _httpClientFactory = httpClientFactory;
+        _embeddingService = embeddingService;
         _logger = logger;
     }
 
@@ -69,7 +66,7 @@ public sealed class RedisSemanticSearchService : ISemanticSearchService
             return [];
         }
 
-        float[] embedding = await GetEmbeddingAsync(runtimeConfig, semanticSearchValue);
+        float[] embedding = await GetEmbeddingAsync(semanticSearchValue);
         if (embedding.Length == 0)
         {
             return [];
@@ -122,40 +119,25 @@ public sealed class RedisSemanticSearchService : ISemanticSearchService
         return bytes;
     }
 
-    private async Task<float[]> GetEmbeddingAsync(RuntimeConfig runtimeConfig, string semanticSearchValue)
+    private async Task<float[]> GetEmbeddingAsync(string semanticSearchValue)
     {
         if (TryParseVectorText(semanticSearchValue, out float[]? parsedVector) && parsedVector is not null)
         {
             return parsedVector;
         }
 
-        string? endpoint = runtimeConfig.Runtime?.SemanticSearch?.EmbeddingEndpoint;
-        if (string.IsNullOrWhiteSpace(endpoint))
+        if (_embeddingService is null || !_embeddingService.IsEnabled)
         {
             return [];
         }
 
-        HttpClient client = _httpClientFactory.CreateClient();
-        string? apiKey = runtimeConfig.Runtime?.SemanticSearch?.EmbeddingApiKey;
-        if (!string.IsNullOrWhiteSpace(apiKey))
-        {
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-        }
-
-        string payload = JsonSerializer.Serialize(new Dictionary<string, string> { { "input", semanticSearchValue } });
-        using HttpRequestMessage request = new(HttpMethod.Post, endpoint)
-        {
-            Content = new StringContent(payload, Encoding.UTF8, "application/json")
-        };
-
-        using HttpResponseMessage response = await client.SendAsync(request);
-        if (!response.IsSuccessStatusCode)
+        EmbeddingResult result = await _embeddingService.TryEmbedAsync(semanticSearchValue);
+        if (!result.Success || result.Embedding is null)
         {
             return [];
         }
 
-        string body = await response.Content.ReadAsStringAsync();
-        return TryExtractEmbedding(body, out float[]? embedding) && embedding is not null ? embedding : [];
+        return result.Embedding;
     }
 
     private static bool TryParseVectorText(string text, out float[]? vector)
@@ -188,73 +170,6 @@ public sealed class RedisSemanticSearchService : ISemanticSearchService
         {
             return false;
         }
-    }
-
-    private static bool TryExtractEmbedding(string responseBody, out float[]? embedding)
-    {
-        embedding = null;
-
-        try
-        {
-            using JsonDocument json = JsonDocument.Parse(responseBody);
-
-            if (json.RootElement.ValueKind is JsonValueKind.Array)
-            {
-                return TryReadEmbeddingArray(json.RootElement, out embedding);
-            }
-
-            if (json.RootElement.ValueKind is JsonValueKind.Object)
-            {
-                if (json.RootElement.TryGetProperty("embedding", out JsonElement directEmbedding)
-                    && TryReadEmbeddingArray(directEmbedding, out embedding))
-                {
-                    return true;
-                }
-
-                if (json.RootElement.TryGetProperty("data", out JsonElement data)
-                    && data.ValueKind is JsonValueKind.Array
-                    && data.GetArrayLength() > 0)
-                {
-                    JsonElement first = data[0];
-                    if (first.ValueKind is JsonValueKind.Object
-                        && first.TryGetProperty("embedding", out JsonElement nestedEmbedding)
-                        && TryReadEmbeddingArray(nestedEmbedding, out embedding))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool TryReadEmbeddingArray(JsonElement array, out float[]? embedding)
-    {
-        embedding = null;
-
-        if (array.ValueKind is not JsonValueKind.Array)
-        {
-            return false;
-        }
-
-        List<float> values = [];
-        foreach (JsonElement item in array.EnumerateArray())
-        {
-            if (!item.TryGetSingle(out float current))
-            {
-                return false;
-            }
-
-            values.Add(current);
-        }
-
-        embedding = values.ToArray();
-        return embedding.Length > 0;
     }
 
     private static async Task<IConnectionMultiplexer> CreateConnectionMultiplexerAsync(string connectionString)

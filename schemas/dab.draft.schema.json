@@ -534,36 +534,7 @@
             }
           }
         },
-        "semantic-search": {
-          "type": "object",
-          "description": "Runtime semantic-search configuration.",
-          "additionalProperties": false,
-          "properties": {
-            "embedding-endpoint": {
-              "type": "string",
-              "description": "Endpoint used to generate embeddings from semantic-search input text."
-            },
-            "embedding-api-key": {
-              "type": "string",
-              "description": "Optional API key used as bearer token for embedding endpoint calls."
-            }
-          }
-        },
-        "semantic-search": {
-          "type": "object",
-          "description": "Runtime semantic-search configuration.",
-          "additionalProperties": false,
-          "properties": {
-            "embedding-endpoint": {
-              "type": "string",
-              "description": "Endpoint used to generate embeddings from semantic-search input text."
-            },
-            "embedding-api-key": {
-              "type": "string",
-              "description": "Optional API key used as bearer token for embedding endpoint calls."
-            }
-          }
-        },
+
         "compression": {
           "type": "object",
           "description": "Configures HTTP response compression settings.",

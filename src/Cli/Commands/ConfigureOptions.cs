@@ -63,8 +63,6 @@ namespace Cli.Commands
             bool? runtimePaginationNextLinkRelative = null,
             string? runtimeCacheLevel2Provider = null,
             string? runtimeCacheLevel2ConnectionString = null,
-            string? runtimeSemanticSearchEmbeddingEndpoint = null,
-            string? runtimeSemanticSearchEmbeddingApiKey = null,
             CompressionLevel? runtimeCompressionLevel = null,
             bool? runtimeHealthEnabled = null,
             int? runtimeHealthCacheTtlSeconds = null,
@@ -167,8 +165,6 @@ namespace Cli.Commands
             RuntimePaginationNextLinkRelative = runtimePaginationNextLinkRelative;
             RuntimeCacheLevel2Provider = runtimeCacheLevel2Provider;
             RuntimeCacheLevel2ConnectionString = runtimeCacheLevel2ConnectionString;
-            RuntimeSemanticSearchEmbeddingEndpoint = runtimeSemanticSearchEmbeddingEndpoint;
-            RuntimeSemanticSearchEmbeddingApiKey = runtimeSemanticSearchEmbeddingApiKey;
             // Compression
             RuntimeCompressionLevel = runtimeCompressionLevel;
             // Health
@@ -355,12 +351,6 @@ namespace Cli.Commands
 
         [Option("runtime.cache.level-2.connection-string", Required = false, HelpText = "Set level-2 cache connection string.")]
         public string? RuntimeCacheLevel2ConnectionString { get; }
-
-        [Option("runtime.semantic-search.embedding-endpoint", Required = false, HelpText = "Set semantic-search embedding endpoint.")]
-        public string? RuntimeSemanticSearchEmbeddingEndpoint { get; }
-
-        [Option("runtime.semantic-search.embedding-api-key", Required = false, HelpText = "Set semantic-search embedding API key.")]
-        public string? RuntimeSemanticSearchEmbeddingApiKey { get; }
 
         [Option("runtime.compression.level", Required = false, HelpText = "Set the response compression level. Allowed values: optimal (default), fastest, none.")]
         public CompressionLevel? RuntimeCompressionLevel { get; }

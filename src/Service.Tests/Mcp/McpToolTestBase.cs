@@ -288,6 +288,30 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             return -1;
         }
 
+        /// <summary>
+        /// Extracts the records array from a ReadRecordsTool response root element.
+        /// Handles both shapes: root["result"]["value"] (paginated) and root["result"] (array directly).
+        /// </summary>
+        protected static JsonElement GetRecordsArray(JsonElement root)
+        {
+            Assert.IsTrue(root.TryGetProperty("result", out JsonElement resultElement),
+                $"Response should contain 'result' property. Actual JSON: {root.GetRawText()}");
+
+            if (resultElement.ValueKind == JsonValueKind.Object &&
+                resultElement.TryGetProperty("value", out JsonElement valueElement))
+            {
+                return valueElement;
+            }
+
+            if (resultElement.ValueKind == JsonValueKind.Array)
+            {
+                return resultElement;
+            }
+
+            Assert.Fail($"Unexpected 'result' shape. Expected object with 'value' or array. Got: {resultElement.ValueKind}. JSON: {resultElement.GetRawText()}");
+            return default;
+        }
+
         #endregion
     }
 }

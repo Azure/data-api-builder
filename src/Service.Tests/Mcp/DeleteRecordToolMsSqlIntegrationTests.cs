@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(readResult, "Follow-up read after delete should succeed.");
 
             JsonElement root = ParseResultRoot(readResult);
-            JsonElement records = root.GetProperty("result").GetProperty("value");
+            JsonElement records = GetRecordsArray(root);
             Assert.AreEqual(0, records.GetArrayLength(),
                 "Deleted record should not be found in subsequent read.");
         }

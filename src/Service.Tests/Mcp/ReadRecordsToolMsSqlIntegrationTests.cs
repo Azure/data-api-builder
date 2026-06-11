@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             JsonElement root = ParseResultRoot(result);
             Assert.AreEqual("Book", root.GetProperty("entity").GetString());
 
-            JsonElement records = root.GetProperty("result").GetProperty("value");
+            JsonElement records = GetRecordsArray(root);
             Assert.AreEqual(JsonValueKind.Array, records.ValueKind);
             Assert.IsTrue(records.GetArrayLength() > 0, "Expected at least one book record.");
         }
@@ -53,7 +53,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "ReadRecords with select should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            JsonElement firstRecord = root.GetProperty("result").GetProperty("value")[0];
+            JsonElement records = GetRecordsArray(root);
+            JsonElement firstRecord = records[0];
             Assert.IsTrue(firstRecord.TryGetProperty("id", out _), "Expected 'id' field in result.");
             Assert.IsTrue(firstRecord.TryGetProperty("title", out _), "Expected 'title' field in result.");
         }
@@ -69,10 +70,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "ReadRecords with filter should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            JsonElement resultElement = root.GetProperty("result");
-            JsonElement records = resultElement.ValueKind == JsonValueKind.Object && resultElement.TryGetProperty("value", out JsonElement valueElement)
-                ? valueElement
-                : resultElement;
+            JsonElement records = GetRecordsArray(root);
             Assert.IsTrue(records.GetArrayLength() > 0, "Expected filtered results.");
 
             foreach (JsonElement record in records.EnumerateArray())
@@ -93,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "ReadRecords with orderby should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            JsonElement records = root.GetProperty("result").GetProperty("value");
+            JsonElement records = GetRecordsArray(root);
             Assert.IsTrue(records.GetArrayLength() > 1, "Expected multiple records for ordering test.");
 
             int previousId = int.MaxValue;
@@ -116,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "ReadRecords with first should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            JsonElement records = root.GetProperty("result").GetProperty("value");
+            JsonElement records = GetRecordsArray(root);
             Assert.AreEqual(3, records.GetArrayLength(), "Expected exactly 3 records when first=3.");
         }
 
@@ -131,10 +129,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "ReadRecords with id filter should succeed.");
 
             JsonElement root = ParseResultRoot(result);
-            JsonElement resultElement = root.GetProperty("result");
-            JsonElement records = resultElement.ValueKind == JsonValueKind.Object && resultElement.TryGetProperty("value", out JsonElement valueElement)
-                ? valueElement
-                : resultElement;
+            JsonElement records = GetRecordsArray(root);
             Assert.AreEqual(1, records.GetArrayLength(), "Expected exactly one record with id=1.");
             Assert.AreEqual(1, records[0].GetProperty("id").GetInt32());
         }

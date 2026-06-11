@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Reflection;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Models;
@@ -141,6 +142,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 () => RequestParser.ParseQueryString(context, new Mock<ISqlMetadataProvider>().Object));
 
             StringAssert.Contains(ex.Message, "semantic_distance cannot be used in orderBy.");
+        }
+
+        [DataTestMethod]
+        [DataRow("semantic_distance asc", true)]
+        [DataRow("Semantic_Distance desc", true)]
+        [DataRow("semantic_distance_score asc", false)]
+        [DataRow("title asc,semantic_distance_score desc", false)]
+        public void ContainsSemanticDistanceOrderByToken_UsesExactColumnMatch(string rawSortValue, bool expected)
+        {
+            MethodInfo method = typeof(RequestParser).GetMethod(
+                "ContainsSemanticDistanceOrderByToken",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.IsNotNull(method, "Expected private helper method to exist.");
+            bool actual = (bool)method!.Invoke(null, new object[] { rawSortValue })!;
+            Assert.AreEqual(expected, actual);
         }
     }
 }

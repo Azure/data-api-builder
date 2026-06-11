@@ -147,7 +147,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }
 
-                        if (rawSortValue.Contains(SemanticSearchConstants.REST_DISTANCE_FIELD, StringComparison.OrdinalIgnoreCase))
+                        if (ContainsSemanticDistanceOrderByToken(rawSortValue))
                         {
                             throw new DataApiBuilderException(
                                 message: "semantic_distance cannot be used in orderBy.",
@@ -186,6 +186,28 @@ namespace Azure.DataApiBuilder.Core.Parsers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
             }
+        }
+
+        private static bool ContainsSemanticDistanceOrderByToken(string rawSortValue)
+        {
+            string decoded = Uri.UnescapeDataString(rawSortValue);
+
+            foreach (string part in decoded.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                string[] tokens = part.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (tokens.Length == 0)
+                {
+                    continue;
+                }
+
+                string columnToken = tokens[0].Trim('\'', '"');
+                if (string.Equals(columnToken, SemanticSearchConstants.REST_DISTANCE_FIELD, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

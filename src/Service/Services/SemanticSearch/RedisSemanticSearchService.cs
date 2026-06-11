@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -27,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Services.SemanticSearch;
 /// 2) performing a Redis FT.SEARCH KNN query,
 /// 3) extracting SQL column/value pairs from Redis hash/json documents.
 /// </summary>
-public sealed class RedisSemanticSearchService : ISemanticSearchService
+public sealed class RedisSemanticSearchService : ISemanticSearchService, IDisposable
 {
     private const string VECTOR_SCORE_FIELD = "__vector_score";
     private const string DEFAULT_VECTOR_FIELD = "embedding";
@@ -36,6 +37,10 @@ public sealed class RedisSemanticSearchService : ISemanticSearchService
     private readonly IMetadataProviderFactory _metadataProviderFactory;
     private readonly IEmbeddingService? _embeddingService;
     private readonly ILogger<RedisSemanticSearchService> _logger;
+    private readonly SemaphoreSlim _redisConnectionGate = new(1, 1);
+
+    private string? _cachedRedisConnectionString;
+    private IConnectionMultiplexer? _cachedRedisMultiplexer;
 
     public RedisSemanticSearchService(
         RuntimeConfigProvider runtimeConfigProvider,
@@ -79,7 +84,7 @@ public sealed class RedisSemanticSearchService : ISemanticSearchService
 
         try
         {
-            using IConnectionMultiplexer multiplexer = await CreateConnectionMultiplexerAsync(connectionString);
+            IConnectionMultiplexer multiplexer = await GetConnectionMultiplexerAsync(connectionString);
             IDatabase db = multiplexer.GetDatabase();
 
             string vectorFieldName = await ResolveVectorFieldNameAsync(db, options.RedisIndexName!, options.RedisIndexType);
@@ -183,6 +188,44 @@ public sealed class RedisSemanticSearchService : ISemanticSearchService
         }
 
         return await ConnectionMultiplexer.ConnectAsync(options);
+    }
+
+    private async Task<IConnectionMultiplexer> GetConnectionMultiplexerAsync(string connectionString)
+    {
+        if (_cachedRedisMultiplexer is not null
+            && string.Equals(_cachedRedisConnectionString, connectionString, StringComparison.Ordinal))
+        {
+            return _cachedRedisMultiplexer;
+        }
+
+        await _redisConnectionGate.WaitAsync();
+        try
+        {
+            if (_cachedRedisMultiplexer is not null
+                && string.Equals(_cachedRedisConnectionString, connectionString, StringComparison.Ordinal))
+            {
+                return _cachedRedisMultiplexer;
+            }
+
+            IConnectionMultiplexer multiplexer = await CreateConnectionMultiplexerAsync(connectionString);
+            IConnectionMultiplexer? previous = _cachedRedisMultiplexer;
+
+            _cachedRedisMultiplexer = multiplexer;
+            _cachedRedisConnectionString = connectionString;
+
+            previous?.Dispose();
+            return _cachedRedisMultiplexer;
+        }
+        finally
+        {
+            _redisConnectionGate.Release();
+        }
+    }
+
+    public void Dispose()
+    {
+        _cachedRedisMultiplexer?.Dispose();
+        _redisConnectionGate.Dispose();
     }
 
     private static async Task<string> ResolveVectorFieldNameAsync(IDatabase db, string indexName, string redisIndexType)

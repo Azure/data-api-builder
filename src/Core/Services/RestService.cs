@@ -236,12 +236,6 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (context is FindRequestContext findRequestContext)
             {
-                if (findRequestContext.IncludeSemanticDistanceInResponse
-                    && !findRequestContext.FieldsToBeReturned.Contains(SemanticSearchConstants.REST_DISTANCE_FIELD))
-                {
-                    findRequestContext.FieldsToBeReturned.Add(SemanticSearchConstants.REST_DISTANCE_FIELD);
-                }
-
                 using JsonDocument? restApiResponse = await queryEngine.ExecuteAsync(findRequestContext);
                 return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext())
                                                : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext());

@@ -319,12 +319,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return (true, emptyResponse);
             }
 
-            // De-duplicate candidate keys while keeping the highest distance.
+            // De-duplicate candidate keys while keeping the highest similarity.
             Dictionary<string, SemanticSearchCandidate> deduped = new(StringComparer.Ordinal);
             foreach (SemanticSearchCandidate candidate in candidates)
             {
                 string signature = BuildPrimaryKeySignatureFromValues(primaryKeyColumns, candidate.PrimaryKeyValues);
-                if (!deduped.TryGetValue(signature, out SemanticSearchCandidate? existing) || candidate.Distance > existing.Distance)
+                if (!deduped.TryGetValue(signature, out SemanticSearchCandidate? existing) || candidate.Similarity > existing.Similarity)
                 {
                     deduped[signature] = candidate;
                 }
@@ -334,7 +334,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             structure.ApplySemanticCandidates(narrowedCandidates);
             foreach (KeyValuePair<string, SemanticSearchCandidate> kvp in deduped)
             {
-                structure.SemanticDistanceByPrimaryKeySignature[kvp.Key] = kvp.Value.Distance;
+                structure.SemanticDistanceByPrimaryKeySignature[kvp.Key] = kvp.Value.Similarity;
             }
 
             return (false, null);

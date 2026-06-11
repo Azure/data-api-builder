@@ -10,4 +10,4 @@ namespace Azure.DataApiBuilder.Core.Models;
 public record SemanticSearchCandidate(
 	IReadOnlyDictionary<string, object?> PrimaryKeyValues,
 	IReadOnlyDictionary<string, object?> ColumnValues,
-	double Distance);
+	double Similarity);

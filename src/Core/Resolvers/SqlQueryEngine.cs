@@ -224,7 +224,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             JsonDocument? response = await ExecuteAsync(structure, dataSourceName);
-            return ApplySemanticDistanceAndOrderingIfNeeded(response, structure, dataSourceName, includeRestField: true, includeGraphQlField: false, context);
+            return ApplySemanticDistanceAndOrderingIfNeeded(response, structure, dataSourceName, includeRestField: true, includeGraphQlField: false);
         }
 
         private async Task<(bool shouldReturnEmpty, JsonDocument? emptyResponse)> TryApplySemanticNarrowingAsync(
@@ -234,8 +234,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName,
             FindRequestContext? restContext = null)
         {
-            JsonDocument? emptyResponse = null;
-
             string? semanticSearchText = restContext?.SemanticSearch;
             if (semanticSearchText is null
                 && graphQLParameters is not null
@@ -315,8 +313,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (candidates.Count == 0)
             {
-                emptyResponse = JsonDocument.Parse("[]");
-                return (true, emptyResponse);
+                return (true, JsonDocument.Parse("[]"));
             }
 
             // De-duplicate candidate keys while keeping the highest similarity.
@@ -345,8 +342,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             SqlQueryStructure structure,
             string dataSourceName,
             bool includeRestField,
-            bool includeGraphQlField,
-            FindRequestContext? restContext = null)
+            bool includeGraphQlField)
         {
             if (response is null || structure.SemanticDistanceByPrimaryKeySignature.Count == 0)
             {

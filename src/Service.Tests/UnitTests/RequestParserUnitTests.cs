@@ -93,9 +93,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             FindRequestContext context = new(
                 entityName: DEFAULT_ENTITY,
                 dbo: new DatabaseTable(DEFAULT_SCHEMA, DEFAULT_ENTITY),
-                isList: true);
+                isList: true)
+            {
+                RawQueryString = "?$semantic_search=wireless%20headphones&$semantic_threshold=0.83"
+            };
 
-            context.RawQueryString = "?$semantic_search=wireless%20headphones&$semantic_threshold=0.83";
             context.ParsedQueryString.Add(RequestParser.SEMANTIC_SEARCH_URL, "wireless headphones");
             context.ParsedQueryString.Add(RequestParser.SEMANTIC_THRESHOLD_URL, "0.83");
 
@@ -114,9 +116,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             FindRequestContext context = new(
                 entityName: DEFAULT_ENTITY,
                 dbo: new DatabaseTable(DEFAULT_SCHEMA, DEFAULT_ENTITY),
-                isList: true);
+                isList: true)
+            {
+                RawQueryString = $"?$semantic_threshold={threshold}"
+            };
 
-            context.RawQueryString = $"?$semantic_threshold={threshold}";
             context.ParsedQueryString.Add(RequestParser.SEMANTIC_THRESHOLD_URL, threshold);
 
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
@@ -133,9 +137,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             FindRequestContext context = new(
                 entityName: DEFAULT_ENTITY,
                 dbo: new DatabaseTable(DEFAULT_SCHEMA, DEFAULT_ENTITY),
-                isList: true);
+                isList: true)
+            {
+                RawQueryString = rawQuery
+            };
 
-            context.RawQueryString = rawQuery;
             context.ParsedQueryString.Add(RequestParser.SORT_URL, rawQuery.Contains("desc", StringComparison.OrdinalIgnoreCase) ? "Semantic_Distance desc" : "semantic_distance asc");
 
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(

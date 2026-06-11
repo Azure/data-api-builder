@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -39,12 +40,12 @@ public sealed class RedisSemanticSearchService : ISemanticSearchService
     public RedisSemanticSearchService(
         RuntimeConfigProvider runtimeConfigProvider,
         IMetadataProviderFactory metadataProviderFactory,
-        IEmbeddingService? embeddingService,
+        IEnumerable<IEmbeddingService> embeddingServices,
         ILogger<RedisSemanticSearchService> logger)
     {
         _runtimeConfigProvider = runtimeConfigProvider;
         _metadataProviderFactory = metadataProviderFactory;
-        _embeddingService = embeddingService;
+        _embeddingService = embeddingServices.FirstOrDefault();
         _logger = logger;
     }
 

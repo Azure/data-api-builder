@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.Authorization;
@@ -212,12 +213,79 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         /// <summary>
         /// Parses the first text content of a result into a JsonElement root.
+        /// Returns a cloned element independent of the source document lifetime.
         /// </summary>
         protected static JsonElement ParseResultRoot(CallToolResult result)
         {
             string content = GetFirstTextContent(result);
             Assert.IsFalse(string.IsNullOrWhiteSpace(content), "Expected non-empty result content.");
-            return JsonDocument.Parse(content).RootElement;
+            using JsonDocument document = JsonDocument.Parse(content);
+            return document.RootElement.Clone();
+        }
+
+        /// <summary>
+        /// Creates a book record and returns its auto-generated ID.
+        /// Used by mutation tests that need a dedicated record to avoid mutating seed data.
+        /// </summary>
+        protected static async Task<int> CreateTestBook(string title, int publisherId = 1234)
+        {
+            IServiceProvider serviceProvider = BuildMutationServiceProvider();
+            CreateRecordTool createTool = new();
+
+            var args = new Dictionary<string, object?>
+            {
+                { "entity", "Book" },
+                { "data", new Dictionary<string, object> { { "title", title }, { "publisher_id", publisherId } } }
+            };
+
+            CallToolResult createResult = await ExecuteToolAsync(createTool, serviceProvider, args);
+            Assert.IsFalse(createResult.IsError == true, $"Setup: Failed to create book. {GetFirstTextContent(createResult)}");
+
+            JsonElement root = ParseResultRoot(createResult);
+            return ExtractCreatedBookId(root);
+        }
+
+        /// <summary>
+        /// Deletes a book record by ID and asserts the deletion succeeded.
+        /// </summary>
+        protected static async Task DeleteTestBook(int id)
+        {
+            IServiceProvider serviceProvider = BuildMutationServiceProvider();
+            DeleteRecordTool deleteTool = new();
+
+            var args = new Dictionary<string, object?>
+            {
+                { "entity", "Book" },
+                { "keys", new Dictionary<string, object> { { "id", id } } }
+            };
+
+            CallToolResult deleteResult = await ExecuteToolAsync(deleteTool, serviceProvider, args);
+            AssertSuccess(deleteResult, $"Cleanup: Failed to delete Book id={id}.");
+        }
+
+        /// <summary>
+        /// Extracts the book ID from a CreateRecordTool response root element.
+        /// </summary>
+        protected static int ExtractCreatedBookId(JsonElement root)
+        {
+            Assert.IsTrue(root.TryGetProperty("result", out JsonElement resultElement),
+                "Response should contain 'result' property.");
+
+            if (resultElement.ValueKind == JsonValueKind.Object &&
+                resultElement.TryGetProperty("value", out JsonElement valueArray) &&
+                valueArray.ValueKind == JsonValueKind.Array &&
+                valueArray.GetArrayLength() > 0)
+            {
+                return valueArray[0].GetProperty("id").GetInt32();
+            }
+
+            if (resultElement.ValueKind == JsonValueKind.Array && resultElement.GetArrayLength() > 0)
+            {
+                return resultElement[0].GetProperty("id").GetInt32();
+            }
+
+            Assert.Fail("Could not extract created book ID from response.");
+            return -1;
         }
 
         #endregion

@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Creates a new book record with valid data and verifies success.
+        /// Creates a new book record with valid data and verifies success. Cleans up after.
         /// </summary>
         [TestMethod]
         public async Task CreateRecord_ValidData_ReturnsSuccess()
@@ -45,10 +45,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual("Book", root.GetProperty("entity").GetString());
             Assert.IsTrue(root.GetProperty("message").GetString()!.Contains("Successfully created"),
                 "Response message should indicate success.");
+
+            int createdId = ExtractCreatedBookId(root);
+            await DeleteTestBook(createdId);
         }
 
         /// <summary>
-        /// Creates a record and verifies the returned record contains the inserted data.
+        /// Creates a record and verifies the returned record contains the inserted data. Cleans up after.
         /// </summary>
         [TestMethod]
         public async Task CreateRecord_ReturnsCreatedData()
@@ -66,17 +69,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             JsonElement root = ParseResultRoot(result);
 
             Assert.IsTrue(root.TryGetProperty("result", out JsonElement resultElement),
-                "Response should contain 'result' property.");
+                "Response should contain 'result'.");
+            Assert.AreEqual(JsonValueKind.Object, resultElement.ValueKind,
+                "Create response result should be an object.");
+            Assert.IsTrue(resultElement.TryGetProperty("value", out JsonElement valueArray),
+                "Create response result should contain 'value'.");
+            Assert.AreEqual(JsonValueKind.Array, valueArray.ValueKind);
+            Assert.IsTrue(valueArray.GetArrayLength() > 0, "Value array should contain the created record.");
 
-            if (resultElement.ValueKind == JsonValueKind.Object && resultElement.TryGetProperty("value", out JsonElement valueArray))
-            {
-                Assert.AreEqual(JsonValueKind.Array, valueArray.ValueKind);
-                Assert.IsTrue(valueArray.GetArrayLength() > 0);
-                JsonElement created = valueArray[0];
-                Assert.AreEqual("Verify Created Data", created.GetProperty("title").GetString());
-                Assert.AreEqual(2345, created.GetProperty("publisher_id").GetInt32());
-                Assert.IsTrue(created.TryGetProperty("id", out _), "Created record should have an auto-generated id.");
-            }
+            JsonElement created = valueArray[0];
+            Assert.AreEqual("Verify Created Data", created.GetProperty("title").GetString());
+            Assert.AreEqual(2345, created.GetProperty("publisher_id").GetInt32());
+            Assert.IsTrue(created.TryGetProperty("id", out _), "Created record should have an auto-generated id.");
+
+            int createdId = created.GetProperty("id").GetInt32();
+            await DeleteTestBook(createdId);
         }
 
         /// <summary>

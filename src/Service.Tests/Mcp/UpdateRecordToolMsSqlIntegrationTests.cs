@@ -174,49 +174,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         private static async Task<int> CreateBookForUpdate(string title)
         {
-            IServiceProvider serviceProvider = BuildMutationServiceProvider();
-            CreateRecordTool createTool = new();
-
-            var args = new Dictionary<string, object?>
-            {
-                { "entity", "Book" },
-                { "data", new Dictionary<string, object> { { "title", title }, { "publisher_id", 1234 } } }
-            };
-
-            CallToolResult createResult = await ExecuteToolAsync(createTool, serviceProvider, args);
-            Assert.IsTrue(createResult.IsError != true, $"Setup: Failed to create book for update test. {GetFirstTextContent(createResult)}");
-
-            JsonElement root = ParseResultRoot(createResult);
-            if (root.TryGetProperty("result", out JsonElement resultElement) &&
-                resultElement.ValueKind == JsonValueKind.Object &&
-                resultElement.TryGetProperty("value", out JsonElement valueArray) &&
-                valueArray.ValueKind == JsonValueKind.Array &&
-                valueArray.GetArrayLength() > 0)
-            {
-                return valueArray[0].GetProperty("id").GetInt32();
-            }
-
-            if (resultElement.ValueKind == JsonValueKind.Array && resultElement.GetArrayLength() > 0)
-            {
-                return resultElement[0].GetProperty("id").GetInt32();
-            }
-
-            Assert.Fail("Could not extract created book ID from response.");
-            return -1;
+            return await CreateTestBook(title);
         }
 
         private static async Task DeleteBook(int id)
         {
-            IServiceProvider serviceProvider = BuildMutationServiceProvider();
-            DeleteRecordTool deleteTool = new();
-
-            var args = new Dictionary<string, object?>
-            {
-                { "entity", "Book" },
-                { "keys", new Dictionary<string, object> { { "id", id } } }
-            };
-
-            await ExecuteToolAsync(deleteTool, serviceProvider, args);
+            await DeleteTestBook(id);
         }
     }
 }

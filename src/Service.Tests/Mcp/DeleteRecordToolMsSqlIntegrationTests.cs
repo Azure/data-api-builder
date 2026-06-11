@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             var readArgs = new Dictionary<string, object?> { { "entity", "Book" }, { "filter", $"id eq {createdId}" } };
             CallToolResult readResult = await ExecuteToolAsync(readTool, readProvider, readArgs);
 
-            Assert.IsTrue(readResult.IsError != true, "Follow-up read after delete should succeed.");
+            AssertSuccess(readResult, "Follow-up read after delete should succeed.");
 
             JsonElement root = ParseResultRoot(readResult);
             JsonElement records = root.GetProperty("result").GetProperty("value");
@@ -133,34 +133,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Creates a book record using the CreateRecordTool and returns its ID.
+        /// Creates a book record and returns its ID using the centralized helper.
         /// </summary>
         private static async Task<int> CreateBookForDeletion(string title)
         {
-            IServiceProvider serviceProvider = BuildMutationServiceProvider();
-            CreateRecordTool createTool = new();
-
-            var args = new Dictionary<string, object?>
-            {
-                { "entity", "Book" },
-                { "data", new Dictionary<string, object> { { "title", title }, { "publisher_id", 1234 } } }
-            };
-
-            CallToolResult createResult = await ExecuteToolAsync(createTool, serviceProvider, args);
-            Assert.IsTrue(createResult.IsError != true, $"Setup: Failed to create book for deletion test. {GetFirstTextContent(createResult)}");
-
-            JsonElement root = ParseResultRoot(createResult);
-            if (root.TryGetProperty("result", out JsonElement resultElement) &&
-                resultElement.ValueKind == JsonValueKind.Object &&
-                resultElement.TryGetProperty("value", out JsonElement valueArray) &&
-                valueArray.ValueKind == JsonValueKind.Array &&
-                valueArray.GetArrayLength() > 0)
-            {
-                return valueArray[0].GetProperty("id").GetInt32();
-            }
-
-            Assert.Fail("Could not extract ID from created book record.");
-            return -1;
+            return await CreateTestBook(title);
         }
 
         private static async Task<CallToolResult> ExecuteDeleteAsync(string entity, Dictionary<string, object> keys)

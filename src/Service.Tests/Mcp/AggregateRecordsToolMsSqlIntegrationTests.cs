@@ -101,21 +101,30 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         #region SUM/AVG/MIN/MAX Tests
 
         /// <summary>
-        /// Validates that numeric aggregation functions (sum, avg, min, max) succeed on publisher_id.
+        /// Validates that numeric aggregation functions (sum, avg, min, max) succeed and return
+        /// the expected alias property with a numeric value.
         /// </summary>
         [DataTestMethod]
         [DataRow("sum", "sum_publisher_id", DisplayName = "SUM of publisher_id")]
         [DataRow("avg", "avg_publisher_id", DisplayName = "AVG of publisher_id")]
         [DataRow("min", "min_publisher_id", DisplayName = "MIN of publisher_id")]
         [DataRow("max", "max_publisher_id", DisplayName = "MAX of publisher_id")]
-        public async Task Aggregate_NumericFunction_ReturnsResult(string function, string expectedAlias)
+        public async Task Aggregate_NumericFunction_ReturnsExpectedAlias(string function, string expectedAlias)
         {
             CallToolResult result = await ExecuteAggregateAsync("Book", function, "publisher_id");
 
             AssertSuccess(result, $"{function.ToUpper()} should succeed on numeric field.");
 
-            string content = GetFirstTextContent(result);
-            Assert.IsFalse(string.IsNullOrWhiteSpace(content), $"Expected non-empty result for {function.ToUpper()}.");
+            JsonElement root = ParseResultRoot(result);
+            JsonElement resultArray = root.GetProperty("result");
+            Assert.AreEqual(JsonValueKind.Array, resultArray.ValueKind,
+                $"{function.ToUpper()} result should be an array.");
+            Assert.IsTrue(resultArray.GetArrayLength() > 0,
+                $"{function.ToUpper()} result array should not be empty.");
+            Assert.IsTrue(resultArray[0].TryGetProperty(expectedAlias, out JsonElement aliasValue),
+                $"Result should contain '{expectedAlias}' property.");
+            Assert.AreEqual(JsonValueKind.Number, aliasValue.ValueKind,
+                $"'{expectedAlias}' should be a numeric value.");
         }
 
         /// <summary>

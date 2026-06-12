@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [TestMethod]
         public async Task ReadRecords_WithFilter_ReturnsFilteredResults()
         {
-            CallToolResult result = await ExecuteReadAsync("Book", filter: "id gt 5");
+            CallToolResult result = await ExecuteReadAsync("Book", select: "id,title", filter: "id gt 5");
 
             AssertSuccess(result, "ReadRecords with filter should succeed.");
 
@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [TestMethod]
         public async Task ReadRecords_FilterById_ReturnsSingleRecord()
         {
-            CallToolResult result = await ExecuteReadAsync("Book", filter: "id eq 1");
+            CallToolResult result = await ExecuteReadAsync("Book", select: "id,title", filter: "id eq 1");
 
             AssertSuccess(result, "ReadRecords with id filter should succeed.");
 

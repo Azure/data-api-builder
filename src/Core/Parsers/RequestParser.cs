@@ -321,6 +321,8 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 return null;
             }
 
+            parameterName = parameterName.Replace("$", "%24");
+
             // Split on '&' which are parameter separators in properly URL-encoded query strings.
             // Any '&' characters within parameter values will be encoded as %26.
             foreach (string param in queryString.TrimStart('?').Split('&'))

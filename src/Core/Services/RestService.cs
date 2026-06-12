@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Core.Services
             DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
             QueryString? query = GetHttpContext().Request.QueryString;
-            string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
+            string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString().Replace("%24", "$");    //Add replacement in order to ensure '$' sign is present as expected
 
             // Read the request body early so it can be used for downstream processing.
             string requestBody = string.Empty;

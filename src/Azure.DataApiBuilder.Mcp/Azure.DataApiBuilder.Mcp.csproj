@@ -4,7 +4,6 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <IsPackable>true</IsPackable>
     <PackageOutputPath>./nupkg</PackageOutputPath>
     <PackageId>Microsoft.DataApiBuilder.Mcp</PackageId>
     <Title>Microsoft.DataApiBuilder.Mcp</Title>

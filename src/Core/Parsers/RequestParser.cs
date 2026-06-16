@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using System.Web;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -320,6 +321,9 @@ namespace Azure.DataApiBuilder.Core.Parsers
             {
                 return null;
             }
+
+            // Encode the parameterName to ensure it matches the encoding in the query string.
+            parameterName = HttpUtility.UrlEncode(parameterName);
 
             // Split on '&' which are parameter separators in properly URL-encoded query strings.
             // Any '&' characters within parameter values will be encoded as %26.

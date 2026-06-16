@@ -322,8 +322,11 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 return null;
             }
 
-            // Encode the parameterName to ensure it matches the encoding in the query string.
-            parameterName = HttpUtility.UrlEncode(parameterName);
+            // Encode the parameterName to ensure it matches the encoding in the query string if the $ sign is URL encoded.
+            if (!queryString.Contains(parameterName))
+            {
+                parameterName = HttpUtility.UrlEncode(parameterName);
+            }
 
             // Split on '&' which are parameter separators in properly URL-encoded query strings.
             // Any '&' characters within parameter values will be encoded as %26.

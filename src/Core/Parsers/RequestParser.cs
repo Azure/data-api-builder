@@ -323,7 +323,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
             }
 
             // Encode the parameterName to ensure it matches the encoding in the query string if the $ sign is URL encoded.
-            if (!queryString.Contains(parameterName))
+            if (!queryString.Contains(parameterName, StringComparison.OrdinalIgnoreCase))
             {
                 parameterName = HttpUtility.UrlEncode(parameterName);
             }

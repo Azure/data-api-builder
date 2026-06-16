@@ -4229,8 +4229,8 @@ type Planet @model(name:""PlanetAlias"") {
         /// options $filter and $orderby succeed to ensure no regression can occur.
         /// </summary>
         [DataTestMethod]
-        [DataRow("/api/Book?$orderby=id desc&$filter=publisher_id eq 1234", DisplayName = "Regular REST uri")]
-        [DataRow("/api/Book?%24orderby=id%20desc&%24filter=publisher_id%20eq%201234", DisplayName = "Regular REST uri")]
+        [DataRow("/api/Book?$orderby=id desc&$filter=publisher_id eq 1234", DisplayName = "REST URL without encoded characters")]
+        [DataRow("/api/Book?%24orderby=id%20desc&%24filter=publisher_id%20eq%201234", DisplayName = "REST URL with encoded characters")]
         [TestCategory(TestCategory.MSSQL)]
         public async Task TestForRestRequestsWithFilterAndOrderbyParameters(string restUri)
         {
@@ -4261,7 +4261,7 @@ type Planet @model(name:""PlanetAlias"") {
 
                 string restResponseBody = await restResponse.Content.ReadAsStringAsync();
                 Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
-                Assert.IsTrue(restResponseBody.Contains("\"publisher_id\": 1234"));
+                Assert.IsTrue(restResponseBody.Contains("\"publisher_id\":1234"));
             }
         }
 

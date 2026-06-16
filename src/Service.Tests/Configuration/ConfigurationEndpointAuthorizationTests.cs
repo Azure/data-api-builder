@@ -104,25 +104,43 @@ public class ConfigurationEndpointAuthorizationTests
         HttpStatusCode expectedStatus)
     {
         // Arrange
+        // Other tests in the assembly (e.g. TestLoadingLocalCosmosSettings) set
+        // ASPNETCORE_ENVIRONMENT / DAB_ENVIRONMENT without cleanup. Those env vars cause
+        // FileSystemRuntimeConfigLoader to find an environment-specific dab-config.*.json on
+        // disk and auto-initialize the runtime, which makes POST /configuration return
+        // 409 Conflict before our security middleware can be exercised. Snapshot and clear
+        // them so each test starts from an uninitialized runtime.
+        string originalAspNetEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        string originalDabEnv = Environment.GetEnvironmentVariable("DAB_ENVIRONMENT");
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
+        Environment.SetEnvironmentVariable("DAB_ENVIRONMENT", null);
         Environment.SetEnvironmentVariable(Startup.CONFIG_AUTH_TOKEN_ENV_VAR, configuredToken);
 
-        using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
-        using HttpClient httpClient = server.CreateClient();
+        try
+        {
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using HttpClient httpClient = server.CreateClient();
 
-        HttpRequestMessage request = new(HttpMethod.Post, configurationEndpoint)
-        {
-            Content = BuildPostContent(configurationEndpoint),
-        };
-        if (providedHeader is not null)
-        {
-            request.Headers.Add(Startup.CONFIG_AUTH_HEADER, providedHeader);
+            HttpRequestMessage request = new(HttpMethod.Post, configurationEndpoint)
+            {
+                Content = BuildPostContent(configurationEndpoint),
+            };
+            if (providedHeader is not null)
+            {
+                request.Headers.Add(Startup.CONFIG_AUTH_HEADER, providedHeader);
+            }
+
+            // Act
+            HttpResponseMessage postResult = await httpClient.SendAsync(request);
+
+            // Assert
+            Assert.AreEqual(expectedStatus, postResult.StatusCode);
         }
-
-        // Act
-        HttpResponseMessage postResult = await httpClient.SendAsync(request);
-
-        // Assert
-        Assert.AreEqual(expectedStatus, postResult.StatusCode);
+        finally
+        {
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalAspNetEnv);
+            Environment.SetEnvironmentVariable("DAB_ENVIRONMENT", originalDabEnv);
+        }
     }
 
     [TestCleanup]

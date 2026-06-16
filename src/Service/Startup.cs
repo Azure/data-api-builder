@@ -1500,11 +1500,12 @@ namespace Azure.DataApiBuilder.Service
 
         /// <summary>
         /// Determines whether a POST /configuration request is authorized by enforcing:
-        /// 1. The request must originate from a loopback address (localhost / 127.0.0.1 / ::1).
+        /// 1. The request must originate from a loopback address (localhost / 127.0.0.1 / ::1
+        ///    or its IPv4-mapped IPv6 form such as ::ffff:127.0.0.1).
         /// 2. If the DAB_CONFIG_AUTH_TOKEN environment variable is set, the request must include
         ///    an X-DAB-CONFIG-AUTH header whose value matches the token (constant-time comparison).
-        /// This mitigates Missing Authentication for Critical Function" by preventing
-        /// unauthenticated network-remote callers from hijacking the runtime configuration.
+        /// This prevents unauthenticated network-remote callers from supplying the runtime
+        /// configuration during the late-configured bootstrap window.
         /// </summary>
         internal static bool IsConfigurationRequestAuthorized(HttpContext context)
         {
@@ -1514,9 +1515,16 @@ namespace Azure.DataApiBuilder.Service
             // be a remote attacker, so we treat it as loopback-equivalent. A real
             // network-borne request always carries a TCP source IP.
             IPAddress? remoteIp = context.Connection.RemoteIpAddress;
-            if (remoteIp is not null && !IPAddress.IsLoopback(remoteIp))
+            if (remoteIp is not null)
             {
-                return false;
+                // Kestrel often listens on dual-stack IPv6, so an IPv4 loopback caller can
+                // arrive as the IPv4-mapped IPv6 form (e.g. ::ffff:127.0.0.1). IPAddress.IsLoopback
+                // does not treat those as loopback, so normalize to IPv4 first.
+                IPAddress effectiveIp = remoteIp.IsIPv4MappedToIPv6 ? remoteIp.MapToIPv4() : remoteIp;
+                if (!IPAddress.IsLoopback(effectiveIp))
+                {
+                    return false;
+                }
             }
 
             // Defense 2: If a bootstrap token is configured, require it in the request header.

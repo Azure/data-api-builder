@@ -39,6 +39,7 @@ public class ConfigurationEndpointAuthorizationTests
     // --- No bootstrap token configured ---
     [DataRow("127.0.0.1", null, null, true, DisplayName = "Loopback IPv4, no token => allow")]
     [DataRow("::1", null, null, true, DisplayName = "Loopback IPv6, no token => allow")]
+    [DataRow("::ffff:127.0.0.1", null, null, true, DisplayName = "IPv4-mapped IPv6 loopback (dual-stack Kestrel), no token => allow")]
     [DataRow(null, null, null, true, DisplayName = "In-process (null IP), no token => allow")]
     [DataRow("192.168.1.100", null, null, false, DisplayName = "Private IPv4, no token => deny")]
     [DataRow("10.0.0.1", null, null, false, DisplayName = "Private IPv4 (10/8), no token => deny")]

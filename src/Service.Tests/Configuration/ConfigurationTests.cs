@@ -4228,9 +4228,11 @@ type Planet @model(name:""PlanetAlias"") {
         /// End to end test that validates that REST requests with OData query
         /// options $filter and $orderby succeed to ensure no regression can occur.
         /// </summary>
-        [TestMethod]
+        [DataTestMethod]
+        [DataRow("/api/Book?$orderby=id desc&$filter=publisher_id eq 1234", DisplayName = "Regular REST uri")]
+        [DataRow("/api/Book?%24orderby=id%20desc&%24filter=publisher_id%20eq%201234", DisplayName = "Regular REST uri")]
         [TestCategory(TestCategory.MSSQL)]
-        public async Task TestForRestRequestsWithFilterAndOrderbyParameters()
+        public async Task TestForRestRequestsWithFilterAndOrderbyParameters(string restUri)
         {
             // The configuration file is constructed by merging hard-coded JSON strings to simulate the scenario where users manually edit the
             // configuration file (instead of using CLI).

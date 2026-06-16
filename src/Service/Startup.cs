@@ -7,6 +7,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -89,6 +91,19 @@ namespace Azure.DataApiBuilder.Service
         public static AzureLogAnalyticsOptions AzureLogAnalyticsOptions = new();
         public static FileSinkOptions FileSinkOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
+
+        /// <summary>
+        /// Environment variable name for the optional bootstrap token that gates access to the
+        /// POST /configuration endpoint in late-configured (hosted) mode. When set, the request
+        /// must include an X-DAB-CONFIG-AUTH header whose value matches this token.
+        /// </summary>
+        internal const string CONFIG_AUTH_TOKEN_ENV_VAR = "DAB_CONFIG_AUTH_TOKEN";
+
+        /// <summary>
+        /// Header name used to supply the configuration bootstrap token.
+        /// </summary>
+        internal const string CONFIG_AUTH_HEADER = "X-DAB-CONFIG-AUTH";
+
         private readonly HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
         private ILogger<Startup> _logger = logger;
@@ -949,6 +964,10 @@ namespace Azure.DataApiBuilder.Service
                     {
                         context.Response.StatusCode = StatusCodes.Status409Conflict;
                     }
+                    else if (!IsConfigurationRequestAuthorized(context))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    }
                     else
                     {
                         await next.Invoke();
@@ -1477,6 +1496,49 @@ namespace Azure.DataApiBuilder.Service
         private static bool IsUIEnabled(RuntimeConfig? runtimeConfig, IWebHostEnvironment env)
         {
             return (runtimeConfig is not null && runtimeConfig.IsDevelopmentMode()) || env.IsDevelopment();
+        }
+
+        /// <summary>
+        /// Determines whether a POST /configuration request is authorized by enforcing:
+        /// 1. The request must originate from a loopback address (localhost / 127.0.0.1 / ::1).
+        /// 2. If the DAB_CONFIG_AUTH_TOKEN environment variable is set, the request must include
+        ///    an X-DAB-CONFIG-AUTH header whose value matches the token (constant-time comparison).
+        /// This mitigates Missing Authentication for Critical Function" by preventing
+        /// unauthenticated network-remote callers from hijacking the runtime configuration.
+        /// </summary>
+        internal static bool IsConfigurationRequestAuthorized(HttpContext context)
+        {
+            // Defense 1: Restrict to loopback addresses only.
+            // A null RemoteIpAddress indicates an in-process call (e.g. TestServer)
+            // where there is no underlying TCP connection — by definition this cannot
+            // be a remote attacker, so we treat it as loopback-equivalent. A real
+            // network-borne request always carries a TCP source IP.
+            IPAddress? remoteIp = context.Connection.RemoteIpAddress;
+            if (remoteIp is not null && !IPAddress.IsLoopback(remoteIp))
+            {
+                return false;
+            }
+
+            // Defense 2: If a bootstrap token is configured, require it in the request header.
+            string? expectedToken = Environment.GetEnvironmentVariable(CONFIG_AUTH_TOKEN_ENV_VAR);
+            if (!string.IsNullOrEmpty(expectedToken))
+            {
+                string? providedToken = context.Request.Headers[CONFIG_AUTH_HEADER].FirstOrDefault();
+                if (string.IsNullOrEmpty(providedToken))
+                {
+                    return false;
+                }
+
+                // Use fixed-time comparison to prevent timing attacks.
+                if (!CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(expectedToken),
+                    Encoding.UTF8.GetBytes(providedToken)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>

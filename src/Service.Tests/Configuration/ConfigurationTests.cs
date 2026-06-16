@@ -4261,7 +4261,7 @@ type Planet @model(name:""PlanetAlias"") {
 
                 string restResponseBody = await restResponse.Content.ReadAsStringAsync();
                 Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
-                Assert.IsTrue(restResponseBody.Contains("1234"));
+                Assert.IsTrue(restResponseBody.Contains("\"publisher_id\": 1234"));
             }
         }
 

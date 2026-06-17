@@ -718,12 +718,16 @@ public class AuthorizationResolver : IAuthorizationResolver
                 continue;
             }
 
+            string resolvedRoleClaimType = string.IsNullOrWhiteSpace(identity.RoleClaimType)
+                ? AuthenticationOptions.ROLE_CLAIM_TYPE
+                : identity.RoleClaimType;
+
             // DAB will only resolve one 'roles' claim whose value matches the x-ms-api-role header value
             // because DAB executes requests in the context of a single role. The `roles` claim
             // resolved here can be forwarded to MSSQL's set-session-context. Modifying this behavior
             // is a breaking change.
             if (!resolvedClaims.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE) &&
-                identity.HasClaim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: clientRoleHeader))
+                identity.HasClaim(type: resolvedRoleClaimType, value: clientRoleHeader))
             {
                 List<Claim> roleClaim = new()
                 {
@@ -737,8 +741,9 @@ public class AuthorizationResolver : IAuthorizationResolver
             // into a list and storing that in resolvedClaims using the claimType as the key.
             foreach (Claim claim in identity.Claims)
             {
-                // 'roles' claim has already been processed. But we preserve the original 'roles' claim.
-                if (claim.Type.Equals(AuthenticationOptions.ROLE_CLAIM_TYPE))
+                // The source JWT role claim has already been processed.
+                // Preserve the original source claim under original_roles.
+                if (claim.Type.Equals(resolvedRoleClaimType))
                 {
                     if (!resolvedClaims.TryAdd(AuthenticationOptions.ORIGINAL_ROLE_CLAIM_TYPE, new List<Claim>() { claim }))
                     {

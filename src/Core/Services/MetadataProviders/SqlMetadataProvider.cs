@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
+using Microsoft.Data.SqlTypes;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
@@ -1488,7 +1489,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // Detect array types: concrete array types (e.g., int[]) have IsArray=true,
                 // while Npgsql reports abstract System.Array for PostgreSQL array columns.
                 // byte[] is excluded since it maps to the bytea/ByteArray scalar type.
-                bool isArrayType = (systemType.IsArray && systemType != typeof(byte[])) || systemType == typeof(Array);
+                bool isArrayType = (systemType.IsArray && systemType != typeof(byte[])) || systemType == typeof(Array) || systemType == typeof(SqlVector<Single>);
 
                 ColumnDefinition column = new()
                 {

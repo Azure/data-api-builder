@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using Microsoft.Data;
+using Microsoft.Data.SqlTypes;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Services
@@ -47,7 +48,8 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(byte[])] = DbType.Binary,
             [typeof(TimeOnly)] = DbType.Time,
             [typeof(TimeSpan)] = DbType.Time,
-            [typeof(object)] = DbType.Object
+            [typeof(object)] = DbType.Object,
+            [typeof(SqlVector<Single>)] = DbType.Object
         };
 
         /// <summary>
@@ -79,7 +81,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(object)] = JsonDataType.Object,
             [typeof(DateTime)] = JsonDataType.String,
             [typeof(DateTimeOffset)] = JsonDataType.String,
-            [typeof(float[])] = JsonDataType.Array
+            [typeof(SqlVector<Single>)] = JsonDataType.String
         };
 
         /// <summary>

@@ -23,6 +23,42 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 [TestClass]
 public class ConfigurationEndpointAuthorizationTests
 {
+    // Names of environment variables this test class manipulates. Snapshotted in
+    // TestInitialize and restored in TestCleanup so each test starts and ends from
+    // the same global state regardless of what other tests in the assembly do.
+    private const string ASPNETCORE_ENVIRONMENT_VAR = "ASPNETCORE_ENVIRONMENT";
+    private const string DAB_ENVIRONMENT_VAR = "DAB_ENVIRONMENT";
+
+    private string _originalAuthToken;
+    private string _originalAspNetEnvironment;
+    private string _originalDabEnvironment;
+
+    [TestInitialize]
+    public void Initialize()
+    {
+        // Snapshot the originals so they can be restored verbatim in TestCleanup.
+        _originalAuthToken = Environment.GetEnvironmentVariable(Startup.CONFIG_AUTH_TOKEN_ENV_VAR);
+        _originalAspNetEnvironment = Environment.GetEnvironmentVariable(ASPNETCORE_ENVIRONMENT_VAR);
+        _originalDabEnvironment = Environment.GetEnvironmentVariable(DAB_ENVIRONMENT_VAR);
+
+        // Other tests in the assembly (e.g. TestLoadingLocalCosmosSettings) set
+        // ASPNETCORE_ENVIRONMENT / DAB_ENVIRONMENT without cleanup. Those env vars cause
+        // FileSystemRuntimeConfigLoader to find an environment-specific dab-config.*.json on
+        // disk and auto-initialize the runtime, which makes POST /configuration return
+        // 409 Conflict before our security middleware can be exercised. Clear them so each
+        // test starts from an uninitialized runtime; the originals are restored in cleanup.
+        Environment.SetEnvironmentVariable(ASPNETCORE_ENVIRONMENT_VAR, null);
+        Environment.SetEnvironmentVariable(DAB_ENVIRONMENT_VAR, null);
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+        Environment.SetEnvironmentVariable(Startup.CONFIG_AUTH_TOKEN_ENV_VAR, _originalAuthToken);
+        Environment.SetEnvironmentVariable(ASPNETCORE_ENVIRONMENT_VAR, _originalAspNetEnvironment);
+        Environment.SetEnvironmentVariable(DAB_ENVIRONMENT_VAR, _originalDabEnvironment);
+    }
+
     /// <summary>
     /// Validates IsConfigurationRequestAuthorized across the full matrix of inputs:
     /// remote IP (loopback v4/v6, private/public, null/in-process), configured bootstrap
@@ -49,7 +85,11 @@ public class ConfigurationEndpointAuthorizationTests
     [DataRow("127.0.0.1", "secret", "secret", true, DisplayName = "Loopback + correct token => allow")]
     [DataRow("127.0.0.1", "secret", "wrong", false, DisplayName = "Loopback + wrong token => deny")]
     [DataRow("127.0.0.1", "secret", null, false, DisplayName = "Loopback + missing header => deny")]
-    [DataRow("192.168.1.50", "secret", "secret", false, DisplayName = "Non-loopback + correct token => still deny")]
+    [DataRow("192.168.1.50", "secret", "secret", false, DisplayName = "Private IPv4 + correct token => still deny (non-loopback)")]
+    [DataRow("192.168.1.50", "secret", "wrong", false, DisplayName = "Private IPv4 + wrong token => deny")]
+    [DataRow("203.0.113.50", "secret", "secret", false, DisplayName = "Public IPv4 + correct token => still deny (non-loopback)")]
+    [DataRow("203.0.113.50", "secret", "wrong", false, DisplayName = "Public IPv4 + wrong token => deny")]
+    [DataRow("203.0.113.50", "secret", null, false, DisplayName = "Public IPv4 + missing header => deny")]
     [DataRow(null, "secret", null, false, DisplayName = "In-process + missing header => deny")]
     [DataRow(null, "secret", "secret", true, DisplayName = "In-process + correct token => allow")]
     public void IsConfigurationRequestAuthorized_Matrix(
@@ -103,50 +143,29 @@ public class ConfigurationEndpointAuthorizationTests
         string providedHeader,
         HttpStatusCode expectedStatus)
     {
-        // Arrange
-        // Other tests in the assembly (e.g. TestLoadingLocalCosmosSettings) set
-        // ASPNETCORE_ENVIRONMENT / DAB_ENVIRONMENT without cleanup. Those env vars cause
-        // FileSystemRuntimeConfigLoader to find an environment-specific dab-config.*.json on
-        // disk and auto-initialize the runtime, which makes POST /configuration return
-        // 409 Conflict before our security middleware can be exercised. Snapshot and clear
-        // them so each test starts from an uninitialized runtime.
-        string originalAspNetEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-        string originalDabEnv = Environment.GetEnvironmentVariable("DAB_ENVIRONMENT");
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null);
-        Environment.SetEnvironmentVariable("DAB_ENVIRONMENT", null);
+        // Arrange -- ASPNETCORE_ENVIRONMENT / DAB_ENVIRONMENT are already cleared by
+        // TestInitialize so the runtime starts uninitialized and our middleware is
+        // exercised. Only the per-row auth token still needs to be set here; TestCleanup
+        // restores the original value.
         Environment.SetEnvironmentVariable(Startup.CONFIG_AUTH_TOKEN_ENV_VAR, configuredToken);
 
-        try
+        using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+        using HttpClient httpClient = server.CreateClient();
+
+        HttpRequestMessage request = new(HttpMethod.Post, configurationEndpoint)
         {
-            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
-            using HttpClient httpClient = server.CreateClient();
-
-            HttpRequestMessage request = new(HttpMethod.Post, configurationEndpoint)
-            {
-                Content = BuildPostContent(configurationEndpoint),
-            };
-            if (providedHeader is not null)
-            {
-                request.Headers.Add(Startup.CONFIG_AUTH_HEADER, providedHeader);
-            }
-
-            // Act
-            HttpResponseMessage postResult = await httpClient.SendAsync(request);
-
-            // Assert
-            Assert.AreEqual(expectedStatus, postResult.StatusCode);
-        }
-        finally
+            Content = BuildPostContent(configurationEndpoint),
+        };
+        if (providedHeader is not null)
         {
-            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", originalAspNetEnv);
-            Environment.SetEnvironmentVariable("DAB_ENVIRONMENT", originalDabEnv);
+            request.Headers.Add(Startup.CONFIG_AUTH_HEADER, providedHeader);
         }
-    }
 
-    [TestCleanup]
-    public void Cleanup()
-    {
-        Environment.SetEnvironmentVariable(Startup.CONFIG_AUTH_TOKEN_ENV_VAR, null);
+        // Act
+        HttpResponseMessage postResult = await httpClient.SendAsync(request);
+
+        // Assert
+        Assert.AreEqual(expectedStatus, postResult.StatusCode);
     }
 
     /// <summary>

@@ -4253,7 +4253,7 @@ type Planet @model(name:""PlanetAlias"") {
             using (HttpClient client = server.CreateClient())
             {
                 // Act
-                using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book?$orderby=id desc&$filter=publisher_id eq 1234");
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, restUri);
                 using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 
                 // Assert - Verify REST response

@@ -25,6 +25,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             await InitializeTestFixture();
         }
 
+        #region Success Tests
+
         /// <summary>
         /// Creates a new book record with valid data and verifies success. Cleans up after.
         /// </summary>
@@ -86,6 +88,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             await DeleteTestBook(createdId);
         }
 
+        #endregion
+
+        #region Error Cases
+
         /// <summary>
         /// Validates error scenarios for CreateRecordTool.
         /// </summary>
@@ -129,6 +135,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             AssertError(result, message: "CreateRecord should fail when missing required NOT NULL fields.");
         }
+
+        #endregion
 
         private static async Task<CallToolResult> ExecuteCreateAsync(string entity, Dictionary<string, object> data)
         {

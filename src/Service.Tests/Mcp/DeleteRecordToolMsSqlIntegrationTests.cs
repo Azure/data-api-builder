@@ -26,6 +26,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             await InitializeTestFixture();
         }
 
+        #region Success Tests
+
         /// <summary>
         /// Creates a book then deletes it, verifying the delete succeeds.
         /// </summary>
@@ -40,6 +42,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertSuccess(result, "DeleteRecord should succeed for existing record.");
             Assert.IsFalse(string.IsNullOrWhiteSpace(GetFirstTextContent(result)));
         }
+
+        #endregion
+
+        #region Error Cases
 
         /// <summary>
         /// Attempts to delete a record with a non-existent key, expecting an error.
@@ -104,6 +110,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertError(result);
         }
 
+        #endregion
+
+        #region Verification Tests
+
         /// <summary>
         /// Verifies that after successful deletion, the record is no longer accessible.
         /// </summary>
@@ -131,6 +141,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(0, records.GetArrayLength(),
                 "Deleted record should not be found in subsequent read.");
         }
+
+        #endregion
 
         /// <summary>
         /// Creates a book record and returns its ID using the centralized helper.

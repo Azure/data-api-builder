@@ -21,10 +21,9 @@ if ($isReleaseBuild -eq 'true')
 }
 
 # Generating hash for DAB packages
-# TODO(prereq-PR Usr/sogh/upgrade-net10-sqlclient6): String-only swap of
-# net8.0 -> net10.0. Release-engineering: please confirm the
-# net10.0_{linux,win,osx}-x64 download URLs and SHA hashes referenced
-# downstream still resolve after the .NET 10 publish cycle runs.
+# TODO: Release-engineering - confirm the net10.0_{linux,win,osx}-x64 download
+# URLs and SHA hashes referenced downstream still resolve after the .NET 10
+# publish cycle runs. (Add a tracking issue number/link here once created.)
 $dotnetTargetFrameworks = "net10.0"
 $RIDs = "win-x64", "linux-x64", "osx-x64"
 [hashtable]$frameworkPlatformDownloadMetadata = @{}

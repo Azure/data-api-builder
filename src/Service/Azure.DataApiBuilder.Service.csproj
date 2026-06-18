@@ -12,8 +12,10 @@
              TestServer fixture takes IWebHostBuilder. Migrating to
              WebApplicationBuilder/HostBuilder is behavior-affecting refactor
              work tracked separately; suppressed here so the .NET 10 + SqlClient
-             6.x prerequisite PR stays behavior-preserving. TODO(prereq-PR
-             Usr/sogh/upgrade-net10-sqlclient6): file a follow-up issue. -->
+             6.x prerequisite PR stays behavior-preserving. TODO: file a
+             follow-up issue to migrate off WebHost (IWebHostBuilder/IWebHost)
+             to WebApplicationBuilder/IHost and remove this ASPDEPR008
+             suppression. -->
         <NoWarn>NU1603;ASPDEPR008</NoWarn>
     </PropertyGroup>
 

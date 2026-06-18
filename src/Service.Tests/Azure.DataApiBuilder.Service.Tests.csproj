@@ -10,7 +10,8 @@
          test-only helpers. Migrating to IHost is behavior-affecting
          refactor work tracked separately; suppressed here so the
          .NET 10 + SqlClient 6.x prerequisite PR stays behavior-preserving.
-         TODO(prereq-PR Usr/sogh/upgrade-net10-sqlclient6): file a follow-up issue. -->
+         TODO: file a follow-up issue to migrate off IWebHostBuilder/IWebHost
+         to IHost and remove this ASPDEPR008 suppression. -->
     <NoWarn>NU1603;ASPDEPR008</NoWarn>
   </PropertyGroup>
 

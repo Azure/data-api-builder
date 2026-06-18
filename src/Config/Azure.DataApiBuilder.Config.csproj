@@ -28,6 +28,7 @@
       <PackageReference Include="Humanizer" />
       <PackageReference Include="Npgsql" />
       <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+      <PackageReference Include="Microsoft.Extensions.Primitives" />
   </ItemGroup>
 
     <ItemGroup>

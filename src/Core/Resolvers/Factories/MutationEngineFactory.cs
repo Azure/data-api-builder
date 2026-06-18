@@ -108,7 +108,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                     HttpStatusCode.BadRequest,
                     DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
-            ;
 
             return mutationEngine;
         }

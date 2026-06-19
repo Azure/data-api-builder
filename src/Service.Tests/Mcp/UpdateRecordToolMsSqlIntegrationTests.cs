@@ -25,6 +25,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             await InitializeTestFixture();
         }
 
+        #region Tests
+
         /// <summary>
         /// Creates a dedicated record, updates its title, verifies success, then cleans up.
         /// </summary>
@@ -154,6 +156,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertError(result);
         }
 
+        #endregion
+
+        #region Helpers
+
         private static async Task<CallToolResult> ExecuteUpdateAsync(
             string entity,
             Dictionary<string, object> keys,
@@ -181,5 +187,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             await DeleteTestBook(id);
         }
+
+        #endregion
     }
 }

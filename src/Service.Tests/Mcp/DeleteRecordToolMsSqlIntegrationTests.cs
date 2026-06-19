@@ -144,6 +144,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         #endregion
 
+        #region Helpers
+
         /// <summary>
         /// Creates a book record and returns its ID using the centralized helper.
         /// </summary>
@@ -165,5 +167,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             return await ExecuteToolAsync(tool, serviceProvider, args);
         }
+
+        #endregion
     }
 }

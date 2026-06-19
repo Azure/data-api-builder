@@ -24,6 +24,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             await InitializeTestFixture();
         }
 
+        #region Tests
+
         /// <summary>
         /// Reads all records from the Book entity without any filters.
         /// </summary>
@@ -135,6 +137,45 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Reads the first page with first=2, extracts the after cursor, then reads the second page
+        /// and verifies it returns different records.
+        /// </summary>
+        [TestMethod]
+        public async Task ReadRecords_WithAfterCursor_ReturnsNextPage()
+        {
+            // First page: get 2 records ordered by id ascending
+            CallToolResult firstPageResult = await ExecuteReadAsync("Book", select: "id,title", orderby: new[] { "id asc" }, first: 2);
+
+            AssertSuccess(firstPageResult, "First page read should succeed.");
+
+            JsonElement firstRoot = ParseResultRoot(firstPageResult);
+            JsonElement firstPageRecords = GetRecordsArray(firstRoot);
+            Assert.AreEqual(2, firstPageRecords.GetArrayLength(), "First page should return exactly 2 records.");
+
+            // Extract the after cursor from the result
+            JsonElement resultElement = firstRoot.GetProperty("result");
+            Assert.IsTrue(resultElement.TryGetProperty("after", out JsonElement afterElement),
+                "Paginated response should contain an 'after' cursor token.");
+            string afterCursor = afterElement.GetString()!;
+            Assert.IsFalse(string.IsNullOrWhiteSpace(afterCursor), "After cursor should not be empty.");
+
+            int firstPageLastId = firstPageRecords[1].GetProperty("id").GetInt32();
+
+            // Second page: use the after cursor
+            CallToolResult secondPageResult = await ExecuteReadAsync("Book", select: "id,title", orderby: new[] { "id asc" }, first: 2, after: afterCursor);
+
+            AssertSuccess(secondPageResult, "Second page read should succeed.");
+
+            JsonElement secondRoot = ParseResultRoot(secondPageResult);
+            JsonElement secondPageRecords = GetRecordsArray(secondRoot);
+            Assert.IsTrue(secondPageRecords.GetArrayLength() > 0, "Second page should return records.");
+
+            int secondPageFirstId = secondPageRecords[0].GetProperty("id").GetInt32();
+            Assert.IsTrue(secondPageFirstId > firstPageLastId,
+                $"Second page first id ({secondPageFirstId}) should be greater than first page last id ({firstPageLastId}).");
+        }
+
+        /// <summary>
         /// Reads records for a non-existent entity, expecting an error.
         /// </summary>
         [TestMethod]
@@ -144,6 +185,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             AssertError(result, "NonExistentEntity");
         }
+
+        #endregion
+
+        #region Helpers
 
         private static async Task<CallToolResult> ExecuteReadAsync(
             string entity,
@@ -185,5 +230,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             return await ExecuteToolAsync(tool, serviceProvider, args);
         }
+
+        #endregion
     }
 }

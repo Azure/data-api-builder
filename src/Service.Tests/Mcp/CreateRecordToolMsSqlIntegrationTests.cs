@@ -138,6 +138,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         #endregion
 
+        #region Helpers
+
         private static async Task<CallToolResult> ExecuteCreateAsync(string entity, Dictionary<string, object> data)
         {
             IServiceProvider serviceProvider = BuildMutationServiceProvider();
@@ -151,5 +153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             return await ExecuteToolAsync(tool, serviceProvider, args);
         }
+
+        #endregion
     }
 }

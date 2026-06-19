@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(object)] = JsonDataType.Object,
             [typeof(DateTime)] = JsonDataType.String,
             [typeof(DateTimeOffset)] = JsonDataType.String,
-            [typeof(SqlVector<Single>)] = JsonDataType.String
+            [typeof(SqlVector<Single>)] = JsonDataType.Number
         };
 
         /// <summary>
@@ -164,7 +164,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 "Date" => EdmPrimitiveTypeKind.Date,
                 "TimeOnly" => EdmPrimitiveTypeKind.TimeOfDay,
                 "TimeSpan" => EdmPrimitiveTypeKind.TimeOfDay,
-                "SqlVector`1" => EdmPrimitiveTypeKind.String,
+                "SqlVector`1" => EdmPrimitiveTypeKind.Single,
                 _ => throw new ArgumentException($"Column type" +
                         $" {columnSystemType.Name} not yet supported.")
             };

@@ -456,7 +456,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 structure.Columns.Select(
                     c => structure.IsSubqueryColumn(c) ?
                         WrapSubqueryColumn(c, structure.JoinQueries[c.TableAlias!]) + $" AS {QuoteIdentifier(c.Label)}" :
-                        Build(c)
+                        Build(c, structure.GetColumnSystemType(c.ColumnName))
             ));
         }
 

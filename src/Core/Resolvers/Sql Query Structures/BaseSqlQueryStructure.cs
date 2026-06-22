@@ -4,6 +4,7 @@
 using System.Data;
 using System.Globalization;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -452,6 +453,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "Guid" => Guid.Parse(param),
                 "TimeOnly" => TimeOnly.Parse(param),
                 "TimeSpan" => TimeOnly.Parse(param),
+                "Single[]" => JsonSerializer.Deserialize<float[]>(param) ?? Array.Empty<float>(),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };
         }

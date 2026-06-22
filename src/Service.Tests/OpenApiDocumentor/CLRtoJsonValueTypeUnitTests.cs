@@ -23,6 +23,11 @@ public class CLRtoJsonValueTypeUnitTests
     private const string SQLDBTYPE_UNEXPECTED_RESOLUTION_ERROR = "should have resolved to a SqlDbType.";
     private const string JSONDATATYPE_RESOLUTION_ERROR = "(when supported) should map to a system type and associated JsonDataType.";
 
+    // Placeholder for future DbType resolution assertions (mirrors JSONDATATYPE_RESOLUTION_ERROR).
+    // Reserved for when DbType mapping is supported; intentionally retained though not yet referenced.
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0051:Remove unused private members", Justification = "Reserved for future DbType support; currently unused, suppressing IDE0051.")]
+    private const string DBTYPE_RESOLUTION_ERROR = "(when supported) should map to a system type and associated DbType.";
+
     /// <summary>
     /// Validates that:
     /// 1. String representations of SqlDbType provided by SQL Server/Azure SQL DB resolve to a SqlDbType enum

@@ -4201,6 +4201,47 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// End to end test that validates that REST requests with OData query
+        /// options $filter and $orderby succeed to ensure no regression can occur.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("/api/Book?$orderby=id desc&$filter=publisher_id eq 1234", DisplayName = "REST URL without encoded characters")]
+        [DataRow("/api/Book?%24orderby=id%20desc&%24filter=publisher_id%20eq%201234", DisplayName = "REST URL with encoded characters")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestForRestRequestsWithFilterAndOrderbyParameters(string restUri)
+        {
+            // The configuration file is constructed by merging hard-coded JSON strings to simulate the scenario where users manually edit the
+            // configuration file (instead of using CLI).
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                configJson,
+                out RuntimeConfig deserializedConfig,
+                replacementSettings: new(),
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
+            string configFileName = "custom-config.json";
+            File.WriteAllText(configFileName, deserializedConfig.ToJson());
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={configFileName}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Act
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, restUri);
+                using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+
+                // Assert - Verify REST response
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, "REST request to auto-generated entity should succeed");
+
+                string restResponseBody = await restResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
+                Assert.IsTrue(restResponseBody.Contains("\"publisher_id\":1234"));
+            }
+        }
+
+        /// <summary>
         /// Test different loglevel values that are avaliable by deserializing RuntimeConfig with specified LogLevel
         /// and checks if value exists properly inside the deserialized RuntimeConfig.
         /// </summary>

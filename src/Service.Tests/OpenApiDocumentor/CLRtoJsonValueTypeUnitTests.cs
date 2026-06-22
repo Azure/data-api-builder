@@ -22,6 +22,7 @@ public class CLRtoJsonValueTypeUnitTests
     private const string SQLDBTYPE_RESOLUTION_ERROR = "failed to resolve to SqlDbType.";
     private const string SQLDBTYPE_UNEXPECTED_RESOLUTION_ERROR = "should have resolved to a SqlDbType.";
     private const string JSONDATATYPE_RESOLUTION_ERROR = "(when supported) should map to a system type and associated JsonDataType.";
+    private const string DBTYPE_RESOLUTION_ERROR = "(when supported) should map to a system type and associated DbType.";
 
     /// <summary>
     /// Validates that:

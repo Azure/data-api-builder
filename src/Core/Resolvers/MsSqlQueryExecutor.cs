@@ -18,6 +18,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlTypes;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -693,6 +694,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         && parameterEntry.Value?.Length is not null)
                     {
                         parameter.Size = parameterEntry.Value.Length.Value;
+                    }
+
+                    // if sqldbtype is vector then set the value as an SqlVector object
+                    if (parameter.SqlDbType is SqlDbType.Vector)
+                    {
+                        List<float> values = new();
+                        foreach (float val in (Array)parameter.Value)
+                        {
+                            values.Add(val);
+                        }
+
+                        SqlVector<float> value = new(values.ToArray());
+                        parameter.Value = value;
                     }
 
                     cmd.Parameters.Add(parameter);

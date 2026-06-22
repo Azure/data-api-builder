@@ -115,6 +115,15 @@ namespace Azure.DataApiBuilder.Core.Services
                     columnDefinition.DbType = TypeHelper.GetDbTypeFromSystemType(columnDefinition.SystemType);
 
                     string sqlDbTypeName = (string)columnInfo["DATA_TYPE"];
+
+                    if (columnDefinition.SystemType == typeof(SqlVector<Single>))
+                    {
+                        sqlDbTypeName = "vector";   // Currently the "DATA_TYPE" column returns "varbinary" for vector type columns. This is a known issue https://learn.microsoft.com/en-us/sql/t-sql/data-types/vector-data-type?view=sql-server-ver17&tabs=csharp#known-issues
+                        columnDefinition.IsArrayType = true;
+                        columnDefinition.ElementSystemType = typeof(Single);
+                        columnDefinition.SystemType = columnDefinition.ElementSystemType.MakeArrayType();
+                    }
+                     
                     if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
                     {
                         // The DbType enum in .NET does not distinguish between VarChar and NVarChar. Both are mapped to DbType.String.
@@ -132,13 +141,6 @@ namespace Azure.DataApiBuilder.Core.Services
                         {
                             columnDefinition.DbType = dbType;
                         }
-                    }
-
-                    if (columnDefinition.SystemType == typeof(SqlVector<Single>))
-                    {
-                        columnDefinition.IsArrayType = true;
-                        columnDefinition.ElementSystemType = typeof(Single);
-                        columnDefinition.SystemType = columnDefinition.ElementSystemType.MakeArrayType();
                     }
                 }
             }

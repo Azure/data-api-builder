@@ -475,7 +475,6 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateConfigProperties();
         ValidatePermissionsInConfig(runtimeConfig);
 
-        _logger.LogInformation("Validating entity relationships.");
         ValidateRelationshipConfigCorrectness(runtimeConfig);
 
         // This function initializes the metadata providers which in turn validates the connectivity to the

@@ -3156,8 +3156,6 @@ namespace Cli
                 return false;
             }
 
-            _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
-
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _))

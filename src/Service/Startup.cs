@@ -8,6 +8,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -55,6 +57,7 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,6 +94,19 @@ namespace Azure.DataApiBuilder.Service
         public static AzureLogAnalyticsOptions AzureLogAnalyticsOptions = new();
         public static FileSinkOptions FileSinkOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
+
+        /// <summary>
+        /// Environment variable name for the optional bootstrap token that gates access to the
+        /// POST /configuration endpoint in late-configured (hosted) mode. When set, the request
+        /// must include an X-DAB-CONFIG-AUTH header whose value matches this token.
+        /// </summary>
+        internal const string CONFIG_AUTH_TOKEN_ENV_VAR = "DAB_CONFIG_AUTH_TOKEN";
+
+        /// <summary>
+        /// Header name used to supply the configuration bootstrap token.
+        /// </summary>
+        internal const string CONFIG_AUTH_HEADER = "X-DAB-CONFIG-AUTH";
+
         private readonly HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
         private ILogger<Startup> _logger = logger;
@@ -457,7 +473,31 @@ namespace Azure.DataApiBuilder.Service
 
                 if (embeddingsOptions.Enabled)
                 {
-                    services.AddHttpClient<IEmbeddingService, EmbeddingService>();
+                    // Configure dedicated FusionCache for embeddings
+                    ConfigureEmbeddingsCache(services, embeddingsOptions, runtimeConfigAvailable);
+
+                    // Register a named HttpClient for EmbeddingService. The IEmbeddingService
+                    // registration below resolves this client by name via IHttpClientFactory using
+                    // nameof(EmbeddingService), which matches the name passed here.
+                    services.AddHttpClient(nameof(EmbeddingService));
+
+                    // Register IEmbeddingService as a singleton that uses the named FusionCache
+                    // ("EmbeddingsCache") when embeddings caching is enabled, or falls back to the
+                    // default IFusionCache otherwise. The factory pattern is required because we need
+                    // to select between two IFusionCache instances at resolution time.
+                    services.AddSingleton<IEmbeddingService>(serviceProvider =>
+                    {
+                        IFusionCache cache = embeddingsOptions.IsCachingEnabled
+                            ? serviceProvider.GetRequiredService<IFusionCacheProvider>().GetCache("EmbeddingsCache")
+                            : serviceProvider.GetRequiredService<IFusionCache>(); // Fallback to default cache
+
+                        ILogger<EmbeddingService> logger = serviceProvider.GetRequiredService<ILogger<EmbeddingService>>();
+                        IHttpClientFactory httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                        HttpClient httpClient = httpClientFactory.CreateClient(nameof(EmbeddingService));
+
+                        return new EmbeddingService(httpClient, embeddingsOptions, logger, cache);
+                    });
+
                     _logger.LogInformation(
                         "Embeddings service enabled with provider: {Provider}, model: {Model}, base-url: {BaseUrl}",
                         providerName,
@@ -1035,6 +1075,10 @@ namespace Azure.DataApiBuilder.Service
                     {
                         context.Response.StatusCode = StatusCodes.Status409Conflict;
                     }
+                    else if (!IsConfigurationRequestAuthorized(context))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    }
                     else
                     {
                         await next.Invoke();
@@ -1068,6 +1112,43 @@ namespace Azure.DataApiBuilder.Service
 
             app.UseEndpoints(endpoints =>
             {
+                // Map the embeddings POST endpoint with a literal path BEFORE MapControllers
+                // so it wins over RestController's global catch-all attribute route ({*route})
+                // by route specificity. The path is taken from runtime config
+                // (runtime.embeddings.endpoint.path), defaulting to "/embed".
+                if (runtimeConfig?.Runtime?.Embeddings is { Enabled: true } embeddingsOptions
+                    && embeddingsOptions.Endpoint is { Enabled: true } embeddingsEndpoint)
+                {
+                    string embedPath = embeddingsEndpoint.EffectivePath;
+                    if (!embedPath.StartsWith('/'))
+                    {
+                        embedPath = "/" + embedPath;
+                    }
+
+                    // ARCHITECTURAL NOTE: This MapPost delegate manually instantiates EmbeddingController
+                    // via ActivatorUtilities so the embeddings endpoint can be served on a configurable,
+                    // literal path that wins over RestController's global catch-all attribute route
+                    // ({*route}) by route-specificity. This intentionally bypasses the MVC controller
+                    // pipeline, which means:
+                    //   * MVC action filters, [Authorize], [Consumes]/[Produces], and model-binding/
+                    //     validation attributes on EmbeddingController are NOT executed here.
+                    //   * Authentication & authorization are still enforced because the ASP.NET Core
+                    //     auth middleware (UseAuthentication/UseAuthorization and the DAB client-role
+                    //     header authorization middleware) runs earlier in the pipeline, before
+                    //     UseEndpoints. EmbeddingController.PostAsync performs its own role/permission
+                    //     checks against HttpContext.User.
+                    // If future work adds new filter/authorization attributes to EmbeddingController,
+                    // those will NOT take effect on this path; either replicate the behavior here or
+                    // move to a standard attribute-routed controller mapping.
+                    endpoints.MapPost(embedPath, async context =>
+                    {
+                        EmbeddingController controller = ActivatorUtilities.CreateInstance<EmbeddingController>(context.RequestServices);
+                        controller.ControllerContext = new ControllerContext { HttpContext = context };
+                        IActionResult result = await controller.PostAsync(embedPath.TrimStart('/'));
+                        await result.ExecuteResultAsync(controller.ControllerContext);
+                    });
+                }
+
                 endpoints.MapControllers();
 
                 // Special for MCP
@@ -1529,6 +1610,57 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
+        /// Determines whether a POST /configuration request is authorized by enforcing:
+        /// 1. The request must originate from a loopback address (localhost / 127.0.0.1 / ::1
+        ///    or its IPv4-mapped IPv6 form such as ::ffff:127.0.0.1).
+        /// 2. If the DAB_CONFIG_AUTH_TOKEN environment variable is set, the request must include
+        ///    an X-DAB-CONFIG-AUTH header whose value matches the token (constant-time comparison).
+        /// This prevents unauthenticated network-remote callers from supplying the runtime
+        /// configuration during the late-configured bootstrap window.
+        /// </summary>
+        internal static bool IsConfigurationRequestAuthorized(HttpContext context)
+        {
+            // Defense 1: Restrict to loopback addresses only.
+            // A null RemoteIpAddress indicates an in-process call (e.g. TestServer)
+            // where there is no underlying TCP connection — by definition this cannot
+            // be a remote attacker, so we treat it as loopback-equivalent. A real
+            // network-borne request always carries a TCP source IP.
+            IPAddress? remoteIp = context.Connection.RemoteIpAddress;
+            if (remoteIp is not null)
+            {
+                // Kestrel often listens on dual-stack IPv6, so an IPv4 loopback caller can
+                // arrive as the IPv4-mapped IPv6 form (e.g. ::ffff:127.0.0.1). IPAddress.IsLoopback
+                // does not treat those as loopback, so normalize to IPv4 first.
+                IPAddress effectiveIp = remoteIp.IsIPv4MappedToIPv6 ? remoteIp.MapToIPv4() : remoteIp;
+                if (!IPAddress.IsLoopback(effectiveIp))
+                {
+                    return false;
+                }
+            }
+
+            // Defense 2: If a bootstrap token is configured, require it in the request header.
+            string? expectedToken = Environment.GetEnvironmentVariable(CONFIG_AUTH_TOKEN_ENV_VAR);
+            if (!string.IsNullOrEmpty(expectedToken))
+            {
+                string? providedToken = context.Request.Headers[CONFIG_AUTH_HEADER].FirstOrDefault();
+                if (string.IsNullOrEmpty(providedToken))
+                {
+                    return false;
+                }
+
+                // Use fixed-time comparison to prevent timing attacks.
+                if (!CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(expectedToken),
+                    Encoding.UTF8.GetBytes(providedToken)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Checks whether On-Behalf-Of (OBO) authentication is configured by verifying that
         /// the required environment variables are set and the config has user-delegated auth enabled.
         /// </summary>
@@ -1595,6 +1727,186 @@ namespace Azure.DataApiBuilder.Service
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.CustomTableName)
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DcrImmutableId)
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DceEndpoint);
+        }
+
+        /// <summary>
+        /// Configures a dedicated FusionCache instance for embeddings with optional L2 Azure Managed Redis cache.
+        /// </summary>
+        /// <param name="services">The service collection.</param>
+        /// <param name="embeddingsOptions">The embeddings configuration options.</param>
+        /// <param name="runtimeConfigAvailable">Whether the runtime config is available.</param>
+        private void ConfigureEmbeddingsCache(
+            IServiceCollection services,
+            EmbeddingsOptions embeddingsOptions,
+            bool runtimeConfigAvailable)
+        {
+            if (!embeddingsOptions.IsCachingEnabled)
+            {
+                _logger.LogInformation("Embeddings caching is disabled");
+                return;
+            }
+
+            EmbeddingsCacheOptions cacheOptions = embeddingsOptions.Cache ?? new EmbeddingsCacheOptions();
+            int ttlHours = cacheOptions.EffectiveTtlHours;
+
+            IFusionCacheBuilder embeddingsCacheBuilder = services.AddFusionCache("EmbeddingsCache")
+                .WithOptions(options =>
+                {
+                    options.FactoryErrorsLogLevel = LogLevel.Debug;
+                    options.EventHandlingErrorsLogLevel = LogLevel.Debug;
+                })
+                .WithDefaultEntryOptions(new FusionCacheEntryOptions
+                {
+                    Duration = TimeSpan.FromHours(ttlHours),
+                    ReThrowBackplaneExceptions = false,
+                    ReThrowDistributedCacheExceptions = false,
+                    ReThrowSerializationExceptions = false,
+                });
+
+            _logger.LogInformation(
+                "Embeddings cache configured with TTL: {TtlHours} hours",
+                ttlHours);
+
+            // Configure L2 Redis cache if enabled
+            if (embeddingsOptions.IsLevel2CacheEnabled && runtimeConfigAvailable)
+            {
+                EmbeddingsCacheLevel2Options level2Options = cacheOptions.Level2!;
+
+                if (string.IsNullOrWhiteSpace(level2Options.ConnectionString))
+                {
+                    throw new Exception("Embeddings internal L2 cache requires a valid connection-string.");
+                }
+
+                // Create connection multiplexer for embeddings Azure Managed Redis cache.
+                // The factory is invoked lazily by FusionCache; we wrap it so that any connection
+                // failure (including transient errors after StackExchange.Redis' own ConnectRetry
+                // exhausts) is logged and surfaced as a distributed-cache exception. Because the
+                // embeddings cache is configured with ReThrowDistributedCacheExceptions = false,
+                // FusionCache will transparently fall back to the L1 (in-memory) cache when L2
+                // is unavailable, so a Redis outage does not break embeddings.
+                Task<IConnectionMultiplexer>? connectionMultiplexerTask = null;
+                Func<Task<IConnectionMultiplexer>> connectionFactory = () =>
+                {
+                    // Cache the task so the connection (and any retry sequence) is shared by the
+                    // distributed cache and the backplane.
+                    connectionMultiplexerTask ??= CreateEmbeddingsRedisConnectionAsync(level2Options.ConnectionString);
+                    return connectionMultiplexerTask;
+                };
+
+                embeddingsCacheBuilder
+                    .WithSerializer(new FusionCacheSystemTextJsonSerializer())
+                    .WithDistributedCache(new RedisCache(new RedisCacheOptions
+                    {
+                        ConnectionMultiplexerFactory = connectionFactory
+                    }))
+                    .WithBackplane(new RedisBackplane(new RedisBackplaneOptions
+                    {
+                        ConnectionMultiplexerFactory = connectionFactory
+                    }));
+
+                _logger.LogInformation("Embeddings L2 (internal) cache enabled");
+            }
+            else
+            {
+                _logger.LogInformation("Embeddings using L1 (memory) cache only");
+            }
+        }
+
+        /// <summary>
+        /// Creates a Redis connection for the embeddings L2 cache with retry on transient failure.
+        /// StackExchange.Redis applies its own ConnectRetry per attempt; this wrapper adds a small
+        /// number of additional attempts with exponential backoff to absorb longer transient outages
+        /// (DNS, brief network blips, AAD token acquisition). If all attempts fail the exception is
+        /// re-thrown so FusionCache can mark the distributed cache as unavailable and fall back to L1.
+        /// </summary>
+        private async Task<IConnectionMultiplexer> CreateEmbeddingsRedisConnectionAsync(string connectionString)
+        {
+            return await ConnectWithRetryAsync(
+                () => CreateConnectionMultiplexerAsync(connectionString),
+                maxAttempts: EMBEDDINGS_REDIS_MAX_CONNECT_ATTEMPTS,
+                initialDelay: TimeSpan.FromMilliseconds(EMBEDDINGS_REDIS_INITIAL_RETRY_DELAY_MS),
+                logger: _logger);
+        }
+
+        // Retry knobs for embeddings L2 Redis connection. Exposed as constants so tests can
+        // reference the same values without duplication.
+        internal const int EMBEDDINGS_REDIS_MAX_CONNECT_ATTEMPTS = 3;
+        internal const int EMBEDDINGS_REDIS_INITIAL_RETRY_DELAY_MS = 500;
+
+        /// <summary>
+        /// Invokes <paramref name="connectFactory"/> with retry-on-exception and exponential backoff.
+        /// Logs each failed attempt as a warning (with the originating exception) and, after all
+        /// attempts are exhausted, logs an error and re-throws the last exception so the caller
+        /// (e.g. FusionCache) can mark the distributed cache as unavailable and fall back to L1.
+        /// Exposed as <c>internal static</c> so unit tests can exercise the retry behavior without
+        /// taking a real Redis dependency.
+        /// </summary>
+        /// <param name="connectFactory">Delegate that performs a single connection attempt.</param>
+        /// <param name="maxAttempts">Maximum number of attempts. Must be >= 1.</param>
+        /// <param name="initialDelay">Delay before the second attempt. Doubled for each subsequent attempt.</param>
+        /// <param name="logger">Logger used to record retry diagnostics. May be null.</param>
+        /// <param name="delayAsync">Optional delay function for tests to avoid real waits.</param>
+        internal static async Task<IConnectionMultiplexer> ConnectWithRetryAsync(
+            Func<Task<IConnectionMultiplexer>> connectFactory,
+            int maxAttempts,
+            TimeSpan initialDelay,
+            Microsoft.Extensions.Logging.ILogger? logger,
+            Func<TimeSpan, Task>? delayAsync = null)
+        {
+            if (connectFactory is null)
+            {
+                throw new ArgumentNullException(nameof(connectFactory));
+            }
+
+            if (maxAttempts < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxAttempts), "maxAttempts must be >= 1.");
+            }
+
+            delayAsync ??= Task.Delay;
+            TimeSpan delay = initialDelay;
+            Exception? lastException = null;
+
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
+                {
+                    IConnectionMultiplexer multiplexer = await connectFactory();
+                    if (attempt > 1)
+                    {
+                        logger?.LogInformation(
+                            "Embeddings L2 Redis cache connected on attempt {Attempt}/{MaxAttempts}.",
+                            attempt, maxAttempts);
+                    }
+
+                    return multiplexer;
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    logger?.LogWarning(
+                        ex,
+                        "Embeddings L2 Redis cache connection attempt {Attempt}/{MaxAttempts} failed: {Message}",
+                        attempt, maxAttempts, ex.Message);
+
+                    if (attempt < maxAttempts)
+                    {
+                        await delayAsync(delay);
+                        delay = TimeSpan.FromMilliseconds(delay.TotalMilliseconds * 2);
+                    }
+                }
+            }
+
+            logger?.LogError(
+                lastException,
+                "Embeddings L2 Redis cache connection failed after {MaxAttempts} attempts. " +
+                "Falling back to L1 (in-memory) cache only.",
+                maxAttempts);
+
+            // Re-throw so FusionCache treats the distributed cache as unavailable. With
+            // ReThrowDistributedCacheExceptions = false on the embeddings cache entry options,
+            // this fallback is transparent to callers.
+            throw lastException!;
         }
 
         /// <summary>

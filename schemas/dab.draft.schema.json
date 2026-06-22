@@ -870,6 +870,41 @@
                 }
               }
             },
+            "cache": {
+              "type": "object",
+              "description": "Cache configuration for embeddings. Includes L1 (in-memory) and optional L2 (Azure Managed Redis) caching.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether caching is enabled for embeddings. Defaults to true.",
+                  "default": true
+                },
+                "ttl-hours": {
+                  "type": "integer",
+                  "description": "Time-to-live for cached embeddings in hours. Defaults to 24 hours. Set high since embeddings are deterministic.",
+                  "default": 24,
+                  "minimum": 1
+                },
+                "level-2": {
+                  "type": "object",
+                  "description": "Configuration for L2 distributed cache using Azure Managed Redis.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Whether L2 (distributed Redis) cache is enabled. Defaults to false.",
+                      "default": false
+                    },
+                    "connection-string": {
+                      "type": "string",
+                      "description": "The connection string for Azure Managed Redis. Supports environment variable substitution with @env('VAR_NAME'). Example: 'contoso.redis.cache.windows.net:6380,password=...,ssl=True,abortConnect=False'. Authentication is auto-detected: when a password is present in the connection string, connection-string based authentication is used; when no password is present and the endpoint is not localhost/loopback, Microsoft Entra ID (token-based) authentication is used via DefaultAzureCredential (Managed Identity when available, with standard credential fallbacks)."
+                    }
+                  },
+                  "required": ["enabled"]
+                }
+              }
+            },
             "chunking": {
               "type": "object",
               "description": "Chunking configuration for text processing before embedding. Used to split large text inputs into smaller chunks.",
@@ -1167,7 +1202,7 @@
           "properties": {
             "description": {
               "type": "string",
-              "description": "Optional description for the entity. Will be surfaced in generated API documentation and GraphQL schema as comments."
+              "description": "Optional description for the entity. Will be surfaced in MCP tool discovery, generated API documentation, and GraphQL schema as comments."
             },
             "health": {
               "description": "Health check configuration for entity",
@@ -1258,10 +1293,6 @@
                         "type": "string"
                       },
                       "description": "DEPRECATED. Use the 'fields' array and set 'primary-key: true' on each key field instead. List of fields to be used as primary keys."
-                    },
-                    "description": {
-                      "type": "string",
-                      "description": "Human-readable description of the database object, used for MCP tool discovery and documentation."
                     }
                   },
                   "required": ["type", "object"]

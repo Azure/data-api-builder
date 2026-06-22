@@ -28,14 +28,23 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly McpToolRegistry _toolRegistry;
         private readonly IServiceProvider _serviceProvider;
         private readonly McpStdoutWriter _stdoutWriter;
+        private readonly TextReader? _inputReader;
         private readonly string _protocolVersion;
 
         private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
 
-        public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider)
+        // Omit null-valued properties (e.g. SDK ContentBlock.Annotations, ContentBlock._meta) so
+        // strict MCP clients never see explicit JSON nulls for optional metadata fields.
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        };
+
+        public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider, TextReader? inputReader = null)
         {
             _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            _inputReader = inputReader;
 
             // Resolve the shared stdout writer so JSON-RPC responses and
             // notifications/message frames are serialized through one lock.
@@ -54,17 +63,20 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task RunAsync(CancellationToken cancellationToken)
         {
-            // Use UTF-8 WITHOUT BOM for stdin. Stdout is owned by McpStdoutWriter,
-            // which serializes all writes from McpStdioServer and the MCP logging
-            // pipeline so JSON-RPC frames cannot interleave at the byte level.
-            UTF8Encoding utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
-
-            using Stream stdin = Console.OpenStandardInput();
-            using StreamReader reader = new(stdin, utf8NoBom);
+            // By default read via Console.In so the loop honors the configured
+            // Console.InputEncoding in stdio mode.
+            TextReader reader = _inputReader ?? Console.In;
 
             while (!cancellationToken.IsCancellationRequested)
             {
                 string? line = await reader.ReadLineAsync(cancellationToken);
+
+                // EOF (stdin pipe closed) is a normal shutdown signal for stdio mode.
+                if (line is null)
+                {
+                    return;
+                }
+
                 if (string.IsNullOrWhiteSpace(line))
                 {
                     continue;
@@ -115,7 +127,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         switch (method)
                         {
                             case "initialize":
-                                HandleInitialize(id);
+                                HandleInitialize(id, root);
                                 break;
 
                             case "notifications/initialized":
@@ -160,22 +172,27 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="id">
         /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
         /// </param>
+        /// <param name="root">The incoming initialize request payload.</param>
         /// <remarks>
-        /// This method constructs and writes the MCP "initialize" response to STDOUT. It uses the protocol version defined by <c>PROTOCOL_VERSION</c>
-        /// and includes supported capabilities and server information. No notifications are sent here; the server waits for the client to send
-        /// "notifications/initialized" before sending any notifications.
+        /// This method constructs and writes the MCP "initialize" response to STDOUT. It negotiates the response protocol version from the
+        /// server-supported version and client-requested version, and includes supported capabilities and server information. No notifications
+        /// are sent here; the server waits for the client to send "notifications/initialized" before sending any notifications.
         /// </remarks>
-        private void HandleInitialize(JsonElement? id)
+        private void HandleInitialize(JsonElement? id, JsonElement root)
         {
+            string? clientRequestedProtocolVersion = GetClientProtocolVersion(root);
+            string negotiatedProtocolVersion =
+                McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(_protocolVersion, clientRequestedProtocolVersion);
+
             // Get the description from runtime config if available
-            string? instructions = null;
+            string? description = null;
             RuntimeConfigProvider? runtimeConfigProvider = _serviceProvider.GetService<RuntimeConfigProvider>();
             if (runtimeConfigProvider != null)
             {
                 try
                 {
                     RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-                    instructions = runtimeConfig.Runtime?.Mcp?.Description;
+                    description = runtimeConfig.Runtime?.Mcp?.Description;
                 }
                 catch (Exception)
                 {
@@ -184,13 +201,33 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
             }
 
-            // Create the initialize response - only include instructions if non-empty
+            bool shouldUseServerInfoDescription = McpProtocolDefaults.ShouldUseServerInfoDescription(negotiatedProtocolVersion);
+
+            // Create the initialize response - only include description/instructions if non-empty
             object result;
-            if (!string.IsNullOrWhiteSpace(instructions))
+            if (!string.IsNullOrWhiteSpace(description) && shouldUseServerInfoDescription)
             {
                 result = new
                 {
-                    protocolVersion = _protocolVersion,
+                    protocolVersion = negotiatedProtocolVersion,
+                    capabilities = new
+                    {
+                        tools = new { listChanged = true },
+                        logging = new { }
+                    },
+                    serverInfo = new
+                    {
+                        name = McpProtocolDefaults.MCP_SERVER_NAME,
+                        version = McpProtocolDefaults.MCP_SERVER_VERSION,
+                        description = description
+                    }
+                };
+            }
+            else if (!string.IsNullOrWhiteSpace(description))
+            {
+                result = new
+                {
+                    protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
                         tools = new { listChanged = true },
@@ -201,14 +238,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         name = McpProtocolDefaults.MCP_SERVER_NAME,
                         version = McpProtocolDefaults.MCP_SERVER_VERSION
                     },
-                    instructions = instructions
+                    instructions = description
                 };
             }
             else
             {
                 result = new
                 {
-                    protocolVersion = _protocolVersion,
+                    protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
                         tools = new { listChanged = true },
@@ -225,6 +262,22 @@ namespace Azure.DataApiBuilder.Mcp.Core
             WriteResult(id, result);
         }
 
+        private static string? GetClientProtocolVersion(JsonElement root)
+        {
+            if (!root.TryGetProperty("params", out JsonElement paramsElement) || paramsElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            if (!paramsElement.TryGetProperty("protocolVersion", out JsonElement protocolVersionElement) ||
+                protocolVersionElement.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            return protocolVersionElement.GetString();
+        }
+
         /// <summary>
         /// Handles the "tools/list" JSON-RPC method by sending the list of available tools to the client.
         /// </summary>
@@ -236,11 +289,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
             List<object> toolsWire = new();
             int count = 0;
 
-            // Tools are expected to be registered during application startup only.
-            // If this ever changes and tools can be added/removed at runtime while
-            // requests are being handled, we may need to introduce locking here or
-            // have the registry return a thread-safe snapshot.
-            foreach (Tool tool in _toolRegistry.GetAllTools())
+            // Resolve runtime config to filter out disabled tools.
+            RuntimeConfigProvider runtimeConfigProvider = _serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+            IEnumerable<Tool> tools = _toolRegistry.GetEnabledTools(runtimeConfig);
+
+            foreach (Tool tool in tools)
             {
                 count++;
                 toolsWire.Add(new
@@ -468,16 +522,40 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         tool, toolName!, argsDoc, _serviceProvider, ct);
                 }
 
-                // Normalize to MCP content blocks (array). We try to pass through if a 'Content' property exists,
-                // otherwise we wrap into a single text block.
-                object[] content = CoerceToMcpContentBlocks(callResult);
-
-                WriteResult(id, new { content });
+                await HandleCallToolAsync(id ?? default, callResult);
             }
             finally
             {
                 argsDoc?.Dispose();
             }
+        }
+
+        /// <summary>
+        /// Writes the JSON-RPC result for a completed tool call, propagating <see cref="CallToolResult.IsError"/>
+        /// to the wire so MCP clients can distinguish tool errors from successes.
+        /// Extracted as a separate overload so it can be exercised directly in unit tests.
+        /// </summary>
+        /// <param name="id">The request identifier used to correlate the response.</param>
+        /// <param name="callResult">The result returned by the tool execution.</param>
+        private Task HandleCallToolAsync(JsonElement id, CallToolResult callResult)
+        {
+            // Normalize to MCP content blocks (array). We try to pass through if a 'Content' property exists,
+            // otherwise we wrap into a single text block.
+            object[] content = CoerceToMcpContentBlocks(callResult);
+
+            // Propagate isError so MCP clients can distinguish tool errors from successes.
+            // _jsonOptions has WhenWritingNull, so a null isError is omitted from the wire.
+            bool? isError = callResult.IsError;
+            if (isError == true)
+            {
+                WriteResult(id, new { content, isError });
+            }
+            else
+            {
+                WriteResult(id, new { content });
+            }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -591,7 +669,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 result = resultObject
             };
 
-            _stdoutWriter.WriteLine(JsonSerializer.Serialize(response));
+            _stdoutWriter.WriteLine(JsonSerializer.Serialize(response, _jsonOptions));
         }
 
         /// <summary>

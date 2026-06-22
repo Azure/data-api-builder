@@ -1215,7 +1215,11 @@ namespace Cli
                 options.RuntimeEmbeddingsHealthExpectedDimensions is not null ||
                 options.RuntimeEmbeddingsChunkingEnabled is not null ||
                 options.RuntimeEmbeddingsChunkingSizeChars is not null ||
-                options.RuntimeEmbeddingsChunkingOverlapChars is not null)
+                options.RuntimeEmbeddingsChunkingOverlapChars is not null ||
+                options.RuntimeEmbeddingsCacheEnabled is not null ||
+                options.RuntimeEmbeddingsCacheTtlHours is not null ||
+                options.RuntimeEmbeddingsCacheLevel2Enabled is not null ||
+                options.RuntimeEmbeddingsCacheLevel2ConnectionString is not null)
             {
                 bool status = TryUpdateConfiguredEmbeddingsValues(options, runtimeConfig?.Runtime?.Embeddings, out EmbeddingsOptions? updatedEmbeddingsOptions);
                 if (!status)
@@ -2091,6 +2095,75 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Chunking configuration.");
                 }
 
+                // Build EmbeddingsCacheOptions from CLI flags or existing config.
+                // The cache block (and its nested level-2 block) must be preserved across
+                // `dab configure` invocations that touch any other embeddings field, so we
+                // always rebuild it from existing values when no CLI flag is provided.
+                EmbeddingsCacheOptions? existingCache = existingEmbeddingsOptions?.Cache;
+                EmbeddingsCacheLevel2Options? existingCacheLevel2 = existingCache?.Level2;
+                EmbeddingsCacheOptions? cacheOptions = null;
+
+                bool anyCacheFlagProvided =
+                    options.RuntimeEmbeddingsCacheEnabled is not null ||
+                    options.RuntimeEmbeddingsCacheTtlHours is not null ||
+                    options.RuntimeEmbeddingsCacheLevel2Enabled is not null ||
+                    options.RuntimeEmbeddingsCacheLevel2ConnectionString is not null;
+
+                if (anyCacheFlagProvided || existingCache is not null)
+                {
+                    bool? cacheEnabled = options.RuntimeEmbeddingsCacheEnabled.HasValue
+                        ? options.RuntimeEmbeddingsCacheEnabled.Value == CliBool.True
+                        : existingCache?.Enabled;
+
+                    // Only carry forward the existing ttl-hours if the user originally set it,
+                    // otherwise leave it null so the serializer omits it and the runtime applies
+                    // the default. New CLI flag value always wins.
+                    int? cacheTtlHours = options.RuntimeEmbeddingsCacheTtlHours
+                        ?? (existingCache?.UserProvidedTtlHours == true ? existingCache.TtlHours : null);
+
+                    // Validate ttl-hours if provided
+                    if (cacheTtlHours is not null && cacheTtlHours <= 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings cache: ttl-hours must be a positive integer.");
+                        return false;
+                    }
+
+                    // Build level-2 sub-options
+                    EmbeddingsCacheLevel2Options? level2Options = null;
+                    bool anyLevel2FlagProvided =
+                        options.RuntimeEmbeddingsCacheLevel2Enabled is not null ||
+                        options.RuntimeEmbeddingsCacheLevel2ConnectionString is not null;
+
+                    if (anyLevel2FlagProvided || existingCacheLevel2 is not null)
+                    {
+                        bool? level2Enabled = options.RuntimeEmbeddingsCacheLevel2Enabled.HasValue
+                            ? options.RuntimeEmbeddingsCacheLevel2Enabled.Value == CliBool.True
+                            : existingCacheLevel2?.Enabled;
+
+                        string? level2ConnectionString =
+                            options.RuntimeEmbeddingsCacheLevel2ConnectionString
+                            ?? existingCacheLevel2?.ConnectionString;
+
+                        // Require a connection string when L2 is being turned on.
+                        if (level2Enabled == true && string.IsNullOrWhiteSpace(level2ConnectionString))
+                        {
+                            _logger.LogError("Failed to configure embeddings cache: level-2.connection-string is required when level-2 cache is enabled. Use --runtime.embeddings.cache.level-2.connection-string to specify it.");
+                            return false;
+                        }
+
+                        level2Options = new EmbeddingsCacheLevel2Options(
+                            Enabled: level2Enabled,
+                            ConnectionString: level2ConnectionString);
+                    }
+
+                    cacheOptions = new EmbeddingsCacheOptions(
+                        Enabled: cacheEnabled,
+                        TtlHours: cacheTtlHours,
+                        Level2: level2Options);
+
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Cache configuration.");
+                }
+
                 // Create the embeddings options
                 updatedEmbeddingsOptions = new EmbeddingsOptions(
                     Provider: (EmbeddingProviderType)provider,
@@ -2103,7 +2176,8 @@ namespace Cli
                     TimeoutMs: timeoutMs,
                     Endpoint: endpointOptions,
                     Health: healthOptions,
-                    Chunking: chunkingOptions);
+                    Chunking: chunkingOptions,
+                    Cache: cacheOptions);
 
                 _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings configuration.");
                 return true;

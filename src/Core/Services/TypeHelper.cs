@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(TimeOnly)] = DbType.Time,
             [typeof(TimeSpan)] = DbType.Time,
             [typeof(object)] = DbType.Object,
-            [typeof(SqlVector<Single>)] = DbType.Object
+            [typeof(SqlVector<Single>)] = DbType.Single
         };
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.UniqueIdentifier] = typeof(Guid),
             [SqlDbType.VarBinary] = typeof(byte[]),
             [SqlDbType.VarChar] = typeof(string),
-            [SqlDbTypeExtensions.Vector] = typeof(float[])
+            [SqlDbTypeExtensions.Vector] = typeof(float)
         };
 
         private static Dictionary<SqlDbType, DbType> _sqlDbDateTimeTypeToDbType = new()
@@ -164,7 +164,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 "Date" => EdmPrimitiveTypeKind.Date,
                 "TimeOnly" => EdmPrimitiveTypeKind.TimeOfDay,
                 "TimeSpan" => EdmPrimitiveTypeKind.TimeOfDay,
-                "SqlVector`1" => EdmPrimitiveTypeKind.Single,
                 _ => throw new ArgumentException($"Column type" +
                         $" {columnSystemType.Name} not yet supported.")
             };

@@ -219,7 +219,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         protected string Build(LabelledColumn column, Type columnType)
         {
-            if (columnType == typeof(SqlVector<Single>))
+            if (columnType == typeof(Single[]))
             {
                 return "JSON_QUERY(CAST(CAST(" + Build(column as Column) + " AS JSON) AS NVARCHAR(max))) AS " + QuoteIdentifier(column.Label);
             }

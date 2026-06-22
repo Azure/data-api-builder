@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlTypes;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
@@ -131,6 +132,13 @@ namespace Azure.DataApiBuilder.Core.Services
                         {
                             columnDefinition.DbType = dbType;
                         }
+                    }
+
+                    if (columnDefinition.SystemType == typeof(SqlVector<Single>))
+                    {
+                        columnDefinition.IsArrayType = true;
+                        columnDefinition.ElementSystemType = typeof(Single);
+                        columnDefinition.SystemType = columnDefinition.ElementSystemType.MakeArrayType();
                     }
                 }
             }

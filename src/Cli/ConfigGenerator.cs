@@ -16,7 +16,6 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
-using HotChocolate.Types;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Serilog;

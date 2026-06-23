@@ -331,7 +331,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<BasicHealthReportResponseWriter>();
             services.AddSingleton<ComprehensiveHealthReportResponseWriter>();
 
-            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            // ILogger explicit creation required for logger to use --log-level startup argument specified.
             services.AddSingleton<ILogger<BasicHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(BasicHealthReportResponseWriter).FullName, _configProvider, _hotReloadEventHandler);
@@ -339,7 +339,7 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<BasicHealthReportResponseWriter>();
             });
 
-            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            // ILogger explicit creation required for logger to use --log-level startup argument specified.
             services.AddSingleton<ILogger<ComprehensiveHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(ComprehensiveHealthReportResponseWriter).FullName, _configProvider, _hotReloadEventHandler);
@@ -347,7 +347,7 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<ComprehensiveHealthReportResponseWriter>();
             });
 
-            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            // ILogger explicit creation required for logger to use --log-level startup argument specified.
             services.AddSingleton<ILogger<HealthCheckHelper>>(implementationFactory: (serviceProvider) =>
             {
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(HealthCheckHelper).FullName, _configProvider, _hotReloadEventHandler);
@@ -355,7 +355,7 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<HealthCheckHelper>();
             });
 
-            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            // ILogger explicit creation required for logger to use --log-level startup argument specified.
             services.AddSingleton<ILogger<HttpUtilities>>(implementationFactory: (serviceProvider) =>
             {
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(HttpUtilities).FullName, _configProvider, _hotReloadEventHandler);
@@ -829,6 +829,11 @@ namespace Azure.DataApiBuilder.Service
             // arrive before runtime config in the late-configured path) still surfaces its audit
             // log line through the standard logging pipeline.
             DynamicLogLevelProvider? logLevelProviderForAudit = app.ApplicationServices.GetService<DynamicLogLevelProvider>();
+            if (logLevelProviderForAudit?.IsLogLevelLegacy is true)
+            {
+                _logBuffer.BufferLog(LogLevel.Warning, "--LogLevel is deprecated, please use --log-level instead.");
+            }
+
             ILoggerFactory? earlyLoggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
             if (logLevelProviderForAudit is not null && earlyLoggerFactory is not null)
             {

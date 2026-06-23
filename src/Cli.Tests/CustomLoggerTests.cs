@@ -6,7 +6,7 @@ namespace Cli.Tests;
 /// <summary>
 /// Tests for <see cref="CustomLoggerProvider"/> covering both the standard CLI
 /// path (writes to stdout/stderr with abbreviated labels) and the MCP stdio path
-/// (suppressed by default, opt-in via either CLI <c>--LogLevel</c> or the
+/// (suppressed by default, opt-in via either CLI <c>--log-level</c> or the
 /// runtime config's <c>log-level</c>, always routed to stderr to keep the
 /// JSON-RPC channel on stdout uncorrupted).
 /// </summary>
@@ -85,7 +85,7 @@ public class CustomLoggerTests
     }
 
     /// <summary>
-    /// MCP stdio mode with no overrides (neither CLI <c>--LogLevel</c> nor
+    /// MCP stdio mode with no overrides (neither CLI <c>--log-level</c> nor
     /// config <c>log-level</c>): all output must be suppressed so the JSON-RPC
     /// channel stays clean.
     /// </summary>
@@ -106,7 +106,7 @@ public class CustomLoggerTests
     }
 
     /// <summary>
-    /// MCP stdio mode with a CLI-supplied <c>--LogLevel</c>: logs must always
+    /// MCP stdio mode with a CLI-supplied <c>--log-level</c>: logs must always
     /// go to stderr (never stdout) and the level threshold from
     /// <see cref="Cli.Utils.CliLogLevel"/> must be honored.
     /// </summary>

@@ -239,18 +239,17 @@ namespace Azure.DataApiBuilder.Service
 
             // Check if --log-level or --LogLevel was explicitly specified via CLI (case-insensitive parsing)
             isLogLevelLegacy = false;
-            foreach (string argument in args)
+            int logLevelIndex = Array.FindIndex(args, a =>
+                string.Equals(a, "--log-level", StringComparison.OrdinalIgnoreCase));
+            int legacyLogLevelIndex = Array.FindIndex(args, a =>
+                string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));
+
+            if (legacyLogLevelIndex >= 0 && legacyLogLevelIndex + 1 < args.Length)
             {
-                if (string.Equals(argument, "--LogLevel", StringComparison.OrdinalIgnoreCase))
-                {
-                    isLogLevelLegacy = true;
-                    break;
-                }
+                logLevelIndex = legacyLogLevelIndex;
+                isLogLevelLegacy = true;
             }
 
-            int logLevelIndex = Array.FindIndex(args, a =>
-                string.Equals(a, "--log-level", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));
             bool hasCliLogLevel = logLevelIndex >= 0 && logLevelIndex + 1 < args.Length;
 
             if (hasCliLogLevel && Enum.TryParse(args[logLevelIndex + 1], ignoreCase: true, out LogLevel cliLogLevel))

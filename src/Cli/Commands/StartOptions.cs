@@ -34,7 +34,7 @@ namespace Cli.Commands
         }
 
         // SetName defines mutually exclusive sets, ie: can not have
-        // both verbose and LogLevel.
+        // both verbose and log-level.
         [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specifies logging level as informational.")]
         public bool Verbose { get; }
 

@@ -60,7 +60,7 @@ namespace Cli
                 {
                     Utils.IsMcpStdioMode = true;
                 }
-                else if (string.Equals(arg, "--LogLevel", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                else if (string.Equals(arg, "--log-level", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                 {
                     Utils.IsCliOverriding = true;
                     if (Enum.TryParse<LogLevel>(args[i + 1], ignoreCase: true, out LogLevel cliLogLevel))

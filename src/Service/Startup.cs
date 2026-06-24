@@ -7,6 +7,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -89,6 +91,19 @@ namespace Azure.DataApiBuilder.Service
         public static AzureLogAnalyticsOptions AzureLogAnalyticsOptions = new();
         public static FileSinkOptions FileSinkOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
+
+        /// <summary>
+        /// Environment variable name for the optional bootstrap token that gates access to the
+        /// POST /configuration endpoint in late-configured (hosted) mode. When set, the request
+        /// must include an X-DAB-CONFIG-AUTH header whose value matches this token.
+        /// </summary>
+        internal const string CONFIG_AUTH_TOKEN_ENV_VAR = "DAB_CONFIG_AUTH_TOKEN";
+
+        /// <summary>
+        /// Header name used to supply the configuration bootstrap token.
+        /// </summary>
+        internal const string CONFIG_AUTH_HEADER = "X-DAB-CONFIG-AUTH";
+
         private readonly HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
         private ILogger<Startup> _logger = logger;
@@ -316,7 +331,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<BasicHealthReportResponseWriter>();
             services.AddSingleton<ComprehensiveHealthReportResponseWriter>();
 
-            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            // ILogger explicit creation required for logger to use --log-level startup argument specified.
             services.AddSingleton<ILogger<BasicHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(BasicHealthReportResponseWriter).FullName, _configProvider, _hotReloadEventHandler);
@@ -324,7 +339,7 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<BasicHealthReportResponseWriter>();
             });
 
-            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            // ILogger explicit creation required for logger to use --log-level startup argument specified.
             services.AddSingleton<ILogger<ComprehensiveHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(ComprehensiveHealthReportResponseWriter).FullName, _configProvider, _hotReloadEventHandler);
@@ -332,7 +347,7 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<ComprehensiveHealthReportResponseWriter>();
             });
 
-            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            // ILogger explicit creation required for logger to use --log-level startup argument specified.
             services.AddSingleton<ILogger<HealthCheckHelper>>(implementationFactory: (serviceProvider) =>
             {
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(HealthCheckHelper).FullName, _configProvider, _hotReloadEventHandler);
@@ -340,7 +355,7 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<HealthCheckHelper>();
             });
 
-            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            // ILogger explicit creation required for logger to use --log-level startup argument specified.
             services.AddSingleton<ILogger<HttpUtilities>>(implementationFactory: (serviceProvider) =>
             {
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(HttpUtilities).FullName, _configProvider, _hotReloadEventHandler);
@@ -814,6 +829,11 @@ namespace Azure.DataApiBuilder.Service
             // arrive before runtime config in the late-configured path) still surfaces its audit
             // log line through the standard logging pipeline.
             DynamicLogLevelProvider? logLevelProviderForAudit = app.ApplicationServices.GetService<DynamicLogLevelProvider>();
+            if (logLevelProviderForAudit?.IsLogLevelLegacy is true)
+            {
+                _logBuffer.BufferLog(LogLevel.Warning, "--LogLevel is deprecated, please use --log-level instead.");
+            }
+
             ILoggerFactory? earlyLoggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
             if (logLevelProviderForAudit is not null && earlyLoggerFactory is not null)
             {
@@ -948,6 +968,10 @@ namespace Azure.DataApiBuilder.Service
                     if (isRuntimeReady)
                     {
                         context.Response.StatusCode = StatusCodes.Status409Conflict;
+                    }
+                    else if (!IsConfigurationRequestAuthorized(context))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
                     }
                     else
                     {
@@ -1477,6 +1501,57 @@ namespace Azure.DataApiBuilder.Service
         private static bool IsUIEnabled(RuntimeConfig? runtimeConfig, IWebHostEnvironment env)
         {
             return (runtimeConfig is not null && runtimeConfig.IsDevelopmentMode()) || env.IsDevelopment();
+        }
+
+        /// <summary>
+        /// Determines whether a POST /configuration request is authorized by enforcing:
+        /// 1. The request must originate from a loopback address (localhost / 127.0.0.1 / ::1
+        ///    or its IPv4-mapped IPv6 form such as ::ffff:127.0.0.1).
+        /// 2. If the DAB_CONFIG_AUTH_TOKEN environment variable is set, the request must include
+        ///    an X-DAB-CONFIG-AUTH header whose value matches the token (constant-time comparison).
+        /// This prevents unauthenticated network-remote callers from supplying the runtime
+        /// configuration during the late-configured bootstrap window.
+        /// </summary>
+        internal static bool IsConfigurationRequestAuthorized(HttpContext context)
+        {
+            // Defense 1: Restrict to loopback addresses only.
+            // A null RemoteIpAddress indicates an in-process call (e.g. TestServer)
+            // where there is no underlying TCP connection — by definition this cannot
+            // be a remote attacker, so we treat it as loopback-equivalent. A real
+            // network-borne request always carries a TCP source IP.
+            IPAddress? remoteIp = context.Connection.RemoteIpAddress;
+            if (remoteIp is not null)
+            {
+                // Kestrel often listens on dual-stack IPv6, so an IPv4 loopback caller can
+                // arrive as the IPv4-mapped IPv6 form (e.g. ::ffff:127.0.0.1). IPAddress.IsLoopback
+                // does not treat those as loopback, so normalize to IPv4 first.
+                IPAddress effectiveIp = remoteIp.IsIPv4MappedToIPv6 ? remoteIp.MapToIPv4() : remoteIp;
+                if (!IPAddress.IsLoopback(effectiveIp))
+                {
+                    return false;
+                }
+            }
+
+            // Defense 2: If a bootstrap token is configured, require it in the request header.
+            string? expectedToken = Environment.GetEnvironmentVariable(CONFIG_AUTH_TOKEN_ENV_VAR);
+            if (!string.IsNullOrEmpty(expectedToken))
+            {
+                string? providedToken = context.Request.Headers[CONFIG_AUTH_HEADER].FirstOrDefault();
+                if (string.IsNullOrEmpty(providedToken))
+                {
+                    return false;
+                }
+
+                // Use fixed-time comparison to prevent timing attacks.
+                if (!CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(expectedToken),
+                    Encoding.UTF8.GetBytes(providedToken)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>

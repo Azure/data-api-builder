@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [DataRow("{ \"vector_data\": null }", null, true, DisplayName = "Insert valid null vector")]
         [DataRow("{ \"vector_data\": [5e-1, 2.5e-1, 7.5e-1] }", new[] { 0.5f, 0.25f, 0.75f }, true, DisplayName = "Insert valid vector with scientific notation")]
         [DataRow("{ \"vector_data\": [\"0.5\", \"0.25\", \"0.75\"] }", new[] { 0.5f, 0.25f, 0.75f }, true, DisplayName = "Insert valid vector with numbers as string values")]
-        [DataRow("{ \"vector_data\": [1.25, 2.25, 3.25, 4.25] }", null, false, DisplayName = "Insert invalid vector with too many dimensions")]
+        [DataRow("{ \"vector_data\": [1.25, 2.25, 3.25, 4.25] }", null, false, DisplayName = "Insert invalid vector with more dimensions than allowed")]
         [DataRow("{ \"vector_data\": [\"not\", \"a\", \"number\"] }", null, false, DisplayName = "Insert invalid vector with invalid values")]
         public async Task InsertVectorType(string requestBody, float[] expectedValue, bool expectedSuccess)
         {
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             JsonElement updated = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
                 .RootElement.GetProperty("value")[0];
             Assert.AreEqual(4, updated.GetProperty("id").GetInt32());
-            
+
             JsonElement readBack = await GetRecordByIdAsync(4);
             AssertVectorEquals(readBack.GetProperty("vector_data"), expected);
         }
@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             JsonElement updated = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
                 .RootElement.GetProperty("value")[0];
             Assert.AreEqual(5, updated.GetProperty("id").GetInt32());
-            
+
             JsonElement readBack = await GetRecordByIdAsync(5);
             AssertVectorEquals(readBack.GetProperty("vector_data"), expected);
         }

@@ -19,7 +19,6 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
-using Microsoft.Data.SqlTypes;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
@@ -1489,7 +1488,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // Detect array types: concrete array types (e.g., int[]) have IsArray=true,
                 // while Npgsql reports abstract System.Array for PostgreSQL array columns.
                 // byte[] is excluded since it maps to the bytea/ByteArray scalar type.
-                bool isArrayType = (systemType.IsArray && systemType != typeof(byte[])) || systemType == typeof(Array) || systemType == typeof(SqlVector<Single>);
+                bool isArrayType = (systemType.IsArray && systemType != typeof(byte[])) || systemType == typeof(Array);
 
                 ColumnDefinition column = new()
                 {
@@ -1501,7 +1500,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // An auto-increment column is also considered as a read-only column. For other types of read-only columns,
                     // the flag is populated later via PopulateColumnDefinitionsWithReadOnlyFlag() method.
                     // Array columns are also treated as read-only until write support for array types is implemented.
-                    IsReadOnly = (bool)columnInfoFromAdapter["IsAutoIncrement"] || (isArrayType && systemType != typeof(SqlVector<Single>))
+                    IsReadOnly = (bool)columnInfoFromAdapter["IsAutoIncrement"] || isArrayType
                 };
 
                 // Tests may try to add the same column simultaneously

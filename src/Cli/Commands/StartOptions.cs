@@ -21,11 +21,12 @@ namespace Cli.Commands
 
         public LogBuffer CliBuffer { get; }
 
-        public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, bool mcpStdio, string? mcpRole, string config)
+        public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, bool mcpStdio, string? mcpRole, LogLevel? logLevelLegacy, string config)
             : base(config)
         {
             // When verbose is true we set LogLevel to information.
             LogLevel = verbose is true ? Microsoft.Extensions.Logging.LogLevel.Information : logLevel;
+            LogLevelLegacy = logLevelLegacy;
             IsHttpsRedirectionDisabled = isHttpsRedirectionDisabled;
             McpStdio = mcpStdio;
             McpRole = mcpRole;
@@ -33,11 +34,11 @@ namespace Cli.Commands
         }
 
         // SetName defines mutually exclusive sets, ie: can not have
-        // both verbose and LogLevel.
+        // both verbose and log-level.
         [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specifies logging level as informational.")]
         public bool Verbose { get; }
 
-        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = LOGLEVEL_HELPTEXT)]
+        [Option("log-level", SetName = "loglevel", Required = false, HelpText = LOGLEVEL_HELPTEXT)]
         public LogLevel? LogLevel { get; }
 
         [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
@@ -48,6 +49,9 @@ namespace Cli.Commands
 
         [Value(0, MetaName = "role", Required = false, HelpText = "Optional MCP permissions role, e.g. role:anonymous. If omitted, defaults to anonymous.")]
         public string? McpRole { get; }
+
+        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = LOGLEVEL_HELPTEXT, Hidden = true)]
+        public LogLevel? LogLevelLegacy { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

@@ -25,6 +25,8 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
         public bool IsAgentOverriding { get; private set; }
 
+        public bool IsLogLevelLegacy { get; private set; }
+
         /// <summary>
         /// Optional logger used to emit an Information line when the agent successfully overrides
         /// the log level. Wired by host startup once the logging pipeline is available; safe to
@@ -41,13 +43,14 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// <param name="logLevel">The initial log level to set.</param>
         /// <param name="isCliOverriding">Indicates whether the CLI is overriding the log level.</param>
         /// <param name="isConfigOverriding">Indicates whether the runtime config is overriding the log level.</param>
-        public void SetInitialLogLevel(LogLevel logLevel = LogLevel.Error, bool isCliOverriding = false, bool isConfigOverriding = false)
+        public void SetInitialLogLevel(LogLevel logLevel = LogLevel.Error, bool isCliOverriding = false, bool isConfigOverriding = false, bool isLogLevelLegacy = false)
         {
             lock (_stateLock)
             {
                 CurrentLogLevel = logLevel;
                 IsCliOverriding = isCliOverriding;
                 IsConfigOverriding = isConfigOverriding;
+                IsLogLevelLegacy = isLogLevelLegacy;
             }
         }
 

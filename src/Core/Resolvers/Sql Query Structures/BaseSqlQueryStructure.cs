@@ -473,7 +473,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 case "Single[]":
                     typeOfArray = typeof(Single);
                     break;
-                    
+
                 default:
                     throw new NotSupportedException($"{systemType.Name} is not supported");
             }

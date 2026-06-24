@@ -458,23 +458,35 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             };
         }
 
+        /// <summary>
+        /// Takes the array of the parameter we are going to parse and converts each element to the specified system type.
+        /// </summary>
+        /// <param name="param"></param>
+        /// <param name="systemType"></param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException"></exception>
         private static object ParseArrayIntoSystemType(string param, Type systemType)
         {
+            Type typeOfArray;
             switch (systemType.Name)
             {
                 case "Single[]":
-                    List<object> list = new();
-                    object[] values = JsonSerializer.Deserialize<object[]>(param) ?? Array.Empty<object>();
-                    foreach (object value in values)
-                    {
-                        string stringValue = value.ToString() ?? string.Empty;
-                        list.Add(ParseParamAsSystemType(stringValue, typeof(Single)));
-                    }
-
-                    return list.ToArray();
+                    typeOfArray = typeof(Single);
+                    break;
+                    
                 default:
                     throw new NotSupportedException($"{systemType.Name} is not supported");
             }
+
+            List<object> list = new();
+            object[] values = JsonSerializer.Deserialize<object[]>(param) ?? Array.Empty<object>();
+            foreach (object value in values)
+            {
+                string stringValue = value.ToString() ?? string.Empty;
+                list.Add(ParseParamAsSystemType(stringValue, typeOfArray));
+            }
+
+            return list.ToArray();
         }
 
         /// <summary>

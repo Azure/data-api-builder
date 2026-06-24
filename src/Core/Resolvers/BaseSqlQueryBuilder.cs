@@ -212,7 +212,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         protected string Build(LabelledColumn column)
         {
-            //if (GetColumnSystemType())
             return Build(column as Column) + " AS " + QuoteIdentifier(column.Label);
         }
 

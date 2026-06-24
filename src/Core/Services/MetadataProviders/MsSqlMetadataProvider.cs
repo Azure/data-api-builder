@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         columnDefinition.ElementSystemType = typeof(Single);
                         columnDefinition.SystemType = columnDefinition.ElementSystemType.MakeArrayType();
                     }
-                     
+
                     if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
                     {
                         // The DbType enum in .NET does not distinguish between VarChar and NVarChar. Both are mapped to DbType.String.

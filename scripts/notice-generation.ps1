@@ -15,7 +15,7 @@ Invoke-WebRequest $chiliCreamLicenseMetadataURL -UseBasicParsing |
  Out-File $chiliCreamLicenseSavePath
 
 # Define the path to the license file in your repository and Read the content of the license file
-$sqlClientSNILicenseFilePath = "$BuildSourcesDir/external_licenses/Microsoft.Data.SqlClient.SNI.5.2.0.License.txt"
+$sqlClientSNILicenseFilePath = "$BuildSourcesDir/external_licenses/Microsoft.Data.SqlClient.SNI.6.0.2.License.txt"
 $sqlClientSNILicense = Get-Content -Path $sqlClientSNILicenseFilePath -Raw
 
 # Replace erroneous copyright, using [System.IO.File] for better performance than Get-Content and Set-Content

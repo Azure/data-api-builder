@@ -8,7 +8,6 @@ using System.Net;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
-using Microsoft.Data;
 using Microsoft.Data.SqlTypes;
 using Microsoft.OData.Edm;
 

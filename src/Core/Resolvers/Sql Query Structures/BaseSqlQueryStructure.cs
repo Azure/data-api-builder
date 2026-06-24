@@ -453,9 +453,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "Guid" => Guid.Parse(param),
                 "TimeOnly" => TimeOnly.Parse(param),
                 "TimeSpan" => TimeOnly.Parse(param),
-                "Single[]" => JsonSerializer.Deserialize<float[]>(param) ?? Array.Empty<float>(),
+                "Single[]" => ParseArrayIntoSystemType(param, systemType),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };
+        }
+
+        private static object ParseArrayIntoSystemType(string param, Type systemType)
+        {
+            switch (systemType.Name)
+            {
+                case "Single[]":
+                    List<object> list = new();
+                    object[] values = JsonSerializer.Deserialize<object[]>(param) ?? Array.Empty<object>();
+                    foreach (object value in values)
+                    {
+                        string stringValue = value.ToString() ?? string.Empty;
+                        list.Add(ParseParamAsSystemType(stringValue, typeof(Single)));
+                    }
+
+                    return list.ToArray();
+                default:
+                    throw new NotSupportedException($"{systemType.Name} is not supported");
+            }
         }
 
         /// <summary>

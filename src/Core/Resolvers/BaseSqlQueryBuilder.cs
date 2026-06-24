@@ -8,7 +8,6 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
-using Microsoft.Data.SqlTypes;
 using static Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -214,16 +213,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         protected string Build(LabelledColumn column)
         {
             //if (GetColumnSystemType())
-            return Build(column as Column) + " AS " + QuoteIdentifier(column.Label);
-        }
-
-        protected string Build(LabelledColumn column, Type columnType)
-        {
-            if (columnType == typeof(Single[]))
-            {
-                return "JSON_QUERY(CAST(CAST(" + Build(column as Column) + " AS JSON) AS NVARCHAR(max))) AS " + QuoteIdentifier(column.Label);
-            }
-
             return Build(column as Column) + " AS " + QuoteIdentifier(column.Label);
         }
 

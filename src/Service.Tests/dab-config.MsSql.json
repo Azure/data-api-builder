@@ -2,7 +2,7 @@
   "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=30;",
+    "connection-string": "Server=localhost\\MSSQLSERVER01;Database=ElPapuDatabase;Trusted_Connection=True;Integrated Security=true;MultipleActiveResultSets=False;Connection Timeout=5;Encrypt=False;",
     "options": {
       "set-session-context": true
     }
@@ -1760,6 +1760,58 @@
         "type": {
           "singular": "SupportedType",
           "plural": "SupportedTypes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        }
+      ]
+    },
+    "VectorType": {
+      "source": {
+        "object": "vector_type_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": false,
+        "type": {
+          "singular": "VectorType",
+          "plural": "VectorTypes"
         }
       },
       "rest": {

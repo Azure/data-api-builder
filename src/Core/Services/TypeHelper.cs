@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(object)] = JsonDataType.Object,
             [typeof(DateTime)] = JsonDataType.String,
             [typeof(DateTimeOffset)] = JsonDataType.String,
-            [typeof(SqlVector<Single>)] = JsonDataType.Number
+            [typeof(Single[])] = JsonDataType.Array
         };
 
         /// <summary>

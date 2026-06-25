@@ -1484,12 +1484,18 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (metadataProvider.TryGetBackingColumn(entityName, field, out string? backingColumnValue) && !string.IsNullOrEmpty(backingColumnValue))
                 {
                     string typeMetadata = string.Empty;
+                    string subTypeMetadata = string.Empty;
                     string formatMetadata = string.Empty;
                     string? fieldDescription = null;
 
                     if (dbObject.SourceDefinition.Columns.TryGetValue(backingColumnValue, out ColumnDefinition? columnDef))
                     {
                         typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(columnDef.SystemType).ToString().ToLower();
+
+                        if (string.Equals(typeMetadata, JsonDataType.Array.ToString().ToLower(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            subTypeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(columnDef.ElementSystemType!).ToString().ToLower();
+                        }
                     }
 
                     if (entityConfig?.Fields != null)
@@ -1502,7 +1508,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         Type = typeMetadata,
                         Format = formatMetadata,
-                        Description = fieldDescription
+                        Description = fieldDescription,
+                        Items = !string.IsNullOrWhiteSpace(subTypeMetadata) ? new OpenApiSchema() { Type = subTypeMetadata } : null
                     });
                 }
             }

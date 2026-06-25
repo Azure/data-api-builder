@@ -465,6 +465,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="systemType"></param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="FormatException"></exception>
         private static object ParseArrayIntoSystemType(string param, Type systemType)
         {
             Type typeOfArray;
@@ -476,6 +477,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 default:
                     throw new NotSupportedException($"{systemType.Name} is not supported");
+            }
+
+            using JsonDocument arg = JsonDocument.Parse(param);
+            if (arg.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                throw new FormatException($"Expected an array for {systemType.Name} but got {arg.RootElement.ValueKind}");
             }
 
             List<object> list = new();

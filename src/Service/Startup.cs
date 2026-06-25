@@ -1126,7 +1126,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
 
-                if (authOptions is null || authOptions.Jwt is null)
+                if (authOptions.IsJwtConfiguredIdentityProvider() && authOptions.Jwt is null)
                 {
                     return;
                 }
@@ -1141,11 +1141,11 @@ namespace Azure.DataApiBuilder.Service
                         options.Audience = authOptions.Jwt!.Audience;
                         options.Authority = authOptions.Jwt!.Issuer;
 
-                        string? jwksUri = authOptions.Jwt.ResolvedJwksUrl;
-                        if (string.IsNullOrWhiteSpace(jwksUri))
+                        string? jwksUrl = authOptions.Jwt.ResolvedJwksUrl;
+                        if (string.IsNullOrWhiteSpace(jwksUrl))
                         {
                             throw new DataApiBuilderException(
-                                message: "JWT configuration requires either issuer or jwksUri.",
+                                message: "JWT configuration requires either issuer or jwksUrl.",
                                 statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
@@ -1153,7 +1153,7 @@ namespace Azure.DataApiBuilder.Service
                         JsonWebKeySet jwks;
                         using (HttpClient client = JwtHttpClientFactory.Create())
                         {
-                            string jwksJson = client.GetStringAsync(jwksUri).GetAwaiter().GetResult();
+                            string jwksJson = client.GetStringAsync(jwksUrl).GetAwaiter().GetResult();
                             jwks = new JsonWebKeySet(jwksJson);
                         }
 

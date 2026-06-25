@@ -103,8 +103,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 ConnectionStringBuilders.TryAdd(dataSourceName, builder);
 
-                // Transitional reuse of MsSqlOptions because it currently only carries SetSessionContext.
-                MsSqlOptions? sessionOptions = dataSource.GetTypedOptions<MsSqlOptions>();
+                PostgreSqlOptions? sessionOptions = dataSource.GetTypedOptions<PostgreSqlOptions>();
                 _dataSourceToSessionContextUsage[dataSourceName] =
                     sessionOptions is not null && sessionOptions.SetSessionContext;
 
@@ -260,9 +259,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// This command's resultsets are consumed and ignored before the actual query command is created.
         /// </summary>
         private void SetSessionContext(
-    NpgsqlConnection conn,
-    HttpContext? httpContext,
-    string dataSourceName)
+            NpgsqlConnection conn,
+            HttpContext? httpContext,
+            string dataSourceName)
         {
             if (string.IsNullOrEmpty(dataSourceName))
             {

@@ -3,7 +3,6 @@
 
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
-using Microsoft.Extensions.Options;
 using Serilog;
 
 namespace Cli.Tests;

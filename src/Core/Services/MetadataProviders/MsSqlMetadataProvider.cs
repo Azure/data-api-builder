@@ -368,18 +368,6 @@ namespace Azure.DataApiBuilder.Core.Services
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
 
-                    if (!_isValidateOnly)
-                    {
-                        if (runtimeConfig.IsRestEnabled)
-                        {
-                            _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, entityName);
-                        }
-                        else
-                        {
-                            _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
-                        }
-                    }
-
                     addedEntities++;
                 }
 
@@ -392,6 +380,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 runtimeConfig.AutoentityResolutionCounts[autoentityName] = addedEntities;
             }
 
+            LogRestPathsForEntities(runtimeConfig, entities);
             _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);
         }
 

@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 namespace Cli.Tests;
@@ -400,6 +401,37 @@ public class ValidateConfigTests
 
         // Validation should fail due to the empty connection string.
         Assert.IsFalse(isValid);
+    }
+
+    /// <summary>
+    /// Tests that validation fails when Azure Log Analytics options are configured without the Auth options.
+    /// </summary>
+    [TestMethod]
+    public async Task TestValidateSuppressedLogsDoNotAppear()
+    {
+        // Arrange
+        StringWriter writer = new();
+        Console.SetOut(writer);
+
+        string config = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
+
+        ((MockFileSystem)_fileSystem!).AddFile(
+            path: TEST_RUNTIME_CONFIG_FILE,
+            mockFile: config);
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+
+        // Act
+        Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
+        ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
+
+        // Assert
+        string loggerOutput = writer.ToString();
+        Assert.IsTrue(
+            condition: !loggerOutput.Contains("REST path:"),
+            message: "RuntimeConfigValidator should not contain any messages indicating REST path for individual entities");
+        Assert.IsTrue(
+            condition: !loggerOutput.Contains("REST calls are disabled for the entity:"),
+            message: "RuntimeConfigValidator should not contain any messages related to REST calls for individual entities");
     }
 
     /// <summary>

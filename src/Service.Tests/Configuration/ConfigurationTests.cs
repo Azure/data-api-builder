@@ -1856,7 +1856,6 @@ type Moon {
         /// <summary>
         /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
         /// It asserts that the validation is successful and there are no validation failures.
-        /// It also verifies that the expected log message is logged.
         /// </summary>
         [TestMethod("Validates the config file schema."), TestCategory(TestCategory.MSSQL)]
         public void TestConfigSchemaIsValid()
@@ -1879,7 +1878,6 @@ type Moon {
         /// <summary>
         /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
         /// It asserts that the validation is successful and there are no validation failures when no optional fields are used.
-        /// It also verifies that the expected log message is logged.
         /// </summary>
         [DataTestMethod]
         [DataRow(CONFIG_FILE_WITH_NO_OPTIONAL_FIELD, DisplayName = "Validates schema of the config file with no optional fields.")]

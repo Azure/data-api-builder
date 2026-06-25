@@ -1019,6 +1019,73 @@ type Moon {
         }
 
         /// <summary>
+        /// Validates that DWSQL data sources also receive the telemetry-bearing Application Name.
+        /// DWSQL uses the SqlClient connection-string builder (like MSSQL) and supports Application Name,
+        /// so the dab_oss telemetry block (with Source encoded as 'D') is embedded.
+        /// </summary>
+        [TestMethod]
+        public void DwSqlConnStringSupplementedWithAppNameProperty()
+        {
+            // Ensure telemetry is enabled (not opted out) and no host label is set.
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.DWSQL, "Data Source=<>;");
+
+            bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                json: runtimeConfig.ToJson(),
+                config: out RuntimeConfig updatedRuntimeConfig,
+                replacementSettings: new(doReplaceEnvVar: true));
+
+            Assert.IsTrue(configParsed, "Runtime config unexpectedly failed parsing.");
+
+            string connectionString = updatedRuntimeConfig.DataSource.ConnectionString;
+            Assert.IsTrue(
+                connectionString.StartsWith("Data Source=<>;Application Name=" + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal),
+                $"Expected DWSQL Application Name to carry the telemetry block but was '{connectionString}'.");
+            Assert.IsTrue(
+                connectionString.EndsWith("+", StringComparison.Ordinal),
+                $"Expected DWSQL telemetry payload to terminate with '+' but was '{connectionString}'.");
+
+            // The encoded Source for a DWSQL pool must decode as 'D'.
+            IReadOnlyList<string> decoded = ApplicationNameTelemetry.Decode(connectionString);
+            Assert.IsTrue(
+                decoded.Any(line => line.Contains("Source: D (DWSQL)")),
+                string.Join(Environment.NewLine, decoded));
+        }
+
+        /// <summary>
+        /// Validates that when telemetry is opted out via DAB_TELEMETRY_APPNAME_OPT_OUT=1, the connection
+        /// string Application Name carries only the version marker (dab_oss_&lt;version&gt;) with no payload.
+        /// </summary>
+        [TestMethod]
+        public void ConnStringAppNameOmitsPayloadWhenOptedOut()
+        {
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, "1");
+
+            try
+            {
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, "Data Source=<>;");
+
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
+
+                Assert.IsTrue(configParsed, "Runtime config unexpectedly failed parsing.");
+                Assert.AreEqual(
+                    "Data Source=<>;Application Name=" + ProductInfo.DAB_USER_AGENT,
+                    updatedRuntimeConfig.DataSource.ConnectionString,
+                    "Opted-out Application Name should be version-only with no telemetry payload.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+            }
+        }
+
+        /// <summary>
         /// Validates that DAB doesn't append nor modify
         /// - the 'Application Name' or 'App' properties in MySQL database connection strings.
         /// - the 'Application Name' property in

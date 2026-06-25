@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Npgsql;
 using static Azure.DataApiBuilder.Config.DabConfigEvents;
@@ -245,7 +246,7 @@ public abstract class RuntimeConfigLoader
             }
 
             // Embed the DAB Application Name (with anonymous usage telemetry) into the connection
-            // string of every MSSQL / PostgreSQL data source.
+            // string of every MSSQL / DWSQL / PostgreSQL data source.
             //
             // We iterate the fully-merged data-source map and pass the merged `config`, so that in a
             // multi-database setup each data source reflects the GLOBAL runtime settings and the
@@ -268,8 +269,8 @@ public abstract class RuntimeConfigLoader
 
                     string updatedConnectionString = dataSource.DatabaseType switch
                     {
-                        DatabaseType.MSSQL => GetConnectionStringWithApplicationName(baseConnectionString, config),
-                        DatabaseType.PostgreSQL => GetPgSqlConnectionStringWithApplicationName(baseConnectionString, config),
+                        DatabaseType.MSSQL or DatabaseType.DWSQL => GetConnectionStringWithApplicationName(baseConnectionString, config, dataSource),
+                        DatabaseType.PostgreSQL => GetPgSqlConnectionStringWithApplicationName(baseConnectionString, config, dataSource),
                         _ => baseConnectionString,
                     };
 
@@ -370,8 +371,10 @@ public abstract class RuntimeConfigLoader
     /// <param name="connectionString">Connection string for connecting to database.</param>
     /// <param name="config">When provided, anonymous DAB telemetry is embedded into the `Application Name`
     /// (honoring the `DAB_TELEMETRY_APPNAME_OPT_OUT` opt-out). When null, only the plain user agent is used.</param>
+    /// <param name="liveDataSource">The data source whose connection is being opened, used to encode per-pool
+    /// fields (Source, OBO). Ignored when <paramref name="config"/> is null.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
-    internal static string GetConnectionStringWithApplicationName(string connectionString, RuntimeConfig? config = null)
+    internal static string GetConnectionStringWithApplicationName(string connectionString, RuntimeConfig? config = null, DataSource? liveDataSource = null)
     {
         // If the connection string is null, empty, or whitespace, return it as is.
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -383,7 +386,14 @@ public abstract class RuntimeConfigLoader
         // Application Name (honoring the opt-out switch). Otherwise fall back to the plain user agent.
         string applicationName = config is null
             ? ProductInfo.GetDataApiBuilderUserAgent()
-            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, DatabaseType.MSSQL);
+            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, liveDataSource);
+
+        if (config is not null)
+        {
+            // Emit the telemetry-bearing Application Name (never the full connection string, which can
+            // contain secrets) at Debug, once per pool, as required by the telemetry design.
+            _logBuffer.BufferLog(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
+        }
 
         // Create a StringBuilder from the connection string.
         SqlConnectionStringBuilder connectionStringBuilder;
@@ -427,8 +437,10 @@ public abstract class RuntimeConfigLoader
     /// </summary>
     /// <param name="connectionString">Connection string for connecting to database.</param>
     /// <param name="config">When provided, anonymous DAB usage telemetry is embedded in the Application Name (honoring the opt-out switch); otherwise the plain user agent is used.</param>
+    /// <param name="liveDataSource">The data source whose connection is being opened, used to encode per-pool
+    /// fields (Source, OBO). Ignored when <paramref name="config"/> is null.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
-    internal static string GetPgSqlConnectionStringWithApplicationName(string connectionString, RuntimeConfig? config = null)
+    internal static string GetPgSqlConnectionStringWithApplicationName(string connectionString, RuntimeConfig? config = null, DataSource? liveDataSource = null)
     {
         // If the connection string is null, empty, or whitespace, return it as is.
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -440,7 +452,14 @@ public abstract class RuntimeConfigLoader
         // Application Name (honoring the opt-out switch). Otherwise fall back to the plain user agent.
         string applicationName = config is null
             ? ProductInfo.GetDataApiBuilderUserAgent()
-            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, DatabaseType.PostgreSQL);
+            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, liveDataSource);
+
+        if (config is not null)
+        {
+            // Emit the telemetry-bearing Application Name (never the full connection string, which can
+            // contain secrets) at Debug, once per pool, as required by the telemetry design.
+            _logBuffer.BufferLog(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
+        }
 
         // Create a StringBuilder from the connection string.
         NpgsqlConnectionStringBuilder connectionStringBuilder;

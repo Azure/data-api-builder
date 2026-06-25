@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void EncodeTelemetryString_HasExpectedShape()
         {
-            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), DatabaseType.MSSQL);
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
 
             Assert.IsTrue(telemetry.StartsWith(ProductInfo.DAB_USER_AGENT + "+", StringComparison.Ordinal), telemetry);
             Assert.IsTrue(telemetry.EndsWith("+", StringComparison.Ordinal), telemetry);
@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(DatabaseType.CosmosDB_NoSQL, 'C')]
         public void EncodeTelemetryString_EncodesSource(DatabaseType dbType, char expectedSource)
         {
-            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), dbType);
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(dbType));
             (string context, _, _) = Sections(telemetry);
 
             // Context = [Protocol][Object][Source][Role]; only Source is known at pool time.
@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void EncodeTelemetryString_NoLiveSource_EmitsAllPlaceholders()
         {
-            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), liveSource: null);
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), liveDataSource: null);
             (string context, _, _) = Sections(telemetry);
             Assert.AreEqual("XXXX", context);
         }
@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void EncodeTelemetryString_RuntimeFlags_MissingSectionsEncodeAsM()
         {
             // No Runtime section at all -> all runtime "enabled"-style flags are 'M'.
-            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: null), DatabaseType.MSSQL);
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: null), Source(DatabaseType.MSSQL));
             (_, string runtime, _) = Sections(telemetry);
 
             Assert.AreEqual('M', runtime[0], "rest.enabled missing");
@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Enabled: true,
                     Endpoint: new EmbeddingsEndpointOptions { Enabled = false }));
 
-            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: runtime), DatabaseType.MSSQL);
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: runtime), Source(DatabaseType.MSSQL));
             (_, string r, _) = Sections(telemetry);
 
             Assert.AreEqual('0', r[0], "rest.enabled=false");
@@ -140,8 +140,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeOptions dev = new(Rest: null, GraphQL: null, Mcp: null, Host: new HostOptions(null, null, HostMode.Development));
             RuntimeOptions prod = new(Rest: null, GraphQL: null, Mcp: null, Host: new HostOptions(null, null, HostMode.Production));
 
-            Assert.AreEqual('0', Sections(ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: dev), DatabaseType.MSSQL)).runtime[3]);
-            Assert.AreEqual('1', Sections(ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: prod), DatabaseType.MSSQL)).runtime[3]);
+            Assert.AreEqual('0', Sections(ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: dev), Source(DatabaseType.MSSQL))).runtime[3]);
+            Assert.AreEqual('1', Sections(ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: prod), Source(DatabaseType.MSSQL))).runtime[3]);
         }
 
         [TestMethod]
@@ -153,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             };
             RuntimeConfig config = new(Schema: "t", DataSource: oboSource, Entities: new(new Dictionary<string, Entity>()));
 
-            (_, string runtime, _) = Sections(ApplicationNameTelemetry.EncodeTelemetryString(config, DatabaseType.MSSQL));
+            (_, string runtime, _) = Sections(ApplicationNameTelemetry.EncodeTelemetryString(config, oboSource));
             Assert.AreEqual('1', runtime[9], "data-source.obo=true");
         }
 
@@ -171,7 +171,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Rest: null, GraphQL: null, Mcp: null,
                 Host: new HostOptions(Cors: null, Authentication: new AuthenticationOptions(provider)));
 
-            (_, string r, _) = Sections(ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: runtime), DatabaseType.MSSQL));
+            (_, string r, _) = Sections(ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: runtime), Source(DatabaseType.MSSQL)));
             Assert.AreEqual(expected, r[17], $"auth.provider letter for '{provider}'");
         }
 
@@ -179,14 +179,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void EncodeTelemetryString_AuthProvider_MissingWhenNoAuthentication()
         {
             RuntimeOptions runtime = new(Rest: null, GraphQL: null, Mcp: null, Host: new HostOptions(Cors: null, Authentication: null));
-            (_, string r, _) = Sections(ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: runtime), DatabaseType.MSSQL));
+            (_, string r, _) = Sections(ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: runtime), Source(DatabaseType.MSSQL)));
             Assert.AreEqual('M', r[17], "auth.provider is M when no authentication is configured");
         }
 
         [TestMethod]
         public void EncodeTelemetryString_EntityFlags_MissingWhenNoEntities()
         {
-            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), DatabaseType.MSSQL);
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
             (_, _, string entity) = Sections(telemetry);
 
             // Tri-state flags are 'M' (no entities); the two unmodeled concepts are '?'.
@@ -224,7 +224,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 },
             };
 
-            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(entities: entities), DatabaseType.MSSQL);
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(entities: entities), Source(DatabaseType.MSSQL));
             (_, _, string e) = Sections(telemetry);
 
             Assert.AreEqual('1', e[0], "any table");
@@ -244,7 +244,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void BuildApplicationNameSegment_OptedIn_ContainsPayload()
         {
-            string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), DatabaseType.MSSQL);
+            string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), Source(DatabaseType.MSSQL));
             Assert.IsTrue(segment.StartsWith(ProductInfo.DAB_USER_AGENT + "+", StringComparison.Ordinal), segment);
             Assert.IsTrue(segment.EndsWith("+", StringComparison.Ordinal), segment);
         }
@@ -253,7 +253,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void BuildApplicationNameSegment_OptedOut_OmitsPayload()
         {
             Environment.SetEnvironmentVariable(OPT_OUT_VAR, "1");
-            string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), DatabaseType.MSSQL);
+            string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), Source(DatabaseType.MSSQL));
             Assert.AreEqual(ProductInfo.DAB_USER_AGENT, segment);
         }
 
@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void BuildApplicationNameSegment_InvalidOptOutValue_KeepsTelemetry(string optOutValue)
         {
             Environment.SetEnvironmentVariable(OPT_OUT_VAR, optOutValue);
-            string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), DatabaseType.MSSQL);
+            string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), Source(DatabaseType.MSSQL));
             Assert.IsTrue(segment.EndsWith("+", StringComparison.Ordinal), $"telemetry should remain on for '{optOutValue}': {segment}");
         }
 
@@ -273,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void BuildApplicationNameSegment_AppNameEnv_RidesAsPrefixWithoutSuppressingTelemetry()
         {
             Environment.SetEnvironmentVariable(APP_NAME_VAR, "dab_hosted");
-            string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), DatabaseType.MSSQL);
+            string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), Source(DatabaseType.MSSQL));
 
             Assert.IsTrue(segment.StartsWith("dab_hosted," + ProductInfo.DAB_USER_AGENT + "+", StringComparison.Ordinal), segment);
             Assert.IsTrue(segment.EndsWith("+", StringComparison.Ordinal), segment);
@@ -284,7 +284,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             Environment.SetEnvironmentVariable(APP_NAME_VAR, "dab_hosted");
             Environment.SetEnvironmentVariable(OPT_OUT_VAR, "1");
-            string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), DatabaseType.MSSQL);
+            string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), Source(DatabaseType.MSSQL));
             Assert.AreEqual("dab_hosted," + ProductInfo.DAB_USER_AGENT, segment);
         }
 
@@ -293,7 +293,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void Decode_RoundTrips_ProducesReadableLines()
         {
-            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), DatabaseType.MSSQL);
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
             IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode(telemetry);
 
             Assert.IsTrue(lines.Any(l => l.StartsWith("Version: " + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal)), "version line");
@@ -305,7 +305,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void Decode_IgnoresUserPrefixAndOboHash()
         {
-            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), DatabaseType.MSSQL);
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
             string fullAppName = $"abc123hash==|MyCustomApp,{telemetry}";
 
             IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode(fullAppName);
@@ -315,7 +315,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void Decode_TruncatedPayload_DoesNotThrowAndDecodesPartial()
         {
-            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), DatabaseType.MSSQL);
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
             // Simulate SQL Server truncation by cutting the string mid-payload.
             string truncated = telemetry[..(telemetry.Length - 10)];
 
@@ -347,7 +347,36 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(1, ApplicationNameTelemetry.Decode("   ").Count);
         }
 
+        /// <summary>
+        /// Per-pool consistency: the OBO flag must reflect the LIVE data source being encoded, not the
+        /// config's default data source. This matters in multi-database setups where data sources differ.
+        /// </summary>
+        [TestMethod]
+        public void EncodeTelemetryString_Obo_ReflectsLiveDataSourceNotDefault()
+        {
+            // Default data source has OBO OFF.
+            DataSource defaultSource = new(DatabaseType.MSSQL, "Server=localhost;Database=default;");
+            // A different (live) data source has OBO ON.
+            DataSource liveOboSource = new(DatabaseType.PostgreSQL, "Host=localhost;Database=live;Username=u;")
+            {
+                UserDelegatedAuth = new UserDelegatedAuthOptions(Enabled: true)
+            };
+            RuntimeConfig config = new(Schema: "t", DataSource: defaultSource, Entities: new(new Dictionary<string, Entity>()));
+
+            // Encoding for the live OBO-enabled pool reports obo=1 even though the default is off.
+            (_, string liveRuntime, _) = Sections(ApplicationNameTelemetry.EncodeTelemetryString(config, liveOboSource));
+            Assert.AreEqual('1', liveRuntime[9], "obo must reflect the live data source");
+
+            // Encoding with no live source falls back to the default data source (obo off).
+            (_, string defaultRuntime, _) = Sections(ApplicationNameTelemetry.EncodeTelemetryString(config, liveDataSource: null));
+            Assert.AreEqual('0', defaultRuntime[9], "obo falls back to the default data source when no live source");
+        }
+
         // ----- Helpers ------------------------------------------------------------------------
+
+        /// <summary>Builds a live data source of the given type for the per-pool encoder inputs.</summary>
+        private static DataSource Source(DatabaseType type) =>
+            new(type, "Server=localhost;Database=test;", Options: null);
 
         private static RuntimeConfig BuildConfig(
             RuntimeOptions runtime = null,

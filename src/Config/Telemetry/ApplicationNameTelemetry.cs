@@ -59,7 +59,7 @@ public static class ApplicationNameTelemetry
     private const char PAYLOAD_DELIMITER = '+';
 
     /// <summary>Inputs available to a setting encoder.</summary>
-    private readonly record struct EncodeInputs(RuntimeConfig Config, DatabaseType? Source);
+    private readonly record struct EncodeInputs(RuntimeConfig Config, DataSource? LiveDataSource);
 
     /// <summary>A single telemetry setting: its name, how to encode it, and how to describe a value.</summary>
     private sealed record Setting(string Name, Func<EncodeInputs, char> Encode, Func<char, string> Describe);
@@ -70,14 +70,15 @@ public static class ApplicationNameTelemetry
     /// telemetry-bearing portion of the connection-string segment.
     /// </summary>
     /// <param name="config">The runtime config to encode.</param>
-    /// <param name="liveSource">
-    /// The data source type of the connection being opened, or <c>null</c> when there is no live
-    /// connection context (e.g. the <c>dab appname --config</c> CLI command), in which case the
-    /// Source field is emitted as <c>X</c>.
+    /// <param name="liveDataSource">
+    /// The data source whose connection is being opened, or <c>null</c> when there is no live
+    /// connection context (e.g. the <c>dab appname --config</c> CLI command). When <c>null</c>, the
+    /// Source field is emitted as <c>X</c> and per–data-source flags (such as OBO) fall back to the
+    /// config's default data source.
     /// </param>
-    public static string EncodeTelemetryString(RuntimeConfig config, DatabaseType? liveSource = null)
+    public static string EncodeTelemetryString(RuntimeConfig config, DataSource? liveDataSource = null)
     {
-        EncodeInputs inputs = new(config, liveSource);
+        EncodeInputs inputs = new(config, liveDataSource);
 
         string context = EncodeSection(_contextSettings, inputs);
         string runtime = EncodeSection(_runtimeSettings, inputs);
@@ -105,12 +106,12 @@ public static class ApplicationNameTelemetry
     /// </list>
     /// </summary>
     /// <param name="config">The runtime config to encode.</param>
-    /// <param name="liveSource">The data source type of the connection being opened.</param>
-    public static string BuildApplicationNameSegment(RuntimeConfig config, DatabaseType liveSource)
+    /// <param name="liveDataSource">The data source whose connection is being opened.</param>
+    public static string BuildApplicationNameSegment(RuntimeConfig config, DataSource? liveDataSource)
     {
         string telemetry = IsOptedOut()
             ? ProductInfo.DAB_USER_AGENT
-            : EncodeTelemetryString(config, liveSource);
+            : EncodeTelemetryString(config, liveDataSource);
 
         string? customLabel = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
 
@@ -256,6 +257,18 @@ public static class ApplicationNameTelemetry
         DatabaseType.CosmosDB_PostgreSQL => 'C',
         _ => NOT_APPLICABLE,
     };
+
+    /// <summary>
+    /// Encodes whether on-behalf-of (user-delegated) auth is enabled for the data source. Uses the
+    /// live data source when one is supplied, so each connection pool reflects its own setting;
+    /// otherwise falls back to the config's default data source (e.g. the CLI, which has no live
+    /// connection). Encoded as <c>M</c> when no data source is available.
+    /// </summary>
+    private static char EncodeObo(EncodeInputs inputs)
+    {
+        DataSource? dataSource = inputs.LiveDataSource ?? inputs.Config.DataSource;
+        return dataSource is null ? MISSING : Present(dataSource.IsUserDelegatedAuthEnabled);
+    }
 
     private static char EncodeHostMode(RuntimeConfig config)
     {
@@ -406,7 +419,7 @@ public static class ApplicationNameTelemetry
         // Protocol/Object/Role are per-request and unknown when a pooled connection is opened.
         new Setting("Protocol", _ => NOT_APPLICABLE, DescribeProtocol),
         new Setting("Object", _ => NOT_APPLICABLE, DescribeObject),
-        new Setting("Source", i => EncodeSource(i.Source), DescribeSource),
+        new Setting("Source", i => EncodeSource(i.LiveDataSource?.DatabaseType), DescribeSource),
         new Setting("Role", _ => NOT_APPLICABLE, DescribeRole),
     };
 
@@ -421,7 +434,7 @@ public static class ApplicationNameTelemetry
         new Setting("health.enabled", i => Flag(i.Config.Runtime?.Health?.Enabled), DescribeFlag),
         new Setting("cache.enabled", i => Flag(i.Config.Runtime?.Cache?.Enabled), DescribeFlag),
         new Setting("cache.l2", i => Flag(i.Config.Runtime?.Cache?.Level2?.Enabled), DescribeFlag),
-        new Setting("data-source.obo", i => i.Config.DataSource is null ? MISSING : Present(i.Config.DataSource.IsUserDelegatedAuthEnabled), DescribeFlag),
+        new Setting("data-source.obo", EncodeObo, DescribeFlag),
         new Setting("autoentities", i => Present(i.Config.Autoentities?.Any() == true), DescribeFlag),
         new Setting("rest.request-body-strict", i => Flag(i.Config.Runtime?.Rest?.RequestBodyStrict), DescribeFlag),
         new Setting("graphql.multiple-mutations.create.enabled", i => Flag(i.Config.Runtime?.GraphQL?.MultipleMutationOptions?.MultipleCreateOptions?.Enabled), DescribeFlag),

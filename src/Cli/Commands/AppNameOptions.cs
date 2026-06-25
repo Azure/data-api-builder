@@ -45,7 +45,9 @@ namespace Cli.Commands
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             // Decode mode: a pure, tolerant string decode. No config or validation is required.
-            if (!string.IsNullOrWhiteSpace(Decode))
+            // Presence of the option (even with an empty/whitespace value) selects decode mode; the
+            // decoder itself reports a friendly message for empty input.
+            if (Decode is not null)
             {
                 IReadOnlyList<string> decodedLines = ApplicationNameTelemetry.Decode(Decode);
                 WriteResult(string.Join(Environment.NewLine, decodedLines), fileSystem, logger, trailingNewLine: true);
@@ -71,7 +73,7 @@ namespace Cli.Commands
 
             // There is no live connection context at design time, so the context fields
             // (Protocol/Object/Source/Role) are emitted as placeholders.
-            string telemetryAppName = ApplicationNameTelemetry.EncodeTelemetryString(runtimeConfig, liveSource: null);
+            string telemetryAppName = ApplicationNameTelemetry.EncodeTelemetryString(runtimeConfig, liveDataSource: null);
             WriteResult(telemetryAppName, fileSystem, logger, trailingNewLine: false);
             return CliReturnCode.SUCCESS;
         }
@@ -83,7 +85,10 @@ namespace Cli.Commands
         {
             if (!string.IsNullOrWhiteSpace(Output))
             {
-                fileSystem.File.WriteAllText(Output, content);
+                // Mirror stdout behavior: append a trailing newline for human-readable (decode) output,
+                // but keep encode output exact (no trailing newline) so it can be copied/piped verbatim.
+                string fileContent = trailingNewLine ? content + Environment.NewLine : content;
+                fileSystem.File.WriteAllText(Output, fileContent);
                 logger.LogInformation("Wrote output to '{outputFile}'.", Output);
             }
             else if (trailingNewLine)

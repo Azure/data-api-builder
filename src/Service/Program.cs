@@ -542,6 +542,15 @@ namespace Azure.DataApiBuilder.Service
                 return true; // If the environment variable is missing, then it cannot be invalid.
             }
 
+            if (string.IsNullOrEmpty(urls))
+            {
+                // An empty value is equivalent to the variable being unset: Kestrel falls back to its
+                // default URLs, so this is valid. Note that starting with .NET 10, setting an environment
+                // variable to an empty string preserves it as "" instead of deleting it (which previously
+                // surfaced here as null), so this case must be handled explicitly.
+                return true;
+            }
+
             if (string.IsNullOrWhiteSpace(urls))
             {
                 return false;

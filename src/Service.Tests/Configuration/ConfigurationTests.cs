@@ -21,6 +21,7 @@ using System.Web;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -903,6 +904,9 @@ type Moon {
             string expectedDabModifiedConnString,
             bool dabEnvOverride)
         {
+            // Ensure telemetry is enabled (not opted out) so the Application Name carries the dab_oss payload.
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+
             // Explicitly set the DAB_APP_NAME_ENV to null to ensure that the DAB_APP_NAME_ENV is not set.
             if (dabEnvOverride)
             {
@@ -913,27 +917,38 @@ type Moon {
                 Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
             }
 
-            // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
-            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
-            expectedDabModifiedConnString += resolvedAssemblyVersion;
+            try
+            {
+                // The DAB-owned portion of the Application Name is always the dab_oss_<version> telemetry block.
+                // When DAB_APP_NAME_ENV is set, its value is preserved as a comma prefix. The encoded telemetry
+                // payload then follows, so we assert the Application Name prefix and that the payload terminates with '+'.
+                string expectedAppNamePrefix = expectedDabModifiedConnString
+                    + (dabEnvOverride ? $"dab_hosted,{ProductInfo.DAB_USER_AGENT}" : ProductInfo.DAB_USER_AGENT);
 
-            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
 
-            // Act
-            bool configParsed = RuntimeConfigLoader.TryParseConfig(
-                json: runtimeConfig.ToJson(),
-                config: out RuntimeConfig updatedRuntimeConfig,
-                replacementSettings: new(doReplaceEnvVar: true));
+                // Act
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
 
-            // Assert
-            Assert.AreEqual(
-                expected: true,
-                actual: configParsed,
-                message: "Runtime config unexpectedly failed parsing.");
-            Assert.AreEqual(
-                expected: expectedDabModifiedConnString,
-                actual: updatedRuntimeConfig.DataSource.ConnectionString,
-                message: "DAB did not properly set the 'Application Name' connection string property.");
+                // Assert
+                Assert.AreEqual(
+                    expected: true,
+                    actual: configParsed,
+                    message: "Runtime config unexpectedly failed parsing.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.StartsWith(expectedAppNamePrefix, StringComparison.Ordinal),
+                    $"Expected connection string to start with '{expectedAppNamePrefix}' but was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Expected telemetry payload to terminate with '+' but connection string was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+            }
         }
 
         /// <summary>
@@ -956,6 +971,9 @@ type Moon {
             string expectedDabModifiedConnString,
             bool dabEnvOverride)
         {
+            // Ensure telemetry is enabled (not opted out) so the Application Name carries the dab_oss payload.
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+
             // Explicitly set the DAB_APP_NAME_ENV to null to ensure that the DAB_APP_NAME_ENV is not set.
             if (dabEnvOverride)
             {
@@ -966,27 +984,38 @@ type Moon {
                 Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
             }
 
-            // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
-            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
-            expectedDabModifiedConnString += resolvedAssemblyVersion;
+            try
+            {
+                // The DAB-owned portion of the Application Name is always the dab_oss_<version> telemetry block.
+                // When DAB_APP_NAME_ENV is set, its value is preserved as a comma prefix. The encoded telemetry
+                // payload then follows, so we assert the Application Name prefix and that the payload terminates with '+'.
+                string expectedAppNamePrefix = expectedDabModifiedConnString
+                    + (dabEnvOverride ? $"dab_hosted,{ProductInfo.DAB_USER_AGENT}" : ProductInfo.DAB_USER_AGENT);
 
-            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.PostgreSQL, configProvidedConnString);
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.PostgreSQL, configProvidedConnString);
 
-            // Act
-            bool configParsed = RuntimeConfigLoader.TryParseConfig(
-                json: runtimeConfig.ToJson(),
-                config: out RuntimeConfig updatedRuntimeConfig,
-                replacementSettings: new(doReplaceEnvVar: true));
+                // Act
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
 
-            // Assert
-            Assert.AreEqual(
-                expected: true,
-                actual: configParsed,
-                message: "Runtime config unexpectedly failed parsing.");
-            Assert.AreEqual(
-                expected: expectedDabModifiedConnString,
-                actual: updatedRuntimeConfig.DataSource.ConnectionString,
-                message: "DAB did not properly set the 'Application Name' connection string property.");
+                // Assert
+                Assert.AreEqual(
+                    expected: true,
+                    actual: configParsed,
+                    message: "Runtime config unexpectedly failed parsing.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.StartsWith(expectedAppNamePrefix, StringComparison.Ordinal),
+                    $"Expected connection string to start with '{expectedAppNamePrefix}' but was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Expected telemetry payload to terminate with '+' but connection string was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+            }
         }
 
         /// <summary>

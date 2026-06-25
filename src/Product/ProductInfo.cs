@@ -10,7 +10,13 @@ public static class ProductInfo
 {
     public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
     public const string COSMOSDB_DATABASE_NAME = "COSMOSDB_DATABASE_NAME";
-    public static readonly string DAB_USER_AGENT = $"dab_oss_{GetProductVersion()}";
+
+    /// <summary>
+    /// Prefix that identifies a DAB open-source user agent / telemetry block. Kept as a separate
+    /// constant so consumers (e.g. Application Name telemetry decoding) can locate the block.
+    /// </summary>
+    public const string DAB_USER_AGENT_MARKER = "dab_oss_";
+    public static readonly string DAB_USER_AGENT = $"{DAB_USER_AGENT_MARKER}{GetProductVersion()}";
     public static readonly string CLOUD_ROLE_NAME = "DataApiBuilder";
 
     /// <summary>

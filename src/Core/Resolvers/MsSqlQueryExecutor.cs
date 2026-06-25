@@ -310,6 +310,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
 
                 ConnectionStringBuilders.TryAdd(dataSourceName, builder);
+
                 MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
                 _dataSourceToSessionContextUsage[dataSourceName] = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
                 _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);

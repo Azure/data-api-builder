@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
@@ -223,7 +224,12 @@ public abstract class RuntimeConfigLoader
                     azureKeyVaultOptions: azureKeyVaultOptions,
                     doReplaceEnvVar: replacementSettings.DoReplaceEnvVar,
                     doReplaceAkvVar: replacementSettings.DoReplaceAkvVar,
-                    envFailureMode: replacementSettings.EnvFailureMode);
+                    envFailureMode: replacementSettings.EnvFailureMode)
+                {
+                    // Preserve the child-config skip flag across this AKV-driven rebuild so nested
+                    // configs still defer Application Name injection to the top-level load.
+                    SkipApplicationNameInjection = replacementSettings.SkipApplicationNameInjection
+                };
             }
         }
 
@@ -238,47 +244,41 @@ public abstract class RuntimeConfigLoader
                 return false;
             }
 
-            // retreive current connection string from config
-            string updatedConnectionString = config.DataSource?.ConnectionString ?? string.Empty;
-
-            if (!string.IsNullOrEmpty(connectionString))
+            // Embed the DAB Application Name (with anonymous usage telemetry) into the connection
+            // string of every MSSQL / PostgreSQL data source.
+            //
+            // We iterate the fully-merged data-source map and pass the merged `config`, so that in a
+            // multi-database setup each data source reflects the GLOBAL runtime settings and the
+            // COMPLETE (merged) entity set rather than its own partial child config. Child configs skip
+            // this step during their own parse (SkipApplicationNameInjection); the top-level load runs
+            // it once here, after the merge, so every connection pool carries a self-contained snapshot
+            // of the deployment.
+            //
+            // The explicit connection-string override (the `connectionString` parameter), when present,
+            // applies only to the default data source.
+            if (replacementSettings?.DoReplaceEnvVar == true && replacementSettings?.SkipApplicationNameInjection != true)
             {
-                // update connection string if provided.
-                updatedConnectionString = connectionString;
-            }
-
-            // Post-processing for connection strings only applies when a data source is present.
-            // Root configs (with data-source-files) may not have a data source.
-            if (config.DataSource is not null)
-            {
-                Dictionary<string, string> datasourceNameToConnectionString = new();
-
-                // add to dictionary if datasourceName is present
-                datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
-
-                // iterate over dictionary and update runtime config with connection strings.
-                foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
+                foreach ((string dataSourceName, DataSource dataSource) in config.GetDataSourceNamesToDataSourcesIterator().ToList())
                 {
-                    string updatedConnection = connectionValue;
+                    bool isDefaultDataSource = string.Equals(dataSourceName, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase);
 
-                    DataSource ds = config.GetDataSourceFromDataSourceName(dataSourceKey);
+                    string baseConnectionString = isDefaultDataSource && !string.IsNullOrEmpty(connectionString)
+                        ? connectionString
+                        : dataSource.ConnectionString;
 
-                    // Add Application Name for telemetry for MsSQL or PgSql
-                    if (ds.DatabaseType is DatabaseType.MSSQL && replacementSettings?.DoReplaceEnvVar == true)
+                    string updatedConnectionString = dataSource.DatabaseType switch
                     {
-                        updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
-                    }
-                    else if (ds.DatabaseType is DatabaseType.PostgreSQL && replacementSettings?.DoReplaceEnvVar == true)
-                    {
-                        updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue);
-                    }
+                        DatabaseType.MSSQL => GetConnectionStringWithApplicationName(baseConnectionString, config),
+                        DatabaseType.PostgreSQL => GetPgSqlConnectionStringWithApplicationName(baseConnectionString, config),
+                        _ => baseConnectionString,
+                    };
 
-                    ds = ds with { ConnectionString = updatedConnection };
-                    config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
+                    DataSource updatedDataSource = dataSource with { ConnectionString = updatedConnectionString };
+                    config.UpdateDataSourceNameToDataSource(dataSourceName, updatedDataSource);
 
-                    if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
+                    if (isDefaultDataSource)
                     {
-                        config = config with { DataSource = ds };
+                        config = config with { DataSource = updatedDataSource };
                     }
                 }
             }
@@ -368,8 +368,10 @@ public abstract class RuntimeConfigLoader
     /// else add the Application Name property with DataApiBuilder Application Name based on hosted/oss platform.
     /// </summary>
     /// <param name="connectionString">Connection string for connecting to database.</param>
+    /// <param name="config">When provided, anonymous DAB telemetry is embedded into the `Application Name`
+    /// (honoring the `DAB_TELEMETRY_APPNAME_OPT_OUT` opt-out). When null, only the plain user agent is used.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
-    internal static string GetConnectionStringWithApplicationName(string connectionString)
+    internal static string GetConnectionStringWithApplicationName(string connectionString, RuntimeConfig? config = null)
     {
         // If the connection string is null, empty, or whitespace, return it as is.
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -377,7 +379,11 @@ public abstract class RuntimeConfigLoader
             return connectionString;
         }
 
-        string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
+        // When the full runtime config is available, embed anonymous DAB telemetry into the
+        // Application Name (honoring the opt-out switch). Otherwise fall back to the plain user agent.
+        string applicationName = config is null
+            ? ProductInfo.GetDataApiBuilderUserAgent()
+            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, DatabaseType.MSSQL);
 
         // Create a StringBuilder from the connection string.
         SqlConnectionStringBuilder connectionStringBuilder;
@@ -420,8 +426,9 @@ public abstract class RuntimeConfigLoader
     /// else add the Application Name property with DataApiBuilder Application Name based on hosted/oss platform.
     /// </summary>
     /// <param name="connectionString">Connection string for connecting to database.</param>
+    /// <param name="config">When provided, anonymous DAB usage telemetry is embedded in the Application Name (honoring the opt-out switch); otherwise the plain user agent is used.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
-    internal static string GetPgSqlConnectionStringWithApplicationName(string connectionString)
+    internal static string GetPgSqlConnectionStringWithApplicationName(string connectionString, RuntimeConfig? config = null)
     {
         // If the connection string is null, empty, or whitespace, return it as is.
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -429,7 +436,11 @@ public abstract class RuntimeConfigLoader
             return connectionString;
         }
 
-        string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
+        // When the full runtime config is available, embed anonymous DAB telemetry into the
+        // Application Name (honoring the opt-out switch). Otherwise fall back to the plain user agent.
+        string applicationName = config is null
+            ? ProductInfo.GetDataApiBuilderUserAgent()
+            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, DatabaseType.PostgreSQL);
 
         // Create a StringBuilder from the connection string.
         NpgsqlConnectionStringBuilder connectionStringBuilder;

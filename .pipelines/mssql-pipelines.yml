@@ -177,7 +177,7 @@ jobs:
       # for the linux job above.
       data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;
       InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
-      SqlVersionCode: '15.0'
+      SqlVersionCode: '17.0'
 
   steps:
   - template: templates/mssql-test-steps.yml
@@ -200,7 +200,7 @@ jobs:
       # for the linux job above.
       data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;
       InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
-      SqlVersionCode: '15.0'
+      SqlVersionCode: '17.0'
 
   steps:
   - template: templates/mssql-test-steps.yml

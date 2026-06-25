@@ -1,11 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
-    <Nullable>disable</Nullable>
+    <!--
+      Nullable=annotations permits nullable reference type syntax (e.g. `string?`)
+      everywhere without emitting CS8632, while keeping nullable flow-analysis
+      warnings (CS8600/CS8602/etc.) suppressed for the bulk of the legacy test code.
+      Individual files that have been audited may opt in to full nullable checks
+      via `#nullable enable`. See issue #3543.
+    -->
+    <Nullable>annotations</Nullable>
     <OutputPath>$(BaseOutputPath)\tests</OutputPath>
-    <NoWarn>NU1603</NoWarn>
+    <!-- ASPDEPR008: IWebHostBuilder/IWebHost are obsolete on net10. The
+         ConfigurationTests fixtures still consume them via Program.cs
+         test-only helpers. Migrating to IHost is behavior-affecting
+         refactor work tracked separately; suppressed here so the
+         .NET 10 + SqlClient 6.x prerequisite PR stays behavior-preserving.
+         TODO: file a follow-up issue to migrate off IWebHostBuilder/IWebHost
+         to IHost and remove this ASPDEPR008 suppression. -->
+    <NoWarn>NU1603;ASPDEPR008</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

@@ -98,9 +98,9 @@ namespace Azure.DataApiBuilder.Service
                 // Initialize log level EARLY, before building the host.
                 // This ensures logging filters are effective during the entire host build process.
                 // For MCP mode, we also read the config file early to check for log level override.
-                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding);
+                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding, out bool isLogLevelLegacy);
 
-                LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverriding, isConfigOverriding);
+                LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverriding, isConfigOverriding, isLogLevelLegacy);
 
                 // For MCP stdio mode, redirect Console.Out to keep stdout clean for JSON-RPC.
                 // MCP SDK uses Console.OpenStandardOutput() which gets the real stdout, unaffected by this redirect.
@@ -222,9 +222,9 @@ namespace Azure.DataApiBuilder.Service
 
         /// <summary>
         /// Extracts the log level from the command line arguments and optionally from config.
-        /// When --LogLevel is present, returns that value with CLI override flag set.
-        /// When in MCP stdio mode without explicit --LogLevel, reads the config file to check for log level.
-        /// When in normal mode without explicit --LogLevel, defaults to Error (UpdateFromRuntimeConfig()
+        /// When --log-level is present, returns that value with CLI override flag set.
+        /// When in MCP stdio mode without explicit --log-level, reads the config file to check for log level.
+        /// When in normal mode without explicit --log-level, defaults to Error (UpdateFromRuntimeConfig()
         /// will later adjust based on config: Debug for Development mode, Error for Production mode).
         /// </summary>
         /// <param name="args">Array that may contain log level information.</param>
@@ -232,24 +232,35 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="isCliOverriding">Set to true if log level is supplied via CLI args.</param>
         /// <param name="isConfigOverriding">Set to true if log level is supplied via the config file (MCP mode only).</param>
         /// <returns>Appropriate log level.</returns>
-        private static LogLevel GetLogLevelFromCommandLineArgsOrConfig(string[] args, bool runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding)
+        private static LogLevel GetLogLevelFromCommandLineArgsOrConfig(string[] args, bool runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding, out bool isLogLevelLegacy)
         {
             LogLevel logLevel;
             isConfigOverriding = false;
 
-            // Check if --LogLevel was explicitly specified via CLI (case-insensitive parsing)
-            int logLevelIndex = Array.FindIndex(args, a => string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));
+            // Check if --log-level or --LogLevel was explicitly specified via CLI (case-insensitive parsing)
+            isLogLevelLegacy = false;
+            int logLevelIndex = Array.FindIndex(args, a =>
+                string.Equals(a, "--log-level", StringComparison.OrdinalIgnoreCase));
+            int legacyLogLevelIndex = Array.FindIndex(args, a =>
+                string.Equals(a, "--LogLevel", StringComparison.OrdinalIgnoreCase));
+
+            if (legacyLogLevelIndex >= 0 && legacyLogLevelIndex + 1 < args.Length)
+            {
+                logLevelIndex = legacyLogLevelIndex;
+                isLogLevelLegacy = true;
+            }
+
             bool hasCliLogLevel = logLevelIndex >= 0 && logLevelIndex + 1 < args.Length;
 
             if (hasCliLogLevel && Enum.TryParse(args[logLevelIndex + 1], ignoreCase: true, out LogLevel cliLogLevel))
             {
-                // User explicitly set --LogLevel via CLI (highest priority)
+                // User explicitly set --log-level via CLI (highest priority)
                 logLevel = cliLogLevel;
                 isCliOverriding = true;
             }
             else if (runMcpStdio)
             {
-                // MCP stdio mode without explicit --LogLevel: check config for log level (second priority)
+                // MCP stdio mode without explicit --log-level: check config for log level (second priority)
                 isCliOverriding = false;
                 logLevel = LogLevel.None; // Default if config doesn't have log level
 
@@ -269,7 +280,7 @@ namespace Azure.DataApiBuilder.Service
             }
             else
             {
-                // Normal (non-MCP) mode without explicit --LogLevel:
+                // Normal (non-MCP) mode without explicit --log-level:
                 // Start with Error as fallback. UpdateFromRuntimeConfig() will later
                 // adjust based on config: Debug for Development mode, Error for Production mode.
                 // This initial value is used before config is loaded.
@@ -529,6 +540,15 @@ namespace Azure.DataApiBuilder.Service
             if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is not { } urls)
             {
                 return true; // If the environment variable is missing, then it cannot be invalid.
+            }
+
+            if (string.IsNullOrEmpty(urls))
+            {
+                // An empty value is equivalent to the variable being unset: Kestrel falls back to its
+                // default URLs, so this is valid. Note that starting with .NET 10, setting an environment
+                // variable to an empty string preserves it as "" instead of deleting it (which previously
+                // surfaced here as null), so this case must be handled explicitly.
+                return true;
             }
 
             if (string.IsNullOrWhiteSpace(urls))

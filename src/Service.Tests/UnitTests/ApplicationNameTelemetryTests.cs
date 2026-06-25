@@ -105,7 +105,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Host: new HostOptions(Cors: null, Authentication: new AuthenticationOptions("StaticWebApps"), Mode: HostMode.Production),
                 Telemetry: new TelemetryOptions(
                     ApplicationInsights: new ApplicationInsightsOptions(Enabled: true),
-                    OpenTelemetry: new OpenTelemetryOptions(Enabled: false)),
+                    OpenTelemetry: new OpenTelemetryOptions(Enabled: false),
+                    AzureLogAnalytics: new AzureLogAnalyticsOptions(enabled: true),
+                    File: new FileSinkOptions(enabled: true)),
                 Cache: new RuntimeCacheOptions(Enabled: true) { Level2 = new RuntimeCacheLevel2Options(Enabled: true) },
                 Health: new RuntimeHealthCheckConfig(enabled: false),
                 Embeddings: new EmbeddingsOptions(
@@ -129,6 +131,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual('1', r[12], "graphql.multiple-mutations.create.enabled=true");
             Assert.AreEqual('0', r[13], "open-telemetry.enabled=false");
             Assert.AreEqual('1', r[14], "application-insights.enabled=true");
+            Assert.AreEqual('1', r[15], "azure-log-analytics.enabled=true");
+            Assert.AreEqual('1', r[16], "file-sink.enabled=true");
             Assert.AreEqual('W', r[17], "auth.provider=StaticWebApps");
             Assert.AreEqual('1', r[18], "embedding.enabled=true");
             Assert.AreEqual('0', r[19], "embedding.endpoint.enabled=false");
@@ -237,6 +241,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual('1', e[11], "any descriptions");
             Assert.AreEqual('1', e[12], "any relationships");
             Assert.AreEqual('1', e[4], "any cache");
+        }
+
+        [TestMethod]
+        public void EncodeTelemetryString_EntityFlags_ReflectMcpToolUsage()
+        {
+            // One entity opts into MCP DML tools only, another opts into the MCP custom tool only,
+            // so the "any entity uses ..." flags for both must be set.
+            Dictionary<string, Entity> entities = new()
+            {
+                ["Dml"] = GenerateEmptyEntity() with { Mcp = new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: true) },
+                ["Custom"] = GenerateEmptyEntity() with { Mcp = new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false) },
+            };
+
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(entities: entities), Source(DatabaseType.MSSQL));
+            (_, _, string e) = Sections(telemetry);
+
+            Assert.AreEqual('1', e[7], "any mcp dml-tools");
+            Assert.AreEqual('1', e[8], "any mcp custom-tool");
         }
 
         // ----- Opt-out + DAB_APP_NAME_ENV -----------------------------------------------------

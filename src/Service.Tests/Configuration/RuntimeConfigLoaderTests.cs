@@ -866,6 +866,67 @@ public class RuntimeConfigLoaderTests
     }
 
     /// <summary>
+    /// Computing the telemetry Application Name buffers a Debug log into a shared static buffer that,
+    /// before the fix, was only drained once at startup — so the log was never emitted on hot reload and
+    /// the buffer accumulated an entry per data source on every reload. This validates that
+    /// <see cref="FileSystemRuntimeConfigLoader.FlushLogBuffer"/> (a) is null-safe when no logger has been
+    /// set, and (b) emits the buffered telemetry log to a configured logger (so reloads drain the buffer).
+    /// Regression test for https://github.com/Azure/data-api-builder/issues/3216
+    /// </summary>
+    [TestMethod]
+    public void FlushLogBuffer_IsNullSafe_AndEmitsBufferedTelemetryLog()
+    {
+        DataSource dataSource = new(DatabaseType.MSSQL, "Server=localhost;Database=test;");
+        RuntimeConfig config = new(
+            Schema: "s",
+            DataSource: dataSource,
+            Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
+
+        // Computing the Application Name buffers a Debug telemetry log into the shared static buffer.
+        RuntimeConfigLoader.GetConnectionStringWithApplicationName("Server=localhost;Database=test;", config, dataSource);
+
+        // (a) A loader with no logger set must not throw when flushing a non-empty buffer. Previously this
+        // threw a NullReferenceException because the buffer was flushed to a null logger.
+        FileSystemRuntimeConfigLoader loaderWithoutLogger = new(new MockFileSystem());
+        loaderWithoutLogger.FlushLogBuffer();
+
+        // (b) With a logger set, a freshly buffered telemetry log is emitted rather than silently
+        // accumulating in the static buffer until the next startup.
+        RuntimeConfigLoader.GetConnectionStringWithApplicationName("Server=localhost;Database=test;", config, dataSource);
+
+        CapturingLogger<FileSystemRuntimeConfigLoader> logger = new();
+        FileSystemRuntimeConfigLoader loaderWithLogger = new(new MockFileSystem());
+        loaderWithLogger.SetLogger(logger);
+        loaderWithLogger.FlushLogBuffer();
+
+        Assert.IsTrue(
+            logger.Messages.Any(m => m.Contains("DAB telemetry Application Name computed")),
+            "FlushLogBuffer should emit the buffered telemetry Debug log to the configured logger.");
+    }
+
+    /// <summary>Minimal in-memory <see cref="ILogger{T}"/> that records formatted messages for assertions.</summary>
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public List<string> Messages { get; } = new();
+
+        public IDisposable BeginScope<TState>(TState state) => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+            => Messages.Add(formatter(state, exception));
+
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+
+            public void Dispose()
+            {
+            }
+        }
+    }
+
+    /// <summary>
     /// Loads a <see cref="RuntimeConfig"/> from a JSON string using a mock file system.
     /// </summary>
     private static RuntimeConfig LoadConfig(string configJson)

@@ -1026,32 +1026,43 @@ type Moon {
         [TestMethod]
         public void DwSqlConnStringSupplementedWithAppNameProperty()
         {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
             // Ensure telemetry is enabled (not opted out) and no host label is set.
             Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
             Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
 
-            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.DWSQL, "Data Source=<>;");
+            try
+            {
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.DWSQL, "Data Source=<>;");
 
-            bool configParsed = RuntimeConfigLoader.TryParseConfig(
-                json: runtimeConfig.ToJson(),
-                config: out RuntimeConfig updatedRuntimeConfig,
-                replacementSettings: new(doReplaceEnvVar: true));
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
 
-            Assert.IsTrue(configParsed, "Runtime config unexpectedly failed parsing.");
+                Assert.IsTrue(configParsed, "Runtime config unexpectedly failed parsing.");
 
-            string connectionString = updatedRuntimeConfig.DataSource.ConnectionString;
-            Assert.IsTrue(
-                connectionString.StartsWith("Data Source=<>;Application Name=" + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal),
-                $"Expected DWSQL Application Name to carry the telemetry block but was '{connectionString}'.");
-            Assert.IsTrue(
-                connectionString.EndsWith("+", StringComparison.Ordinal),
-                $"Expected DWSQL telemetry payload to terminate with '+' but was '{connectionString}'.");
+                string connectionString = updatedRuntimeConfig.DataSource.ConnectionString;
+                Assert.IsTrue(
+                    connectionString.StartsWith("Data Source=<>;Application Name=" + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal),
+                    $"Expected DWSQL Application Name to carry the telemetry block but was '{connectionString}'.");
+                Assert.IsTrue(
+                    connectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Expected DWSQL telemetry payload to terminate with '+' but was '{connectionString}'.");
 
-            // The encoded Source for a DWSQL pool must decode as 'D'.
-            IReadOnlyList<string> decoded = ApplicationNameTelemetry.Decode(connectionString);
-            Assert.IsTrue(
-                decoded.Any(line => line.Contains("Source: D (DWSQL)")),
-                string.Join(Environment.NewLine, decoded));
+                // The encoded Source for a DWSQL pool must decode as 'D'.
+                IReadOnlyList<string> decoded = ApplicationNameTelemetry.Decode(connectionString);
+                Assert.IsTrue(
+                    decoded.Any(line => line.Contains("Source: D (DWSQL)")),
+                    string.Join(Environment.NewLine, decoded));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
         }
 
         /// <summary>
@@ -1061,6 +1072,9 @@ type Moon {
         [TestMethod]
         public void ConnStringAppNameOmitsPayloadWhenOptedOut()
         {
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+
             Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
             Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, "1");
 
@@ -1081,7 +1095,156 @@ type Moon {
             }
             finally
             {
-                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
+        }
+
+        /// <summary>
+        /// Validates that the hosted / late-configured path (POST /configuration, which supplies the
+        /// connection string separately with doReplaceEnvVar:false) still embeds anonymous usage
+        /// telemetry — including the DAB_APP_NAME_ENV host label — into the connection string's
+        /// Application Name. This is the deployment shape where the 'dab_hosted' label is most valuable.
+        /// </summary>
+        [TestMethod]
+        public async Task HostedLateConfigConnStringSupplementedWithTelemetry()
+        {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
+
+            try
+            {
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, "Server=placeholder;");
+                FileSystemRuntimeConfigLoader loader = new(new MockFileSystem());
+                RuntimeConfigProvider provider = new(loader);
+
+                // Mirror the hosted /configuration path: connection string supplied separately, env-var
+                // replacement disabled. Telemetry must still be embedded.
+                bool initialized = await provider.Initialize(
+                    runtimeConfig.ToJson(),
+                    graphQLSchema: null,
+                    connectionString: "Server=hosted-sql;Database=hosteddb;",
+                    accessToken: null,
+                    replacementSettings: new(azureKeyVaultOptions: null, doReplaceEnvVar: false, doReplaceAkvVar: false));
+
+                Assert.IsTrue(initialized, "Hosted late-config initialization should succeed.");
+
+                string connectionString = provider.GetConfig().DataSource.ConnectionString;
+                Assert.IsTrue(
+                    connectionString.Contains("Application Name=dab_hosted," + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal),
+                    $"Hosted connection string should carry the dab_hosted label and dab_oss marker but was '{connectionString}'.");
+                Assert.IsTrue(
+                    connectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Hosted connection string should carry the telemetry payload but was '{connectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
+        }
+
+        /// <summary>
+        /// Validates that an explicit connection-string override is applied to the default data source
+        /// even when env-var replacement is disabled (DoReplaceEnvVar == false). Telemetry, which is
+        /// gated on DoReplaceEnvVar, is not embedded in that case, but the override must still take effect.
+        /// </summary>
+        [TestMethod]
+        public void ConnStringOverrideAppliedWhenEnvVarReplacementDisabled()
+        {
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, "Server=in-config;");
+
+            bool parsed = RuntimeConfigLoader.TryParseConfig(
+                json: runtimeConfig.ToJson(),
+                config: out RuntimeConfig updatedRuntimeConfig,
+                parseError: out _,
+                replacementSettings: new(doReplaceEnvVar: false),
+                connectionString: "Server=override-server;Database=overridedb;");
+
+            Assert.IsTrue(parsed, "Runtime config unexpectedly failed parsing.");
+            Assert.AreEqual(
+                "Server=override-server;Database=overridedb;",
+                updatedRuntimeConfig.DataSource.ConnectionString,
+                "The explicit connection-string override should be applied even when env-var replacement (and telemetry) is disabled.");
+        }
+
+        /// <summary>
+        /// Multi-database hosted scenario: the late-config path supplements the default data source with
+        /// the separately-supplied connection string, and must also embed telemetry into child data
+        /// sources (from data-source-files) so every hosted connection pool carries the usage snapshot.
+        /// </summary>
+        [TestMethod]
+        public async Task HostedLateConfigMultiDbChildConnStringSupplementedWithTelemetry()
+        {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
+
+            // The RuntimeConfig constructor loads child data-source-files from a real FileSystem.
+            string childFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.IO.Path.GetRandomFileName() + ".json");
+
+            try
+            {
+                string childConfig = @"{
+                    ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                    ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=child-sql;Database=childdb;TrustServerCertificate=True;"" },
+                    ""entities"": { ""ChildEntity"": { ""source"": ""dbo.ChildTable"", ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""read""] }] } }
+                }";
+                await File.WriteAllTextAsync(childFilePath, childConfig);
+
+                string rootConfig = $@"{{
+                    ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                    ""data-source"": {{ ""database-type"": ""mssql"", ""connection-string"": ""Server=placeholder;"" }},
+                    ""data-source-files"": [""{childFilePath.Replace("\\", "\\\\")}""],
+                    ""runtime"": {{ ""rest"": {{ ""enabled"": true }} }},
+                    ""entities"": {{ ""RootEntity"": {{ ""source"": ""dbo.RootTable"", ""permissions"": [{{ ""role"": ""anonymous"", ""actions"": [""read""] }}] }} }}
+                }}";
+
+                FileSystemRuntimeConfigLoader loader = new(new MockFileSystem());
+                RuntimeConfigProvider provider = new(loader);
+
+                bool initialized = await provider.Initialize(
+                    rootConfig,
+                    graphQLSchema: null,
+                    connectionString: "Server=hosted-default;Database=defaultdb;",
+                    accessToken: null,
+                    replacementSettings: new(azureKeyVaultOptions: null, doReplaceEnvVar: false, doReplaceAkvVar: false));
+
+                Assert.IsTrue(initialized, "Hosted multi-database late-config initialization should succeed.");
+
+                RuntimeConfig loaded = provider.GetConfig();
+                string expectedAppName = "Application Name=dab_hosted," + ProductInfo.DAB_USER_AGENT;
+
+                // Default data source: supplemented with the supplied connection string + telemetry.
+                Assert.IsTrue(
+                    loaded.DataSource.ConnectionString.Contains(expectedAppName, StringComparison.Ordinal)
+                        && loaded.DataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Default data source should carry telemetry but was '{loaded.DataSource.ConnectionString}'.");
+
+                // Child data source: its own server, also supplemented with telemetry.
+                DataSource childDataSource = loaded.GetDataSourceFromDataSourceName(loaded.GetDataSourceNameFromEntityName("ChildEntity"));
+                Assert.IsTrue(
+                    childDataSource.ConnectionString.Contains(expectedAppName, StringComparison.Ordinal)
+                        && childDataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Child data source should carry telemetry but was '{childDataSource.ConnectionString}'.");
+                Assert.IsTrue(
+                    childDataSource.ConnectionString.Contains("child-sql", StringComparison.Ordinal),
+                    $"Child data source should retain its own server but was '{childDataSource.ConnectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+
+                if (File.Exists(childFilePath))
+                {
+                    File.Delete(childFilePath);
+                }
             }
         }
 

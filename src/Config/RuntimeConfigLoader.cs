@@ -257,22 +257,32 @@ public abstract class RuntimeConfigLoader
             //
             // The explicit connection-string override (the `connectionString` parameter), when present,
             // applies only to the default data source.
-            if (replacementSettings?.DoReplaceEnvVar == true && replacementSettings?.SkipApplicationNameInjection != true)
+            // The explicit connection-string override is applied to the default data source regardless of
+            // env-var replacement, while telemetry embedding is gated on DoReplaceEnvVar (and skipped for
+            // nested child configs, which defer injection to the top-level load).
+            bool embedTelemetry = replacementSettings?.DoReplaceEnvVar == true && replacementSettings?.SkipApplicationNameInjection != true;
+            bool hasConnectionStringOverride = !string.IsNullOrEmpty(connectionString);
+
+            if (embedTelemetry || hasConnectionStringOverride)
             {
                 foreach ((string dataSourceName, DataSource dataSource) in config.GetDataSourceNamesToDataSourcesIterator().ToList())
                 {
                     bool isDefaultDataSource = string.Equals(dataSourceName, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase);
 
-                    string baseConnectionString = isDefaultDataSource && !string.IsNullOrEmpty(connectionString)
-                        ? connectionString
-                        : dataSource.ConnectionString;
+                    // The override applies only to the default data source; others keep their own value.
+                    bool applyOverrideHere = isDefaultDataSource && hasConnectionStringOverride;
 
-                    string updatedConnectionString = dataSource.DatabaseType switch
+                    // Nothing to do for a non-default data source when we're not embedding telemetry.
+                    if (!embedTelemetry && !applyOverrideHere)
                     {
-                        DatabaseType.MSSQL or DatabaseType.DWSQL => GetConnectionStringWithApplicationName(baseConnectionString, config, dataSource),
-                        DatabaseType.PostgreSQL => GetPgSqlConnectionStringWithApplicationName(baseConnectionString, config, dataSource),
-                        _ => baseConnectionString,
-                    };
+                        continue;
+                    }
+
+                    string baseConnectionString = applyOverrideHere ? connectionString! : dataSource.ConnectionString;
+
+                    string updatedConnectionString = embedTelemetry
+                        ? GetConnectionStringWithApplicationName(baseConnectionString, config, dataSource)
+                        : baseConnectionString;
 
                     DataSource updatedDataSource = dataSource with { ConnectionString = updatedConnectionString };
                     config.UpdateDataSourceNameToDataSource(dataSourceName, updatedDataSource);
@@ -364,6 +374,25 @@ public abstract class RuntimeConfigLoader
     }
 
     /// <summary>
+    /// Embeds the DAB <c>Application Name</c> (with anonymous usage telemetry) into the connection
+    /// string for the given data source, dispatching to the engine-specific implementation. Engines
+    /// that do not support telemetry (e.g. MySQL) return the connection string unchanged.
+    /// </summary>
+    /// <param name="connectionString">Connection string for connecting to the database.</param>
+    /// <param name="config">The fully-resolved runtime config used to compute the telemetry payload.</param>
+    /// <param name="dataSource">The data source whose connection is being opened (selects the engine and per-pool fields).</param>
+    /// <returns>The connection string with the telemetry-bearing <c>Application Name</c> embedded.</returns>
+    public static string GetConnectionStringWithApplicationName(string connectionString, RuntimeConfig config, DataSource dataSource)
+    {
+        return dataSource.DatabaseType switch
+        {
+            DatabaseType.MSSQL or DatabaseType.DWSQL => GetMsSqlConnectionStringWithApplicationName(connectionString, config, dataSource),
+            DatabaseType.PostgreSQL => GetPgSqlConnectionStringWithApplicationName(connectionString, config, dataSource),
+            _ => connectionString,
+        };
+    }
+
+    /// <summary>
     /// It adds or replaces a property in the connection string with `Application Name` property.
     /// If the connection string already contains the property, it appends the property `Application Name` to the connection string,
     /// else add the Application Name property with DataApiBuilder Application Name based on hosted/oss platform.
@@ -374,7 +403,7 @@ public abstract class RuntimeConfigLoader
     /// <param name="liveDataSource">The data source whose connection is being opened, used to encode per-pool
     /// fields (Source, OBO). Ignored when <paramref name="config"/> is null.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
-    internal static string GetConnectionStringWithApplicationName(string connectionString, RuntimeConfig? config = null, DataSource? liveDataSource = null)
+    internal static string GetMsSqlConnectionStringWithApplicationName(string connectionString, RuntimeConfig? config = null, DataSource? liveDataSource = null)
     {
         // If the connection string is null, empty, or whitespace, return it as is.
         if (string.IsNullOrWhiteSpace(connectionString))

@@ -411,19 +411,6 @@ public abstract class RuntimeConfigLoader
             return connectionString;
         }
 
-        // When the full runtime config is available, embed anonymous DAB telemetry into the
-        // Application Name (honoring the opt-out switch). Otherwise fall back to the plain user agent.
-        string applicationName = config is null
-            ? ProductInfo.GetDataApiBuilderUserAgent()
-            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, liveDataSource);
-
-        if (config is not null)
-        {
-            // Emit the telemetry-bearing Application Name (never the full connection string, which can
-            // contain secrets) at Debug, once per pool, as required by the telemetry design.
-            _logBuffer.BufferLog(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
-        }
-
         // Create a StringBuilder from the connection string.
         SqlConnectionStringBuilder connectionStringBuilder;
         try
@@ -437,6 +424,26 @@ public abstract class RuntimeConfigLoader
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
                 innerException: ex);
+        }
+
+        // Idempotency guard: if DAB telemetry was already embedded into the Application Name (e.g. by
+        // the loader's post-processing), do not append it again — that would duplicate the payload.
+        if (connectionStringBuilder.ApplicationName?.Contains(ProductInfo.DAB_USER_AGENT_MARKER, StringComparison.Ordinal) == true)
+        {
+            return connectionString;
+        }
+
+        // When the full runtime config is available, embed anonymous DAB telemetry into the
+        // Application Name (honoring the opt-out switch). Otherwise fall back to the plain user agent.
+        string applicationName = config is null
+            ? ProductInfo.GetDataApiBuilderUserAgent()
+            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, liveDataSource);
+
+        if (config is not null)
+        {
+            // Emit the telemetry-bearing Application Name (never the full connection string, which can
+            // contain secrets) at Debug, once per pool, as required by the telemetry design.
+            _logBuffer.BufferLog(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
         }
 
         string defaultApplicationName = new SqlConnectionStringBuilder().ApplicationName;
@@ -477,19 +484,6 @@ public abstract class RuntimeConfigLoader
             return connectionString;
         }
 
-        // When the full runtime config is available, embed anonymous DAB telemetry into the
-        // Application Name (honoring the opt-out switch). Otherwise fall back to the plain user agent.
-        string applicationName = config is null
-            ? ProductInfo.GetDataApiBuilderUserAgent()
-            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, liveDataSource);
-
-        if (config is not null)
-        {
-            // Emit the telemetry-bearing Application Name (never the full connection string, which can
-            // contain secrets) at Debug, once per pool, as required by the telemetry design.
-            _logBuffer.BufferLog(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
-        }
-
         // Create a StringBuilder from the connection string.
         NpgsqlConnectionStringBuilder connectionStringBuilder;
         try
@@ -503,6 +497,26 @@ public abstract class RuntimeConfigLoader
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
                 innerException: ex);
+        }
+
+        // Idempotency guard: if DAB telemetry was already embedded into the Application Name (e.g. by
+        // the loader's post-processing), do not append it again — that would duplicate the payload.
+        if (connectionStringBuilder.ApplicationName?.Contains(ProductInfo.DAB_USER_AGENT_MARKER, StringComparison.Ordinal) == true)
+        {
+            return connectionString;
+        }
+
+        // When the full runtime config is available, embed anonymous DAB telemetry into the
+        // Application Name (honoring the opt-out switch). Otherwise fall back to the plain user agent.
+        string applicationName = config is null
+            ? ProductInfo.GetDataApiBuilderUserAgent()
+            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, liveDataSource);
+
+        if (config is not null)
+        {
+            // Emit the telemetry-bearing Application Name (never the full connection string, which can
+            // contain secrets) at Debug, once per pool, as required by the telemetry design.
+            _logBuffer.BufferLog(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
         }
 
         // If the connection string does not contain the `Application Name` property, add it.

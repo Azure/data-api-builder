@@ -866,6 +866,30 @@ public class RuntimeConfigLoaderTests
     }
 
     /// <summary>
+    /// Embedding telemetry into a connection string that already carries the DAB telemetry marker must
+    /// be a no-op (idempotent), so a value can never accumulate a duplicated payload
+    /// (<c>...+...+,dab_oss_...+...+</c>) if the embed ever runs more than once (e.g. the loader's
+    /// post-processing followed by the late-config provider).
+    /// </summary>
+    [TestMethod]
+    public void GetConnectionStringWithApplicationName_IsIdempotent()
+    {
+        DataSource dataSource = new(DatabaseType.MSSQL, "Server=localhost;Database=test;");
+        RuntimeConfig config = new(
+            Schema: "s",
+            DataSource: dataSource,
+            Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
+
+        string once = RuntimeConfigLoader.GetConnectionStringWithApplicationName("Server=localhost;Database=test;", config, dataSource);
+        string twice = RuntimeConfigLoader.GetConnectionStringWithApplicationName(once, config, dataSource);
+
+        Assert.AreEqual(once, twice, "Re-embedding telemetry should be a no-op (idempotent).");
+
+        int markerOccurrences = (twice.Length - twice.Replace(ProductInfo.DAB_USER_AGENT_MARKER, string.Empty).Length) / ProductInfo.DAB_USER_AGENT_MARKER.Length;
+        Assert.AreEqual(1, markerOccurrences, $"Telemetry marker should appear exactly once but was '{twice}'.");
+    }
+
+    /// <summary>
     /// Computing the telemetry Application Name buffers a Debug log into a shared static buffer that,
     /// before the fix, was only drained once at startup — so the log was never emitted on hot reload and
     /// the buffer accumulated an entry per data source on every reload. This validates that

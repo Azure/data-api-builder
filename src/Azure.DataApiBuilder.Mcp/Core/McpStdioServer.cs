@@ -316,7 +316,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <remarks>
         /// Log level precedence (highest to lowest):
         /// 1. MCP <c>logging/setLevel</c> (Agent) - always wins, overrides CLI and Config.
-        /// 2. CLI <c>--LogLevel</c> flag.
+        /// 2. CLI <c>--log-level</c> flag.
         /// 3. Config <c>runtime.telemetry.log-level</c>.
         /// 4. Default: <c>None</c> for MCP stdio mode (silent by default to keep stdout clean for JSON-RPC),
         ///    <c>Error</c> in Production, <c>Debug</c> in Development.
@@ -334,7 +334,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         ///    hot-reloads do not overwrite the agent's choice.
         /// 3. Restore <see cref="Console.Error"/> to the real stderr stream when logging is enabled,
         ///    in case startup redirected it to <see cref="TextWriter.Null"/> (default for
-        ///    <c>--mcp-stdio</c> or <c>--LogLevel none</c>).
+        ///    <c>--mcp-stdio</c> or <c>--log-level none</c>).
         /// </remarks>
         private void HandleSetLogLevel(JsonElement? id, JsonElement root)
         {
@@ -393,7 +393,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             bool updated = logLevelController.UpdateFromMcp(level);
 
             // Restore stderr if the agent successfully turned logging on. When `--mcp-stdio` (or
-            // `--LogLevel none`) was the startup default, stderr was redirected to TextWriter.Null;
+            // `--log-level none`) was the startup default, stderr was redirected to TextWriter.Null;
             // re-enable it now so subsequent logs flow.
             if (updated && isLoggingEnabled)
             {

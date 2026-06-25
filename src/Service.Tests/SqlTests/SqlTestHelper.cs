@@ -552,15 +552,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Get all the available non-public,non-static constructors for SqlError class.
             constructorsArray = typeof(SqlError).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
 
-            // At this point the ConstructorInfo[] for SqlError has 2 entries: One constructor with 8 parameters,
-            // and one with 9 parameters. We can choose either of them to create an object of SqlError type.
-            ConstructorInfo nineParamsConstructor = constructorsArray.FirstOrDefault(c => c.GetParameters().Length == 9);
+            // Microsoft.Data.SqlClient exposes multiple internal SqlError constructors (including more than
+            // one with nine parameters). Select the specific overload by matching its exact parameter types
+            // so we are resilient to constructor ordering and signature changes across SqlClient versions:
+            // (int infoNumber, byte errorState, byte errorClass, string server, string errorMessage,
+            //  string procedure, int lineNumber, int win32ErrorCode, Exception exception)
+            Type[] expectedParameterTypes = new[]
+            {
+                typeof(int), typeof(byte), typeof(byte), typeof(string), typeof(string),
+                typeof(string), typeof(int), typeof(int), typeof(Exception)
+            };
+            ConstructorInfo sqlErrorConstructor = constructorsArray.FirstOrDefault(c =>
+                c.GetParameters().Select(p => p.ParameterType).SequenceEqual(expectedParameterTypes));
 
             // Create SqlError object.
             // For details on what the parameters stand for please refer:
             // https://learn.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlerror.number#examples
-            SqlError sqlError = (nineParamsConstructor
-                .Invoke(new object[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, null }) as SqlError)!;
+            SqlError sqlError = (sqlErrorConstructor
+                .Invoke(new object[] { number, (byte)0, (byte)0, "", "", "", (int)0, (int)0, null }) as SqlError)!;
             errorList.Add(sqlError);
 
             // Create SqlException object

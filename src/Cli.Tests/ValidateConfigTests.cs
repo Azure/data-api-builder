@@ -404,7 +404,7 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// Tests that validation fails when Azure Log Analytics options are configured without the Auth options.
+    /// Tests that logs related to suppressed messages do not appear.
     /// </summary>
     [TestMethod]
     public async Task TestValidateSuppressedLogsDoNotAppear()

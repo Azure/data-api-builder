@@ -30,6 +30,26 @@ public abstract class RuntimeConfigLoader
 
     protected static LogBuffer _logBuffer = new();
 
+    /// <summary>
+    /// Logger used to drain buffered logs. <c>null</c> on a base loader with no logging; loaders that
+    /// own a logger (e.g. <see cref="FileSystemRuntimeConfigLoader"/>) override this so
+    /// <see cref="FlushLogBuffer"/> can emit to it.
+    /// </summary>
+    protected virtual ILogger? Logger => null;
+
+    /// <summary>
+    /// Flushes any logs buffered during config parsing / telemetry embedding (notably the telemetry
+    /// Application Name Debug log) to <see cref="Logger"/>. Safe no-op when no logger is available (the
+    /// buffered logs remain until a later flush), so it cannot lose logs or regress flush behavior.
+    /// </summary>
+    public void FlushLogBuffer()
+    {
+        if (Logger is not null)
+        {
+            _logBuffer.FlushToLogger(Logger);
+        }
+    }
+
     // Public to allow the RuntimeProvider and other users of class to set via out param.
     // May be candidate to refactor by changing all of the Parse/Load functions to save
     // state in place of using out params.

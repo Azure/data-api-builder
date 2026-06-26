@@ -904,6 +904,9 @@ type Moon {
             string expectedDabModifiedConnString,
             bool dabEnvOverride)
         {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
             // Ensure telemetry is enabled (not opted out) so the Application Name carries the dab_oss payload.
             Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
 
@@ -947,7 +950,8 @@ type Moon {
             }
             finally
             {
-                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
             }
         }
 
@@ -971,6 +975,9 @@ type Moon {
             string expectedDabModifiedConnString,
             bool dabEnvOverride)
         {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
             // Ensure telemetry is enabled (not opted out) so the Application Name carries the dab_oss payload.
             Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
 
@@ -1014,7 +1021,8 @@ type Moon {
             }
             finally
             {
-                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
             }
         }
 

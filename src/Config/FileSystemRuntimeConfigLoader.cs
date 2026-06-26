@@ -556,18 +556,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     }
 
     /// <summary>
-    /// Flush all logs from the buffer after the log level is set from the RuntimeConfig.
-    /// Logger needs to be present, or else the logs will be lost.
+    /// The logger this loader emits to once set, consumed by the base
+    /// <see cref="RuntimeConfigLoader.FlushLogBuffer"/> to drain buffered logs.
     /// </summary>
-    public void FlushLogBuffer()
-    {
-        // Only flush when a logger is available; otherwise FlushToLogger would throw. When no logger
-        // has been set yet (very early startup), the logs remain buffered until the next flush.
-        if (_logger is not null)
-        {
-            _logBuffer.FlushToLogger(_logger);
-        }
-    }
+    protected override ILogger? Logger => _logger;
 
     /// <summary>
     /// Helper method that sends the log to the buffer if the logger has not being set up.

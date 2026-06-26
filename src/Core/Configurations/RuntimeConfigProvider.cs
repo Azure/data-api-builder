@@ -217,7 +217,7 @@ public class RuntimeConfigProvider : IDisposable
             // Flush the telemetry Debug log(s) buffered during embedding. The startup-time flush has
             // already run by the time this late-config path executes, so without flushing here the
             // buffered telemetry logs would never be emitted.
-            FlushConfigLoaderLogBuffer();
+            _configLoader.FlushLogBuffer();
 
             ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
         }
@@ -318,7 +318,7 @@ public class RuntimeConfigProvider : IDisposable
             // Flush the telemetry Debug log(s) buffered during embedding. The startup-time flush has
             // already run by the time this late-config path executes, so without flushing here the
             // buffered telemetry logs would never be emitted.
-            FlushConfigLoaderLogBuffer();
+            _configLoader.FlushLogBuffer();
 
             return await InvokeConfigLoadedHandlersAsync();
         }
@@ -359,22 +359,6 @@ public class RuntimeConfigProvider : IDisposable
         }
 
         return config;
-    }
-
-    /// <summary>
-    /// Flushes any logs buffered during config parsing / telemetry embedding (notably the telemetry
-    /// Application Name Debug log emitted by the static connection-string helpers) to the loader's
-    /// logger. The hosted / late-config path runs after the startup-time flush, so these logs would
-    /// otherwise remain buffered indefinitely. Safe no-op when the loader is not a
-    /// <see cref="FileSystemRuntimeConfigLoader"/> or when no logger has been set yet (the buffered
-    /// logs simply remain until a later flush), so it cannot regress existing flush behavior.
-    /// </summary>
-    private void FlushConfigLoaderLogBuffer()
-    {
-        if (_configLoader is FileSystemRuntimeConfigLoader fileSystemLoader)
-        {
-            fileSystemLoader.FlushLogBuffer();
-        }
     }
 
     /// <summary>

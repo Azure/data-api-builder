@@ -101,6 +101,13 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 string expectedSchemaReferenceId = $"{entityName}{OpenApiDocumentor.SP_REQUEST_SUFFIX}";
 
                 ValidateOpenApiReferenceContents(schemaComponentReference, expectedSchemaReferenceId, expectedParameters, expectedParametersJsonTypes);
+
+                // Validate that parameters without a default value are marked as required in the schema component.
+                ISet<string> requiredParameters = _openApiDocument.Components.Schemas[expectedSchemaReferenceId].Required;
+                CollectionAssert.AreEquivalent(
+                    expectedParameters,
+                    requiredParameters.ToArray(),
+                    message: "Unexpected required parameters in request body schema component.");
             }
         }
 

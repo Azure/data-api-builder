@@ -215,6 +215,33 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(desc.GetString()!.Contains("userId"));
         }
 
+        /// <summary>
+        /// Test that the config-based input schema lists parameters without a default value
+        /// in the JSON Schema "required" array, while excluding those that have a default.
+        /// </summary>
+        [TestMethod]
+        public void GetToolMetadata_PopulatesRequired_FromConfigParameters()
+        {
+            // Arrange
+            ParameterMetadata[] parameters = new[]
+            {
+                new ParameterMetadata { Name = "firstName" },
+                new ParameterMetadata { Name = "lastName" },
+                new ParameterMetadata { Name = "nickname", Default = "guest" }
+            };
+            Entity entity = CreateTestStoredProcedureEntity(parameters: parameters);
+            DynamicCustomTool tool = new("GetUser", entity);
+
+            // Act
+            ModelContextProtocol.Protocol.Tool metadata = tool.GetToolMetadata();
+
+            // Assert
+            JsonDocument schemaObj = JsonDocument.Parse(metadata.InputSchema.GetRawText());
+            Assert.IsTrue(schemaObj.RootElement.TryGetProperty("required", out JsonElement required));
+            List<string> requiredNames = required.EnumerateArray().Select(e => e.GetString()!).ToList();
+            CollectionAssert.AreEquivalent(new[] { "firstName", "lastName" }, requiredNames);
+        }
+
         #region Parameter Validation Tests (ExecuteAsync)
 
         /// <summary>
@@ -695,6 +722,35 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // Assert
             string desc = props.GetProperty("tenant").GetProperty("description").GetString()!;
             StringAssert.Contains(desc, "default: default_tenant");
+        }
+
+        /// <summary>
+        /// Parameters discovered via DB metadata that lack a config default are listed in the
+        /// JSON Schema "required" array, while parameters with a default are excluded.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_PopulatesRequired_ForParamsWithoutDefault()
+        {
+            // Arrange
+            Dictionary<string, ParameterDefinition> dbParams = new()
+            {
+                ["firstName"] = new() { SystemType = typeof(string) },
+                ["lastName"] = new() { SystemType = typeof(string) },
+                ["tenant"] = new() { SystemType = typeof(string), HasConfigDefault = true, ConfigDefaultValue = "default_tenant" }
+            };
+
+            const string entityName = "TestSP";
+            Entity entity = CreateTestStoredProcedureEntity();
+            DynamicCustomTool tool = new(entityName, entity);
+            tool.InitializeMetadata(BuildServiceProviderForMetadata(entityName, dbParams));
+
+            // Act
+            JsonElement schema = tool.GetToolMetadata().InputSchema;
+
+            // Assert
+            Assert.IsTrue(schema.TryGetProperty("required", out JsonElement required));
+            List<string> requiredNames = required.EnumerateArray().Select(e => e.GetString()!).ToList();
+            CollectionAssert.AreEquivalent(new[] { "firstName", "lastName" }, requiredNames);
         }
 
         /// <summary>

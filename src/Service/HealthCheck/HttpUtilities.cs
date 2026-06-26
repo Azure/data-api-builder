@@ -136,6 +136,65 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
         }
 
+        // Executes the MCP query by sending an initialize JSON-RPC POST request to the MCP endpoint.
+        public async Task<string?> ExecuteMcpQueryAsync(string mcpUriSuffix, string incomingRoleHeader, string incomingRoleToken)
+        {
+            string? errorMessage = null;
+            try
+            {
+                if (string.IsNullOrEmpty(mcpUriSuffix))
+                {
+                    _logger.LogError("The MCP route is not available, hence HealthEndpoint is not available.");
+                    return errorMessage;
+                }
+
+                if (!Program.CheckSanityOfUrl($"{_httpClient.BaseAddress}{mcpUriSuffix.TrimStart('/')}"))
+                {
+                    _logger.LogError("Blocked outbound request due to invalid or unsafe URI.");
+                    return "Blocked outbound request due to invalid or unsafe URI.";
+                }
+
+                string jsonPayload = Utilities.CreateHttpMcpQuery();
+                HttpContent content = new StringContent(jsonPayload, Encoding.UTF8, Utilities.JSON_CONTENT_TYPE);
+
+                HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: mcpUriSuffix)
+                {
+                    Content = content
+                };
+
+                // The MCP Streamable HTTP transport requires the client to accept both
+                // JSON and SSE responses.
+                message.Headers.Add("Accept", "application/json, text/event-stream");
+
+                if (!string.IsNullOrEmpty(incomingRoleToken))
+                {
+                    message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
+                }
+
+                if (!string.IsNullOrEmpty(incomingRoleHeader))
+                {
+                    message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
+                }
+
+                HttpResponseMessage response = await _httpClient.SendAsync(message);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogTrace($"The MCP HealthEndpoint query executed successfully with code {response.StatusCode}.");
+                }
+                else
+                {
+                    errorMessage = $"The MCP HealthEndpoint query failed with code: {response.StatusCode}.";
+                }
+
+                return errorMessage;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"An exception occurred while executing the health check MCP query: {ex.Message}");
+                return ex.Message;
+            }
+        }
+
         // Executes the GraphQL query by sending a POST request to the API.
         // Internally calls the metadata provider to fetch the column names to create the graphql payload.
         public async Task<string?> ExecuteGraphQLQueryAsync(string graphqlUriSuffix, string entityName, Entity entity, string incomingRoleHeader, string incomingRoleToken)

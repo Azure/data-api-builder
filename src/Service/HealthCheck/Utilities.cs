@@ -72,6 +72,27 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return $"/{entityName}?$first={first}";
         }
 
+        public static string CreateHttpMcpQuery()
+        {
+            // Create a minimal MCP request (initialize) as a valid JSON-RPC request.
+            // 'initialize' is used because other methods (e.g. 'tools/list') require an active
+            // session in the MCP Streamable HTTP transport.
+            var payload = new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                method = "initialize",
+                @params = new
+                {
+                    protocolVersion = "2025-03-26",
+                    capabilities = new { },
+                    clientInfo = new { name = "dab-health-check", version = "1.0.0" }
+                }
+            };
+
+            return JsonSerializer.Serialize(payload);
+        }
+
         public static string NormalizeConnectionString(string connectionString, DatabaseType dbType, ILogger? logger = null)
         {
             try

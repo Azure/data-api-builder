@@ -361,6 +361,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             Dictionary<string, object> properties = new();
+            List<string> required = new();
             foreach ((string paramName, ParameterDefinition paramDef) in spDefinition.Parameters)
             {
                 Dictionary<string, object> paramSchema = new()
@@ -370,6 +371,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 };
 
                 properties[paramName] = paramSchema;
+
+                // A parameter is required when no default value is available to fall back on.
+                if (!paramDef.HasConfigDefault)
+                {
+                    required.Add(paramName);
+                }
             }
 
             Dictionary<string, object> schema = new()
@@ -377,6 +384,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 ["type"] = "object",
                 ["properties"] = properties
             };
+
+            if (required.Count > 0)
+            {
+                schema["required"] = required;
+            }
 
             return JsonSerializer.SerializeToElement(schema);
         }
@@ -396,6 +408,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             if (_entity.Source.Parameters != null && _entity.Source.Parameters.Any())
             {
                 Dictionary<string, object> properties = (Dictionary<string, object>)schema["properties"];
+                List<string> required = new();
 
                 foreach (ParameterMetadata param in _entity.Source.Parameters)
                 {
@@ -404,6 +417,17 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         ["type"] = new[] { "string", "number", "boolean", "null" },
                         ["description"] = param.Description ?? $"Parameter {param.Name}"
                     };
+
+                    // A parameter is required when no default value is configured.
+                    if (param.Default is null)
+                    {
+                        required.Add(param.Name);
+                    }
+                }
+
+                if (required.Count > 0)
+                {
+                    schema["required"] = required;
                 }
             }
 

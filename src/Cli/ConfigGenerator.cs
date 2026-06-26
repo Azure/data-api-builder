@@ -3206,7 +3206,7 @@ namespace Cli
 
                         if (missingFields)
                         {
-                            _logger.LogWarning($"One or more entities are missing `fields` definition while MCP is enabled. " +
+                            _logger.LogWarning("One or more entities are missing `fields` definition while MCP is enabled. " +
                                 "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
                         }
                     }

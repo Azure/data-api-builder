@@ -40,6 +40,16 @@ public class ValidateConfigTests
         Environment.SetEnvironmentVariable($"database-type", null);
         Environment.SetEnvironmentVariable($"sp_param1_int", null);
         Environment.SetEnvironmentVariable($"sp_param2_bool", null);
+
+        // Set output back to the default for other tests.
+        Console.SetOut(new StreamWriter(Console.OpenStandardOutput())
+        {
+            AutoFlush = true
+        });
+        Console.SetError(new StreamWriter(Console.OpenStandardError())
+        {
+            AutoFlush = true
+        });
     }
 
     /// <summary>

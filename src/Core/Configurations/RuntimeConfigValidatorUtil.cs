@@ -45,9 +45,10 @@ public static class RuntimeConfigValidatorUtil
         }
         else
         {
+            // Remove the leading '/' before validating the remaining path. The path may contain
+            // multiple '/'-separated segments (e.g. '/api/v2'), each of which is validated individually.
             uriComponent = uriComponent.Substring(1);
-            // URI component should not contain any reserved characters.
-            if (DoesUriComponentContainReservedChars(uriComponent))
+            if (DoesUriPathContainReservedChars(uriComponent))
             {
                 exceptionMessageSuffix = URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG;
             }
@@ -64,6 +65,34 @@ public static class RuntimeConfigValidatorUtil
     public static bool DoesUriComponentContainReservedChars(string uriComponent)
     {
         return _reservedUriCharsRgx.IsMatch(uriComponent);
+    }
+
+    /// <summary>
+    /// Method to validate a URI path that may contain multiple '/'-separated segments
+    /// (for example 'api/v2'). The leading '/' is expected to already be removed.
+    /// Each segment is validated to ensure it is non-empty and free of reserved characters.
+    /// An empty input (representing the root path '/') is considered valid.
+    /// </summary>
+    /// <param name="uriPath">Path prefix for rest/graphql apis with the leading '/' already removed.</param>
+    /// <returns>true if any segment is empty or contains reserved characters, false otherwise.</returns>
+    public static bool DoesUriPathContainReservedChars(string uriPath)
+    {
+        // An empty path represents the root '/' which is valid and contains no segments to validate.
+        if (string.IsNullOrEmpty(uriPath))
+        {
+            return false;
+        }
+
+        foreach (string segment in uriPath.Split('/'))
+        {
+            // An empty segment indicates leading, consecutive, or trailing slashes.
+            if (string.IsNullOrEmpty(segment) || DoesUriComponentContainReservedChars(segment))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

@@ -945,7 +945,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate that the engine starts successfully when --verbose and --LogLevel
+    /// Test to validate that the engine starts successfully when --verbose and --log-level
     /// options are used with the start command
     /// This test does not validate whether the engine logs messages at the specified log level
     /// </summary>
@@ -953,15 +953,17 @@ public class EndToEndTests
     [DataTestMethod]
     [DataRow("", DisplayName = "No logging from command line.")]
     [DataRow("--verbose", DisplayName = "Verbose logging from command line.")]
-    [DataRow("--LogLevel 0", DisplayName = "LogLevel 0 from command line.")]
-    [DataRow("--LogLevel 1", DisplayName = "LogLevel 1 from command line.")]
-    [DataRow("--LogLevel 2", DisplayName = "LogLevel 2 from command line.")]
-    [DataRow("--LogLevel Trace", DisplayName = "LogLevel Trace from command line.")]
-    [DataRow("--LogLevel Debug", DisplayName = "LogLevel Debug from command line.")]
-    [DataRow("--LogLevel Information", DisplayName = "LogLevel Information from command line.")]
-    [DataRow("--LogLevel tRace", DisplayName = "Case sensitivity: LogLevel Trace from command line.")]
-    [DataRow("--LogLevel DebUG", DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
-    [DataRow("--LogLevel information", DisplayName = "Case sensitivity: LogLevel Information from command line.")]
+    [DataRow("--log-level 0", DisplayName = "LogLevel 0 from command line.")]
+    [DataRow("--log-level 1", DisplayName = "LogLevel 1 from command line.")]
+    [DataRow("--log-level 2", DisplayName = "LogLevel 2 from command line.")]
+    [DataRow("--log-level Trace", DisplayName = "LogLevel Trace from command line.")]
+    [DataRow("--log-level Debug", DisplayName = "LogLevel Debug from command line.")]
+    [DataRow("--log-level Information", DisplayName = "LogLevel Information from command line.")]
+    [DataRow("--log-level tRace", DisplayName = "Case sensitivity: LogLevel Trace from command line.")]
+    [DataRow("--log-level DebUG", DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
+    [DataRow("--log-level information", DisplayName = "Case sensitivity: LogLevel Information from command line.")]
+    [DataRow("--LogLevel 0", DisplayName = "Case sensitivity: LogLevel 0 legacy from command line.")]
+    [DataRow("--LogLevel information", DisplayName = "Case sensitivity: LogLevel Information legacy from command line.")]
     public void TestEngineStartUpWithVerboseAndLogLevelOptions(string logLevelOption)
     {
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
@@ -981,7 +983,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate that the engine starts successfully when --LogLevel is set to Warning
+    /// Test to validate that the engine starts successfully when --log-level is set to Warning
     /// or above. At these levels, CLI phase messages (logged at Information) are suppressed,
     /// so no stdout output with message 'info' is expected during the CLI phase.
     /// </summary>
@@ -1002,7 +1004,7 @@ public class EndToEndTests
         StringWriter consoleOutput = new();
         Console.SetOut(consoleOutput);
 
-        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--LogLevel", logLevelOption };
+        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--log-level", logLevelOption };
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
         // Run Program.Execute on a background task because StartEngine blocks until the host shuts down.
@@ -1017,7 +1019,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate that the engine starts successfully when --LogLevel is set to None.
+    /// Test to validate that the engine starts successfully when --log-level is set to None.
     /// At these levels, CLI phase messages (logged at Information) are suppressed,
     /// so no stdout output is expected during the CLI phase.
     /// </summary>
@@ -1032,7 +1034,7 @@ public class EndToEndTests
         StringWriter consoleOutput = new();
         Console.SetOut(consoleOutput);
 
-        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--LogLevel", logLevelOption };
+        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--log-level", logLevelOption };
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
         // Run Program.Execute on a background task because StartEngine blocks until the host shuts down.
@@ -1046,12 +1048,12 @@ public class EndToEndTests
     }
 
     /// Validates that `dab start` correctly sets <see cref="Startup.IsCliOverriding"/>
-    /// based on whether the --LogLevel CLI flag is provided.
+    /// based on whether the --log-level CLI flag is provided.
     ///
-    /// When the --LogLevel flag is provided, IsCliOverriding should be true.
-    /// When the --LogLevel flag is omitted (log level comes from the config file), IsCliOverriding should be false.
+    /// When the --log-level flag is provided, IsCliOverriding should be true.
+    /// When the --log-level flag is omitted (log level comes from the config file), IsCliOverriding should be false.
     /// </summary>
-    /// <param name="cliLogLevel">The --LogLevel CLI flag value, or null to omit the flag.</param>
+    /// <param name="cliLogLevel">The --log-level CLI flag value, or null to omit the flag.</param>
     /// <param name="expectedIsOverridden">Expected value of Startup.IsCliOverriding.</param>
     [DataTestMethod]
     [DataRow(null, false, DisplayName = "IsCliOverriding is false")]
@@ -1109,6 +1111,7 @@ public class EndToEndTests
             isHttpsRedirectionDisabled: false,
             mcpStdio: false,
             mcpRole: null,
+            logLevelLegacy: null,
             config: TEST_RUNTIME_CONFIG_FILE);
 
         // Run TryStartEngineWithOptions on a background task because StartEngine blocks until the host shuts down.

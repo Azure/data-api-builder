@@ -175,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Hot-reloading the runtime config must not overwrite a CLI-set level. The CLI
-        /// <c>--LogLevel</c> flag is the operator's deliberate startup choice, so a
+        /// <c>--log-level</c> flag is the operator's deliberate startup choice, so a
         /// subsequent <see cref="DynamicLogLevelProvider.UpdateFromRuntimeConfig"/> with a
         /// different config-pinned level must be ignored.
         /// </summary>

@@ -12,7 +12,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry
     {
         /// <summary>
         /// Gets a value indicating whether the CLI is the source overriding the log level
-        /// (i.e., <c>--LogLevel</c> was supplied). When true, runtime-config (hot-reload)
+        /// (i.e., <c>--log-level</c> was supplied). When true, runtime-config (hot-reload)
         /// updates are ignored.
         /// </summary>
         bool IsCliOverriding { get; }
@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry
         /// The MCP level string is mapped to the appropriate LogLevel.
         /// Log-level precedence (highest to lowest):
         /// 1. Agent (MCP <c>logging/setLevel</c>) — always wins.
-        /// 2. CLI <c>--LogLevel</c> flag.
+        /// 2. CLI <c>--log-level</c> flag.
         /// 3. Config <c>runtime.telemetry.log-level</c>.
         /// 4. Defaults.
         /// </summary>

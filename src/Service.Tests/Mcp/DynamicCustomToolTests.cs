@@ -711,6 +711,126 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// DB-discovered parameters with no config default/override are advertised as required.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_IncludesRequiredArray_ForParamsWithoutDefaults()
+        {
+            // Arrange
+            Dictionary<string, ParameterDefinition> dbParams = new()
+            {
+                ["productId"] = new() { SystemType = typeof(int) }
+            };
+
+            // Act
+            JsonElement schema = InitializeAndGetSchema(dbParams);
+
+            // Assert
+            Assert.IsTrue(schema.TryGetProperty("required", out JsonElement required),
+                "Schema should expose a 'required' array for parameters without defaults.");
+            CollectionAssert.AreEquivalent(
+                new[] { "productId" },
+                EnumerateStrings(required),
+                "'productId' should be listed as required.");
+        }
+
+        /// <summary>
+        /// Parameters that have a config default or are explicitly marked optional are excluded
+        /// from the required array, while parameters without defaults remain required.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_ExcludesParamsWithDefaultsOrOptionalFlag_FromRequired()
+        {
+            // Arrange
+            Dictionary<string, ParameterDefinition> dbParams = new()
+            {
+                ["id"] = new() { SystemType = typeof(int) },
+                ["title"] = new() { SystemType = typeof(string), HasConfigDefault = true, ConfigDefaultValue = "randomX" },
+                ["publisher_id"] = new() { SystemType = typeof(int), Required = false }
+            };
+
+            // Act
+            JsonElement schema = InitializeAndGetSchema(dbParams);
+
+            // Assert
+            Assert.IsTrue(schema.TryGetProperty("required", out JsonElement required));
+            CollectionAssert.AreEquivalent(
+                new[] { "id" },
+                EnumerateStrings(required),
+                "Only 'id' (no default, not marked optional) should be required.");
+        }
+
+        /// <summary>
+        /// A zero-parameter SP must not emit a 'required' array.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_ZeroParamSP_OmitsRequiredArray()
+        {
+            // Arrange & Act
+            JsonElement schema = InitializeAndGetSchema(new Dictionary<string, ParameterDefinition>());
+
+            // Assert
+            Assert.IsFalse(schema.TryGetProperty("required", out _),
+                "Zero-param SP should not include a 'required' array.");
+        }
+
+        /// <summary>
+        /// When falling back to config-based schema, parameters without a default are required.
+        /// </summary>
+        [TestMethod]
+        public void GetToolMetadata_ConfigFallback_MarksParamsWithoutDefaultsRequired()
+        {
+            // Arrange - config declares one required param and one with a default
+            ParameterMetadata[] parameters = new[]
+            {
+                new ParameterMetadata { Name = "userId" },
+                new ParameterMetadata { Name = "tenant", Default = "contoso" }
+            };
+            Entity entity = CreateTestStoredProcedureEntity(parameters: parameters);
+            DynamicCustomTool tool = new("GetUser", entity);
+
+            // Act - no InitializeMetadata call, so the config-based schema is used
+            JsonElement schema = tool.GetToolMetadata().InputSchema;
+
+            // Assert
+            Assert.IsTrue(schema.TryGetProperty("required", out JsonElement required));
+            CollectionAssert.AreEquivalent(
+                new[] { "userId" },
+                EnumerateStrings(required),
+                "Only 'userId' (no default) should be required in the config-based schema.");
+        }
+
+        /// <summary>
+        /// Helper: Parses the "required" array values into a list of strings.
+        /// </summary>
+        private static List<string> EnumerateStrings(JsonElement array)
+        {
+            List<string> values = new();
+            foreach (JsonElement element in array.EnumerateArray())
+            {
+                values.Add(element.GetString()!);
+            }
+
+            return values;
+        }
+
+        /// <summary>
+        /// Helper: Creates a DynamicCustomTool, initializes it with mocked DB metadata, and returns
+        /// the full input schema element.
+        /// </summary>
+        private static JsonElement InitializeAndGetSchema(
+            Dictionary<string, ParameterDefinition> dbParameters,
+            string entityName = "TestSP")
+        {
+            Entity entity = CreateTestStoredProcedureEntity();
+            DynamicCustomTool tool = new(entityName, entity);
+            IServiceProvider sp = BuildServiceProviderForMetadata(entityName, dbParameters);
+
+            tool.InitializeMetadata(sp);
+            return tool.GetToolMetadata().InputSchema;
+        }
+
+        /// <summary>
         /// Helper: Creates a DynamicCustomTool, initializes it with mocked DB metadata, and returns
         /// the "properties" element from the resulting input schema.
         /// </summary>

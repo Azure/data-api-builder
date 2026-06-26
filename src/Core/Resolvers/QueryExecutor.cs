@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlTypes;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
@@ -502,7 +503,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             {
                                 if (!ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
                                 {
-                                    dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
+                                    dbResultSetRow.Columns.Add(columnName, GetColumnInformation(dbDataReader, columnName));
                                 }
                                 else
                                 {
@@ -883,6 +884,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     statusCode: HttpStatusCode.RequestEntityTooLarge,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorProcessingData);
             }
+        }
+
+        /// <summary>
+        /// Helper function to get column information from the DbDataReader and handle special cases like SqlVector<float>.
+        /// </summary>
+        /// <param name="dbDataReader"></param>
+        /// <param name="columnName"></param>
+        /// <returns></returns>
+        private static object GetColumnInformation(DbDataReader dbDataReader, string columnName)
+        {
+            if (dbDataReader[columnName] is SqlVector<float> columnValue)
+            {
+                return columnValue.Memory;
+            }
+
+            return dbDataReader[columnName];
         }
 
         internal virtual void AddDbExecutionTimeToMiddlewareContext(long time)

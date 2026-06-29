@@ -3066,10 +3066,10 @@ namespace Cli
             List<string> args = new()
             { "--ConfigFileName", runtimeConfigFile };
 
-            /// Add arguments for LogLevel. Only pass --LogLevel when user explicitly specified it,
+            /// Add arguments for LogLevel. Only pass --log-level when user explicitly specified it,
             /// so that MCP logging/setLevel can still adjust the level when no CLI override is present.
             /// 
-            /// When --LogLevel is NOT specified:
+            /// When --log-level is NOT specified:
             /// - MCP stdio mode: Service defaults to None for clean stdout output
             /// - Non-MCP mode: Service defaults to Debug (Development) or Error (Production) based on config
             LogLevel minimumLogLevel;
@@ -3079,19 +3079,30 @@ namespace Cli
             Utils.IsConfigOverriding = false;
             Utils.ConfigLogLevel = LogLevel.Information;
 
+            LogLevel? logLevel = null;
             if (options.LogLevel is not null)
             {
-                if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
+                logLevel = options.LogLevel;
+            }
+            else if (options.LogLevelLegacy is not null)
+            {
+                options.CliBuffer.BufferLog(LogLevel.Warning, $"--LogLevel is deprecated, please use --log-level instead.");
+                logLevel = options.LogLevelLegacy;
+            }
+
+            if (logLevel is not null)
+            {
+                if (logLevel is < LogLevel.Trace or > LogLevel.None)
                 {
                     options.CliBuffer.BufferLog(LogLevel.Error,
-                        $"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel");
+                        $"LogLevel's valid range is 0 to 6, your value: {logLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel");
                     return false;
                 }
 
-                minimumLogLevel = (LogLevel)options.LogLevel;
-                // Only add --LogLevel when user explicitly specified it via CLI.
+                minimumLogLevel = (LogLevel)logLevel;
+                // Only add --log-level when user explicitly specified it via CLI.
                 // This allows MCP logging/setLevel to work when no CLI override is present.
-                args.Add("--LogLevel");
+                args.Add("--log-level");
                 args.Add(minimumLogLevel.ToString());
             }
             else
@@ -3100,7 +3111,7 @@ namespace Cli
 
                 // Track whether config explicitly set a log level. In MCP stdio mode this
                 // allows CLI logs to be emitted to stderr (instead of being suppressed)
-                // when the user expressed intent via the config file rather than --LogLevel.
+                // when the user expressed intent via the config file rather than --log-level.
                 if (deserializedRuntimeConfig.HasExplicitLogLevel())
                 {
                     Utils.IsConfigOverriding = true;
@@ -3155,8 +3166,6 @@ namespace Cli
                 return false;
             }
 
-            _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
-
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _))
@@ -3185,13 +3194,20 @@ namespace Cli
                     bool mcpEnabled = config.IsMcpEnabled;
                     if (mcpEnabled)
                     {
+                        bool missingFields = false;
                         foreach (KeyValuePair<string, Entity> entity in config.Entities)
                         {
                             if (entity.Value.Fields == null || !entity.Value.Fields.Any())
                             {
-                                _logger.LogWarning($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled. " +
-                                    "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
+                                missingFields = true;
+                                _logger.LogDebug($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled.");
                             }
+                        }
+
+                        if (missingFields)
+                        {
+                            _logger.LogWarning("One or more entities are missing `fields` definition while MCP is enabled. " +
+                                "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
                         }
                     }
 

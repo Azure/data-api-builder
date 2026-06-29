@@ -123,18 +123,7 @@ namespace Azure.DataApiBuilder.Core.Services
             _databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
             _logger = logger;
             _isValidateOnly = isValidateOnly;
-            foreach ((string entityName, Entity entityMetatdata) in Entities)
-            {
-                if (runtimeConfig.IsRestEnabled)
-                {
-                    string restPath = entityMetatdata.Rest?.Path ?? entityName;
-                    _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
-                }
-                else
-                {
-                    _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
-                }
-            }
+            LogRestPathsForEntities(runtimeConfig, Entities);
 
             ConnectionString = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).ConnectionString;
             EntitiesDataSet = new();
@@ -1044,6 +1033,30 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, DatabaseObject> sourceObjects)
         {
             return;
+        }
+
+        /// <summary>
+        /// Helper method that logs the REST paths for all entities and shows if the REST calls are enabled/disabled for any entity.
+        /// </summary>
+        /// <param name="runtimeConfig"></param>
+        /// <param name="entities"></param>
+        protected void LogRestPathsForEntities(RuntimeConfig runtimeConfig, IReadOnlyDictionary<string, Entity> entities)
+        {
+            if (!_isValidateOnly)
+            {
+                foreach ((string entityName, Entity entityMetatdata) in entities)
+                {
+                    if (runtimeConfig.IsRestEnabled)
+                    {
+                        string restPath = entityMetatdata.Rest?.Path ?? entityName;
+                        _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
+                    }
+                    else
+                    {
+                        _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
+                    }
+                }
+            }
         }
 
         /// <summary>

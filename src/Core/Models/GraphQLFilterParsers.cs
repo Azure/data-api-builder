@@ -723,49 +723,61 @@ public static class FieldFilterParser
                     break;
                 case "some":
                     op = PredicateOperation.ARRAY_SOME;
-                    if (value is List<ObjectFieldNode> elementFields && elementFields.Count > 0)
+
+                    if (value is not List<ObjectFieldNode> elementFields || elementFields.Count == 0)
                     {
-                        IInputValueDefinition elementFilterSchema = argumentObject.Fields["some"];
-                        Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, elementFields, processLiterals, false);
-                        predicates.Push(new PredicateOperand(new Predicate(
-                            new PredicateOperand(column),
-                            op,
-                            new PredicateOperand(nestedPredicate)
-                        )));
-                        continue;
+                        throw new DataApiBuilderException(
+                            message: "Bad syntax: 'some' list filter requires at least one nested filter field.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    break;
+                    IInputValueDefinition elementFilterSchema = argumentObject.Fields["some"];
+                    Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, elementFields, processLiterals, false);
+                    predicates.Push(new PredicateOperand(new Predicate(
+                        new PredicateOperand(column),
+                        op,
+                        new PredicateOperand(nestedPredicate)
+                    )));
+                    continue;
                 case "none":
                     op = PredicateOperation.ARRAY_NONE;
-                    if (value is List<ObjectFieldNode> noneFields && noneFields.Count > 0)
+
+                    if (value is not List<ObjectFieldNode> noneFields || noneFields.Count == 0)
                     {
-                        IInputValueDefinition elementFilterSchema = argumentObject.Fields["none"];
-                        Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, noneFields, processLiterals, false);
-                        predicates.Push(new PredicateOperand(new Predicate(
-                            new PredicateOperand(column),
-                            op,
-                            new PredicateOperand(nestedPredicate)
-                        )));
-                        continue;
+                        throw new DataApiBuilderException(
+                            message: "Bad syntax: 'none' list filter requires at least one nested filter field.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    break;
+                    IInputValueDefinition elementFilterSchema = argumentObject.Fields["none"];
+                    Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, noneFields, processLiterals, false);
+                    predicates.Push(new PredicateOperand(new Predicate(
+                        new PredicateOperand(column),
+                        op,
+                        new PredicateOperand(nestedPredicate)
+                    )));
+                    continue;
                 case "all":
                     op = PredicateOperation.ARRAY_ALL;
-                    if (value is List<ObjectFieldNode> allFields && allFields.Count > 0)
+
+                    if (value is not List<ObjectFieldNode> allFields || allFields.Count == 0)
                     {
-                        IInputValueDefinition elementFilterSchema = argumentObject.Fields["all"];
-                        Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, allFields, processLiterals, false);
-                        predicates.Push(new PredicateOperand(new Predicate(
-                            new PredicateOperand(column),
-                            op,
-                            new PredicateOperand(nestedPredicate)
-                        )));
-                        continue;
+                        throw new DataApiBuilderException(
+                            message: "Bad syntax: 'all' list filter requires at least one nested filter field.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    break;
+                    IInputValueDefinition elementFilterSchema = argumentObject.Fields["all"];
+                    Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, allFields, processLiterals, false);
+                    predicates.Push(new PredicateOperand(new Predicate(
+                        new PredicateOperand(column),
+                        op,
+                        new PredicateOperand(nestedPredicate)
+                    )));
+                    continue;
                 case "any":
                     processLiteral = false;
                     op = PredicateOperation.ARRAY_ANY;

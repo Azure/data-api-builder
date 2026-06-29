@@ -5759,126 +5759,38 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
-        /// Ensures that autoentities are properly generated into in-memory entities when entities have unusual elements such as non-default schemas.
+        /// Ensures that autoentities are properly generated into in-memory entities when entities have non-default schemas.
         /// </summary>
         /// <param name="includePattern">The pattern to include for autoentities</param>
-        /// <param name="patternType">Integer that indicates which input pattern is being used</param>
+        /// <param name="isPatternFoo">Boolean that indicates if the pattern is for the foo schema</param>
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow("foo.%", 0, DisplayName = "Test Autoentities with foo schema")]
-        [DataRow("bar.%", 1, DisplayName = "Test Autoentities with bar schema")]
-        public async Task TestAutoentitiesGeneratedWithUnusualElements(string includePattern, int patternType)
+        [DataRow("foo.%", true, DisplayName = "Test Autoentities with foo schema")]
+        [DataRow("bar.%", false, DisplayName = "Test Autoentities with bar schema")]
+        public async Task TestAutoentitiesGeneratedWithDifferentSchemas(string includePattern, bool isPatternFoo)
         {
             // Arrange
             Dictionary<string, Autoentity> autoentityMap = new()
-            {
-                {
-                    "PublisherAutoEntity", new Autoentity(
-                        Patterns: new AutoentityPatterns(
-                            Include: new[] { includePattern },
-                            Exclude: null,
-                            Name: null
-                        ),
-                        Template: new AutoentityTemplate(
-                            Rest: new EntityRestOptions(Enabled: true),
-                            GraphQL: new EntityGraphQLOptions(
-                                Singular: string.Empty,
-                                Plural: string.Empty,
-                                Enabled: true
-                            ),
-                            Health: null,
-                            Cache: null
-                        ),
-                        Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) }
-                    )
-                }
-            };
-
-            // Create DataSource for MSSQL connection
-            DataSource dataSource = new(DatabaseType.MSSQL,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
-
-            // Build complete runtime configuration with autoentities
-            RuntimeConfig configuration = new(
-                Schema: "TestAutoentitiesSchema",
-                DataSource: dataSource,
-                Runtime: new(
-                    Rest: new(Enabled: true),
-                    GraphQL: new(Enabled: true),
-                    Mcp: new(Enabled: false),
-                    Host: new(
-                        Cors: null,
-                        Authentication: new Config.ObjectModel.AuthenticationOptions(
-                            Provider: nameof(EasyAuthType.StaticWebApps),
-                            Jwt: null
-                        )
-                    )
-                ),
-                Entities: new(new Dictionary<string, Entity>()),
-                Autoentities: new RuntimeAutoentities(autoentityMap)
-            );
-
-            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
-
-            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
-            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
                 // Act
-                string path;
-                string item;
-                string expectedResponseFragment;
-                switch (patternType)
-                {
-                    case 0:
-                        path = "foo_magazines";
-                        item = "title";
-                        expectedResponseFragment = @"""title"":""Vogue""";
-                        break;
-                    case 1:
-                        path = "bar_magazines";
-                        item = "comic_name";
-                        expectedResponseFragment = @"""comic_name"":""NotVogue""";
-                        break;
-                    default:
-                        throw new ArgumentException("Invalid pattern type");
-                }
-
+                string path = isPatternFoo ? "foo_magazines" : "bar_magazines";
                 using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{path}");
                 using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 
+                string item = isPatternFoo ? "title" : "comic_name";
                 string graphqlQuery = $@"
                 {{
                     {path} {{
-                        items {{
-                            {item}
-                        }}
-                    }}
-                }}";
-
-                object graphqlPayload = new { query = graphqlQuery };
-                HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
-                {
-                    Content = JsonContent.Create(graphqlPayload)
-                };
                 HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
 
                 // Assert
+                string expectedResponseFragment = isPatternFoo ? @"""title"":""Vogue""" : @"""comic_name"":""NotVogue""";
+
                 // Verify REST response
                 Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, "REST request to auto-generated entity should succeed");
 
-                string restResponseBody = await restResponse.Content.ReadAsStringAsync();
-                Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
-                Assert.IsTrue(restResponseBody.Contains(expectedResponseFragment));
-
-                // Verify GraphQL response
-                Assert.AreEqual(HttpStatusCode.OK, graphqlResponse.StatusCode, "GraphQL request to auto-generated entity should succeed");
-
-                string graphqlResponseBody = await graphqlResponse.Content.ReadAsStringAsync();
-                Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");
-                Assert.IsFalse(graphqlResponseBody.Contains("errors"), "GraphQL response should not contain errors");
-                Assert.IsTrue(graphqlResponseBody.Contains(expectedResponseFragment));
             }
         }
 

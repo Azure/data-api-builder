@@ -310,20 +310,17 @@ CREATE TABLE GQLmappings (
     column3 varchar(max)
 )
 
-CREATE TABLE bookmarks
-(
+CREATE TABLE bookmarks (
 	id int IDENTITY(1,1) PRIMARY KEY,
 	bkname nvarchar(1000) NOT NULL
 )
 
-CREATE TABLE mappedbookmarks
-(
+CREATE TABLE mappedbookmarks (
 	id int IDENTITY(1,1) PRIMARY KEY,
 	bkname nvarchar(50) NOT NULL
 )
 
-create Table fte_data
-(
+create Table fte_data (
     id int IDENTITY(5001,1),
     u_id int DEFAULT 2,
     name varchar(50),
@@ -332,8 +329,7 @@ create Table fte_data
     PRIMARY KEY(id, u_id)
 );
 
-create Table intern_data
-(
+create Table intern_data (
     id int,
     months int default 2 NOT NULL,
     name varchar(50),
@@ -341,8 +337,7 @@ create Table intern_data
     PRIMARY KEY(id, months)
 );
 
-create table books_sold
-(
+create table books_sold (
     id int PRIMARY KEY not null,
     book_name varchar(50),
     row_version rowversion,
@@ -351,8 +346,7 @@ create table books_sold
     last_sold_on_date as last_sold_on,
 )
 
-CREATE TABLE default_with_function_table
-(
+CREATE TABLE default_with_function_table (
     id INT PRIMARY KEY IDENTITY(5001,1),
     user_value INT,
     [current_date] DATETIME DEFAULT GETDATE() NOT NULL,

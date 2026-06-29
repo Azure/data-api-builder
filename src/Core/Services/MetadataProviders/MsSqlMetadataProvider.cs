@@ -302,6 +302,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             Dictionary<string, Entity> entities = new();
+            Dictionary<string, string> entityNameToRawEntity = new();
             foreach ((string autoentityName, Autoentity autoentity) in autoentities)
             {
                 int addedEntities = 0;
@@ -378,9 +379,12 @@ namespace Azure.DataApiBuilder.Core.Services
                     // whitespace removal (e.g. "Order Item" and "OrderItem" both yield "OrderItem").
                     if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddGeneratedAutoentityNameToDataSourceName(entityName, autoentityName))
                     {
-                        string collisionMessage = rawEntityName != entityName
-                            ? $"Entity '{entityName}' (normalized from '{rawEntityName}' in schema '{schemaName}') conflicts with autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it."
-                            : $"Entity '{entityName}' conflicts with autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it.";
+                        string checkEntityName = entityNameToRawEntity.ContainsKey(entityName) && !rawEntityName.Contains(" ")
+                            ? entityNameToRawEntity[entityName]
+                            : rawEntityName;
+                        string collisionMessage = checkEntityName.Contains(" ")
+                            ? $"Entity '{entityName}' normalized from '{rawEntityName}' conflicts in autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it."
+                            : $"Entity '{entityName}' conflicts in autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it.";
                         throw new DataApiBuilderException(
                             message: collisionMessage,
                             statusCode: HttpStatusCode.BadRequest,
@@ -397,6 +401,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
 
                     addedEntities++;
+                    entityNameToRawEntity.Add(entityName, rawEntityName);
                 }
 
                 if (addedEntities == 0)

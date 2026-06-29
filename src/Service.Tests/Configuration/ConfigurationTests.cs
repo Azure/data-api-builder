@@ -3892,7 +3892,7 @@ type Moon {
             RuntimeConfigValidator validator = new(provider, fileSystem, loggerValidator.Object);
 
             DataApiBuilderException exception =
-                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, validator, fileSystem), provider.GetConfig().DefaultDataSourceName);
+                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, validator, fileSystem, provider.GetConfig().DefaultDataSourceName));
             Assert.AreEqual("Circular reference detected in the provided GraphQL schema for entity 'Character'.", exception.Message);
             Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);

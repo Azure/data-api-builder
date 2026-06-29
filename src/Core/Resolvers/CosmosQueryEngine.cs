@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
@@ -618,7 +619,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             // Get the selection set to find which relationship fields are requested
-            SelectionSetNode? selectionSet = context.Selection.SyntaxNode.SelectionSet;
+            SelectionSetNode? selectionSet = context.Selection.RequireFieldNode().SelectionSet;
             if (selectionSet == null)
             {
                 return;

@@ -8,7 +8,7 @@ COPY [".", "./"]
 RUN dotnet build "./src/Service/Azure.DataApiBuilder.Service.csproj" -c Docker -o /out -r linux-x64
 RUN mkdir /package \
 	&& cp /src/src/Service/dab-config*.json /package/ \
-	&& cp /src/src/Service/*.gql /package/
+	&& find /src/src/Service/ -maxdepth 1 -name "*.gql" -exec cp {} /package/ \;
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-azurelinux3.0 AS runtime
 

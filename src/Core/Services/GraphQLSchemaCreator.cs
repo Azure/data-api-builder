@@ -878,8 +878,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Grafts the relationship fields declared in the runtime config onto the matching CosmosDB object
         /// types. Any embedded field of the same name is replaced by the relationship field, and when the
-        /// source and target share a container the embedded target fields are stripped from the source
-        /// (join/source fields are always preserved).
+        /// source and target share a container the embedded target projection (fields whose GraphQL type is
+        /// the target type) is stripped from the source. Stripping is keyed off the field's type rather than
+        /// a name match, so the source's own scalar fields that merely share a name with a target field
+        /// (e.g. <c>id</c>, <c>name</c>) are preserved. Join/source fields are always preserved.
         /// </summary>
         private void AddConfiguredRelationshipFieldsToCosmosTypes(Dictionary<string, ObjectTypeDefinitionNode> objectTypes)
         {
@@ -914,13 +916,18 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Replace any existing field of the same name (e.g. an embedded array) with the relationship field.
                     fields.RemoveAll(f => f.Name.Value == relationshipName);
 
-                    // When source and target share a container, strip embedded target fields from the source,
-                    // except those used as join (source) fields in any relationship.
-                    if (entity.Source.Object == targetEntity.Source.Object
-                        && objectTypes.TryGetValue(targetEntityName, out ObjectTypeDefinitionNode? targetObjectNode))
+                    // When source and target share a container, the target's data is embedded in the
+                    // source document. Strip only the embedded projection of the target, identified
+                    // positively by GraphQL type (the source field's named type equals the target type),
+                    // rather than by a name intersection. This avoids dropping the source's own scalar
+                    // fields that merely share a name with a target field (e.g. id, name). Join/source
+                    // fields are always preserved.
+                    if (entity.Source.Object == targetEntity.Source.Object)
                     {
-                        HashSet<string> targetFieldNames = targetObjectNode.Fields.Select(f => f.Name.Value).ToHashSet();
-                        fields.RemoveAll(f => targetFieldNames.Contains(f.Name.Value) && !sourceFieldsInRelationships.Contains(f.Name.Value));
+                        string targetTypeName = GetDefinedSingularName(targetEntityName, targetEntity);
+                        fields.RemoveAll(f =>
+                            f.Type.NamedType().Name.Value == targetTypeName
+                            && !sourceFieldsInRelationships.Contains(f.Name.Value));
                     }
 
                     INullableTypeNode fieldType = relationship.Cardinality == Cardinality.One

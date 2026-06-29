@@ -1307,6 +1307,86 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
+        /// Tests that the field level query filter work with list type for 'some' and 'contains' operators
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterSomeContains_WithStringArray()
+        {
+            string gqlQuery = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : {tags: { some: { contains : ""tag1""}}})
+                {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = $"SELECT c.id, c.name FROM c where EXISTS(SELECT VALUE 1 FROM t IN c.tags WHERE t LIKE \"%tag1%\")"; 
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Tests that the field level query filter work with list type for 'none' and 'contains' operators
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterNoneContains_WithStringArray()
+        {
+            string gqlQuery = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : {tags: { none: { contains : ""tagg1""}}})
+                {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = $"SELECT c.id, c.name FROM c where NOT EXISTS(SELECT VALUE 1 FROM t IN c.tags WHERE t LIKE \"%tagg1%\")"; 
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Tests that the field level query filter work with list type for 'all' and 'contains' operators
+        /// /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterAllContains_WithStringArray()
+        {
+            string gqlQuery = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : {tags: { all: { contains : ""tag""}}})
+                {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = $"SELECT c.id, c.name FROM c where NOT EXISTS(SELECT VALUE 1 FROM t IN c.tags WHERE NOT t LIKE \"%tag%\")"; 
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Tests that the field level query filter work with list type for 'any' operator at true
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterAny_WithStringArray()
+        {
+            string gqlQuery = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : {tags: { any: true}})
+                {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = $"SELECT c.id, c.name FROM c where ARRAY_LENGTH(c.tags) > 0";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
         /// Tests that the pk level query filter is working with variables.
         /// </summary>
         [TestMethod]

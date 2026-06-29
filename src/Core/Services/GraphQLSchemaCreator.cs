@@ -751,9 +751,12 @@ namespace Azure.DataApiBuilder.Core.Services
                         if (seenTypeDefinitions.TryGetValue(typeName, out IDefinitionNode? existing))
                         {
                             // The same type name is shared across data sources. This is valid only when
-                            // the definitions are identical; differing shapes indicate a config error and
-                            // must not be silently dropped.
-                            if (!existing.ToString().Equals(definition.ToString(), StringComparison.Ordinal))
+                            // the definitions are semantically identical; differing shapes indicate a config
+                            // error and must not be silently dropped. The comparison is order-insensitive
+                            // (fields, directives, arguments, etc.) because GraphQL treats these as unordered
+                            // sets, so the same type authored with a different field/directive order in two
+                            // data source schemas is not a conflict.
+                            if (!AreTypeDefinitionsEquivalent(existing, definition))
                             {
                                 throw new DataApiBuilderException(
                                     message: $"Conflicting GraphQL type definitions were found for '{typeName}' across CosmosDB data sources. A type name must resolve to the same definition in every data source.",
@@ -772,6 +775,104 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return new DocumentNode(definitions);
+        }
+
+        /// <summary>
+        /// Determines whether two GraphQL type definitions are semantically equivalent.
+        /// The definitions are normalized into a canonical form (children such as fields,
+        /// directives, arguments, interfaces, enum values and union members are sorted by name)
+        /// before their printed SDL is compared. This avoids false-positive conflicts when the
+        /// same type is authored with a different ordering across data source schemas, since
+        /// GraphQL treats these collections as unordered sets.
+        /// </summary>
+        private static bool AreTypeDefinitionsEquivalent(IDefinitionNode left, IDefinitionNode right)
+        {
+            return NormalizeDefinition(left).ToString().Equals(NormalizeDefinition(right).ToString(), StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// Produces a canonical form of a type system definition by recursively sorting its
+        /// order-insensitive child collections by name. Node kinds that have no order-insensitive
+        /// children (or are not expected in a CosmosDB schema root) are returned unchanged.
+        /// </summary>
+        private static IDefinitionNode NormalizeDefinition(IDefinitionNode definition)
+        {
+            switch (definition)
+            {
+                case ObjectTypeDefinitionNode obj:
+                    return obj
+                        .WithDirectives(SortDirectives(obj.Directives))
+                        .WithInterfaces(SortNamedTypes(obj.Interfaces))
+                        .WithFields(SortFields(obj.Fields));
+                case InterfaceTypeDefinitionNode iface:
+                    return iface
+                        .WithDirectives(SortDirectives(iface.Directives))
+                        .WithInterfaces(SortNamedTypes(iface.Interfaces))
+                        .WithFields(SortFields(iface.Fields));
+                case InputObjectTypeDefinitionNode input:
+                    return input
+                        .WithDirectives(SortDirectives(input.Directives))
+                        .WithFields(SortInputValues(input.Fields));
+                case EnumTypeDefinitionNode enumType:
+                    return enumType
+                        .WithDirectives(SortDirectives(enumType.Directives))
+                        .WithValues(enumType.Values
+                            .OrderBy(value => value.Name.Value, StringComparer.Ordinal)
+                            .Select(value => value.WithDirectives(SortDirectives(value.Directives)))
+                            .ToList());
+                case UnionTypeDefinitionNode union:
+                    return union
+                        .WithDirectives(SortDirectives(union.Directives))
+                        .WithTypes(SortNamedTypes(union.Types));
+                case ScalarTypeDefinitionNode scalar:
+                    return scalar.WithDirectives(SortDirectives(scalar.Directives));
+                default:
+                    return definition;
+            }
+        }
+
+        /// <summary>
+        /// Sorts directives by name and, within each directive, sorts arguments by name.
+        /// </summary>
+        private static IReadOnlyList<DirectiveNode> SortDirectives(IReadOnlyList<DirectiveNode> directives)
+        {
+            return directives
+                .OrderBy(directive => directive.Name.Value, StringComparer.Ordinal)
+                .Select(directive => directive.WithArguments(
+                    directive.Arguments.OrderBy(argument => argument.Name.Value, StringComparer.Ordinal).ToList()))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Sorts named type references (e.g. implemented interfaces or union members) by name.
+        /// </summary>
+        private static IReadOnlyList<NamedTypeNode> SortNamedTypes(IReadOnlyList<NamedTypeNode> types)
+        {
+            return types.OrderBy(type => type.Name.Value, StringComparer.Ordinal).ToList();
+        }
+
+        /// <summary>
+        /// Sorts output fields by name and normalizes each field's arguments and directives.
+        /// </summary>
+        private static IReadOnlyList<FieldDefinitionNode> SortFields(IReadOnlyList<FieldDefinitionNode> fields)
+        {
+            return fields
+                .OrderBy(field => field.Name.Value, StringComparer.Ordinal)
+                .Select(field => field
+                    .WithArguments(SortInputValues(field.Arguments))
+                    .WithDirectives(SortDirectives(field.Directives)))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Sorts input values (input fields or field arguments) by name and normalizes their directives.
+        /// </summary>
+        private static IReadOnlyList<InputValueDefinitionNode> SortInputValues(IReadOnlyList<InputValueDefinitionNode> values)
+        {
+            return values
+                .OrderBy(value => value.Name.Value, StringComparer.Ordinal)
+                .Select(value => value.WithDirectives(SortDirectives(value.Directives)))
+                .ToList();
         }
 
         /// <summary>

@@ -732,13 +732,16 @@ public static class FieldFilterParser
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    IInputValueDefinition elementFilterSchema = argumentObject.Fields["some"];
-                    Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, elementFields, processLiterals, false);
-                    predicates.Push(new PredicateOperand(new Predicate(
-                        new PredicateOperand(column),
-                        op,
-                        new PredicateOperand(nestedPredicate)
-                    )));
+                    {
+                        IInputValueDefinition elementFilterSchema = argumentObject.Fields["some"];
+                        Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, elementFields, processLiterals, false);
+                        predicates.Push(new PredicateOperand(new Predicate(
+                            new PredicateOperand(column),
+                            op,
+                            new PredicateOperand(nestedPredicate)
+                        )));
+                    }
+
                     continue;
                 case "none":
                     op = PredicateOperation.ARRAY_NONE;
@@ -751,13 +754,16 @@ public static class FieldFilterParser
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    IInputValueDefinition elementFilterSchema = argumentObject.Fields["none"];
-                    Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, noneFields, processLiterals, false);
-                    predicates.Push(new PredicateOperand(new Predicate(
-                        new PredicateOperand(column),
-                        op,
-                        new PredicateOperand(nestedPredicate)
-                    )));
+                    {
+                        IInputValueDefinition elementFilterSchema = argumentObject.Fields["none"];
+                        Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, noneFields, processLiterals, false);
+                        predicates.Push(new PredicateOperand(new Predicate(
+                            new PredicateOperand(column),
+                            op,
+                            new PredicateOperand(nestedPredicate)
+                        )));
+                    }
+
                     continue;
                 case "all":
                     op = PredicateOperation.ARRAY_ALL;
@@ -770,13 +776,16 @@ public static class FieldFilterParser
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    IInputValueDefinition elementFilterSchema = argumentObject.Fields["all"];
-                    Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, allFields, processLiterals, false);
-                    predicates.Push(new PredicateOperand(new Predicate(
-                        new PredicateOperand(column),
-                        op,
-                        new PredicateOperand(nestedPredicate)
-                    )));
+                    {
+                        IInputValueDefinition elementFilterSchema = argumentObject.Fields["all"];
+                        Predicate nestedPredicate = Parse(ctx, elementFilterSchema, column, allFields, processLiterals, false);
+                        predicates.Push(new PredicateOperand(new Predicate(
+                            new PredicateOperand(column),
+                            op,
+                            new PredicateOperand(nestedPredicate)
+                        )));
+                    }
+
                     continue;
                 case "any":
                     processLiteral = false;

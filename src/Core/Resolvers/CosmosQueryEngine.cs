@@ -553,16 +553,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return Encoding.UTF8.GetString(base64EncodedBytes);
         }
 
-        /// <summary>
-        /// Extracts a scalar value from a GraphQL ValueNode for use in query parameters.
-        /// </summary>
         private static object? GetScalarValue(IValueNode valueNode)
         {
             return valueNode switch
             {
                 StringValueNode stringValue => stringValue.Value,
-                IntValueNode intValue => int.Parse(intValue.Value),
-                FloatValueNode floatValue => double.Parse(floatValue.Value),
+                IntValueNode intValue => int.Parse(intValue.Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture),
+                FloatValueNode floatValue => double.Parse(floatValue.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture),
                 BooleanValueNode boolValue => boolValue.Value,
                 NullValueNode => null,
                 _ => valueNode.ToString()

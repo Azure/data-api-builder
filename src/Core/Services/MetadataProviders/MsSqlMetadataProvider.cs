@@ -337,7 +337,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Remove whitespace from the entity name and camelCase-join words so the result is
                     // a valid identifier for REST paths and GraphQL singular/plural names.
                     string rawEntityName = entityName;
-                    entityName = RemoveWhitespaceAndCamelCase(entityName);
+                    entityName = RemoveWhitespaceAddCamelCase(entityName);
 
                     if (string.IsNullOrEmpty(entityName))
                     {

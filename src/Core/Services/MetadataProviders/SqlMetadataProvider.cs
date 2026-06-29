@@ -740,7 +740,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="name">The entity name to process.</param>
         /// <returns>The entity name with whitespace removed and following characters capitalized.</returns>
-        protected static string RemoveWhitespaceAndCamelCase(string name)
+        protected static string RemoveWhitespaceAddCamelCase(string name)
         {
             StringBuilder result = new(name.Length);
             bool capitalizeNext = false;

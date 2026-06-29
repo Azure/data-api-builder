@@ -1347,8 +1347,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests that the field level query filter work with list type for 'all' and 'contains' operators
-        /// /// </summary>
+        /// Tests that the field level query filters work with list type for 'all' and 'contains' operators
+        /// </summary>
         [TestMethod]
         public async Task TestQueryFilterAllContains_WithStringArray()
         {

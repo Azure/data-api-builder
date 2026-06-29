@@ -383,7 +383,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             ? entityNameToRawEntity[entityName]
                             : rawEntityName;
                         string collisionMessage = checkEntityName.Contains(" ")
-                            ? $"Entity '{entityName}' normalized from '{rawEntityName}' conflicts in autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it."
+                            ? $"Entity '{entityName}' normalized from '{checkEntityName}' from '{schemaName}' schema conflicts in autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it."
                             : $"Entity '{entityName}' conflicts in autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it.";
                         throw new DataApiBuilderException(
                             message: collisionMessage,

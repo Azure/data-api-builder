@@ -142,13 +142,30 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             string? errorMessage = null;
             try
             {
-                if (string.IsNullOrEmpty(mcpUriSuffix))
+                if (string.IsNullOrWhiteSpace(mcpUriSuffix))
                 {
-                    _logger.LogError("The MCP route is not available, hence HealthEndpoint is not available.");
-                    return errorMessage;
+                    const string msg = "MCP path is not configured.";
+                    _logger.LogError(msg);
+                    return msg;
                 }
 
-                if (!Program.CheckSanityOfUrl($"{_httpClient.BaseAddress}{mcpUriSuffix.TrimStart('/')}"))
+                if (_httpClient.BaseAddress is null)
+                {
+                    const string msg = "Health check HTTP client BaseAddress is not configured.";
+                    _logger.LogError(msg);
+                    return msg;
+                }
+
+                // Ensure the configured MCP path cannot override the host (e.g. absolute URIs).
+                if (!Uri.TryCreate(mcpUriSuffix, UriKind.Relative, out _))
+                {
+                    _logger.LogError("Blocked outbound request due to invalid or unsafe URI.");
+                    return "Blocked outbound request due to invalid or unsafe URI.";
+                }
+
+                Uri requestUri = new(_httpClient.BaseAddress, mcpUriSuffix);
+
+                if (!Program.CheckSanityOfUrl(requestUri.AbsoluteUri))
                 {
                     _logger.LogError("Blocked outbound request due to invalid or unsafe URI.");
                     return "Blocked outbound request due to invalid or unsafe URI.";
@@ -157,10 +174,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 string jsonPayload = Utilities.CreateHttpMcpQuery();
                 HttpContent content = new StringContent(jsonPayload, Encoding.UTF8, Utilities.JSON_CONTENT_TYPE);
 
-                HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: mcpUriSuffix)
+                HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: requestUri)
                 {
                     Content = content
-                };
+                }
 
                 // The MCP Streamable HTTP transport requires the client to accept both
                 // JSON and SSE responses.

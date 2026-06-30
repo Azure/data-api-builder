@@ -244,17 +244,19 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Executes the MCP Query and keeps track of the response time and error message.
         private async Task<(int, string?)> ExecuteMcpQueryAsync(string mcpUriSuffix, string roleHeader, string roleToken)
         {
-            string? errorMessage = null;
-            if (!string.IsNullOrEmpty(mcpUriSuffix))
+            if (string.IsNullOrEmpty(mcpUriSuffix))
             {
-                Stopwatch stopwatch = new();
-                stopwatch.Start();
-                errorMessage = await _httpUtility.ExecuteMcpQueryAsync(mcpUriSuffix, roleHeader, roleToken);
-                stopwatch.Stop();
-                return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
+                return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, "MCP is enabled but no MCP path is configured.");
             }
 
-            return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
+            Stopwatch stopwatch = new();
+            stopwatch.Start();
+            string? errorMessage = await _httpUtility.ExecuteMcpQueryAsync(mcpUriSuffix, roleHeader, roleToken);
+            stopwatch.Stop();
+
+            return string.IsNullOrEmpty(errorMessage)
+                ? ((int)stopwatch.ElapsedMilliseconds, errorMessage)
+                : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
         }
 
         // Updates the Entity Health Check Results in the response.

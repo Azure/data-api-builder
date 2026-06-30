@@ -5787,6 +5787,57 @@ type Planet @model(name:""PlanetAlias"") {
         {
             // Arrange
             Dictionary<string, Autoentity> autoentityMap = new()
+            {
+                {
+                    "PublisherAutoEntity", new Autoentity(
+                        Patterns: new AutoentityPatterns(
+                            Include: new[] { includePattern },
+                            Exclude: null,
+                            Name: null
+                        ),
+                        Template: new AutoentityTemplate(
+                            Rest: new EntityRestOptions(Enabled: true),
+                            GraphQL: new EntityGraphQLOptions(
+                                Singular: string.Empty,
+                                Plural: string.Empty,
+                                Enabled: true
+                            ),
+                            Health: null,
+                            Cache: null
+                        ),
+                        Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) }
+                    )
+                }
+            };
+
+            // Create DataSource for MSSQL connection
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            // Build complete runtime configuration with autoentities
+            RuntimeConfig configuration = new(
+                Schema: "TestAutoentitiesSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: false),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new Config.ObjectModel.AuthenticationOptions(
+                            Provider: nameof(EasyAuthType.StaticWebApps),
+                            Jwt: null
+                        )
+                    )
+                ),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new RuntimeAutoentities(autoentityMap)
+            );
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
                 // Act
@@ -5798,6 +5849,17 @@ type Planet @model(name:""PlanetAlias"") {
                 string graphqlQuery = $@"
                 {{
                     {path} {{
+                        items {{
+                            {item}
+                        }}
+                    }}
+                }}";
+
+                object graphqlPayload = new { query = graphqlQuery };
+                HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(graphqlPayload)
+                };
                 HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
 
                 // Assert
@@ -5806,6 +5868,17 @@ type Planet @model(name:""PlanetAlias"") {
                 // Verify REST response
                 Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, "REST request to auto-generated entity should succeed");
 
+                string restResponseBody = await restResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
+                Assert.IsTrue(restResponseBody.Contains(expectedResponseFragment));
+
+                // Verify GraphQL response
+                Assert.AreEqual(HttpStatusCode.OK, graphqlResponse.StatusCode, "GraphQL request to auto-generated entity should succeed");
+
+                string graphqlResponseBody = await graphqlResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");
+                Assert.IsFalse(graphqlResponseBody.Contains("errors"), "GraphQL response should not contain errors");
+                Assert.IsTrue(graphqlResponseBody.Contains(expectedResponseFragment));
             }
         }
 
@@ -5817,11 +5890,13 @@ type Planet @model(name:""PlanetAlias"") {
         /// entity name "dbo_OrderItems" — not "dbo_Order Items".
         /// </summary>
         [TestCategory(TestCategory.MSSQL)]
-        [TestMethod]
-        public async Task TestAutoentitiesGeneratedWithSpacesInObjectName()
+        [DataTestMethod]
+        [DataRow("dbo.Order Items", "{schema}_{object}", "dbo_orderItems", DisplayName = "Test Autoentities with schema and object name containing spaces")]
+        [DataRow("dbo.Order Items", "{object}", "orderItems", DisplayName = "Test Autoentities with object name containing spaces")]
+        [DataRow("dbo.Extra     Order     Items", "{schema}_{object}", "dbo_extraOrderItems", DisplayName = "Test Autoentities with schema and object name containing tabs")]
+        public async Task TestAutoentitiesGeneratedWithSpacesInObjectName(string tableName, string namePattern, string expectedEntityName)
         {
             // Arrange
-            const string EXPECTED_ENTITY_NAME = "dbo_OrderItems";
             const string EXPECTED_ITEM_FIELD = "productname";
             const string EXPECTED_RESPONSE_FRAGMENT = @"""productname"":""Sample Product""";
 
@@ -5830,9 +5905,9 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     "SpacedObjectAutoEntity", new Autoentity(
                         Patterns: new AutoentityPatterns(
-                            Include: new[] { "dbo.Order Items" },
+                            Include: new[] { tableName },
                             Exclude: null,
-                            Name: null
+                            Name: namePattern
                         ),
                         Template: new AutoentityTemplate(
                             Rest: new EntityRestOptions(Enabled: true),
@@ -5878,13 +5953,13 @@ type Planet @model(name:""PlanetAlias"") {
             using (HttpClient client = server.CreateClient())
             {
                 // Assert that the sanitized entity name "dbo_OrderItems" is reachable via REST,
-                // explicitly confirming the generated name is EXPECTED_ENTITY_NAME and not "dbo_Order Items".
-                using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{EXPECTED_ENTITY_NAME}");
+                // explicitly confirming the generated name is expectedEntityName and not names with spaces in between.
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{expectedEntityName}");
                 using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(
                     HttpStatusCode.OK,
                     restResponse.StatusCode,
-                    $"REST path '/api/{EXPECTED_ENTITY_NAME}' should exist; the entity name must be sanitized from 'dbo_Order Items' to '{EXPECTED_ENTITY_NAME}'.");
+                    $"REST path '/api/{expectedEntityName}' should exist; the entity name must be sanitized from 'dbo_Order Items' to '{expectedEntityName}'.");
 
                 string restResponseBody = await restResponse.Content.ReadAsStringAsync();
                 Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
@@ -5893,7 +5968,7 @@ type Planet @model(name:""PlanetAlias"") {
                 // Also verify via GraphQL using the sanitized name as the query root field.
                 string graphqlQuery = $@"
                 {{
-                    {EXPECTED_ENTITY_NAME} {{
+                    {expectedEntityName} {{
                         items {{
                             {EXPECTED_ITEM_FIELD}
                         }}
@@ -5910,7 +5985,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Assert.AreEqual(
                     HttpStatusCode.OK,
                     graphqlResponse.StatusCode,
-                    $"GraphQL query for '{EXPECTED_ENTITY_NAME}' should succeed with the sanitized entity name.");
+                    $"GraphQL query for '{expectedEntityName}' should succeed with the sanitized entity name.");
 
                 string graphqlResponseBody = await graphqlResponse.Content.ReadAsStringAsync();
                 Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");

@@ -63,7 +63,8 @@ DROP TABLE IF EXISTS date_only_table;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS user_profiles;
 DROP TABLE IF EXISTS default_books;
-DROP TABLE IF EXISTS [Order Items];
+DROP TABLE IF EXISTS [order items];
+DROP TABLE IF EXISTS [extra     order     items];
 DROP SCHEMA IF EXISTS [foo];
 DROP SCHEMA IF EXISTS [bar];
 COMMIT;
@@ -391,7 +392,12 @@ CREATE TABLE default_books(
     title NVARCHAR(100)
 );
 
-CREATE TABLE [Order Items](
+CREATE TABLE [order items](
+    id INT PRIMARY KEY,
+    productname VARCHAR(100)
+);
+
+CREATE TABLE [extra     order     items](
     id INT PRIMARY KEY,
     productname VARCHAR(100)
 );
@@ -829,5 +835,8 @@ VALUES ('2023-01-01', '08:30:00', '2023-01-01 08:30:00'),
        ('2023-02-15', '12:45:00', '2023-02-15 12:45:00'), 
        ('2023-03-30', '17:15:00', '2023-03-30 17:15:00');
 
-INSERT INTO [Order Items](id, productname)
+INSERT INTO [order items](id, productname)
+VALUES (1, 'Sample Product');
+
+INSERT INTO [extra     order     items](id, productname)
 VALUES (1, 'Sample Product');

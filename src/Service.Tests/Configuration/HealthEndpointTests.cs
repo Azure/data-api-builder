@@ -430,7 +430,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     "SendAsync",
                     ItExpr.Is<HttpRequestMessage>(req =>
                         req.Method == HttpMethod.Post &&
-                        req.RequestUri == new Uri($"{BASE_DAB_URL}{runtimeConfig.McpPath}")),
+                        req.RequestUri == new Uri($"{BASE_DAB_URL}{runtimeConfig.McpPath}") &&
+                        req.Content != null &&
+                        req.Content.ReadAsStringAsync().Result.Contains("\"method\":\"initialize\"") &&
+                        req.Headers.TryGetValues("Accept", out IEnumerable<string>? acceptValues) &&
+                        acceptValues.Any(v => v.Contains("application/json") && v.Contains("text/event-stream"))),
                     ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage(httpStatusCode)
                 {

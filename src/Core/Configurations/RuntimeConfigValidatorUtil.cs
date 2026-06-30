@@ -73,7 +73,7 @@ public static class RuntimeConfigValidatorUtil
     /// Each segment is validated to ensure it is non-empty and free of reserved characters.
     /// An empty input (representing the root path '/') is considered valid.
     /// </summary>
-    /// <param name="uriPath">Path prefix for rest/graphql apis with the leading '/' already removed.</param>
+    /// <param name="uriPath">Runtime endpoint path prefix with the leading '/' already removed (REST/GraphQL/MCP/base-route).</param>
     /// <returns>true if any segment is empty or contains reserved characters, false otherwise.</returns>
     public static bool DoesUriPathContainReservedChars(string uriPath)
     {

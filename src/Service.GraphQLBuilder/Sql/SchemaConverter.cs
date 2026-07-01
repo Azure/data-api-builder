@@ -577,7 +577,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 "Byte[]" => BYTEARRAY_TYPE,
                 "TimeOnly" => LOCALTIME_TYPE,
                 "TimeSpan" => LOCALTIME_TYPE,
-                "SqlVector`1" => SINGLE_TYPE,
                 _ => throw new DataApiBuilderException(
                         message: $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
                         statusCode: HttpStatusCode.InternalServerError,

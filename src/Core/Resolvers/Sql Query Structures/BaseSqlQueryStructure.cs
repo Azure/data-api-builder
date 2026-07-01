@@ -479,21 +479,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     throw new NotSupportedException($"{systemType.Name} is not supported");
             }
 
-            using JsonDocument arg = JsonDocument.Parse(param);
-            if (arg.RootElement.ValueKind != JsonValueKind.Array)
+            try
             {
-                throw new FormatException($"Expected an array for {systemType.Name} but got {arg.RootElement.ValueKind}");
-            }
+                List<object> list = new();
+                object[] values = JsonSerializer.Deserialize<object[]>(param) ?? Array.Empty<object>();
+                for (int i = 0; i < values.Length; i++)
+                {
+                    string stringValue = values[i]?.ToString() ?? string.Empty;
+                    values[i] = ParseParamAsSystemType(stringValue, typeOfArray);
+                }
 
-            List<object> list = new();
-            object[] values = JsonSerializer.Deserialize<object[]>(param) ?? Array.Empty<object>();
-            foreach (object value in values)
+                return values;
+            }
+            catch
             {
-                string stringValue = value.ToString() ?? string.Empty;
-                list.Add(ParseParamAsSystemType(stringValue, typeOfArray));
+                throw new FormatException($"Expected an array for {systemType.Name} but got an unexpected value");
             }
-
-            return list.ToArray();
         }
 
         /// <summary>

@@ -127,13 +127,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
-        /// PUT /api/VectorType/id/4 - Verify that an existing record's vector value is replaced (full update).
+        /// PUT Verify that an existing record's vector value is replaced (full update).
         /// </summary>
         [TestMethod]
         public async Task PutVectorType_Update()
         {
+            // Change vector value
             float[] expected = new[] { 9.5f, 8.5f, 7.5f };
             string requestBody = "{ \"vector_data\": [9.5, 8.5, 7.5] }";
+
+            HttpResponseMessage response = await HttpClient.PutAsync(
+                $"{VECTOR_TYPE_REST_PATH}/id/4",
+                new StringContent(requestBody, Encoding.UTF8, "application/json"));
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+            JsonElement updated = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+                .RootElement.GetProperty("value")[0];
+            Assert.AreEqual(4, updated.GetProperty("id").GetInt32());
+
+            JsonElement readBack = await GetRecordByIdAsync(4);
+            AssertVectorEquals(readBack.GetProperty("vector_data"), expected);
+
+            // Restore vector value to original
+            expected = new[] { 1.0f, 2.0f, 3.0f };
+            requestBody = "{ \"vector_data\": [1.0, 2.0, 3.0] }";
 
             HttpResponseMessage response = await HttpClient.PutAsync(
                 $"{VECTOR_TYPE_REST_PATH}/id/4",
@@ -149,24 +166,41 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
-        /// PATCH /api/VectorType/id/5 - Verify that an existing record's vector value is updated.
+        /// PATCH Verify that an existing record's vector value is updated.
         /// </summary>
         [TestMethod]
         public async Task PatchVectorType_Update()
         {
+            // Change vector value
             float[] expected = new[] { 1.25f, 2.25f, 3.25f };
             string requestBody = "{ \"vector_data\": [1.25, 2.25, 3.25] }";
 
             HttpResponseMessage response = await HttpClient.PatchAsync(
-                $"{VECTOR_TYPE_REST_PATH}/id/5",
+                $"{VECTOR_TYPE_REST_PATH}/id/4",
                 new StringContent(requestBody, Encoding.UTF8, "application/json"));
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
             JsonElement updated = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
                 .RootElement.GetProperty("value")[0];
-            Assert.AreEqual(5, updated.GetProperty("id").GetInt32());
+            Assert.AreEqual(4, updated.GetProperty("id").GetInt32());
 
             JsonElement readBack = await GetRecordByIdAsync(5);
+            AssertVectorEquals(readBack.GetProperty("vector_data"), expected);
+
+            // Restore vector value to original
+            expected = new[] { 1.0f, 2.0f, 3.0f };
+            requestBody = "{ \"vector_data\": [1.0, 2.0, 3.0] }";
+
+            HttpResponseMessage response = await HttpClient.PutAsync(
+                $"{VECTOR_TYPE_REST_PATH}/id/4",
+                new StringContent(requestBody, Encoding.UTF8, "application/json"));
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+            JsonElement updated = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+                .RootElement.GetProperty("value")[0];
+            Assert.AreEqual(4, updated.GetProperty("id").GetInt32());
+
+            JsonElement readBack = await GetRecordByIdAsync(4);
             AssertVectorEquals(readBack.GetProperty("vector_data"), expected);
         }
 

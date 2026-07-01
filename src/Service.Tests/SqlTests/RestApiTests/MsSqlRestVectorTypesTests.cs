@@ -152,17 +152,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             expected = new[] { 1.0f, 2.0f, 3.0f };
             requestBody = "{ \"vector_data\": [1.0, 2.0, 3.0] }";
 
-            HttpResponseMessage response = await HttpClient.PutAsync(
+            HttpResponseMessage restoreResponse = await HttpClient.PutAsync(
                 $"{VECTOR_TYPE_REST_PATH}/id/4",
                 new StringContent(requestBody, Encoding.UTF8, "application/json"));
-            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            Assert.AreEqual(HttpStatusCode.OK, restoreResponse.StatusCode);
 
-            JsonElement updated = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+            JsonElement restoreUpdated = JsonDocument.Parse(await restoreResponse.Content.ReadAsStringAsync())
                 .RootElement.GetProperty("value")[0];
-            Assert.AreEqual(4, updated.GetProperty("id").GetInt32());
+            Assert.AreEqual(4, restoreUpdated.GetProperty("id").GetInt32());
 
-            JsonElement readBack = await GetRecordByIdAsync(4);
-            AssertVectorEquals(readBack.GetProperty("vector_data"), expected);
+            JsonElement restoreReadBack = await GetRecordByIdAsync(4);
+            AssertVectorEquals(restoreReadBack.GetProperty("vector_data"), expected);
         }
 
         /// <summary>
@@ -184,24 +184,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 .RootElement.GetProperty("value")[0];
             Assert.AreEqual(4, updated.GetProperty("id").GetInt32());
 
-            JsonElement readBack = await GetRecordByIdAsync(5);
+            JsonElement readBack = await GetRecordByIdAsync(4);
             AssertVectorEquals(readBack.GetProperty("vector_data"), expected);
 
             // Restore vector value to original
             expected = new[] { 1.0f, 2.0f, 3.0f };
             requestBody = "{ \"vector_data\": [1.0, 2.0, 3.0] }";
 
-            HttpResponseMessage response = await HttpClient.PutAsync(
+            HttpResponseMessage restoreResponse = await HttpClient.PutAsync(
                 $"{VECTOR_TYPE_REST_PATH}/id/4",
                 new StringContent(requestBody, Encoding.UTF8, "application/json"));
-            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            Assert.AreEqual(HttpStatusCode.OK, restoreResponse.StatusCode);
 
-            JsonElement updated = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+            JsonElement restoreUpdated = JsonDocument.Parse(await restoreResponse.Content.ReadAsStringAsync())
                 .RootElement.GetProperty("value")[0];
-            Assert.AreEqual(4, updated.GetProperty("id").GetInt32());
+            Assert.AreEqual(4, restoreUpdated.GetProperty("id").GetInt32());
 
-            JsonElement readBack = await GetRecordByIdAsync(4);
-            AssertVectorEquals(readBack.GetProperty("vector_data"), expected);
+            JsonElement restoreReadBack = await GetRecordByIdAsync(4);
+            AssertVectorEquals(restoreReadBack.GetProperty("vector_data"), expected);
         }
 
         #endregion

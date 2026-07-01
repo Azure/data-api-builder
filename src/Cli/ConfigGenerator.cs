@@ -3166,8 +3166,6 @@ namespace Cli
                 return false;
             }
 
-            _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
-
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _))
@@ -3196,13 +3194,20 @@ namespace Cli
                     bool mcpEnabled = config.IsMcpEnabled;
                     if (mcpEnabled)
                     {
+                        bool missingFields = false;
                         foreach (KeyValuePair<string, Entity> entity in config.Entities)
                         {
                             if (entity.Value.Fields == null || !entity.Value.Fields.Any())
                             {
-                                _logger.LogWarning($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled. " +
-                                    "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
+                                missingFields = true;
+                                _logger.LogDebug($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled.");
                             }
+                        }
+
+                        if (missingFields)
+                        {
+                            _logger.LogWarning("One or more entities are missing `fields` definition while MCP is enabled. " +
+                                "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
                         }
                     }
 

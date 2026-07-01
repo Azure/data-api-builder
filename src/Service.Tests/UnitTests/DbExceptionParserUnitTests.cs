@@ -94,5 +94,42 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(expected, dbExceptionParser.IsTransientException(SqlTestHelper.CreateSqlException(number)));
         }
+
+        /// <summary>
+        /// Validates that JSON data type validation error codes raised by SQL Server 2025+
+        /// when invalid JSON is supplied for a json column are mapped to HTTP 400 Bad Request.
+        /// </summary>
+        /// <param name="number">SQL error code populated in SqlException.Number.</param>
+        [DataTestMethod]
+        [DataRow(13608, DisplayName = "JSON validation error code 13608 maps to 400")]
+        [DataRow(13609, DisplayName = "JSON validation error code 13609 maps to 400")]
+        [DataRow(13610, DisplayName = "JSON validation error code 13610 maps to 400")]
+        [DataRow(13611, DisplayName = "JSON validation error code 13611 maps to 400")]
+        [DataRow(13612, DisplayName = "JSON validation error code 13612 maps to 400")]
+        [DataRow(13613, DisplayName = "JSON validation error code 13613 maps to 400")]
+        [DataRow(13614, DisplayName = "JSON validation error code 13614 maps to 400")]
+        public void TestJsonValidationErrorsMapToBadRequest(int number)
+        {
+            RuntimeConfig mockConfig = new(
+                Schema: "",
+                DataSource: new(DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null, HostMode.Development)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+
+            Assert.AreEqual(
+                System.Net.HttpStatusCode.BadRequest,
+                dbExceptionParser.GetHttpStatusCodeForException(SqlTestHelper.CreateSqlException(number)));
+        }
     }
 }

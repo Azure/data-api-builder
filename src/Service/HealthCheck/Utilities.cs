@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 {
                     protocolVersion,
                     capabilities = new { },
-                    clientInfo = new { name = "dab-health-check", version = protocolVersion }
+                    clientInfo = new { name = "dab-health-check", version = "1.0.0" }
                 }
             };
 

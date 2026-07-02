@@ -78,6 +78,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // Create a minimal MCP request (initialize) as a valid JSON-RPC request.
             // 'initialize' is used because other methods (e.g. 'tools/list') require an active
             // session in the MCP Streamable HTTP transport.
+            string protocolVersion = McpProtocolDefaults.ResolveProtocolVersion(configuration: null);
             var payload = new
             {
                 jsonrpc = "2.0",
@@ -85,9 +86,9 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 method = "initialize",
                 @params = new
                 {
-                    protocolVersion = McpProtocolDefaults.ResolveProtocolVersion(configuration: null),
+                    protocolVersion,
                     capabilities = new { },
-                    clientInfo = new { name = "dab-health-check", version = McpProtocolDefaults.MCP_SERVER_VERSION }
+                    clientInfo = new { name = "dab-health-check", version = protocolVersion }
                 }
             };
 

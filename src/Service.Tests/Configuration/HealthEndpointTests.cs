@@ -422,6 +422,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
             Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            string expectedMcpPayload = Azure.DataApiBuilder.Service.HealthCheck.Utilities.CreateHttpMcpQuery();
 
             // Mock the handler to return the supplied status code for the MCP initialize POST request.
             Mock<HttpMessageHandler> mockHandler = new();
@@ -432,9 +433,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         req.Method == HttpMethod.Post &&
                         req.RequestUri == new Uri($"{BASE_DAB_URL}{runtimeConfig.McpPath}") &&
                         req.Content != null &&
-                        req.Content.ReadAsStringAsync().Result.Contains("\"method\":\"initialize\"") &&
-                        req.Headers.TryGetValues("Accept", out IEnumerable<string>? acceptValues) &&
-                        acceptValues.Any(v => v.Contains("application/json") && v.Contains("text/event-stream"))),
+                        req.Content.ReadAsStringAsync().Result.Equals(expectedMcpPayload) &&
+                        req.Headers.Accept.Any(v => v.MediaType == "application/json") &&
+                        req.Headers.Accept.Any(v => v.MediaType == "text/event-stream")),
                     ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage(httpStatusCode)
                 {

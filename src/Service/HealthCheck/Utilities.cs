@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Mcp.Core;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
@@ -84,9 +85,9 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 method = "initialize",
                 @params = new
                 {
-                    protocolVersion = "2025-03-26",
+                    protocolVersion = McpProtocolDefaults.ResolveProtocolVersion(configuration: null),
                     capabilities = new { },
-                    clientInfo = new { name = "dab-health-check", version = "1.0.0" }
+                    clientInfo = new { name = "dab-health-check", version = McpProtocolDefaults.MCP_SERVER_VERSION }
                 }
             };
 

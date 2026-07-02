@@ -177,7 +177,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: requestUri)
                 {
                     Content = content
-                }
+                };
 
                 // The MCP Streamable HTTP transport requires the client to accept both
                 // JSON and SSE responses.

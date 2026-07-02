@@ -905,6 +905,13 @@ namespace Azure.DataApiBuilder.Core.Services
                     .SelectMany(r => r.SourceFields!)
                     .ToHashSet();
 
+                // The relationship fields grafted below are themselves typed as their target type. When
+                // multiple relationships on this entity target the same shared-container type, the
+                // type-based stripping below would otherwise remove a relationship field added on an
+                // earlier iteration (leaving only the last one). Preserving all relationship names keeps
+                // every grafted relationship field intact.
+                HashSet<string> relationshipNames = entity.Relationships.Keys.ToHashSet();
+
                 foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships)
                 {
                     string targetEntityName = relationship.TargetEntity;
@@ -921,13 +928,14 @@ namespace Azure.DataApiBuilder.Core.Services
                     // positively by GraphQL type (the source field's named type equals the target type),
                     // rather than by a name intersection. This avoids dropping the source's own scalar
                     // fields that merely share a name with a target field (e.g. id, name). Join/source
-                    // fields are always preserved.
+                    // fields and already-grafted relationship fields are always preserved.
                     if (entity.Source.Object == targetEntity.Source.Object)
                     {
                         string targetTypeName = GetDefinedSingularName(targetEntityName, targetEntity);
                         fields.RemoveAll(f =>
                             f.Type.NamedType().Name.Value == targetTypeName
-                            && !sourceFieldsInRelationships.Contains(f.Name.Value));
+                            && !sourceFieldsInRelationships.Contains(f.Name.Value)
+                            && !relationshipNames.Contains(f.Name.Value));
                     }
 
                     INullableTypeNode fieldType = relationship.Cardinality == Cardinality.One

@@ -268,6 +268,68 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         }
 
         /// <summary>
+        /// When a single entity declares multiple relationships that target the SAME type backed by the
+        /// SAME container as the source, every grafted relationship field must be preserved. The
+        /// shared-container path strips embedded projections of the target type (fields typed as the
+        /// target); this must not remove relationship fields grafted on earlier iterations, which are
+        /// themselves typed as the target. Prior to the fix only the last relationship survived. Here
+        /// Planet declares both "characterA" and "characterB" targeting Character (same container), so
+        /// both relationship fields must exist. This is the regression guard for that bug.
+        /// </summary>
+        [TestMethod]
+        public async Task CosmosRelationship_MultipleRelationshipsToSameSharedContainerTarget_AllPreserved()
+        {
+            string configContents = BuildCosmosMultiRelationshipConfig(
+                characterContainer: "graphqldb.planet",
+                relationshipNames: new[] { "characterA", "characterB" });
+            string cosmosSchemaContents = await File.ReadAllTextAsync("schema.gql");
+
+            IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
+            {
+                { "dab-config.json", new MockFileData(configContents) },
+                { "schema.gql", new MockFileData(cosmosSchemaContents) }
+            });
+
+            FileSystemRuntimeConfigLoader loader = new(fs);
+            RuntimeConfigProvider provider = new(loader);
+
+            Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
+            RuntimeConfigValidator validator = new(provider, fs, loggerValidator.Object);
+
+            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
+            Mock<IQueryEngineFactory> queryEngineFactory = new();
+            Mock<IMutationEngineFactory> mutationEngineFactory = new();
+            Mock<ILogger<ISqlMetadataProvider>> logger = new();
+            IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(provider, validator, queryManagerFactory.Object, logger.Object, fs, handler: null);
+            Mock<IAuthorizationResolver> authResolver = new();
+
+            GraphQLSchemaCreator creator = new(provider, queryEngineFactory.Object, mutationEngineFactory.Object, metadataProviderFactory, authResolver.Object);
+            (DocumentNode root, _) = creator.GenerateGraphQLObjects();
+
+            ObjectTypeDefinitionNode planet = root.Definitions
+                .OfType<ObjectTypeDefinitionNode>()
+                .Single(d => d.Name.Value == "Planet");
+
+            HashSet<string> fieldNames = planet.Fields.Select(f => f.Name.Value).ToHashSet();
+
+            // Both relationship fields targeting the same shared-container type must survive.
+            Assert.IsTrue(fieldNames.Contains("characterA"), "First relationship field 'characterA' must be preserved.");
+            Assert.IsTrue(fieldNames.Contains("characterB"), "Second relationship field 'characterB' must be preserved.");
+
+            foreach (string relationshipName in new[] { "characterA", "characterB" })
+            {
+                FieldDefinitionNode field = planet.Fields.Single(f => f.Name.Value == relationshipName);
+                Assert.IsTrue(
+                    field.Directives.Any(d => d.Name.Value == RelationshipDirectiveType.DirectiveName),
+                    $"The '{relationshipName}' field should carry the @relationship directive.");
+                Assert.AreEqual(
+                    "Character",
+                    field.Type.NamedType().Name.Value,
+                    $"The '{relationshipName}' relationship field should be typed as the target type.");
+            }
+        }
+
+        /// <summary>
         /// Builds the Cosmos GraphQL schema for a Planet/Character/Star configuration and returns the
         /// generated <c>Planet</c> object type. The Character entity's container and the Planet-&gt;Character
         /// relationship are parameterized so callers can exercise the shared- and separate-container paths.
@@ -313,6 +375,69 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         /// declares the supplied relationship to Character; Character maps to the supplied container,
         /// which the caller sets equal to Planet's container to exercise the embedded (shared-container) path.
         /// </summary>
+        /// <summary>
+        /// Produces a minimal CosmosDB runtime config with a Planet (PlanetAlias) entity that declares
+        /// multiple one-cardinality relationships (named per <paramref name="relationshipNames"/>) all
+        /// targeting the Character entity, plus the Character and Star entities. Character maps to the
+        /// supplied container, which callers set equal to Planet's container (graphqldb.planet) to
+        /// exercise the shared-container embedded-projection stripping path.
+        /// </summary>
+        private static string BuildCosmosMultiRelationshipConfig(string characterContainer, string[] relationshipNames)
+        {
+            // Local CosmosDB emulator well-known endpoint/key; not a secret.
+            const string connectionString = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
+
+            string relationshipsJson = string.Join(",\n", relationshipNames.Select(name => $$"""
+                    "{{name}}": {
+                      "cardinality": "one",
+                      "target.entity": "Character"
+                    }
+            """));
+
+            return $$"""
+            {
+              "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
+              "data-source": {
+                "database-type": "cosmosdb_nosql",
+                "connection-string": "{{connectionString}}",
+                "options": {
+                  "database": "graphqldb",
+                  "container": "planet",
+                  "schema": "schema.gql"
+                }
+              },
+              "runtime": {
+                "rest": { "enabled": false, "path": "/api" },
+                "graphql": { "enabled": true, "path": "/graphql", "allow-introspection": true },
+                "host": { "authentication": { "provider": "StaticWebApps" }, "mode": "development" }
+              },
+              "entities": {
+                "PlanetAlias": {
+                  "source": { "object": "graphqldb.planet" },
+                  "graphql": { "enabled": true, "type": { "singular": "Planet", "plural": "Planets" } },
+                  "rest": { "enabled": false },
+                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ],
+                  "relationships": {
+            {{relationshipsJson}}
+                  }
+                },
+                "Character": {
+                  "source": { "object": "{{characterContainer}}" },
+                  "graphql": { "enabled": true, "type": { "singular": "Character", "plural": "Characters" } },
+                  "rest": { "enabled": false },
+                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ]
+                },
+                "Star": {
+                  "source": { "object": "graphqldb.star" },
+                  "graphql": { "enabled": true, "type": { "singular": "Star", "plural": "Stars" } },
+                  "rest": { "enabled": false },
+                  "permissions": [ { "role": "anonymous", "actions": [ { "action": "*" } ] } ]
+                }
+              }
+            }
+            """;
+        }
+
         private static string BuildCosmosRelationshipConfig(string characterContainer, string relationshipName, string cardinality)
         {
             // Local CosmosDB emulator well-known endpoint/key; not a secret.

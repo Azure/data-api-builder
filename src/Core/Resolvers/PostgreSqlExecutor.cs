@@ -2,11 +2,13 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
+using System.Net;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -144,6 +146,89 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private static bool ShouldManagedIdentityAccessBeAttempted(NpgsqlConnectionStringBuilder builder)
         {
             return string.IsNullOrEmpty(builder.Password);
+        }
+
+        /// <inheritdoc/>
+        public override async Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
+            DbDataReader dbDataReader, List<string>? args = null)
+        {
+            // RS1: COUNT of rows matching PK (no policy) — used to distinguish
+            // "row doesn't exist" from "row exists but policy blocked".
+            DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
+            DbResultSetRow? resultSetRowWithCountOfRowsWithGivenPk = resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault();
+            int numOfRecordsWithGivenPK;
+
+            if (resultSetRowWithCountOfRowsWithGivenPk is not null &&
+                resultSetRowWithCountOfRowsWithGivenPk.Columns.TryGetValue(PostgresQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, out object? rowsWithGivenPK))
+            {
+                // PostgreSQL COUNT(*) returns Int64; convert to int.
+                numOfRecordsWithGivenPK = Convert.ToInt32(rowsWithGivenPK!);
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: $"Neither insert nor update could be performed.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            // RS2: UPDATE result, or UPDATE+INSERT CTE result.
+            DbResultSet dbResultSet = await dbDataReader.NextResultAsync()
+                ? await ExtractResultSetFromDbDataReaderAsync(dbDataReader)
+                : throw new DataApiBuilderException(
+                    message: $"Neither insert nor update could be performed.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+
+            if (numOfRecordsWithGivenPK == 1) // Row existed — we attempted an UPDATE.
+            {
+                if (dbResultSet.Rows.Count == 0)
+                {
+                    // Row exists but UPDATE returned no rows — update policy blocked it.
+                    throw new DataApiBuilderException(
+                        message: DataApiBuilderException.AUTHORIZATION_FAILURE,
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+                }
+
+                dbResultSet.ResultProperties.Add(SqlMutationEngine.IS_UPDATE_RESULT_SET, true);
+            }
+            else if (dbResultSet.Rows.Count == 0)
+            {
+                // Check whether IsFallbackToUpdate was set (passed as args[2]).
+                // If true, the row simply didn't exist — return 404 (same as MsSql's null-RS2 path).
+                // If false (or not present), the INSERT ran but create policy blocked it — return 403.
+                bool isFallbackToUpdate = args is not null && args.Count > 2
+                    && bool.TryParse(args[2], out bool fallback) && fallback;
+
+                if (isFallbackToUpdate)
+                {
+                    if (args is not null && args.Count > 1)
+                    {
+                        string prettyPrintPk = args[0];
+                        string entityName = args[1];
+
+                        throw new DataApiBuilderException(
+                            message: $"Cannot perform INSERT and could not find {entityName} " +
+                            $"with primary key {prettyPrintPk} to perform UPDATE on.",
+                            statusCode: HttpStatusCode.NotFound,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound);
+                    }
+
+                    throw new DataApiBuilderException(
+                        message: $"Neither insert nor update could be performed.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                }
+
+                // Row didn't exist but INSERT returned no rows — create policy blocked it.
+                throw new DataApiBuilderException(
+                    message: DataApiBuilderException.AUTHORIZATION_FAILURE,
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+            }
+
+            return dbResultSet;
         }
 
         /// <summary>

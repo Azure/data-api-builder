@@ -2015,6 +2015,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
             IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
             string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+            bool isFallbackToUpdate;
 
             if (operationType is EntityActionOperation.Upsert)
             {
@@ -2028,6 +2029,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     incrementalUpdate: false);
                 queryString = queryBuilder.Build(upsertStructure);
                 queryParameters = upsertStructure.Parameters;
+                isFallbackToUpdate = upsertStructure.IsFallbackToUpdate;
             }
             else
             {
@@ -2041,6 +2043,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     incrementalUpdate: true);
                 queryString = queryBuilder.Build(upsertIncrementalStructure);
                 queryParameters = upsertIncrementalStructure.Parameters;
+                isFallbackToUpdate = upsertIncrementalStructure.IsFallbackToUpdate;
             }
 
             string prettyPrintPk = "<" + string.Join(", ", context.PrimaryKeyValuePairs.Select(
@@ -2053,7 +2056,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                        queryExecutor.GetMultipleResultSetsIfAnyAsync,
                        dataSourceName,
                        GetHttpContext(),
-                       new List<string> { prettyPrintPk, entityName });
+                       new List<string> { prettyPrintPk, entityName, isFallbackToUpdate.ToString() });
         }
 
         private Dictionary<string, object?> PrepareParameters(RestRequestContext context)

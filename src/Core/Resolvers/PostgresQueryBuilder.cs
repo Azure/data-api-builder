@@ -68,11 +68,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-            string insertQuery = $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ";
+            string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
+            string dbPolicyPredicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
+            string insertQuery = $"INSERT INTO {tableName} ";
+
             if (structure.InsertColumns.Any())
             {
-                insertQuery += $"({Build(structure.InsertColumns)}) " +
-                    $"VALUES ({string.Join(", ", (structure.Values))}) ";
+                string insertColumns = Build(structure.InsertColumns);
+                string insertValues = dbPolicyPredicates.Equals(BASE_PREDICATE)
+                    ? $"({insertColumns}) VALUES ({string.Join(", ", structure.Values)})"
+                    : $"({insertColumns}) SELECT {insertColumns} FROM (SELECT {string.Join(", ", structure.InsertColumns.Zip(structure.Values, (col, val) => $"{val} AS {QuoteIdentifier(col)}"))}) AS T WHERE {dbPolicyPredicates}";
+                insertQuery += insertValues;
             }
             else
             {

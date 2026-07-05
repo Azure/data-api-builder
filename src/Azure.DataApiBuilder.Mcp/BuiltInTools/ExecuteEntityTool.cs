@@ -36,6 +36,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// </summary>
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
+        public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.ExecuteEntity ?? true;
+
         /// <summary>
         /// Gets the metadata for the execute-entity tool, including its name, description, and input schema.
         /// </summary>
@@ -162,13 +164,22 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpErrorHelpers.PermissionDenied(toolName, entity, "execute", authError, logger);
                 }
 
-                // 7) Validate parameters against metadata
-                if (parameters != null && entityConfig.Source.Parameters != null)
+                // 7) Validate parameters against DB metadata (StoredProcedureDefinition.Parameters),
+                // which is the source of truth for parameter names. The upstream merge performed by
+                // FillSchemaForStoredProcedureAsync ensures this dictionary contains all valid parameters.
+                // Note: Comparison is case-sensitive (default Dictionary<string,...> comparer),
+                // consistent with the existing REST/GraphQL SP execution path.
+                if (dbObject is not DatabaseStoredProcedure storedProcedure)
                 {
-                    // Validate all provided parameters exist in metadata
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity '{entity}' is not a stored procedure.", logger);
+                }
+
+                StoredProcedureDefinition spDefinition = storedProcedure.StoredProcedureDefinition;
+                if (parameters != null && spDefinition.Parameters is not null)
+                {
                     foreach (KeyValuePair<string, object?> param in parameters)
                     {
-                        if (!entityConfig.Source.Parameters.Any(p => p.Name == param.Key))
+                        if (!spDefinition.Parameters.ContainsKey(param.Key))
                         {
                             return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", $"Invalid parameter: {param.Key}", logger);
                         }
@@ -201,14 +212,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
-                // Then, add default parameters from configuration (only if not already provided by user)
-                if ((parameters == null || parameters.Count == 0) && entityConfig.Source.Parameters != null)
+                // Apply config-declared defaults from the merged ParameterDefinitions.
+                // This covers all parameters (including DB-discovered ones with config defaults)
+                // and applies them when the user didn't supply a value.
+                if (spDefinition.Parameters is not null)
                 {
-                    foreach (ParameterMetadata param in entityConfig.Source.Parameters)
+                    foreach ((string paramName, ParameterDefinition paramDef) in spDefinition.Parameters)
                     {
-                        if (!context.FieldValuePairsInBody.ContainsKey(param.Name))
+                        if (!context.FieldValuePairsInBody.ContainsKey(paramName) && paramDef.HasConfigDefault)
                         {
-                            context.FieldValuePairsInBody[param.Name] = param.Default;
+                            context.FieldValuePairsInBody[paramName] = paramDef.ConfigDefaultValue;
                         }
                     }
                 }

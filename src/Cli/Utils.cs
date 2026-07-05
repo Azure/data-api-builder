@@ -29,16 +29,29 @@ namespace Cli
         public static bool IsMcpStdioMode { get; set; }
 
         /// <summary>
-        /// When true, user explicitly set --LogLevel via CLI (even in MCP mode).
+        /// When true, the CLI is the source overriding the log level (i.e., <c>--log-level</c> was supplied).
         /// This allows logs to be written to stderr instead of being completely suppressed.
         /// </summary>
-        public static bool IsLogLevelOverriddenByCli { get; set; }
+        public static bool IsCliOverriding { get; set; }
 
         /// <summary>
-        /// The log level specified via CLI --LogLevel flag.
-        /// Only valid when IsLogLevelOverriddenByCli is true.
+        /// The log level specified via CLI --log-level flag.
+        /// Only valid when IsCliOverriding is true.
         /// </summary>
         public static LogLevel CliLogLevel { get; set; } = LogLevel.Information;
+
+        /// <summary>
+        /// When true, the runtime config is the source overriding the log level
+        /// (i.e., <c>runtime.telemetry.log-level</c> was explicitly set).
+        /// This allows CLI logs to be written to stderr in MCP mode even when no --log-level flag was provided.
+        /// </summary>
+        public static bool IsConfigOverriding { get; set; }
+
+        /// <summary>
+        /// The log level specified via runtime config file's log-level setting.
+        /// Only valid when IsConfigOverriding is true.
+        /// </summary>
+        public static LogLevel ConfigLogLevel { get; set; } = LogLevel.Information;
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private static ILogger<Utils> _logger;
@@ -192,7 +205,8 @@ namespace Cli
                 uriComponent = uriComponent.Substring(1);
             }
 
-            return !RuntimeConfigValidatorUtil.DoesUriComponentContainReservedChars(uriComponent);
+            // The path may contain multiple '/'-separated segments (e.g. 'api/v2'); validate each segment.
+            return !RuntimeConfigValidatorUtil.DoesUriPathContainReservedChars(uriComponent);
         }
 
         /// <summary>

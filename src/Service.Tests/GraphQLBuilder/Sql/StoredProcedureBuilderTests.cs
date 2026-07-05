@@ -249,5 +249,154 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             string mismatchedTypeErrorMsg = $"Failure: Parameter '{parameterName}' is type '{actualGraphQLType}' but should be type '{expectedGraphQLType}'";
             Assert.AreEqual(expected: expectedGraphQLType, actual: actualGraphQLType, message: mismatchedTypeErrorMsg);
         }
+
+        /// <summary>
+        /// Validates that stored-procedure input arguments are emitted with the correct GraphQL
+        /// nullability based on the parameter's required flag:
+        /// <list type="bullet">
+        ///   <item><description>A parameter listed in config with <c>required: true</c> is wrapped in <see cref="NonNullTypeNode"/>.</description></item>
+        ///   <item><description>A parameter listed in config with <c>required: false</c> stays a nullable <see cref="NamedTypeNode"/>.</description></item>
+        ///   <item><description>A parameter discovered from database metadata but not declared in config defaults to required and is wrapped in <see cref="NonNullTypeNode"/>.</description></item>
+        /// </list>
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("requiredParam", true, false, true, DisplayName = "Config required=true -> NonNull")]
+        [DataRow("optionalParam", true, true, false, DisplayName = "Config required=false -> nullable")]
+        [DataRow("dbOnlyParam", false, false, true, DisplayName = "Param not in config -> defaults to NonNull (required)")]
+        public void StoredProcedure_RequiredFlag_ProducesNonNullType(
+            string parameterName,
+            bool listInConfig,
+            bool configRequiredFalse,
+            bool expectsNonNull)
+        {
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spReqTest")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+                {
+                    Parameters = new() { { parameterName, new() { SystemType = typeof(string) } } }
+                }
+            };
+            spDbObj.SourceDefinition.Columns.TryAdd("col1", new() { SystemType = typeof(string) });
+
+            List<ParameterMetadata> configParameters = new();
+            if (listInConfig)
+            {
+                configParameters.Add(new ParameterMetadata
+                {
+                    Name = parameterName,
+                    Required = !configRequiredFalse
+                });
+            }
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: configParameters,
+                graphQLTypeName: "SpReqTestType",
+                entityName: "SpReqTest");
+
+            InputValueDefinitionNode arg = field.Arguments.First(a => a.Name.Value == parameterName);
+
+            if (expectsNonNull)
+            {
+                Assert.IsInstanceOfType(arg.Type, typeof(NonNullTypeNode),
+                    $"Expected '{parameterName}' to be NonNullTypeNode but was '{arg.Type.GetType().Name}'.");
+            }
+            else
+            {
+                Assert.IsInstanceOfType(arg.Type, typeof(NamedTypeNode),
+                    $"Expected '{parameterName}' to be nullable NamedTypeNode but was '{arg.Type.GetType().Name}'.");
+            }
+
+            // Underlying named type should remain the same regardless of nullability wrapping.
+            Assert.AreEqual(STRING_TYPE, arg.Type.NamedType().Name.Value);
+        }
+
+        /// <summary>
+        /// Validates that a required parameter with a config-supplied default value still emits a
+        /// NON_NULL input argument and preserves the default value on the GraphQL schema.
+        /// </summary>
+        [TestMethod]
+        public void StoredProcedure_RequiredWithDefault_KeepsDefaultValue()
+        {
+            const string parameterName = "title";
+
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spReqDefault")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+                {
+                    Parameters = new() { { parameterName, new() { SystemType = typeof(string) } } }
+                }
+            };
+            spDbObj.SourceDefinition.Columns.TryAdd("col1", new() { SystemType = typeof(string) });
+
+            List<ParameterMetadata> configParameters = new()
+            {
+                new ParameterMetadata
+                {
+                    Name = parameterName,
+                    Required = true,
+                    Default = "Demo Title"
+                }
+            };
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: configParameters,
+                graphQLTypeName: "SpReqDefaultType",
+                entityName: "SpReqDefault");
+
+            InputValueDefinitionNode arg = field.Arguments.First(a => a.Name.Value == parameterName);
+
+            Assert.IsInstanceOfType(arg.Type, typeof(NonNullTypeNode), "Required parameter should be NonNullTypeNode.");
+            Assert.IsNotNull(arg.DefaultValue, "Default value should be preserved on NON_NULL input argument.");
+            Assert.IsInstanceOfType(arg.DefaultValue, typeof(StringValueNode));
+            Assert.AreEqual("Demo Title", ((StringValueNode)arg.DefaultValue!).Value);
+        }
+
+        /// <summary>
+        /// Helper that builds a query schema for a stored-procedure entity and returns
+        /// the generated execute* field so individual tests can assert on its argument
+        /// type nodes and default values.
+        /// </summary>
+        private static FieldDefinitionNode BuildSchemaAndGetExecuteField(
+            DatabaseObject spDbObj,
+            List<ParameterMetadata> configParameters,
+            string graphQLTypeName,
+            string entityName)
+        {
+            Entity spEntity = GraphQLTestHelpers.GenerateStoredProcedureEntity(
+                graphQLTypeName: graphQLTypeName,
+                graphQLOperation: GraphQLOperation.Query,
+                parameters: configParameters);
+
+            ObjectTypeDefinitionNode objectType = CreateGraphQLTypeForEntity(spEntity, entityName, spDbObj);
+
+            DocumentNode root = CreateGraphQLDocument(new Dictionary<string, ObjectTypeDefinitionNode>
+            {
+                { entityName, objectType }
+            });
+
+            Dictionary<string, EntityMetadata> permissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                entityNames: new[] { entityName },
+                operations: new[] { EntityActionOperation.Execute },
+                roles: SchemaConverterTests.GetRolesAllowedForEntity());
+
+            Dictionary<string, Entity> entities = new() { { entityName, spEntity } };
+            Dictionary<string, DatabaseType> entityToDatabaseName = new() { { entityName, DatabaseType.MSSQL } };
+            Dictionary<string, DatabaseObject> dbObjects = new() { { entityName, spDbObj } };
+
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                entityToDatabaseName,
+                entities: new(entities),
+                inputTypes: null,
+                entityPermissionsMap: permissions,
+                dbObjects: dbObjects);
+
+            ObjectTypeDefinitionNode queryNode = QueryBuilderTests.GetQueryNode(queryRoot);
+            return queryNode.Fields.First(f => f.Name.Value.StartsWith($"execute{graphQLTypeName}"));
+        }
     }
 }

@@ -196,20 +196,24 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Verify that if both REST and GraphQL is disabled, we will get error.
+        /// Verify that if all APIs (REST, GraphQL, and MCP) are disabled, we will get an error.
+        /// Disabling only REST and GraphQL is allowed when MCP remains enabled.
         /// </summary>
-        [DataRow(CliBool.False, CliBool.False, false, DisplayName = "Both REST and GraphQL disabled.")]
-        [DataRow(CliBool.False, CliBool.True, true, DisplayName = "REST disabled, and GraphQL enabled.")]
-        [DataRow(CliBool.True, CliBool.False, true, DisplayName = "REST enabled, and GraphQL disabled.")]
-        [DataRow(CliBool.True, CliBool.True, true, DisplayName = "Both REST and GraphQL are enabled.")]
+        [DataRow(CliBool.False, CliBool.False, CliBool.False, false, DisplayName = "All three APIs disabled - failure.")]
+        [DataRow(CliBool.False, CliBool.False, CliBool.None, true, DisplayName = "REST and GraphQL disabled, MCP defaulted to enabled - success.")]
+        [DataRow(CliBool.False, CliBool.True, CliBool.None, true, DisplayName = "REST disabled, and GraphQL enabled.")]
+        [DataRow(CliBool.True, CliBool.False, CliBool.None, true, DisplayName = "REST enabled, and GraphQL disabled.")]
+        [DataRow(CliBool.True, CliBool.True, CliBool.None, true, DisplayName = "Both REST and GraphQL are enabled.")]
         [DataTestMethod]
-        public void EnsureFailureWhenBothRestAndGraphQLAreDisabled(
+        public void EnsureFailureWhenAllApisAreDisabled(
             CliBool restEnabled,
             CliBool graphQLEnabled,
+            CliBool mcpEnabled,
             bool expectedResult)
         {
             bool restDisabled = restEnabled is CliBool.False ? true : false;
             bool graphQLDisabled = graphQLEnabled is CliBool.False ? true : false;
+            bool mcpDisabled = mcpEnabled is CliBool.False ? true : false;
             InitOptions options = new(
                 databaseType: DatabaseType.MSSQL,
                 connectionString: "testconnectionstring",
@@ -222,8 +226,10 @@ namespace Cli.Tests
                 authenticationProvider: EasyAuthType.AppService.ToString(),
                 restEnabled: restEnabled,
                 graphqlEnabled: graphQLEnabled,
+                mcpEnabled: mcpEnabled,
                 restDisabled: restDisabled,
                 graphqlDisabled: graphQLDisabled,
+                mcpDisabled: mcpDisabled,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             Assert.AreEqual(expectedResult, TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? _));

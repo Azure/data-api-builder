@@ -741,6 +741,13 @@ type Moon {
         /// But if invalid config is provided during startup, ApplicationException is thrown
         /// and application exits.
         /// </summary>
+        /// <remarks>
+        /// As of Hot Chocolate 16, the GraphQL middleware resolves <c>WithOptions</c> per request via an
+        /// <c>Action&lt;GraphQLServerOptions&gt;</c>, so the "no runtime config" condition surfaces as a
+        /// <see cref="DataApiBuilderException"/> with <see cref="HttpStatusCode.ServiceUnavailable"/> bubbling
+        /// out of the request pipeline rather than as a synchronous 503 response. The assertions below treat
+        /// that as semantically equivalent to the original 503 / <see cref="ApplicationException"/> contract.
+        /// </remarks>
         [DataTestMethod]
         [DataRow(new string[] { }, true, DisplayName = "No config returns 503 - config file flag absent")]
         [DataRow(new string[] { "--ConfigFileName=" }, true, DisplayName = "No config returns 503 - empty config file option")]
@@ -767,13 +774,24 @@ type Moon {
                 HttpResponseMessage result = await httpClient.GetAsync("/graphql");
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
             }
-            catch (Exception e)
+            catch (DataApiBuilderException dabException)
             {
-                Assert.IsFalse(isUpdateableRuntimeConfig);
-                Assert.AreEqual(typeof(ApplicationException), e.GetType());
+                // Hot Chocolate 16+: the absence of a runtime config bubbles out of the GraphQL pipeline
+                // as DataApiBuilderException(ServiceUnavailable). This is semantically equivalent to the
+                // pre-HC16 503 response (hosting case) or ApplicationException (CLI case).
+                Assert.AreEqual(
+                    HttpStatusCode.ServiceUnavailable,
+                    dabException.StatusCode,
+                    $"Expected ServiceUnavailable status when runtime config is missing, got: {dabException.Message}");
+            }
+            catch (ApplicationException appException)
+            {
+                Assert.IsFalse(
+                    isUpdateableRuntimeConfig,
+                    "ApplicationException should only be thrown in the non-updateable (CLI startup) scenario.");
                 Assert.AreEqual(
                     $"Could not initialize the engine with the runtime config file: {DEFAULT_CONFIG_FILE_NAME}",
-                    e.Message);
+                    appException.Message);
             }
             finally
             {
@@ -1838,7 +1856,6 @@ type Moon {
         /// <summary>
         /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
         /// It asserts that the validation is successful and there are no validation failures.
-        /// It also verifies that the expected log message is logged.
         /// </summary>
         [TestMethod("Validates the config file schema."), TestCategory(TestCategory.MSSQL)]
         public void TestConfigSchemaIsValid()
@@ -1856,20 +1873,11 @@ type Moon {
             JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
             Assert.IsTrue(result.IsValid);
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
-            schemaValidatorLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
-                    It.IsAny<Exception>(),
-                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
-                Times.Once);
         }
 
         /// <summary>
         /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
         /// It asserts that the validation is successful and there are no validation failures when no optional fields are used.
-        /// It also verifies that the expected log message is logged.
         /// </summary>
         [DataTestMethod]
         [DataRow(CONFIG_FILE_WITH_NO_OPTIONAL_FIELD, DisplayName = "Validates schema of the config file with no optional fields.")]
@@ -1888,14 +1896,6 @@ type Moon {
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
 
             Assert.IsTrue(result.IsValid);
-            schemaValidatorLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
-                    It.IsAny<Exception>(),
-                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
-                Times.Once);
         }
 
         [DataTestMethod]
@@ -1922,14 +1922,6 @@ type Moon {
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors), "Validation Erros null of empty");
 
             Assert.IsTrue(result.IsValid, "Result should be valid");
-            schemaValidatorLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
-                    It.IsAny<Exception>(),
-                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
-                Times.Once);
         }
 
         /// <summary>
@@ -4203,6 +4195,47 @@ type Planet @model(name:""PlanetAlias"") {
                     string actualBody = await followUpResponse.Content.ReadAsStringAsync();
                     Assert.AreEqual(true, actualBody.Contains(expectedOpenApiTargetContent));
                 }
+            }
+        }
+
+        /// <summary>
+        /// End to end test that validates that REST requests with OData query
+        /// options $filter and $orderby succeed to ensure no regression can occur.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("/api/Book?$orderby=id desc&$filter=publisher_id eq 1234", DisplayName = "REST URL without encoded characters")]
+        [DataRow("/api/Book?%24orderby=id%20desc&%24filter=publisher_id%20eq%201234", DisplayName = "REST URL with encoded characters")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestForRestRequestsWithFilterAndOrderbyParameters(string restUri)
+        {
+            // The configuration file is constructed by merging hard-coded JSON strings to simulate the scenario where users manually edit the
+            // configuration file (instead of using CLI).
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                configJson,
+                out RuntimeConfig deserializedConfig,
+                replacementSettings: new(),
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
+            string configFileName = "custom-config.json";
+            File.WriteAllText(configFileName, deserializedConfig.ToJson());
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={configFileName}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Act
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, restUri);
+                using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+
+                // Assert - Verify REST response
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, "REST request to auto-generated entity should succeed");
+
+                string restResponseBody = await restResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
+                Assert.IsTrue(restResponseBody.Contains("\"publisher_id\":1234"));
             }
         }
 

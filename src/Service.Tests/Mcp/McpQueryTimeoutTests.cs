@@ -215,6 +215,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             public ToolType ToolType { get; } = ToolType.BuiltIn;
 
+            public bool IsEnabled(RuntimeConfig config) => true;
+
             public Tool GetToolMetadata()
             {
                 using JsonDocument doc = JsonDocument.Parse("{\"type\": \"object\"}");
@@ -256,6 +258,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             }
 
             public ToolType ToolType { get; }
+
+            public bool IsEnabled(RuntimeConfig config) => true;
 
             public Tool GetToolMetadata()
             {

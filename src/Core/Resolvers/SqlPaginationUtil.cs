@@ -608,8 +608,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Builds a query string by appending or replacing the <c>$after</c> token with the specified value.
         /// </summary>
-        /// <remarks>This method does not include the <paramref name="path"/> in the returned query
-        /// string. It only processes and formats the query string parameters.</remarks>
+        /// <remarks>This method returns only the query string portion (no path or host).</remarks>
         /// <param name="queryStringParameters">A collection of existing query string parameters. If <see langword="null"/>, an empty collection is used.
         /// The <c>$after</c> parameter, if present, will be removed before appending the new token.</param>
         /// <param name="newAfterPayload">The new value for the <c>$after</c> token. If this value is <see langword="null"/>, empty, or whitespace, no
@@ -638,18 +637,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={newAfterPayload}";
             }
 
-            // Construct final link
-            // return $"{path}{queryString}";
             return queryString;
         }
 
         /// <summary>
-        /// Gets a consolidated next link for pagination in JSON format.
+        /// Returns the next-page link for cursor-based pagination as a <see cref="JsonElement"/>
+        /// wrapping a single-element array of the form <c>[ { "nextLink": "..." } ]</c>.
         /// </summary>
-        /// <param name="baseUri">The base Pagination Uri</param>
-        /// <param name="queryString">The query string with after value</param>
-        /// <param name="isNextLinkRelative">True, if the next link should be relative</param>
-        /// <returns></returns>
+        /// <param name="baseUri">The base pagination URI.</param>
+        /// <param name="queryString">The query string with the $after value already merged in.</param>
+        /// <param name="isNextLinkRelative">True to return only the path + query (no host); false for an absolute URL.</param>
+        /// <returns>JsonElement wrapping the next-page URL.</returns>
         public static JsonElement GetConsolidatedNextLinkForPagination(string baseUri, string queryString, bool isNextLinkRelative = false)
         {
             UriBuilder uriBuilder = new(baseUri)
@@ -663,12 +661,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ? uriBuilder.Uri.PathAndQuery // returns just "/api/<Entity>?$after...", no host
                 : uriBuilder.Uri.AbsoluteUri; // returns full URL
 
-            // Return serialized JSON object
             string jsonString = JsonSerializer.Serialize(new[]
             {
                 new { nextLink = nextLinkValue }
             });
-
             return JsonSerializer.Deserialize<JsonElement>(jsonString);
         }
 

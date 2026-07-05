@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Exceptions;
 using ModelContextProtocol.Protocol;
@@ -61,11 +62,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
         }
 
         /// <summary>
-        /// Gets all registered tools
+        /// Gets metadata for all registered tools that are enabled in the given runtime configuration.
         /// </summary>
-        public IEnumerable<Tool> GetAllTools()
+        public IEnumerable<Tool> GetEnabledTools(RuntimeConfig config)
         {
-            return _tools.Values.Select(t => t.GetToolMetadata());
+            return _tools.Values
+                .Where(t => t.IsEnabled(config))
+                .Select(t => t.GetToolMetadata());
         }
 
         /// <summary>
@@ -74,6 +77,26 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public bool TryGetTool(string toolName, out IMcpTool? tool)
         {
             return _tools.TryGetValue(toolName, out tool);
+        }
+
+        /// <summary>
+        /// Initializes and registers all MCP tools, enriching custom tools with DB metadata schemas.
+        /// Shared by both HTTP hosted-service and stdio startup paths.
+        /// </summary>
+        public static void InitializeAndRegisterTools(
+            IEnumerable<IMcpTool> tools,
+            McpToolRegistry registry,
+            IServiceProvider serviceProvider)
+        {
+            foreach (IMcpTool tool in tools)
+            {
+                if (tool is DynamicCustomTool customTool)
+                {
+                    customTool.InitializeMetadata(serviceProvider);
+                }
+
+                registry.RegisterTool(tool);
+            }
         }
     }
 }

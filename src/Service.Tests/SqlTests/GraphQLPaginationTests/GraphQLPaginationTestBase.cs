@@ -1268,6 +1268,51 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}");
         }
 
+        /// <summary>
+        /// Validates column-level authorization on orderBy arguments.
+        /// Without this check, protected column values leak through the base64-encoded endCursor
+        /// returned in pagination responses.
+        /// Book entity has publisher_id excluded for role test_role_with_excluded_fields on read.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("publisher_id", true, DataApiBuilderException.GRAPHQL_ORDERBY_FIELD_AUTHZ_FAILURE,
+            DisplayName = "Excluded column in orderBy, AuthZ failure")]
+        [DataRow("title", false, "",
+            DisplayName = "Allowed column in orderBy, no AuthZ error")]
+        public async Task TestOrderByColumnAuthorization(string orderByColumn, bool expectsError, string errorMessageFragment)
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(first: 1 orderBy: {" + orderByColumn + @": ASC}) {
+                    items {
+                        id
+                        title
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(
+                graphQLQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: "test_role_with_excluded_fields",
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(
+                    result.ToString(),
+                    message: errorMessageFragment,
+                    statusCode: $"{DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed}");
+            }
+            else
+            {
+                Assert.IsTrue(result.GetProperty("items").GetArrayLength() > 0);
+            }
+        }
+
         #endregion
     }
 }

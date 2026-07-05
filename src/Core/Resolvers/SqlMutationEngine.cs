@@ -2056,7 +2056,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                        queryExecutor.GetMultipleResultSetsIfAnyAsync,
                        dataSourceName,
                        GetHttpContext(),
-                       new List<string> { prettyPrintPk, entityName, isFallbackToUpdate.ToString() });
+                       sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL
+                           ? new List<string> { prettyPrintPk, entityName, isFallbackToUpdate.ToString() }
+                           : new List<string> { prettyPrintPk, entityName });
         }
 
         private Dictionary<string, object?> PrepareParameters(RestRequestContext context)
@@ -2267,7 +2269,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///     }
         /// }
         /// </code>
-        /// 
+        ///
         /// Example 2 - Multiple items creation:
         /// <code>
         /// mutation {

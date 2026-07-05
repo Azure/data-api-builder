@@ -167,6 +167,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 "
             },
             {
+                "PatchOneInsertWithDatabasePolicy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 0 AND pieceid = 7 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 0
+                            AND (pieceid != 6 AND ""piecesAvailable"" > 0)
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOne_Update_Default_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -335,27 +348,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         #region overridden tests
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneUpdateWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneInsertWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneInsertWithDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
         #endregion
 
         #region Test Fixture Setup

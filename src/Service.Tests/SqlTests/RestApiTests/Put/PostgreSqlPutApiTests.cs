@@ -86,6 +86,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             },
             {
+                "PutOneInsertWithDatabasePolicy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 0 AND pieceid = 7 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 0
+                            AND (pieceid != 6 AND ""piecesAvailable"" > 0)
+                    ) AS subq
+                "
+            },
+            {
                 "PutOneUpdateAccessibleRowWithDatabasePolicy",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -434,27 +447,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         #endregion
 
         #region overridden tests
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneInsertWithDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
-        {
-            throw new NotImplementedException();
-        }
         #endregion
 
         [TestCleanup]

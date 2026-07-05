@@ -17,6 +17,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private const string UPSERT_IDENTIFIER_COLUMN_NAME = "___upsert_op___";
         private const string INSERT_UPSERT = "inserted";
         private const string UPDATE_UPSERT = "updated";
+        public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
 
         private static DbCommandBuilder _builder = new NpgsqlCommandBuilder();
 
@@ -117,25 +118,50 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             // https://stackoverflow.com/questions/42668720/check-if-postgres-query-inserted-or-updated-via-upsert
             // relying on xmax to detect insert vs update breaks for views
-            string updatePredicates = JoinPredicateStrings(Build(structure.Predicates), structure.GetDbPolicyForOperation(EntityActionOperation.Update));
-            string updateQuery = $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+            string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
+            string pkPredicates = Build(structure.Predicates);
+
+            // RS1: COUNT of rows matching PK (no policy) — used to distinguish
+            // "row doesn't exist" from "row exists but policy blocked" in the executor.
+            string countQuery = $"SELECT COUNT(*) AS {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
+
+            string updatePredicates = JoinPredicateStrings(pkPredicates, structure.GetDbPolicyForOperation(EntityActionOperation.Update));
+            string updateQuery = $"UPDATE {tableName} " +
                 $"SET {Build(structure.UpdateOperations, ", ")} " +
                 $"WHERE {updatePredicates} " +
                 $"RETURNING {Build(structure.OutputColumns)}, '{UPDATE_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME}";
 
             if (structure.IsFallbackToUpdate)
             {
-                return updateQuery + ";";
+                // RS2: UPDATE only — no INSERT branch for autogen PK or missing required columns.
+                return $"{countQuery}; {updateQuery};";
             }
             else
             {
-                return $"WITH update_cte AS ( {updateQuery} ), insert_cte AS ( " +
-                    $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
-                    $"SELECT {string.Join(", ", (structure.Values))} " +
-                    $"WHERE NOT EXISTS (SELECT 1 FROM update_cte) " +
+                // INSERT only runs when row doesn't exist (pkPredicates match nothing)
+                // AND the create policy (if any) is satisfied.
+                string insertPredicates = JoinPredicateStrings(
+                    $"NOT EXISTS (SELECT 1 FROM {tableName} WHERE {pkPredicates})",
+                    structure.GetDbPolicyForOperation(EntityActionOperation.Create));
+
+                // Alias each value with its column name so that policy predicates referencing
+                // column names (e.g. "pieceid" != @param) can be resolved in the WHERE clause.
+                // Using SELECT ... FROM (SELECT @p1 AS col1, ...) AS T avoids both the VALUES(NULL)
+                // type inference issue and the unnamed-column resolution issue.
+                string namedValues = string.Join(", ",
+                    structure.InsertColumns.Zip(structure.Values,
+                        (col, val) => $"{val} AS {QuoteIdentifier(col)}"));
+
+                // RS2: CTE that attempts UPDATE first; falls through to INSERT only when row is absent.
+                string cteQuery = $"WITH update_cte AS ( {updateQuery} ), insert_cte AS ( " +
+                    $"INSERT INTO {tableName} ({Build(structure.InsertColumns)}) " +
+                    $"SELECT {Build(structure.InsertColumns)} FROM (SELECT {namedValues}) AS T " +
+                    $"WHERE {insertPredicates} " +
                     $"RETURNING {Build(structure.OutputColumns)}, '{INSERT_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME} ) " +
-                    $"SELECT {BuildListOfLabels(structure.OutputColumns)}, {UPSERT_IDENTIFIER_COLUMN_NAME} FROM update_cte UNION " +
+                    $"SELECT {BuildListOfLabels(structure.OutputColumns)}, {UPSERT_IDENTIFIER_COLUMN_NAME} FROM update_cte UNION ALL " +
                     $"SELECT {BuildListOfLabels(structure.OutputColumns)}, {UPSERT_IDENTIFIER_COLUMN_NAME} FROM insert_cte;";
+
+                return $"{countQuery}; {cteQuery}";
             }
         }
 

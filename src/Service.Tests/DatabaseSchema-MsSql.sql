@@ -64,6 +64,8 @@ DROP TABLE IF EXISTS date_only_table;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS user_profiles;
 DROP TABLE IF EXISTS default_books;
+DROP TABLE IF EXISTS [order items];
+DROP TABLE IF EXISTS [extra     order     items];
 DROP SCHEMA IF EXISTS [foo];
 DROP SCHEMA IF EXISTS [bar];
 COMMIT;
@@ -316,37 +318,34 @@ CREATE TABLE GQLmappings (
     column3 varchar(max)
 )
 
-CREATE TABLE bookmarks
-(
+CREATE TABLE bookmarks (
 	id int IDENTITY(1,1) PRIMARY KEY,
 	bkname nvarchar(1000) NOT NULL
 )
 
-CREATE TABLE mappedbookmarks
-(
+CREATE TABLE mappedbookmarks (
 	id int IDENTITY(1,1) PRIMARY KEY,
 	bkname nvarchar(50) NOT NULL
 )
 
-create Table fte_data(
-id int IDENTITY(5001,1),
-u_id int DEFAULT 2,
-name varchar(50),
-position varchar(20),
-salary int default 20,
-PRIMARY KEY(id, u_id)
+create Table fte_data (
+    id int IDENTITY(5001,1),
+    u_id int DEFAULT 2,
+    name varchar(50),
+    position varchar(20),
+    salary int default 20,
+    PRIMARY KEY(id, u_id)
 );
 
-create Table intern_data(
-id int,
-months int default 2 NOT NULL,
-name varchar(50),
-salary int default 15,
-PRIMARY KEY(id, months)
+create Table intern_data (
+    id int,
+    months int default 2 NOT NULL,
+    name varchar(50),
+    salary int default 15,
+    PRIMARY KEY(id, months)
 );
 
-create table books_sold
-(
+create table books_sold (
     id int PRIMARY KEY not null,
     book_name varchar(50),
     row_version rowversion,
@@ -355,8 +354,7 @@ create table books_sold
     last_sold_on_date as last_sold_on,
 )
 
-CREATE TABLE default_with_function_table
-(
+CREATE TABLE default_with_function_table (
     id INT PRIMARY KEY IDENTITY(5001,1),
     user_value INT,
     [current_date] DATETIME DEFAULT GETDATE() NOT NULL,
@@ -399,6 +397,16 @@ CREATE TABLE user_profiles (
 CREATE TABLE default_books(
     id int IDENTITY(5001, 1) PRIMARY KEY,
     title NVARCHAR(100)
+);
+
+CREATE TABLE [order items](
+    id INT PRIMARY KEY,
+    productname VARCHAR(100)
+);
+
+CREATE TABLE [extra     order     items](
+    id INT PRIMARY KEY,
+    productname VARCHAR(100)
 );
 
 ALTER TABLE books
@@ -850,3 +858,9 @@ INSERT INTO date_only_table( event_date, event_time, event_timestamp)
 VALUES ('2023-01-01', '08:30:00', '2023-01-01 08:30:00'), 
        ('2023-02-15', '12:45:00', '2023-02-15 12:45:00'), 
        ('2023-03-30', '17:15:00', '2023-03-30 17:15:00');
+
+INSERT INTO [order items](id, productname)
+VALUES (1, 'Sample Product');
+
+INSERT INTO [extra     order     items](id, productname)
+VALUES (1, 'Sample Product');

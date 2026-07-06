@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 
 # MsSql Integration Testing Pipeline config is split into parallel jobs:
-# 1) linux (disabled) -> Run SQL Server 2019 in Linux Docker Image
+# 1) linux (disabled) -> Run SQL Server 2025 in Linux Docker Image
 # 2) windows_combined -> GraphQL, REST, Unit, HotReload, OpenApi, Auth, Telemetry, Caching on LocalDB
 # 3) windows_configuration -> Configuration tests on LocalDB (with schema init)
 

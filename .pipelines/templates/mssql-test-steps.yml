@@ -70,6 +70,49 @@ steps:
       SqlLocalDb.exe start MSSQLLocalDB
       SqlLocalDb.exe info "MSSQLLocalDB"
 
+# Warm up LocalDB so the first real test connection isn't paying the cold-start
+# cost. LocalDB's TDS pre-login phase can take 30-60s on a cold instance, which
+# was timing out class-init metadata fetches in tests like
+# MsSqlMultipleMutationBuilderTests (~60 fresh connections opened sequentially).
+# We retry SELECT 1 for up to ~2 minutes; failure here is non-fatal so the
+# pipeline still proceeds to the actual test step which will surface a clearer
+# error if LocalDB really is unreachable.
+- task: PowerShell@2
+  displayName: 'Warm up LocalDB (retry SELECT 1)'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $connStr = "Server=(localdb)\MSSQLLocalDB;Integrated Security=True;TrustServerCertificate=True;Connection Timeout=60;"
+      $maxAttempts = 6
+      $attempt = 0
+      $success = $false
+      while (-not $success -and $attempt -lt $maxAttempts) {
+          $attempt++
+          $sw = [System.Diagnostics.Stopwatch]::StartNew()
+          try {
+              $connection = New-Object System.Data.SqlClient.SqlConnection($connStr)
+              $connection.Open()
+              $cmd = $connection.CreateCommand()
+              $cmd.CommandText = "SELECT 1"
+              $cmd.CommandTimeout = 60
+              [void]$cmd.ExecuteScalar()
+              $connection.Close()
+              $sw.Stop()
+              Write-Host "LocalDB warm-up succeeded on attempt $attempt in $($sw.ElapsedMilliseconds) ms."
+              $success = $true
+          }
+          catch {
+              $sw.Stop()
+              Write-Warning "LocalDB warm-up attempt $attempt failed after $($sw.ElapsedMilliseconds) ms: $_"
+              if ($attempt -lt $maxAttempts) {
+                  Start-Sleep -Seconds 5
+              }
+          }
+      }
+      if (-not $success) {
+          Write-Warning "LocalDB warm-up did not succeed after $maxAttempts attempts; continuing - test step will surface the real error."
+      }
+
 - ${{ if eq(parameters.initDbSchema, true) }}:
   - task: PowerShell@2
     displayName: 'Initialize database schema'
@@ -79,7 +122,7 @@ steps:
         Write-Host "Running DatabaseSchema-MsSql.sql against LocalDB via SqlClient..."
         $sqlFile = "$(System.DefaultWorkingDirectory)\src\Service.Tests\DatabaseSchema-MsSql.sql"
         $sql = Get-Content $sqlFile -Raw
-        $connStr = "Server=(localdb)\MSSQLLocalDB;Integrated Security=True;TrustServerCertificate=True;Connection Timeout=30;"
+        $connStr = "Server=(localdb)\MSSQLLocalDB;Integrated Security=True;TrustServerCertificate=True;Connection Timeout=60;"
         $connection = New-Object System.Data.SqlClient.SqlConnection($connStr)
         try {
             $connection.Open()

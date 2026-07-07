@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="type">CLR type</param>
         /// <param name="dbType">Optional DbType used to distinguish date-only (DbType.Date) from date-time types.</param>
-        /// <seealso cref="https://spec.openapis.org/oas/v3.0.1#data-types"/>
+        /// <seealso href="https://spec.openapis.org/oas/v3.0.1#data-types"/>
         /// <returns>OpenAPI format string (e.g. "date-time", "date", "time", "uuid", "byte"),
         /// or null if no standard format applies to the type.</returns>
         public static string? GetOpenApiFormatFromSystemType(Type type, DbType? dbType = null)

@@ -1486,13 +1486,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (metadataProvider.TryGetBackingColumn(entityName, field, out string? backingColumnValue) && !string.IsNullOrEmpty(backingColumnValue))
                 {
                     string typeMetadata = string.Empty;
-                    string formatMetadata = string.Empty;
+                    string? formatMetadata = null;
                     string? fieldDescription = null;
 
                     if (dbObject.SourceDefinition.Columns.TryGetValue(backingColumnValue, out ColumnDefinition? columnDef))
                     {
                         typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(columnDef.SystemType).ToString().ToLower();
-                        formatMetadata = TypeHelper.GetOpenApiFormatFromSystemType(columnDef.SystemType, columnDef.DbType) ?? string.Empty;
+                        formatMetadata = TypeHelper.GetOpenApiFormatFromSystemType(columnDef.SystemType, columnDef.DbType);
                     }
 
                     if (entityConfig?.Fields != null)

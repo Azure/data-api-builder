@@ -259,8 +259,7 @@ public class ParameterValidationTests
     }
 
     /// <summary>
-    /// Test to validate that the custom header parameters are present for each of the operation irrespective of the operation and the type
-    /// of the entity.
+    /// Test to validate that supported custom header parameters are present for each operation irrespective of the operation and entity type.
     /// </summary>
     /// <param name="entityName">Name of the entity.</param>
     /// <param name="objectName">Name of the database object backing the entity.</param>
@@ -281,12 +280,10 @@ public class ParameterValidationTests
         {
             foreach ((OperationType operationType, OpenApiOperation operation) in pathItem.Operations)
             {
-                // Assert presence of Authorization header and the expected parameter properties for the header parameter.
-                Assert.IsTrue(operation.Parameters.Any(
+                // Assert absence of Authorization header because OpenAPI security schemes handle bearer auth.
+                Assert.IsFalse(operation.Parameters.Any(
                     param => param.In is ParameterLocation.Header &&
-                    AuthorizationResolver.AUTHORIZATION_HEADER.Equals(param.Name) &&
-                    JsonDataType.String.ToString().ToLower().Equals(param.Schema.Type) &&
-                    param.Required is false));
+                    AuthorizationResolver.AUTHORIZATION_HEADER.Equals(param.Name)));
 
                 // Assert presence of X-MS-API-ROLE header and the expected parameter properties for the header parameter.
                 Assert.IsTrue(operation.Parameters.Any(

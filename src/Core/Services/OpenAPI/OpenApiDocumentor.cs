@@ -52,6 +52,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string SP_RESPONSE_SUFFIX = "_sp_response";
         public const string SCHEMA_OBJECT_TYPE = "object";
         public const string RESPONSE_ARRAY_PROPERTY = "array";
+        public const string BEARER_AUTH_SECURITY_SCHEME = "BearerAuth";
 
         // Routing constant
         public const string OPENAPI_ROUTE = "openapi";
@@ -224,7 +225,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 });
             }
 
-            return new OpenApiDocument()
+            OpenApiDocument document = new()
             {
                 Info = new OpenApiInfo
                 {
@@ -239,6 +240,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 Components = components,
                 Tags = globalTagsDict.Values.ToList()
             };
+
+            AddAuthenticationSecurity(document, runtimeConfig.Runtime?.Host?.Authentication);
+            return document;
         }
 
         /// <summary>
@@ -650,7 +654,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Helper method to populate operation parameters with all the custom headers like X-MS-API-ROLE, Authorization etc. headers.
         /// </summary>
         /// <param name="operation">OpenApi operation.</param>
-        private static void AddCustomHeadersToOperation(OpenApiOperation operation)
+        internal static void AddCustomHeadersToOperation(OpenApiOperation operation)
         {
             OpenApiSchema stringParamSchema = new()
             {
@@ -666,16 +670,38 @@ namespace Azure.DataApiBuilder.Core.Services
                 Schema = stringParamSchema
             };
             operation.Parameters.Add(paramForClientHeader);
+        }
 
-            // Add parameter for Authorization header.
-            OpenApiParameter paramForAuthHeader = new()
+        internal static void AddAuthenticationSecurity(OpenApiDocument document, AuthenticationOptions? authenticationOptions)
+        {
+            if (authenticationOptions is null || authenticationOptions.IsUnauthenticatedAuthenticationProvider())
             {
-                Required = false,
+                return;
+            }
+
+            document.Components ??= new OpenApiComponents();
+            document.Components.SecuritySchemes ??= new Dictionary<string, OpenApiSecurityScheme>();
+            document.Components.SecuritySchemes[BEARER_AUTH_SECURITY_SCHEME] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
                 In = ParameterLocation.Header,
-                Name = "Authorization",
-                Schema = stringParamSchema
+                Name = AuthorizationResolver.AUTHORIZATION_HEADER
             };
-            operation.Parameters.Add(paramForAuthHeader);
+
+            document.SecurityRequirements ??= new List<OpenApiSecurityRequirement>();
+            document.SecurityRequirements.Add(new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = BEARER_AUTH_SECURITY_SCHEME
+                    }
+                }] = []
+            });
         }
 
         /// <summary>

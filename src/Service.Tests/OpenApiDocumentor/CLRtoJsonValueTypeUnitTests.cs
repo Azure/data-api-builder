@@ -3,6 +3,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Data;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -105,10 +106,70 @@ public class CLRtoJsonValueTypeUnitTests
     [DataRow(typeof(Guid?))]
     [DataRow(typeof(TimeOnly?))]
     [DataRow(typeof(TimeSpan?))]
+    [DataRow(typeof(DateOnly?))]
     [DataTestMethod]
     public void ResolveUnderlyingTypeForNullableValueType(Type nullableType)
     {
         Assert.AreNotEqual(notExpected: JsonDataType.Undefined, actual: TypeHelper.GetJsonDataTypeFromSystemType(nullableType));
         Assert.IsNotNull(TypeHelper.GetDbTypeFromSystemType(nullableType));
+    }
+
+    /// <summary>
+    /// Validates that TypeHelper.GetOpenApiFormatFromSystemType returns the expected
+    /// OpenAPI format string for each supported CLR type and DbType combination.
+    /// This covers all supported DAB data sources (MSSQL, PostgreSQL, MySQL):
+    /// - MSSQL: uses DbType.Date to distinguish SQL date from datetime/datetime2
+    /// - PostgreSQL (Npgsql 8): date columns report DateOnly as their CLR type
+    /// - MySQL (MySqlConnector 2+): date columns report DateOnly as their CLR type
+    /// </summary>
+    [DataTestMethod]
+    // date-time: DateTime without DbType (PostgreSQL timestamp, MySQL datetime/timestamp)
+    [DataRow(typeof(DateTime), null, "date-time",
+        DisplayName = "DateTime with no DbType → date-time (PostgreSQL timestamp, MySQL datetime)")]
+    // date-time: DateTime with DateTime DbType (MSSQL datetime, smalldatetime)
+    [DataRow(typeof(DateTime), DbType.DateTime, "date-time",
+        DisplayName = "DateTime with DbType.DateTime → date-time (MSSQL datetime/smalldatetime)")]
+    // date-time: DateTime with DateTime2 DbType (MSSQL datetime2)
+    [DataRow(typeof(DateTime), DbType.DateTime2, "date-time",
+        DisplayName = "DateTime with DbType.DateTime2 → date-time (MSSQL datetime2)")]
+    // date: DateTime with Date DbType (MSSQL date type)
+    [DataRow(typeof(DateTime), DbType.Date, "date",
+        DisplayName = "DateTime with DbType.Date → date (MSSQL date)")]
+    // date: DateOnly (PostgreSQL date via Npgsql 8, MySQL DATE via MySqlConnector 2+)
+    [DataRow(typeof(DateOnly), null, "date",
+        DisplayName = "DateOnly with no DbType → date (PostgreSQL date/Npgsql 8, MySQL DATE/MySqlConnector 2+)")]
+    // date: nullable DateOnly? resolves to DateOnly
+    [DataRow(typeof(DateOnly?), null, "date",
+        DisplayName = "DateOnly? → date (nullable date column)")]
+    // date-time: DateTimeOffset (MSSQL datetimeoffset, PostgreSQL timestamptz)
+    [DataRow(typeof(DateTimeOffset), null, "date-time",
+        DisplayName = "DateTimeOffset → date-time (MSSQL datetimeoffset, PostgreSQL timestamptz)")]
+    // date-time: nullable DateTime? resolves to DateTime
+    [DataRow(typeof(DateTime?), DbType.DateTime, "date-time",
+        DisplayName = "DateTime? → date-time (nullable datetime column)")]
+    // time: TimeOnly (MSSQL time, PostgreSQL time, MySQL time)
+    [DataRow(typeof(TimeOnly), null, "time",
+        DisplayName = "TimeOnly → time (MSSQL/PostgreSQL/MySQL time columns)")]
+    // time: TimeSpan maps to time as well
+    [DataRow(typeof(TimeSpan), null, "time",
+        DisplayName = "TimeSpan → time")]
+    // uuid: Guid (MSSQL uniqueidentifier, PostgreSQL uuid, MySQL char(36))
+    [DataRow(typeof(Guid), null, "uuid",
+        DisplayName = "Guid → uuid (MSSQL uniqueidentifier, PostgreSQL uuid)")]
+    // byte: byte[] (MSSQL binary/varbinary/image/timestamp, PostgreSQL bytea, MySQL binary/varbinary/blob)
+    [DataRow(typeof(byte[]), null, "byte",
+        DisplayName = "byte[] → byte (binary/bytea columns)")]
+    // No format for plain string, int, bool, etc.
+    [DataRow(typeof(string), null, null,
+        DisplayName = "string → null (no format)")]
+    [DataRow(typeof(int), null, null,
+        DisplayName = "int → null (no format)")]
+    [DataRow(typeof(bool), null, null,
+        DisplayName = "bool → null (no format)")]
+    public void GetOpenApiFormatFromSystemType_ReturnsExpectedFormat(Type type, DbType? dbType, string? expectedFormat)
+    {
+        string? actualFormat = TypeHelper.GetOpenApiFormatFromSystemType(type, dbType);
+        Assert.AreEqual(expectedFormat, actualFormat,
+            $"Expected OpenAPI format '{expectedFormat ?? "null"}' for type {type.Name} with DbType {dbType?.ToString() ?? "null"}.");
     }
 }

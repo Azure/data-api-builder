@@ -573,6 +573,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 "Decimal" => DECIMAL_TYPE,
                 "Boolean" => BOOLEAN_TYPE,
                 "DateTime" => DATETIME_TYPE,
+                "DateOnly" => DATETIME_TYPE,
                 "DateTimeOffset" => DATETIME_TYPE,
                 "Byte[]" => BYTEARRAY_TYPE,
                 "TimeOnly" => LOCALTIME_TYPE,

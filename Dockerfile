@@ -1,6 +1,6 @@
 # Version values referenced from https://hub.docker.com/_/microsoft-dotnet-aspnet
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0-cbl-mariner2.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-azurelinux3.0 AS build
 
 
 WORKDIR /src
@@ -14,7 +14,7 @@ RUN dotnet build "./src/Service/Azure.DataApiBuilder.Service.csproj" -c Docker -
 # and `runtime-nonroot` (non-root, scanner-friendly) variants derive from
 # this stage so the shared setup stays in one place.
 # ---------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-cbl-mariner2.0 AS runtime-base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-azurelinux3.0 AS runtime-base
 
 COPY --from=build /out /App
 # Add default dab-config.json to /App in the image
@@ -29,19 +29,19 @@ ENTRYPOINT ["dotnet", "Azure.DataApiBuilder.Service.dll"]
 #   docker build --target runtime-nonroot -t <repo>:<version>-nonroot .
 #
 # Runs as the "app" user that ships with the mcr.microsoft.com/dotnet/aspnet
-# base image (UID/GID 1654 on the cbl-mariner variant; 64198 on the
-# Debian/chiseled variants). DAB does not require root, and declaring USER
+# base image (UID/GID 1654, exposed via the APP_UID env var, on the
+# azurelinux3.0 variant). DAB does not require root, and declaring USER
 # explicitly sets the image's Config.User field so image scanners
 # (e.g. Checkmarx One) that require a non-root user in the final stage are
 # satisfied.
 #
 # Safeguards applied to minimize the chance of runtime breakage:
-#   * `chown -R app:app /App` so any feature that writes to a relative path
-#     under WORKDIR works (e.g. runtime.telemetry.file with the default path
-#     "logs/dab-log.txt", or any future relative-path artifact). File modes
-#     are unchanged - only ownership.
-#   * Pre-create /App/logs so the documented default file-sink path works
-#     with no additional volume/permission setup.
+#   * Pre-create /App/logs and `chown app:app /App/logs` (non-recursive) so
+#     the documented default file-sink path ("logs/dab-log.txt", relative to
+#     WORKDIR /App) is writable. Ownership of the published assemblies under
+#     /App is intentionally left unchanged - a recursive chown would
+#     duplicate every assembly layer and roughly double the image size for
+#     no runtime benefit, since DAB only needs write access to /App/logs.
 #   * Default port stays at 5000, which is above 1024, so binding works
 #     without CAP_NET_BIND_SERVICE. Users overriding ASPNETCORE_URLS to a
 #     privileged port (<1024) must add `--cap-add=NET_BIND_SERVICE` to
@@ -60,11 +60,11 @@ ENTRYPOINT ["dotnet", "Azure.DataApiBuilder.Service.dll"]
 # ---------------------------------------------------------------------------
 FROM runtime-base AS runtime-nonroot
 
-RUN mkdir -p /App/logs && chown -R app:app /App
+RUN mkdir -p /App/logs && chown app:app /App/logs
 USER app
 
 LABEL org.opencontainers.image.title="Data API builder (non-root)" \
-      org.opencontainers.image.description="Data API builder running as the non-root 'app' user (UID 1654 on cbl-mariner)." \
+      org.opencontainers.image.description="Data API builder running as the non-root 'app' user (UID 1654 on azurelinux3.0)." \
       org.opencontainers.image.source="https://github.com/Azure/data-api-builder"
 
 # ---------------------------------------------------------------------------

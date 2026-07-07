@@ -25,7 +25,7 @@ switch (aspireDB)
         }
 
         var mssqlService = builder.AddProject<Projects.Azure_DataApiBuilder_Service>("mssql-service", "Development")
-            .WithArgs("-f", "net8.0")
+            .WithArgs("-f", "net10.0")
             .WithEndpoint(endpointName: "https", (e) => e.Port = 1234)
             .WithEndpoint(endpointName: "http", (e) => e.Port = 2345)
             .WithEnvironment("db-type", "mssql")
@@ -65,7 +65,7 @@ switch (aspireDB)
         }
 
         var pgService = builder.AddProject<Projects.Azure_DataApiBuilder_Service>("pg-service", "Development")
-            .WithArgs("-f", "net8.0")
+            .WithArgs("-f", "net10.0")
             .WithEndpoint(endpointName: "https", (e) => e.Port = 1234)
             .WithEndpoint(endpointName: "http", (e) => e.Port = 2345)
             .WithEnvironment("db-type", "postgresql")

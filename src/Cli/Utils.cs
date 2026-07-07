@@ -29,13 +29,13 @@ namespace Cli
         public static bool IsMcpStdioMode { get; set; }
 
         /// <summary>
-        /// When true, the CLI is the source overriding the log level (i.e., <c>--LogLevel</c> was supplied).
+        /// When true, the CLI is the source overriding the log level (i.e., <c>--log-level</c> was supplied).
         /// This allows logs to be written to stderr instead of being completely suppressed.
         /// </summary>
         public static bool IsCliOverriding { get; set; }
 
         /// <summary>
-        /// The log level specified via CLI --LogLevel flag.
+        /// The log level specified via CLI --log-level flag.
         /// Only valid when IsCliOverriding is true.
         /// </summary>
         public static LogLevel CliLogLevel { get; set; } = LogLevel.Information;
@@ -43,7 +43,7 @@ namespace Cli
         /// <summary>
         /// When true, the runtime config is the source overriding the log level
         /// (i.e., <c>runtime.telemetry.log-level</c> was explicitly set).
-        /// This allows CLI logs to be written to stderr in MCP mode even when no --LogLevel flag was provided.
+        /// This allows CLI logs to be written to stderr in MCP mode even when no --log-level flag was provided.
         /// </summary>
         public static bool IsConfigOverriding { get; set; }
 
@@ -205,7 +205,8 @@ namespace Cli
                 uriComponent = uriComponent.Substring(1);
             }
 
-            return !RuntimeConfigValidatorUtil.DoesUriComponentContainReservedChars(uriComponent);
+            // The path may contain multiple '/'-separated segments (e.g. 'api/v2'); validate each segment.
+            return !RuntimeConfigValidatorUtil.DoesUriPathContainReservedChars(uriComponent);
         }
 
         /// <summary>

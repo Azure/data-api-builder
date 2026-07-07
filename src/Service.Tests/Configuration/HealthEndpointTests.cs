@@ -36,6 +36,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string CUSTOM_CONFIG_FILENAME = "custom_config.json";
         private const string BASE_DAB_URL = "http://localhost:5000";
 
+        [TestInitialize]
+        public void SetupAuthProviderEnvironmentVariables()
+        {
+            TestHelper.SetAppServiceEasyAuthEnvironmentVariables();
+        }
+
         [TestCleanup]
         public void CleanupAfterEachTest()
         {

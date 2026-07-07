@@ -735,6 +735,13 @@ type Moon {
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
+        [TestInitialize]
+        public void SetupAuthProviderEnvironmentVariables()
+        {
+            TestHelper.SetAppServiceEasyAuthEnvironmentVariables();
+            TestHelper.SetStaticWebAppsEnvironmentVariable();
+        }
+
         /// <summary>
         /// When updating config during runtime is possible, then For invalid config the Application continues to
         /// accept request with status code of 503.

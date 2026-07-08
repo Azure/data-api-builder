@@ -205,7 +205,8 @@ namespace Cli
                 uriComponent = uriComponent.Substring(1);
             }
 
-            return !RuntimeConfigValidatorUtil.DoesUriComponentContainReservedChars(uriComponent);
+            // The path may contain multiple '/'-separated segments (e.g. 'api/v2'); validate each segment.
+            return !RuntimeConfigValidatorUtil.DoesUriPathContainReservedChars(uriComponent);
         }
 
         /// <summary>

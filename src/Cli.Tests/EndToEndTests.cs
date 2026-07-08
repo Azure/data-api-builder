@@ -343,11 +343,12 @@ public class EndToEndTests
     [DataRow("/updatedPath", true, DisplayName = "Success in updated GraphQL Path to /updatedPath.")]
     [DataRow("/updated-Path", true, DisplayName = "Success in updated GraphQL Path to /updated-Path.")]
     [DataRow("/updated_Path", true, DisplayName = "Success in updated GraphQL Path to /updated_Path.")]
+    [DataRow("/api/v2", true, DisplayName = "Success in updated GraphQL Path to multi-segment path /api/v2.")]
     [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
     [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
     [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]
     [DataRow("/updated@Path", false, DisplayName = "Failure due reserved chars '@'.")]
-    [DataRow("/updated/Path", false, DisplayName = "Failure due reserved chars '/'.")]
+    [DataRow("/api//v2", false, DisplayName = "Failure due to empty path segment.")]
     public void TestUpdateGraphQLPathRuntimeSettings(string path, bool isSuccess)
     {
         // Initialize the config file.
@@ -405,11 +406,12 @@ public class EndToEndTests
     [DataRow("/updatedPath", true, DisplayName = "Successfully updated Rest Path to /updatedPath.")]
     [DataRow("/updated-Path", true, DisplayName = "Successfully updated Rest Path to /updated-Path.")]
     [DataRow("/updated_Path", true, DisplayName = "Successfully updated Rest Path to /updated_Path.")]
+    [DataRow("/api/v2", true, DisplayName = "Successfully updated Rest Path to multi-segment path /api/v2.")]
     [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
     [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
     [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]
     [DataRow("/updated@Path", false, DisplayName = "Failure due reserved chars '@'.")]
-    [DataRow("/updated/Path", false, DisplayName = "Failure due reserved chars '/'.")]
+    [DataRow("/api//v2", false, DisplayName = "Failure due to empty path segment.")]
     public void TestUpdateRestPathRuntimeSettings(string path, bool isSuccess)
     {
         // Initialize the config file.

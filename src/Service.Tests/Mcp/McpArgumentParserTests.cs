@@ -211,7 +211,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             bool ok = McpArgumentParser.TryParseExecuteArguments(
                 Parse(@"{ ""entity"": ""GetBooks"" }"),
-                out string entity, out Dictionary<string, object?> parameters, out string error);
+                out string entity, out Dictionary<string, object?> parameters, out _);
 
             Assert.IsTrue(ok);
             Assert.AreEqual("GetBooks", entity);

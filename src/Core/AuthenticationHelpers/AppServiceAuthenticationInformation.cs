@@ -15,10 +15,6 @@ public static class AppServiceAuthenticationInfo
     /// Environment variable key whose value represents whether AppService EasyAuth is enabled ("true" or "false").
     /// </summary>
     public const string APPSERVICESAUTH_ENABLED_ENVVAR = "WEBSITE_AUTH_ENABLED";
-    /// <summary>
-    /// Environment variable key whose value represents Identity Provider such as "AzureActiveDirectory"
-    /// </summary>
-    public const string APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR = "WEBSITE_AUTH_DEFAULT_PROVIDER";
 
     // ── AppService messages ──────────────────────────────────────────────────────────────────────
     /// <summary>

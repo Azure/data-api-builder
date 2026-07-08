@@ -3958,7 +3958,6 @@ type Planet @model(name:""PlanetAlias"") {
         {
             // Clears or sets App Service Environment Variables based on test input.
             Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, setAppServiceEnvVars ? "true" : null);
-            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR, setAppServiceEnvVars ? "AzureActiveDirectory" : null);
             Environment.SetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR, setStaticWebAppsEnvVar ? "test-site-name" : null);
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
 
@@ -4005,7 +4004,6 @@ type Planet @model(name:""PlanetAlias"") {
             finally
             {
                 Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, null);
-                Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR, null);
                 Environment.SetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR, null);
             }
         }

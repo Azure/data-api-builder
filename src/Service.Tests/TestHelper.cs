@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             Environment.SetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR, null);
         }
 
-        public static void SetAppServiceEasyAuthEnvironmentVariables()
+        public static void SetAppServiceEnvironmentVariable()
         {
             Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, "true");
         }

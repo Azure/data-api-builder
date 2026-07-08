@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestInitialize]
         public void SetupAuthProviderEnvironmentVariables()
         {
-            TestHelper.SetAppServiceEasyAuthEnvironmentVariables();
+            TestHelper.SetAppServiceEnvironmentVariable();
         }
 
         [TestCleanup]

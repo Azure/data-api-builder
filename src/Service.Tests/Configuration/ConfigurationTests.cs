@@ -738,7 +738,7 @@ type Moon {
         [TestInitialize]
         public void SetupAuthProviderEnvironmentVariables()
         {
-            TestHelper.SetAppServiceEasyAuthEnvironmentVariables();
+            TestHelper.SetAppServiceEnvironmentVariable();
             TestHelper.SetStaticWebAppsEnvironmentVariable();
         }
 

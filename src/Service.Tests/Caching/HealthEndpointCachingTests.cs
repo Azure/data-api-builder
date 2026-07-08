@@ -25,7 +25,7 @@ public class HealthEndpointCachingTests
     [TestInitialize]
     public void SetupAuthProviderEnvironmentVariables()
     {
-        TestHelper.SetAppServiceEasyAuthEnvironmentVariables();
+        TestHelper.SetAppServiceEnvironmentVariable();
     }
 
     [TestCleanup]

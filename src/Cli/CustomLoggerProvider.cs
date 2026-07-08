@@ -124,13 +124,14 @@ public class CustomLoggerProvider : ILoggerProvider
                 // Apply colors so the abbreviation matches the visual style of engine logs.
                 // try/finally guarantees the original colors are restored even if Write throws,
                 // otherwise the console would be left tinted (e.g. red on error) for subsequent output.
+                string mcpTimestamp = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
                 ConsoleColor mcpOriginalForeGroundColor = Console.ForegroundColor;
                 ConsoleColor mcpOriginalBackGroundColor = Console.BackgroundColor;
                 try
                 {
                     Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
                     Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
-                    Console.Error.Write($"{mcpAbbreviation}:");
+                    Console.Error.Write($"{mcpTimestamp} {mcpAbbreviation}:");
                 }
                 finally
                 {
@@ -153,6 +154,7 @@ public class CustomLoggerProvider : ILoggerProvider
             }
 
             TextWriter writer = logLevel >= LogLevel.Error ? Console.Error : Console.Out;
+            string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
             // try/finally guarantees the original colors are restored even if Write throws,
             // otherwise the console would be left tinted (e.g. red on error) for subsequent output.
             ConsoleColor originalForeGroundColor = Console.ForegroundColor;
@@ -161,7 +163,7 @@ public class CustomLoggerProvider : ILoggerProvider
             {
                 Console.ForegroundColor = _logLevelToForeGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.White);
                 Console.BackgroundColor = _logLevelToBackGroundConsoleColorMap.GetValueOrDefault(logLevel, ConsoleColor.Black);
-                writer.Write($"{abbreviation}:");
+                writer.Write($"{timestamp} {abbreviation}:");
             }
             finally
             {

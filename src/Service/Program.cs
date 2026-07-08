@@ -194,6 +194,11 @@ namespace Azure.DataApiBuilder.Service
                     else
                     {
                         logging.SetMinimumLevel(LogLevelProvider.CurrentLogLevel);
+                        logging.AddSimpleConsole(options =>
+                        {
+                            options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
+                            options.UseUtcTimestamp = true;
+                        });
                     }
 
                     // Add filter for dynamic log level changes (e.g., via MCP logging/setLevel)
@@ -464,6 +469,11 @@ namespace Azure.DataApiBuilder.Service
                         // When LogLevel.None, skip the console logger entirely for true silence.
                         if (LogLevelProvider.CurrentLogLevel != LogLevel.None)
                         {
+                            builder.AddSimpleConsole(options =>
+                            {
+                                options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
+                                options.UseUtcTimestamp = true;
+                            });
                             builder.AddConsole(options =>
                             {
                                 options.LogToStandardErrorThreshold = LogLevel.Trace;
@@ -472,7 +482,11 @@ namespace Azure.DataApiBuilder.Service
                     }
                     else
                     {
-                        builder.AddConsole();
+                        builder.AddSimpleConsole(options =>
+                        {
+                            options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
+                            options.UseUtcTimestamp = true;
+                        });
                     }
                 });
         }

@@ -77,8 +77,8 @@ public class CustomLoggerTests
         string actual = expectStderr ? stderr : stdout;
         string other = expectStderr ? stdout : stderr;
 
-        Assert.IsTrue(actual.StartsWith(expectedPrefix),
-            $"Expected output to start with '{expectedPrefix}' but got: '{actual}'");
+        Assert.IsTrue(actual.Contains(expectedPrefix),
+            $"Expected output to contain '{expectedPrefix}' but got: '{actual}'");
         StringAssert.Contains(actual, Message);
         Assert.AreEqual(string.Empty, other,
             $"Did not expect output on the other stream but got: '{other}'");

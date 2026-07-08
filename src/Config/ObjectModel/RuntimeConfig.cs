@@ -310,14 +310,14 @@ public record RuntimeConfig
     /// To be used when setting up from cli json scenario.
     /// </summary>
     /// <param name="Schema">schema for config.</param>
-    /// <param name="DataSource">Default datasource.</param>
+    /// <param name="DataSource">Default datasource. May be null for root configs that use <paramref name="DataSourceFiles"/> and delegate the data source to child configs.</param>
     /// <param name="Entities">Entities</param>
     /// <param name="Runtime">Runtime settings.</param>
     /// <param name="DataSourceFiles">List of datasource files for multiple db scenario. Null for single db scenario.</param>
     [JsonConstructor]
     public RuntimeConfig(
         string? Schema,
-        DataSource DataSource,
+        DataSource? DataSource,
         RuntimeEntities Entities,
         RuntimeAutoentities? Autoentities = null,
         RuntimeOptions? Runtime = null,

@@ -16,6 +16,10 @@
       "path": "/graphql",
       "allow-introspection": true
     },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp"
+    },
     "host": {
       "cors": {
         "origins": [
@@ -27,14 +31,24 @@
         "provider": "AppService"
       },
       "mode": "development"
+    },
+    "telemetry": {
+      "open-telemetry": {
+        "enabled": true,
+        "endpoint": "@env('OTEL_EXPORTER_OTLP_ENDPOINT')",
+        "headers": "@env('OTEL_EXPORTER_OTLP_HEADERS')",
+        "service-name": "@env('OTEL_SERVICE_NAME')"
+      }
     }
   },
+  "autoentities": {},
   "entities": {
     "Publisher": {
       "source": {
         "object": "publishers",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -268,6 +282,7 @@
         "object": "stocks",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -425,6 +440,18 @@
         "object": "books",
         "type": "table"
       },
+      "fields": [
+        {
+          "name": "id",
+          "alias": "id",
+          "primary-key": false
+        },
+        {
+          "name": "title",
+          "alias": "title",
+          "primary-key": false
+        }
+      ],
       "graphql": {
         "enabled": true,
         "type": {
@@ -806,10 +833,6 @@
           ]
         }
       ],
-      "mappings": {
-        "id": "id",
-        "title": "title"
-      },
       "relationships": {
         "publishers": {
           "cardinality": "one",
@@ -894,6 +917,7 @@
         "object": "book_website_placements",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -953,6 +977,7 @@
         "object": "authors",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1007,6 +1032,7 @@
         "object": "reviews",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1066,6 +1092,7 @@
         "object": "comics",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1168,6 +1195,7 @@
         "object": "brokers",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": false,
         "type": {
@@ -1211,6 +1239,7 @@
         "object": "website_users",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1263,6 +1292,13 @@
         "object": "type_table",
         "type": "table"
       },
+      "fields": [
+        {
+          "name": "id",
+          "alias": "typeid",
+          "primary-key": false
+        }
+      ],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1308,21 +1344,18 @@
             }
           ]
         }
-      ],
-      "mappings": {
-        "id": "typeid"
-      }
+      ]
     },
-    "stocks_price": {
+    "ArrayType": {
       "source": {
-        "object": "stocks_price",
+        "object": "array_type_table",
         "type": "table"
       },
       "graphql": {
         "enabled": true,
         "type": {
-          "singular": "stocks_price",
-          "plural": "stocks_prices"
+          "singular": "ArrayType",
+          "plural": "ArrayTypes"
         }
       },
       "rest": {
@@ -1341,6 +1374,33 @@
           "role": "authenticated",
           "actions": [
             {
+              "action": "read"
+            }
+          ]
+        }
+      ]
+    },
+    "stocks_price": {
+      "source": {
+        "object": "stocks_price",
+        "type": "table"
+      },
+      "fields": [],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "stocks_price",
+          "plural": "stocks_prices"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [
+            {
               "action": "create"
             },
             {
@@ -1351,6 +1411,14 @@
             },
             {
               "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
             }
           ]
         },
@@ -1382,6 +1450,18 @@
         "object": "trees",
         "type": "table"
       },
+      "fields": [
+        {
+          "name": "species",
+          "alias": "Scientific Name",
+          "primary-key": false
+        },
+        {
+          "name": "region",
+          "alias": "United State's Region",
+          "primary-key": false
+        }
+      ],
       "graphql": {
         "enabled": false,
         "type": {
@@ -1427,17 +1507,20 @@
             }
           ]
         }
-      ],
-      "mappings": {
-        "species": "Scientific Name",
-        "region": "United State's Region"
-      }
+      ]
     },
     "Shrub": {
       "source": {
         "object": "trees",
         "type": "table"
       },
+      "fields": [
+        {
+          "name": "species",
+          "alias": "fancyName",
+          "primary-key": false
+        }
+      ],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1485,15 +1568,16 @@
           ]
         }
       ],
-      "mappings": {
-        "species": "fancyName"
-      },
       "relationships": {
         "fungus": {
           "cardinality": "one",
           "target.entity": "Fungus",
-          "source.fields": [ "species" ],
-          "target.fields": [ "habitat" ],
+          "source.fields": [
+            "species"
+          ],
+          "target.fields": [
+            "habitat"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -1504,6 +1588,13 @@
         "object": "fungi",
         "type": "table"
       },
+      "fields": [
+        {
+          "name": "spores",
+          "alias": "hazards",
+          "primary-key": false
+        }
+      ],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1567,15 +1658,16 @@
           ]
         }
       ],
-      "mappings": {
-        "spores": "hazards"
-      },
       "relationships": {
-        "shrub": {
+        "Shrub": {
           "cardinality": "one",
           "target.entity": "Shrub",
-          "source.fields": [ "habitat" ],
-          "target.fields": [ "species" ],
+          "source.fields": [
+            "habitat"
+          ],
+          "target.fields": [
+            "species"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -1586,6 +1678,7 @@
         "object": "users",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1652,6 +1745,7 @@
         "object": "users",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1692,6 +1786,7 @@
         "object": "users",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1761,11 +1856,15 @@
     "books_view_with_mapping": {
       "source": {
         "object": "books_view_with_mapping",
-        "type": "view",
-        "key-fields": [
-          "id"
-        ]
+        "type": "view"
       },
+      "fields": [
+        {
+          "name": "id",
+          "alias": "book_id",
+          "primary-key": true
+        }
+      ],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1785,10 +1884,7 @@
             }
           ]
         }
-      ],
-      "mappings": {
-        "id": "book_id"
-      }
+      ]
     },
     "stocks_view_selected": {
       "source": {
@@ -1884,6 +1980,7 @@
         "object": "empty_table",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1927,6 +2024,7 @@
         "object": "notebooks",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -1971,6 +2069,7 @@
         "object": "journals",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -2069,6 +2168,28 @@
         "object": "aow",
         "type": "table"
       },
+      "fields": [
+        {
+          "name": "DetailAssessmentAndPlanning",
+          "alias": "始計",
+          "primary-key": false
+        },
+        {
+          "name": "WagingWar",
+          "alias": "作戰",
+          "primary-key": false
+        },
+        {
+          "name": "StrategicAttack",
+          "alias": "謀攻",
+          "primary-key": false
+        },
+        {
+          "name": "NoteNum",
+          "alias": "┬─┬ノ( º _ ºノ)",
+          "primary-key": false
+        }
+      ],
       "graphql": {
         "enabled": false,
         "type": {
@@ -2096,19 +2217,14 @@
             }
           ]
         }
-      ],
-      "mappings": {
-        "DetailAssessmentAndPlanning": "始計",
-        "WagingWar": "作戰",
-        "StrategicAttack": "謀攻",
-        "NoteNum": "┬─┬ノ( º _ ºノ)"
-      }
+      ]
     },
     "series": {
       "source": {
         "object": "series",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -2188,6 +2304,7 @@
         "object": "sales",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -2222,6 +2339,18 @@
         "object": "gqlmappings",
         "type": "table"
       },
+      "fields": [
+        {
+          "name": "__column1",
+          "alias": "column1",
+          "primary-key": false
+        },
+        {
+          "name": "__column2",
+          "alias": "column2",
+          "primary-key": false
+        }
+      ],
       "graphql": {
         "enabled": true,
         "type": {
@@ -2249,17 +2378,14 @@
             }
           ]
         }
-      ],
-      "mappings": {
-        "__column1": "column1",
-        "__column2": "column2"
-      }
+      ]
     },
     "Bookmarks": {
       "source": {
         "object": "bookmarks",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -2294,6 +2420,18 @@
         "object": "mappedbookmarks",
         "type": "table"
       },
+      "fields": [
+        {
+          "name": "id",
+          "alias": "bkid",
+          "primary-key": false
+        },
+        {
+          "name": "bkname",
+          "alias": "name",
+          "primary-key": false
+        }
+      ],
       "graphql": {
         "enabled": true,
         "type": {
@@ -2321,11 +2459,7 @@
             }
           ]
         }
-      ],
-      "mappings": {
-        "id": "bkid",
-        "bkname": "name"
-      }
+      ]
     },
     "BooksSold": {
       "source": {
@@ -2353,11 +2487,54 @@
         }
       ]
     },
+    "DefaultBuiltInFunction": {
+      "source": {
+        "object": "default_with_function_table",
+        "type": "table"
+      },
+      "fields": [],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "DefaultBuiltInFunction",
+          "plural": "DefaultBuiltInFunctions"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "current_date",
+                  "next_date"
+                ]
+              }
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
+    },
     "PublisherNF": {
       "source": {
         "object": "publishers",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -2440,6 +2617,18 @@
         "object": "books",
         "type": "table"
       },
+      "fields": [
+        {
+          "name": "id",
+          "alias": "id",
+          "primary-key": false
+        },
+        {
+          "name": "title",
+          "alias": "title",
+          "primary-key": false
+        }
+      ],
       "graphql": {
         "enabled": true,
         "type": {
@@ -2501,10 +2690,6 @@
           ]
         }
       ],
-      "mappings": {
-        "id": "id",
-        "title": "title"
-      },
       "relationships": {
         "publishers": {
           "cardinality": "one",
@@ -2549,45 +2734,12 @@
         }
       }
     },
-    "DefaultBuiltInFunction": {
-      "source": {
-        "object": "default_with_function_table",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "create",
-              "fields": {
-                "include": [
-                  "*"
-                ],
-                "exclude": [
-                  "current_date",
-                  "next_date"
-                ]
-              }
-            },
-            "read",
-            "update",
-            "delete"
-          ]
-        }
-      ]
-    },
     "AuthorNF": {
       "source": {
         "object": "authors",
         "type": "table"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -2672,22 +2824,42 @@
       }
     },
     "dbo_DimAccount": {
-      "source": "dimaccount",
+      "source": {
+        "object": "dimaccount",
+        "type": "table"
+      },
+      "fields": [
+        {
+          "name": "parentaccountkey",
+          "alias": "ParentAccountKey",
+          "primary-key": false
+        },
+        {
+          "name": "accountkey",
+          "alias": "AccountKey",
+          "primary-key": false
+        }
+      ],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "dbo_DimAccount",
+          "plural": "dbo_DimAccounts"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
       "permissions": [
         {
           "role": "anonymous",
           "actions": [
-            "read",
-            "create",
-            "update",
-            "delete"
+            {
+              "action": "*"
+            }
           ]
         }
       ],
-      "mappings": {
-        "accountkey": "AccountKey",
-        "parentaccountkey": "ParentAccountKey"
-      },
       "relationships": {
         "parent_account": {
           "cardinality": "one",
@@ -2697,7 +2869,9 @@
           ],
           "target.fields": [
             "accountkey"
-          ]
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
         },
         "child_accounts": {
           "cardinality": "many",
@@ -2707,7 +2881,9 @@
           ],
           "target.fields": [
             "parentaccountkey"
-          ]
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
         }
       }
     }

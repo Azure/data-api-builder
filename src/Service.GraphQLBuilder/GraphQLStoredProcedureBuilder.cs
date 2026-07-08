@@ -25,6 +25,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// It uses the parameters to build the arguments and returns a list
         /// of the StoredProcedure GraphQL object.
         /// </summary>
+        /// <remarks>
+        /// Each input argument's GraphQL type is wrapped in <see cref="NonNullTypeNode"/> when the
+        /// parameter is required, so introspection (<c>String!</c> vs <c>String</c>) reflects whether
+        /// the caller must supply a value. A parameter is treated as required unless the runtime
+        /// config explicitly sets <c>required: false</c> for it.
+        /// </remarks>
         /// <param name="name">Name used for InputValueDefinition name.</param>
         /// <param name="entity">Entity's runtime config metadata.</param>
         /// <param name="dbObject">Stored procedure database schema metadata.</param>
@@ -55,16 +61,26 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     // Without database metadata, there is no way to know to cast 1 to a decimal versus an integer.
 
                     IValueNode? defaultValueNode = null;
-                    if (entity.Source.Parameters is not null)
-                    {
-                        ParameterMetadata? paramMetadata = entity.Source.Parameters
-                            .FirstOrDefault(p => p.Name == param);
+                    ParameterMetadata? paramMetadata = entity.Source.Parameters?
+                        .FirstOrDefault(p => p.Name == param);
 
-                        if (paramMetadata is not null && paramMetadata.Default is not null)
-                        {
-                            Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(paramMetadata.Default.ToString()!, parameterDefinition: spdef.Parameters[param]);
-                            defaultValueNode = defaultGraphQLValue.Item2;
-                        }
+                    if (paramMetadata is not null && paramMetadata.Default is not null)
+                    {
+                        Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(paramMetadata.Default.ToString()!, parameterDefinition: spdef.Parameters[param]);
+                        defaultValueNode = defaultGraphQLValue.Item2;
+                    }
+
+                    // Default to required so the schema doesn't silently mark a mandatory parameter as
+                    // optional. T-SQL nullability does not indicate whether a caller must supply a value,
+                    // so we only relax this when the config explicitly opts out.
+                    bool isRequired = paramMetadata?.Required ?? true;
+
+                    ITypeNode parameterTypeNode = new NamedTypeNode(
+                        SchemaConverter.GetGraphQLTypeFromSystemType(type: definition.SystemType));
+
+                    if (isRequired)
+                    {
+                        parameterTypeNode = new NonNullTypeNode((INullableTypeNode)parameterTypeNode);
                     }
 
                     inputValues.Add(
@@ -74,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                             description: definition.Description != null
                                         ? new StringValueNode(definition.Description)
                                         : new StringValueNode($"parameters for {name.Value} stored-procedure"),
-                            type: new NamedTypeNode(SchemaConverter.GetGraphQLTypeFromSystemType(type: definition.SystemType)),
+                            type: parameterTypeNode,
                             defaultValue: defaultValueNode,
                             directives: new List<DirectiveNode>())
                         );
@@ -156,14 +172,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 Tuple<string, IValueNode> valueNode = paramValueType switch
                 {
-                    UUID_TYPE => new(UUID_TYPE, new UuidType().ParseValue(Guid.Parse(defaultValueFromConfig))),
-                    BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig))),
-                    SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig))),
-                    INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig))),
-                    LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig))),
-                    SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(float.Parse(defaultValueFromConfig))),
-                    FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
-                    DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
+                    UUID_TYPE => new(UUID_TYPE, new UuidType().ValueToLiteral(Guid.Parse(defaultValueFromConfig))),
+                    BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ValueToLiteral(float.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
+                    DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig, CultureInfo.InvariantCulture))),
                     STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
                     BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(
                         defaultValueFromConfig switch
@@ -174,10 +190,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                             var s when s.Equals("false", StringComparison.OrdinalIgnoreCase) => false,
                             _ => throw new FormatException($"String '{defaultValueFromConfig}' was not recognized as a valid Boolean.")
                         })),
-                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(
-                        DateTime.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
-                    BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
-                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new HotChocolate.Types.NodaTime.LocalTimeType().ParseResult(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
+                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ValueToLiteral(
+                        DateTimeOffset.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
+                    BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new Base64StringType().ValueToLiteral(Convert.FromBase64String(defaultValueFromConfig))),
+                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new HotChocolate.Types.NodaTime.LocalTimeType().ValueToLiteral(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
                     _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
                 };
 

@@ -2666,6 +2666,40 @@
       }
     },
     {
+      ArrayType: {
+        Source: {
+          Object: array_type_table,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: arrayType,
+          Plural: arrayTypes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       dbo_DimAccount: {
         Source: {
           Object: dimaccount,

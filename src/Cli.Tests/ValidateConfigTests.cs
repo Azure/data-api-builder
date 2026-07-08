@@ -40,6 +40,16 @@ public class ValidateConfigTests
         Environment.SetEnvironmentVariable($"database-type", null);
         Environment.SetEnvironmentVariable($"sp_param1_int", null);
         Environment.SetEnvironmentVariable($"sp_param2_bool", null);
+
+        // Set output back to the default for other tests.
+        Console.SetOut(new StreamWriter(Console.OpenStandardOutput())
+        {
+            AutoFlush = true
+        });
+        Console.SetError(new StreamWriter(Console.OpenStandardError())
+        {
+            AutoFlush = true
+        });
     }
 
     /// <summary>
@@ -294,9 +304,6 @@ public class ValidateConfigTests
         Assert.IsFalse(
             condition: loggerOutput.Contains("Failed to validate config against schema due to"),
             message: "Unexpected errors encountered when validating config schema in RuntimeConfigValidator::ValidateConfigSchema(...).");
-        Assert.IsTrue(
-            condition: loggerOutput.Contains("The config satisfies the schema requirements."),
-            message: "RuntimeConfigValidator::ValidateConfigSchema(...) didn't communicate successful config schema validation.");
     }
 
     /// <summary>
@@ -403,6 +410,37 @@ public class ValidateConfigTests
 
         // Validation should fail due to the empty connection string.
         Assert.IsFalse(isValid);
+    }
+
+    /// <summary>
+    /// Tests that logs related to suppressed messages do not appear.
+    /// </summary>
+    [TestMethod]
+    public async Task TestValidateSuppressedLogsDoNotAppear()
+    {
+        // Arrange
+        StringWriter writer = new();
+        Console.SetOut(writer);
+
+        string config = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
+
+        ((MockFileSystem)_fileSystem!).AddFile(
+            path: TEST_RUNTIME_CONFIG_FILE,
+            mockFile: config);
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+
+        // Act
+        Utils.LoggerFactoryForCli = Utils.GetLoggerFactoryForCli();
+        ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
+
+        // Assert
+        string loggerOutput = writer.ToString();
+        Assert.IsTrue(
+            condition: !loggerOutput.Contains("REST path:"),
+            message: "RuntimeConfigValidator should not contain any messages indicating REST path for individual entities");
+        Assert.IsTrue(
+            condition: !loggerOutput.Contains("REST calls are disabled for the entity:"),
+            message: "RuntimeConfigValidator should not contain any messages related to REST calls for individual entities");
     }
 
     /// <summary>
@@ -916,7 +954,7 @@ public class ValidateConfigTests
 
         RuntimeConfig config = new(
             Schema: null,
-            DataSource: ds,
+            DataSource: ds!,
             Runtime: new(
                 Rest: new(),
                 GraphQL: new(),
@@ -944,7 +982,7 @@ public class ValidateConfigTests
     {
         return new Entity(
             Source: new EntitySource(Object: source, Type: EntitySourceType.Table, Parameters: null, KeyFields: null),
-            GraphQL: new(Singular: null, Plural: null),
+            GraphQL: new(Singular: string.Empty, Plural: string.Empty),
             Fields: null,
             Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
             Permissions: new[] { new EntityPermission("anonymous", new[] { new EntityAction(EntityActionOperation.Read, null, null) }) },

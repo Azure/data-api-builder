@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Product;
 using Cli.Constants;
 using CommandLine;
@@ -91,6 +92,28 @@ namespace Cli.Commands
             long? fileSinkFileSizeLimitBytes = null,
             IEnumerable<string>? runtimeTelemetryLogLevel = null,
             bool showEffectivePermissions = false,
+            CliBool? runtimeEmbeddingsEnabled = null,
+            EmbeddingProviderType? runtimeEmbeddingsProvider = null,
+            string? runtimeEmbeddingsBaseUrl = null,
+            string? runtimeEmbeddingsApiKey = null,
+            string? runtimeEmbeddingsModel = null,
+            string? runtimeEmbeddingsApiVersion = null,
+            int? runtimeEmbeddingsDimensions = null,
+            int? runtimeEmbeddingsTimeoutMs = null,
+            CliBool? runtimeEmbeddingsEndpointEnabled = null,
+            IEnumerable<string>? runtimeEmbeddingsEndpointRoles = null,
+            string? runtimeEmbeddingsEndpointPath = null,
+            CliBool? runtimeEmbeddingsHealthEnabled = null,
+            int? runtimeEmbeddingsHealthThresholdMs = null,
+            string? runtimeEmbeddingsHealthTestText = null,
+            int? runtimeEmbeddingsHealthExpectedDimensions = null,
+            CliBool? runtimeEmbeddingsChunkingEnabled = null,
+            int? runtimeEmbeddingsChunkingSizeChars = null,
+            int? runtimeEmbeddingsChunkingOverlapChars = null,
+            CliBool? runtimeEmbeddingsCacheEnabled = null,
+            int? runtimeEmbeddingsCacheTtlHours = null,
+            CliBool? runtimeEmbeddingsCacheLevel2Enabled = null,
+            string? runtimeEmbeddingsCacheLevel2ConnectionString = null,
             string? config = null)
             : base(config)
         {
@@ -176,6 +199,33 @@ namespace Cli.Commands
             // Telemetry Log Level
             RuntimeTelemetryLogLevel = runtimeTelemetryLogLevel;
             ShowEffectivePermissions = showEffectivePermissions;
+            // Embeddings
+            RuntimeEmbeddingsEnabled = runtimeEmbeddingsEnabled;
+            RuntimeEmbeddingsProvider = runtimeEmbeddingsProvider;
+            RuntimeEmbeddingsBaseUrl = runtimeEmbeddingsBaseUrl;
+            RuntimeEmbeddingsApiKey = runtimeEmbeddingsApiKey;
+            RuntimeEmbeddingsModel = runtimeEmbeddingsModel;
+            RuntimeEmbeddingsApiVersion = runtimeEmbeddingsApiVersion;
+            RuntimeEmbeddingsDimensions = runtimeEmbeddingsDimensions;
+            RuntimeEmbeddingsTimeoutMs = runtimeEmbeddingsTimeoutMs;
+            // Embeddings Endpoint
+            RuntimeEmbeddingsEndpointEnabled = runtimeEmbeddingsEndpointEnabled;
+            RuntimeEmbeddingsEndpointRoles = runtimeEmbeddingsEndpointRoles;
+            RuntimeEmbeddingsEndpointPath = runtimeEmbeddingsEndpointPath;
+            // Embeddings Health
+            RuntimeEmbeddingsHealthEnabled = runtimeEmbeddingsHealthEnabled;
+            RuntimeEmbeddingsHealthThresholdMs = runtimeEmbeddingsHealthThresholdMs;
+            RuntimeEmbeddingsHealthTestText = runtimeEmbeddingsHealthTestText;
+            RuntimeEmbeddingsHealthExpectedDimensions = runtimeEmbeddingsHealthExpectedDimensions;
+            // Embeddings Chunking
+            RuntimeEmbeddingsChunkingEnabled = runtimeEmbeddingsChunkingEnabled;
+            RuntimeEmbeddingsChunkingSizeChars = runtimeEmbeddingsChunkingSizeChars;
+            RuntimeEmbeddingsChunkingOverlapChars = runtimeEmbeddingsChunkingOverlapChars;
+            // Embeddings Cache
+            RuntimeEmbeddingsCacheEnabled = runtimeEmbeddingsCacheEnabled;
+            RuntimeEmbeddingsCacheTtlHours = runtimeEmbeddingsCacheTtlHours;
+            RuntimeEmbeddingsCacheLevel2Enabled = runtimeEmbeddingsCacheLevel2Enabled;
+            RuntimeEmbeddingsCacheLevel2ConnectionString = runtimeEmbeddingsCacheLevel2ConnectionString;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: mssql, postgresql, cosmosdb_nosql, mysql, dwsql.")]
@@ -384,6 +434,72 @@ namespace Cli.Commands
 
         [Option("show-effective-permissions", Required = false, HelpText = "Display effective permissions for all entities, including inherited permissions. Entities are listed in alphabetical order.")]
         public bool ShowEffectivePermissions { get; }
+
+        [Option("runtime.embeddings.enabled", Required = false, HelpText = "Enable/disable the embedding service. Default: true")]
+        public CliBool? RuntimeEmbeddingsEnabled { get; }
+
+        [Option("runtime.embeddings.provider", Required = false, HelpText = "Configure embedding provider type. Allowed values: azure-openai, openai.")]
+        public EmbeddingProviderType? RuntimeEmbeddingsProvider { get; }
+
+        [Option("runtime.embeddings.base-url", Required = false, HelpText = "Configure the embedding provider base URL.")]
+        public string? RuntimeEmbeddingsBaseUrl { get; }
+
+        [Option("runtime.embeddings.api-key", Required = false, HelpText = "Configure the embedding API key for authentication.")]
+        public string? RuntimeEmbeddingsApiKey { get; }
+
+        [Option("runtime.embeddings.model", Required = false, HelpText = "Configure the model/deployment name. Required for Azure OpenAI, defaults to text-embedding-3-small for OpenAI.")]
+        public string? RuntimeEmbeddingsModel { get; }
+
+        [Option("runtime.embeddings.api-version", Required = false, HelpText = "Configure the Azure API version. Only used for Azure OpenAI provider. Default: 2024-02-01")]
+        public string? RuntimeEmbeddingsApiVersion { get; }
+
+        [Option("runtime.embeddings.dimensions", Required = false, HelpText = "Configure the output vector dimensions. Optional, uses model default if not specified.")]
+        public int? RuntimeEmbeddingsDimensions { get; }
+
+        [Option("runtime.embeddings.timeout-ms", Required = false, HelpText = "Configure the request timeout in milliseconds. Default: 30000")]
+        public int? RuntimeEmbeddingsTimeoutMs { get; }
+
+        [Option("runtime.embeddings.endpoint.enabled", Required = false, HelpText = "Enable/disable the endpoint for embeddings. Default: false")]
+        public CliBool? RuntimeEmbeddingsEndpointEnabled { get; }
+
+        [Option("runtime.embeddings.endpoint.roles", Required = false, Separator = ',', HelpText = "Configure the roles allowed to access the embedding endpoint. Comma-separated list. In development mode defaults to 'anonymous'.")]
+        public IEnumerable<string>? RuntimeEmbeddingsEndpointRoles { get; }
+
+        [Option("runtime.embeddings.endpoint.path", Required = false, HelpText = "Configure the URL path for the embedding endpoint. Default: '/embed' Conditions: Prefix path with '/'.")]
+        public string? RuntimeEmbeddingsEndpointPath { get; }
+
+        [Option("runtime.embeddings.health.enabled", Required = false, HelpText = "Enable/disable health checks for the embedding service. Default: true")]
+        public CliBool? RuntimeEmbeddingsHealthEnabled { get; }
+
+        [Option("runtime.embeddings.health.threshold-ms", Required = false, HelpText = "Configure the health check threshold in milliseconds. Default: 5000")]
+        public int? RuntimeEmbeddingsHealthThresholdMs { get; }
+
+        [Option("runtime.embeddings.health.test-text", Required = false, HelpText = "Configure the test text for health check validation. Default: 'health check'")]
+        public string? RuntimeEmbeddingsHealthTestText { get; }
+
+        [Option("runtime.embeddings.health.expected-dimensions", Required = false, HelpText = "Configure the expected dimensions for health check validation. Optional.")]
+        public int? RuntimeEmbeddingsHealthExpectedDimensions { get; }
+
+        [Option("runtime.embeddings.chunking.enabled", Required = false, HelpText = "Enable/disable text chunking before embedding. Default: true")]
+        public CliBool? RuntimeEmbeddingsChunkingEnabled { get; }
+
+        [Option("runtime.embeddings.chunking.size-chars", Required = false, HelpText = "Configure the chunk size in characters. Default: 800")]
+        public int? RuntimeEmbeddingsChunkingSizeChars { get; }
+
+        [Option("runtime.embeddings.chunking.overlap-chars", Required = false, HelpText = "Configure the overlap size in characters between consecutive chunks. Default: 100")]
+        public int? RuntimeEmbeddingsChunkingOverlapChars { get; }
+
+        [Option("runtime.embeddings.cache.enabled", Required = false, HelpText = "Enable/disable caching for embeddings. Default: true")]
+        public CliBool? RuntimeEmbeddingsCacheEnabled { get; }
+
+        [Option("runtime.embeddings.cache.ttl-hours", Required = false, HelpText = "Configure the time-to-live for cached embeddings in hours. Default: 24")]
+        public int? RuntimeEmbeddingsCacheTtlHours { get; }
+
+        [Option("runtime.embeddings.cache.level-2.enabled", Required = false, HelpText = "Enable/disable the L2 (distributed Azure Managed Redis) cache for embeddings. Default: false")]
+        public CliBool? RuntimeEmbeddingsCacheLevel2Enabled { get; }
+
+        [Option("runtime.embeddings.cache.level-2.connection-string", Required = false, HelpText = "Connection string for the L2 (Azure Managed Redis) cache used by embeddings.")]
+        public string? RuntimeEmbeddingsCacheLevel2ConnectionString { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

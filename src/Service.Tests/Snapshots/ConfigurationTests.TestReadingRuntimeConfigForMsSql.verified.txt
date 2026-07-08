@@ -2842,7 +2842,11 @@
               }
             ]
           }
-        ]
+        ],
+        Mcp: {
+          CustomToolEnabled: true,
+          DmlToolEnabled: true
+        }
       }
     },
     {
@@ -2880,7 +2884,11 @@
               }
             ]
           }
-        ]
+        ],
+        Mcp: {
+          CustomToolEnabled: true,
+          DmlToolEnabled: true
+        }
       }
     },
     {
@@ -2918,7 +2926,11 @@
               }
             ]
           }
-        ]
+        ],
+        Mcp: {
+          CustomToolEnabled: true,
+          DmlToolEnabled: true
+        }
       }
     },
     {
@@ -2968,7 +2980,11 @@
               }
             ]
           }
-        ]
+        ],
+        Mcp: {
+          CustomToolEnabled: true,
+          DmlToolEnabled: true
+        }
       }
     },
     {
@@ -3006,7 +3022,11 @@
               }
             ]
           }
-        ]
+        ],
+        Mcp: {
+          CustomToolEnabled: true,
+          DmlToolEnabled: true
+        }
       }
     },
     {

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
     <RootNamespace>Cli</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -55,7 +55,7 @@
     <None Include="..\..\nuget\README.md" Pack="true" PackagePath="\" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\nuget\nuget_icon.png" Pack="true" PackagePath="\" />
     <None Include="..\..\LICENSE.txt" Pack="true" PackagePath="\" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\..\NOTICE.txt')" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\nuget_cli\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\nuget_cli\NOTICE.txt')" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

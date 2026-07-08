@@ -13,12 +13,16 @@
     "rest": {
       "enabled": false,
       "path": "/api",
-      "request-body-strict": true
+      "request-body-strict": false
     },
     "graphql": {
       "enabled": true,
       "path": "/graphql",
       "allow-introspection": true
+    },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp"
     },
     "host": {
       "cors": {
@@ -33,17 +37,21 @@
       "mode": "development"
     },
     "telemetry": {
-      "app-insights": {
+      "open-telemetry": {
         "enabled": true,
-        "connection-string": "InstrumentationKey=00000000-0000-0000-0000-000000000000;IngestionEndpoint=https://dc.services.visualstudio.com/v2/track"
+        "endpoint": "@env('OTEL_EXPORTER_OTLP_ENDPOINT')",
+        "headers": "@env('OTEL_EXPORTER_OTLP_HEADERS')",
+        "service-name": "@env('OTEL_SERVICE_NAME')"
       }
     }
   },
+  "autoentities": {},
   "entities": {
     "PlanetAlias": {
       "source": {
         "object": "graphqldb.planet"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -117,6 +125,7 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -159,6 +168,7 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -244,6 +254,7 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -295,6 +306,7 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -390,6 +402,7 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -432,6 +445,7 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -468,6 +482,7 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -504,6 +519,7 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -576,6 +592,7 @@
       "source": {
         "object": "graphqldb.newcontainer"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {
@@ -731,6 +748,7 @@
       "source": {
         "object": "graphqldb.invalidAuthModelContainer"
       },
+      "fields": [],
       "graphql": {
         "enabled": true,
         "type": {

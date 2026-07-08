@@ -61,6 +61,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsHealthEnabled);
         // Ignore the global RuntimeOptions.IsHealthCheckEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsHealthCheckEnabled);
+        // Ignore the global RuntimeOptions.IsEmbeddingsConfigured as that's a computed property, not serialized.
+        VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsEmbeddingsConfigured);
         // Ignore the entity IsEntityHealthEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<Entity>(entity => entity.IsEntityHealthEnabled);
         // Ignore the entity EntityThresholdMs as that's unimportant from a test standpoint.

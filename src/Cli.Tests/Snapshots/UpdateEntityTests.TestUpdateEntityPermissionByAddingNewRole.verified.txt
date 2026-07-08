@@ -1,4 +1,4 @@
-﻿{
+{
   DataSource: {
     DatabaseType: MSSQL
   },
@@ -24,7 +24,8 @@
           Issuer: 
         }
       }
-    }
+    },
+    IsEmbeddingsConfigured: false
   },
   Entities: [
     {

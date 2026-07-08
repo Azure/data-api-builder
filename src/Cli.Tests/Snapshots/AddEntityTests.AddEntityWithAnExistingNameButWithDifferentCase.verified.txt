@@ -20,7 +20,8 @@
       Authentication: {
         Provider: Unauthenticated
       }
-    }
+    },
+    IsEmbeddingsConfigured: false
   },
   Entities: [
     {

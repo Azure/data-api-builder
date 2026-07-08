@@ -1,4 +1,4 @@
-﻿{
+{
   DataSource: {
     DatabaseType: MSSQL
   },
@@ -20,7 +20,8 @@
       Authentication: {
         Provider: Unauthenticated
       }
-    }
+    },
+    IsEmbeddingsConfigured: false
   },
   Entities: [
     {
@@ -31,17 +32,14 @@
           Parameters: [
             {
               Name: param1,
-              Required: false,
               Default: 123
             },
             {
               Name: param2,
-              Required: false,
               Default: hello
             },
             {
               Name: param3,
-              Required: false,
               Default: True
             }
           ]

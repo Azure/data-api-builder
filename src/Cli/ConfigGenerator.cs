@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -99,24 +100,31 @@ namespace Cli
 
             HyphenatedNamingPolicy namingPolicy = new();
 
-            // If --rest.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
+            // If --rest.disabled flag is included in the init command, we log a warning as the flag is deprecated.
             if (options.RestDisabled is true)
             {
-                _logger.LogWarning("The option --rest.disabled will be deprecated and support for the option will be removed in future versions of Data API builder." +
-                    " We recommend that you use the --rest.enabled option instead.");
+                _logger.LogWarning("The option --rest.disabled is deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " Use the --rest.enabled option instead.");
             }
 
-            // If --graphql.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
+            // If --graphql.disabled flag is included in the init command, we log a warning as the flag is deprecated.
             if (options.GraphQLDisabled is true)
             {
-                _logger.LogWarning("The option --graphql.disabled will be deprecated and support for the option will be removed in future versions of Data API builder." +
-                    " We recommend that you use the --graphql.enabled option instead.");
+                _logger.LogWarning("The option --graphql.disabled is deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " Use the --graphql.enabled option instead.");
+            }
+
+            // If --mcp.disabled flag is included in the init command, we log a warning as the flag is deprecated.
+            if (options.McpDisabled is true)
+            {
+                _logger.LogWarning("The option --mcp.disabled is deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " Use the --mcp.enabled option instead.");
             }
 
             bool restEnabled, graphQLEnabled, mcpEnabled;
             if (!TryDetermineIfApiIsEnabled(options.RestDisabled, options.RestEnabled, ApiType.REST, out restEnabled) ||
                 !TryDetermineIfApiIsEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL, out graphQLEnabled) ||
-                !TryDetermineIfMcpIsEnabled(options.McpEnabled, out mcpEnabled))
+                !TryDetermineIfApiIsEnabled(options.McpDisabled, options.McpEnabled, ApiType.MCP, out mcpEnabled))
             {
                 return false;
             }
@@ -236,9 +244,9 @@ namespace Cli
                 }
             }
 
-            if (options.RestDisabled && options.GraphQLDisabled)
+            if (!restEnabled && !graphQLEnabled && !mcpEnabled)
             {
-                _logger.LogError("Both Rest and GraphQL cannot be disabled together.");
+                _logger.LogError("At least one of REST, GraphQL, or MCP must be enabled.");
                 return false;
             }
 
@@ -296,12 +304,12 @@ namespace Cli
 
         /// <summary>
         /// Helper method to determine if the api is enabled or not based on the enabled/disabled options in the dab init command.
-        /// The method also validates that there is no mismatch in semantics of enabling/disabling the REST/GraphQL API(s)
+        /// The method also validates that there is no mismatch in semantics of enabling/disabling the REST/GraphQL/MCP API(s)
         /// based on the values supplied in the enabled/disabled options for the API in the init command.
         /// </summary>
         /// <param name="apiDisabledOptionValue">Value of disabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
         /// <param name="apiEnabledOptionValue">Value of enabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
-        /// <param name="apiType">ApiType - REST/GraphQL.</param>
+        /// <param name="apiType">ApiType - REST/GraphQL/MCP.</param>
         /// <param name="isApiEnabled">Boolean value indicating whether the API endpoint is enabled or not.</param>
         private static bool TryDetermineIfApiIsEnabled(bool apiDisabledOptionValue, CliBool apiEnabledOptionValue, ApiType apiType, out bool isApiEnabled)
         {
@@ -331,17 +339,6 @@ namespace Cli
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Helper method to determine if the mcp api is enabled or not based on the enabled/disabled options in the dab init command.
-        /// </summary>
-        /// <param name="mcpEnabledOptionValue">True, if MCP is enabled</param>
-        /// <param name="isMcpEnabled">Out param isMcpEnabled</param>
-        /// <returns>True if MCP is enabled</returns>
-        private static bool TryDetermineIfMcpIsEnabled(CliBool mcpEnabledOptionValue, out bool isMcpEnabled)
-        {
-            return TryDetermineIfApiIsEnabled(false, mcpEnabledOptionValue, ApiType.MCP, out isMcpEnabled);
         }
 
         /// <summary>
@@ -1200,6 +1197,42 @@ namespace Cli
                 };
             }
 
+            // Embeddings: Provider, Endpoint, ApiKey, Model, ApiVersion, Dimensions, TimeoutMs, Enabled, Endpoint.Enabled/Roles/Path, Health.*, Chunking.*
+            if (options.RuntimeEmbeddingsProvider is not null ||
+                options.RuntimeEmbeddingsBaseUrl is not null ||
+                options.RuntimeEmbeddingsApiKey is not null ||
+                options.RuntimeEmbeddingsModel is not null ||
+                options.RuntimeEmbeddingsApiVersion is not null ||
+                options.RuntimeEmbeddingsDimensions is not null ||
+                options.RuntimeEmbeddingsTimeoutMs is not null ||
+                options.RuntimeEmbeddingsEnabled is not null ||
+                options.RuntimeEmbeddingsEndpointEnabled is not null ||
+                (options.RuntimeEmbeddingsEndpointRoles is not null && options.RuntimeEmbeddingsEndpointRoles.Any()) ||
+                options.RuntimeEmbeddingsEndpointPath is not null ||
+                options.RuntimeEmbeddingsHealthEnabled is not null ||
+                options.RuntimeEmbeddingsHealthThresholdMs is not null ||
+                options.RuntimeEmbeddingsHealthTestText is not null ||
+                options.RuntimeEmbeddingsHealthExpectedDimensions is not null ||
+                options.RuntimeEmbeddingsChunkingEnabled is not null ||
+                options.RuntimeEmbeddingsChunkingSizeChars is not null ||
+                options.RuntimeEmbeddingsChunkingOverlapChars is not null ||
+                options.RuntimeEmbeddingsCacheEnabled is not null ||
+                options.RuntimeEmbeddingsCacheTtlHours is not null ||
+                options.RuntimeEmbeddingsCacheLevel2Enabled is not null ||
+                options.RuntimeEmbeddingsCacheLevel2ConnectionString is not null)
+            {
+                bool status = TryUpdateConfiguredEmbeddingsValues(options, runtimeConfig?.Runtime?.Embeddings, out EmbeddingsOptions? updatedEmbeddingsOptions);
+                if (!status)
+                {
+                    return false;
+                }
+
+                if (updatedEmbeddingsOptions is not null)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Embeddings = updatedEmbeddingsOptions } };
+                }
+            }
+
             return runtimeConfig != null;
         }
 
@@ -1864,6 +1897,294 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError($"Failed to update configuration with runtime.telemetry.file. Exception message: {ex.Message}.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the embeddings configuration based on the provided options.
+        /// Creates a new EmbeddingsOptions object if the configuration is valid.
+        /// Provider, endpoint, and API key are required when configuring embeddings.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="existingEmbeddingsOptions">The existing embeddings options from the runtime configuration.</param>
+        /// <param name="updatedEmbeddingsOptions">The resulting embeddings options if successful.</param>
+        /// <returns>True if the embeddings options were successfully configured; otherwise, false.</returns>
+        private static bool TryUpdateConfiguredEmbeddingsValues(
+            ConfigureOptions options,
+            EmbeddingsOptions? existingEmbeddingsOptions,
+            out EmbeddingsOptions? updatedEmbeddingsOptions)
+        {
+            updatedEmbeddingsOptions = null;
+
+            try
+            {
+                // Get values from options or fall back to existing configuration
+                EmbeddingProviderType? provider = options.RuntimeEmbeddingsProvider ?? existingEmbeddingsOptions?.Provider;
+                string? baseUrl = options.RuntimeEmbeddingsBaseUrl ?? existingEmbeddingsOptions?.BaseUrl;
+                string? apiKey = options.RuntimeEmbeddingsApiKey ?? existingEmbeddingsOptions?.ApiKey;
+                string? model = options.RuntimeEmbeddingsModel ?? existingEmbeddingsOptions?.Model;
+                string? apiVersion = options.RuntimeEmbeddingsApiVersion ?? existingEmbeddingsOptions?.ApiVersion;
+                int? dimensions = options.RuntimeEmbeddingsDimensions ?? existingEmbeddingsOptions?.Dimensions;
+                int? timeoutMs = options.RuntimeEmbeddingsTimeoutMs ?? existingEmbeddingsOptions?.TimeoutMs;
+                bool? enabled = options.RuntimeEmbeddingsEnabled.HasValue
+                    ? options.RuntimeEmbeddingsEnabled.Value == CliBool.True
+                    : existingEmbeddingsOptions?.Enabled;
+
+                // Validate required fields
+                if (provider is null)
+                {
+                    _logger.LogError("Failed to configure embeddings: provider is required. Use --runtime.embeddings.provider to specify the provider (azure-openai or openai).");
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(baseUrl))
+                {
+                    _logger.LogError("Failed to configure embeddings: base-url is required. Use --runtime.embeddings.base-url to specify the provider base URL.");
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(apiKey))
+                {
+                    _logger.LogError("Failed to configure embeddings: api-key is required. Use --runtime.embeddings.api-key to specify the authentication key.");
+                    return false;
+                }
+
+                // Validate Azure OpenAI requires model/deployment name
+                if (provider == EmbeddingProviderType.AzureOpenAI && string.IsNullOrEmpty(model))
+                {
+                    _logger.LogError("Failed to configure embeddings: model/deployment name is required for Azure OpenAI provider. Use --runtime.embeddings.model to specify the deployment name.");
+                    return false;
+                }
+
+                // Validate dimensions if provided
+                if (dimensions is not null && dimensions <= 0)
+                {
+                    _logger.LogError("Failed to configure embeddings: dimensions must be a positive integer.");
+                    return false;
+                }
+
+                // Validate timeout if provided
+                if (timeoutMs is not null && timeoutMs <= 0)
+                {
+                    _logger.LogError("Failed to configure embeddings: timeout-ms must be a positive integer.");
+                    return false;
+                }
+
+                // Build EmbeddingsEndpointOptions from CLI flags or existing config
+                EmbeddingsEndpointOptions? existingEndpoint = existingEmbeddingsOptions?.Endpoint;
+                EmbeddingsEndpointOptions? endpointOptions = null;
+
+                if (options.RuntimeEmbeddingsEndpointEnabled is not null ||
+                    options.RuntimeEmbeddingsEndpointRoles is not null ||
+                    options.RuntimeEmbeddingsEndpointPath is not null ||
+                    existingEndpoint is not null)
+                {
+                    bool? endpointEnabled = options.RuntimeEmbeddingsEndpointEnabled.HasValue
+                        ? options.RuntimeEmbeddingsEndpointEnabled.Value == CliBool.True
+                        : existingEndpoint?.Enabled;
+
+                    string[]? endpointRoles = options.RuntimeEmbeddingsEndpointRoles is not null && options.RuntimeEmbeddingsEndpointRoles.Any()
+                        ? options.RuntimeEmbeddingsEndpointRoles.ToArray()
+                        : existingEndpoint?.Roles;
+
+                    string? endpointPath = options.RuntimeEmbeddingsEndpointPath ?? existingEndpoint?.Path;
+
+                    // Validate path if provided
+                    if (endpointPath is not null)
+                    {
+                        bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: endpointPath, out string exceptionMessage);
+                        if (!status)
+                        {
+                            _logger.LogError("Failed to configure embeddings endpoint path as '{path}'. Error: {error}", endpointPath, exceptionMessage);
+                            return false;
+                        }
+                    }
+
+                    endpointOptions = new EmbeddingsEndpointOptions(
+                        enabled: endpointEnabled,
+                        roles: endpointRoles,
+                        path: endpointPath);
+
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Endpoint configuration.");
+                }
+
+                // Build EmbeddingsHealthCheckConfig from CLI flags or existing config
+                EmbeddingsHealthCheckConfig? existingHealth = existingEmbeddingsOptions?.Health;
+                EmbeddingsHealthCheckConfig? healthOptions = null;
+
+                if (options.RuntimeEmbeddingsHealthEnabled is not null ||
+                    options.RuntimeEmbeddingsHealthThresholdMs is not null ||
+                    options.RuntimeEmbeddingsHealthTestText is not null ||
+                    options.RuntimeEmbeddingsHealthExpectedDimensions is not null ||
+                    existingHealth is not null)
+                {
+                    bool? healthEnabled = options.RuntimeEmbeddingsHealthEnabled.HasValue
+                        ? options.RuntimeEmbeddingsHealthEnabled.Value == CliBool.True
+                        : existingHealth?.Enabled;
+
+                    int? healthThresholdMs = options.RuntimeEmbeddingsHealthThresholdMs ?? existingHealth?.ThresholdMs;
+                    string? healthTestText = options.RuntimeEmbeddingsHealthTestText ?? existingHealth?.TestText;
+                    int? healthExpectedDimensions = options.RuntimeEmbeddingsHealthExpectedDimensions ?? existingHealth?.ExpectedDimensions;
+
+                    // Validate threshold if provided
+                    if (healthThresholdMs is not null && healthThresholdMs <= 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings health: threshold-ms must be a positive integer.");
+                        return false;
+                    }
+
+                    // Validate expected dimensions if provided
+                    if (healthExpectedDimensions is not null && healthExpectedDimensions <= 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings health: expected-dimensions must be a positive integer.");
+                        return false;
+                    }
+
+                    healthOptions = new EmbeddingsHealthCheckConfig(
+                        enabled: healthEnabled,
+                        thresholdMs: healthThresholdMs,
+                        testText: healthTestText,
+                        expectedDimensions: healthExpectedDimensions);
+
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Health configuration.");
+                }
+
+                // Build EmbeddingsChunkingOptions from CLI flags or existing config
+                EmbeddingsChunkingOptions? existingChunking = existingEmbeddingsOptions?.Chunking;
+                EmbeddingsChunkingOptions? chunkingOptions = null;
+
+                if (options.RuntimeEmbeddingsChunkingEnabled is not null ||
+                    options.RuntimeEmbeddingsChunkingSizeChars is not null ||
+                    options.RuntimeEmbeddingsChunkingOverlapChars is not null ||
+                    existingChunking is not null)
+                {
+                    bool? chunkingEnabled = options.RuntimeEmbeddingsChunkingEnabled.HasValue
+                        ? options.RuntimeEmbeddingsChunkingEnabled.Value == CliBool.True
+                        : existingChunking?.Enabled;
+
+                    int? sizeChars = options.RuntimeEmbeddingsChunkingSizeChars ?? existingChunking?.SizeChars;
+                    int? overlapChars = options.RuntimeEmbeddingsChunkingOverlapChars ?? existingChunking?.OverlapChars;
+
+                    // Validate size-chars if provided
+                    if (sizeChars is not null && sizeChars <= 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings chunking: size-chars must be a positive integer.");
+                        return false;
+                    }
+
+                    // Validate overlap-chars if provided
+                    if (overlapChars is not null && overlapChars < 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings chunking: overlap-chars must be a non-negative integer.");
+                        return false;
+                    }
+
+                    // Validate that overlap is less than size
+                    if (sizeChars is not null && overlapChars is not null && overlapChars >= sizeChars)
+                    {
+                        _logger.LogError("Failed to configure embeddings chunking: overlap-chars must be less than size-chars.");
+                        return false;
+                    }
+
+                    chunkingOptions = new EmbeddingsChunkingOptions(
+                        Enabled: chunkingEnabled,
+                        SizeChars: sizeChars,
+                        OverlapChars: overlapChars);
+
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Chunking configuration.");
+                }
+
+                // Build EmbeddingsCacheOptions from CLI flags or existing config.
+                // The cache block (and its nested level-2 block) must be preserved across
+                // `dab configure` invocations that touch any other embeddings field, so we
+                // always rebuild it from existing values when no CLI flag is provided.
+                EmbeddingsCacheOptions? existingCache = existingEmbeddingsOptions?.Cache;
+                EmbeddingsCacheLevel2Options? existingCacheLevel2 = existingCache?.Level2;
+                EmbeddingsCacheOptions? cacheOptions = null;
+
+                bool anyCacheFlagProvided =
+                    options.RuntimeEmbeddingsCacheEnabled is not null ||
+                    options.RuntimeEmbeddingsCacheTtlHours is not null ||
+                    options.RuntimeEmbeddingsCacheLevel2Enabled is not null ||
+                    options.RuntimeEmbeddingsCacheLevel2ConnectionString is not null;
+
+                if (anyCacheFlagProvided || existingCache is not null)
+                {
+                    bool? cacheEnabled = options.RuntimeEmbeddingsCacheEnabled.HasValue
+                        ? options.RuntimeEmbeddingsCacheEnabled.Value == CliBool.True
+                        : existingCache?.Enabled;
+
+                    // Only carry forward the existing ttl-hours if the user originally set it,
+                    // otherwise leave it null so the serializer omits it and the runtime applies
+                    // the default. New CLI flag value always wins.
+                    int? cacheTtlHours = options.RuntimeEmbeddingsCacheTtlHours
+                        ?? (existingCache?.UserProvidedTtlHours == true ? existingCache.TtlHours : null);
+
+                    // Validate ttl-hours if provided
+                    if (cacheTtlHours is not null && cacheTtlHours <= 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings cache: ttl-hours must be a positive integer.");
+                        return false;
+                    }
+
+                    // Build level-2 sub-options
+                    EmbeddingsCacheLevel2Options? level2Options = null;
+                    bool anyLevel2FlagProvided =
+                        options.RuntimeEmbeddingsCacheLevel2Enabled is not null ||
+                        options.RuntimeEmbeddingsCacheLevel2ConnectionString is not null;
+
+                    if (anyLevel2FlagProvided || existingCacheLevel2 is not null)
+                    {
+                        bool? level2Enabled = options.RuntimeEmbeddingsCacheLevel2Enabled.HasValue
+                            ? options.RuntimeEmbeddingsCacheLevel2Enabled.Value == CliBool.True
+                            : existingCacheLevel2?.Enabled;
+
+                        string? level2ConnectionString =
+                            options.RuntimeEmbeddingsCacheLevel2ConnectionString
+                            ?? existingCacheLevel2?.ConnectionString;
+
+                        // Require a connection string when L2 is being turned on.
+                        if (level2Enabled == true && string.IsNullOrWhiteSpace(level2ConnectionString))
+                        {
+                            _logger.LogError("Failed to configure embeddings cache: level-2.connection-string is required when level-2 cache is enabled. Use --runtime.embeddings.cache.level-2.connection-string to specify it.");
+                            return false;
+                        }
+
+                        level2Options = new EmbeddingsCacheLevel2Options(
+                            Enabled: level2Enabled,
+                            ConnectionString: level2ConnectionString);
+                    }
+
+                    cacheOptions = new EmbeddingsCacheOptions(
+                        Enabled: cacheEnabled,
+                        TtlHours: cacheTtlHours,
+                        Level2: level2Options);
+
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Cache configuration.");
+                }
+
+                // Create the embeddings options
+                updatedEmbeddingsOptions = new EmbeddingsOptions(
+                    Provider: (EmbeddingProviderType)provider,
+                    BaseUrl: baseUrl,
+                    ApiKey: apiKey,
+                    Enabled: enabled,
+                    Model: model,
+                    ApiVersion: apiVersion,
+                    Dimensions: dimensions,
+                    TimeoutMs: timeoutMs,
+                    Endpoint: endpointOptions,
+                    Health: healthOptions,
+                    Chunking: chunkingOptions,
+                    Cache: cacheOptions);
+
+                _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings configuration.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Embeddings with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }
@@ -2562,7 +2883,7 @@ namespace Cli
                             {
                                 Name = newParam.Name,
                                 Description = newParam.Description != null ? newParam.Description : match.Description,
-                                Required = newParam.Required,
+                                Required = newParam.Required != null ? newParam.Required : match.Required,
                                 Default = newParam.Default != null ? newParam.Default : match.Default
                             });
                         }
@@ -2745,31 +3066,57 @@ namespace Cli
             List<string> args = new()
             { "--ConfigFileName", runtimeConfigFile };
 
-            /// Add arguments for LogLevel. Only pass --LogLevel when user explicitly specified it,
+            /// Add arguments for LogLevel. Only pass --log-level when user explicitly specified it,
             /// so that MCP logging/setLevel can still adjust the level when no CLI override is present.
             /// 
-            /// When --LogLevel is NOT specified:
+            /// When --log-level is NOT specified:
             /// - MCP stdio mode: Service defaults to None for clean stdout output
             /// - Non-MCP mode: Service defaults to Debug (Development) or Error (Production) based on config
             LogLevel minimumLogLevel;
+
+            // Reset the config-based override flag so stale state from a prior call
+            // (these are static) cannot leak into the current run.
+            Utils.IsConfigOverriding = false;
+            Utils.ConfigLogLevel = LogLevel.Information;
+
+            LogLevel? logLevel = null;
             if (options.LogLevel is not null)
             {
-                if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
+                logLevel = options.LogLevel;
+            }
+            else if (options.LogLevelLegacy is not null)
+            {
+                options.CliBuffer.BufferLog(LogLevel.Warning, $"--LogLevel is deprecated, please use --log-level instead.");
+                logLevel = options.LogLevelLegacy;
+            }
+
+            if (logLevel is not null)
+            {
+                if (logLevel is < LogLevel.Trace or > LogLevel.None)
                 {
                     options.CliBuffer.BufferLog(LogLevel.Error,
-                        $"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel");
+                        $"LogLevel's valid range is 0 to 6, your value: {logLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel");
                     return false;
                 }
 
-                minimumLogLevel = (LogLevel)options.LogLevel;
-                // Only add --LogLevel when user explicitly specified it via CLI.
+                minimumLogLevel = (LogLevel)logLevel;
+                // Only add --log-level when user explicitly specified it via CLI.
                 // This allows MCP logging/setLevel to work when no CLI override is present.
-                args.Add("--LogLevel");
+                args.Add("--log-level");
                 args.Add(minimumLogLevel.ToString());
             }
             else
             {
                 minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
+
+                // Track whether config explicitly set a log level. In MCP stdio mode this
+                // allows CLI logs to be emitted to stderr (instead of being suppressed)
+                // when the user expressed intent via the config file rather than --log-level.
+                if (deserializedRuntimeConfig.HasExplicitLogLevel())
+                {
+                    Utils.IsConfigOverriding = true;
+                    Utils.ConfigLogLevel = minimumLogLevel;
+                }
             }
 
             options.CliBuffer.BufferLog(LogLevel.Information, $"Setting minimum LogLevel: {minimumLogLevel}.");
@@ -2819,8 +3166,6 @@ namespace Cli
                 return false;
             }
 
-            _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
-
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _))
@@ -2849,13 +3194,20 @@ namespace Cli
                     bool mcpEnabled = config.IsMcpEnabled;
                     if (mcpEnabled)
                     {
+                        bool missingFields = false;
                         foreach (KeyValuePair<string, Entity> entity in config.Entities)
                         {
                             if (entity.Value.Fields == null || !entity.Value.Fields.Any())
                             {
-                                _logger.LogWarning($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled. " +
-                                    "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
+                                missingFields = true;
+                                _logger.LogDebug($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled.");
                             }
+                        }
+
+                        if (missingFields)
+                        {
+                            _logger.LogWarning("One or more entities are missing `fields` definition while MCP is enabled. " +
+                                "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
                         }
                     }
 

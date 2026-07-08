@@ -22,6 +22,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private const string CUSTOM_CONFIG_FILENAME = "custom-config.json";
 
+        [TestInitialize]
+        public void SetupAuthProviderEnvironmentVariables()
+        {
+            TestHelper.SetAppServiceEasyAuthEnvironmentVariables();
+        }
+
         [TestCleanup]
         public void CleanupAfterEachTest()
         {

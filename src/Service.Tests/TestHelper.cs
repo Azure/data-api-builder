@@ -9,6 +9,7 @@ using System.IO.Abstractions.TestingHelpers;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Humanizer;
@@ -29,6 +30,20 @@ namespace Azure.DataApiBuilder.Service.Tests
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
+            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, null);
+            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR, null);
+            Environment.SetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR, null);
+        }
+
+        public static void SetAppServiceEasyAuthEnvironmentVariables()
+        {
+            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, "true");
+            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR, "AzureActiveDirectory");
+        }
+
+        public static void SetStaticWebAppsEnvironmentVariable()
+        {
+            Environment.SetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR, "dab-service-tests");
         }
 
         /// <summary>

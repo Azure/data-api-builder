@@ -47,14 +47,12 @@ public static class AppServiceAuthenticationInfo
     /// </summary>
     public static bool AreExpectedAppServiceEnvVarsPresent()
     {
+        // WEBSITE_AUTH_ENABLED is the only variable that is reliably injected by the Azure platform
+        // whenever App Service Authentication (EasyAuth) is enabled, regardless of how many identity
+        // providers are configured. WEBSITE_AUTH_DEFAULT_PROVIDER is only set when a *single* provider
+        // is selected; multi-provider configurations leave it unset, so it must not be required here.
         string? appServiceEnabled = Environment.GetEnvironmentVariable(APPSERVICESAUTH_ENABLED_ENVVAR);
-        string? appServiceIdentityProvider = Environment.GetEnvironmentVariable(APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR);
-
-        if (string.IsNullOrEmpty(appServiceEnabled) || string.IsNullOrEmpty(appServiceIdentityProvider))
-        {
-            return false;
-        }
-
-        return appServiceEnabled.Equals(value: "true", comparisonType: StringComparison.OrdinalIgnoreCase);
+        return appServiceEnabled is not null &&
+               appServiceEnabled.Equals(value: "true", comparisonType: StringComparison.OrdinalIgnoreCase);
     }
 }

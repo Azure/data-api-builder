@@ -26,6 +26,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
+using Microsoft.Extensions.Logging.Console;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
@@ -474,7 +475,9 @@ namespace Azure.DataApiBuilder.Service
                                 options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
                                 options.UseUtcTimestamp = true;
                             });
-                            builder.AddConsole(options =>
+                            // Route all levels to stderr to keep stdout clean for MCP JSON-RPC.
+                            // Uses Services.Configure (not AddConsole) so no second provider is registered.
+                            builder.Services.Configure<ConsoleLoggerOptions>(options =>
                             {
                                 options.LogToStandardErrorThreshold = LogLevel.Trace;
                             });

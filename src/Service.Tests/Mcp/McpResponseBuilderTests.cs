@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataApiBuilder.Mcp.Utils;
@@ -114,12 +115,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [TestMethod]
-        public void GetJsonValue_Number_ReturnsDouble()
+        public void GetJsonValue_Number_PreservesNumericValue()
         {
             JsonElement number = JsonDocument.Parse("42").RootElement;
 
-            // The ternary in GetJsonValue unifies long and double to double.
-            Assert.AreEqual(42d, McpResponseBuilder.GetJsonValue(number));
+            Assert.AreEqual(42m, Convert.ToDecimal(McpResponseBuilder.GetJsonValue(number)));
         }
     }
 }

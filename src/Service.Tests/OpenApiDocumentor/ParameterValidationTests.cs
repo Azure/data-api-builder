@@ -259,7 +259,7 @@ public class ParameterValidationTests
     }
 
     /// <summary>
-    /// Test to validate that supported custom header parameters are present for each operation irrespective of the operation and entity type.
+    /// Test to validate that supported custom header parameters are present for each operation regardless of operation and entity type.
     /// </summary>
     /// <param name="entityName">Name of the entity.</param>
     /// <param name="objectName">Name of the database object backing the entity.</param>

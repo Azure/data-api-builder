@@ -79,4 +79,18 @@ public class SecuritySchemeTests
         Assert.IsTrue(document.Components.SecuritySchemes is null || document.Components.SecuritySchemes.Count is 0);
         Assert.IsTrue(document.SecurityRequirements is null || document.SecurityRequirements.Count is 0);
     }
+
+    [TestMethod]
+    public void AddAuthenticationSecurity_DoesNotAddBearerSecuritySchemeWhenAuthenticationOptionsAreNull()
+    {
+        OpenApiDocument document = new()
+        {
+            Components = new OpenApiComponents()
+        };
+
+        OpenApiDocumentor.AddAuthenticationSecurity(document, authenticationOptions: null);
+
+        Assert.IsTrue(document.Components.SecuritySchemes is null || document.Components.SecuritySchemes.Count is 0);
+        Assert.IsTrue(document.SecurityRequirements is null || document.SecurityRequirements.Count is 0);
+    }
 }

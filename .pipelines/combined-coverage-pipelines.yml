@@ -17,14 +17,19 @@
 #   The `patterns` filter grabs only the small cobertura xml and skips the ~22MB
 #   bundled HTML report, and avoids needing the dynamic artifact name.
 #
-# BEFORE ENABLING:
+# BEFORE ENABLING (one-time, manual — this yaml does NOTHING until registered):
 #   1. Confirm each pipeline resource `source:` matches that pipeline's name in
 #      the Azure DevOps Pipelines list. The definition name is NOT stored in the
 #      repo, so the values below are best-guess and may need adjusting.
-#   2. Create this as a new pipeline in Azure DevOps named "Total Code Coverage"
-#      (that name becomes the GitHub status check and the Pipelines-list entry;
-#      its build's Code Coverage tab is where the combined number is shown).
-#   3. Fallback only if `- download` cannot see the report (it is a build/
+#   2. Create the pipeline in Azure DevOps: Pipelines > New pipeline > "Existing
+#      Azure Pipelines YAML file" > point at this file. Name it "Total Code
+#      Coverage" (that name becomes the GitHub status check and the Pipelines-
+#      list entry; its build's Code Coverage tab shows the combined number).
+#      NOTE: merging this file alone does not create or run anything.
+#   3. Run the new pipeline once manually. Azure DevOps only arms
+#      `resources.pipelines` completion triggers AFTER the pipeline has run once,
+#      so the "run after the six test pipelines" trigger won't fire until then.
+#   4. Fallback only if `- download` cannot see the report (it is a build/
 #      container artifact): add a deterministic pipeline artifact to each
 #      *-pipelines.yml --
 #          - task: PublishPipelineArtifact@1

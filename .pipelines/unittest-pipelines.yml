@@ -21,11 +21,124 @@ pr:
     - '*.md'
     - templates/**
 
-pool:
-  vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
-
 variables:
 - template: templates/variables.yml
 
-steps:
-- template: templates/build-pipelines.yml
+jobs:
+- job: build
+  displayName: 'Build and Unit Tests'
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - template: templates/build-pipelines.yml
+
+# ---------------------------------------------------------------------------
+# Total Code Coverage
+# ---------------------------------------------------------------------------
+# Merges THIS run's unit coverage with the latest coverage from the database
+# integration pipelines (MsSql, PostgreSql, MySql, DwSql, CosmosDb) and publishes
+# a single combined report. Each pipeline in isolation looks low (~30-43% branch)
+# because they are complementary; the union is ~77%.
+#
+# This job is BEST-EFFORT (continueOnError on the job and every step) so it can
+# never fail or block unit CI. The DB coverage is the latest available run, so
+# the combined number is a dashboard figure, not a per-PR-exact gate.
+#
+# TODO before it produces DB coverage: replace each 'TODO-<db>-definition-id'
+# with the pipeline's numeric definition ID (open the pipeline in Azure DevOps;
+# the URL contains ...?definitionId=NN). Until then the job still runs and
+# publishes unit-only coverage. Requires the ReportGenerator ADO extension.
+- job: total_code_coverage
+  displayName: 'Total Code Coverage'
+  dependsOn: build
+  condition: succeededOrFailed()
+  continueOnError: true
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+
+  # This run's unit coverage (published by the build job above).
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download unit coverage (this run)'
+    continueOnError: true
+    inputs:
+      source: 'current'
+      artifact: 'coverage-unit'
+      patterns: '**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/unit'
+
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download MsSql coverage (latest)'
+    continueOnError: true
+    inputs:
+      source: 'specific'
+      project: '$(System.TeamProject)'
+      pipeline: 'TODO-mssql-definition-id'
+      runVersion: 'latest'
+      patterns: '**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/db/mssql'
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download PostgreSql coverage (latest)'
+    continueOnError: true
+    inputs:
+      source: 'specific'
+      project: '$(System.TeamProject)'
+      pipeline: 'TODO-pg-definition-id'
+      runVersion: 'latest'
+      patterns: '**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/db/pg'
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download MySql coverage (latest)'
+    continueOnError: true
+    inputs:
+      source: 'specific'
+      project: '$(System.TeamProject)'
+      pipeline: 'TODO-mysql-definition-id'
+      runVersion: 'latest'
+      patterns: '**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/db/mysql'
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download DwSql coverage (latest)'
+    continueOnError: true
+    inputs:
+      source: 'specific'
+      project: '$(System.TeamProject)'
+      pipeline: 'TODO-dwsql-definition-id'
+      runVersion: 'latest'
+      patterns: '**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/db/dwsql'
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download CosmosDb coverage (latest)'
+    continueOnError: true
+    inputs:
+      source: 'specific'
+      project: '$(System.TeamProject)'
+      pipeline: 'TODO-cosmos-definition-id'
+      runVersion: 'latest'
+      patterns: '**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/db/cosmos'
+
+  - task: PowerShell@2
+    displayName: 'Merge cobertura (union) and print combined %'
+    continueOnError: true
+    inputs:
+      filePath: 'scripts/merge-coverage.ps1'
+      arguments: '-Path "$(Pipeline.Workspace)"'
+      pwsh: true
+
+  # Merge into one cobertura for the Code Coverage tab (test projects excluded).
+  - task: reportgenerator@5
+    displayName: 'Generate merged cobertura'
+    continueOnError: true
+    inputs:
+      reports: '$(Pipeline.Workspace)/**/*.cobertura.xml'
+      targetdir: '$(Build.ArtifactStagingDirectory)/merged'
+      reporttypes: 'Cobertura;HtmlInline_AzurePipelines;TextSummary'
+      assemblyfilters: '-*.Tests'
+
+  - task: PublishCodeCoverageResults@2
+    displayName: 'Publish combined code coverage'
+    continueOnError: true
+    inputs:
+      summaryFileLocation: '$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml'

@@ -1135,9 +1135,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 StoredProcedureDefinition spDef = (StoredProcedureDefinition)sourceDef;
                 foreach (KeyValuePair<string, ParameterDefinition> parameterMetadata in spDef.Parameters)
                 {
-                    // A parameter which does not have any of the following properties
+                    // A parameter which is explicitly marked required or has no default value
                     // results in the body being required so that a value can be provided.
-                    if (!parameterMetadata.Value.HasConfigDefault)
+                    if (parameterMetadata.Value.Required ?? !parameterMetadata.Value.HasConfigDefault)
                     {
                         requestBodyRequired = true;
                         break;

@@ -28,12 +28,15 @@ ENTRYPOINT ["dotnet", "Azure.DataApiBuilder.Service.dll"]
 # Non-root variant. Build explicitly with:
 #   docker build --target runtime-nonroot -t <repo>:<version>-nonroot .
 #
-# Runs as the "app" user that ships with the mcr.microsoft.com/dotnet/aspnet
-# base image (UID/GID 1654, exposed via the APP_UID env var, on the
-# azurelinux3.0 variant). DAB does not require root, and declaring USER
-# explicitly sets the image's Config.User field so image scanners
-# (e.g. Checkmarx One) that require a non-root user in the final stage are
-# satisfied.
+# Runs as the non-root user that ships with the
+# mcr.microsoft.com/dotnet/aspnet base image (UID/GID 1654, exposed via the
+# APP_UID env var, on the azurelinux3.0 variant). DAB does not require root,
+# and declaring USER explicitly sets the image's Config.User field so image
+# scanners (e.g. Checkmarx One) that require a non-root user in the final
+# stage are satisfied. We use the numeric `USER $APP_UID` form (rather than
+# `USER app`) per .NET container guidance: a numeric UID is friendlier to
+# image scanners and to Kubernetes `runAsNonRoot`/`runAsUser` checks, which
+# cannot resolve a username to a UID at admission time.
 #
 # Safeguards applied to minimize the chance of runtime breakage:
 #   * Pre-create /App/logs and `chown app:app /App/logs` (non-recursive) so
@@ -52,16 +55,16 @@ ENTRYPOINT ["dotnet", "Azure.DataApiBuilder.Service.dll"]
 #     writable, if DAB needs to write them - by UID 1654 on the host.
 #     Either `chown -R 1654:1654 /host/path` or, in Kubernetes, set
 #     `securityContext.fsGroup: 1654`.
-#   * `docker exec` defaults to the `app` user. Use `docker exec --user 0`
+#   * `docker exec` defaults to UID 1654. Use `docker exec --user 0`
 #     for administrative actions inside a running container.
 #   * Downstream Dockerfiles (FROM <this image>) that need to install
 #     packages or write outside /App should add `USER 0` before those
-#     instructions, then restore `USER app` at the end.
+#     instructions, then restore `USER $APP_UID` at the end.
 # ---------------------------------------------------------------------------
 FROM runtime-base AS runtime-nonroot
 
-RUN mkdir -p /App/logs && chown app:app /App/logs
-USER app
+RUN mkdir -p /App/logs && chown $APP_UID:$APP_UID /App/logs
+USER $APP_UID
 
 LABEL org.opencontainers.image.title="Data API builder (non-root)" \
       org.opencontainers.image.description="Data API builder running as the non-root 'app' user (UID 1654 on azurelinux3.0)." \

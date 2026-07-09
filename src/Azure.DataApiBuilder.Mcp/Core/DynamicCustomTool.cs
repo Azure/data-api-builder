@@ -372,8 +372,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 properties[paramName] = paramSchema;
 
-                // A parameter is required unless config marks it optional or supplies a default
-                // the engine applies when the caller omits it.
+                // A DB metadata parameter is required unless config marks it optional or supplies
+                // a default the engine applies when the caller omits it.
                 if (IsParameterRequired(paramDef.Required, paramDef.HasConfigDefault))
                 {
                     requiredParameters.Add(paramName);

@@ -802,6 +802,33 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Config fallback should exclude parameters with defaults from the required array even when
+        /// they are explicitly marked required.
+        /// </summary>
+        [TestMethod]
+        public void GetToolMetadata_ConfigFallback_ExcludesRequiredParamWhenDefaultExists()
+        {
+            // Arrange
+            ParameterMetadata[] parameters = new[]
+            {
+                new ParameterMetadata { Name = "userId", Required = true },
+                new ParameterMetadata { Name = "tenant", Required = true, Default = "contoso" }
+            };
+            Entity entity = CreateTestStoredProcedureEntity(parameters: parameters);
+            DynamicCustomTool tool = new("GetUser", entity);
+
+            // Act
+            JsonElement schema = tool.GetToolMetadata().InputSchema;
+
+            // Assert
+            Assert.IsTrue(schema.TryGetProperty("required", out JsonElement required));
+            CollectionAssert.AreEquivalent(
+                new[] { "userId" },
+                EnumerateStrings(required),
+                "Parameters with config defaults should not be required even when marked required.");
+        }
+
+        /// <summary>
         /// Helper: Parses the "required" array values into a list of strings.
         /// </summary>
         private static List<string> EnumerateStrings(JsonElement array)

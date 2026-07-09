@@ -405,6 +405,25 @@ namespace Azure.DataApiBuilder.Core.Services
             return false;
         }
 
+        /// <inheritdoc/>
+        public bool TryGetUnderlyingFieldKind(string entityName, string fieldName, out SyntaxKind fieldKind)
+        {
+            if (TryGetBackingColumn(entityName, fieldName, out string? columnName))
+            {
+                SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
+                ColumnDefinition column = sourceDefinition.Columns[columnName];
+
+                // If the column is an array type, we need to get the syntax kind from the element system type.
+                if (column.IsArrayType && TypeHelper.TryGetSyntaxKindFromSystemType(column.ElementSystemType!, out fieldKind))
+                {
+                    return true;
+                }
+            }
+
+            fieldKind = 0;
+            return false;
+        }
+
         /// <summary>
         /// Log Primary key information. Function only called when not
         /// in a hosted scenario. Log relevant information about Primary keys

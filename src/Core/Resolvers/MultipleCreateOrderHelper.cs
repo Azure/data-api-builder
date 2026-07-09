@@ -385,7 +385,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             foreach (ObjectFieldNode field in fieldNodes)
             {
                 Tuple<IValueNode?, SyntaxKind> fieldDetails = GraphQLUtils.GetFieldDetails(field.Value, context.Variables);
-                SyntaxKind fieldKind = fieldDetails.Item2;
+                SyntaxKind fieldKind = metadataProvider.TryGetUnderlyingFieldKind(entityName, field.Name.Value, out SyntaxKind arrayFieldKind) ? arrayFieldKind : fieldDetails.Item2;
                 if (GraphQLUtils.IsScalarField(fieldKind) && metadataProvider.TryGetBackingColumn(entityName, field.Name.Value, out string? backingColumnName))
                 {
                     backingColumnData.Add(backingColumnName, fieldDetails.Item1);

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -9,6 +10,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
+using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 
@@ -111,8 +113,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (value is not null)
             {
+                // Array/vector columns (e.g. SQL Server 'vector') arrive as a List<IValueNode>.
+                // Calling ToString() on a list/array only yields the CLR type name, so instead extract
+                // the underlying element values and serialize them into a JSON array string (e.g. "[1.5,2.5,3.5]").
+                string stringifiedValue = value switch
+                {
+                    IEnumerable<IValueNode> valueNodes => JsonSerializer.Serialize(valueNodes.Select(TypeHelper.GetValue)),
+                    _ => value.ToString()!
+                };
+
                 paramName = MakeDbConnectionParam(
-                    GetParamAsSystemType(value.ToString()!, columnName, GetColumnSystemType(columnName)), columnName);
+                    GetParamAsSystemType(stringifiedValue, columnName, GetColumnSystemType(columnName)), columnName);
             }
             else
             {

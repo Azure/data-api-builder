@@ -127,6 +127,11 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.DateTimeOffset] = DbType.DateTimeOffset
         };
 
+        private static Dictionary<Type, SyntaxKind> _systemTypeToFieldKind = new()
+        {
+            [typeof(float)] = SyntaxKind.FloatValue,
+        };
+
         /// <summary>
         /// Given the system type, returns the corresponding primitive type kind.
         /// </summary>
@@ -307,6 +312,11 @@ namespace Azure.DataApiBuilder.Core.Services
         public static bool TryGetDbTypeFromSqlDbDateTimeType(SqlDbType sqlDbType, [NotNullWhen(true)] out DbType dbType)
         {
             return _sqlDbDateTimeTypeToDbType.TryGetValue(sqlDbType, out dbType);
+        }
+
+        public static bool TryGetSyntaxKindFromSystemType(Type systemType, [NotNullWhen(true)] out SyntaxKind syntaxKind)
+        {
+            return _systemTypeToFieldKind.TryGetValue(systemType, out syntaxKind);
         }
 
         /// <summary>

@@ -87,7 +87,7 @@ jobs:
     inputs:
       source: 'specific'
       project: '$(System.TeamProject)'
-      pipeline: '1'
+      pipeline: '2'
       runVersion: 'latest'
       patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/mssql'
@@ -97,7 +97,7 @@ jobs:
     inputs:
       source: 'specific'
       project: '$(System.TeamProject)'
-      pipeline: '2'
+      pipeline: '4'
       runVersion: 'latest'
       patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/pg'
@@ -117,7 +117,7 @@ jobs:
     inputs:
       source: 'specific'
       project: '$(System.TeamProject)'
-      pipeline: '4'
+      pipeline: '1'
       runVersion: 'latest'
       patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/dwsql'

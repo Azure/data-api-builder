@@ -151,8 +151,20 @@ jobs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
-
-# MsSql Integration Testing is split into two parallel jobs (~20 min each):
+  # Publish the RAW cobertura as a named pipeline artifact so the unit pipeline's
+  # 'Total Code Coverage' job can download and union it. (PublishCodeCoverageResults@1
+  # only exposes an HTML report artifact, not the raw XML, so aggregation needs this.)
+  - task: CopyFiles@2
+    displayName: 'Stage raw coverage for aggregation'
+    inputs:
+      sourceFolder: '$(Agent.TempDirectory)'
+      contents: '**/*.cobertura.xml'
+      targetFolder: '$(Build.ArtifactStagingDirectory)/coverage'
+  - task: PublishPipelineArtifact@1
+    displayName: 'Publish coverage artifact for aggregation'
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)/coverage'
+      artifact: 'coverage-mssql'
 #
 # 1) windows_combined -> GraphQL, HotReload, REST, Unit, OpenApi, Auth,
 #    Telemetry, and Caching tests.

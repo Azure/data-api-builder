@@ -746,6 +746,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             {
                 ["id"] = new() { SystemType = typeof(int) },
                 ["title"] = new() { SystemType = typeof(string), HasConfigDefault = true, ConfigDefaultValue = "randomX" },
+                ["category"] = new() { SystemType = typeof(string), Required = true, HasConfigDefault = true, ConfigDefaultValue = "defaultCategory" },
                 ["publisher_id"] = new() { SystemType = typeof(int), Required = false }
             };
 

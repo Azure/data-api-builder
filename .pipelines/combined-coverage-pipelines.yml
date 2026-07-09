@@ -1,30 +1,35 @@
 # =============================================================================
-# DRAFT — Combined Code Coverage (union of all test pipelines)
+# Combined Code Coverage (union of all test pipelines)
 # =============================================================================
 # Purpose:
 #   The unit + per-database (MsSql, PostgreSql, MySql, DwSql, CosmosDb) pipelines
 #   each publish their OWN coverage tab. No single view shows the union, so each
 #   pipeline looks low (~30-43% branch) even though the merged coverage is ~77%.
 #
-#   This aggregator runs AFTER the six test pipelines complete, downloads each
-#   one's raw cobertura artifact, merges them (scripts/merge-coverage.ps1), and
-#   republishes a single combined coverage report. THIS pipeline's build is where
-#   the true combined "Code Coverage" tab lives.
+#   This aggregator runs AFTER the six test pipelines complete, downloads the
+#   coverage each already publishes, merges them (scripts/merge-coverage.ps1),
+#   and republishes ONE combined report. THIS pipeline's build is where the true
+#   combined "Code Coverage" tab lives.
 #
-# PREREQUISITE (do first, in each of the six *-pipelines.yml):
-#   Add a step that publishes the raw cobertura as a downloadable artifact, e.g.
-#     - task: PublishPipelineArtifact@1
-#       displayName: 'Publish raw coverage'
-#       inputs:
-#         targetPath: '$(Agent.TempDirectory)'
-#         artifact: 'coverage-<db>'      # coverage-unit, coverage-mssql, ...
+#   NOTE: This REUSES the existing "Code Coverage Report_<buildId>" artifact that
+#   every pipeline's PublishCodeCoverageResults@1 step already produces (the same
+#   zip downloadable from each build). No changes to the six pipelines required.
+#   The `patterns` filter grabs only the small cobertura xml and skips the ~22MB
+#   bundled HTML report, and avoids needing the dynamic artifact name.
 #
 # TODO before enabling:
-#   1. Replace the pipeline resource 'source' values with the real ADO pipeline
-#      definition names (Pipelines > each pipeline > ... > Settings).
-#   2. Confirm the artifact names match those published above.
-#   3. Register this file as a new pipeline in Azure DevOps and add it as a
+#   1. Replace each pipeline resource `source:` with the real Azure DevOps
+#      pipeline DEFINITION name (Pipelines list, not the yml filename).
+#   2. Register this file as a new pipeline in Azure DevOps and add it as a
 #      required GitHub status check named "Combined Coverage".
+#   3. Fallback only if `- download` cannot see the report (it is a build/
+#      container artifact): add a deterministic pipeline artifact to each
+#      *-pipelines.yml --
+#          - task: PublishPipelineArtifact@1
+#            inputs:
+#              targetPath: '$(Agent.TempDirectory)'
+#              artifact: 'coverage-<db>'
+#      -- and change the downloads below to `- download: <alias>`.
 # =============================================================================
 
 trigger: none      # runs via pipeline-completion resource triggers, not on push
@@ -54,35 +59,37 @@ pool:
   vmImage: 'windows-latest'
 
 steps:
+  # Reuse the coverage each pipeline already publishes; `patterns` keeps only the
+  # cobertura xml (skips the bundled HTML) and avoids needing the dynamic
+  # "Code Coverage Report_<buildId>" artifact name.
   - download: unit
-    artifact: coverage-unit
+    patterns: '**/*.cobertura.xml'
   - download: mssql
-    artifact: coverage-mssql
+    patterns: '**/*.cobertura.xml'
   - download: pg
-    artifact: coverage-pg
+    patterns: '**/*.cobertura.xml'
   - download: mysql
-    artifact: coverage-mysql
+    patterns: '**/*.cobertura.xml'
   - download: dwsql
-    artifact: coverage-dwsql
+    patterns: '**/*.cobertura.xml'
   - download: cosmos
-    artifact: coverage-cosmos
+    patterns: '**/*.cobertura.xml'
 
   - task: PowerShell@2
-    displayName: 'Merge cobertura reports (union)'
+    displayName: 'Merge cobertura reports (union) and print combined %'
     inputs:
       filePath: 'scripts/merge-coverage.ps1'
-      arguments: '-Path "$(Pipeline.Workspace)" '
+      arguments: '-Path "$(Pipeline.Workspace)"'
       pwsh: false
 
-  # merge-coverage.ps1 prints the combined %. For a published tab, also emit a
-  # merged cobertura via ReportGenerator and publish it:
+  # Also emit a merged cobertura via ReportGenerator so the combined number shows
+  # in the Code Coverage tab (excludes test projects so it reflects product code).
   - task: reportgenerator@5
     displayName: 'Generate merged cobertura'
     inputs:
-      reports: '$(Pipeline.Workspace)/**/coverage.cobertura.xml'
+      reports: '$(Pipeline.Workspace)/**/*.cobertura.xml'
       targetdir: '$(Build.ArtifactStagingDirectory)/merged'
       reporttypes: 'Cobertura;HtmlInline_AzurePipelines;TextSummary'
-      # Exclude the test projects so the number reflects product code only.
       assemblyfilters: '-*.Tests'
 
   - task: PublishCodeCoverageResults@2

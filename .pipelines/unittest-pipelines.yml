@@ -33,37 +33,10 @@ jobs:
   - template: templates/build-pipelines.yml
 
 # ---------------------------------------------------------------------------
-# Total Code Coverage (rolling dashboard - NOT a synchronized per-PR gate)
+# Total Code Coverage (rolling dashboard, not a per-PR gate)
 # ---------------------------------------------------------------------------
-# Merges THIS run's unit coverage with the LATEST AVAILABLE coverage from the
-# database integration pipelines (MsSql, PostgreSql, MySql, DwSql, CosmosDb) and
-# publishes a single combined report. Each pipeline in isolation looks low
-# (~30-43% branch) because they are complementary; the union is ~77%.
-#
-# IMPORTANT - there is intentionally NO cross-pipeline synchronization:
-#   * This job only waits for THIS pipeline's unit tests (dependsOn: build).
-#   * DB coverage is pulled with runVersion 'latest', i.e. whatever the most
-#     recent completed DB run produced - which may be an OLDER commit or a
-#     different PR. ADO offers no primitive to block until all six sibling runs
-#     finish for the same commit from inside one of them.
-#   * Therefore the combined number is a ROLLING DASHBOARD figure for
-#     visibility only. Do NOT treat it as a per-PR-exact gate. (A true per-PR
-#     guarantee would require consolidating all six suites into one pipeline
-#     with a dependsOn-all aggregation job.)
-#
-# This job is also BEST-EFFORT (continueOnError on the job and every step) so it
-# can never fail or block unit CI.
-#
-# The merge + report generation is done entirely by scripts/merge-coverage.ps1
-# (a dependency-free PowerShell union merger that emits a Cobertura file) - no
-# ReportGenerator or other Marketplace extension is required.
-#
-# The DB 'pipeline' IDs below are the numeric definition IDs from Azure DevOps
-# (pipeline URL ...?definitionId=NN). Each DB pipeline publishes its RAW cobertura
-# as a named 'coverage-<db>' pipeline artifact (added in its own YAML); this job
-# downloads those by name and unions them. NOTE: each DB pipeline must run once
-# after that change merges before its 'coverage-<db>' artifact exists - until then
-# its download soft-fails (continueOnError) and it's simply omitted from the union.
+# Unions this run's unit coverage with the latest DB coverage and publishes one
+# combined report. Best-effort (continueOnError) so it never blocks unit CI.
 - job: total_code_coverage
   displayName: 'Total Code Coverage (rolling dashboard)'
   dependsOn: build

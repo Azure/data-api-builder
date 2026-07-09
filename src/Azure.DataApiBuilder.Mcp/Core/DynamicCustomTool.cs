@@ -442,13 +442,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         private static bool IsParameterRequired(bool? configuredRequired, bool hasDefault)
         {
-            if (configuredRequired is not null)
+            // If the engine can supply a default when the caller omits the parameter,
+            // it should not be advertised as required.
+            if (hasDefault)
             {
-                return configuredRequired.Value;
+                return false;
             }
 
-            // No explicit config: a parameter is required unless a default is available.
-            return !hasDefault;
+            return configuredRequired ?? true;
         }
 
         /// <summary>

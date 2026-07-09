@@ -54,10 +54,13 @@ jobs:
 # This job is also BEST-EFFORT (continueOnError on the job and every step) so it
 # can never fail or block unit CI.
 #
-# TODO before it produces DB coverage: replace each 'TODO-<db>-definition-id'
-# with the pipeline's numeric definition ID (open the pipeline in Azure DevOps;
-# the URL contains ...?definitionId=NN). Until then the job still runs and
-# publishes unit-only coverage. Requires the ReportGenerator ADO extension.
+# The merge + report generation is done entirely by scripts/merge-coverage.ps1
+# (a dependency-free PowerShell union merger that emits a Cobertura file) - no
+# ReportGenerator or other Marketplace extension is required.
+#
+# The DB 'pipeline' IDs below are the numeric definition IDs from Azure DevOps
+# (pipeline URL ...?definitionId=NN). The db-name labels are cosmetic; only the
+# numeric IDs matter for the download, and the merge is order-independent.
 - job: total_code_coverage
   displayName: 'Total Code Coverage (rolling dashboard)'
   dependsOn: build
@@ -84,7 +87,7 @@ jobs:
     inputs:
       source: 'specific'
       project: '$(System.TeamProject)'
-      pipeline: 'TODO-mssql-definition-id'
+      pipeline: '1'
       runVersion: 'latest'
       patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/mssql'
@@ -94,7 +97,7 @@ jobs:
     inputs:
       source: 'specific'
       project: '$(System.TeamProject)'
-      pipeline: 'TODO-pg-definition-id'
+      pipeline: '2'
       runVersion: 'latest'
       patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/pg'
@@ -104,7 +107,7 @@ jobs:
     inputs:
       source: 'specific'
       project: '$(System.TeamProject)'
-      pipeline: 'TODO-mysql-definition-id'
+      pipeline: '3'
       runVersion: 'latest'
       patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/mysql'
@@ -114,7 +117,7 @@ jobs:
     inputs:
       source: 'specific'
       project: '$(System.TeamProject)'
-      pipeline: 'TODO-dwsql-definition-id'
+      pipeline: '4'
       runVersion: 'latest'
       patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/dwsql'
@@ -124,28 +127,20 @@ jobs:
     inputs:
       source: 'specific'
       project: '$(System.TeamProject)'
-      pipeline: 'TODO-cosmos-definition-id'
+      pipeline: '6'
       runVersion: 'latest'
       patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/cosmos'
 
+  # Union-merge every downloaded cobertura and emit ONE combined Cobertura.xml
+  # (test projects excluded). Dependency-free - no ReportGenerator extension.
   - task: PowerShell@2
-    displayName: 'Merge cobertura (union) and print combined %'
+    displayName: 'Merge cobertura (union) and emit combined report'
     continueOnError: true
     inputs:
       filePath: 'scripts/merge-coverage.ps1'
-      arguments: '-Path "$(Pipeline.Workspace)"'
+      arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml"'
       pwsh: true
-
-  # Merge into one cobertura for the Code Coverage tab (test projects excluded).
-  - task: reportgenerator@5
-    displayName: 'Generate merged cobertura'
-    continueOnError: true
-    inputs:
-      reports: '$(Pipeline.Workspace)/**/*.cobertura.xml'
-      targetdir: '$(Build.ArtifactStagingDirectory)/merged'
-      reporttypes: 'Cobertura;HtmlInline_AzurePipelines;TextSummary'
-      assemblyfilters: '-*.Tests'
 
   - task: PublishCodeCoverageResults@2
     displayName: 'Publish combined code coverage'

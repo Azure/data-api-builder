@@ -31,7 +31,9 @@ param(
     [string]$Path,
     [string[]]$Files,
     # Package (assembly) names matching this regex are excluded (test projects by default).
-    [string]$ExcludePattern = '\.Tests$'
+    [string]$ExcludePattern = '\.Tests$',
+    # When set, writes a merged Cobertura XML to this path (for PublishCodeCoverageResults).
+    [string]$OutFile
 )
 
 if ($Files) {
@@ -52,8 +54,10 @@ if ($reportFiles.Count -eq 0) {
     exit 1
 }
 
-# key: "package|filename|lineNumber" -> merged coverage point
+# key: "package|class|lineNumber" -> merged coverage point
 $points = @{}
+# "package|class" -> representative filename (first non-empty seen)
+$classFile = @{}
 
 foreach ($rf in $reportFiles) {
     try {
@@ -69,7 +73,10 @@ foreach ($rf in $reportFiles) {
         if ($ExcludePattern -and $pkgName -match $ExcludePattern) { continue }
         foreach ($cls in $pkg.classes.class) {
             $clsName = [string]$cls.name
+            $clsFile = [string]$cls.filename
             if (-not $cls.lines) { continue }
+            $ckey = "$pkgName|$clsName"
+            if ($clsFile -and -not $classFile.ContainsKey($ckey)) { $classFile[$ckey] = $clsFile }
             foreach ($ln in $cls.lines.line) {
                 if (-not $ln) { continue }
                 $num = [int]$ln.number
@@ -97,6 +104,8 @@ foreach ($rf in $reportFiles) {
                 else {
                     $points[$key] = [pscustomobject]@{
                         Package  = $pkgName
+                        Class    = $clsName
+                        Line     = $num
                         Hits     = $hits
                         IsBranch = $isBranch
                         CondCov  = $condCov
@@ -145,3 +154,82 @@ Write-Host "==================== COMBINED (all pipelines) ===================="
 Write-Host "  LINE   : $covLines / $totLines = $LR%"
 Write-Host "  BRANCH : $covBr / $totBr = $BR%"
 Write-Host "================================================================="
+
+# ---------------------------------------------------------------------------
+# Optionally emit a merged Cobertura XML (so PublishCodeCoverageResults can show
+# the combined number in the Code Coverage tab - no ReportGenerator required).
+# ---------------------------------------------------------------------------
+if ($OutFile) {
+    function ConvertTo-XmlAttr([string]$s) {
+        if ($null -eq $s) { return '' }
+        return $s.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;').Replace("'", '&apos;')
+    }
+
+    # Group merged points into package -> class -> lines.
+    $pkgTree = @{}
+    foreach ($e in $points.Values) {
+        if (-not $pkgTree.ContainsKey($e.Package)) { $pkgTree[$e.Package] = @{} }
+        $classes = $pkgTree[$e.Package]
+        if (-not $classes.ContainsKey($e.Class)) { $classes[$e.Class] = New-Object System.Collections.ArrayList }
+        [void]$classes[$e.Class].Add($e)
+    }
+
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine('<?xml version="1.0" encoding="utf-8"?>')
+    $lineRate = if ($totLines) { [math]::Round($covLines / $totLines, 4) } else { 0 }
+    $branchRate = if ($totBr) { [math]::Round($covBr / $totBr, 4) } else { 0 }
+    $ts = [int64]([datetime]::UtcNow - [datetime]'1970-01-01').TotalSeconds
+    [void]$sb.AppendLine("<coverage line-rate=""$lineRate"" branch-rate=""$branchRate"" lines-covered=""$covLines"" lines-valid=""$totLines"" branches-covered=""$covBr"" branches-valid=""$totBr"" version=""1.9"" timestamp=""$ts"">")
+    [void]$sb.AppendLine('  <sources><source>.</source></sources>')
+    [void]$sb.AppendLine('  <packages>')
+    foreach ($pk in ($pkgTree.Keys | Sort-Object)) {
+        $classes = $pkgTree[$pk]
+        $pTL = 0; $pCL = 0; $pTB = 0; $pCB = 0
+        foreach ($clist in $classes.Values) {
+            foreach ($e in $clist) {
+                $pTL++; if ($e.Hits -gt 0) { $pCL++ }
+                if ($e.IsBranch) { $pTB += $e.CondTot; $pCB += $e.CondCov }
+            }
+        }
+        $pLR = if ($pTL) { [math]::Round($pCL / $pTL, 4) } else { 0 }
+        $pBR = if ($pTB) { [math]::Round($pCB / $pTB, 4) } else { 0 }
+        [void]$sb.AppendLine(("    <package name=""{0}"" line-rate=""{1}"" branch-rate=""{2}"" complexity=""0"">" -f (ConvertTo-XmlAttr $pk), $pLR, $pBR))
+        [void]$sb.AppendLine('      <classes>')
+        foreach ($cn in ($classes.Keys | Sort-Object)) {
+            $clist = $classes[$cn]
+            $cTL = 0; $cCL = 0; $cTB = 0; $cCB = 0
+            foreach ($e in $clist) {
+                $cTL++; if ($e.Hits -gt 0) { $cCL++ }
+                if ($e.IsBranch) { $cTB += $e.CondTot; $cCB += $e.CondCov }
+            }
+            $cLR = if ($cTL) { [math]::Round($cCL / $cTL, 4) } else { 0 }
+            $cBR = if ($cTB) { [math]::Round($cCB / $cTB, 4) } else { 0 }
+            $fn = ''
+            if ($classFile.ContainsKey("$pk|$cn")) { $fn = $classFile["$pk|$cn"] }
+            [void]$sb.AppendLine(("        <class name=""{0}"" filename=""{1}"" line-rate=""{2}"" branch-rate=""{3}"" complexity=""0"">" -f (ConvertTo-XmlAttr $cn), (ConvertTo-XmlAttr $fn), $cLR, $cBR))
+            [void]$sb.AppendLine('          <methods />')
+            [void]$sb.AppendLine('          <lines>')
+            foreach ($e in ($clist | Sort-Object Line)) {
+                if ($e.IsBranch) {
+                    $pct = if ($e.CondTot) { [math]::Round($e.CondCov / $e.CondTot * 100, 0) } else { 0 }
+                    [void]$sb.AppendLine(("            <line number=""{0}"" hits=""{1}"" branch=""true"" condition-coverage=""{2}% ({3}/{4})"" />" -f $e.Line, $e.Hits, $pct, $e.CondCov, $e.CondTot))
+                }
+                else {
+                    [void]$sb.AppendLine(("            <line number=""{0}"" hits=""{1}"" branch=""false"" />" -f $e.Line, $e.Hits))
+                }
+            }
+            [void]$sb.AppendLine('          </lines>')
+            [void]$sb.AppendLine('        </class>')
+        }
+        [void]$sb.AppendLine('      </classes>')
+        [void]$sb.AppendLine('    </package>')
+    }
+    [void]$sb.AppendLine('  </packages>')
+    [void]$sb.AppendLine('</coverage>')
+
+    $dir = Split-Path -Parent $OutFile
+    if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    [System.IO.File]::WriteAllText($OutFile, $sb.ToString())
+    Write-Host ""
+    Write-Host "Wrote merged Cobertura report: $OutFile"
+}

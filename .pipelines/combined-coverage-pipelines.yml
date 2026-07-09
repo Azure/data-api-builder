@@ -1,0 +1,91 @@
+# =============================================================================
+# DRAFT — Combined Code Coverage (union of all test pipelines)
+# =============================================================================
+# Purpose:
+#   The unit + per-database (MsSql, PostgreSql, MySql, DwSql, CosmosDb) pipelines
+#   each publish their OWN coverage tab. No single view shows the union, so each
+#   pipeline looks low (~30-43% branch) even though the merged coverage is ~77%.
+#
+#   This aggregator runs AFTER the six test pipelines complete, downloads each
+#   one's raw cobertura artifact, merges them (scripts/merge-coverage.ps1), and
+#   republishes a single combined coverage report. THIS pipeline's build is where
+#   the true combined "Code Coverage" tab lives.
+#
+# PREREQUISITE (do first, in each of the six *-pipelines.yml):
+#   Add a step that publishes the raw cobertura as a downloadable artifact, e.g.
+#     - task: PublishPipelineArtifact@1
+#       displayName: 'Publish raw coverage'
+#       inputs:
+#         targetPath: '$(Agent.TempDirectory)'
+#         artifact: 'coverage-<db>'      # coverage-unit, coverage-mssql, ...
+#
+# TODO before enabling:
+#   1. Replace the pipeline resource 'source' values with the real ADO pipeline
+#      definition names (Pipelines > each pipeline > ... > Settings).
+#   2. Confirm the artifact names match those published above.
+#   3. Register this file as a new pipeline in Azure DevOps and add it as a
+#      required GitHub status check named "Combined Coverage".
+# =============================================================================
+
+trigger: none      # runs via pipeline-completion resource triggers, not on push
+
+resources:
+  pipelines:
+    - pipeline: unit
+      source: 'TODO-unit-pipeline-name'
+      trigger: true
+    - pipeline: mssql
+      source: 'TODO-mssql-pipeline-name'
+      trigger: true
+    - pipeline: pg
+      source: 'TODO-pg-pipeline-name'
+      trigger: true
+    - pipeline: mysql
+      source: 'TODO-mysql-pipeline-name'
+      trigger: true
+    - pipeline: dwsql
+      source: 'TODO-dwsql-pipeline-name'
+      trigger: true
+    - pipeline: cosmos
+      source: 'TODO-cosmos-pipeline-name'
+      trigger: true
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+  - download: unit
+    artifact: coverage-unit
+  - download: mssql
+    artifact: coverage-mssql
+  - download: pg
+    artifact: coverage-pg
+  - download: mysql
+    artifact: coverage-mysql
+  - download: dwsql
+    artifact: coverage-dwsql
+  - download: cosmos
+    artifact: coverage-cosmos
+
+  - task: PowerShell@2
+    displayName: 'Merge cobertura reports (union)'
+    inputs:
+      filePath: 'scripts/merge-coverage.ps1'
+      arguments: '-Path "$(Pipeline.Workspace)" '
+      pwsh: false
+
+  # merge-coverage.ps1 prints the combined %. For a published tab, also emit a
+  # merged cobertura via ReportGenerator and publish it:
+  - task: reportgenerator@5
+    displayName: 'Generate merged cobertura'
+    inputs:
+      reports: '$(Pipeline.Workspace)/**/coverage.cobertura.xml'
+      targetdir: '$(Build.ArtifactStagingDirectory)/merged'
+      reporttypes: 'Cobertura;HtmlInline_AzurePipelines;TextSummary'
+      # Exclude the test projects so the number reflects product code only.
+      assemblyfilters: '-*.Tests'
+
+  - task: PublishCodeCoverageResults@2
+    displayName: 'Publish combined code coverage'
+    inputs:
+      summaryFileLocation: '$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml'

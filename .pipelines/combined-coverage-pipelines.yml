@@ -17,11 +17,13 @@
 #   The `patterns` filter grabs only the small cobertura xml and skips the ~22MB
 #   bundled HTML report, and avoids needing the dynamic artifact name.
 #
-# TODO before enabling:
-#   1. Replace each pipeline resource `source:` with the real Azure DevOps
-#      pipeline DEFINITION name (Pipelines list, not the yml filename).
-#   2. Register this file as a new pipeline in Azure DevOps and add it as a
-#      required GitHub status check named "Combined Coverage".
+# BEFORE ENABLING:
+#   1. Confirm each pipeline resource `source:` matches that pipeline's name in
+#      the Azure DevOps Pipelines list. The definition name is NOT stored in the
+#      repo, so the values below are best-guess and may need adjusting.
+#   2. Create this as a new pipeline in Azure DevOps named "Total Code Coverage"
+#      (that name becomes the GitHub status check and the Pipelines-list entry;
+#      its build's Code Coverage tab is where the combined number is shown).
 #   3. Fallback only if `- download` cannot see the report (it is a build/
 #      container artifact): add a deterministic pipeline artifact to each
 #      *-pipelines.yml --
@@ -32,27 +34,34 @@
 #      -- and change the downloads below to `- download: <alias>`.
 # =============================================================================
 
+# Build-number format for each run (the human-facing pipeline name is set in
+# Azure DevOps as "Total Code Coverage").
+name: 'TotalCodeCoverage_$(Date:yyyyMMdd)$(Rev:.r)'
+
 trigger: none      # runs via pipeline-completion resource triggers, not on push
 
 resources:
   pipelines:
+    # `source` must match each pipeline's name in the Azure DevOps Pipelines list.
+    # These are best-guess names derived from the existing *-pipelines.yml; adjust
+    # if the ADO definition names differ.
     - pipeline: unit
-      source: 'TODO-unit-pipeline-name'
+      source: 'DataApiBuilder-UnitTests'
       trigger: true
     - pipeline: mssql
-      source: 'TODO-mssql-pipeline-name'
+      source: 'DataApiBuilder-MsSql'
       trigger: true
     - pipeline: pg
-      source: 'TODO-pg-pipeline-name'
+      source: 'DataApiBuilder-PostgreSql'
       trigger: true
     - pipeline: mysql
-      source: 'TODO-mysql-pipeline-name'
+      source: 'DataApiBuilder-MySql'
       trigger: true
     - pipeline: dwsql
-      source: 'TODO-dwsql-pipeline-name'
+      source: 'DataApiBuilder-DwSql'
       trigger: true
     - pipeline: cosmos
-      source: 'TODO-cosmos-pipeline-name'
+      source: 'DataApiBuilder-CosmosDb'
       trigger: true
 
 pool:

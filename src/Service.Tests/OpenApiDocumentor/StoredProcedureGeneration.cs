@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         /// <param name="expectedRequiredParameters">Expected parameters flagged as required in the schema component.</param>
         [DataRow("sp1", new string[] { "title", "publisher_name" }, new string[] { "string", "string" }, new string[] { "title", "publisher_name" }, DisplayName = "Parameters without defaults are all required.")]
         [DataRow("sp2", new string[] { "title", "publisher_id" }, new string[] { "string", "integer" }, new string[] { "publisher_id" }, DisplayName = "Parameter with a config default is not required.")]
-        [DataRow("sp3", new string[] { "id", "title" }, new string[] { "integer", "string" }, new string[] { "id" }, DisplayName = "Parameter explicitly marked required:false is not required.")]
+        [DataRow("sp3", new string[] { "id", "title" }, new string[] { "integer", "string" }, new string[] { "id" }, DisplayName = "Parameter explicitly marked required: false is not required.")]
         [DataTestMethod]
         public void ValidateRequestBodyContents(string entityName, string[] expectedParameters, string[] expectedParametersJsonTypes, string[] expectedRequiredParameters)
         {

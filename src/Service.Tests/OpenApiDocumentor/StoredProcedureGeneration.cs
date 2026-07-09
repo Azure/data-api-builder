@@ -151,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 ValidateOpenApiReferenceContents(schemaComponentReference, expectedSchemaReferenceId, expectedParameters, expectedParametersJsonTypes);
 
                 // Validate that the expected parameters are marked as required in the schema component.
-                ISet<string> requiredParameters = _openApiDocument.Components.Schemas[expectedSchemaReferenceId].Required;
+ISet<string> requiredParameters = _openApiDocument.Components.Schemas[expectedSchemaReferenceId].Required ?? new HashSet<string>();
                 CollectionAssert.AreEquivalent(
                     expectedRequiredParameters,
                     requiredParameters.ToArray(),

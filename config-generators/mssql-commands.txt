@@ -16,7 +16,7 @@ add Broker --config "dab-config.MsSql.json" --source brokers --permissions "anon
 add WebsiteUser --config "dab-config.MsSql.json" --source website_users --permissions "anonymous:create,read,delete,update"
 add WebsiteUser_MM --config "dab-config.MsSql.json" --source website_users_mm --graphql "websiteuser_mm:websiteusers_mm" --permissions "anonymous:*"
 add SupportedType --config "dab-config.MsSql.json" --source type_table --permissions "anonymous:create,read,delete,update"
-add VectorType --config "dab-config.MsSql.json" --source vector_type_table --rest true --graphql false --permissions "anonymous:create,read,delete,update"
+add VectorType --config "dab-config.MsSql.json" --source vector_type_table --rest true --graphql true --permissions "anonymous:create,read,delete,update"
 update VectorType --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update"
 add stocks_price --config "dab-config.MsSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete"
 update stocks_price --config "dab-config.MsSql.json" --permissions "anonymous:read"

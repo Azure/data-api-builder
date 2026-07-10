@@ -113,17 +113,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (value is not null)
             {
-                // Array/vector columns (e.g. SQL Server 'vector') arrive as a List<IValueNode>.
-                // Calling ToString() on a list/array only yields the CLR type name, so instead extract
-                // the underlying element values and serialize them into a JSON array string (e.g. "[1.5,2.5,3.5]").
-                string stringifiedValue = value switch
-                {
-                    IEnumerable<IValueNode> valueNodes => JsonSerializer.Serialize(valueNodes.Select(TypeHelper.GetValue)),
-                    _ => value.ToString()!
-                };
-
+                string stringValue = GetStringifiedValue(value);
                 paramName = MakeDbConnectionParam(
-                    GetParamAsSystemType(stringifiedValue, columnName, GetColumnSystemType(columnName)), columnName);
+                    GetParamAsSystemType(stringValue, columnName, GetColumnSystemType(columnName)), columnName);
             }
             else
             {

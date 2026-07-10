@@ -156,6 +156,12 @@ steps:
     targetPath: '$(Build.ArtifactStagingDirectory)/coverage'
     artifact: 'coverage-mssql${{ parameters.artifactSuffix }}'
 
+- task: CopyFiles@2
+  condition: eq(variables['publishverify'], 'Yes')
+  displayName: 'Copy received files to Artifact Staging'
+  inputs:
+    contents: '**\*.received.*'
+    targetFolder: '$(Build.ArtifactStagingDirectory)\Verify'
     cleanTargetFolder: true
     overWrite: true
 

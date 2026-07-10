@@ -10,12 +10,13 @@
 
     Merge semantics:
       * LINE coverage is an EXACT union - a source line is covered if it is hit in ANY report.
-      * BRANCH coverage is a conservative FLOOR (lower bound), NOT an exact union. Coverlet's
-        Cobertura reports only an aggregate "(covered/total)" per line, not which specific
-        branch was taken, so when two reports each cover a DIFFERENT branch of the same line we
-        cannot prove the union (e.g. (1/2) + (1/2) may really be 2/2 but we report 1/2). We take
-        the MAX (covered/total) seen across reports: this never over-counts but can under-count.
-        Treat the combined branch % as "at least this". Line % is the accurate headline metric.
+      * BRANCH coverage is an EXACT union WHEN per-edge detail is available. Coverlet may emit
+        <conditions><condition number=".." coverage="N%"/></conditions> children - one per
+        edge. When present (their count matches the aggregate denominator) we OR each edge's
+        covered flag across reports for a true union. When only the aggregate "(covered/total)"
+        is available we fall back to MAX(covered/total): a conservative FLOOR that never
+        over-counts but can under-count (e.g. (1/2)+(1/2) covering different edges is really 2/2
+        but reports 1/2). Line % is always exact and is the headline metric.
 
     Zero external dependencies (no reportgenerator / no az CLI required).
 
@@ -56,7 +57,8 @@ else {
     exit 1
 }
 
-$reportFiles = @($reportFiles | Where-Object { $_ -and (Test-Path $_) })
+$reportFiles = @($reportFiles | Where-Object { $_ -and (Test-Path $_) } |
+        ForEach-Object { (Resolve-Path -LiteralPath $_).Path } | Select-Object -Unique)
 if ($reportFiles.Count -eq 0) {
     Write-Error "No cobertura files found."
     exit 1   # intentional: fail this task when there is nothing to merge (CI job is continueOnError)
@@ -107,6 +109,23 @@ foreach ($rf in $reportFiles) {
                     $condTot = [int]$Matches[2]
                 }
 
+                # Per-edge branch detail: coverlet may emit one <condition number="i" coverage="N%"/>
+                # per edge. When their count equals the aggregate denominator we can OR each edge's
+                # covered flag across reports for a TRUE union (instead of MAX-ing aggregate counts,
+                # which under-counts when two reports cover different edges of the same line).
+                $edges = $null
+                if ($isBranch -and $ln.conditions -and $ln.conditions.condition) {
+                    $condEls = @($ln.conditions.condition)
+                    if ($condTot -gt 0 -and $condEls.Count -eq $condTot) {
+                        $edges = @{}
+                        foreach ($c in $condEls) {
+                            $covPct = 0
+                            if (([string]$c.coverage) -match '(\d+)') { $covPct = [int]$Matches[1] }
+                            $edges[[int]$c.number] = ($covPct -ge 100)
+                        }
+                    }
+                }
+
                 # Key by FQ class name (agent-path independent) + line number so the same
                 # source point unions across reports built on different agents (Windows vs Linux).
                 $key = "$pkgName|$clsName|$num"
@@ -117,6 +136,12 @@ foreach ($rf in $reportFiles) {
                         $e.IsBranch = $true
                         if ($condCov -gt $e.CondCov) { $e.CondCov = $condCov }
                         if ($condTot -gt $e.CondTot) { $e.CondTot = $condTot }
+                        if ($edges) {
+                            if (-not $e.Edges) { $e.Edges = @{} }
+                            foreach ($n in $edges.Keys) {
+                                $e.Edges[$n] = ([bool]$e.Edges[$n]) -or $edges[$n]
+                            }
+                        }
                     }
                 }
                 else {
@@ -128,10 +153,29 @@ foreach ($rf in $reportFiles) {
                         IsBranch = $isBranch
                         CondCov  = $condCov
                         CondTot  = $condTot
+                        Edges    = $edges
                     }
                 }
             }
         }
+    }
+}
+
+# Effective branch cov/tot per point: exact union from per-edge detail when available,
+# else the aggregate MAX (a conservative floor).
+foreach ($e in $points.Values) {
+    if ($e.IsBranch -and $e.Edges -and $e.Edges.Count -gt 0) {
+        $cov = 0; foreach ($v in $e.Edges.Values) { if ($v) { $cov++ } }
+        $e | Add-Member -NotePropertyName EffTot -NotePropertyValue $e.Edges.Count -Force
+        $e | Add-Member -NotePropertyName EffCov -NotePropertyValue $cov -Force
+    }
+    elseif ($e.IsBranch) {
+        $e | Add-Member -NotePropertyName EffTot -NotePropertyValue $e.CondTot -Force
+        $e | Add-Member -NotePropertyName EffCov -NotePropertyValue $e.CondCov -Force
+    }
+    else {
+        $e | Add-Member -NotePropertyName EffTot -NotePropertyValue 0 -Force
+        $e | Add-Member -NotePropertyName EffCov -NotePropertyValue 0 -Force
     }
 }
 
@@ -142,7 +186,7 @@ $totLines = 0; $covLines = 0; $totBr = 0; $covBr = 0
 foreach ($e in $points.Values) {
     $totLines++
     if ($e.Hits -gt 0) { $covLines++ }
-    if ($e.IsBranch) { $totBr += $e.CondTot; $covBr += $e.CondCov }
+    if ($e.IsBranch) { $totBr += $e.EffTot; $covBr += $e.EffCov }
 
     if (-not $byPkg.ContainsKey($e.Package)) {
         $byPkg[$e.Package] = [pscustomobject]@{ TL = 0; CL = 0; TB = 0; CB = 0 }
@@ -150,7 +194,7 @@ foreach ($e in $points.Values) {
     $p = $byPkg[$e.Package]
     $p.TL++
     if ($e.Hits -gt 0) { $p.CL++ }
-    if ($e.IsBranch) { $p.TB += $e.CondTot; $p.CB += $e.CondCov }
+    if ($e.IsBranch) { $p.TB += $e.EffTot; $p.CB += $e.EffCov }
 }
 
 Write-Host ""
@@ -170,7 +214,7 @@ $LR = if ($totLines) { [math]::Round($covLines / $totLines * 100, 2) } else { 0 
 $BR = if ($totBr) { [math]::Round($covBr / $totBr * 100, 2) } else { 0 }
 Write-Host "==================== COMBINED (all pipelines) ===================="
 Write-Host "  LINE   : $covLines / $totLines = $LR% (exact union)"
-Write-Host "  BRANCH : $covBr / $totBr = $BR% (floor / lower bound - see script header)"
+Write-Host "  BRANCH : $covBr / $totBr = $BR% (exact where per-edge detail present, else floor)"
 Write-Host "================================================================="
 
 # ---------------------------------------------------------------------------
@@ -206,7 +250,7 @@ if ($OutFile) {
         foreach ($clist in $classes.Values) {
             foreach ($e in $clist) {
                 $pTL++; if ($e.Hits -gt 0) { $pCL++ }
-                if ($e.IsBranch) { $pTB += $e.CondTot; $pCB += $e.CondCov }
+                if ($e.IsBranch) { $pTB += $e.EffTot; $pCB += $e.EffCov }
             }
         }
         $pLR = if ($pTL) { [math]::Round($pCL / $pTL, 4) } else { 0 }
@@ -218,7 +262,7 @@ if ($OutFile) {
             $cTL = 0; $cCL = 0; $cTB = 0; $cCB = 0
             foreach ($e in $clist) {
                 $cTL++; if ($e.Hits -gt 0) { $cCL++ }
-                if ($e.IsBranch) { $cTB += $e.CondTot; $cCB += $e.CondCov }
+                if ($e.IsBranch) { $cTB += $e.EffTot; $cCB += $e.EffCov }
             }
             $cLR = if ($cTL) { [math]::Round($cCL / $cTL, 4) } else { 0 }
             $cBR = if ($cTB) { [math]::Round($cCB / $cTB, 4) } else { 0 }
@@ -228,9 +272,9 @@ if ($OutFile) {
             [void]$sb.AppendLine('          <methods />')
             [void]$sb.AppendLine('          <lines>')
             foreach ($e in ($clist | Sort-Object Line)) {
-                if ($e.IsBranch) {
-                    $pct = if ($e.CondTot) { [math]::Round($e.CondCov / $e.CondTot * 100, 0) } else { 0 }
-                    [void]$sb.AppendLine(("            <line number=""{0}"" hits=""{1}"" branch=""true"" condition-coverage=""{2}% ({3}/{4})"" />" -f $e.Line, $e.Hits, $pct, $e.CondCov, $e.CondTot))
+                if ($e.IsBranch -and $e.EffTot -gt 0) {
+                    $pct = [math]::Round($e.EffCov / $e.EffTot * 100, 0)
+                    [void]$sb.AppendLine(("            <line number=""{0}"" hits=""{1}"" branch=""true"" condition-coverage=""{2}% ({3}/{4})"" />" -f $e.Line, $e.Hits, $pct, $e.EffCov, $e.EffTot))
                 }
                 else {
                     [void]$sb.AppendLine(("            <line number=""{0}"" hits=""{1}"" branch=""false"" />" -f $e.Line, $e.Hits))

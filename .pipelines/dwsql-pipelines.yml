@@ -266,6 +266,20 @@ jobs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
+  # Publish the RAW cobertura as a uniquely-named pipeline artifact so the unit
+  # pipeline's 'Total Code Coverage' job can union the Windows job's coverage too.
+  - task: CopyFiles@2
+    displayName: 'Stage raw coverage for aggregation'
+    inputs:
+      sourceFolder: '$(Agent.TempDirectory)'
+      contents: '**/*.cobertura.xml'
+      targetFolder: '$(Build.ArtifactStagingDirectory)/coverage'
+  - task: PublishPipelineArtifact@1
+    displayName: 'Publish coverage artifact for aggregation'
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)/coverage'
+      artifact: 'coverage-dwsql-windows'
+
   - task: CopyFiles@2
     condition: eq(variables['publishverify'], 'Yes')
     displayName: 'Copy received files to Artifact Staging'

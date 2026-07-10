@@ -4,13 +4,18 @@
     postgres, mysql, cosmos, dwsql) into a single combined line/branch coverage number.
 
 .DESCRIPTION
-    Azure DevOps' PublishCodeCoverageResults@1 renders a per-pipeline coverage tab but does
-    not merge across pipelines. Download each pipeline run's raw *.cobertura.xml (from the
-    "Code Coverage Report_<id>" artifact) into one folder, then run this script.
+    Azure DevOps' PublishCodeCoverageResults renders a per-pipeline coverage tab but does not
+    merge across pipelines. Download each pipeline run's raw *.cobertura.xml into one folder
+    (or pass -Files) and run this script to produce a single combined report.
 
-    Merge semantics (union): a source line is covered if it is hit in ANY report; a line's
-    covered branch-conditions are the MAX seen across reports (denominator is fixed per line).
-    This matches how ReportGenerator unions reports when per-condition detail is absent.
+    Merge semantics:
+      * LINE coverage is an EXACT union - a source line is covered if it is hit in ANY report.
+      * BRANCH coverage is a conservative FLOOR (lower bound), NOT an exact union. Coverlet's
+        Cobertura reports only an aggregate "(covered/total)" per line, not which specific
+        branch was taken, so when two reports each cover a DIFFERENT branch of the same line we
+        cannot prove the union (e.g. (1/2) + (1/2) may really be 2/2 but we report 1/2). We take
+        the MAX (covered/total) seen across reports: this never over-counts but can under-count.
+        Treat the combined branch % as "at least this". Line % is the accurate headline metric.
 
     Zero external dependencies (no reportgenerator / no az CLI required).
 
@@ -33,7 +38,10 @@ param(
     # Package (assembly) names matching this regex are excluded (test projects by default).
     [string]$ExcludePattern = '\.Tests$',
     # When set, writes a merged Cobertura XML to this path (for PublishCodeCoverageResults).
-    [string]$OutFile
+    [string]$OutFile,
+    # Optional path substrings (e.g. 'unit','mssql','cosmos'). A warning is printed for each
+    # that matches none of the discovered files, so a silently-missing source is noticeable.
+    [string[]]$ExpectedSources
 )
 
 if ($Files) {
@@ -51,7 +59,17 @@ else {
 $reportFiles = @($reportFiles | Where-Object { $_ -and (Test-Path $_) })
 if ($reportFiles.Count -eq 0) {
     Write-Error "No cobertura files found."
-    exit 1
+    exit 1   # intentional: fail this task when there is nothing to merge (CI job is continueOnError)
+}
+
+# Surface silently-missing sources: a DB whose artifact failed to download simply
+# vanishes from the union, so warn loudly for each expected source with no files.
+if ($ExpectedSources) {
+    foreach ($src in $ExpectedSources) {
+        if (-not ($reportFiles | Where-Object { $_ -like "*$src*" })) {
+            Write-Warning "Expected coverage source '$src' not found - it is ABSENT from the combined union."
+        }
+    }
 }
 
 # key: "package|class|lineNumber" -> merged coverage point
@@ -80,7 +98,7 @@ foreach ($rf in $reportFiles) {
             foreach ($ln in $cls.lines.line) {
                 if (-not $ln) { continue }
                 $num = [int]$ln.number
-                $hits = [int]$ln.hits
+                $hits = [long]$ln.hits
                 $isBranch = ([string]$ln.branch -eq 'true')
                 $condCov = 0
                 $condTot = 0
@@ -151,8 +169,8 @@ Write-Host ""
 $LR = if ($totLines) { [math]::Round($covLines / $totLines * 100, 2) } else { 0 }
 $BR = if ($totBr) { [math]::Round($covBr / $totBr * 100, 2) } else { 0 }
 Write-Host "==================== COMBINED (all pipelines) ===================="
-Write-Host "  LINE   : $covLines / $totLines = $LR%"
-Write-Host "  BRANCH : $covBr / $totBr = $BR%"
+Write-Host "  LINE   : $covLines / $totLines = $LR% (exact union)"
+Write-Host "  BRANCH : $covBr / $totBr = $BR% (floor / lower bound - see script header)"
 Write-Host "================================================================="
 
 # ---------------------------------------------------------------------------

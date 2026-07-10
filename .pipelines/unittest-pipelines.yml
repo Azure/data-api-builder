@@ -57,6 +57,14 @@ jobs:
       patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/unit'
 
+  # DB coverage: each pipeline's numeric definition ID (Azure DevOps pipeline URL
+  # ...?definitionId=NN). Mapping: DwSql=1, MsSql=2, MySql=3, PgSql=4, Cosmos=6.
+  # (5 is THIS unit pipeline, so it is not downloaded here.) If a pipeline is
+  # recreated its ID changes and that DB silently drops from the union - the merge
+  # step's -ExpectedSources warning flags any source that produced no files.
+  # No 'artifact:' name is set so ALL of a run's coverage artifacts are pulled
+  # (some DBs publish one per job, e.g. MsSql linux + windows_combined +
+  # windows_configuration); the pattern keeps only raw cobertura for the merger.
   - task: DownloadPipelineArtifact@2
     displayName: 'Download MsSql coverage (latest)'
     continueOnError: true
@@ -65,7 +73,7 @@ jobs:
       project: '$(System.TeamProject)'
       pipeline: '2'
       runVersion: 'latest'
-      artifact: 'coverage-mssql'
+      patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/mssql'
   - task: DownloadPipelineArtifact@2
     displayName: 'Download PostgreSql coverage (latest)'
@@ -75,7 +83,7 @@ jobs:
       project: '$(System.TeamProject)'
       pipeline: '4'
       runVersion: 'latest'
-      artifact: 'coverage-pg'
+      patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/pg'
   - task: DownloadPipelineArtifact@2
     displayName: 'Download MySql coverage (latest)'
@@ -85,7 +93,7 @@ jobs:
       project: '$(System.TeamProject)'
       pipeline: '3'
       runVersion: 'latest'
-      artifact: 'coverage-mysql'
+      patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/mysql'
   - task: DownloadPipelineArtifact@2
     displayName: 'Download DwSql coverage (latest)'
@@ -95,7 +103,7 @@ jobs:
       project: '$(System.TeamProject)'
       pipeline: '1'
       runVersion: 'latest'
-      artifact: 'coverage-dwsql'
+      patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/dwsql'
   - task: DownloadPipelineArtifact@2
     displayName: 'Download CosmosDb coverage (latest)'
@@ -105,7 +113,7 @@ jobs:
       project: '$(System.TeamProject)'
       pipeline: '6'
       runVersion: 'latest'
-      artifact: 'coverage-cosmos'
+      patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/cosmos'
 
   # Union-merge every downloaded cobertura and emit ONE combined Cobertura.xml
@@ -115,7 +123,7 @@ jobs:
     continueOnError: true
     inputs:
       filePath: 'scripts/merge-coverage.ps1'
-      arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml"'
+      arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml" -ExpectedSources unit,mssql,pg,mysql,dwsql,cosmos'
       pwsh: true
 
   - task: PublishCodeCoverageResults@2

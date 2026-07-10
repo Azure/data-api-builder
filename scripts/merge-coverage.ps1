@@ -161,13 +161,14 @@ foreach ($rf in $reportFiles) {
     }
 }
 
-# Effective branch cov/tot per point: exact union from per-edge detail when available,
-# else the aggregate MAX (a conservative floor).
+# Effective branch cov/tot per point. The per-edge union and the aggregate MAX are two
+# INDEPENDENT lower bounds of the true union; take the max of each (still never over-counts,
+# since each is <= the true union) so an aggregate-only report proving more is not discarded.
 foreach ($e in $points.Values) {
     if ($e.IsBranch -and $e.Edges -and $e.Edges.Count -gt 0) {
         $cov = 0; foreach ($v in $e.Edges.Values) { if ($v) { $cov++ } }
-        $e | Add-Member -NotePropertyName EffTot -NotePropertyValue $e.Edges.Count -Force
-        $e | Add-Member -NotePropertyName EffCov -NotePropertyValue $cov -Force
+        $e | Add-Member -NotePropertyName EffTot -NotePropertyValue ([math]::Max($e.Edges.Count, $e.CondTot)) -Force
+        $e | Add-Member -NotePropertyName EffCov -NotePropertyValue ([math]::Max($cov, $e.CondCov)) -Force
     }
     elseif ($e.IsBranch) {
         $e | Add-Member -NotePropertyName EffTot -NotePropertyValue $e.CondTot -Force

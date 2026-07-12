@@ -87,7 +87,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public override string MakeDbConnectionParam(object? value, string? paramName = null, bool lengthOverride = false)
         {
-            if (!string.IsNullOrEmpty(paramName) && value is string stringValue && GetUnderlyingSourceDefinition().Columns.ContainsKey(paramName))
+            if (MetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL &&
+                !string.IsNullOrEmpty(paramName) &&
+                value is string stringValue &&
+                GetUnderlyingSourceDefinition().Columns.ContainsKey(paramName))
             {
                 Type columnSystemType = GetColumnSystemType(paramName);
                 if (columnSystemType != typeof(string))

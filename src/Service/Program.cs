@@ -195,7 +195,7 @@ namespace Azure.DataApiBuilder.Service
                     else
                     {
                         logging.SetMinimumLevel(LogLevelProvider.CurrentLogLevel);
-                        logging.AddSimpleConsole(options =>
+                        logging.Services.Configure<SimpleConsoleFormatterOptions>(options =>
                         {
                             options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
                             options.UseUtcTimestamp = true;

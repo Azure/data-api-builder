@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -25,7 +26,7 @@ public class CustomLoggerProvider : ILoggerProvider
 
     public class CustomConsoleLogger : ILogger
     {
-        private const string UtcTimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z'";
+        private const string UTC_TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.fff'Z'";
 
         private readonly LogLevel _minimumLogLevel;
 
@@ -126,7 +127,7 @@ public class CustomLoggerProvider : ILoggerProvider
                 // Apply colors so the abbreviation matches the visual style of engine logs.
                 // try/finally guarantees the original colors are restored even if Write throws,
                 // otherwise the console would be left tinted (e.g. red on error) for subsequent output.
-                string mcpTimestamp = DateTime.UtcNow.ToString(UtcTimestampFormat);
+                string mcpTimestamp = DateTime.UtcNow.ToString(UTC_TIMESTAMP_FORMAT, CultureInfo.InvariantCulture);
                 ConsoleColor mcpOriginalForeGroundColor = Console.ForegroundColor;
                 ConsoleColor mcpOriginalBackGroundColor = Console.BackgroundColor;
                 try
@@ -156,7 +157,7 @@ public class CustomLoggerProvider : ILoggerProvider
             }
 
             TextWriter writer = logLevel >= LogLevel.Error ? Console.Error : Console.Out;
-            string timestamp = DateTime.UtcNow.ToString(UtcTimestampFormat);
+            string timestamp = DateTime.UtcNow.ToString(UTC_TIMESTAMP_FORMAT, CultureInfo.InvariantCulture);
             // try/finally guarantees the original colors are restored even if Write throws,
             // otherwise the console would be left tinted (e.g. red on error) for subsequent output.
             ConsoleColor originalForeGroundColor = Console.ForegroundColor;

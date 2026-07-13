@@ -95,8 +95,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             int errorCode = ((SqlException)e).Number;
             // MSSQL 201 - Procedure or function '%.*ls' expects parameter '%.*ls', which was not supplied.
+            // SQL Server 2025+ JSON validation errors are also client input errors.
             // Pending revisions of error code classifications, this is a temporary fix to determine substatus code.
-            if (errorCode == 201)
+            if (errorCode is 201 or 13608 or 13609 or 13610 or 13611 or 13612 or 13613 or 13614)
             {
                 return DataApiBuilderException.SubStatusCodes.DatabaseInputError;
             }

@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -97,7 +98,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Validates that JSON data type validation error codes raised by SQL Server 2025+
-        /// when invalid JSON is supplied for a json column are mapped to HTTP 400 Bad Request.
+        /// when invalid JSON is supplied for a json column are mapped to HTTP 400 Bad Request
+        /// and are classified as client input errors.
         /// </summary>
         /// <param name="number">SQL error code populated in SqlException.Number.</param>
         [DataTestMethod]
@@ -127,9 +129,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigProvider provider = new(loader);
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
 
+            DbException sqlException = SqlTestHelper.CreateSqlException(number);
+
             Assert.AreEqual(
                 System.Net.HttpStatusCode.BadRequest,
-                dbExceptionParser.GetHttpStatusCodeForException(SqlTestHelper.CreateSqlException(number)));
+                dbExceptionParser.GetHttpStatusCodeForException(sqlException));
+            Assert.AreEqual(
+                DataApiBuilderException.SubStatusCodes.DatabaseInputError,
+                dbExceptionParser.GetResultSubStatusCodeForException(sqlException));
         }
     }
 }

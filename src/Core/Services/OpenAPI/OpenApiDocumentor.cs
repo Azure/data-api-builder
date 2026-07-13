@@ -1414,10 +1414,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 string parameter = kvp.Key;
                 ParameterDefinition def = kvp.Value;
                 string typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(def.SystemType).ToString().ToLower();
+                string? formatMetadata = TypeHelper.GetOpenApiFormatFromSystemType(def.SystemType, def.DbType);
 
                 properties.Add(parameter, new OpenApiSchema()
                 {
                     Type = typeMetadata,
+                    Format = formatMetadata,
                     Description = def.Description,
                     Default = def.Default is not null ? new OpenApiString(def.Default) : null
                 });
@@ -1484,12 +1486,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (metadataProvider.TryGetBackingColumn(entityName, field, out string? backingColumnValue) && !string.IsNullOrEmpty(backingColumnValue))
                 {
                     string typeMetadata = string.Empty;
-                    string formatMetadata = string.Empty;
+                    string? formatMetadata = null;
                     string? fieldDescription = null;
 
                     if (dbObject.SourceDefinition.Columns.TryGetValue(backingColumnValue, out ColumnDefinition? columnDef))
                     {
                         typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(columnDef.SystemType).ToString().ToLower();
+                        formatMetadata = TypeHelper.GetOpenApiFormatFromSystemType(columnDef.SystemType, columnDef.DbType);
                     }
 
                     if (entityConfig?.Fields != null)

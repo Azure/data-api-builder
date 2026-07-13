@@ -46,6 +46,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(byte[])] = DbType.Binary,
             [typeof(TimeOnly)] = DbType.Time,
             [typeof(TimeSpan)] = DbType.Time,
+            [typeof(DateOnly)] = DbType.Date,
             [typeof(object)] = DbType.Object
         };
 
@@ -77,6 +78,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(TimeOnly)] = JsonDataType.String,
             [typeof(object)] = JsonDataType.Object,
             [typeof(DateTime)] = JsonDataType.String,
+            [typeof(DateOnly)] = JsonDataType.String,
             [typeof(DateTimeOffset)] = JsonDataType.String
         };
 
@@ -157,6 +159,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 "DateTime" => EdmPrimitiveTypeKind.DateTimeOffset,
                 "DateTimeOffset" => EdmPrimitiveTypeKind.DateTimeOffset,
                 "Date" => EdmPrimitiveTypeKind.Date,
+                "DateOnly" => EdmPrimitiveTypeKind.Date,
                 "TimeOnly" => EdmPrimitiveTypeKind.TimeOfDay,
                 "TimeSpan" => EdmPrimitiveTypeKind.TimeOfDay,
                 _ => throw new ArgumentException($"Column type" +
@@ -201,6 +204,60 @@ namespace Azure.DataApiBuilder.Core.Services
             };
 
             return type;
+        }
+
+        /// <summary>
+        /// Returns the OpenAPI format string for the given system type and optional DbType.
+        /// The format provides additional semantic information for string-typed fields in the OpenAPI schema.
+        /// </summary>
+        /// <param name="type">CLR type</param>
+        /// <param name="dbType">Optional DbType used to distinguish date-only (DbType.Date) from date-time types.</param>
+        /// <seealso href="https://spec.openapis.org/oas/v3.0.1#data-types"/>
+        /// <returns>OpenAPI format string (e.g. "date-time", "date", "time", "uuid", "byte"),
+        /// or null if no standard format applies to the type.</returns>
+        public static string? GetOpenApiFormatFromSystemType(Type type, DbType? dbType = null)
+        {
+            // Resolve underlying type for nullable value types (e.g. DateTime? → DateTime).
+            Type? nullableUnderlyingType = Nullable.GetUnderlyingType(type);
+            if (nullableUnderlyingType is not null)
+            {
+                type = nullableUnderlyingType;
+            }
+
+            if (type == typeof(DateTime))
+            {
+                // DbType.Date corresponds to a date-only SQL type (e.g. SQL Server "date").
+                return dbType == DbType.Date ? "date" : "date-time";
+            }
+
+            if (type == typeof(DateOnly))
+            {
+                // DateOnly is reported by Npgsql 8 (PostgreSQL "date") and MySqlConnector 2+
+                // (MySQL "DATE") as the native CLR type for date-only columns.
+                return "date";
+            }
+
+            if (type == typeof(DateTimeOffset))
+            {
+                return "date-time";
+            }
+
+            if (type == typeof(TimeOnly) || type == typeof(TimeSpan))
+            {
+                return "time";
+            }
+
+            if (type == typeof(Guid))
+            {
+                return "uuid";
+            }
+
+            if (type == typeof(byte[]))
+            {
+                return "byte";
+            }
+
+            return null;
         }
 
         /// <summary>

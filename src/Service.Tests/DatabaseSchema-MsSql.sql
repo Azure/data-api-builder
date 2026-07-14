@@ -644,6 +644,7 @@ VALUES (7, CAST('[' + (
     SELECT STRING_AGG(CAST(value AS NVARCHAR(MAX)), ',') WITHIN GROUP (ORDER BY value)
     FROM GENERATE_SERIES(1, 1998)
 ) + ']' AS vector(1998)));
+SET IDENTITY_INSERT vector_type_table OFF
 
 SET IDENTITY_INSERT profiles ON
 INSERT INTO profiles(id, metadata)
@@ -654,7 +655,6 @@ VALUES
     (4, N'{"unicode":"éü😀"}'),
     (5, NULL);
 SET IDENTITY_INSERT profiles OFF
-SET IDENTITY_INSERT vector_type_table OFF
 
 SET IDENTITY_INSERT sales ON
 INSERT INTO sales(id, item_name, subtotal, tax) VALUES (1, 'Watch', 249.00, 20.59), (2, 'Montior', 120.50, 11.12);

@@ -253,12 +253,12 @@ namespace Azure.DataApiBuilder.Core.Services
             bool isMToNRelationship) => throw new NotImplementedException();
 
         /// <summary>
-        /// 
+        /// Tries to get the underlying field kind for a given field inside an entity.
         /// </summary>
-        /// <param name="entityName"></param>
-        /// <param name="fieldName"></param>
-        /// <param name="fieldKind"></param>
-        /// <returns></returns>
+        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="fieldName">The name of the field.</param>
+        /// <param name="fieldKind">The kind of the field.</param>
+        /// <returns>Returns true if the field kind is found, false otherwise.</returns>
         public bool TryGetUnderlyingFieldKind(
             string entityName,
             string fieldName,

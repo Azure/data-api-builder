@@ -30,7 +30,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "4435", "4436", "4437", "4438", "4439", "4440", "4441",
                 "4442", "4443", "4444", "4445", "4446", "4447", "4448",
                 "4450", "4451", "4452", "4453", "4454", "4455", "4456",
-                "4457", "4933", "4934", "4936", "4988", "8102"
+                "4457", "4933", "4934", "4936", "4988", "8102",
+                // JSON data type validation errors (SQL Server 2025+). Invalid JSON
+                // supplied for a json column is a client error, mapped to HTTP 400.
+                "13608", "13609", "13610", "13611", "13612", "13613", "13614"
             });
 
             TransientExceptionCodes.UnionWith(new List<string>
@@ -92,8 +95,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             int errorCode = ((SqlException)e).Number;
             // MSSQL 201 - Procedure or function '%.*ls' expects parameter '%.*ls', which was not supplied.
+            // SQL Server 2025+ JSON validation errors are also client input errors.
             // Pending revisions of error code classifications, this is a temporary fix to determine substatus code.
-            if (errorCode == 201)
+            if (errorCode is 201 or 13608 or 13609 or 13610 or 13611 or 13612 or 13613 or 13614)
             {
                 return DataApiBuilderException.SubStatusCodes.DatabaseInputError;
             }

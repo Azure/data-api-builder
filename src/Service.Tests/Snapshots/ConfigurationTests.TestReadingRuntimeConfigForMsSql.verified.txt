@@ -1714,6 +1714,58 @@
       }
     },
     {
+      VectorType: {
+        Source: {
+          Object: vector_type_table,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: VectorType,
+          Plural: VectorTypes,
+          Enabled: false
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Update
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Update
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       stocks_price: {
         Source: {
           Object: stocks_price,

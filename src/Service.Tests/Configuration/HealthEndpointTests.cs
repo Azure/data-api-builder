@@ -110,6 +110,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     ValidateConfigurationDetailsHealthCheckResponse(responseProperties, enableGlobalRest, enableGlobalGraphql, enableGlobalMcp);
                     ValidateIfAttributePresentInResponse(responseProperties, enableDatasourceHealth, HealthCheckConstants.DATASOURCE);
                     ValidateIfAttributePresentInResponse(responseProperties, enableEntityHealth, HealthCheckConstants.ENDPOINT);
+                    ValidateIfAttributePresentInResponse(responseProperties, enableGlobalMcp, HealthCheckConstants.MCP);
                     if (enableEntityHealth)
                     {
                         ValidateEntityRestAndGraphQLResponse(responseProperties, enableEntityRest, enableEntityGraphQL, enableGlobalRest, enableGlobalGraphql);
@@ -221,6 +222,52 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             // Assert
             Assert.IsNotNull(errorMessageFromGraphQL);
+        }
+
+        /// <summary>
+        /// Simulates the function call to HttpUtilities.ExecuteMcpQueryAsync.
+        /// while setting up mock HTTP client to simulate the response from the server to send OK code.
+        /// Validates the response to ensure no error message is received.
+        /// </summary>
+        [TestMethod]
+        public async Task TestHealthCheckMcpResponseAsync()
+        {
+            // Arrange
+            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true, true);
+            HttpUtilities httpUtilities = SetupMcpTest(runtimeConfig);
+
+            // Act
+            // Simulate an MCP initialize POST request to the endpoint.
+            // Response should be null as error message is not expected to be returned.
+            string errorMessageFromMcp = await httpUtilities.ExecuteMcpQueryAsync(
+                mcpUriSuffix: runtimeConfig.McpPath,
+                incomingRoleHeader: string.Empty,
+                incomingRoleToken: string.Empty);
+
+            // Assert
+            Assert.IsNull(errorMessageFromMcp);
+        }
+
+        /// <summary>
+        /// Simulates the function call to HttpUtilities.ExecuteMcpQueryAsync.
+        /// while setting up mock HTTP client to simulate the response from the server to send InternalServerError code.
+        /// Validates the response to ensure error message is received.
+        /// </summary>
+        [TestMethod]
+        public async Task TestFailureHealthCheckMcpResponseAsync()
+        {
+            // Arrange
+            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true, true);
+            HttpUtilities httpUtilities = SetupMcpTest(runtimeConfig, HttpStatusCode.InternalServerError);
+
+            // Act
+            string errorMessageFromMcp = await httpUtilities.ExecuteMcpQueryAsync(
+                mcpUriSuffix: runtimeConfig.McpPath,
+                incomingRoleHeader: string.Empty,
+                incomingRoleToken: string.Empty);
+
+            // Assert
+            Assert.IsNotNull(errorMessageFromMcp);
         }
 
         /// <summary>
@@ -348,6 +395,51 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 .ReturnsAsync(new HttpResponseMessage(httpStatusCode)
                 {
                     Content = new StringContent("{\"errors\":[{\"message\":\"Internal Server Error\"}]}")
+                });
+
+            Mock<IHttpClientFactory> mockHttpClientFactory = new();
+            mockHttpClientFactory.Setup(x => x.CreateClient("ContextConfiguredHealthCheckClient"))
+                .Returns(new HttpClient(mockHandler.Object)
+                {
+                    BaseAddress = new Uri($"{BASE_DAB_URL}")
+                });
+
+            Mock<ILogger<HttpUtilities>> logger = new();
+
+            return new(
+                logger.Object,
+                metadataProviderFactory.Object,
+                provider,
+                mockHttpClientFactory.Object);
+        }
+
+        private static HttpUtilities SetupMcpTest(RuntimeConfig runtimeConfig, HttpStatusCode httpStatusCode = HttpStatusCode.OK)
+        {
+            // Arrange
+            // Create a mock entity map with a single entity for testing and load in RuntimeConfigProvider
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(runtimeConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            string expectedMcpPayload = Azure.DataApiBuilder.Service.HealthCheck.Utilities.CreateHttpMcpQuery();
+
+            // Mock the handler to return the supplied status code for the MCP initialize POST request.
+            Mock<HttpMessageHandler> mockHandler = new();
+            mockHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req =>
+                        req.Method == HttpMethod.Post &&
+                        req.RequestUri == new Uri($"{BASE_DAB_URL}{runtimeConfig.McpPath}") &&
+                        req.Content != null &&
+                        req.Content.ReadAsStringAsync().Result.Equals(expectedMcpPayload) &&
+                        req.Headers.Accept.Any(v => v.MediaType == "application/json") &&
+                        req.Headers.Accept.Any(v => v.MediaType == "text/event-stream")),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage(httpStatusCode)
+                {
+                    Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}")
                 });
 
             Mock<IHttpClientFactory> mockHttpClientFactory = new();

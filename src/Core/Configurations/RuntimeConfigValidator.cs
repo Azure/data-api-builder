@@ -907,7 +907,8 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <exception cref="DataApiBuilderException"></exception>
     public void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(DatabaseType databaseType, RuntimeEntities entityCollection)
     {
-        HashSet<string> graphQLOperationNames = new();
+        // Maps each generated GraphQL operation name to the entity name that registered it.
+        Dictionary<string, string> graphQLOperationOwners = new();
 
         foreach ((string entityName, Entity entity) in entityCollection)
         {
@@ -916,16 +917,13 @@ public class RuntimeConfigValidator : IConfigValidator
                 continue;
             }
 
-            bool containsDuplicateOperationNames = false;
+            List<string> currentEntityOperations = new();
+
             if (entity.Source.Type is EntitySourceType.StoredProcedure)
             {
                 // For Stored Procedures a single query/mutation is generated.
                 string storedProcedureQueryName = GraphQLNaming.GenerateStoredProcedureGraphQLFieldName(entityName, entity);
-
-                if (!graphQLOperationNames.Add(storedProcedureQueryName))
-                {
-                    containsDuplicateOperationNames = true;
-                }
+                currentEntityOperations.Add(storedProcedureQueryName);
             }
             else
             {
@@ -938,28 +936,69 @@ public class RuntimeConfigValidator : IConfigValidator
                 string listQueryName = GraphQLNaming.GenerateListQueryName(entityName, entity);
 
                 // Mutations names for the exposed entities are determined.
-                string createMutationName = $"create{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
-                string updateMutationName = $"update{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
-                string deleteMutationName = $"delete{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
-                string patchMutationName = $"patch{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
+                string singularName = GraphQLNaming.GetDefinedSingularName(entityName, entity);
+                string createMutationName = $"create{singularName}";
+                string updateMutationName = $"update{singularName}";
+                string deleteMutationName = $"delete{singularName}";
+                string patchMutationName = $"patch{singularName}";
 
-                if (!graphQLOperationNames.Add(pkQueryName)
-                    || !graphQLOperationNames.Add(listQueryName)
-                    || !graphQLOperationNames.Add(createMutationName)
-                    || !graphQLOperationNames.Add(updateMutationName)
-                    || !graphQLOperationNames.Add(deleteMutationName)
-                    || ((databaseType is DatabaseType.CosmosDB_NoSQL) && !graphQLOperationNames.Add(patchMutationName)))
+                currentEntityOperations.Add(pkQueryName);
+                currentEntityOperations.Add(listQueryName);
+                currentEntityOperations.Add(createMutationName);
+                currentEntityOperations.Add(updateMutationName);
+                currentEntityOperations.Add(deleteMutationName);
+
+                if (databaseType is DatabaseType.CosmosDB_NoSQL)
                 {
-                    containsDuplicateOperationNames = true;
+                    currentEntityOperations.Add(patchMutationName);
                 }
             }
 
-            if (containsDuplicateOperationNames)
+            // Identify all operations that are already registered by a previously processed entity.
+            List<string> conflictingOperations = currentEntityOperations
+                .Where(op => graphQLOperationOwners.ContainsKey(op))
+                .ToList();
+
+            if (conflictingOperations.Count > 0)
             {
+                // Identify which previously registered entities own the conflicting operations.
+                IEnumerable<string> conflictingEntityNames = conflictingOperations
+                    .Select(op => graphQLOperationOwners[op])
+                    .Distinct();
+
+                string conflictingEntitiesStr = string.Join(
+                    $"{Environment.NewLine}  ",
+                    conflictingEntityNames.Append(entityName));
+
+                string conflictingOpsStr = string.Join(
+                    $"{Environment.NewLine}  ",
+                    conflictingOperations);
+
+                string message = $"GraphQL naming conflict detected.{Environment.NewLine}"
+                    + $"{Environment.NewLine}Entities:{Environment.NewLine}  {conflictingEntitiesStr}"
+                    + $"{Environment.NewLine}{Environment.NewLine}The above entities generate conflicting GraphQL operation names:{Environment.NewLine}  {conflictingOpsStr}";
+
+                if (entity.Source.Type is not EntitySourceType.StoredProcedure)
+                {
+                    string singularName = GraphQLNaming.GetDefinedSingularName(entityName, entity);
+                    string pluralName = GraphQLNaming.GetDefinedPluralName(entityName, entity);
+                    message += $"{Environment.NewLine}{Environment.NewLine}GraphQL type names in conflict:{Environment.NewLine}  Singular type: {singularName}{Environment.NewLine}  Plural type: {pluralName}";
+                }
+
+                message += $"{Environment.NewLine}{Environment.NewLine}Configure distinct GraphQL singular and plural names for one of the entities to resolve this conflict.";
+
                 HandleOrRecordException(new DataApiBuilderException(
-                    message: $"Entity {entityName} generates queries/mutation that already exist",
+                    message: message,
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+            else
+            {
+                // No conflicts; register all operations for this entity.
+                foreach (string op in currentEntityOperations)
+                {
+                    graphQLOperationOwners[op] = entityName;
+                }
             }
         }
     }

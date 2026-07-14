@@ -441,6 +441,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Predicates by virtue of PK.
             string pkPredicates = JoinPredicateStrings(Build(structure.Predicates));
 
+            // Predicates by virtue of PK + database policy for the update operation.
+            // The database policy must be applied to the UPDATE statement's WHERE clause so that
+            // an upsert which resolves to an update only affects rows the caller is authorized to modify.
+            // Omitting it would (a) apply the update to every row in the table since only the SET clause
+            // would remain, and (b) bypass any row-level update policy. See MsSqlQueryBuilder for parity.
+            string updatePredicates = JoinPredicateStrings(pkPredicates, structure.GetDbPolicyForOperation(EntityActionOperation.Update));
+
             string updateOperations = Build(structure.UpdateOperations, ", ");
             string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
 
@@ -457,7 +464,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 $"IF @ROWS_TO_UPDATE = 1 " +
                 $"BEGIN " +
                 $"UPDATE {tableName} " +
-                $"SET {updateOperations} ");
+                $"SET {updateOperations} " +
+                $"WHERE {updatePredicates}; ");
 
             // End the IF block.
             updateQuery.Append("END ");

@@ -49,7 +49,7 @@ jobs:
 
   # This run's unit coverage (published by the build job above).
   - task: DownloadPipelineArtifact@2
-    displayName: 'Download unit coverage (this run)'
+    displayName: 'Download unit coverage (current run)'
     continueOnError: true
     inputs:
       source: 'current'
@@ -62,7 +62,7 @@ jobs:
   # (5 is THIS unit pipeline, so it is not downloaded here.) If a pipeline is
   # recreated its ID changes and that DB silently drops from the union - the merge
   # step's -ExpectedSources warning flags any source that produced no files.
-  # No 'artifact:' name is set so ALL of a run's coverage artifacts are pulled
+  # No 'artifact' name is set so ALL of a run's coverage artifacts are pulled
   # (some DBs publish one per job, e.g. MsSql linux + windows_combined +
   # windows_configuration); the pattern keeps only raw cobertura for the merger.
   - task: DownloadPipelineArtifact@2
@@ -119,7 +119,7 @@ jobs:
   # Union-merge every downloaded cobertura and emit ONE combined Cobertura.xml
   # (test projects excluded). Dependency-free - no ReportGenerator extension.
   - task: PowerShell@2
-    displayName: 'Merge cobertura (union) and emit combined report'
+    displayName: 'Merge cobertura union and emit combined report'
     continueOnError: true
     inputs:
       filePath: 'scripts/merge-coverage.ps1'

@@ -624,6 +624,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                                 upsertOperationResultSetRow = upsertOperationResult.Rows.FirstOrDefault() ?? new();
 
+                                if (upsertOperationResultSetRow.Columns.Count > 0 &&
+                                    upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isUpdateResultSetValue))
+                                {
+
+                                    hasPerformedUpdate = Convert.ToBoolean(isUpdateResultSetValue);
+                                }
+
                                 // The role with which the REST request is executed can have a database policy defined for the read action.
                                 // In such a case, to get the results back, a select query which honors the database policy is executed.
                                 if (isDatabasePolicyDefinedForReadAction)

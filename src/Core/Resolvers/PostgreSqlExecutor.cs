@@ -190,8 +190,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         statusCode: HttpStatusCode.Forbidden,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
                 }
-
-                dbResultSet.ResultProperties.Add(SqlMutationEngine.IS_UPDATE_RESULT_SET, true);
             }
             else if (dbResultSet.Rows.Count == 0)
             {

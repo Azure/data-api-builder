@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
 
         /// <summary>
         /// GET /api/Profile - Verify the whole collection (5 seeded rows) is returned and that
-        /// each metadata value renders either as its JSON payload or null (row 5).
+        /// each metadata value renders either as a JSON string payload or null (row 5).
         /// </summary>
         [TestMethod]
         public async Task GetJsonTypeList()
@@ -45,6 +45,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             JsonElement items = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
                 .RootElement.GetProperty("value");
             Assert.AreEqual(5, items.GetArrayLength(), "Expected the 5 seeded profile rows.");
+
+            // Rows 1-4 carry a JSON payload (returned as a JSON string); row 5 is null.
+            foreach (JsonElement record in items.EnumerateArray())
+            {
+                JsonValueKind metadataKind = record.GetProperty("metadata").ValueKind;
+                Assert.IsTrue(
+                    metadataKind is JsonValueKind.String or JsonValueKind.Null,
+                    $"Expected metadata to be a JSON string or null, but was {metadataKind}.");
+            }
         }
 
         /// <summary>
@@ -178,7 +187,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
-        /// PATCH /api/Profile/id/1 - Verify metadata can be cleared to null.
+        /// PATCH /api/Profile/id/2 - Verify metadata can be cleared to null.
         /// </summary>
         [TestMethod]
         public async Task PatchJsonType_ToNull()
@@ -222,18 +231,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
 
         /// <summary>
         /// Returns the metadata field parsed as a JSON element. DAB treats a JSON column as a string,
-        /// so the value is expected to arrive as a JSON string carrying the payload; this helper also
-        /// tolerates the value arriving as a raw JSON object so the assertions remain robust.
+        /// so a non-null metadata value MUST arrive at the REST boundary as a JSON string carrying the
+        /// payload (the Phase 2 contract). This helper asserts that and parses the string payload.
         /// </summary>
         private static JsonElement ParseMetadata(JsonElement record)
         {
             JsonElement metadata = record.GetProperty("metadata");
-            if (metadata.ValueKind == JsonValueKind.String)
-            {
-                return JsonDocument.Parse(metadata.GetString()).RootElement.Clone();
-            }
+            Assert.AreEqual(
+                JsonValueKind.String,
+                metadata.ValueKind,
+                "A JSON column must be returned as a JSON string at the REST boundary (treated as a normal string).");
 
-            return metadata.Clone();
+            return JsonDocument.Parse(metadata.GetString()).RootElement.Clone();
         }
 
         #endregion

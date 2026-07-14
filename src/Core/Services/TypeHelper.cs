@@ -100,6 +100,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.Float] = typeof(double),
             [SqlDbType.Image] = typeof(byte[]),
             [SqlDbType.Int] = typeof(int),
+            [SqlDbType.Json] = typeof(string),
             [SqlDbType.Money] = typeof(decimal),
             [SqlDbType.NChar] = typeof(char),
             [SqlDbType.NText] = typeof(string),

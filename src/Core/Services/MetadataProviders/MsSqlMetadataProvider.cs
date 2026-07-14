@@ -82,13 +82,19 @@ namespace Azure.DataApiBuilder.Core.Services
                 if ("UPDATE".Equals(type_desc))
                 {
                     sourceDefinition.IsUpdateDMLTriggerEnabled = true;
-                    _logger.LogInformation($"An update trigger is enabled for the entity: {entityName}");
+                    if (!_isValidateOnly)
+                    {
+                        _logger.LogInformation($"An update trigger is enabled for the entity: {entityName}");
+                    }
                 }
 
                 if ("INSERT".Equals(type_desc))
                 {
                     sourceDefinition.IsInsertDMLTriggerEnabled = true;
-                    _logger.LogInformation($"An insert trigger is enabled for the entity: {entityName}");
+                    if (!_isValidateOnly)
+                    {
+                        _logger.LogInformation($"An insert trigger is enabled for the entity: {entityName}");
+                    }
                 }
             }
         }
@@ -312,6 +318,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             Dictionary<string, Entity> entities = new();
+            Dictionary<string, string> entityNameToRawEntity = new();
             foreach ((string autoentityName, Autoentity autoentity) in autoentities)
             {
                 int addedEntities = 0;
@@ -343,6 +350,26 @@ namespace Azure.DataApiBuilder.Core.Services
                         continue;
                     }
 
+                    // Remove whitespace from the entity name and camelCase-join words so the result is
+                    // a valid identifier for REST paths and GraphQL singular/plural names.
+                    string rawEntityName = entityName;
+                    entityName = RemoveWhitespaceAddCamelCase(entityName);
+
+                    if (string.IsNullOrEmpty(entityName))
+                    {
+                        _logger.LogError(
+                            "Skipping autoentity generation: entity name '{rawEntityName}' for schema '{schemaName}' resolves to an empty string after whitespace removal for autoentities definition '{autoentityName}'.",
+                            rawEntityName, schemaName, autoentityName);
+                        continue;
+                    }
+
+                    if (rawEntityName != entityName)
+                    {
+                        _logger.LogDebug(
+                            "Entity name '{rawEntityName}' was normalized to '{entityName}' by removing whitespace.",
+                            rawEntityName, entityName);
+                    }
+
                     // Create the entity using the template settings and permissions from the autoentity configuration.
                     // Currently the source type is always Table for auto-generated entities from database objects.
                     Entity generatedEntity = new(
@@ -364,24 +391,24 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     // Add the generated entity to the linking entities dictionary.
                     // This allows the entity to be processed later during metadata population.
+                    // A collision can occur when two database objects produce the same entity name after
+                    // whitespace removal (e.g. "Order Item" and "OrderItem" both yield "OrderItem").
                     if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddGeneratedAutoentityNameToDataSourceName(entityName, autoentityName))
                     {
+                        string checkEntityName = entityNameToRawEntity.ContainsKey(entityName) && !rawEntityName.Contains(" ")
+                            ? entityNameToRawEntity[entityName]
+                            : rawEntityName;
+                        string collisionMessage = checkEntityName.Contains(" ")
+                            ? $"Entity '{entityName}' normalized from '{checkEntityName}' from '{schemaName}' schema conflicts in autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it."
+                            : $"Entity '{entityName}' conflicts in autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it.";
                         throw new DataApiBuilderException(
-                            message: $"Entity '{entityName}' conflicts with autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it.",
+                            message: collisionMessage,
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
 
-                    if (runtimeConfig.IsRestEnabled)
-                    {
-                        _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, entityName);
-                    }
-                    else
-                    {
-                        _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
-                    }
-
                     addedEntities++;
+                    entityNameToRawEntity.Add(entityName, rawEntityName);
                 }
 
                 if (addedEntities == 0)
@@ -393,9 +420,16 @@ namespace Azure.DataApiBuilder.Core.Services
                 runtimeConfig.AutoentityResolutionCounts[autoentityName] = addedEntities;
             }
 
+            LogRestPathsForEntities(runtimeConfig, entities);
             _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);
         }
 
+        /// <summary>
+        /// Queries the database for autoentities based on the provided autoentity definition.
+        /// </summary>
+        /// <param name="autoentityName">The name of the autoentity definition.</param>
+        /// <param name="autoentity">The autoentity definition containing patterns for inclusion, exclusion, and name.</param>
+        /// <returns>A JsonArray containing the queried autoentities, or an empty array if none are found.</returns>
         public async Task<JsonArray?> QueryAutoentitiesAsync(string autoentityName, Autoentity autoentity)
         {
             string include = string.Join(",", autoentity.Patterns.Include);

@@ -111,4 +111,17 @@ public class CLRtoJsonValueTypeUnitTests
         Assert.AreNotEqual(notExpected: JsonDataType.Undefined, actual: TypeHelper.GetJsonDataTypeFromSystemType(nullableType));
         Assert.IsNotNull(TypeHelper.GetDbTypeFromSystemType(nullableType));
     }
+
+    /// <summary>
+    /// Validates that the SQL Server 2025+ 'json' data type literal resolves to the
+    /// CLR string type and maps to JsonDataType.String, i.e. DAB treats a JSON column
+    /// just like a string column.
+    /// </summary>
+    [TestMethod]
+    public void JsonSqlDbTypeResolvesToString()
+    {
+        Type resolvedType = TypeHelper.GetSystemTypeFromSqlDbType("json");
+        Assert.AreEqual(typeof(string), resolvedType);
+        Assert.AreEqual(JsonDataType.String, TypeHelper.GetJsonDataTypeFromSystemType(resolvedType));
+    }
 }

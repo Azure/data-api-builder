@@ -481,7 +481,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             try
             {
-                List<object> list = new();
                 object[] values = JsonSerializer.Deserialize<object[]>(param) ?? Array.Empty<object>();
                 for (int i = 0; i < values.Length; i++)
                 {

@@ -894,12 +894,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns></returns>
         private static object GetColumnInformation(DbDataReader dbDataReader, string columnName)
         {
-            if (dbDataReader[columnName] is SqlVector<float> columnValue)
-            {
-                return columnValue.Memory;
-            }
-
-            return dbDataReader[columnName];
+            object value = dbDataReader[columnName];
+            return value is SqlVector<float> vector ? vector.Memory : value;
         }
 
         internal virtual void AddDbExecutionTimeToMiddlewareContext(long time)

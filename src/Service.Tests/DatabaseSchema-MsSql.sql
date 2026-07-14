@@ -243,7 +243,7 @@ CREATE TABLE vector_type_table(
 );
 
 CREATE TABLE profiles(
-    id int IDENTITY(1, 1) PRIMARY KEY,
+    id int IDENTITY(5001, 1) PRIMARY KEY,
     metadata json NULL
 );
 

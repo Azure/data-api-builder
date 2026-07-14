@@ -4,6 +4,7 @@
 using System.Data;
 using System.Globalization;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -452,8 +453,47 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "Guid" => Guid.Parse(param),
                 "TimeOnly" => TimeOnly.Parse(param),
                 "TimeSpan" => TimeOnly.Parse(param),
+                "Single[]" => ParseArrayIntoSystemType(param, systemType),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };
+        }
+
+        /// <summary>
+        /// Takes the array of the parameter we are going to parse and converts each element to the specified system type.
+        /// </summary>
+        /// <param name="param"></param>
+        /// <param name="systemType"></param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="FormatException"></exception>
+        private static object ParseArrayIntoSystemType(string param, Type systemType)
+        {
+            Type typeOfArray;
+            switch (systemType.Name)
+            {
+                case "Single[]":
+                    typeOfArray = typeof(Single);
+                    break;
+
+                default:
+                    throw new NotSupportedException($"{systemType.Name} is not supported");
+            }
+
+            try
+            {
+                object[] values = JsonSerializer.Deserialize<object[]>(param) ?? Array.Empty<object>();
+                for (int i = 0; i < values.Length; i++)
+                {
+                    string stringValue = values[i]?.ToString() ?? string.Empty;
+                    values[i] = ParseParamAsSystemType(stringValue, typeOfArray);
+                }
+
+                return values;
+            }
+            catch
+            {
+                throw new FormatException($"Expected an array for {systemType.Name} but got an unexpected value");
+            }
         }
 
         /// <summary>

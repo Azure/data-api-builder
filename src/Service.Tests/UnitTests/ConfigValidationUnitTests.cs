@@ -1683,6 +1683,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "GraphQL path prefix containing space at the start and underscore in between.")]
         [DataRow("/", null, ApiType.REST, false,
             DisplayName = "REST path containing only a forward slash.")]
+        [DataRow("/api/v2", null, ApiType.REST, false,
+            DisplayName = "REST path containing multiple segments.")]
+        [DataRow("/api/v2", null, ApiType.GraphQL, false,
+            DisplayName = "GraphQL path containing multiple segments.")]
+        [DataRow("/api/", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path containing a trailing slash.")]
+        [DataRow("/api//v2", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path containing an empty segment.")]
         public void ValidateApiURIsAreWellFormed(
             string apiPathPrefix,
             string expectedErrorMessage,

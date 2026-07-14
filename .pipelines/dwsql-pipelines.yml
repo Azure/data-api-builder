@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 
 # DwSql Integration Testing Pipeline config is split into two jobs:
-# 1) LinuxTests -> Run SQL Server 2019 in Linux Docker Image
+# 1) LinuxTests -> Run SQL Server 2025 in Linux Docker Image
 # 2) WindowsTests -> Run LocalDB preinstalled on machine
 
 trigger:
@@ -159,8 +159,8 @@ jobs:
       # The variable setting on the pipeline UI sets the connection string
       # for the linux job above.
       data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;
-      InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
-      SqlVersionCode: '15.0'
+      InstallerUrl: https://download.microsoft.com/download/dea8c210-c44a-4a9d-9d80-0c81578860c5/ENU/SqlLocalDB.msi
+      SqlVersionCode: '17.0'
 
   steps:
   - task: CmdLine@2

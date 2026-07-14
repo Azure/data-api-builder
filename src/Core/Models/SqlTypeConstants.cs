@@ -47,6 +47,7 @@ public static class SqlTypeConstants
         { "time", true },                 // SqlDbType.Time
         { "datetime2", true },            // SqlDbType.DateTime2
         { "datetimeoffset", true },       // SqlDbType.DateTimeOffset
+        { "json", true },                 // SqlDbType.Json (SQL Server 2025+) treated as string
         { "", false },                    // SqlDbType.Udt and SqlDbType.Structured provided by SQL as empty strings (unsupported)
         { "numeric", true},                // Not present in SqlDbType, however can be returned by sql functions like LAG and should map to decimal.
         { "vector", true }                // SqlDbType.Vector

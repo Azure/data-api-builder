@@ -91,11 +91,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // The SET clause must be followed by a WHERE before the IF/END block closes, i.e.
             // "UPDATE ... SET ... WHERE ..." rather than "UPDATE ... SET ... END".
-            int setIdx = query.IndexOf("SET", StringComparison.Ordinal);
+            int updateIdx = query.IndexOf("UPDATE", StringComparison.Ordinal);
+            int setIdx = query.IndexOf("SET", updateIdx, StringComparison.Ordinal);
             int whereIdx = query.IndexOf("WHERE", setIdx, StringComparison.Ordinal);
-            int endIdx = query.IndexOf("END", setIdx, StringComparison.Ordinal);
-            Assert.IsTrue(whereIdx > setIdx && (endIdx == -1 || whereIdx < endIdx),
-                $"UPDATE branch must contain a WHERE clause before the IF/END block terminates:{Environment.NewLine}{query}");
+            int endIdx = query.IndexOf("END", updateIdx, StringComparison.Ordinal);
+            Assert.IsTrue(setIdx > updateIdx && whereIdx > setIdx && (endIdx == -1 || whereIdx < endIdx),
+                $"UPDATE branch must contain a WHERE clause after SET and before the IF/END block terminates:{Environment.NewLine}{query}");
         }
 
         /// <summary>

@@ -1766,6 +1766,61 @@
       }
     },
     {
+      Profile: {
+        Source: {
+          Object: profiles,
+          Type: Table,
+          KeyFields: [
+            id
+          ]
+        },
+        GraphQL: {
+          Singular: Profile,
+          Plural: Profiles,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Update
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Update
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       stocks_price: {
         Source: {
           Object: stocks_price,

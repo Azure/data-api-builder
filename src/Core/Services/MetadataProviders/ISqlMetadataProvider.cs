@@ -28,8 +28,8 @@ namespace Azure.DataApiBuilder.Core.Services
         string GetSchemaName(string entityName);
 
         bool VerifyForeignKeyExistsInDB(
-            DatabaseTable databaseObjectA,
-            DatabaseTable databaseObjectB);
+            DatabaseObject databaseObjectA,
+            DatabaseObject databaseObjectB);
 
         /// <summary>
         /// Obtains the underlying source object's name (SQL table or Cosmos container).

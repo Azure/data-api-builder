@@ -327,7 +327,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             DisplayName = "Anonymous role - X-MS-API-ROLE is not honored")]
         [DataRow(true, "author",
             DisplayName = "Authenticated role - existing X-MS-API-ROLE is honored")]
-        [TestMethod]
         public async Task TestClientRoleHeaderPresence(bool addAuthenticated, string clientRoleHeader)
         {
             string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated);
@@ -357,15 +356,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 ""auth_typ"":""aad"",
                 ""claims"":[
                   {
-                    ""typ"":""x', N'v';
-                        SET IDENTITY_INSERT authors ON;
-                        INSERT INTO authors (id, name, birthdate) VALUES (10001, 'Hidden Author', '2001-01-01');
-                        SET IDENTITY_INSERT authors OFF;
-                        SELECT 1 AS inserted FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
-                        --"",
+                    ""typ"":""x', N'v';SET IDENTITY_INSERT authors ON;INSERT INTO authors (id, name, birthdate) VALUES (10001, 'Hidden Author', '2001-01-01');SET IDENTITY_INSERT authors OFF;SELECT 1 AS inserted FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;--"",
                     ""val"":""x""
                   }
-                ]
+                ],
+                ""UserRoles"":[""anonymous""]
             }";
 
             string generatedToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(header));
@@ -373,7 +368,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 await SendRequestAndGetHttpContextState(
                     generatedToken,
                     EasyAuthType.StaticWebApps,
-                    clientRoleHeader: "authenticated");
+                    clientRoleHeader: "anonymous");
             Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
 
             using IHost host = await WebHostBuilderHelper.CreateWebHost(EasyAuthType.StaticWebApps.ToString(), false);

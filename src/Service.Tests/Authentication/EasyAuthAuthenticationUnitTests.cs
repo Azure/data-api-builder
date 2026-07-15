@@ -2,9 +2,11 @@
 // Licensed under the MIT License.
 
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -342,6 +344,50 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Assert.AreEqual(expected: addAuthenticated ? clientRoleHeader : AuthorizationType.Anonymous.ToString(),
                 actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
                 ignoreCase: true);
+        }
+
+        /// <summary>
+        /// Tests we ensure that an invalid query in the EasyAuth header does not result in a successful request.
+        /// </summary>
+        [TestMethod]
+        public async Task TestInvalidQueryInHeader()
+        {
+            string header = @"
+            {
+                ""auth_typ"":""aad"",
+                ""claims"":[
+                  {
+                    ""typ"":""x', N'v';
+                        SET IDENTITY_INSERT authors ON;
+                        INSERT INTO authors (id, name, birthdate) VALUES (10001, 'Hidden Author', '2001-01-01');
+                        SET IDENTITY_INSERT authors OFF;
+                        SELECT 1 AS inserted FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
+                        --"",
+                    ""val"":""x""
+                  }
+                ]
+            }";
+
+            string generatedToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(header));
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    generatedToken,
+                    EasyAuthType.StaticWebApps,
+                    clientRoleHeader: "authenticated");
+            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
+
+            using IHost host = await WebHostBuilderHelper.CreateWebHost(EasyAuthType.StaticWebApps.ToString(), false);
+            TestServer server = host.GetTestServer();
+            HttpClient client = server.CreateClient();
+
+            HttpRequestMessage request = new(HttpMethod.Get, $"api/Author/id/10001");
+            HttpResponseMessage response = await client.SendAsync(request);
+            string responseBody = await response.Content.ReadAsStringAsync();
+
+            Assert.IsFalse(responseBody.Contains($"\"id\":10001"),
+                "The GET request should not return the invalid row.");
+            Assert.IsFalse(responseBody.Contains("Hidden Author"),
+                "The GET request should not return any information related to the invalid row.");
         }
 
         /// <summary>

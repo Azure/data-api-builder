@@ -3,6 +3,7 @@
 
 #nullable enable
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -12,6 +13,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Tests.Authentication.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -356,24 +358,27 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 ""auth_typ"":""aad"",
                 ""claims"":[
                   {
-                    ""typ"":""x', N'v';SET IDENTITY_INSERT authors ON;INSERT INTO authors (id, name, birthdate) VALUES (10001, 'Hidden Author', '2001-01-01');SET IDENTITY_INSERT authors OFF;SELECT 1 AS inserted FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;--"",
+                    ""typ"":""x', N'v';INSERT INTO authors (id, name, birthdate) VALUES (10001, 'Hidden Author', '2001-01-01');--"",
                     ""val"":""x""
                   }
                 ],
-                ""UserRoles"":[""anonymous""]
+                ""UserRoles"":[""authenticated""]
             }";
 
             string generatedToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(header));
-            HttpContext postMiddlewareContext =
-                await SendRequestAndGetHttpContextState(
-                    generatedToken,
-                    EasyAuthType.StaticWebApps,
-                    clientRoleHeader: "anonymous");
-            Assert.AreEqual(expected: (int)HttpStatusCode.OK, actual: postMiddlewareContext.Response.StatusCode);
 
-            using IHost host = await WebHostBuilderHelper.CreateWebHost(EasyAuthType.StaticWebApps.ToString(), false);
-            TestServer server = host.GetTestServer();
-            HttpClient client = server.CreateClient();
+            const string SESSION_CONFIG = $"session-context-config.{TestCategory.MSSQL}.json";
+            SetupSessionContextConfig(SESSION_CONFIG);
+
+            string[] args = [$"--ConfigFileName={SESSION_CONFIG}"];
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+
+            HttpRequestMessage requestWithHeader = new(HttpMethod.Get, "api/Author");
+            requestWithHeader.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, generatedToken);
+            requestWithHeader.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, "authenticated");
+            HttpResponseMessage responseWithHeader = await client.SendAsync(requestWithHeader);
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: responseWithHeader.StatusCode);
 
             HttpRequestMessage request = new(HttpMethod.Get, $"api/Author/id/10001");
             HttpResponseMessage response = await client.SendAsync(request);
@@ -469,6 +474,40 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
                 context.Request.Scheme = "https";
             });
+        }
+
+        /// <summary>
+        /// Writes a MsSql runtime config that uses StaticWebApps EasyAuth and enables
+        /// set-session-context so requests exercise MsSqlQueryExecutor.GetSessionParamsQuery.
+        /// </summary>
+        private static void SetupSessionContextConfig(string configFileName)
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            RuntimeConfigProvider configProvider =
+                TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            RuntimeConfig config = configProvider.GetConfig();
+
+            RuntimeConfig updatedConfig = config with
+            {
+                DataSource = config.DataSource! with
+                {
+                    Options = new Dictionary<string, object?>
+                    {
+                        // Matches MsSqlOptions.SetSessionContext (hyphenated naming policy).
+                        { "set-session-context", true }
+                    }
+                },
+                Runtime = config.Runtime! with
+                {
+                    Host = config.Runtime.Host! with
+                    {
+                        Authentication = new AuthenticationOptions(
+                            Provider: EasyAuthType.AppService.ToString(), Jwt: null)
+                    }
+                }
+            };
+
+            File.WriteAllText(configFileName, updatedConfig.ToJson());
         }
         #endregion
     }

@@ -530,9 +530,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach ((string claimType, string claimValue) in sessionParams)
                 {
                     string keyName = $"{SESSION_KEY_NAME}{counter.Current()}";
-                    string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
                     parameters.Add(keyName, new(claimType));
+
+                    string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
                     parameters.Add(paramName, new(claimValue));
+
                     // Append statement to set read only param value - can be set only once for a connection.
                     string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + keyName + ", " + paramName + ", @read_only = 0;";
                     sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);

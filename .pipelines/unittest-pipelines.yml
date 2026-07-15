@@ -73,7 +73,7 @@ jobs:
       project: '$(System.TeamProject)'
       pipeline: '2'
       runVersion: 'latest'
-      patterns: '**/*.cobertura.xml'
+      patterns: 'coverage-*/**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/mssql'
   - task: DownloadPipelineArtifact@2
     displayName: 'Download PostgreSql coverage (latest)'
@@ -83,7 +83,7 @@ jobs:
       project: '$(System.TeamProject)'
       pipeline: '4'
       runVersion: 'latest'
-      patterns: '**/*.cobertura.xml'
+      patterns: 'coverage-*/**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/pg'
   - task: DownloadPipelineArtifact@2
     displayName: 'Download MySql coverage (latest)'
@@ -93,7 +93,7 @@ jobs:
       project: '$(System.TeamProject)'
       pipeline: '3'
       runVersion: 'latest'
-      patterns: '**/*.cobertura.xml'
+      patterns: 'coverage-*/**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/mysql'
   - task: DownloadPipelineArtifact@2
     displayName: 'Download DwSql coverage (latest)'
@@ -103,7 +103,7 @@ jobs:
       project: '$(System.TeamProject)'
       pipeline: '1'
       runVersion: 'latest'
-      patterns: '**/*.cobertura.xml'
+      patterns: 'coverage-*/**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/dwsql'
   - task: DownloadPipelineArtifact@2
     displayName: 'Download CosmosDb coverage (latest)'
@@ -113,7 +113,7 @@ jobs:
       project: '$(System.TeamProject)'
       pipeline: '6'
       runVersion: 'latest'
-      patterns: '**/*.cobertura.xml'
+      patterns: 'coverage-*/**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/cosmos'
 
   # Union-merge every downloaded cobertura and emit ONE combined Cobertura.xml

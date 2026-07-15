@@ -142,19 +142,10 @@ steps:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
-# Publish the RAW cobertura as a uniquely-named pipeline artifact (suffixed per job)
-# so the unit pipeline's 'Total Code Coverage' job can union THIS job's coverage too.
-- task: CopyFiles@2
-  displayName: 'Stage raw coverage for aggregation'
-  inputs:
-    sourceFolder: '$(Agent.TempDirectory)'
-    contents: '**/*.cobertura.xml'
-    targetFolder: '$(Build.ArtifactStagingDirectory)/coverage'
-- task: PublishPipelineArtifact@1
-  displayName: 'Publish coverage artifact for aggregation'
-  inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/coverage'
-    artifact: 'coverage-mssql${{ parameters.artifactSuffix }}'
+# Publish this job's raw cobertura as a uniquely-named artifact (suffixed per job).
+- template: publish-coverage-artifact.yml
+  parameters:
+    artifactName: 'coverage-mssql${{ parameters.artifactSuffix }}'
 
 - task: CopyFiles@2
   condition: eq(variables['publishverify'], 'Yes')

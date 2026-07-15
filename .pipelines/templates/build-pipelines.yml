@@ -129,14 +129,6 @@ steps:
 # Publish this run's unit cobertura as a pipeline artifact so the
 # "Total Code Coverage" job (unittest-pipelines.yml) can merge it with the
 # database integration pipelines' coverage into one combined report.
-- task: CopyFiles@2
-  displayName: 'Stage unit coverage for aggregation'
-  inputs:
-    sourceFolder: '$(Agent.TempDirectory)'
-    contents: '**/*.cobertura.xml'
-    targetFolder: '$(Build.ArtifactStagingDirectory)/coverage'
-- task: PublishPipelineArtifact@1
-  displayName: 'Publish unit cobertura (coverage-unit)'
-  inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/coverage'
-    artifact: 'coverage-unit'
+- template: publish-coverage-artifact.yml
+  parameters:
+    artifactName: 'coverage-unit'

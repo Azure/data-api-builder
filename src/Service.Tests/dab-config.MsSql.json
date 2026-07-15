@@ -1857,10 +1857,7 @@
     "Profile": {
       "source": {
         "object": "profiles",
-        "type": "table",
-        "key-fields": [
-          "id"
-        ]
+        "type": "table"
       },
       "graphql": {
         "enabled": true,

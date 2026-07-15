@@ -1769,10 +1769,7 @@
       Profile: {
         Source: {
           Object: profiles,
-          Type: Table,
-          KeyFields: [
-            id
-          ]
+          Type: Table
         },
         GraphQL: {
           Singular: Profile,

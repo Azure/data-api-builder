@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, "'false'", "false")]
         [DataRow(STRING_TYPE, "lksa;jdflasdf;alsdflksdfkldj", "\"lksa;jdflasdf;alsdflksdfkldj\"")]
         [DataTestMethod]
-        public async Task PGSQL_real_graphql_in_filter_expectedValues(
+        public async Task PGSQL_graphql_in_filter_expectedValues(
             string type,
             string sqlValue,
             string gqlValue)
@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string orderBy = "id",
             string limit = "1")
         {
-            string formattedSelect = limit.Equals("1") ? "SELECT to_jsonb(subq3) AS DATA" : "SELECT json_agg(to_jsonb(subq3)) AS DATA";
+            string formattedSelect = limit.Equals("1") ? "SELECT to_jsonb(subq3) AS DATA" : "SELECT COALESCE(json_agg(to_jsonb(subq3)), '[]'::json) AS DATA";
 
             return @"
                 " + formattedSelect + @"
@@ -140,16 +140,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 return columnName;
             }
-        }
-
-        /// <summary>
-        /// Bypass DateTime GQL tests for PostreSql
-        /// </summary>
-        [DataTestMethod]
-        [Ignore]
-        public new void QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
-        {
-            Assert.Inconclusive("Test skipped for PostgreSql.");
         }
     }
 }

@@ -177,6 +177,83 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 $"'{paramName}' description should mention config default '{expectedDefault}'.");
         }
 
+        /// <summary>
+        /// Validates that a DB-discovered parameter without a config default is advertised as required.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_RequiredArray_IncludesParamWithoutDefault()
+        {
+            IServiceProvider serviceProvider = BuildQueryServiceProvider();
+            RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+            Entity entity = configProvider.GetConfig().Entities["GetBook"];
+
+            DynamicCustomTool tool = new("GetBook", entity);
+            tool.InitializeMetadata(serviceProvider);
+
+            JsonElement schema = tool.GetToolMetadata().InputSchema;
+
+            Assert.IsTrue(schema.TryGetProperty("required", out JsonElement required),
+                "GetBook schema should expose a 'required' array.");
+
+            List<string> requiredParams = new();
+            foreach (JsonElement element in required.EnumerateArray())
+            {
+                requiredParams.Add(element.GetString()!);
+            }
+
+            CollectionAssert.Contains(requiredParams, "id",
+                "'id' has no config default and should be required.");
+        }
+
+        /// <summary>
+        /// Validates that parameters with config defaults (marked optional) are excluded from required.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_RequiredArray_ExcludesParamsWithConfigDefaults()
+        {
+            IServiceProvider serviceProvider = BuildQueryServiceProvider();
+            RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+            Entity entity = configProvider.GetConfig().Entities["InsertBook"];
+
+            DynamicCustomTool tool = new("InsertBook", entity);
+            tool.InitializeMetadata(serviceProvider);
+
+            JsonElement schema = tool.GetToolMetadata().InputSchema;
+
+            List<string> requiredParams = new();
+            if (schema.TryGetProperty("required", out JsonElement required))
+            {
+                foreach (JsonElement element in required.EnumerateArray())
+                {
+                    requiredParams.Add(element.GetString()!);
+                }
+            }
+
+            CollectionAssert.DoesNotContain(requiredParams, "title",
+                "'title' has a config default and must not be required.");
+            CollectionAssert.DoesNotContain(requiredParams, "publisher_id",
+                "'publisher_id' has a config default and must not be required.");
+        }
+
+        /// <summary>
+        /// Validates that a zero-parameter SP does not emit a 'required' array.
+        /// </summary>
+        [TestMethod]
+        public void InitializeMetadata_ZeroParamSP_OmitsRequiredArray()
+        {
+            IServiceProvider serviceProvider = BuildQueryServiceProvider();
+            RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+            Entity entity = configProvider.GetConfig().Entities["GetBooks"];
+
+            DynamicCustomTool tool = new("GetBooks", entity);
+            tool.InitializeMetadata(serviceProvider);
+
+            JsonElement schema = tool.GetToolMetadata().InputSchema;
+
+            Assert.IsFalse(schema.TryGetProperty("required", out _),
+                "Zero-param SP should not include a 'required' array.");
+        }
+
         #endregion
 
         /// <summary>

@@ -98,6 +98,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     value = GetParamAsSystemType(stringValue, paramName, columnSystemType);
                 }
+
+                // Npgsql requires DateTime with Kind=Unspecified for 'timestamp without time zone' columns.
+                // ParseParamAsSystemType returns Kind=Utc (via .UtcDateTime), which causes PostgreSQL to
+                // apply a UTC-to-local offset during comparison, producing incorrect filter results.
+                if (value is DateTime dtValue && dtValue.Kind == DateTimeKind.Utc && columnSystemType == typeof(DateTime))
+                {
+                    value = DateTime.SpecifyKind(dtValue, DateTimeKind.Unspecified);
+                }
             }
 
             return base.MakeDbConnectionParam(value, paramName, lengthOverride);

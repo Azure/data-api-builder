@@ -361,6 +361,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             Dictionary<string, object> properties = new();
+            List<string> requiredParameters = new();
             foreach ((string paramName, ParameterDefinition paramDef) in spDefinition.Parameters)
             {
                 Dictionary<string, object> paramSchema = new()
@@ -370,6 +371,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 };
 
                 properties[paramName] = paramSchema;
+
+                // A DB metadata parameter is required unless config marks it optional or supplies
+                // a default the engine applies when the caller omits it.
+                if (IsParameterRequired(paramDef.Required, paramDef.HasConfigDefault))
+                {
+                    requiredParameters.Add(paramName);
+                }
             }
 
             Dictionary<string, object> schema = new()
@@ -377,6 +385,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 ["type"] = "object",
                 ["properties"] = properties
             };
+
+            if (requiredParameters.Count > 0)
+            {
+                schema["required"] = requiredParameters;
+            }
 
             return JsonSerializer.SerializeToElement(schema);
         }
@@ -396,6 +409,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             if (_entity.Source.Parameters != null && _entity.Source.Parameters.Any())
             {
                 Dictionary<string, object> properties = (Dictionary<string, object>)schema["properties"];
+                List<string> requiredParameters = new();
 
                 foreach (ParameterMetadata param in _entity.Source.Parameters)
                 {
@@ -404,10 +418,38 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         ["type"] = new[] { "string", "number", "boolean", "null" },
                         ["description"] = param.Description ?? $"Parameter {param.Name}"
                     };
+
+                    // A parameter is required unless config marks it optional or supplies a default.
+                    if (IsParameterRequired(param.Required, param.Default is not null))
+                    {
+                        requiredParameters.Add(param.Name);
+                    }
+                }
+
+                if (requiredParameters.Count > 0)
+                {
+                    schema["required"] = requiredParameters;
                 }
             }
 
             return JsonSerializer.SerializeToElement(schema);
+        }
+
+        /// <summary>
+        /// Determines whether a stored procedure parameter should be advertised as required in the
+        /// tool input schema. A parameter is required when configuration does not mark it optional
+        /// and does not provide a default value the engine can apply when the caller omits it.
+        /// </summary>
+        private static bool IsParameterRequired(bool? configuredRequired, bool hasDefault)
+        {
+            // If the engine can supply a default when the caller omits the parameter,
+            // it should not be advertised as required.
+            if (hasDefault)
+            {
+                return false;
+            }
+
+            return configuredRequired ?? true;
         }
 
         /// <summary>

@@ -40,6 +40,7 @@ DROP TABLE IF EXISTS stocks;
 DROP TABLE IF EXISTS comics;
 DROP TABLE IF EXISTS brokers;
 DROP TABLE IF EXISTS type_table;
+DROP TABLE IF EXISTS vector_type_table;
 DROP TABLE IF EXISTS trees;
 DROP TABLE IF EXISTS fungi;
 DROP TABLE IF EXISTS empty_table;
@@ -232,6 +233,12 @@ CREATE TABLE type_table(
     time_types time,
     bytearray_types varbinary(max),
     uuid_types uniqueidentifier DEFAULT newid()
+);
+
+CREATE TABLE vector_type_table(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    vector_data vector(3),
+    vector_data_max vector(1998)
 );
 
 CREATE TABLE trees (
@@ -615,6 +622,23 @@ VALUES
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO type_table(id, uuid_types) values(10, 'D1D021A8-47B4-4AE4-B718-98E89C41A161');
 SET IDENTITY_INSERT type_table OFF
+
+SET IDENTITY_INSERT vector_type_table ON
+INSERT INTO vector_type_table(id, vector_data)
+VALUES
+    (1, '[0.5, 0.25, 0.75]'),
+    (2, '[1.5, -2.5, 3.5]'),
+    (3, NULL),
+    (4, '[1.0, 2.0, 3.0]'),
+    (5, '[4.0, 5.0, 6.0]'),
+    (6, '[7.0, 8.0, 9.0]');
+
+INSERT INTO vector_type_table(id, vector_data_max)
+VALUES (7, CAST('[' + (
+    SELECT STRING_AGG(CAST(value AS NVARCHAR(MAX)), ',') WITHIN GROUP (ORDER BY value)
+    FROM GENERATE_SERIES(1, 1998)
+) + ']' AS vector(1998)));
+SET IDENTITY_INSERT vector_type_table OFF
 
 SET IDENTITY_INSERT sales ON
 INSERT INTO sales(id, item_name, subtotal, tax) VALUES (1, 'Watch', 249.00, 20.59), (2, 'Montior', 120.50, 11.12);

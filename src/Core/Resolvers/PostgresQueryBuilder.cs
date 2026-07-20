@@ -18,6 +18,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private const string INSERT_UPSERT = "inserted";
         private const string UPDATE_UPSERT = "updated";
         public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
+        public const string IS_FALLBACK_TO_UPDATE = "is_fallback_to_update";
 
         private static DbCommandBuilder _builder = new NpgsqlCommandBuilder();
 
@@ -126,10 +127,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // relying on xmax to detect insert vs update breaks for views
             string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
             string pkPredicates = Build(structure.Predicates);
+            string isFallbackToUpdateSqlLiteral = structure.IsFallbackToUpdate ? "TRUE" : "FALSE";
 
             // RS1: COUNT of rows matching PK (no policy) — used to distinguish
             // "row doesn't exist" from "row exists but policy blocked" in the executor.
-            string countQuery = $"SELECT COUNT(*) AS {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
+            string countQuery = $"SELECT COUNT(*) AS {COUNT_ROWS_WITH_GIVEN_PK}, " +
+                $"{isFallbackToUpdateSqlLiteral} AS {IS_FALLBACK_TO_UPDATE} " +
+                $"FROM {tableName} WHERE {pkPredicates}";
 
             string updatePredicates = JoinPredicateStrings(pkPredicates, structure.GetDbPolicyForOperation(EntityActionOperation.Update));
             string updateQuery = $"UPDATE {tableName} " +

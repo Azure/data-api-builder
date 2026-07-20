@@ -157,12 +157,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
             DbResultSetRow? resultSetRowWithCountOfRowsWithGivenPk = resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault();
             int numOfRecordsWithGivenPK;
+            bool isFallbackToUpdate;
 
             if (resultSetRowWithCountOfRowsWithGivenPk is not null &&
-                resultSetRowWithCountOfRowsWithGivenPk.Columns.TryGetValue(PostgresQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, out object? rowsWithGivenPK))
+                resultSetRowWithCountOfRowsWithGivenPk.Columns.TryGetValue(PostgresQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, out object? rowsWithGivenPK) &&
+                resultSetRowWithCountOfRowsWithGivenPk.Columns.TryGetValue(PostgresQueryBuilder.IS_FALLBACK_TO_UPDATE, out object? fallbackToUpdate))
             {
                 // PostgreSQL COUNT(*) returns Int64; convert to int.
                 numOfRecordsWithGivenPK = Convert.ToInt32(rowsWithGivenPK!);
+                isFallbackToUpdate = Convert.ToBoolean(fallbackToUpdate!);
             }
             else
             {
@@ -193,11 +196,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else if (dbResultSet.Rows.Count == 0)
             {
-                // Check whether IsFallbackToUpdate was set (passed as args[2]).
                 // If true, the row simply didn't exist — return 404 (same as MsSql's null-RS2 path).
-                // If false (or not present), the INSERT ran but create policy blocked it — return 403.
-                bool isFallbackToUpdate = args is not null && args.Count > 2
-                    && bool.TryParse(args[2], out bool fallback) && fallback;
+                // If false, the INSERT ran but create policy blocked it — return 403.
 
                 if (isFallbackToUpdate)
                 {

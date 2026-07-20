@@ -1578,7 +1578,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Tests we ensure that an invalid query in the EasyAuth header does not result in a successful request.
+        /// Tests we ensure that an invalid query in the EasyAuth header
+        /// retruns a successful request without executing the invalid query.
         /// </summary>
         [TestCategory(TestCategory.MSSQL)]
         [TestMethod]
@@ -1586,7 +1587,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
 
-            string header = @"
+            string firstHeader = @"
+            {
+                ""auth_typ"":""aad"",
+                ""claims"":[
+                  {
+                    ""typ"":""x', N'v';SET IDENTITY_INSERT authors ON;--"",
+                    ""val"":""x""
+                  }
+                ],
+                ""UserRoles"":[""authenticated""]
+            }";
+
+            string firstGeneratedToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(firstHeader));
+
+            string secondHeader = @"
             {
                 ""auth_typ"":""aad"",
                 ""claims"":[
@@ -1598,7 +1613,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 ""UserRoles"":[""authenticated""]
             }";
 
-            string generatedToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(header));
+            string secondGeneratedToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(secondHeader));
 
             const string SESSION_CONFIG = $"session-context-config.{TestCategory.MSSQL}.json";
             RuntimeConfigProvider configProvider =
@@ -1631,11 +1646,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
 
+            // Request with the first header
             HttpRequestMessage requestWithHeader = new(HttpMethod.Get, "api/Author");
-            requestWithHeader.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, generatedToken);
+            requestWithHeader.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, firstGeneratedToken);
             requestWithHeader.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, "authenticated");
             HttpResponseMessage responseWithHeader = await client.SendAsync(requestWithHeader);
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: responseWithHeader.StatusCode);
+
+            // Request with second header
+            HttpRequestMessage requestWithHeaderSec = new(HttpMethod.Get, "api/Author");
+            requestWithHeaderSec.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, secondGeneratedToken);
+            requestWithHeaderSec.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, "authenticated");
+            HttpResponseMessage responseWithHeaderSec = await client.SendAsync(requestWithHeaderSec);
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: responseWithHeaderSec.StatusCode);
 
             HttpRequestMessage request = new(HttpMethod.Get, $"api/Author/id/10001");
             HttpResponseMessage response = await client.SendAsync(request);
@@ -1645,6 +1668,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "The GET request should not return the invalid row.");
             Assert.IsFalse(responseBody.Contains("Hidden Author"),
                 "The GET request should not return any information related to the invalid row.");
+
+            if (File.Exists(SESSION_CONFIG))
+            {
+                File.Delete(SESSION_CONFIG);
+            }
         }
 
         [TestCleanup]

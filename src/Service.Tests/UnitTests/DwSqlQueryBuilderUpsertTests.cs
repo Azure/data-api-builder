@@ -127,17 +127,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             metadataProvider.Setup(x => x.GetSourceDefinition(ENTITY_NAME)).Returns(sourceDefinition);
             metadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.DWSQL);
 
-            string outColumn;
+            string? outColumn;
             metadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out outColumn))
                 .Callback(new TryGetColumnCallback((string entity, string field, out string? column)
                     => _columnMapping.TryGetValue(field, out column)))
-                .Returns((string entity, string field, string column) => _columnMapping.ContainsKey(field));
+                .Returns((string entity, string field, string? column) => _columnMapping.ContainsKey(field));
 
-            string outExposed;
+            string? outExposed;
             metadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), It.IsAny<string>(), out outExposed))
                 .Callback(new TryGetColumnCallback((string entity, string field, out string? column)
                     => _columnMapping.TryGetValue(field, out column)))
-                .Returns((string entity, string field, string column) => _columnMapping.ContainsKey(field));
+                .Returns((string entity, string field, string? column) => _columnMapping.ContainsKey(field));
 
             // The update policy is injected directly onto the structure, so the resolver only needs
             // to return an empty policy (no throw) during construction.

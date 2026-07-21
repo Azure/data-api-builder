@@ -425,6 +425,34 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual(dbDescription, arg.Description!.Value);
         }
 
+        [TestMethod]
+        public void StoredProcedure_ParameterDescription_FallsBackToDefaultText()
+        {
+            const string parameterName = "title";
+            const string graphQLTypeName = "SpParamDescDefaultTextType";
+            const string entityName = "SpParamDescDefaultText";
+
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spParamDescDefaultText")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+                {
+                    Parameters = new() { { parameterName, new() { SystemType = typeof(string) } } }
+                }
+            };
+            spDbObj.SourceDefinition.Columns.TryAdd("col1", new() { SystemType = typeof(string) });
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: new List<ParameterMetadata>(),
+                graphQLTypeName: graphQLTypeName,
+                entityName: entityName);
+
+            InputValueDefinitionNode arg = field.Arguments.First(a => a.Name.Value == parameterName);
+            Assert.IsNotNull(arg.Description);
+            Assert.AreEqual($"parameters for {graphQLTypeName} stored-procedure", arg.Description!.Value);
+        }
+
         /// <summary>
         /// Helper that builds a query schema for a stored-procedure entity and returns
         /// the generated execute* field so individual tests can assert on its argument

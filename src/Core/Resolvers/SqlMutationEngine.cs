@@ -715,52 +715,37 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                             parameters: parameters,
                                             sqlMetadataProvider: sqlMetadataProvider);
 
-                                if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
+                                if (mutationResultRow is null)
+                                {
+                                    HttpStatusCode statusCode = effectiveOperationType is EntityActionOperation.Insert
+                                        ? HttpStatusCode.InternalServerError
+                                        : HttpStatusCode.NotFound;
+
+                                    // Ideally this case should not happen, however may occur due to unexpected reasons,
+                                    // like the DbDataReader being null. We throw an exception
+                                    // which will be returned as an UnexpectedError.
+                                    throw new DataApiBuilderException(
+                                        message: "An unexpected error occurred while trying to execute the query.",
+                                        statusCode: statusCode,
+                                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                                }
+
+                                if (mutationResultRow.Columns.Count == 0)
                                 {
                                     if (effectiveOperationType is EntityActionOperation.Insert)
                                     {
-                                        if (mutationResultRow is null)
-                                        {
-                                            // Ideally this case should not happen, however may occur due to unexpected reasons,
-                                            // like the DbDataReader being null. We throw an exception
-                                            // which will be returned as an UnexpectedError.
-                                            throw new DataApiBuilderException(
-                                                message: "An unexpected error occurred while trying to execute the query.",
-                                                statusCode: HttpStatusCode.InternalServerError,
-                                                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                                        }
-
-                                        if (mutationResultRow.Columns.Count == 0)
-                                        {
-                                            throw new DataApiBuilderException(
-                                                message: "Could not insert row with given values.",
-                                                statusCode: HttpStatusCode.Forbidden,
-                                                subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
-                                                );
-                                        }
+                                        throw new DataApiBuilderException(
+                                            message: "Could not insert row with given values.",
+                                            statusCode: HttpStatusCode.Forbidden,
+                                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
+                                            );
                                     }
-                                    else
-                                    {
-                                        if (mutationResultRow is null)
-                                        {
-                                            // Ideally this case should not happen, however may occur due to unexpected reasons,
-                                            // like the DbDataReader being null. We throw an exception
-                                            // which will be returned as an UnexpectedError
-                                            throw new DataApiBuilderException(message: "An unexpected error occurred while trying to execute the query.",
-                                                                                statusCode: HttpStatusCode.NotFound,
-                                                                                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                                        }
 
-                                        if (mutationResultRow.Columns.Count == 0)
-                                        {
-                                            // This code block is reached when Update or UpdateIncremental operation does not successfully find the record to
-                                            // update. An exception is thrown which will be returned as a 404 NotFound response.
-                                            throw new DataApiBuilderException(message: "No Update could be performed, record not found",
-                                                                                statusCode: HttpStatusCode.NotFound,
-                                                                                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-                                        }
-
-                                    }
+                                    // This code block is reached when Update or UpdateIncremental operation does not successfully find the record to
+                                    // update. An exception is thrown which will be returned as a 404 NotFound response.
+                                    throw new DataApiBuilderException(message: "No Update could be performed, record not found",
+                                                                        statusCode: HttpStatusCode.NotFound,
+                                                                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                                 }
 
                                 // The role with which the REST request is executed can have database policies defined for the read action.

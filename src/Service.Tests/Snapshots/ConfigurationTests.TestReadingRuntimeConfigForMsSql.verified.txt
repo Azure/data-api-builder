@@ -910,6 +910,33 @@
             ]
           },
           {
+            Role: test_role_with_excluded_fields_on_mutation,
+            Actions: [
+              {
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    publisher_id
+                  ]
+                }
+              },
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    publisher_id
+                  ]
+                }
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
             Role: role_multiple_create_policy_tester,
             Actions: [
               {
@@ -1590,6 +1617,33 @@
               },
               {
                 Action: Update
+              }
+            ]
+          },
+          {
+            Role: test_role_with_excluded_fields_on_mutation,
+            Actions: [
+              {
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    username
+                  ]
+                }
+              },
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    username
+                  ]
+                }
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
               }
             ]
           }

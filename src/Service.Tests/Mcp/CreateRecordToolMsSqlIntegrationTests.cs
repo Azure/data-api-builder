@@ -175,13 +175,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// Sanity check accompanying <see cref="CreateRecord_ExcludedColumn_ReturnsPermissionDenied"/>:
         /// the same restricted role must still be able to create a record when it only supplies
         /// columns it is permitted to write.
+        /// Uses the WebsiteUser entity (rather than Book) because its only non-key column
+        /// ("username") is nullable, so omitting the excluded column does not also trip a
+        /// "missing required field" validation error unrelated to authorization. Book's only
+        /// non-key column (publisher_id) is NOT NULL with no default, so it cannot be omitted
+        /// regardless of role permissions and is unsuitable for this scenario.
         /// </summary>
         [TestMethod]
         public async Task CreateRecord_AllowedColumnsOnly_WithColumnRestrictedRole_ReturnsSuccess()
         {
+            int testUserId = 7_654_321;
+
             var data = new Dictionary<string, object>
             {
-                { "title", "Allowed Column Only Book" }
+                { "id", testUserId }
             };
 
             IServiceProvider serviceProvider = BuildMutationServiceProvider(role: "test_role_with_excluded_fields_on_mutation");
@@ -189,17 +196,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             var args = new Dictionary<string, object?>
             {
-                { "entity", "Book" },
+                { "entity", "WebsiteUser" },
                 { "data", data }
             };
 
-            CallToolResult result = await ExecuteToolAsync(tool, serviceProvider, args);
+            try
+            {
+                CallToolResult result = await ExecuteToolAsync(tool, serviceProvider, args);
 
-            AssertSuccess(result, "CreateRecord should succeed when only permitted columns are supplied.");
-
-            JsonElement root = ParseResultRoot(result);
-            int createdId = ExtractCreatedBookId(root);
-            await DeleteTestBook(createdId);
+                AssertSuccess(result, "CreateRecord should succeed when only permitted columns are supplied.");
+            }
+            finally
+            {
+                await DeleteWebsiteUser(testUserId);
+            }
         }
 
         #endregion
@@ -218,6 +228,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             };
 
             return await ExecuteToolAsync(tool, serviceProvider, args);
+        }
+
+        /// <summary>
+        /// Deletes a WebsiteUser record by ID, ignoring the outcome. Used for cleanup only;
+        /// a failed create in the calling test means there is nothing to delete.
+        /// </summary>
+        private static async Task DeleteWebsiteUser(int id)
+        {
+            IServiceProvider serviceProvider = BuildMutationServiceProvider();
+            DeleteRecordTool deleteTool = new();
+
+            var args = new Dictionary<string, object?>
+            {
+                { "entity", "WebsiteUser" },
+                { "keys", new Dictionary<string, object> { { "id", id } } }
+            };
+
+            await ExecuteToolAsync(deleteTool, serviceProvider, args);
         }
 
         #endregion

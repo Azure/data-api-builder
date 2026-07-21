@@ -1704,6 +1704,33 @@
               "action": "update"
             }
           ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_mutation",
+          "actions": [
+            {
+              "action": "read"
+            },
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "username"
+                ]
+              }
+            },
+            {
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "username"
+                ]
+              }
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
       ],
       "relationships": {

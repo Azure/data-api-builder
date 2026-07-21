@@ -131,15 +131,22 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     ? dataElement.EnumerateObject().Select(property => property.Name)
                     : Enumerable.Empty<string>();
 
-                if (!McpAuthorizationHelper.AreColumnsAuthorizedForOperation(
-                        authorizationResolver,
-                        entityName,
-                        effectiveRole!,
-                        EntityActionOperation.Create,
-                        requestedColumns,
-                        out string columnAuthError))
+                try
                 {
-                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "create", columnAuthError, logger);
+                    if (!McpAuthorizationHelper.AreColumnsAuthorizedForOperation(
+                            authorizationResolver,
+                            entityName,
+                            effectiveRole!,
+                            EntityActionOperation.Create,
+                            requestedColumns,
+                            out string columnAuthError))
+                    {
+                        return McpErrorHelpers.PermissionDenied(toolName, entityName, "create", columnAuthError, logger);
+                    }
+                }
+                catch (Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException dabEx)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "ValidationFailed", $"Request validation failed: {dabEx.Message}", logger);
                 }
 
                 JsonElement insertPayloadRoot = dataElement.Clone();

@@ -21,10 +21,7 @@ public static class AppServiceAuthenticationInfo
     /// Error message used when AppService Authentication is configured in production mode in a non AppService Environment.
     /// </summary>
     public const string APPSERVICE_PROD_MISSING_ENV_CONFIG =
-        "AppService environment not detected while runtime is in production mode. " +
-        "The X-MS-CLIENT-PRINCIPAL header is not cryptographically validated by DAB and can be trivially " +
-        "forged when the service is not hosted behind an Azure App Service EasyAuth proxy. " +
-        "Set host.mode to 'development' for local testing, or deploy behind Azure App Service.";
+        "App Service: Cannot start in production: EasyAuth is configured with host.mode set to production, but the Azure App Service environment could not be detected because the WEBSITE_AUTH_ENABLED environment variable was missing or did not have the value true. DAB requires an Azure App Service EasyAuth proxy in production because it trusts the X-MS-CLIENT-PRINCIPAL header as the authenticated user identity, and without the EasyAuth proxy this header could be forged. If this is a local or non-Azure deployment, set host.mode to development. If this is intended to run in production, deploy it behind Azure App Service, enable EasyAuth, and verify that WEBSITE_AUTH_ENABLED=true is available to the application.";
     /// <summary>
     /// Warning message logged when AppService environment not detected (applicable to development mode).
     /// </summary>

@@ -215,6 +215,11 @@ namespace Azure.DataApiBuilder.Service.Services
                 return null;
             }
 
+            /*if (fieldValue.ValueKind is JsonValueKind.Object && namedType is StringType)
+            {
+                return fieldValue.ToString();
+            }*/
+
             // Each scalar in HotChocolate has a runtime type representation.
             // In order to let scalar values flow through the GraphQL type completion
             // efficiently we want the leaf types to match the runtime type.

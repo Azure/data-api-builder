@@ -98,6 +98,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             },
             {
+                "PutOneUpdateWithDatabasePolicy",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 100 AND pieceid = 99 AND categoryName ='SciFi' AND piecesAvailable = 4
+                        AND piecesRequired = 5 AND pieceid != 1
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Update_NullOutMissingField_Test",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
@@ -359,16 +372,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         #region overridden tests
 
+        // Create-action database policies are only supported for MSSQL and DWSQL. Since MySQL does not
+        // support a database policy on the create action, the PUT tests that rely on a create policy
+        // (insert path) remain unsupported here. The update-policy path is validated by
+        // PutOneUpdateWithDatabasePolicy.
         [TestMethod]
         [Ignore]
-        public override Task PutOneUpdateWithDatabasePolicy()
+        public override Task PutOneInsertWithDatabasePolicy()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod]
         [Ignore]
-        public override Task PutOneInsertWithDatabasePolicy()
+        public override Task PutOneWithUnsatisfiedDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
         {
             throw new NotImplementedException();
         }
@@ -397,20 +421,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         [TestMethod]
         [Ignore]
         public void PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
         {
             throw new NotImplementedException();
         }

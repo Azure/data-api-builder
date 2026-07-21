@@ -355,6 +355,27 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual("Demo Title", ((StringValueNode)arg.DefaultValue!).Value);
         }
 
+        [TestMethod]
+        public void StoredProcedure_Description_UsesEntityDescription()
+        {
+            const string entityDescription = "Entity description from config";
+
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spDescriptionTest")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+            };
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: new List<ParameterMetadata>(),
+                graphQLTypeName: "SpDescriptionType",
+                entityName: "SpDescription",
+                entityDescription: entityDescription);
+
+            Assert.AreEqual(entityDescription, field.Description?.Value);
+        }
+
         /// <summary>
         /// Helper that builds a query schema for a stored-procedure entity and returns
         /// the generated execute* field so individual tests can assert on its argument
@@ -364,12 +385,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             DatabaseObject spDbObj,
             List<ParameterMetadata> configParameters,
             string graphQLTypeName,
-            string entityName)
+            string entityName,
+            string? entityDescription = null)
         {
             Entity spEntity = GraphQLTestHelpers.GenerateStoredProcedureEntity(
                 graphQLTypeName: graphQLTypeName,
                 graphQLOperation: GraphQLOperation.Query,
-                parameters: configParameters);
+                parameters: configParameters) with
+            { Description = entityDescription };
 
             ObjectTypeDefinitionNode objectType = CreateGraphQLTypeForEntity(spEntity, entityName, spDbObj);
 

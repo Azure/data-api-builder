@@ -138,6 +138,72 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         #endregion
 
+        #region Column-Level Authorization Tests
+
+        /// <summary>
+        /// Regression test for column-level authorization bypass in create_record.
+        /// A role holding CREATE permission on the entity, but with a column explicitly
+        /// excluded via fields.exclude, must be denied when supplying a value for that column
+        /// even though the operation itself is authorized. Fails pre-fix, passes post-fix.
+        /// </summary>
+        [TestMethod]
+        public async Task CreateRecord_ExcludedColumn_ReturnsPermissionDenied()
+        {
+            var data = new Dictionary<string, object>
+            {
+                { "title", "Should Not Be Created" },
+                { "publisher_id", 1234 }
+            };
+
+            IServiceProvider serviceProvider = BuildMutationServiceProvider(role: "test_role_with_excluded_fields_on_mutation");
+            CreateRecordTool tool = new();
+
+            var args = new Dictionary<string, object?>
+            {
+                { "entity", "Book" },
+                { "data", data }
+            };
+
+            CallToolResult result = await ExecuteToolAsync(tool, serviceProvider, args);
+
+            AssertError(result, "permission",
+                "CreateRecord should deny writes to columns excluded for the caller's role, even though " +
+                "the role holds CREATE permission on the entity.");
+        }
+
+        /// <summary>
+        /// Sanity check accompanying <see cref="CreateRecord_ExcludedColumn_ReturnsPermissionDenied"/>:
+        /// the same restricted role must still be able to create a record when it only supplies
+        /// columns it is permitted to write.
+        /// </summary>
+        [TestMethod]
+        public async Task CreateRecord_AllowedColumnsOnly_WithColumnRestrictedRole_ReturnsSuccess()
+        {
+            var data = new Dictionary<string, object>
+            {
+                { "title", "Allowed Column Only Book" }
+            };
+
+            IServiceProvider serviceProvider = BuildMutationServiceProvider(role: "test_role_with_excluded_fields_on_mutation");
+            CreateRecordTool tool = new();
+
+            var args = new Dictionary<string, object?>
+            {
+                { "entity", "Book" },
+                { "data", data }
+            };
+
+            CallToolResult result = await ExecuteToolAsync(tool, serviceProvider, args);
+
+            AssertSuccess(result, "CreateRecord should succeed when only permitted columns are supplied.");
+
+            JsonElement root = ParseResultRoot(result);
+            int createdId = ExtractCreatedBookId(root);
+            await DeleteTestBook(createdId);
+        }
+
+        #endregion
+
         #region Helpers
 
         private static async Task<CallToolResult> ExecuteCreateAsync(string entity, Dictionary<string, object> data)

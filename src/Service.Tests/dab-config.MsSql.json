@@ -937,6 +937,33 @@
           ]
         },
         {
+          "role": "test_role_with_excluded_fields_on_mutation",
+          "actions": [
+            {
+              "action": "read"
+            },
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
+            },
+            {
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
           "role": "role_multiple_create_policy_tester",
           "actions": [
             {

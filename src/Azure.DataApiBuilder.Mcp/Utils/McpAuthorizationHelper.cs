@@ -80,5 +80,40 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             error = $"You do not have permission to perform {operation} operation for this entity.";
             return false;
         }
+
+        /// <summary>
+        /// Validates that the resolved role is authorized to write/access the specific set of columns
+        /// for the given operation. This is the column-level counterpart to
+        /// <see cref="TryResolveAuthorizedRole"/>, which only performs entity/operation-level authorization.
+        /// Mutation tools (create_record, update_record) must call this after resolving the effective role
+        /// and before forwarding the payload to the mutation engine, mirroring the column-level checks
+        /// already enforced by REST (ColumnsPermissionsRequirement) and the read-side MCP tools.
+        /// </summary>
+        public static bool AreColumnsAuthorizedForOperation(
+            IAuthorizationResolver authorizationResolver,
+            string entityName,
+            string role,
+            EntityActionOperation operation,
+            IEnumerable<string> columns,
+            out string error)
+        {
+            error = string.Empty;
+
+            List<string> requestedColumns = columns is null ? new List<string>() : columns.ToList();
+
+            // No columns supplied means nothing is written, so there is nothing to restrict.
+            if (requestedColumns.Count == 0)
+            {
+                return true;
+            }
+
+            if (!authorizationResolver.AreColumnsAllowedForOperation(entityName, role, operation, requestedColumns))
+            {
+                error = $"You do not have permission to access one or more of the specified columns for the {operation} operation on this entity.";
+                return false;
+            }
+
+            return true;
+        }
     }
 }

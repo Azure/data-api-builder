@@ -66,6 +66,26 @@ public class RuntimeConfigValidator : IConfigValidator
     // Error messages.
     public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
 
+    private const string SEMANTIC_SEARCH_REDIS_REQUIREMENT_ERR_MSG =
+        "Semantic search requires runtime.cache.level-2.provider to be 'redis' and runtime.cache.level-2.connection-string to be configured.";
+
+    private const string SEMANTIC_SEARCH_EMBEDDING_REQUIREMENT_ERR_MSG =
+        "Semantic search requires runtime.embeddings to be configured and enabled.";
+
+    private static readonly HashSet<string> _reservedSemanticRestNames =
+    [
+        "semantic_search",
+        "semantic_threshold",
+        "semantic_distance"
+    ];
+
+    private static readonly HashSet<string> _reservedSemanticGraphQLNames =
+    [
+        "semanticSearch",
+        "semanticThreshold",
+        "semanticDistance"
+    ];
+
     public RuntimeConfigValidator(
         RuntimeConfigProvider runtimeConfigProvider,
         IFileSystem fileSystem,
@@ -1009,6 +1029,153 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 ValidateNameRequirements(entity.GraphQL.Singular);
                 ValidateNameRequirements(entity.GraphQL.Plural);
+            }
+
+            ValidateSemanticSearchConfiguration(runtimeConfig, entityName, entity);
+        }
+    }
+
+    /// <summary>
+    /// Validates semantic-search settings configured for an entity.
+    /// </summary>
+    private void ValidateSemanticSearchConfiguration(RuntimeConfig runtimeConfig, string entityName, Entity entity)
+    {
+        EntitySemanticSearchOptions? semantic = entity.SemanticSearch;
+
+        if (semantic is null || !semantic.Enabled)
+        {
+            return;
+        }
+
+        if (entity.Source.Type is not EntitySourceType.Table and not EntitySourceType.View)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "Semantic search is only supported for entities with source type 'table' or 'view'.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        if (string.IsNullOrWhiteSpace(semantic.RedisIndexName))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"semantic-search.redis-index-name is required when semantic-search.enabled is true for entity '{entityName}'.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        if (!HasValidSemanticRedisConfiguration(runtimeConfig))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: SEMANTIC_SEARCH_REDIS_REQUIREMENT_ERR_MSG,
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        if (!HasValidSemanticEmbeddingConfiguration(runtimeConfig))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: SEMANTIC_SEARCH_EMBEDDING_REQUIREMENT_ERR_MSG,
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        if (semantic.RedisIndexMultiplier < 1 || semantic.RedisIndexMultiplier > 10)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"semantic-search.redis-index-multiplier for entity '{entityName}' must be an integer between 1 and 10.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        if (semantic.SimilarityThreshold < 0.0 || semantic.SimilarityThreshold > 1.0)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "semantic_threshold must be a decimal value between 0.0 and 1.0.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        ValidateSemanticReservedNames(entityName, entity);
+    }
+
+    /// <summary>
+    /// Validates Redis provider/connection-string prerequisites for semantic-search.
+    /// </summary>
+    private static bool HasValidSemanticRedisConfiguration(RuntimeConfig runtimeConfig)
+    {
+        RuntimeCacheLevel2Options? level2 = runtimeConfig.Runtime?.Cache?.Level2;
+        return level2 is not null
+            && string.Equals(level2.Provider, EntityCacheOptions.L2_CACHE_PROVIDER, StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(level2.ConnectionString);
+    }
+
+    /// <summary>
+    /// Validates embeddings prerequisites for semantic-search.
+    /// </summary>
+    private static bool HasValidSemanticEmbeddingConfiguration(RuntimeConfig runtimeConfig)
+    {
+        EmbeddingsOptions? embeddings = runtimeConfig.Runtime?.Embeddings;
+        return embeddings is not null && embeddings.Enabled;
+    }
+
+    /// <summary>
+    /// Ensures configured field names do not collide with semantic reserved names.
+    /// </summary>
+    private void ValidateSemanticReservedNames(string entityName, Entity entity)
+    {
+        HashSet<string> exposedFieldNames = new(StringComparer.OrdinalIgnoreCase);
+
+        if (entity.Fields is not null)
+        {
+            foreach (FieldMetadata field in entity.Fields)
+            {
+                if (!string.IsNullOrWhiteSpace(field.Name))
+                {
+                    exposedFieldNames.Add(field.Name);
+                }
+
+                if (!string.IsNullOrWhiteSpace(field.Alias))
+                {
+                    exposedFieldNames.Add(field.Alias);
+                }
+            }
+        }
+
+        if (entity.Mappings is not null)
+        {
+            foreach (KeyValuePair<string, string> mapping in entity.Mappings)
+            {
+                if (!string.IsNullOrWhiteSpace(mapping.Key))
+                {
+                    exposedFieldNames.Add(mapping.Key);
+                }
+
+                if (!string.IsNullOrWhiteSpace(mapping.Value))
+                {
+                    exposedFieldNames.Add(mapping.Value);
+                }
+            }
+        }
+
+        foreach (string reserved in _reservedSemanticRestNames)
+        {
+            if (exposedFieldNames.Contains(reserved))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Entity '{entityName}' cannot enable semantic search because field name '{reserved}' is reserved.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+
+        foreach (string reserved in _reservedSemanticGraphQLNames)
+        {
+            if (exposedFieldNames.Contains(reserved))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Entity '{entityName}' cannot enable semantic search because field name '{reserved}' is reserved.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
         }
     }

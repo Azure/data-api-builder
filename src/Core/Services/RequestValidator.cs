@@ -272,6 +272,15 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             ISqlMetadataProvider sqlMetadataProvider = GetSqlMetadataProvider(insertRequestCtx.EntityName);
 
+            if (insertRequestCtx.FieldValuePairsInBody.ContainsKey(SemanticSearchConstants.REST_DISTANCE_FIELD)
+                || insertRequestCtx.FieldValuePairsInBody.ContainsKey(SemanticSearchConstants.GRAPHQL_DISTANCE_FIELD))
+            {
+                throw new DataApiBuilderException(
+                    message: "semantic_distance is read-only.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
             SourceDefinition sourceDefinition =
                 TryGetSourceDefinition(insertRequestCtx.EntityName, sqlMetadataProvider);
@@ -356,6 +365,16 @@ namespace Azure.DataApiBuilder.Core.Services
         public void ValidateUpsertRequestContext(UpsertRequestContext upsertRequestCtx, bool isPrimaryKeyInUrl = true)
         {
             ISqlMetadataProvider sqlMetadataProvider = GetSqlMetadataProvider(upsertRequestCtx.EntityName);
+
+            if (upsertRequestCtx.FieldValuePairsInBody.ContainsKey(SemanticSearchConstants.REST_DISTANCE_FIELD)
+                || upsertRequestCtx.FieldValuePairsInBody.ContainsKey(SemanticSearchConstants.GRAPHQL_DISTANCE_FIELD))
+            {
+                throw new DataApiBuilderException(
+                    message: "semantic_distance is read-only.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
             bool isRequestBodyStrict = IsRequestBodyStrict();
             SourceDefinition sourceDefinition = TryGetSourceDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);

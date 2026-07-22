@@ -534,6 +534,7 @@
             }
           }
         },
+
         "compression": {
           "type": "object",
           "description": "Configures HTTP response compression settings.",
@@ -1486,6 +1487,67 @@
                   "default": "L1L2"
                 }
               }
+            },
+            "semantic-search": {
+              "type": "object",
+              "description": "Semantic search configuration for this entity.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/$defs/boolean-or-string",
+                  "description": "Enables semantic search for this entity.",
+                  "default": false
+                },
+                "redis-index-name": {
+                  "type": "string",
+                  "description": "Name of the Redis vector index used for semantic search for this entity."
+                },
+                "redis-index-type": {
+                  "type": "string",
+                  "description": "Redis index storage type used by the semantic search index.",
+                  "enum": ["hash", "json"],
+                  "default": "hash"
+                },
+                "redis-index-multiplier": {
+                  "type": "integer",
+                  "description": "Multiplier applied to requested result count when querying Redis.",
+                  "default": 2,
+                  "minimum": 1,
+                  "maximum": 10
+                },
+                "similarity-threshold": {
+                  "type": "number",
+                  "description": "Minimum Redis similarity value required for a semantic match.",
+                  "default": 0.8,
+                  "minimum": 0.0,
+                  "maximum": 1.0
+                },
+                "input-description": {
+                  "type": "string",
+                  "description": "Description surfaced in API metadata for semantic search input.",
+                  "default": "Natural language value used for semantic search."
+                },
+                "output-description": {
+                  "type": "string",
+                  "description": "Description surfaced in API metadata for semantic distance output.",
+                  "default": "Semantic distance score returned by semantic search."
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "enabled": {
+                        "const": true
+                      }
+                    },
+                    "required": ["enabled"]
+                  },
+                  "then": {
+                    "required": ["redis-index-name"]
+                  }
+                }
+              ]
             },
             "mcp": {
               "oneOf": [

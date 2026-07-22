@@ -16,6 +16,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Services.SemanticSearch;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
@@ -439,6 +440,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 contextAccessor: httpContextAccessor.Object,
                 authorizationResolver: authorizationResolver,
                 gQLFilterParser: graphQLFilterParser,
+                semanticSearchService: NoOpSemanticSearchService.Instance,
                 logger: queryEngineLogger.Object,
                 cache: cacheService,
                 handler: null);

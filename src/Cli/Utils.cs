@@ -958,6 +958,94 @@ namespace Cli
         }
 
         /// <summary>
+        /// Constructs the EntitySemanticSearchOptions for Add/Update.
+        /// </summary>
+        /// <returns>EntitySemanticSearchOptions when at least one semantic option is provided, null otherwise.</returns>
+        public static EntitySemanticSearchOptions? ConstructSemanticSearchOptions(
+            string? semanticSearchEnabled,
+            string? semanticSearchRedisIndexName,
+            string? semanticSearchRedisIndexType,
+            string? semanticSearchRedisIndexMultiplier,
+            string? semanticSearchSimilarityThreshold,
+            string? semanticSearchInputDescription,
+            string? semanticSearchOutputDescription)
+        {
+            if (semanticSearchEnabled is null
+                && semanticSearchRedisIndexName is null
+                && semanticSearchRedisIndexType is null
+                && semanticSearchRedisIndexMultiplier is null
+                && semanticSearchSimilarityThreshold is null
+                && semanticSearchInputDescription is null
+                && semanticSearchOutputDescription is null)
+            {
+                return null;
+            }
+
+            bool enabled = false;
+            if (semanticSearchEnabled is not null && !bool.TryParse(semanticSearchEnabled, out enabled))
+            {
+                _logger.LogError("Invalid format for --semantic-search.enabled. Accepted values are true/false.");
+                return null;
+            }
+
+            string redisIndexType = EntitySemanticSearchOptions.DEFAULT_REDIS_INDEX_TYPE;
+            if (!string.IsNullOrWhiteSpace(semanticSearchRedisIndexType))
+            {
+                if (!string.Equals(semanticSearchRedisIndexType, "hash", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(semanticSearchRedisIndexType, "json", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogError("Invalid format for --semantic-search.redis-index-type. Accepted values are hash/json.");
+                    return null;
+                }
+
+                redisIndexType = semanticSearchRedisIndexType.ToLowerInvariant();
+            }
+
+            int redisIndexMultiplier = EntitySemanticSearchOptions.DEFAULT_REDIS_INDEX_MULTIPLIER;
+            if (!string.IsNullOrWhiteSpace(semanticSearchRedisIndexMultiplier)
+                && !int.TryParse(semanticSearchRedisIndexMultiplier, out redisIndexMultiplier))
+            {
+                _logger.LogError("Invalid format for --semantic-search.redis-index-multiplier. Accepted values are integer values in range [1,10].");
+                return null;
+            }
+
+            if (redisIndexMultiplier < 1 || redisIndexMultiplier > 10)
+            {
+                _logger.LogError("Invalid value for --semantic-search.redis-index-multiplier. Accepted values are integer values in range [1,10].");
+                return null;
+            }
+
+            double similarityThreshold = EntitySemanticSearchOptions.DEFAULT_SIMILARITY_THRESHOLD;
+            if (!string.IsNullOrWhiteSpace(semanticSearchSimilarityThreshold)
+                && !double.TryParse(semanticSearchSimilarityThreshold, out similarityThreshold))
+            {
+                _logger.LogError("Invalid format for --semantic-search.similarity-threshold. Accepted values are decimal values in range [0.0,1.0].");
+                return null;
+            }
+
+            if (similarityThreshold < 0.0 || similarityThreshold > 1.0)
+            {
+                _logger.LogError("Invalid value for --semantic-search.similarity-threshold. Accepted values are decimal values in range [0.0,1.0].");
+                return null;
+            }
+
+            return new EntitySemanticSearchOptions
+            {
+                Enabled = enabled,
+                RedisIndexName = semanticSearchRedisIndexName,
+                RedisIndexType = redisIndexType,
+                RedisIndexMultiplier = redisIndexMultiplier,
+                SimilarityThreshold = similarityThreshold,
+                InputDescription = string.IsNullOrWhiteSpace(semanticSearchInputDescription)
+                    ? EntitySemanticSearchOptions.DEFAULT_INPUT_DESCRIPTION
+                    : semanticSearchInputDescription,
+                OutputDescription = string.IsNullOrWhiteSpace(semanticSearchOutputDescription)
+                    ? EntitySemanticSearchOptions.DEFAULT_OUTPUT_DESCRIPTION
+                    : semanticSearchOutputDescription
+            };
+        }
+
+        /// <summary>
         /// Constructs the EntityMcpOptions for Add/Update.
         /// </summary>
         /// <param name="mcpDmlTools">String value that defines if DML tools are enabled for MCP.</param>

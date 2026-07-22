@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
@@ -374,6 +375,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Operations including primary key
                     Dictionary<OperationType, OpenApiOperation> pkOperations = CreateOperations(
                         entityName: entityName,
+                        entity: entity,
                         sourceDefinition: sourceDefinition,
                         includePrimaryKeyPathComponent: true,
                         configuredRestOperations: configuredRestOperations,
@@ -398,6 +400,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Operations excluding primary key
                     Dictionary<OperationType, OpenApiOperation> operations = CreateOperations(
                         entityName: entityName,
+                        entity: entity,
                         sourceDefinition: sourceDefinition,
                         includePrimaryKeyPathComponent: false,
                         configuredRestOperations: configuredRestOperations,
@@ -434,6 +437,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <returns>Collection of operation types and associated definitions.</returns>
         private Dictionary<OperationType, OpenApiOperation> CreateOperations(
             string entityName,
+            Entity entity,
             SourceDefinition sourceDefinition,
             bool includePrimaryKeyPathComponent,
             Dictionary<OperationType, bool> configuredRestOperations,
@@ -447,7 +451,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (configuredRestOperations[OperationType.Get])
                 {
                     OpenApiOperation getOperation = CreateBaseOperation(description: GETONE_DESCRIPTION, tags: tags);
-                    AddQueryParameters(getOperation.Parameters);
+                    AddQueryParameters(getOperation.Parameters, entity);
                     getOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
                     openApiPathItemOperations.Add(OperationType.Get, getOperation);
                 }
@@ -492,7 +496,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (configuredRestOperations[OperationType.Get])
                 {
                     OpenApiOperation getAllOperation = CreateBaseOperation(description: GETALL_DESCRIPTION, tags: tags);
-                    AddQueryParameters(getAllOperation.Parameters);
+                    AddQueryParameters(getAllOperation.Parameters, entity);
                     getAllOperation.Responses.Add(
                         HttpStatusCode.OK.ToString("D"),
                         CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName, includeNextLink: true));
@@ -542,11 +546,26 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Helper method to add query parameters like $select, $first, $orderby etc. to get and getAll operations for tables/views.
         /// </summary>
         /// <param name="parameters">List of parameters for the operation.</param>
-        private static void AddQueryParameters(IList<OpenApiParameter> parameters)
+        private static void AddQueryParameters(IList<OpenApiParameter> parameters, Entity entity)
         {
             foreach (OpenApiParameter openApiParameter in _tableAndViewQueryParameters)
             {
                 parameters.Add(openApiParameter);
+            }
+
+            if (entity.SemanticSearch?.Enabled is true)
+            {
+                parameters.Add(GetOpenApiQueryParameter(
+                    name: RequestParser.SEMANTIC_SEARCH_URL,
+                    description: entity.SemanticSearch.InputDescription,
+                    required: false,
+                    type: "string"));
+
+                parameters.Add(GetOpenApiQueryParameter(
+                    name: RequestParser.SEMANTIC_THRESHOLD_URL,
+                    description: "Minimum semantic similarity threshold between 0.0 and 1.0.",
+                    required: false,
+                    type: "number"));
             }
         }
 
@@ -1512,6 +1531,19 @@ namespace Azure.DataApiBuilder.Core.Services
                         Items = !string.IsNullOrWhiteSpace(subTypeMetadata) ? new OpenApiSchema() { Type = subTypeMetadata } : null
                     });
                 }
+            }
+
+            if (!isRequestBodySchema
+                && entityConfig?.SemanticSearch?.Enabled is true
+                && !properties.ContainsKey(SemanticSearchConstants.REST_DISTANCE_FIELD))
+            {
+                properties.Add(SemanticSearchConstants.REST_DISTANCE_FIELD, new OpenApiSchema()
+                {
+                    Type = "number",
+                    Description = entityConfig.SemanticSearch.OutputDescription,
+                    ReadOnly = true,
+                    Nullable = true
+                });
             }
 
             OpenApiSchema schema = new()

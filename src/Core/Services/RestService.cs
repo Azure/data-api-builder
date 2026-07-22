@@ -194,6 +194,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     context.RawQueryString = queryString;
                     context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                     RequestParser.ParseQueryString(context, sqlMetadataProvider);
+                    ValidateSemanticRestRequest(context, operationType, _runtimeConfigProvider.GetConfig());
                 }
             }
 
@@ -354,6 +355,71 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return false;
+        }
+
+        private static void ValidateSemanticRestRequest(RestRequestContext context, EntityActionOperation operationType, RuntimeConfig runtimeConfig)
+        {
+            bool hasSemanticSearch = !string.IsNullOrWhiteSpace(context.SemanticSearch);
+            bool hasSemanticThreshold = context.SemanticThreshold.HasValue;
+            bool isSemanticRequest = hasSemanticSearch || hasSemanticThreshold;
+
+            if (context.FieldsToBeReturned.Contains(SemanticSearchConstants.REST_DISTANCE_FIELD, StringComparer.OrdinalIgnoreCase))
+            {
+                context.FieldsToBeReturned = context.FieldsToBeReturned
+                    .Where(field => !string.Equals(field, SemanticSearchConstants.REST_DISTANCE_FIELD, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                context.IsSemanticDistanceExplicitlySelected = true;
+            }
+
+            if (!isSemanticRequest)
+            {
+                if (context.IsSemanticDistanceExplicitlySelected)
+                {
+                    throw new DataApiBuilderException(
+                        message: "semantic_distance can only be selected when semantic search is used.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
+                return;
+            }
+
+            if (operationType is not EntityActionOperation.Read)
+            {
+                throw new DataApiBuilderException(
+                    message: "Semantic search is only supported for read operations.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            if (!runtimeConfig.Entities.TryGetValue(context.EntityName, out Entity? entity)
+                || entity.SemanticSearch is null
+                || !entity.SemanticSearch.Enabled)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Semantic search is not enabled for entity '{context.EntityName}'.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            if (!string.IsNullOrWhiteSpace(context.After))
+            {
+                throw new DataApiBuilderException(
+                    message: "Pagination continuation tokens are not supported when semantic search is used.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            if (context.OrderByClauseInUrl is not null
+                && context.OrderByClauseInUrl.Any(col => string.Equals(col.ColumnName, SemanticSearchConstants.REST_DISTANCE_FIELD, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new DataApiBuilderException(
+                    message: "semantic_distance cannot be used in orderBy.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            context.IncludeSemanticDistanceInResponse = context.FieldsToBeReturned.Count == 0 || context.IsSemanticDistanceExplicitlySelected;
         }
 
         /// <summary>

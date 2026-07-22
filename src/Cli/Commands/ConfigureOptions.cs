@@ -61,6 +61,8 @@ namespace Cli.Commands
             int? runtimePaginationMaxPageSize = null,
             int? runtimePaginationDefaultPageSize = null,
             bool? runtimePaginationNextLinkRelative = null,
+            string? runtimeCacheLevel2Provider = null,
+            string? runtimeCacheLevel2ConnectionString = null,
             CompressionLevel? runtimeCompressionLevel = null,
             bool? runtimeHealthEnabled = null,
             int? runtimeHealthCacheTtlSeconds = null,
@@ -161,6 +163,8 @@ namespace Cli.Commands
             RuntimePaginationMaxPageSize = runtimePaginationMaxPageSize;
             RuntimePaginationDefaultPageSize = runtimePaginationDefaultPageSize;
             RuntimePaginationNextLinkRelative = runtimePaginationNextLinkRelative;
+            RuntimeCacheLevel2Provider = runtimeCacheLevel2Provider;
+            RuntimeCacheLevel2ConnectionString = runtimeCacheLevel2ConnectionString;
             // Compression
             RuntimeCompressionLevel = runtimeCompressionLevel;
             // Health
@@ -341,6 +345,12 @@ namespace Cli.Commands
 
         [Option("runtime.pagination.next-link-relative", Required = false, HelpText = "Use relative URLs for pagination next links. Default: false (boolean).")]
         public bool? RuntimePaginationNextLinkRelative { get; }
+
+        [Option("runtime.cache.level-2.provider", Required = false, HelpText = "Set level-2 cache provider. Allowed values: redis.")]
+        public string? RuntimeCacheLevel2Provider { get; }
+
+        [Option("runtime.cache.level-2.connection-string", Required = false, HelpText = "Set level-2 cache connection string.")]
+        public string? RuntimeCacheLevel2ConnectionString { get; }
 
         [Option("runtime.compression.level", Required = false, HelpText = "Set the response compression level. Allowed values: optimal (default), fastest, none.")]
         public CompressionLevel? RuntimeCompressionLevel { get; }

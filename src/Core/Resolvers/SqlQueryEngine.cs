@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -12,6 +13,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Services.SemanticSearch;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -37,6 +39,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly DabCacheService _cache;
+        private readonly ISemanticSearchService _semanticSearchService;
 
         // <summary>
         // Constructor.
@@ -49,7 +52,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider,
-            DabCacheService cache)
+            DabCacheService cache,
+            ISemanticSearchService? semanticSearchService = null)
         {
             _queryFactory = queryFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
@@ -59,6 +63,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
             _cache = cache;
+            _semanticSearchService = semanticSearchService ?? NoOpSemanticSearchService.Instance;
         }
 
         /// <summary>
@@ -79,16 +84,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _runtimeConfigProvider,
                 _gQLFilterParser);
 
+            (bool shouldReturnEmpty, JsonDocument? emptySemanticResponse) = await TryApplySemanticNarrowingAsync(
+                structure,
+                dataSourceName,
+                parameters,
+                GraphQLUtils.GetEntityNameFromContext(context));
+            if (shouldReturnEmpty)
+            {
+                return new Tuple<JsonDocument?, IMetadata?>(emptySemanticResponse, structure.PaginationMetadata);
+            }
+
             if (structure.PaginationMetadata.IsPaginated)
             {
+                JsonDocument? queryResult = await ExecuteAsync(structure, dataSourceName);
+                JsonDocument? processedResult = ApplySemanticDistanceAndOrderingIfNeeded(queryResult, structure, dataSourceName, includeRestField: false, includeGraphQlField: true);
+
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName), structure.PaginationMetadata, structure.GroupByMetadata),
+                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(processedResult, structure.PaginationMetadata, structure.GroupByMetadata),
                     structure.PaginationMetadata);
             }
             else
             {
+                JsonDocument? queryResult = await ExecuteAsync(structure, dataSourceName);
+                JsonDocument? processedResult = ApplySemanticDistanceAndOrderingIfNeeded(queryResult, structure, dataSourceName, includeRestField: false, includeGraphQlField: true);
+
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    await ExecuteAsync(structure, dataSourceName),
+                    processedResult,
                     structure.PaginationMetadata);
             }
         }
@@ -189,7 +210,230 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _runtimeConfigProvider,
                 _gQLFilterParser,
                 _httpContextAccessor.HttpContext!);
-            return await ExecuteAsync(structure, dataSourceName);
+
+            (bool shouldReturnEmpty, JsonDocument? emptySemanticResponse) = await TryApplySemanticNarrowingAsync(
+                structure,
+                dataSourceName,
+                graphQLParameters: null,
+                context.EntityName,
+                context);
+            if (shouldReturnEmpty)
+            {
+                return emptySemanticResponse;
+            }
+
+            JsonDocument? response = await ExecuteAsync(structure, dataSourceName);
+            return ApplySemanticDistanceAndOrderingIfNeeded(response, structure, dataSourceName, includeRestField: true, includeGraphQlField: false);
+        }
+
+        private async Task<(bool shouldReturnEmpty, JsonDocument? emptyResponse)> TryApplySemanticNarrowingAsync(
+            SqlQueryStructure structure,
+            string dataSourceName,
+            IDictionary<string, object?>? graphQLParameters,
+            string entityName,
+            FindRequestContext? restContext = null)
+        {
+            string? semanticSearchText = restContext?.SemanticSearch;
+            if (semanticSearchText is null
+                && graphQLParameters is not null
+                && graphQLParameters.TryGetValue(QueryBuilder.SEMANTIC_SEARCH_ARGUMENT_NAME, out object? graphQlSearchValue)
+                && graphQlSearchValue is string graphQlSearchText)
+            {
+                semanticSearchText = graphQlSearchText;
+            }
+
+            bool hasSemanticThresholdOnly = restContext?.SemanticThreshold is not null
+                || (graphQLParameters is not null && graphQLParameters.ContainsKey(QueryBuilder.SEMANTIC_THRESHOLD_ARGUMENT_NAME));
+
+            bool semanticRequested = !string.IsNullOrWhiteSpace(semanticSearchText) || hasSemanticThresholdOnly;
+
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            if (!runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity)
+                || entity.SemanticSearch is null
+                || !entity.SemanticSearch.Enabled)
+            {
+                if (semanticRequested)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Semantic search is not enabled for entity '{entityName}'.",
+                        statusCode: System.Net.HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
+                return (false, null);
+            }
+
+            if (string.IsNullOrWhiteSpace(semanticSearchText))
+            {
+                return (false, null);
+            }
+
+            if (graphQLParameters is not null
+                && graphQLParameters.TryGetValue(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, out object? afterArg)
+                && afterArg is string afterToken
+                && !string.IsNullOrWhiteSpace(afterToken))
+            {
+                throw new DataApiBuilderException(
+                    message: "Pagination continuation tokens are not supported when semantic search is used.",
+                    statusCode: System.Net.HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            if (graphQLParameters is not null
+                && graphQLParameters.TryGetValue(QueryBuilder.SEMANTIC_THRESHOLD_ARGUMENT_NAME, out object? graphQlThreshold)
+                && graphQlThreshold is double graphQlThresholdDouble
+                && (graphQlThresholdDouble < 0.0 || graphQlThresholdDouble > 1.0))
+            {
+                throw new DataApiBuilderException(
+                    message: "semantic_threshold must be a decimal value between 0.0 and 1.0.",
+                    statusCode: System.Net.HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            double effectiveThreshold = restContext?.SemanticThreshold
+                ?? (graphQLParameters is not null && graphQLParameters.TryGetValue(QueryBuilder.SEMANTIC_THRESHOLD_ARGUMENT_NAME, out object? gqlThresholdObj) && gqlThresholdObj is double gqlThresholdVal
+                    ? gqlThresholdVal
+                    : entity.SemanticSearch.SimilarityThreshold);
+
+            int first = restContext?.First
+                ?? (graphQLParameters is not null && graphQLParameters.TryGetValue(QueryBuilder.PAGE_START_ARGUMENT_NAME, out object? firstObj) && firstObj is int gqlFirst ? gqlFirst : (int)runtimeConfig.DefaultPageSize());
+            int redisTop = first * entity.SemanticSearch.RedisIndexMultiplier;
+
+            SourceDefinition sourceDefinition = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName).GetSourceDefinition(entityName);
+            IReadOnlyList<string> primaryKeyColumns = sourceDefinition.PrimaryKey;
+
+            IReadOnlyList<SemanticSearchCandidate> candidates = await _semanticSearchService.GetCandidatesAsync(
+                entityName,
+                entity.SemanticSearch,
+                primaryKeyColumns,
+                semanticSearchText,
+                effectiveThreshold,
+                redisTop);
+
+            if (candidates.Count == 0)
+            {
+                return (true, JsonDocument.Parse("[]"));
+            }
+
+            // De-duplicate candidate keys while keeping the highest similarity.
+            Dictionary<string, SemanticSearchCandidate> deduped = new(StringComparer.Ordinal);
+            foreach (SemanticSearchCandidate candidate in candidates)
+            {
+                string signature = BuildPrimaryKeySignatureFromValues(primaryKeyColumns, candidate.PrimaryKeyValues);
+                if (!deduped.TryGetValue(signature, out SemanticSearchCandidate? existing) || candidate.Similarity > existing.Similarity)
+                {
+                    deduped[signature] = candidate;
+                }
+            }
+
+            IReadOnlyList<SemanticSearchCandidate> narrowedCandidates = deduped.Values.ToList();
+            structure.ApplySemanticCandidates(narrowedCandidates);
+            foreach (KeyValuePair<string, SemanticSearchCandidate> kvp in deduped)
+            {
+                structure.SemanticDistanceByPrimaryKeySignature[kvp.Key] = kvp.Value.Similarity;
+            }
+
+            return (false, null);
+        }
+
+        private JsonDocument? ApplySemanticDistanceAndOrderingIfNeeded(
+            JsonDocument? response,
+            SqlQueryStructure structure,
+            string dataSourceName,
+            bool includeRestField,
+            bool includeGraphQlField)
+        {
+            if (response is null || structure.SemanticDistanceByPrimaryKeySignature.Count == 0)
+            {
+                return response;
+            }
+
+            SourceDefinition sourceDefinition = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName).GetSourceDefinition(structure.EntityName);
+            if (response.RootElement.ValueKind is not JsonValueKind.Array)
+            {
+                return response;
+            }
+
+            List<(double? distance, JsonObject row)> rows = new();
+            foreach (JsonElement element in response.RootElement.EnumerateArray())
+            {
+                JsonObject? row = JsonObject.Create(element);
+                if (row is null)
+                {
+                    continue;
+                }
+
+                string signature = BuildPrimaryKeySignatureFromRow(sourceDefinition.PrimaryKey, structure.EntityName, dataSourceName, element);
+                double? distance = null;
+                if (structure.SemanticDistanceByPrimaryKeySignature.TryGetValue(signature, out double mappedDistance))
+                {
+                    distance = mappedDistance;
+                }
+
+                if (includeRestField)
+                {
+                    row[SemanticSearchConstants.REST_DISTANCE_FIELD] = distance.HasValue ? JsonValue.Create(distance.Value) : null;
+                }
+
+                if (includeGraphQlField)
+                {
+                    row[SemanticSearchConstants.GRAPHQL_DISTANCE_FIELD] = distance.HasValue ? JsonValue.Create(distance.Value) : null;
+                }
+
+                rows.Add((distance, row));
+            }
+
+            if (!structure.HasUserSpecifiedOrdering)
+            {
+                rows = rows.OrderByDescending(r => r.distance ?? double.MinValue).ToList();
+            }
+
+            JsonElement updated = JsonSerializer.SerializeToElement(rows.Select(r => r.row).ToList());
+
+            response.Dispose();
+            return JsonDocument.Parse(updated.GetRawText());
+        }
+
+        private string BuildPrimaryKeySignatureFromRow(
+            IReadOnlyList<string> primaryKeyColumns,
+            string entityName,
+            string dataSourceName,
+            JsonElement row)
+        {
+            ISqlMetadataProvider metadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            Dictionary<string, object?> values = new(StringComparer.Ordinal);
+            foreach (string primaryKeyColumn in primaryKeyColumns)
+            {
+                if (!metadataProvider.TryGetExposedColumnName(entityName, primaryKeyColumn, out string? exposedName)
+                    || string.IsNullOrWhiteSpace(exposedName)
+                    || !row.TryGetProperty(exposedName, out JsonElement valueElement))
+                {
+                    values[primaryKeyColumn] = null;
+                    continue;
+                }
+
+                values[primaryKeyColumn] = valueElement.ValueKind switch
+                {
+                    JsonValueKind.Null => null,
+                    JsonValueKind.String => valueElement.GetString(),
+                    _ => valueElement.ToString()
+                };
+            }
+
+            return BuildPrimaryKeySignatureFromValues(primaryKeyColumns, values);
+        }
+
+        private static string BuildPrimaryKeySignatureFromValues(
+            IReadOnlyList<string> primaryKeyColumns,
+            IReadOnlyDictionary<string, object?> values)
+        {
+            return string.Join("|", primaryKeyColumns.Select(pk =>
+            {
+                string serializedValue = values.TryGetValue(pk, out object? value)
+                    ? value?.ToString() ?? "null"
+                    : "null";
+                return $"{pk}={serializedValue}";
+            }));
         }
 
         /// <summary>

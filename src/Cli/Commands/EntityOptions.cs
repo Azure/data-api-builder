@@ -27,6 +27,13 @@ namespace Cli.Commands
             string? cacheTtlSeconds,
             string? cacheLevel,
             string? healthEnabled,
+            string? semanticSearchEnabled,
+            string? semanticSearchRedisIndexName,
+            string? semanticSearchRedisIndexType,
+            string? semanticSearchRedisIndexMultiplier,
+            string? semanticSearchSimilarityThreshold,
+            string? semanticSearchInputDescription,
+            string? semanticSearchOutputDescription,
             string? description,
             IEnumerable<string>? parametersNameCollection,
             IEnumerable<string>? parametersDescriptionCollection,
@@ -58,6 +65,13 @@ namespace Cli.Commands
             CacheTtlSeconds = cacheTtlSeconds;
             CacheLevel = cacheLevel;
             HealthEnabled = healthEnabled;
+            SemanticSearchEnabled = semanticSearchEnabled;
+            SemanticSearchRedisIndexName = semanticSearchRedisIndexName;
+            SemanticSearchRedisIndexType = semanticSearchRedisIndexType;
+            SemanticSearchRedisIndexMultiplier = semanticSearchRedisIndexMultiplier;
+            SemanticSearchSimilarityThreshold = semanticSearchSimilarityThreshold;
+            SemanticSearchInputDescription = semanticSearchInputDescription;
+            SemanticSearchOutputDescription = semanticSearchOutputDescription;
             Description = description;
             ParametersNameCollection = parametersNameCollection;
             ParametersDescriptionCollection = parametersDescriptionCollection;
@@ -119,6 +133,27 @@ namespace Cli.Commands
 
         [Option("health.enabled", Required = false, HelpText = "Enable health checks for this entity. Default: true (boolean).")]
         public string? HealthEnabled { get; }
+
+        [Option("semantic-search.enabled", Required = false, HelpText = "Enable semantic search for this entity. Accepted values are true/false.")]
+        public string? SemanticSearchEnabled { get; }
+
+        [Option("semantic-search.redis-index-name", Required = false, HelpText = "Name of the Redis vector index to use for semantic search.")]
+        public string? SemanticSearchRedisIndexName { get; }
+
+        [Option("semantic-search.redis-index-type", Required = false, HelpText = "Redis index type for semantic search. Allowed values: hash, json.")]
+        public string? SemanticSearchRedisIndexType { get; }
+
+        [Option("semantic-search.redis-index-multiplier", Required = false, HelpText = "Multiplier for Redis candidate retrieval. Allowed values: 1-10.")]
+        public string? SemanticSearchRedisIndexMultiplier { get; }
+
+        [Option("semantic-search.similarity-threshold", Required = false, HelpText = "Default semantic similarity threshold. Allowed values: 0.0-1.0.")]
+        public string? SemanticSearchSimilarityThreshold { get; }
+
+        [Option("semantic-search.input-description", Required = false, HelpText = "Description for semantic search input metadata.")]
+        public string? SemanticSearchInputDescription { get; }
+
+        [Option("semantic-search.output-description", Required = false, HelpText = "Description for semantic distance output metadata.")]
+        public string? SemanticSearchOutputDescription { get; }
 
         [Option("description", Required = false, HelpText = "Description of the entity.")]
         public string? Description { get; }

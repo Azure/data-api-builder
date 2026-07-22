@@ -142,3 +142,7 @@ steps:
   inputs:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+
+- template: templates/publish-coverage-artifact.yml
+  parameters:
+    artifactName: 'coverage-cosmos'

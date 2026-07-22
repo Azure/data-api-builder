@@ -1188,6 +1188,83 @@ namespace Cli.Tests
             Assert.AreEqual(expectedPrimaryKey, field.PrimaryKey);
         }
 
+        /// <summary>
+        /// Verifies that a field description containing commas is stored in full
+        /// and not truncated at the first comma.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("Indicates whether the record is active. When false, the record may be historical and still exist, but is no longer actively used. Type: boolean",
+            DisplayName = "Field description with multiple commas is stored in full")]
+        [DataRow("Simple description without commas",
+            DisplayName = "Field description without commas is unchanged")]
+        public void TestUpdateFieldDescriptionWithCommas(string description)
+        {
+            string initialConfig = GetInitialConfigString() + "," + @"
+                ""entities"": {
+                    ""MyEntity"": {
+                        ""source"": ""MyTable"",
+                        ""permissions"": [
+                            {
+                                ""role"": ""anonymous"",
+                                ""actions"": [""read""]
+                            }
+                        ]
+                    }
+                }
+            }";
+
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: null,
+                linkingTargetFields: null,
+                relationshipFields: null,
+                map: null,
+                cacheEnabled: null,
+                cacheTtlSeconds: null,
+                cacheLevel: null,
+                healthEnabled: null,
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null,
+                description: null,
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null,
+                fieldsNameCollection: new[] { "RecordIsActive" },
+                fieldsAliasCollection: null,
+                fieldsDescriptionCollection: new[] { description },
+                fieldsPrimaryKeyCollection: null,
+                mcpDmlTools: null,
+                mcpCustomTool: null
+            );
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig), "Parsed config file.");
+            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig), "Successfully updated entity in the config.");
+
+            Entity updatedEntity = updatedRuntimeConfig.Entities["MyEntity"];
+            Assert.IsNotNull(updatedEntity.Fields);
+            Assert.AreEqual(1, updatedEntity.Fields!.Count);
+            FieldMetadata field = updatedEntity.Fields[0];
+            Assert.AreEqual("RecordIsActive", field.Name);
+            Assert.AreEqual(description, field.Description, "Full description including commas must be preserved.");
+        }
+
         private static string GetInitialConfigString()
         {
             return @"{" +

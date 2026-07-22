@@ -169,6 +169,27 @@ public class ParameterEmbeddingHelperTests
         _mockService.VerifyNoOtherCalls();
     }
 
+    [TestMethod]
+    public async Task MissingEntity_ThrowsEntityNotFound()
+    {
+        RuntimeConfig runtimeConfig = new(
+            Schema: null,
+            DataSource: null,
+            Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
+
+        DataApiBuilderException exception = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
+            () => ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+                new Dictionary<string, object?>(),
+                runtimeConfig,
+                "MissingEntity",
+                _mockService.Object,
+                CancellationToken.None));
+
+        Assert.AreEqual(HttpStatusCode.NotFound, exception.StatusCode);
+        Assert.AreEqual(DataApiBuilderException.SubStatusCodes.EntityNotFound, exception.SubStatusCode);
+        StringAssert.Contains(exception.Message, "MissingEntity");
+    }
+
     #endregion
 
     #region Service Availability

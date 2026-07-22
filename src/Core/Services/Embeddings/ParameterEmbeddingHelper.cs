@@ -56,7 +56,14 @@ public static class ParameterEmbeddingHelper
         CancellationToken cancellationToken,
         ILogger? logger = null)
     {
-        Entity entity = runtimeConfig.Entities[entityName];
+        if (!runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity))
+        {
+            throw new DataApiBuilderException(
+                message: $"The entity '{entityName}' was not found in the runtime config.",
+                statusCode: HttpStatusCode.NotFound,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+        }
+
         string? sprocName = entity.Source.Object;
         string? provider = runtimeConfig.Runtime?.Embeddings?.Provider.ToString().ToLowerInvariant();
         string? model = runtimeConfig.Runtime?.Embeddings?.EffectiveModel;

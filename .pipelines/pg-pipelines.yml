@@ -140,3 +140,8 @@ jobs:
     inputs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+
+  # Publish this job's raw cobertura as a named pipeline artifact for aggregation.
+  - template: templates/publish-coverage-artifact.yml
+    parameters:
+      artifactName: 'coverage-pg'

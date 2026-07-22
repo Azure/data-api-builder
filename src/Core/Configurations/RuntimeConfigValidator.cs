@@ -739,9 +739,8 @@ public class RuntimeConfigValidator : IConfigValidator
         // Validate each child config independently.
         foreach ((string fileName, RuntimeConfig childConfig) in runtimeConfig.ChildConfigs)
         {
-            // The metadata provider stores autoentity resolution counts on the root (merged)
-            // config. Copy those counts to the child config so per-child validation can find
-            // them. Only copy if the child hasn't already been populated (e.g. in unit tests).
+            // The metadata provider stores autoentity resolution counts on the root config.
+            // Copy those counts to the child config so per-child validation can find them
             foreach (KeyValuePair<string, Autoentity> ae in childConfig.Autoentities)
             {
                 if (!childConfig.AutoentityResolutionCounts.ContainsKey(ae.Key)

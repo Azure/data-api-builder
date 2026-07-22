@@ -884,12 +884,9 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// Child config with only autoentities that resolve to >0 entities is valid.
+    /// Child config with only autoentities that resolve to greater than 0 entities is valid.
     /// Simulates the production code path where the metadata provider stores resolution
     /// counts on the root (merged) config rather than on the child config directly.
-    /// This is the regression test for the bug where child-config autoentities caused
-    /// "No entities found" even when they were expanded successfully.
-    /// Covers child truth-table row C5 (DS=1, E=0, AE=1, resolved>0, counts on root).
     /// </summary>
     [TestMethod]
     public void TestChildWithDataSourceAndAutoentitiesResolvingEntitiesIsValid()

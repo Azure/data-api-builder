@@ -2038,9 +2038,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                        queryExecutor.GetMultipleResultSetsIfAnyAsync,
                        dataSourceName,
                        GetHttpContext(),
-                       sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL
-                           ? new List<string> { prettyPrintPk, entityName }
-                           : new List<string> { prettyPrintPk, entityName });
+                       new List<string> { prettyPrintPk, entityName });
         }
 
         private Dictionary<string, object?> PrepareParameters(RestRequestContext context)

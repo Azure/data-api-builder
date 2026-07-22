@@ -380,6 +380,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             DatabaseType dbType = DatabaseType.MSSQL,
             string testCategory = TestCategory.MSSQL)
         {
+            TestHelper.SetAppServiceEnvironmentVariable();
             DataSource dataSource = new(dbType, GetConnectionStringFromEnvironmentConfig(environment: testCategory), new());
             Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.AppService), null);
 

@@ -47,7 +47,8 @@ public class RuntimeConfigValidator : IConfigValidator
     private static readonly HashSet<DatabaseType> _databaseTypesSupportingCreatePolicy =
     [
         DatabaseType.MSSQL,
-        DatabaseType.DWSQL
+        DatabaseType.DWSQL,
+        DatabaseType.PostgreSQL
     ];
 
     // Error messages for user-delegated authentication configuration.

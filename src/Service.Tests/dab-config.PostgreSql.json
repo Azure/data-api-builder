@@ -324,7 +324,10 @@
               }
             },
             {
-              "action": "create"
+              "action": "create",
+              "policy": {
+                "database": "@item.pieceid ne 6 and @item.piecesAvailable gt 0"
+              }
             },
             {
               "action": "read"

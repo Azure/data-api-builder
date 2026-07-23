@@ -4,7 +4,7 @@
 
 ## Summary
 
-Data API builder (DAB) embeds a compact, anonymous **usage-telemetry token** into the `Application Name` property of the connection strings it uses to reach SQL Server, Azure SQL, Azure SQL Data Warehouse (DWSQL), and PostgreSQL. Because `Application Name` is surfaced on the database side (for example in `sys.dm_exec_sessions.program_name`), this lets the team understand &mdash; **in aggregate and without any per-customer identifiers** &mdash; which DAB version is running and which features are enabled, using telemetry the database already collects.
+Data API builder (DAB) embeds a compact, anonymous **usage-telemetry token** into the `Application Name` property of the connection strings it uses to reach SQL Server, Azure SQL, Azure SQL Data Warehouse (DWSQL), and PostgreSQL. Because `Application Name` is surfaced on the database side (`sys.dm_exec_sessions.program_name` on SQL Server, `pg_stat_activity.application_name` on PostgreSQL), this lets the team understand &mdash; **in aggregate and without any per-customer identifiers** &mdash; which DAB version is running and which features are enabled, using telemetry the database already collects.
 
 The token has the shape:
 
@@ -209,12 +209,20 @@ When the token is computed, DAB emits a single Debug log of the **token only** (
 
 ## Decoding and observing in production
 
-On the database side, the token appears as the session's program name. For SQL Server:
+The token surfaces server-side as the connection's application name; the exact surface is engine-specific.
+
+- **SQL Server / DWSQL** — `sys.dm_exec_sessions.program_name`:
 
 ```sql
-SELECT program_name
-FROM sys.dm_exec_sessions
+SELECT program_name FROM sys.dm_exec_sessions
 WHERE program_name LIKE 'dab_oss%' OR program_name LIKE '%,dab_oss%';
+```
+
+- **PostgreSQL** — `pg_stat_activity.application_name` (PostgreSQL truncates this to 63 bytes; the decoder tolerates truncation):
+
+```sql
+SELECT application_name FROM pg_stat_activity
+WHERE application_name LIKE 'dab_oss%' OR application_name LIKE '%,dab_oss%';
 ```
 
 A captured token can be decoded back to a legend with `dab appname --decode "<token>"`.

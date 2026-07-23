@@ -379,7 +379,14 @@ public record RuntimeConfig
             // be resolved using the parent's Key Vault configuration.
             // If a child config defines its own azure-key-vault section, TryParseConfig's
             // ExtractAzureKeyVaultOptions will detect it and override these parent options.
-            DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: this.AzureKeyVault, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
+            DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: this.AzureKeyVault, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore)
+            {
+                // Defer Application Name (telemetry) injection to the top-level load. A child config
+                // has no global runtime section and only its own entities; the root performs the
+                // injection once over the fully-merged config so each data source's pool reflects the
+                // global runtime and the complete entity set.
+                SkipApplicationNameInjection = true
+            };
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {

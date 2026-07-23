@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service;
 using Cli.Constants;
@@ -128,7 +129,10 @@ public class EndToEndTests
             replacementSettings: replacementSettings));
 
         SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource!.ConnectionString);
-        Assert.AreEqual(ProductInfo.GetDataApiBuilderUserAgent(), builder.ApplicationName);
+        // Application Name now embeds the dab_oss telemetry block (dab_oss_<version>+<payload>+),
+        // so assert it begins with the product user agent rather than exact-matching it.
+        Assert.IsTrue(builder.ApplicationName.StartsWith(ProductInfo.GetDataApiBuilderUserAgent()),
+            $"Expected Application Name to start with '{ProductInfo.GetDataApiBuilderUserAgent()}' but was '{builder.ApplicationName}'.");
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
@@ -137,6 +141,133 @@ public class EndToEndTests
         Assert.IsFalse(runtimeConfig.Runtime.Rest?.Enabled);
         Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL?.Path);
         Assert.IsTrue(runtimeConfig.Runtime.GraphQL?.Enabled);
+    }
+
+    /// <summary>
+    /// The `appname` command encodes the telemetry Application Name from a config (offline — no
+    /// validation and no database connection) and decodes a telemetry string back into a
+    /// human-readable description.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeAndDecode()
+    {
+        // Arrange: a minimal, self-contained MSSQL config in the mock file system.
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;User Id=sa;Password=Placeholder1;"" },
+            ""runtime"": { ""rest"": { ""enabled"": true }, ""graphql"": { ""enabled"": true }, ""host"": { ""mode"": ""development"", ""authentication"": { ""provider"": ""StaticWebApps"" } } },
+            ""entities"": { ""Book"": { ""source"": { ""object"": ""dbo.books"", ""type"": ""table"" }, ""permissions"": [ { ""role"": ""anonymous"", ""actions"": [ ""read"" ] } ] } }
+        }";
+        _fileSystem!.File.WriteAllText("appname-config.json", configJson);
+
+        // Act: encode to an output file. This must succeed offline (no validation / no DB connection).
+        int encodeCode = Program.Execute(
+            new[] { "appname", "--config", "appname-config.json", "--output", "appname-out.txt" },
+            _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: encode succeeded and produced a well-formed telemetry string.
+        Assert.AreEqual(0, encodeCode, "appname --config should succeed offline");
+        string telemetry = _fileSystem.File.ReadAllText("appname-out.txt");
+        Assert.IsTrue(telemetry.StartsWith("dab_oss_"), telemetry);
+        Assert.IsTrue(telemetry.EndsWith("+"), telemetry);
+
+        // Act: decode the produced string back into a human-readable description.
+        int decodeCode = Program.Execute(
+            new[] { "appname", "--decode", telemetry, "--output", "appname-decoded.txt" },
+            _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: decode succeeded and produced recognizable lines.
+        Assert.AreEqual(0, decodeCode, "appname --decode should succeed");
+        string decoded = _fileSystem.File.ReadAllText("appname-decoded.txt");
+        Assert.IsTrue(decoded.Contains("Version: dab_oss_"), decoded);
+        Assert.IsTrue(decoded.Contains("runtime.rest.enabled"), decoded);
+        Assert.IsTrue(decoded.Contains("entities.any.table"), decoded);
+    }
+
+    /// <summary>
+    /// The `appname` encode path returns GENERAL_ERROR (and writes no output file) when the config
+    /// file cannot be found.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeFailsWhenConfigMissing()
+    {
+        int code = Program.Execute(
+            new[] { "appname", "--config", "does-not-exist.json", "--output", "appname-out.txt" },
+            _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.GENERAL_ERROR, code, "appname encode should fail when the config cannot be found.");
+        Assert.IsFalse(_fileSystem!.File.Exists("appname-out.txt"), "No output file should be written on failure.");
+    }
+
+    /// <summary>
+    /// The `appname` encode path writes the telemetry string to stdout when --output is omitted.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeWritesToStdout()
+    {
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;User Id=sa;Password=Placeholder1;"" },
+            ""runtime"": { ""rest"": { ""enabled"": true }, ""graphql"": { ""enabled"": true } },
+            ""entities"": { }
+        }";
+        _fileSystem!.File.WriteAllText("appname-config.json", configJson);
+
+        TextWriter originalOut = Console.Out;
+        StringWriter capturedOut = new();
+        Console.SetOut(capturedOut);
+        int code;
+        try
+        {
+            code = Program.Execute(
+                new[] { "appname", "--config", "appname-config.json" },
+                _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+
+        Assert.AreEqual(CliReturnCode.SUCCESS, code, "appname encode to stdout should succeed.");
+        string stdout = capturedOut.ToString();
+        Assert.IsTrue(stdout.Contains("dab_oss_"), $"stdout should contain the telemetry marker but was '{stdout}'.");
+        Assert.IsTrue(stdout.TrimEnd().EndsWith("+"), $"stdout telemetry should end with '+' but was '{stdout}'.");
+    }
+
+    /// <summary>
+    /// The `appname` command is a design-time inspection tool: it always shows the full telemetry
+    /// encoding so users can see what would be collected, independent of the runtime opt-out switch
+    /// (DAB_TELEMETRY_APPNAME_OPT_OUT). This pins that intentional behavior.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeIsIndependentOfOptOut()
+    {
+        string? originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+        Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, "1");
+        try
+        {
+            string configJson = @"{
+                ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;User Id=sa;Password=Placeholder1;"" },
+                ""runtime"": { ""rest"": { ""enabled"": true }, ""graphql"": { ""enabled"": true } },
+                ""entities"": { }
+            }";
+            _fileSystem!.File.WriteAllText("appname-config.json", configJson);
+
+            int code = Program.Execute(
+                new[] { "appname", "--config", "appname-config.json", "--output", "appname-out.txt" },
+                _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+            Assert.AreEqual(CliReturnCode.SUCCESS, code, "appname encode should succeed even when opted out.");
+            string telemetry = _fileSystem.File.ReadAllText("appname-out.txt");
+            Assert.IsTrue(
+                telemetry.StartsWith("dab_oss_") && telemetry.EndsWith("+"),
+                $"appname should show the full telemetry encoding regardless of opt-out, but was '{telemetry}'.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+        }
     }
 
     /// <summary>

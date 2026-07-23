@@ -360,6 +360,11 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         IsNewConfigValidated = false;
         SignalConfigChanged();
 
+        // Telemetry (and any other) logs buffered during the reload parse are otherwise only
+        // drained once at startup. Flush them now so hot-reload logs are actually emitted and the
+        // shared static buffer does not accumulate entries across successive reloads.
+        FlushLogBuffer();
+
         logger?.LogInformation("Hot-reload process finished.");
     }
 
@@ -551,13 +556,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     }
 
     /// <summary>
-    /// Flush all logs from the buffer after the log level is set from the RuntimeConfig.
-    /// Logger needs to be present, or else the logs will be lost.
+    /// The logger this loader emits to once set, consumed by the base
+    /// <see cref="RuntimeConfigLoader.FlushLogBuffer"/> to drain buffered logs.
     /// </summary>
-    public void FlushLogBuffer()
-    {
-        _logBuffer.FlushToLogger(_logger!);
-    }
+    protected override ILogger? Logger => _logger;
 
     /// <summary>
     /// Helper method that sends the log to the buffer if the logger has not being set up.

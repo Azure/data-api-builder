@@ -138,12 +138,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
             AuthenticationOptions authOptions = new()
             {
                 Provider = "AzureAD",
-                Jwt = new(Audience: AUDIENCE, Issuer: LOCAL_ISSUER)
+                Jwt = new() { Audience = AUDIENCE, Issuer = LOCAL_ISSUER }
             };
 
             RuntimeConfig runtimeConfig = RuntimeConfigAuthHelper.CreateTestConfigWithAuthNProvider(authOptions);
             fileSystemRuntimeConfigLoader.RuntimeConfig = runtimeConfig;
             RuntimeConfigProvider runtimeConfigProvider = new(fileSystemRuntimeConfigLoader);
+            string resolvedRoleClaimType = string.IsNullOrWhiteSpace(authOptions.Jwt.RolesPath)
+                ? AuthenticationOptions.ROLE_CLAIM_TYPE
+                : authOptions.Jwt.RolesPath;
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
@@ -175,7 +178,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                                         ValidateLifetime = true,
                                         // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInRole()
                                         // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole#remarks
-                                        RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
+                                        RoleClaimType = resolvedRoleClaimType
                                     };
                                 });
                             services.AddAuthorization();

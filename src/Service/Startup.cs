@@ -62,6 +62,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Client;
+using Microsoft.IdentityModel.Tokens;
 using NodaTime;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -404,11 +405,9 @@ namespace Azure.DataApiBuilder.Service
                     bool allowSelfSigned = Environment.GetEnvironmentVariable("USE_SELF_SIGNED_CERT")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
                     HttpClientHandler handler = new();
-
                     if (allowSelfSigned)
                     {
-                        handler.ServerCertificateCustomValidationCallback =
-                            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                        handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                     }
 
                     return handler;
@@ -1126,6 +1125,12 @@ namespace Azure.DataApiBuilder.Service
                 runtimeConfig.Runtime?.Host?.Authentication is not null)
             {
                 AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
+
+                if (authOptions.IsJwtConfiguredIdentityProvider() && authOptions.Jwt is null)
+                {
+                    return;
+                }
+
                 HostMode mode = runtimeConfig.Runtime.Host.Mode;
                 if (authOptions.IsJwtConfiguredIdentityProvider())
                 {
@@ -1135,11 +1140,46 @@ namespace Azure.DataApiBuilder.Service
                         options.MapInboundClaims = false;
                         options.Audience = authOptions.Jwt!.Audience;
                         options.Authority = authOptions.Jwt!.Issuer;
+
+                        string? jwksUrl = authOptions.Jwt.ResolvedJwksUrl;
+                        if (string.IsNullOrWhiteSpace(jwksUrl))
+                        {
+                            throw new DataApiBuilderException(
+                                message: "JWT configuration requires either issuer or jwksUrl.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        }
+
+                        JsonWebKeySet jwks;
+                        using (HttpClient client = JwtHttpClientFactory.Create())
+                        {
+                            string jwksJson = client.GetStringAsync(jwksUrl).GetAwaiter().GetResult();
+                            jwks = new JsonWebKeySet(jwksJson);
+                        }
+
                         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                         {
-                            // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInRole()
-                            // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole#remarks
-                            RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
+                            ValidateIssuer = true,
+                            ValidateAudience = true,
+                            ValidateLifetime = true,
+                            ValidateIssuerSigningKey = true,
+                            IssuerSigningKeys = jwks.Keys,
+                            // Instructs the asp.net core middleware which JWT claim to use for User.IsInRole()
+                            // Defaults to "roles" when not explicitly configured.
+                            RoleClaimType = authOptions.Jwt!.ResolvedRoleClaimType
+                        };
+
+                        options.Events = new JwtBearerEvents
+                        {
+                            OnTokenValidated = context =>
+                            {
+                                JwtRoleClaimsTransformer.NormalizeRoleClaims(
+                                    principal: context.Principal!,
+                                    sourceRoleClaimType: authOptions.Jwt!.ResolvedRoleClaimType,
+                                    separator: authOptions.Jwt.ResolvedRolesSeparator);
+
+                                return Task.CompletedTask;
+                            }
                         };
                     });
                 }

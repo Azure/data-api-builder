@@ -457,6 +457,18 @@
                     "issuer": {
                       "type": "string",
                       "description": "The expected issuer (iss) claim of incoming JWT tokens."
+                    },
+                    "rolesPath": {
+                      "type": "string",
+                      "description": "The JWT claim name that should be treated as the role claim for authorization checks. Defaults to 'roles'."
+                    },
+                    "rolesSeparator": {
+                      "type": "string",
+                      "description": "Optional separator used when the configured role claim is emitted as a single string containing multiple roles or permissions. If omitted, the role claim is treated as a single scalar value unless it is a JSON array."
+                    },
+                    "jwksUrl": {
+                      "type": "string",
+                      "description": "Optional JWKS endpoint URL. If omitted, DAB derives it from the issuer as '{issuer}/.well-known/jwks.json'."
                     }
                   },
                   "required": [ "audience", "issuer" ]

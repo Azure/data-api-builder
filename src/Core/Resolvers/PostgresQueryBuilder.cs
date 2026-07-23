@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             StringBuilder result = new();
             if (structure.IsListQuery)
             {
-                result.Append($"SELECT COALESCE(jsonb_agg(to_jsonb({subqueryName})), '[]') ");
+                result.Append($"SELECT COALESCE(jsonb_agg(to_jsonb({subqueryName})), '[]'::jsonb) ");
             }
             else
             {

@@ -64,9 +64,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow("EntraID")]
         public void ValidateJwtConfigParamsSet(string authenticationProvider)
         {
-            JwtOptions jwt = new(
-                Audience: "12345",
-                Issuer: "https://login.microsoftonline.com/common");
+            JwtOptions jwt = new()
+            {
+                Audience = "12345",
+                Issuer = "https://login.microsoftonline.com/common"
+            };
             AuthenticationOptions authNConfig = new(
                 Provider: authenticationProvider,
                 Jwt: jwt);
@@ -115,9 +117,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow("EntraID")]
         public void ValidateFailureWithIncompleteJwtConfig(string authenticationProvider)
         {
-            JwtOptions jwt = new(
-                Audience: "12345",
-                Issuer: string.Empty);
+            JwtOptions jwt = new()
+            {
+                Audience = "12345",
+                Issuer = string.Empty
+            };
             AuthenticationOptions authNConfig = new(
                 Provider: authenticationProvider,
                 Jwt: jwt);
@@ -136,9 +140,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 _runtimeConfigValidator.ValidateConfigProperties();
             });
 
-            jwt = new(
-                Audience: string.Empty,
-                Issuer: DEFAULT_ISSUER);
+            jwt = new()
+            {
+                Audience = string.Empty,
+                Issuer = DEFAULT_ISSUER
+            };
             authNConfig = new(
                 Provider: authenticationProvider,
                 Jwt: jwt);
@@ -153,9 +159,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("AuthN validation fails when either Issuer or Audience are provided for EasyAuth")]
         public void ValidateFailureWithUnneededEasyAuthConfig()
         {
-            JwtOptions jwt = new(
-                Audience: "12345",
-                Issuer: string.Empty);
+            JwtOptions jwt = new()
+            {
+                Audience = "12345",
+                Issuer = string.Empty
+            };
             AuthenticationOptions authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
             RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
@@ -171,9 +179,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 _runtimeConfigValidator.ValidateConfigProperties();
             });
 
-            jwt = new(
-                Audience: string.Empty,
-                Issuer: DEFAULT_ISSUER);
+            jwt = new()
+            {
+                Audience = string.Empty,
+                Issuer = DEFAULT_ISSUER
+            };
             authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
             config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 

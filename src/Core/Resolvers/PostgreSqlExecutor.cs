@@ -2,9 +2,11 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
+using System.Text;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.Identity;
@@ -32,6 +34,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Key: datasource name, Value: access token for this datasource.
         /// </summary>
         private Dictionary<string, string?> _accessTokensFromConfiguration;
+
+        /// <summary>
+        /// DatasourceName to boolean value indicating if session context should be set for db.
+        /// </summary>
+        private Dictionary<string, bool> _dataSourceToSessionContextUsage;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new(); // CodeQL [SM05137]: DefaultAzureCredential will use Managed Identity if available or fallback to default.
 
@@ -61,13 +68,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor,
             HotReloadEventHandler<HotReloadEventArgs>? handler = null)
-            : base(dbExceptionParser,
+            : base(
+                  dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
                   httpContextAccessor,
                   handler)
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
+            _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;
             ConfigurePostgreSqlQueryExecutor();
@@ -78,7 +87,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private void ConfigurePostgreSqlQueryExecutor()
         {
-            IEnumerable<KeyValuePair<string, DataSource>> postgresqldbs = _runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.PostgreSQL);
+            IEnumerable<KeyValuePair<string, DataSource>> postgresqldbs =
+                _runtimeConfigProvider.GetConfig()
+                    .GetDataSourceNamesToDataSourcesIterator()
+                    .Where(x => x.Value.DatabaseType == DatabaseType.PostgreSQL);
 
             foreach ((string dataSourceName, DataSource dataSource) in postgresqldbs)
             {
@@ -90,7 +102,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
 
                 ConnectionStringBuilders.TryAdd(dataSourceName, builder);
-                MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
+
+                PostgreSqlOptions? sessionOptions = dataSource.GetTypedOptions<PostgreSqlOptions>();
+                _dataSourceToSessionContextUsage[dataSourceName] =
+                    sessionOptions is not null && sessionOptions.SetSessionContext;
+
                 _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
         }
@@ -104,7 +120,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
         public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName)
         {
-            // using default datasource name for first db - maintaining backward compatibility for single db scenario.
             if (string.IsNullOrEmpty(dataSourceName))
             {
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
@@ -112,19 +127,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);
 
-            // Only attempt to get the access token if the connection string is in the appropriate format
             if (setAccessToken)
             {
                 NpgsqlConnection sqlConn = (NpgsqlConnection)conn;
 
-                // If the configuration controller provided a managed identity access token use that,
-                // else use the default saved access token if still valid.
-                // Get a new token only if the saved token is null or expired.
                 _accessTokensFromConfiguration.TryGetValue(dataSourceName, out string? accessTokenFromController);
                 string? accessToken = accessTokenFromController ??
-                    (IsDefaultAccessTokenValid() ?
-                        ((AccessToken)_defaultAccessToken!).Token :
-                        await GetAccessTokenAsync(dataSourceName));
+                    (IsDefaultAccessTokenValid()
+                        ? _defaultAccessToken!.Value.Token
+                        : await GetAccessTokenAsync(dataSourceName));
 
                 if (accessToken is not null)
                 {
@@ -135,6 +146,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     sqlConn.ConnectionString = newConnectionString.ToString();
                 }
             }
+        }
+
+        /// <summary>
+        /// Sync counterpart for managed identity handling.
+        /// </summary>
+        public override void SetManagedIdentityAccessTokenIfAny(DbConnection conn, string dataSourceName = "")
+        {
+            SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -149,20 +168,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Determines if the saved default azure credential's access token is valid and not expired.
         /// </summary>
-        /// <returns>True if valid, false otherwise.</returns>
         private bool IsDefaultAccessTokenValid()
         {
             return _defaultAccessToken is not null &&
-                ((AccessToken)_defaultAccessToken).ExpiresOn.CompareTo(DateTimeOffset.Now) > 0;
+                   _defaultAccessToken.Value.ExpiresOn.CompareTo(DateTimeOffset.Now) > 0;
         }
 
         /// <summary>
         /// Tries to get an access token using DefaultAzureCredentials.
-        /// Catches any CredentialUnavailableException and logs only a warning
-        /// since this is best effort.
         /// </summary>
-        /// <returns>The string representation of the access token if found,
-        /// null otherwise.</returns>
         private async Task<string?> GetAccessTokenAsync(string dataSourceName)
         {
             bool firstAttemptAtDefaultAccessToken = _defaultAccessToken is null;
@@ -173,31 +187,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     await AzureCredential.GetTokenAsync(
                         new TokenRequestContext(new[] { DATABASE_SCOPE }));
             }
-            // because there can be scenarios where password is not specified but
-            // default managed identity is not the intended method of authentication
-            // so a bunch of different exceptions could occur in that scenario
             catch (Exception ex)
             {
                 string messagePrefix = "{correlationId} No password detected in the connection string. Attempt to retrieve a managed identity access token using DefaultAzureCredential failed due to:\n{errorMessage}";
-                string messageSuffix = (firstAttemptAtDefaultAccessToken ? $"If authentication with DefaultAzureCrendential is not intended, this warning can be safely ignored." : string.Empty);
+                string messageSuffix = firstAttemptAtDefaultAccessToken
+                    ? "If authentication with DefaultAzureCrendential is not intended, this warning can be safely ignored."
+                    : string.Empty;
                 string message = messagePrefix + messageSuffix;
+
                 QueryExecutorLogger.LogWarning(
                     exception: ex,
                     message: message,
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext),
                     ex.Message);
 
-                // the config doesn't contain an identity token
-                // and a default identity token cannot be obtained
-                // so the application should not attempt to set the token
-                // for future conntions
-                // note though that if a default access token has been previously
-                // obtained successfully (firstAttemptAtDefaultAccessToken == false)
-                // this might be a transitory failure don't disable attempts to set
-                // the token
-                //
-                // disabling the attempts is useful in scenarios where the user
-                // has a valid connection string without a password in it
                 if (firstAttemptAtDefaultAccessToken)
                 {
                     _dataSourceAccessTokenUsage[dataSourceName] = false;
@@ -205,6 +208,129 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return _defaultAccessToken?.Token;
+        }
+
+        /// <summary>
+        /// No query prefixing for PostgreSQL. Session state is set via a dedicated command
+        /// on the same open connection inside PrepareDbCommand(...).
+        /// </summary>
+        public override string GetSessionParamsQuery(
+            HttpContext? httpContext,
+            IDictionary<string, DbConnectionParam> parameters,
+            string dataSourceName)
+        {
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// PostgreSQL override that first sets session settings on the already-open connection
+        /// using a dedicated command, then returns the actual data command.
+        /// </summary>
+        public override DbCommand PrepareDbCommand(
+            NpgsqlConnection conn,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            HttpContext? httpContext,
+            string dataSourceName)
+        {
+            SetSessionContext(conn, httpContext, dataSourceName);
+
+            NpgsqlCommand cmd = conn.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.Text;
+            cmd.CommandText = sqltext;
+
+            if (parameters is not null)
+            {
+                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
+                {
+                    DbParameter parameter = cmd.CreateParameter();
+                    parameter.ParameterName = parameterEntry.Key;
+                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
+                    PopulateDbTypeForParameter(parameterEntry, parameter);
+                    cmd.Parameters.Add(parameter);
+                }
+            }
+
+            return cmd;
+        }
+
+        /// <summary>
+        /// Sets processed user claims into PostgreSQL custom settings on the same open connection.
+        /// This command's resultsets are consumed and ignored before the actual query command is created.
+        /// </summary>
+        private void SetSessionContext(
+            NpgsqlConnection conn,
+            HttpContext? httpContext,
+            string dataSourceName)
+        {
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+            }
+
+            if (httpContext is null ||
+                !_dataSourceToSessionContextUsage.TryGetValue(dataSourceName, out bool enabled) ||
+                !enabled)
+            {
+                return;
+            }
+
+            Dictionary<string, string> sessionParams = AuthorizationResolver.GetProcessedUserClaims(httpContext);
+            if (sessionParams.Count == 0)
+            {
+                return;
+            }
+
+            using NpgsqlCommand cmd = conn.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.Text;
+
+            StringBuilder sql = new();
+            int i = 0;
+
+            foreach ((string claimType, string claimValue) in sessionParams)
+            {
+                string parameterName = $"p{i++}";
+                string sessionSettingKey = ToPostgresSessionSettingKey(claimType);
+
+                sql.Append($"SELECT set_config('{sessionSettingKey}', @{parameterName}, false);");
+                cmd.Parameters.AddWithValue(parameterName, claimValue);
+            }
+
+            cmd.CommandText = sql.ToString();
+
+            using DbDataReader reader = cmd.ExecuteReader();
+
+            do
+            {
+                while (reader.Read())
+                {
+                    // ignore set_config result rows
+                }
+            }
+            while (reader.NextResult());
+        }
+
+        /// <summary>
+        /// Normalize a claim name into a valid PostgreSQL custom setting key.
+        /// Example: "tenant" -> "dab.claims.tenant"
+        /// </summary>
+        private static string ToPostgresSessionSettingKey(string claimType)
+        {
+            StringBuilder keyBuilder = new("dab.claims.");
+
+            foreach (char c in claimType)
+            {
+                if (char.IsLetterOrDigit(c) || c == '_' || c == '.')
+                {
+                    keyBuilder.Append(char.ToLowerInvariant(c));
+                }
+                else
+                {
+                    keyBuilder.Append('_');
+                }
+            }
+
+            return keyBuilder.ToString();
         }
     }
 }

@@ -4,8 +4,27 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
+    <PackageId>Microsoft.DataApiBuilder.Mcp</PackageId>
+    <Title>Microsoft.DataApiBuilder.Mcp</Title>
+    <Authors>Microsoft</Authors>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://go.microsoft.com/fwlink/?linkid=2224253</PackageProjectUrl>
+    <PackageTags>microsoft mcp model-context-protocol dab dataApiBuilder azure sql graphql rest sdk internal</PackageTags>
+    <AssemblyName>Microsoft.DataApiBuilder.Mcp</AssemblyName>
+    <Description>MCP integration library for Data API builder with services and endpoint mapping for exposing DAB tools through Model Context Protocol.</Description>
+    <PackageIcon>nuget_icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <!-- Suppress transitive dependency version mismatch warnings from MCP SDK -->
     <NoWarn>$(NoWarn);NU1603</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +38,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\nuget\nuget_mcp\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\nuget\nuget_icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE.txt" Pack="true" PackagePath="\" />
+    <None Include="..\..\nuget_mcp\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\nuget_mcp\NOTICE.txt')" />
   </ItemGroup>
 
   <ItemGroup>

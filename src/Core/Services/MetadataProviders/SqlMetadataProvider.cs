@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Database object for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Database object for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Source definition for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -202,7 +202,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Stored Procedure Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Stored procedure definition for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -1733,7 +1733,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Using a data adapter, obtains the schema of the given table name
-        /// and adds the corresponding entity in the data set.
+        /// and adds the corresponding DataTable to the entities data set.
         /// </summary>
         private async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,

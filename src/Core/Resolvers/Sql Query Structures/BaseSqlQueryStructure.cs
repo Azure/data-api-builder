@@ -85,6 +85,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
+        /// <inheritdoc />
+        public override string MakeDbConnectionParam(object? value, string? paramName = null, bool lengthOverride = false)
+        {
+            if (MetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL &&
+                !string.IsNullOrEmpty(paramName) &&
+                value is string stringValue &&
+                GetUnderlyingSourceDefinition().Columns.ContainsKey(paramName))
+            {
+                Type columnSystemType = GetColumnSystemType(paramName);
+                if (columnSystemType != typeof(string))
+                {
+                    value = GetParamAsSystemType(stringValue, paramName, columnSystemType);
+                }
+
+                // Npgsql requires DateTime with Kind=Unspecified for 'timestamp without time zone' columns.
+                // ParseParamAsSystemType returns Kind=Utc (via .UtcDateTime), which causes PostgreSQL to
+                // apply a UTC-to-local offset during comparison, producing incorrect filter results.
+                if (value is DateTime dtValue && dtValue.Kind == DateTimeKind.Utc && columnSystemType == typeof(DateTime))
+                {
+                    value = DateTime.SpecifyKind(dtValue, DateTimeKind.Unspecified);
+                }
+            }
+
+            return base.MakeDbConnectionParam(value, paramName, lengthOverride);
+        }
+
         /// <summary>
         /// For UPDATE (OVERWRITE) operation
         /// Adds result of (SourceDefinition.Columns minus MutationFields) to UpdateOperations with null values
@@ -422,9 +448,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Tries to parse the string parameter to the given system type
         /// Useful for inferring parameter types for columns or procedure parameters
         /// </summary>
-        /// <param name="param"></param>
-        /// <param name="systemType"></param>
-        /// <returns></returns>
+        /// <param name="param">The string value to parse.</param>
+        /// <param name="systemType">The target system type for the parsed value.</param>
+        /// <returns>The parameter parsed as the requested system type.</returns>
         /// <exception cref="NotSupportedException"></exception>
         protected static object ParseParamAsSystemType(string param, Type systemType)
         {

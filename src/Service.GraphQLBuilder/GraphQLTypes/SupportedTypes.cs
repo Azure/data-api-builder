@@ -6,7 +6,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
     /// <summary>
     /// Only used to group the supported type names under a class with a relevant name.
     /// The type names mentioned here are Hotchocolate scalar built in types.
-    /// The corresponding SQL type name may be different for e.g. UUID maps to Guid as the SQL type.
+    /// The corresponding SQL type name may be different for e.g. UUID maps to Guid as the .NET type.
     /// </summary>
     public static class SupportedHotChocolateTypes
     {
@@ -32,7 +32,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         // new name so the generated schema does not depend on a deprecated scalar.
         public const string BYTEARRAY_TYPE = "Base64String";
         public const string DATETIME_TYPE = "DateTime";
-        public const string DATETIMEOFFSET_TYPE = "DateTimeOffset";
         public const string LOCALTIME_TYPE = "LocalTime";
         public const string TIME_TYPE = "Time";
     }
@@ -46,6 +45,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         public const string DATE_TYPE = "date";
         public const string SMALLDATETIME_TYPE = "smalldatetime";
         public const string DATETIME2_TYPE = "datetime2";
+        public const string DATETIMEOFFSET_TYPE = "DateTimeOffset";
     }
 
     /// <summary>

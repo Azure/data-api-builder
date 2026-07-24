@@ -39,8 +39,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// <param name="configEntity">Runtime config information for the table.</param>
         /// <param name="entities">Key/Value Collection mapping entity name to the entity object,
         /// currently used to lookup relationship metadata.</param>
-        /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
-        /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
+        /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level.</param>
+        /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level.</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
         public static ObjectTypeDefinitionNode GenerateObjectTypeDefinitionForDatabaseObject(
             string entityName,
@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 List<DirectiveNode> directives = new();
                 if (sourceDefinition.PrimaryKey.Contains(columnName))
                 {
-                    directives.Add(new DirectiveNode(PrimaryKeyDirectiveType.DirectiveName, new ArgumentNode("databaseType", column.SystemType.Name)));
+                    directives.Add(new DirectiveNode(PrimaryKeyDirectiveType.DirectiveName));
                 }
 
                 if (column.IsReadOnly)

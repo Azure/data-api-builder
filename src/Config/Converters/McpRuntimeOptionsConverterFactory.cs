@@ -119,11 +119,20 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                                 allowedHosts = new List<string>();
                                 while (reader.Read() && reader.TokenType is not JsonTokenType.EndArray)
                                 {
-                                    string? host = reader.DeserializeString(_replacementSettings);
-                                    if (!string.IsNullOrWhiteSpace(host))
-                                    {
-                                        allowedHosts.Add(host);
-                                    }
+string? host = reader.DeserializeString(_replacementSettings)?.Trim();
+if (string.IsNullOrEmpty(host))
+{
+    continue;
+}
+
+string normalizedHost = host.Trim('[', ']');
+if (!string.Equals(host, "*", StringComparison.Ordinal) &&
+    Uri.CheckHostName(normalizedHost) == UriHostNameType.Unknown)
+{
+    throw new JsonException("Each entry in mcp.allowed-hosts must be a host name (or \"*\").");
+}
+
+allowedHosts.Add(host);
                                 }
                             }
 

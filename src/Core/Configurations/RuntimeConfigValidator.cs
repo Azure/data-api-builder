@@ -99,6 +99,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateAzureLogAnalyticsAuth(runtimeConfig);
         ValidateFileSinkPath(runtimeConfig);
         ValidateEmbeddingsOptions(runtimeConfig);
+        ValidateEmbedParameters(runtimeConfig);
     }
 
     /// <summary>
@@ -449,7 +450,114 @@ public class RuntimeConfigValidator : IConfigValidator
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
         }
+    }
 
+    /// <summary>
+    /// Validates that auto-embed parameters are used only on stored-procedure
+    /// entities backed by MSSQL or DWSQL, and that runtime.embeddings is
+    /// configured and enabled. Default values are allowed.
+    /// </summary>
+    /// <remarks>
+    /// Internal (rather than private) to allow direct unit testing via the
+    /// <c>InternalsVisibleTo</c> attribute on Azure.DataApiBuilder.Core. Callers outside
+    /// the assembly should still go through <see cref="ValidateConfigProperties"/>.
+    /// </remarks>
+    internal void ValidateEmbedParameters(RuntimeConfig runtimeConfig)
+    {
+        // Check once whether the embedding service is configured and enabled.
+        // Example: "runtime": { "embeddings": { "enabled": true, "provider": "azure-openai" } } → true
+        // Example: embeddings section missing or "enabled": false → false
+        bool embeddingsConfigured = runtimeConfig.Runtime?.Embeddings is not null
+            && runtimeConfig.Runtime.Embeddings.Enabled;
+
+        // Loop through every entity in the config.
+        // Example entities: "Product" (table), "Category" (table), "SearchProducts" (sproc)
+        foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+        {
+            // Skip entities that have no parameters defined.
+            // Tables and views typically don't have parameters.
+            // Example: "Product": { "source": { "type": "table" } } → Parameters is null → skip
+            if (entity.Source.Parameters is null)
+            {
+                continue;
+            }
+
+            // Fast-path: skip entities with no auto-embed:true parameters entirely.
+            // Avoids the data-source lookup and inner loop for the common case of
+            // entities whose params are all normal pass-through.
+            if (!entity.Source.Parameters.Any(p => p.AutoEmbed))
+            {
+                continue;
+            }
+
+            // Rule 3 (entity-level): auto-embed:true requires a database provider that
+            // can perform the required metadata checks (string-compatibility of the
+            // parameter type). Today this is the MSSQL T-SQL family — MSSQL itself
+            // plus DWSQL which shares MsSqlMetadataProvider. PG, MySQL, and CosmosDB
+            // don't implement the auto-embed metadata path, so DAB rejects auto-embed
+            // on those providers at startup rather than failing cryptically at request
+            // time. Checked once per entity (not per param) since data source type is
+            // an entity-level property.
+            // Example PASS: data source declared as "database-type": "mssql" → allowed
+            // Example FAIL: data source declared as "database-type": "postgresql"
+            //   → Error: "Entity 'X' has auto-embed parameter(s) but the data source
+            //             is of type 'PostgreSQL'. ..."
+            string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+            DatabaseType databaseType = runtimeConfig
+                .GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            if (databaseType is not DatabaseType.MSSQL and not DatabaseType.DWSQL)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Entity '{entityName}' has auto-embed parameter(s) but the data source " +
+                             $"is of type '{databaseType}'. " +
+                             $"auto-embed is currently only supported on MSSQL data sources.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+
+                // Skip per-param Rules 1+2 — they'd report redundant noise for an entity
+                // that's fundamentally invalid for auto-embed regardless of param shape.
+                continue;
+            }
+
+            // Check each parameter for the auto-embed flag.
+            // Example: iterates over { "name": "query_vector", "auto-embed": true } and { "name": "top_k", "default": "5" }
+            foreach (ParameterMetadata param in entity.Source.Parameters)
+            {
+                // Skip parameters that don't have auto-embed: true. Most params are normal pass-through.
+                // Example: "top_k" has AutoEmbed=false (default) → skip
+                // Example: "query_vector" has AutoEmbed=true → continue to validation checks
+                if (!param.AutoEmbed)
+                {
+                    continue;
+                }
+
+                // Rule 1: auto-embed:true is only valid on stored-procedure entities.
+                // Tables/views don't have user-supplied parameters that get passed to SQL.
+                // Example PASS: "SearchProducts": { "source": { "type": "stored-procedure" } }
+                // Example FAIL: "Product": { "source": { "type": "table", "parameters": [{"name":"x","auto-embed":true}] } }
+                //   → Error: "Entity 'Product': parameter 'x' has 'auto-embed: true' but is only valid on stored-procedure entities."
+                if (entity.Source.Type is not EntitySourceType.StoredProcedure)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}': parameter '{param.Name}' has 'auto-embed: true' but is only valid on stored-procedure entities.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                // Rule 2: auto-embed:true requires runtime.embeddings to be configured and enabled.
+                // Can't convert text to vectors without an embedding service.
+                // Example PASS: "embeddings": { "enabled": true, "provider": "azure-openai", "api-key": "..." }
+                // Example FAIL: "embeddings": { "enabled": false } or embeddings section missing
+                //   → Error: "parameter 'query_vector' has 'auto-embed: true' but runtime.embeddings is not configured or not enabled."
+                if (!embeddingsConfigured)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}': parameter '{param.Name}' has 'auto-embed: true' but runtime.embeddings is not configured or not enabled.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+            }
+        }
     }
 
     /// <summary>

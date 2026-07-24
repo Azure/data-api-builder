@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -25,6 +26,7 @@ using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -41,6 +43,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IEmbeddingService _embeddingService;
+        private readonly ILogger<IMutationEngine> _logger;
         public const string IS_UPDATE_RESULT_SET = "IsUpdateResultSet";
         private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
         public const string SINGLE_INPUT_ARGUEMENT_NAME = "item";
@@ -60,7 +64,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IHttpContextAccessor httpContextAccessor,
-            RuntimeConfigProvider runtimeConfigProvider)
+            RuntimeConfigProvider runtimeConfigProvider,
+            IEmbeddingService embeddingService,
+            ILogger<IMutationEngine> logger)
         {
             _queryManagerFactory = queryManagerFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
@@ -69,6 +75,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _httpContextAccessor = httpContextAccessor;
             _gQLFilterParser = gQLFilterParser;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _embeddingService = embeddingService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -347,6 +355,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
             IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
+
+            // Substitute auto-embed:true parameters with embedding vectors (REST mutation path).
+            // Helper handles entity lookup, null-service detection, and per-param validation.
+            await ParameterEmbeddingHelper.SubstituteEmbedParametersAsync(
+                context.ResolvedParameters,
+                _runtimeConfigProvider.GetConfig(),
+                context.EntityName,
+                _embeddingService,
+                _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None,
+                _logger);
+
             SqlExecuteStructure executeQueryStructure = new(
                 context.EntityName,
                 sqlMetadataProvider,

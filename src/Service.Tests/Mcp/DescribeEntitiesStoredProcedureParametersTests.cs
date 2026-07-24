@@ -288,5 +288,83 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(1, entities.GetArrayLength());
             return entities.EnumerateArray().First();
         }
+
+        /// <summary>
+        /// When a stored procedure parameter has auto-embed: true in config, the
+        /// describe_entities response must include autoEmbed: true on that parameter
+        /// and autoEmbed: false on non-auto-embed parameters.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_AutoEmbedParameter_ExposedInMetadata()
+        {
+            // Create entity with config-side auto-embed on "query_text"
+            Entity entity = new(
+                Source: new("dbo.SearchProducts", EntitySourceType.StoredProcedure,
+                    Parameters: new List<ParameterMetadata>
+                    {
+                        new() { Name = "query_text", AutoEmbed = true, Description = "Search query" },
+                        new() { Name = "top_k", AutoEmbed = false }
+                    },
+                    KeyFields: null),
+                GraphQL: new(TEST_ENTITY_NAME, TEST_ENTITY_NAME),
+                Rest: new(Enabled: true),
+                Fields: null,
+                Permissions: new[]
+                {
+                    new EntityPermission(
+                        Role: "anonymous",
+                        Actions: new[]
+                        {
+                            new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
+                        })
+                },
+                Relationships: null,
+                Mappings: null,
+                Mcp: null
+            );
+
+            Dictionary<string, Entity> entities = new() { [TEST_ENTITY_NAME] = entity };
+            RuntimeConfig config = new(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(Enabled: true, Path: "/mcp", DmlTools: null),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
+                ),
+                Entities: new(entities)
+            );
+
+            ServiceCollection services = new();
+            RegisterCommonServices(services, config);
+
+            // DB params with metadata already merged (as MsSqlMetadataProvider would do)
+            DatabaseObject dbObject = CreateStoredProcedureObject("dbo", "SearchProducts",
+                new Dictionary<string, ParameterDefinition>
+                {
+                    ["query_text"] = new() { Description = "Search query", SystemType = typeof(string) },
+                    ["top_k"] = new() { Default = "5", SystemType = typeof(int) }
+                });
+            RegisterMetadataProvider(services, TEST_ENTITY_NAME, dbObject);
+
+            IServiceProvider serviceProvider = services.BuildServiceProvider();
+            DescribeEntitiesTool tool = new();
+            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
+
+            Assert.IsTrue(result.IsError == false || result.IsError == null);
+            JsonElement entityElement = GetSingleEntityFromResult(result);
+            JsonElement parameters = entityElement.GetProperty("parameters");
+
+            // query_text should have autoEmbed: true
+            JsonElement queryParam = parameters.EnumerateArray().Single(p => p.GetProperty("name").GetString() == "query_text");
+            Assert.IsTrue(queryParam.GetProperty("autoEmbed").GetBoolean(),
+                "auto-embed parameter should have autoEmbed: true in describe_entities response");
+
+            // top_k should have autoEmbed: false
+            JsonElement topKParam = parameters.EnumerateArray().Single(p => p.GetProperty("name").GetString() == "top_k");
+            Assert.IsFalse(topKParam.GetProperty("autoEmbed").GetBoolean(),
+                "non-auto-embed parameter should have autoEmbed: false in describe_entities response");
+        }
     }
 }

@@ -1168,6 +1168,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: new[] { "Id" },
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: new[] { "Unique Key" },
@@ -1252,7 +1253,9 @@ namespace Cli.Tests
             string? healthEnabled = null,
             string? description = null,
             string? mcpDmlTools = null,
-            string? mcpCustomTool = null
+            string? mcpCustomTool = null,
+            IEnumerable<string>? parametersNameOverride = null,
+            IEnumerable<string>? parametersAutoEmbedOverride = null
             )
         {
             return new(
@@ -1284,10 +1287,11 @@ namespace Cli.Tests
                 restMethodsForStoredProcedure: restMethodsForStoredProcedure,
                 graphQLOperationForStoredProcedure: graphQLOperationForStoredProcedure,
                 description: description,
-                parametersNameCollection: null,
+                parametersNameCollection: parametersNameOverride,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: parametersAutoEmbedOverride,
                 fieldsNameCollection: null,
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: null,
@@ -1352,6 +1356,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: null,
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: null,
@@ -1420,6 +1425,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: null,
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: null,
@@ -1491,6 +1497,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: null,
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: null,
@@ -1563,6 +1570,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: null,
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: null,
@@ -1634,6 +1642,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: null,
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: null,
@@ -1704,6 +1713,7 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
+                parametersAutoEmbedCollection: null,
                 fieldsNameCollection: null,
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: null,
@@ -1815,5 +1825,88 @@ namespace Cli.Tests
         }
 
         #endregion Entity Cache Level and Health Tests
+
+        #region Auto-Embed CLI Tests
+
+        /// <summary>
+        /// Verify that dab update with --parameters.auto-embed correctly sets AutoEmbed
+        /// on an existing stored procedure entity's parameters.
+        /// </summary>
+        [TestMethod]
+        public void UpdateEntityWithAutoEmbedParameter()
+        {
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                permissions: new string[] { "anonymous", "execute" },
+                parametersNameOverride: new[] { "param1", "param2", "param3" },
+                parametersAutoEmbedOverride: new[] { "true", "false" });
+
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedConfig));
+
+            Entity entity = updatedConfig.Entities["MyEntity"];
+            Assert.IsNotNull(entity.Source.Parameters);
+
+            Assert.IsTrue(entity.Source.Parameters[0].AutoEmbed,
+                "param1 should have AutoEmbed=true after update");
+            Assert.IsFalse(entity.Source.Parameters[1].AutoEmbed,
+                "param2 should have AutoEmbed=false after update");
+            Assert.IsFalse(entity.Source.Parameters[2].AutoEmbed,
+                "param3 should default to AutoEmbed=false (not specified in auto-embed list)");
+        }
+
+        /// <summary>
+        /// Regression matrix for the dab-update auto-embed merge. The previous merge used
+        /// `newParam.AutoEmbed || match.AutoEmbed`, which made `true` sticky — running
+        /// `dab update entity --parameters.auto-embed:false` could not disable auto-embed on
+        /// an existing parameter. Covers every meaningful (existing × CLI) combination via
+        /// a single data-driven test:
+        ///   - existing=true,  CLI="false"   → false  (the fix — disables the stuck-true bug)
+        ///   - existing=true,  CLI omitted   → true   (preserve existing)
+        ///   - existing=false, CLI="true"    → true   (enable)
+        ///   - existing=false, CLI omitted   → false  (preserve existing)
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, "false", false, DisplayName = "existing=true, CLI=false → false (the bug fix)")]
+        [DataRow(true, null, true, DisplayName = "existing=true, CLI=omitted → true (preserve)")]
+        [DataRow(false, "true", true, DisplayName = "existing=false, CLI=true → true (enable)")]
+        [DataRow(false, null, false, DisplayName = "existing=false, CLI=omitted → false (preserve)")]
+        public void UpdateEntity_AutoEmbedMerge(bool initialAutoEmbed, string? cliAutoEmbed, bool expectedAutoEmbed)
+        {
+            string[]? cliAutoEmbedArr = cliAutoEmbed is null ? null : new[] { cliAutoEmbed };
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                permissions: new string[] { "anonymous", "execute" },
+                parametersNameOverride: new[] { "param1" },
+                parametersAutoEmbedOverride: cliAutoEmbedArr);
+
+            string initialAutoEmbedLiteral = initialAutoEmbed ? "true" : "false";
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, $@"{{
+                ""entities"": {{
+                    ""MyEntity"": {{
+                        ""source"": {{
+                            ""type"": ""stored-procedure"",
+                            ""object"": ""dbo.SearchProducts"",
+                            ""parameters"": [
+                                {{ ""name"": ""param1"", ""auto-embed"": {initialAutoEmbedLiteral} }}
+                            ]
+                        }},
+                        ""permissions"": [
+                            {{ ""role"": ""anonymous"", ""actions"": [""execute""] }}
+                        ]
+                    }}
+                }}
+            }}");
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedConfig));
+
+            Entity entity = updatedConfig.Entities["MyEntity"];
+            Assert.IsNotNull(entity.Source.Parameters);
+            Assert.AreEqual(expectedAutoEmbed, entity.Source.Parameters[0].AutoEmbed,
+                $"Initial AutoEmbed={initialAutoEmbed}, CLI input='{cliAutoEmbed ?? "(omitted)"}', expected={expectedAutoEmbed}.");
+        }
+
+        #endregion Auto-Embed CLI Tests
     }
 }

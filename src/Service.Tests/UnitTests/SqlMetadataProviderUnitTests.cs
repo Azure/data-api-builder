@@ -670,5 +670,45 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
+
+        #region Auto-Embed String Compatibility
+
+        /// <summary>
+        /// Per spec #3331: auto-embed params must be string-compatible. The validator
+        /// rejects non-string types (byte[], int, DateTime) and accepts string types.
+        /// When AutoEmbed is false, the check is skipped regardless of type.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(typeof(string), true, false, DisplayName = "NVARCHAR (string) + auto-embed → accepted")]
+        [DataRow(typeof(byte[]), true, true, DisplayName = "VECTOR (byte[]) + auto-embed → rejected")]
+        [DataRow(typeof(int), true, true, DisplayName = "INT + auto-embed → rejected")]
+        [DataRow(typeof(byte[]), false, false, DisplayName = "byte[] without auto-embed → not checked")]
+        public void ValidateAutoEmbedStringCompatibility(Type systemType, bool autoEmbed, bool expectThrow)
+        {
+            ParameterDefinition def = new() { Name = "p", SystemType = systemType };
+            ParameterMetadata meta = new() { Name = "p", AutoEmbed = autoEmbed };
+
+            if (expectThrow)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                    MsSqlMetadataProvider.ValidateAutoEmbedStringCompatibility(
+                        meta, def, "dbo", "sp_test", "p"));
+                Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                StringAssert.Contains(ex.Message, "dbo.sp_test");
+                StringAssert.Contains(ex.Message, "p");
+                StringAssert.Contains(ex.Message, systemType.Name);
+                StringAssert.Contains(ex.Message, "string-compatible");
+            }
+            else
+            {
+                // No exception expected — if ValidateAutoEmbedStringCompatibility throws,
+                // MSTest fails the test automatically with the full exception details.
+                MsSqlMetadataProvider.ValidateAutoEmbedStringCompatibility(
+                    meta, def, "dbo", "sp_test", "p");
+            }
+        }
+
+        #endregion
     }
 }

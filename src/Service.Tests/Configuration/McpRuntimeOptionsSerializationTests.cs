@@ -355,7 +355,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 ""runtime"": {
                     ""mcp"": {
                         ""enabled"": true,
-                        ""allowed-hosts"": [ ""api.contoso.com"", ""*.example.com"" ]
+                        ""allowed-hosts"": [ ""api.contoso.com"", ""sub.example.com"" ]
                     }
                 },
                 ""entities"": {}

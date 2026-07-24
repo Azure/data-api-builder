@@ -66,12 +66,13 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                 string? path = null;
                 DmlToolsConfig? dmlTools = null;
                 string? description = null;
+                List<string>? allowedHosts = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType == JsonTokenType.EndObject)
                     {
-                        return new McpRuntimeOptions(enabled, path, dmlTools, description);
+                        return new McpRuntimeOptions(enabled, path, dmlTools, description, allowedHosts);
                     }
 
                     string? propertyName = reader.GetString();
@@ -103,6 +104,36 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                             if (reader.TokenType is not JsonTokenType.Null)
                             {
                                 description = reader.DeserializeString(_replacementSettings);
+                            }
+
+                            break;
+
+                        case "allowed-hosts":
+                            if (reader.TokenType is not JsonTokenType.Null)
+                            {
+                                if (reader.TokenType is not JsonTokenType.StartArray)
+                                {
+                                    throw new JsonException("The mcp.allowed-hosts property must be an array of strings.");
+                                }
+
+                                allowedHosts = new List<string>();
+                                while (reader.Read() && reader.TokenType is not JsonTokenType.EndArray)
+                                {
+string? host = reader.DeserializeString(_replacementSettings)?.Trim();
+if (string.IsNullOrEmpty(host))
+{
+    continue;
+}
+
+string normalizedHost = host.Trim('[', ']');
+if (!string.Equals(host, "*", StringComparison.Ordinal) &&
+    Uri.CheckHostName(normalizedHost) == UriHostNameType.Unknown)
+{
+    throw new JsonException("Each entry in mcp.allowed-hosts must be a host name (or \"*\").");
+}
+
+allowedHosts.Add(host);
+                                }
                             }
 
                             break;
@@ -148,6 +179,13 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
             {
                 writer.WritePropertyName("description");
                 JsonSerializer.Serialize(writer, value.Description, options);
+            }
+
+            // Write allowed-hosts only when the user explicitly provided them.
+            if (value?.UserProvidedAllowedHosts is true && value.AllowedHosts is not null)
+            {
+                writer.WritePropertyName("allowed-hosts");
+                JsonSerializer.Serialize(writer, value.AllowedHosts, options);
             }
 
             writer.WriteEndObject();

@@ -41,6 +41,7 @@ DROP TABLE IF EXISTS comics;
 DROP TABLE IF EXISTS brokers;
 DROP TABLE IF EXISTS type_table;
 DROP TABLE IF EXISTS vector_type_table;
+DROP TABLE IF EXISTS profiles;
 DROP TABLE IF EXISTS trees;
 DROP TABLE IF EXISTS fungi;
 DROP TABLE IF EXISTS empty_table;
@@ -239,6 +240,11 @@ CREATE TABLE vector_type_table(
     id int IDENTITY(5001, 1) PRIMARY KEY,
     vector_data vector(3),
     vector_data_max vector(1998)
+);
+
+CREATE TABLE profiles(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    metadata json NULL
 );
 
 CREATE TABLE trees (
@@ -639,6 +645,16 @@ VALUES (7, CAST('[' + (
     FROM GENERATE_SERIES(1, 1998)
 ) + ']' AS vector(1998)));
 SET IDENTITY_INSERT vector_type_table OFF
+
+SET IDENTITY_INSERT profiles ON
+INSERT INTO profiles(id, metadata)
+VALUES
+    (1, N'{"role":"admin","tier":3}'),
+    (2, N'{"tags":["a","b","c"]}'),
+    (3, N'{"nested":{"key":{"deep":true}}}'),
+    (4, N'{"unicode":"éü😀"}'),
+    (5, NULL);
+SET IDENTITY_INSERT profiles OFF
 
 SET IDENTITY_INSERT sales ON
 INSERT INTO sales(id, item_name, subtotal, tax) VALUES (1, 'Watch', 249.00, 20.59), (2, 'Montior', 120.50, 11.12);

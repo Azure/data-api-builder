@@ -18,6 +18,8 @@ add WebsiteUser_MM --config "dab-config.MsSql.json" --source website_users_mm --
 add SupportedType --config "dab-config.MsSql.json" --source type_table --permissions "anonymous:create,read,delete,update"
 add VectorType --config "dab-config.MsSql.json" --source vector_type_table --rest true --graphql false --permissions "anonymous:create,read,delete,update"
 update VectorType --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update"
+add Profile --config "dab-config.MsSql.json" --source profiles --rest true --graphql true --permissions "anonymous:create,read,delete,update"
+update Profile --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update"
 add stocks_price --config "dab-config.MsSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete"
 update stocks_price --config "dab-config.MsSql.json" --permissions "anonymous:read"
 update stocks_price --config "dab-config.MsSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"

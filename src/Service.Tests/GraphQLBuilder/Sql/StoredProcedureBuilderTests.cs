@@ -355,6 +355,104 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual("Demo Title", ((StringValueNode)arg.DefaultValue!).Value);
         }
 
+        [TestMethod]
+        public void StoredProcedure_ParameterDescription_UsesConfigDescription()
+        {
+            const string parameterName = "title";
+            const string configDescription = "Title from runtime config";
+            const string dbDescription = "Title from database metadata";
+
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spParamDesc")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+                {
+                    Parameters = new()
+                    {
+                        { parameterName, new() { SystemType = typeof(string), Description = dbDescription } }
+                    }
+                }
+            };
+            spDbObj.SourceDefinition.Columns.TryAdd("col1", new() { SystemType = typeof(string) });
+
+            List<ParameterMetadata> configParameters = new()
+            {
+                new ParameterMetadata
+                {
+                    Name = parameterName,
+                    Description = configDescription
+                }
+            };
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: configParameters,
+                graphQLTypeName: "SpParamDescType",
+                entityName: "SpParamDesc");
+
+            InputValueDefinitionNode arg = field.Arguments.First(a => a.Name.Value == parameterName);
+            Assert.IsNotNull(arg.Description);
+            Assert.AreEqual(configDescription, arg.Description!.Value);
+        }
+
+        [TestMethod]
+        public void StoredProcedure_ParameterDescription_FallsBackToDatabaseDescription()
+        {
+            const string parameterName = "title";
+            const string dbDescription = "Title from database metadata";
+
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spParamDescFallback")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+                {
+                    Parameters = new()
+                    {
+                        { parameterName, new() { SystemType = typeof(string), Description = dbDescription } }
+                    }
+                }
+            };
+            spDbObj.SourceDefinition.Columns.TryAdd("col1", new() { SystemType = typeof(string) });
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: new List<ParameterMetadata>(),
+                graphQLTypeName: "SpParamDescFallbackType",
+                entityName: "SpParamDescFallback");
+
+            InputValueDefinitionNode arg = field.Arguments.First(a => a.Name.Value == parameterName);
+            Assert.IsNotNull(arg.Description);
+            Assert.AreEqual(dbDescription, arg.Description!.Value);
+        }
+
+        [TestMethod]
+        public void StoredProcedure_ParameterDescription_FallsBackToDefaultText()
+        {
+            const string parameterName = "title";
+            const string graphQLTypeName = "SpParamDescDefaultTextType";
+            const string entityName = "SpParamDescDefaultText";
+
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spParamDescDefaultText")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+                {
+                    Parameters = new() { { parameterName, new() { SystemType = typeof(string) } } }
+                }
+            };
+            spDbObj.SourceDefinition.Columns.TryAdd("col1", new() { SystemType = typeof(string) });
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: new List<ParameterMetadata>(),
+                graphQLTypeName: graphQLTypeName,
+                entityName: entityName);
+
+            InputValueDefinitionNode arg = field.Arguments.First(a => a.Name.Value == parameterName);
+            Assert.IsNotNull(arg.Description);
+            Assert.AreEqual($"parameters for {graphQLTypeName} stored-procedure", arg.Description!.Value);
+        }
+
         /// <summary>
         /// Helper that builds a query schema for a stored-procedure entity and returns
         /// the generated execute* field so individual tests can assert on its argument

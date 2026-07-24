@@ -83,13 +83,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                         parameterTypeNode = new NonNullTypeNode((INullableTypeNode)parameterTypeNode);
                     }
 
+                    string parameterDescription = !string.IsNullOrWhiteSpace(paramMetadata?.Description)
+                        ? paramMetadata.Description
+                        : !string.IsNullOrWhiteSpace(definition.Description)
+                            ? definition.Description
+                            : $"parameters for {name.Value} stored-procedure";
+
                     inputValues.Add(
                         new(
                             location: null,
                             name: new(param),
-                            description: definition.Description != null
-                                        ? new StringValueNode(definition.Description)
-                                        : new StringValueNode($"parameters for {name.Value} stored-procedure"),
+                            description: new StringValueNode(parameterDescription),
                             type: parameterTypeNode,
                             defaultValue: defaultValueNode,
                             directives: new List<DirectiveNode>())

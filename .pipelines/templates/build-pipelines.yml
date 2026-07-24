@@ -125,3 +125,10 @@ steps:
   inputs:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+
+# Publish this run's unit cobertura as a pipeline artifact so the
+# "Total Code Coverage" job (unittest-pipelines.yml) can merge it with the
+# database integration pipelines' coverage into one combined report.
+- template: publish-coverage-artifact.yml
+  parameters:
+    artifactName: 'coverage-unit'

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
@@ -65,6 +66,8 @@ public class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearerOptions
             // used by the Microsoft identity platform (AAD) against the issuer of the token.
             options.TokenValidationParameters.EnableAadSigningKeyIssuerValidation();
         }
+
+        options.ConfigureCustomJwtRoleExtraction(newAuthOptions);
     }
 
     // This won't be called, but is required for the interface

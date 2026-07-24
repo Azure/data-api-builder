@@ -745,6 +745,53 @@ namespace Cli.Tests
             Assert.AreEqual(updatedJwtIssuerValue.ToString(), runtimeConfig.Runtime.Host.Authentication.Jwt.Issuer);
         }
 
+        [TestMethod]
+        public void TestUpdateAuthenticationJwtRolesSettingsForCustomProvider()
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeHostAuthenticationProvider: "Custom",
+                runtimeHostAuthenticationJwtAudience: "updatedAudience",
+                runtimeHostAuthenticationJwtIssuer: "updatedIssuer",
+                runtimeHostAuthenticationJwtRolesPath: "realm_access.roles",
+                runtimeHostAuthenticationJwtRolesFormat: "delimited-string",
+                runtimeHostAuthenticationJwtRolesDelimiter: ",",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.AreEqual("realm_access.roles", runtimeConfig.Runtime?.Host?.Authentication?.Jwt?.RolesPath);
+            Assert.AreEqual("delimited-string", runtimeConfig.Runtime?.Host?.Authentication?.Jwt?.RolesFormat);
+            Assert.AreEqual(",", runtimeConfig.Runtime?.Host?.Authentication?.Jwt?.RolesDelimiter);
+        }
+
+        [DataTestMethod]
+        [DataRow("EntraID", "roles", "array", null, DisplayName = "Role settings fail for non-Custom provider.")]
+        [DataRow("Custom", "groups[0]", "array", null, DisplayName = "Invalid rolesPath fails.")]
+        [DataRow("Custom", "", "array", null, DisplayName = "Blank rolesPath fails.")]
+        [DataRow("Custom", "roles", "semicolon-delimited", null, DisplayName = "Invalid rolesFormat fails.")]
+        [DataRow("Custom", "roles", "array", ",", DisplayName = "rolesDelimiter rejected for array format.")]
+        public void TestUpdateAuthenticationJwtRolesSettingsValidationFailure(string authenticationProvider, string rolesPath, string rolesFormat, string rolesDelimiter)
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                runtimeHostAuthenticationProvider: authenticationProvider,
+                runtimeHostAuthenticationJwtRolesPath: rolesPath,
+                runtimeHostAuthenticationJwtRolesFormat: rolesFormat,
+                runtimeHostAuthenticationJwtRolesDelimiter: rolesDelimiter,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsFalse(isSuccess);
+            Assert.AreEqual(INITIAL_CONFIG, _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE));
+        }
+
         /// <summary>
         /// Test to update the current depth limit for GraphQL and removal the depth limit using -1.
         /// When runtime.graphql.depth-limit has an initial value of 8.

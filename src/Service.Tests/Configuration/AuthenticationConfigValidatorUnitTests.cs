@@ -89,6 +89,105 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
+        [DataTestMethod("Custom JWT roles settings validation passes when valid")]
+        [DataRow("realm_access.roles", null, null)]
+        [DataRow(null, "delimited-string", null)]
+        [DataRow("['app.roles']", "array", null)]
+        [DataRow("resource_access['dab-api'].roles", "array", null)]
+        [DataRow("@env('JWT_ROLES_PATH')", "array", null)]
+        [DataRow("scope", "delimited-string", "@env('JWT_ROLES_DELIMITER')")]
+        [DataRow("scope", "delimited-string", "@akv('jwt-roles-delimiter')")]
+        public void ValidateCustomJwtRolesSettings(string rolesPath, string rolesFormat, string rolesDelimiter)
+        {
+            JwtOptions jwt = new(
+                Audience: "12345",
+                Issuer: "https://login.microsoftonline.com/common",
+                RolesPath: rolesPath,
+                RolesFormat: rolesFormat,
+                RolesDelimiter: rolesDelimiter);
+            AuthenticationOptions authNConfig = new(
+                Provider: "Custom",
+                Jwt: jwt);
+            RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
+
+            _mockFileSystem.AddFile(
+                FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
+                new MockFileData(config.ToJson())
+            );
+
+            _runtimeConfigLoader.UpdateConfigFilePath(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+
+            try
+            {
+                _runtimeConfigValidator.ValidateConfigProperties();
+            }
+            catch (NotSupportedException e)
+            {
+                Assert.Fail(message: e.Message);
+            }
+        }
+
+        [TestMethod("Custom JWT roles settings fail for non-Custom providers")]
+        public void ValidateCustomJwtRolesSettingsFailForNonCustomProvider()
+        {
+            JwtOptions jwt = new(
+                Audience: "12345",
+                Issuer: DEFAULT_ISSUER,
+                RolesPath: "groups");
+            AuthenticationOptions authNConfig = new(
+                Provider: "EntraID",
+                Jwt: jwt);
+            RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
+
+            _mockFileSystem.AddFile(
+                FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
+                new MockFileData(config.ToJson())
+            );
+
+            _runtimeConfigLoader.UpdateConfigFilePath(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+
+            Assert.ThrowsException<NotSupportedException>(() =>
+            {
+                _runtimeConfigValidator.ValidateConfigProperties();
+            });
+        }
+
+        [DataTestMethod("Custom JWT roles settings fail with invalid values")]
+        [DataRow("groups[0]", null, null)]
+        [DataRow("realm_access..roles", null, null)]
+        [DataRow("", null, null)]
+        [DataRow("   ", null, null)]
+        [DataRow(null, "semicolon-delimited", null)]
+        [DataRow(null, "@env('JWT_ROLES_FORMAT')", null)]
+        [DataRow(null, "array", ",")]
+        [DataRow(null, "string", ",")]
+        [DataRow(null, "delimited-string", "")]
+        public void ValidateCustomJwtRolesSettingsFailWithInvalidValues(string rolesPath, string rolesFormat, string rolesDelimiter)
+        {
+            JwtOptions jwt = new(
+                Audience: "12345",
+                Issuer: DEFAULT_ISSUER,
+                RolesPath: rolesPath,
+                RolesFormat: rolesFormat,
+                RolesDelimiter: rolesDelimiter);
+            AuthenticationOptions authNConfig = new(
+                Provider: "Custom",
+                Jwt: jwt);
+            RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
+
+            _mockFileSystem.AddFile(
+                FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
+                new MockFileData(config.ToJson())
+            );
+
+            _runtimeConfigLoader.UpdateConfigFilePath(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+
+            Assert.ThrowsException<NotSupportedException>(() =>
+            {
+                _runtimeConfigValidator.ValidateConfigProperties();
+            });
+        }
+
         [TestMethod("AuthN validation passes when no authN section in the config.")]
         public void ValidateAuthNSectionNotNecessary()
         {

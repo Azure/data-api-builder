@@ -139,6 +139,42 @@ public class EndToEndTests
         Assert.IsTrue(runtimeConfig.Runtime.GraphQL?.Enabled);
     }
 
+    [TestMethod]
+    public void TestInitializingCustomJwtRoleSettings()
+    {
+        string[] args =
+        {
+            "init",
+            "-c",
+            TEST_RUNTIME_CONFIG_FILE,
+            "--connection-string",
+            SAMPLE_TEST_CONN_STRING,
+            "--database-type",
+            "mssql",
+            "--auth.provider",
+            "Custom",
+            "--auth.audience",
+            "dab-api",
+            "--auth.issuer",
+            "https://issuer.example.com",
+            "--auth.roles-path",
+            "scope",
+            "--auth.roles-format",
+            "delimited-string",
+            "--auth.roles-delimiter",
+            ","
+        };
+        Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+
+        JwtOptions? jwt = runtimeConfig.Runtime?.Host?.Authentication?.Jwt;
+        Assert.IsNotNull(jwt);
+        Assert.AreEqual("scope", jwt.RolesPath);
+        Assert.AreEqual("delimited-string", jwt.RolesFormat);
+        Assert.AreEqual(",", jwt.RolesDelimiter);
+    }
+
     /// <summary>
     /// Test to validate the usage of --graphql.multiple-mutations.create.enabled option of the init command for all database types.
     ///

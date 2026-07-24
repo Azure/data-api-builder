@@ -457,6 +457,23 @@
                     "issuer": {
                       "type": "string",
                       "description": "The expected issuer (iss) claim of incoming JWT tokens."
+                    },
+                    "roles-path": {
+                      "type": "string",
+                      "description": "Path to the JWT claim that contains custom roles. Supports dot notation and bracket notation. Supported for Custom authentication."
+                    },
+                    "roles-format": {
+                      "type": "string",
+                      "description": "Format of the JWT claim that contains custom roles. Supported for Custom authentication.",
+                      "enum": [
+                        "array",
+                        "string",
+                        "delimited-string"
+                      ]
+                    },
+                    "roles-delimiter": {
+                      "type": "string",
+                      "description": "Delimiter used when roles-format is delimited-string. Supported for Custom authentication."
                     }
                   },
                   "required": [ "audience", "issuer" ]
@@ -479,6 +496,82 @@
                   },
                   "then": { "required": [ "jwt" ] },
                   "else": { "properties": { "jwt": false } }
+                },
+                {
+                  "$comment": "Custom JWT role extraction settings default to the standard DAB roles claim shape.",
+                  "if": {
+                    "properties": {
+                      "provider": {
+                        "const": "Custom"
+                      }
+                    },
+                    "required": [ "provider" ]
+                  },
+                  "then": {
+                    "properties": {
+                      "jwt": {
+                        "properties": {
+                          "roles-path": {
+                            "default": "roles"
+                          },
+                          "roles-format": {
+                            "default": "array"
+                          },
+                          "roles-delimiter": {
+                            "default": " "
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "$comment": "Custom JWT role extraction settings are only supported for the Custom provider.",
+                  "if": {
+                    "properties": {
+                      "provider": {
+                        "not": { "const": "Custom" }
+                      }
+                    },
+                    "required": [ "provider" ]
+                  },
+                  "then": {
+                    "properties": {
+                      "jwt": {
+                        "properties": {
+                          "roles-path": false,
+                          "roles-format": false,
+                          "roles-delimiter": false
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "$comment": "roles-delimiter is valid only when Custom JWT roles-format is delimited-string.",
+                  "if": {
+                    "properties": {
+                      "provider": {
+                        "const": "Custom"
+                      },
+                      "jwt": {
+                        "required": [ "roles-delimiter" ]
+                      }
+                    },
+                    "required": [ "provider", "jwt" ]
+                  },
+                  "then": {
+                    "properties": {
+                      "jwt": {
+                        "properties": {
+                          "roles-format": {
+                            "const": "delimited-string"
+                          }
+                        },
+                        "required": [ "roles-format" ]
+                      }
+                    }
+                  }
                 }
               ]
             }

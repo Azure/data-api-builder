@@ -111,8 +111,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (value is not null)
             {
+                string stringValue = GetStringifiedValue(value);
                 paramName = MakeDbConnectionParam(
-                    GetParamAsSystemType(value.ToString()!, columnName, GetColumnSystemType(columnName)), columnName);
+                    GetParamAsSystemType(stringValue, columnName, GetColumnSystemType(columnName)), columnName);
             }
             else
             {

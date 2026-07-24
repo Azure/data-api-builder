@@ -1808,7 +1808,7 @@
         "type": "table"
       },
       "graphql": {
-        "enabled": false,
+        "enabled": true,
         "type": {
           "singular": "VectorType",
           "plural": "VectorTypes"

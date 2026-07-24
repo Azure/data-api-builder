@@ -1722,7 +1722,7 @@
         GraphQL: {
           Singular: VectorType,
           Plural: VectorTypes,
-          Enabled: false
+          Enabled: true
         },
         Rest: {
           Enabled: true

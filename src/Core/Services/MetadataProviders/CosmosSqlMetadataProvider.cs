@@ -530,6 +530,19 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return true;
         }
 
+        /// <summary>
+        /// Array types are not yet supported for Cosmos. Returns false.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="fieldKind">The kind of the field in GraphQL.</param>
+        /// <returns>False, as array types are not supported.</returns>
+        public bool TryGetUnderlyingFieldKind(string entityName, string fieldName, out SyntaxKind fieldKind)
+        {
+            fieldKind = 0;
+            return false;
+        }
+
         public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             throw new NotImplementedException();

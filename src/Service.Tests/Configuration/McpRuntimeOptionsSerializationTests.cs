@@ -369,7 +369,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(config.Runtime?.Mcp?.AllowedHosts, "AllowedHosts should not be null");
             Assert.AreEqual(2, config.Runtime.Mcp.AllowedHosts.Count, "AllowedHosts should have two entries");
             Assert.AreEqual("api.contoso.com", config.Runtime.Mcp.AllowedHosts[0]);
-            Assert.AreEqual("*.example.com", config.Runtime.Mcp.AllowedHosts[1]);
+            Assert.AreEqual("sub.example.com", config.Runtime.Mcp.AllowedHosts[1]);
         }
 
         /// <summary>

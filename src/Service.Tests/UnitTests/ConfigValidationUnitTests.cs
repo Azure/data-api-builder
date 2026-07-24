@@ -3587,6 +3587,99 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             configValidator.ValidateEmbeddingsOptions(runtimeConfig);
         }
 
+        [TestMethod]
+        public void StoredProcedureCannotEnableGraphQLSubscriptionEvents()
+        {
+            string runtimeConfigString = @"{
+                ""$schema"": ""test_schema"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
+                },
+                ""runtime"": {
+                    ""graphql"": {
+                        ""enabled"": true
+                    }
+                },
+                ""entities"": {
+                    ""ExecuteBook"": {
+                        ""source"": {
+                            ""type"": ""stored-procedure"",
+                            ""object"": ""dbo.ExecuteBook""
+                        },
+                        ""graphql"": {
+                            ""enabled"": true,
+                            ""operation"": ""mutation"",
+                            ""subscription"": {
+                                ""events"": [ ""created"" ]
+                            }
+                        },
+                        ""permissions"": [
+                            {
+                                ""role"": ""anonymous"",
+                                ""actions"": [ ""execute"" ]
+                            }
+                        ]
+                    }
+                }
+            }";
+
+            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
+                () => configValidator.ValidateEntityConfiguration(runtimeConfig));
+
+            Assert.AreEqual(
+                string.Format(RuntimeConfigValidator.STORED_PROCEDURE_GRAPHQL_SUBSCRIPTION_ERR_MSG, "ExecuteBook"),
+                exception.Message);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, exception.SubStatusCode);
+        }
+
+        [TestMethod]
+        public void StoredProcedureSubscriptionSettingsIgnoredWhenGraphQLEntityDisabled()
+        {
+            string runtimeConfigString = @"{
+                ""$schema"": ""test_schema"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
+                },
+                ""runtime"": {
+                    ""graphql"": {
+                        ""enabled"": true
+                    }
+                },
+                ""entities"": {
+                    ""ExecuteBook"": {
+                        ""source"": {
+                            ""type"": ""stored-procedure"",
+                            ""object"": ""dbo.ExecuteBook""
+                        },
+                        ""graphql"": {
+                            ""enabled"": false,
+                            ""operation"": ""mutation"",
+                            ""subscription"": {
+                                ""events"": [ ""created"" ]
+                            }
+                        },
+                        ""permissions"": [
+                            {
+                                ""role"": ""anonymous"",
+                                ""actions"": [ ""execute"" ]
+                            }
+                        ]
+                    }
+                }
+            }";
+
+            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            configValidator.ValidateEntityConfiguration(runtimeConfig);
+        }
+
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
         {
             MockFileSystem fileSystem = new();
@@ -3686,4 +3779,3 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
     }
 }
-

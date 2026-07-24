@@ -660,5 +660,47 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Ensure child override for connection-string applied while AKV remained from base.
             Assert.AreEqual("Server=.;Database=Child;Trusted_Connection=True;", mergedConfig.DataSource.ConnectionString, "Child connection-string override not applied.");
         }
+
+        [TestMethod]
+        public void TestEntityGraphQLSubscriptionOptionsDeserializeAndMerge()
+        {
+            string parentConfig = @"{
+  ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=.;Database=Parent;Trusted_Connection=True;"" },
+  ""entities"": {
+    ""Actor"": {
+      ""source"": ""dbo.Actor"",
+      ""graphql"": {
+        ""subscription"": {
+          ""events"": [ ""created"" ]
+        }
+      },
+      ""permissions"": [ { ""role"": ""anonymous"", ""actions"": [ ""read"", ""create"" ] } ]
+    }
+  }
+}";
+
+            string childConfig = @"{
+  ""entities"": {
+    ""Actor"": {
+      ""graphql"": {
+        ""subscription"": {
+          ""enabled"": false,
+          ""events"": [ ""updated"", ""deleted"" ]
+        }
+      }
+    }
+  }
+}";
+
+            string mergedJson = MergeJsonProvider.Merge(parentConfig, childConfig);
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(mergedJson, out RuntimeConfig mergedConfig), "Merged runtime config failed to parse.");
+            EntityGraphQLSubscriptionOptions subscription = mergedConfig.Entities["Actor"].GraphQL.Subscription!;
+
+            Assert.IsFalse(subscription.Enabled);
+            CollectionAssert.AreEqual(
+                new[] { GraphQLSubscriptionEvent.Updated, GraphQLSubscriptionEvent.Deleted },
+                subscription.Events);
+        }
     }
 }

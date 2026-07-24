@@ -20,10 +20,25 @@ namespace Azure.DataApiBuilder.Core.Telemetry
         private static readonly Counter<long> _errorCounter = _meter.CreateCounter<long>("total_errors");
         private static readonly Counter<long> _totalRequests = _meter.CreateCounter<long>("total_requests");
         private static readonly Histogram<double> _requestDuration = _meter.CreateHistogram<double>("request_duration", "ms");
+        private static readonly UpDownCounter<long> _activeGraphQLSubscriptions = _meter.CreateUpDownCounter<long>("active_graphql_subscriptions");
 
         public static void IncrementActiveRequests(ApiType kind) => _activeRequests.Add(1, new KeyValuePair<string, object?>("api_type", kind));
 
         public static void DecrementActiveRequests(ApiType kind) => _activeRequests.Add(-1, new KeyValuePair<string, object?>("api_type", kind));
+
+        private static long _activeGraphQLSubscriptionCount;
+
+        public static long IncrementActiveGraphQLSubscriptions(string entityName, string eventType)
+        {
+            _activeGraphQLSubscriptions.Add(1, new("entity", entityName), new("event", eventType));
+            return Interlocked.Increment(ref _activeGraphQLSubscriptionCount);
+        }
+
+        public static long DecrementActiveGraphQLSubscriptions(string entityName, string eventType)
+        {
+            _activeGraphQLSubscriptions.Add(-1, new("entity", entityName), new("event", eventType));
+            return Interlocked.Decrement(ref _activeGraphQLSubscriptionCount);
+        }
 
         /// <summary>
         /// Tracks a request by incrementing the total requests counter and associating it with metadata.

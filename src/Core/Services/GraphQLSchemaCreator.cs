@@ -18,9 +18,12 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Subscriptions;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
 namespace Azure.DataApiBuilder.Core.Services
@@ -43,6 +46,8 @@ namespace Azure.DataApiBuilder.Core.Services
         private RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IGraphQLSubscriptionEventPublisher _subscriptionEventPublisher;
+        private readonly ILoggerFactory _loggerFactory;
         private bool _isMultipleCreateOperationEnabled;
         private bool _isAggregationEnabled;
 
@@ -61,6 +66,8 @@ namespace Azure.DataApiBuilder.Core.Services
             IMutationEngineFactory mutationEngineFactory,
             IMetadataProviderFactory metadataProviderFactory,
             IAuthorizationResolver authorizationResolver,
+            IGraphQLSubscriptionEventPublisher? subscriptionEventPublisher = null,
+            ILoggerFactory? loggerFactory = null,
             HotReloadEventHandler<HotReloadEventArgs>? handler = null)
         {
             handler?.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, OnConfigChanged);
@@ -75,6 +82,8 @@ namespace Azure.DataApiBuilder.Core.Services
             _metadataProviderFactory = metadataProviderFactory;
             _authorizationResolver = authorizationResolver;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _subscriptionEventPublisher = subscriptionEventPublisher ?? NullGraphQLSubscriptionEventPublisher.Instance;
+            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         }
 
         /// <summary>
@@ -105,7 +114,7 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             // Generate the Query and the Mutation Node.
-            (DocumentNode queryNode, DocumentNode mutationNode) = GenerateQueryAndMutationNodes(root, inputTypes);
+            (DocumentNode queryNode, DocumentNode mutationNode, DocumentNode subscriptionNode) = GenerateQueryMutationAndSubscriptionNodes(root, inputTypes);
 
             // Hot Chocolate v16 validates schemas eagerly during host startup
             // (RequestExecutorWarmupService) and rejects an empty Query type with
@@ -133,8 +142,15 @@ namespace Azure.DataApiBuilder.Core.Services
                 .AddDocument(queryNode)
                 // Generate the GraphQL mutations from the provided objects
                 .AddDocument(mutationNode)
+                // Generate the GraphQL subscriptions from the provided objects
+                .AddDocument(subscriptionNode)
                 // Adds our type interceptor that will create the resolvers.
-                .TryAddTypeInterceptor(new ResolverTypeInterceptor(new ExecutionHelper(_queryEngineFactory, _mutationEngineFactory, _runtimeConfigProvider)));
+                .TryAddTypeInterceptor(new ResolverTypeInterceptor(new ExecutionHelper(
+                    _queryEngineFactory,
+                    _mutationEngineFactory,
+                    _runtimeConfigProvider,
+                    _subscriptionEventPublisher,
+                    _loggerFactory.CreateLogger<ExecutionHelper>())));
         }
 
         /// <summary>
@@ -216,7 +232,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="root">Root document node which contains base entity types.</param>
         /// <param name="inputTypes">Dictionary with key being the object and value the input object type definition node for that object.</param>
         /// <returns>Query and mutation nodes.</returns>
-        public (DocumentNode, DocumentNode) GenerateQueryAndMutationNodes(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        public (DocumentNode, DocumentNode, DocumentNode) GenerateQueryMutationAndSubscriptionNodes(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             Dictionary<string, DatabaseObject> entityToDbObjects = new();
             Dictionary<string, DatabaseType> entityToDatabaseType = new();
@@ -242,6 +258,15 @@ namespace Azure.DataApiBuilder.Core.Services
             // Generate the GraphQL mutations from the provided objects
             DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isMultipleCreateOperationEnabled);
 
+            // Generate the GraphQL subscriptions from the provided objects
+            DocumentNode subscriptionNode = SubscriptionBuilder.Build(root, _entities, _authorizationResolver.EntityPermissionsMap, entityToDatabaseType);
+
+            return (queryNode, mutationNode, subscriptionNode);
+        }
+
+        public (DocumentNode, DocumentNode) GenerateQueryAndMutationNodes(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        {
+            (DocumentNode queryNode, DocumentNode mutationNode, _) = GenerateQueryMutationAndSubscriptionNodes(root, inputTypes);
             return (queryNode, mutationNode);
         }
 

@@ -16,6 +16,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Subscriptions;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
@@ -63,6 +64,9 @@ public class RuntimeConfigValidator : IConfigValidator
 
     public const string USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG =
         "User-delegated authentication requires DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, and DAB_OBO_CLIENT_SECRET environment variables.";
+
+    public const string STORED_PROCEDURE_GRAPHQL_SUBSCRIPTION_ERR_MSG =
+        "Stored-procedure entity '{0}' cannot enable GraphQL subscription events.";
 
     // Error messages.
     public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
@@ -1010,7 +1014,26 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 ValidateNameRequirements(entity.GraphQL.Singular);
                 ValidateNameRequirements(entity.GraphQL.Plural);
+
+                if (entity.GraphQL.Subscription is { Enabled: true, Events.Length: 0 })
+                {
+                    _logger.LogWarning("Entity {entityName} has GraphQL subscriptions enabled but no subscription events configured.", entityName);
+                }
+
+                ValidateGraphQLSubscriptionConfig(entity, entityName);
             }
+        }
+    }
+
+    private void ValidateGraphQLSubscriptionConfig(Entity entity, string entityName)
+    {
+        if (entity.Source.Type is EntitySourceType.StoredProcedure &&
+            SubscriptionBuilder.IsSubscriptionEnabled(entity))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: string.Format(STORED_PROCEDURE_GRAPHQL_SUBSCRIPTION_ERR_MSG, entityName),
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
     }
 

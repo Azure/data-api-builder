@@ -26,6 +26,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
+using Microsoft.Extensions.Logging.Console;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
@@ -194,6 +195,11 @@ namespace Azure.DataApiBuilder.Service
                     else
                     {
                         logging.SetMinimumLevel(LogLevelProvider.CurrentLogLevel);
+                        logging.Services.Configure<SimpleConsoleFormatterOptions>(options =>
+                        {
+                            options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
+                            options.UseUtcTimestamp = true;
+                        });
                     }
 
                     // Add filter for dynamic log level changes (e.g., via MCP logging/setLevel)
@@ -464,7 +470,14 @@ namespace Azure.DataApiBuilder.Service
                         // When LogLevel.None, skip the console logger entirely for true silence.
                         if (LogLevelProvider.CurrentLogLevel != LogLevel.None)
                         {
-                            builder.AddConsole(options =>
+                            builder.AddSimpleConsole(options =>
+                            {
+                                options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
+                                options.UseUtcTimestamp = true;
+                            });
+                            // Route all levels to stderr to keep stdout clean for MCP JSON-RPC.
+                            // Uses Services.Configure (not AddConsole) so no second provider is registered.
+                            builder.Services.Configure<ConsoleLoggerOptions>(options =>
                             {
                                 options.LogToStandardErrorThreshold = LogLevel.Trace;
                             });
@@ -472,7 +485,11 @@ namespace Azure.DataApiBuilder.Service
                     }
                     else
                     {
-                        builder.AddConsole();
+                        builder.AddSimpleConsole(options =>
+                        {
+                            options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
+                            options.UseUtcTimestamp = true;
+                        });
                     }
                 });
         }

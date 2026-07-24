@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.RegularExpressions;
+
 namespace Cli.Tests;
 
 /// <summary>
@@ -77,8 +79,9 @@ public class CustomLoggerTests
         string actual = expectStderr ? stderr : stdout;
         string other = expectStderr ? stdout : stderr;
 
-        Assert.IsTrue(actual.StartsWith(expectedPrefix),
-            $"Expected output to start with '{expectedPrefix}' but got: '{actual}'");
+        Assert.IsTrue(
+            Regex.IsMatch(actual, $@"^\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}:\d{{2}}:\d{{2}}\.\d{{3}}Z {Regex.Escape(expectedPrefix)}"),
+            $"Expected output to start with an ISO 8601 UTC timestamp followed by '{expectedPrefix}' but got: '{actual}'");
         StringAssert.Contains(actual, Message);
         Assert.AreEqual(string.Empty, other,
             $"Did not expect output on the other stream but got: '{other}'");

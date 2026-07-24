@@ -1135,6 +1135,10 @@ namespace Azure.DataApiBuilder.Service
                         options.MapInboundClaims = false;
                         options.Audience = authOptions.Jwt!.Audience;
                         options.Authority = authOptions.Jwt!.Issuer;
+                        // Require HTTPS for IdP metadata unless explicitly running in Development mode.
+                        // This keeps defaults secure (HTTPS) for any current or future non-Development mode,
+                        // while still allowing local/docker scenarios (e.g. IdP reachable only over HTTP) in Development.
+                        options.RequireHttpsMetadata = mode is not HostMode.Development;
                         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                         {
                             // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInRole()

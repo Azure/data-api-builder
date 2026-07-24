@@ -1259,7 +1259,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "Book", bookWithUpperCase }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType, conflictingEntityName: "book");
         }
 
         /// <summary>
@@ -1302,7 +1302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "executeBook", bookTable },
                 { "Book_by_pk", bookByPkStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType, conflictingEntityName: "Book_by_pk");
         }
 
         /// <summary>
@@ -1346,7 +1346,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "ExecuteBooks", bookTable },
                 { "AddBook", addBookStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType, conflictingEntityName: "AddBook");
         }
 
         /// <summary>
@@ -1384,7 +1384,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, conflictingEntityName: "book");
         }
 
         /// <summary>
@@ -1427,7 +1427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, conflictingEntityName: "book");
         }
 
         /// <summary>
@@ -1465,7 +1465,45 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             entityCollection.Add("book_alt", book_alt);
             entityCollection.Add("book", book);
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, conflictingEntityName: "book");
+        }
+
+        /// <summary>
+        /// Validates that a detailed error is thrown when autoentities includes objects whose names
+        /// differ only by singular/plural form (e.g. dbo.Category and dbo.Categories), causing
+        /// DAB to generate conflicting GraphQL type and operation names.
+        ///
+        /// "dbo_Category" entity → singular: Category, plural: Categories
+        /// "dbo_Categories" entity → singular: Category, plural: Categories (after pluralization)
+        ///
+        /// Both entities generate the same pk query, list query, and mutation names.
+        /// </summary>
+        [TestMethod]
+        [DataRow(DatabaseType.MSSQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateAutoEntitiesWithSingularPluralNameCollisionGenerateDuplicateQueries(DatabaseType databaseType)
+        {
+            // Entity Name: dbo_Category
+            // Singular: Category (from entity name processed by autoentities)
+            // Plural: Categories (pluralized from singular)
+            Entity categoryEntity = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Category", "Categories");
+
+            // Entity Name: dbo_Categories
+            // Singular: Category (after singularization by autoentities)
+            // Plural: Categories
+            Entity categoriesEntity = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Category", "Categories");
+
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "dbo_Categories", categoriesEntity },
+                { "dbo_Category", categoryEntity }
+            };
+
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(
+                entityCollection,
+                "dbo_Category",
+                databaseType,
+                conflictingEntityName: "dbo_Categories");
         }
 
         /// <summary>
@@ -1612,14 +1650,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// queries with the same name.
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
-        /// <param name="entityName">Entity name to construct the expected exception message</param>
-        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName, DatabaseType databaseType)
+        /// <param name="entityName">The entity name expected to appear in the conflict message as the conflicting entity.</param>
+        /// <param name="databaseType">Database type used during validation.</param>
+        /// <param name="conflictingEntityName">The other entity name expected to appear in the conflict message.</param>
+        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(
+            SortedDictionary<string, Entity> entityCollection,
+            string entityName,
+            DatabaseType databaseType,
+            string conflictingEntityName)
         {
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
                action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(databaseType, new(entityCollection)));
 
-            Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
+            StringAssert.StartsWith(dabException.Message, "GraphQL naming conflict detected.");
+            StringAssert.Contains(dabException.Message, entityName);
+            StringAssert.Contains(dabException.Message, conflictingEntityName);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
             Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
         }

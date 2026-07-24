@@ -910,6 +910,9 @@ public class RuntimeConfigValidator : IConfigValidator
     {
         HashSet<string> graphQLOperationNames = new();
 
+        // Tracks which entity registered each operation name, used only for building conflict error messages.
+        Dictionary<string, string> operationOwner = new();
+
         foreach ((string entityName, Entity entity) in entityCollection)
         {
             if (!entity.GraphQL.Enabled)
@@ -918,6 +921,7 @@ public class RuntimeConfigValidator : IConfigValidator
             }
 
             bool containsDuplicateOperationNames = false;
+            string conflictingEntityName = string.Empty;
             if (entity.Source.Type is EntitySourceType.StoredProcedure)
             {
                 // For Stored Procedures a single query/mutation is generated.
@@ -926,6 +930,11 @@ public class RuntimeConfigValidator : IConfigValidator
                 if (!graphQLOperationNames.Add(storedProcedureQueryName))
                 {
                     containsDuplicateOperationNames = true;
+                    conflictingEntityName = operationOwner.GetValueOrDefault(storedProcedureQueryName, string.Empty);
+                }
+                else
+                {
+                    operationOwner[storedProcedureQueryName] = entityName;
                 }
             }
             else
@@ -952,13 +961,41 @@ public class RuntimeConfigValidator : IConfigValidator
                     || ((databaseType is DatabaseType.CosmosDB_NoSQL) && !graphQLOperationNames.Add(patchMutationName)))
                 {
                     containsDuplicateOperationNames = true;
+                    conflictingEntityName =
+                        operationOwner.GetValueOrDefault(pkQueryName) ??
+                        operationOwner.GetValueOrDefault(listQueryName) ??
+                        operationOwner.GetValueOrDefault(createMutationName) ??
+                        operationOwner.GetValueOrDefault(updateMutationName) ??
+                        operationOwner.GetValueOrDefault(deleteMutationName) ??
+                        operationOwner.GetValueOrDefault(patchMutationName) ??
+                        string.Empty;
+                }
+                else
+                {
+                    operationOwner[pkQueryName] = entityName;
+                    operationOwner[listQueryName] = entityName;
+                    operationOwner[createMutationName] = entityName;
+                    operationOwner[updateMutationName] = entityName;
+                    operationOwner[deleteMutationName] = entityName;
+                    if (databaseType is DatabaseType.CosmosDB_NoSQL)
+                    {
+                        operationOwner[patchMutationName] = entityName;
+                    }
                 }
             }
 
             if (containsDuplicateOperationNames)
             {
+                string entitiesStr = string.IsNullOrEmpty(conflictingEntityName)
+                    ? $"  {entityName}"
+                    : $"  {conflictingEntityName}{Environment.NewLine}  {entityName}";
+
+                string message = $"GraphQL naming conflict detected.{Environment.NewLine}"
+                    + $"{Environment.NewLine}Entities:{Environment.NewLine}{entitiesStr}"
+                    + $"{Environment.NewLine}{Environment.NewLine}Configure distinct GraphQL singular and plural names for one of the entities to resolve this conflict.";
+
                 HandleOrRecordException(new DataApiBuilderException(
-                    message: $"Entity {entityName} generates queries/mutation that already exist",
+                    message: message,
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }

@@ -104,10 +104,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
+            string description = !string.IsNullOrWhiteSpace(entity.Description)
+                ? entity.Description
+                : $"Execute Stored-Procedure {name.Value} and get results from the database";
+
             return new(
                 location: null,
                 new NameNode(GenerateStoredProcedureGraphQLFieldName(name.Value, entity)),
-                new StringValueNode($"Execute Stored-Procedure {name.Value} and get results from the database"),
+                new StringValueNode(description),
                 inputValues,
                 new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
                 fieldDefinitionNodeDirectives

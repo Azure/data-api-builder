@@ -906,6 +906,163 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
+        /// Reproduces the real-world Book entity scenario: a single role with MULTIPLE actions
+        /// (read with no field restriction, create/update excluding a column, delete with no
+        /// field restriction) all defined in one EntityPermission.Actions array - unlike
+        /// AuthorizationHelpers.InitRuntimeConfig which only ever builds a single action per role.
+        /// </summary>
+        [TestMethod("Multiple actions per role - column exclusion on create/update only")]
+        public void MultipleActionsPerRole_ColumnExclusionOnCreateAndUpdate()
+        {
+            EntityActionFields createUpdateFields = new(Exclude: new() { "col3" });
+            EntityAction readAction = new(Action: EntityActionOperation.Read, Fields: null, Policy: new(null, null));
+            EntityAction createAction = new(Action: EntityActionOperation.Create, Fields: createUpdateFields, Policy: new(null, null));
+            EntityAction updateAction = new(Action: EntityActionOperation.Update, Fields: createUpdateFields, Policy: new(null, null));
+            EntityAction deleteAction = new(Action: EntityActionOperation.Delete, Fields: null, Policy: new(null, null));
+
+            Azure.DataApiBuilder.Config.ObjectModel.EntityPermission permissionForEntity = new(
+                Role: AuthorizationHelpers.TEST_ROLE,
+                Actions: new EntityAction[] { readAction, createAction, updateAction, deleteAction });
+
+            Azure.DataApiBuilder.Config.ObjectModel.Entity sampleEntity = new(
+                Source: new Azure.DataApiBuilder.Config.ObjectModel.EntitySource(AuthorizationHelpers.TEST_ENTITY, Azure.DataApiBuilder.Config.ObjectModel.EntitySourceType.Table, null, null),
+                Fields: null,
+                Rest: new(Array.Empty<SupportedHttpVerb>()),
+                GraphQL: new(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ENTITY),
+                Permissions: new Azure.DataApiBuilder.Config.ObjectModel.EntityPermission[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null);
+
+            Azure.DataApiBuilder.Config.ObjectModel.RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new Azure.DataApiBuilder.Config.ObjectModel.DataSource(Azure.DataApiBuilder.Config.ObjectModel.DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new("AppService", null))),
+                Entities: new(new Dictionary<string, Azure.DataApiBuilder.Config.ObjectModel.Entity> { { AuthorizationHelpers.TEST_ENTITY, sampleEntity } }));
+
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            // Read should allow all columns (no exclusion for read).
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Read,
+                new List<string> { "col1", "col3" }));
+
+            // Create should DENY col3 since it is excluded for create.
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Create,
+                new List<string> { "col1", "col3" }));
+
+            // Update should DENY col3 since it is excluded for update.
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Update,
+                new List<string> { "col1", "col3" }));
+
+            // Round-trip the config through JSON serialization/deserialization (as happens when DAB
+            // loads a real config file from disk) to rule out any bug specific to the JSON converters
+            // (e.g. shared/aliased Fields.Exclude HashSet instances across sibling actions).
+            string json = runtimeConfig.ToJson();
+            Assert.IsTrue(Azure.DataApiBuilder.Config.RuntimeConfigLoader.TryParseConfig(json, out Azure.DataApiBuilder.Config.ObjectModel.RuntimeConfig? roundTrippedConfig));
+            AuthorizationResolver roundTrippedResolver = AuthorizationHelpers.InitAuthorizationResolver(roundTrippedConfig!);
+
+            Assert.IsTrue(roundTrippedResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Read,
+                new List<string> { "col1", "col3" }));
+
+            Assert.IsFalse(roundTrippedResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Create,
+                new List<string> { "col1", "col3" }));
+
+            Assert.IsFalse(roundTrippedResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Update,
+                new List<string> { "col1", "col3" }));
+        }
+
+        /// <summary>
+        /// Parses the EXACT real-world Book entity config structure from JSON (entity-level "fields"
+        /// array listing only id/title, plus a multi-action role that excludes publisher_id for
+        /// create/update) and asserts that Fields.Exclude survives deserialization for each action.
+        /// This isolates whether the bug is in the JSON config converters (EntityActionConverter /
+        /// EntityActionFields) independent of any database/metadata provider.
+        /// </summary>
+        [TestMethod("Real config JSON: Fields.Exclude survives parse for multi-action role")]
+        public void RealConfigJson_FieldsExcludeSurvivesParse()
+        {
+            string configJson = @"{
+              ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/v0.10.23/dab.draft.schema.json"",
+              ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=localhost;Database=master;""
+              },
+              ""runtime"": {
+                ""rest"": { ""enabled"": true, ""path"": ""/api"", ""request-body-strict"": true },
+                ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
+                ""host"": { ""mode"": ""development"", ""authentication"": { ""provider"": ""StaticWebApps"" } }
+              },
+              ""entities"": {
+                ""Book"": {
+                  ""source"": { ""object"": ""books"", ""type"": ""table"" },
+                  ""fields"": [
+                    { ""name"": ""id"", ""alias"": ""id"", ""primary-key"": false },
+                    { ""name"": ""title"", ""alias"": ""title"", ""primary-key"": false }
+                  ],
+                  ""permissions"": [
+                    {
+                      ""role"": ""test_role_with_excluded_fields_on_mutation"",
+                      ""actions"": [
+                        { ""action"": ""read"" },
+                        { ""action"": ""create"", ""fields"": { ""exclude"": [ ""publisher_id"" ] } },
+                        { ""action"": ""update"", ""fields"": { ""exclude"": [ ""publisher_id"" ] } },
+                        { ""action"": ""delete"" }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }";
+
+            Assert.IsTrue(
+                Azure.DataApiBuilder.Config.RuntimeConfigLoader.TryParseConfig(configJson, out Azure.DataApiBuilder.Config.ObjectModel.RuntimeConfig? config),
+                "Config should parse successfully.");
+            Assert.IsNotNull(config);
+
+            Azure.DataApiBuilder.Config.ObjectModel.Entity bookEntity = config!.Entities["Book"];
+            Azure.DataApiBuilder.Config.ObjectModel.EntityPermission permission =
+                bookEntity.Permissions.Single(p => p.Role == "test_role_with_excluded_fields_on_mutation");
+
+            Azure.DataApiBuilder.Config.ObjectModel.EntityAction createAction =
+                permission.Actions.Single(a => a.Action == EntityActionOperation.Create);
+            Azure.DataApiBuilder.Config.ObjectModel.EntityAction updateAction =
+                permission.Actions.Single(a => a.Action == EntityActionOperation.Update);
+
+            Assert.IsNotNull(createAction.Fields, "Create action Fields should not be null after parsing.");
+            Assert.IsNotNull(updateAction.Fields, "Update action Fields should not be null after parsing.");
+
+            Assert.IsTrue(
+                createAction.Fields!.Exclude.Contains("publisher_id"),
+                $"Create action Exclude should contain publisher_id. Actual: [{string.Join(",", createAction.Fields.Exclude)}]");
+            Assert.IsTrue(
+                updateAction.Fields!.Exclude.Contains("publisher_id"),
+                $"Update action Exclude should contain publisher_id. Actual: [{string.Join(",", updateAction.Fields.Exclude)}]");
+        }
+
+        /// <summary>
         /// Test that all columns should be excluded if the exclusion contains wildcard character.
         /// </summary>
         [TestMethod("Wildcard column exclusion")]

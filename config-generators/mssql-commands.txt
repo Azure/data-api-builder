@@ -123,6 +123,9 @@ update Book --config "dab-config.MsSql.json" --permissions "test_role_with_exclu
 update Book --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields:read" --fields.exclude "publisher_id"
 update Book --config "dab-config.MsSql.json" --permissions "test_role_with_policy_excluded_fields:create,update,delete"
 update Book --config "dab-config.MsSql.json" --permissions "test_role_with_policy_excluded_fields:read" --fields.exclude "publisher_id" --policy-database "@item.title ne 'Test'"
+update Book --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_mutation:read,delete"
+update Book --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_mutation:create" --fields.exclude "publisher_id"
+update Book --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_mutation:update" --fields.exclude "publisher_id"
 update Book --config "dab-config.MsSql.json" --permissions "role_multiple_create_policy_tester:read" --policy-database "@item.publisher_id ne 1234"
 update Book --config "dab-config.MsSql.json" --permissions "role_multiple_create_policy_tester:create" --policy-database "@item.title ne 'Test'"
 update Book --config "dab-config.MsSql.json" --permissions "role_multiple_create_policy_tester:update,delete"
@@ -142,6 +145,9 @@ update BookWebsitePlacement --config "dab-config.MsSql.json" --permissions "auth
 update BookWebsitePlacement --config "dab-config.MsSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.userId eq @item.id"
 update Author --config "dab-config.MsSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update WebsiteUser --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" --rest false --graphql "websiteUser:websiteUsers"
+update WebsiteUser --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_mutation:read,delete"
+update WebsiteUser --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_mutation:create" --fields.exclude "username"
+update WebsiteUser --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_mutation:update" --fields.exclude "username"
 update WebsiteUser -c "dab-config.MsSql.json" --relationship reviews --target.entity Review --cardinality many --relationship.fields "id:websiteuser_id"
 update WebsiteUser_MM --config "dab-config.MsSql.json" --source website_users_mm --permissions "authenticated:*" --relationship reviews --relationship.fields "id:websiteuser_id" --target.entity Review_MM --cardinality many
 update Revenue --config "dab-config.MsSql.json" --permissions "database_policy_tester:create" --policy-database "@item.revenue gt 1000"

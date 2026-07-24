@@ -196,7 +196,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// operation resulted in an update or an insert, and to surface database policy failures.
         /// The upsert query returns:
         ///   result set #1: the number of records already present for the given primary key.
-        ///   result set #2: the output of the UPDATE (non-empty only when a record was updated).
+        ///   result set #2: the output of the UPDATE (non-empty when a row matched the primary key and the update policy).
         ///   result set #3 (non-fallback only): the output of the INSERT (non-empty only when a record was inserted).
         /// </summary>
         /// <param name="dbDataReader">A DbDataReader.</param>
@@ -223,8 +223,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
-            // Result set #2: output of the UPDATE. Non-empty only when a record was actually updated
-            // (i.e. it existed and satisfied the update database policy).
+            // Result set #2: output of the UPDATE. Non-empty whenever a row matched the primary key and
+            // satisfied the update database policy - independent of whether any value physically changed,
+            // so authorized idempotent updates are still returned.
             DbResultSet? updateResultSet = await dbDataReader.NextResultAsync()
                 ? await ExtractResultSetFromDbDataReaderAsync(dbDataReader)
                 : null;
@@ -234,8 +235,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // A record existed for the given primary key, so an update was attempted.
                 if (updateResultSet is null || updateResultSet.Rows.Count == 0)
                 {
-                    // Record exists but no record was updated - indicates the update database policy
-                    // was not satisfied (e.g. an attempt to modify another user's row).
+                    // Record exists but no row matched the primary key + update policy - indicates the
+                    // update database policy was not satisfied (e.g. an attempt to modify another user's row).
                     throw new DataApiBuilderException(
                         message: DataApiBuilderException.AUTHORIZATION_FAILURE,
                         statusCode: HttpStatusCode.Forbidden,

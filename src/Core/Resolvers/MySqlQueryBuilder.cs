@@ -132,22 +132,36 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 pkPredicates,
                 structure.GetDbPolicyForOperation(EntityActionOperation.Update));
 
-            // Capture whether a record already exists for the given primary key BEFORE attempting the
-            // update/insert. This count is surfaced as the first result set and is used by the query
-            // executor to distinguish an update from an insert and to detect database policy failures.
+            // Capture two facts about the pre-update state of the row, surfaced/consumed by the executor:
+            //  - @cnt: whether a record exists for the given primary key. Used to distinguish an update
+            //    from an insert (first result set).
+            //  - @matched: whether a record exists that ALSO satisfies the update policy. Used to decide
+            //    whether the update was authorized.
+            // These are *locking* reads (FOR UPDATE). On an existing row InnoDB takes a record lock; on a
+            // missing primary key it takes a gap lock, which prevents another concurrent transaction from
+            // inserting the same key until this transaction completes. This makes the insert-vs-update
+            // decision race-safe: two concurrent upserts for the same missing PK are serialized, and the
+            // second request observes the row the first inserted and cleanly resolves to an update instead
+            // of failing with a duplicate-key error.
+            // @matched is deliberately a *matched-row* count rather than ROW_COUNT() (the number of
+            // *changed* rows). ROW_COUNT() reports 0 for an authorized idempotent update (values already
+            // equal the row's current values) when the connection is opened with UseAffectedRows=true,
+            // which would otherwise be misread as a policy failure. Using a matched-row count keeps the
+            // authorization decision correct and independent of the connection-string options.
             string countExistingRows =
-                $"SET @cnt := (SELECT COUNT(*) FROM {tableName} WHERE {pkPredicates}); " +
+                $"SELECT COUNT(*) INTO @cnt FROM {tableName} WHERE {pkPredicates} FOR UPDATE; " +
+                $"SELECT COUNT(*) INTO @matched FROM {tableName} WHERE {updatePredicates} FOR UPDATE; " +
                 $"SELECT @cnt AS {QuoteIdentifier(COUNT_ROWS_WITH_GIVEN_PK)};";
 
-            // Update honoring the update database policy. When the policy is not satisfied, zero rows
-            // match and the subsequent select returns no rows.
+            // Update honoring the update database policy. The update output is emitted whenever a row
+            // matched the primary key + policy (@matched > 0) — regardless of whether any physical value
+            // actually changed — so that authorized idempotent updates still return the row (HTTP 200).
             string updateQuery =
                 $"UPDATE {tableName} " +
                 $"SET {Build(structure.UpdateOperations, ", ")} " +
                     ", " + updates +
                 $" WHERE {updatePredicates}; " +
-                $"SET @ROWCOUNT=ROW_COUNT(); " +
-                $"SELECT " + select + $" WHERE @ROWCOUNT > 0;";
+                $"SELECT " + select + $" WHERE @matched > 0;";
 
             if (structure.IsFallbackToUpdate)
             {

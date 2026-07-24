@@ -63,9 +63,51 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 Relationships: null,
                 Description: "Represents a stored procedure for books");
 
+            // Entity whose "title" parameter has a config-provided default value.
+            // Because a default is available, "title" must not be flagged as required, while
+            // "publisher_id" (no default) must remain required.
+            Entity entity2 = new(
+                Source: new(
+                    Object: "insert_book",
+                    EntitySourceType.StoredProcedure,
+                    Parameters: new List<ParameterMetadata>
+                    {
+                        new() { Name = "title", Default = "Sample Title" }
+                    },
+                    KeyFields: null),
+                Fields: null,
+                GraphQL: new(Singular: null, Plural: null, Enabled: false),
+                Rest: new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Permissions: OpenApiTestBootstrap.CreateBasicPermissions(),
+                Mappings: null,
+                Relationships: null,
+                Description: "Stored procedure with a parameter default");
+
+            // Entity whose "title" parameter is explicitly marked required: false in config.
+            // Even though it has no default value, the explicit override must be honored so that only
+            // "id" (no default, no override) remains required.
+            Entity entity3 = new(
+                Source: new(
+                    Object: "update_book_title",
+                    EntitySourceType.StoredProcedure,
+                    Parameters: new List<ParameterMetadata>
+                    {
+                        new() { Name = "title", Required = false }
+                    },
+                    KeyFields: null),
+                Fields: null,
+                GraphQL: new(Singular: null, Plural: null, Enabled: false),
+                Rest: new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Permissions: OpenApiTestBootstrap.CreateBasicPermissions(),
+                Mappings: null,
+                Relationships: null,
+                Description: "Stored procedure with an explicit required override");
+
             Dictionary<string, Entity> entities = new()
             {
-                { "sp1", entity1 }
+                { "sp1", entity1 },
+                { "sp2", entity2 },
+                { "sp3", entity3 }
             };
 
             _runtimeEntities = new(entities);
@@ -74,13 +116,19 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         /// <summary>
         /// Validates that the generated request body references stored procedure parameters
         /// and not result set columns.
+        /// Also validates that the request body schema component flags the expected parameters
+        /// as required: a parameter is required when it has no default value and is not explicitly
+        /// marked required: false in the runtime config.
         /// </summary>
         /// <param name="entityName">Entity name</param>
         /// <param name="expectedParameters">Expected parameters in request body</param>
         /// <param name="expectedParametersJsonTypes">Expected parameter value types in request body.</param>
-        [DataRow("sp1", new string[] { "title", "publisher_name" }, new string[] { "string", "string" }, DisplayName = "Validate request body parameters and parameter Json data types.")]
+        /// <param name="expectedRequiredParameters">Expected parameters flagged as required in the schema component.</param>
+        [DataRow("sp1", new string[] { "title", "publisher_name" }, new string[] { "string", "string" }, new string[] { "title", "publisher_name" }, DisplayName = "Parameters without defaults are all required.")]
+        [DataRow("sp2", new string[] { "title", "publisher_id" }, new string[] { "string", "integer" }, new string[] { "publisher_id" }, DisplayName = "Parameter with a config default is not required.")]
+        [DataRow("sp3", new string[] { "id", "title" }, new string[] { "integer", "string" }, new string[] { "id" }, DisplayName = "Parameter explicitly marked required: false is not required.")]
         [DataTestMethod]
-        public void ValidateRequestBodyContents(string entityName, string[] expectedParameters, string[] expectedParametersJsonTypes)
+        public void ValidateRequestBodyContents(string entityName, string[] expectedParameters, string[] expectedParametersJsonTypes, string[] expectedRequiredParameters)
         {
             Dictionary<OperationType, bool> configuredOperations = ResolveConfiguredOperations(_runtimeEntities[entityName]);
             foreach (OperationType opType in configuredOperations.Keys)
@@ -101,6 +149,13 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 string expectedSchemaReferenceId = $"{entityName}{OpenApiDocumentor.SP_REQUEST_SUFFIX}";
 
                 ValidateOpenApiReferenceContents(schemaComponentReference, expectedSchemaReferenceId, expectedParameters, expectedParametersJsonTypes);
+
+                // Validate that the expected parameters are marked as required in the schema component.
+                ISet<string> requiredParameters = _openApiDocument.Components.Schemas[expectedSchemaReferenceId].Required ?? new HashSet<string>();
+                CollectionAssert.AreEquivalent(
+                    expectedRequiredParameters,
+                    requiredParameters.ToArray(),
+                    message: "Unexpected required parameters in request body schema component.");
             }
         }
 

@@ -1135,9 +1135,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 StoredProcedureDefinition spDef = (StoredProcedureDefinition)sourceDef;
                 foreach (KeyValuePair<string, ParameterDefinition> parameterMetadata in spDef.Parameters)
                 {
-                    // A parameter which does not have any of the following properties
+                    // A parameter which is explicitly marked required or has no default value
                     // results in the body being required so that a value can be provided.
-                    if (!parameterMetadata.Value.HasConfigDefault)
+                    if (parameterMetadata.Value.Required ?? !parameterMetadata.Value.HasConfigDefault)
                     {
                         requestBodyRequired = true;
                         break;
@@ -1422,7 +1422,10 @@ namespace Azure.DataApiBuilder.Core.Services
                     Default = def.Default is not null ? new OpenApiString(def.Default) : null
                 });
 
-                if (def.Required == true)
+                // A parameter is required when it is explicitly marked required in the runtime config,
+                // or when no default value is available, in which case a value must be provided in the
+                // request body. This mirrors the logic used by IsRequestBodyRequired.
+                if (def.Required ?? !def.HasConfigDefault)
                 {
                     required.Add(parameter);
                 }

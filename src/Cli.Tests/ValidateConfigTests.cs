@@ -884,6 +884,69 @@ public class ValidateConfigTests
     }
 
     /// <summary>
+    /// Child config with only autoentities that resolve to greater than 0 entities is valid.
+    /// Simulates the production code path where the metadata provider stores resolution
+    /// counts on the root (merged) config rather than on the child config directly.
+    /// </summary>
+    [TestMethod]
+    public void TestChildWithDataSourceAndAutoentitiesResolvingEntitiesIsValid()
+    {
+        // Child has no explicit entities; only autoentities.
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new(),
+            autoentities: new() { { "ae1", BuildSimpleAutoentity() } });
+        childConfig.IsChildConfig = true;
+
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: false, entities: new(),
+            dataSourceFiles: new DataSourceFiles(new[] { "child-db.json" }));
+        rootConfig.ChildConfigs.Add(("child-db.json", childConfig));
+
+        // Simulate production: metadata provider stores counts in the root config,
+        // NOT directly on the child config.
+        rootConfig.AutoentityResolutionCounts["ae1"] = 3;
+
+        RuntimeConfigValidator validator = BuildValidator(rootConfig);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
+
+        Assert.AreEqual(0, validator.ConfigValidationExceptions.Count,
+            "Child config with autoentities that resolved entities should pass validation.");
+    }
+
+    /// <summary>
+    /// Both root and child configs have autoentities that resolve to >0 entities.
+    /// Resolution counts for both are stored only on the root config (as the metadata
+    /// provider does at runtime). Validation must pass for both configs.
+    /// </summary>
+    [TestMethod]
+    public void TestRootAndChildBothWithAutoentitiesResolvingEntitiesIsValid()
+    {
+        RuntimeConfig childConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new(),
+            autoentities: new() { { "child-ae", BuildSimpleAutoentity() } });
+        childConfig.IsChildConfig = true;
+
+        RuntimeConfig rootConfig = BuildTestConfig(
+            hasDataSource: true,
+            entities: new(),
+            dataSourceFiles: new DataSourceFiles(new[] { "child-db.json" }),
+            autoentities: new() { { "root-ae", BuildSimpleAutoentity() } });
+        rootConfig.ChildConfigs.Add(("child-db.json", childConfig));
+
+        // Simulate production: metadata provider stores ALL counts in the root config.
+        rootConfig.AutoentityResolutionCounts["root-ae"] = 2;
+        rootConfig.AutoentityResolutionCounts["child-ae"] = 4;
+
+        RuntimeConfigValidator validator = BuildValidator(rootConfig);
+        validator.ValidateDataSourceAndEntityPresence(rootConfig);
+
+        Assert.AreEqual(0, validator.ConfigValidationExceptions.Count,
+            "Root and child configs both with autoentities that resolved entities should pass validation.");
+    }
+
+    /// <summary>
     /// Helper: verifies that the autoentity-discovered-zero warning was logged at least once,
     /// optionally also checking that the formatted message contains a child config file name.
     /// </summary>

@@ -6,6 +6,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0-azurelinux3.0 AS build
 WORKDIR /src
 COPY [".", "./"]
 RUN dotnet build "./src/Service/Azure.DataApiBuilder.Service.csproj" -c Docker -o /out -r linux-x64
+RUN mkdir /package \
+	&& cp /src/src/Service/dab-config*.json /package/ \
+	&& find /src/src/Service/ -maxdepth 1 -name "*.gql" -exec cp {} /package/ \;
 
 # ---------------------------------------------------------------------------
 # Common runtime base.
@@ -17,8 +20,7 @@ RUN dotnet build "./src/Service/Azure.DataApiBuilder.Service.csproj" -c Docker -
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-azurelinux3.0 AS runtime-base
 
 COPY --from=build /out /App
-# Add default dab-config.json to /App in the image
-COPY --from=build /out/dab-config.json /App/dab-config.json
+COPY --from=build /package /App
 WORKDIR /App
 ENV ASPNETCORE_URLS=http://+:5000
 EXPOSE 5000

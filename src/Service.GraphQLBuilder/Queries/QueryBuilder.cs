@@ -67,6 +67,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 {
                     NameNode name = objectTypeDefinitionNode.Name;
                     string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
+
+                    // A Cosmos schema file can declare @model types that are not registered as entities
+                    // in the runtime config (e.g. shared schema files). Such types have no queries to
+                    // generate, so they are intentionally skipped. Genuine type-name conflicts across
+                    // data sources are detected earlier in GraphQLSchemaCreator.
+                    if (!entities.ContainsKey(entityName))
+                    {
+                        continue;
+                    }
+
                     Entity entity = entities[entityName];
 
                     if (entity.Source.Type is EntitySourceType.StoredProcedure)

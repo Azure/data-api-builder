@@ -681,27 +681,283 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="dataSourceNames">Hashset of datasourceNames to generate cosmos objects.</param>
         private DocumentNode GenerateCosmosGraphQLObjects(HashSet<string> dataSourceNames, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
         {
-            DocumentNode? root = null;
-
-            if (dataSourceNames.Count() == 0)
+            if (dataSourceNames.Count == 0)
             {
                 return new DocumentNode(new List<IDefinitionNode>());
             }
+
+            DocumentNode root = MergeCosmosSchemaDefinitions(dataSourceNames);
+
+            // Build dictionary of object types so we can modify them to add relationship fields
+            Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
+            List<IDefinitionNode> nonObjectDefinitions = new();
+            
+            foreach (IDefinitionNode definition in root!.Definitions)
+            {
+                if (definition is ObjectTypeDefinitionNode objectNode)
+                {
+                    string modelName = ObjectTypeToEntityName(objectNode);
+                    objectTypes[modelName] = objectNode;
+                }
+                else
+                {
+                    nonObjectDefinitions.Add(definition);
+                }
+            }
+
+            // Cosmos schemas are generated from a .gql root file rather than DB metadata, so the
+            // relationship fields declared in the runtime config must be grafted onto the object types here.
+            AddConfiguredRelationshipFieldsToCosmosTypes(objectTypes);
+
+            // Add query arguments to relationship fields (for many-to-* relationships)
+            foreach ((string entityName, ObjectTypeDefinitionNode node) in objectTypes.ToList())
+            {
+                objectTypes[entityName] = QueryBuilder.AddQueryArgumentsForRelationships(node, inputObjects);
+            }
+
+            // Generate input types for all object types
+            foreach (ObjectTypeDefinitionNode node in objectTypes.Values)
+            {
+                InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
+            }
+
+            // Rebuild root with modified object types
+            List<IDefinitionNode> allDefinitions = [.. objectTypes.Values, .. nonObjectDefinitions];
+            return new DocumentNode(allDefinitions);
+        }
+
+        /// <summary>
+        /// Merges the GraphQL schema definitions from every CosmosDB data source into a single document.
+        /// A type name shared by multiple data sources is included only once, and a conflict (the same
+        /// type name resolving to differing shapes) is surfaced as a config error rather than silently dropped.
+        /// </summary>
+        private DocumentNode MergeCosmosSchemaDefinitions(HashSet<string> dataSourceNames)
+        {
+            List<IDefinitionNode> definitions = new();
+            // Tracks named type definitions already merged so the same type defined by multiple
+            // CosmosDB data sources is included only once.
+            Dictionary<string, IDefinitionNode> seenTypeDefinitions = new();
 
             foreach (string dataSourceName in dataSourceNames)
             {
                 ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 DocumentNode currentNode = ((CosmosSqlMetadataProvider)metadataProvider).GraphQLSchemaRoot;
-                root = root is null ? currentNode : root.WithDefinitions(root.Definitions.Concat(currentNode.Definitions).ToImmutableList());
+
+                foreach (IDefinitionNode definition in currentNode.Definitions)
+                {
+                    if (definition is INamedSyntaxNode namedNode)
+                    {
+                        string typeName = namedNode.Name.Value;
+                        if (seenTypeDefinitions.TryGetValue(typeName, out IDefinitionNode? existing))
+                        {
+                            // The same type name is shared across data sources. This is valid only when
+                            // the definitions are semantically identical; differing shapes indicate a config
+                            // error and must not be silently dropped. The comparison is order-insensitive
+                            // (fields, directives, arguments, etc.) because GraphQL treats these as unordered
+                            // sets, so the same type authored with a different field/directive order in two
+                            // data source schemas is not a conflict.
+                            if (!AreTypeDefinitionsEquivalent(existing, definition))
+                            {
+                                throw new DataApiBuilderException(
+                                    message: $"Conflicting GraphQL type definitions were found for '{typeName}' across CosmosDB data sources. A type name must resolve to the same definition in every data source.",
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            }
+
+                            continue;
+                        }
+
+                        seenTypeDefinitions.Add(typeName, definition);
+                    }
+
+                    definitions.Add(definition);
+                }
             }
 
-            IEnumerable<ObjectTypeDefinitionNode> objectNodes = root!.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
-            foreach (ObjectTypeDefinitionNode node in objectNodes)
+            return new DocumentNode(definitions);
+        }
+
+        /// <summary>
+        /// Determines whether two GraphQL type definitions are semantically equivalent.
+        /// The definitions are normalized into a canonical form (children such as fields,
+        /// directives, arguments, interfaces, enum values and union members are sorted by name)
+        /// before their printed SDL is compared. This avoids false-positive conflicts when the
+        /// same type is authored with a different ordering across data source schemas, since
+        /// GraphQL treats these collections as unordered sets.
+        /// </summary>
+        private static bool AreTypeDefinitionsEquivalent(IDefinitionNode left, IDefinitionNode right)
+        {
+            return NormalizeDefinition(left).ToString().Equals(NormalizeDefinition(right).ToString(), StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// Produces a canonical form of a type system definition by recursively sorting its
+        /// order-insensitive child collections by name. Node kinds that have no order-insensitive
+        /// children (or are not expected in a CosmosDB schema root) are returned unchanged.
+        /// </summary>
+        private static IDefinitionNode NormalizeDefinition(IDefinitionNode definition)
+        {
+            switch (definition)
             {
-                InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
+                case ObjectTypeDefinitionNode obj:
+                    return obj
+                        .WithDirectives(SortDirectives(obj.Directives))
+                        .WithInterfaces(SortNamedTypes(obj.Interfaces))
+                        .WithFields(SortFields(obj.Fields));
+                case InterfaceTypeDefinitionNode iface:
+                    return iface
+                        .WithDirectives(SortDirectives(iface.Directives))
+                        .WithInterfaces(SortNamedTypes(iface.Interfaces))
+                        .WithFields(SortFields(iface.Fields));
+                case InputObjectTypeDefinitionNode input:
+                    return input
+                        .WithDirectives(SortDirectives(input.Directives))
+                        .WithFields(SortInputValues(input.Fields));
+                case EnumTypeDefinitionNode enumType:
+                    return enumType
+                        .WithDirectives(SortDirectives(enumType.Directives))
+                        .WithValues(enumType.Values
+                            .OrderBy(value => value.Name.Value, StringComparer.Ordinal)
+                            .Select(value => value.WithDirectives(SortDirectives(value.Directives)))
+                            .ToList());
+                case UnionTypeDefinitionNode union:
+                    return union
+                        .WithDirectives(SortDirectives(union.Directives))
+                        .WithTypes(SortNamedTypes(union.Types));
+                case ScalarTypeDefinitionNode scalar:
+                    return scalar.WithDirectives(SortDirectives(scalar.Directives));
+                default:
+                    return definition;
             }
+        }
 
-            return root;
+        /// <summary>
+        /// Sorts directives by name and, within each directive, sorts arguments by name.
+        /// </summary>
+        private static IReadOnlyList<DirectiveNode> SortDirectives(IReadOnlyList<DirectiveNode> directives)
+        {
+            return directives
+                .OrderBy(directive => directive.Name.Value, StringComparer.Ordinal)
+                .Select(directive => directive.WithArguments(
+                    directive.Arguments.OrderBy(argument => argument.Name.Value, StringComparer.Ordinal).ToList()))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Sorts named type references (e.g. implemented interfaces or union members) by name.
+        /// </summary>
+        private static IReadOnlyList<NamedTypeNode> SortNamedTypes(IReadOnlyList<NamedTypeNode> types)
+        {
+            return types.OrderBy(type => type.Name.Value, StringComparer.Ordinal).ToList();
+        }
+
+        /// <summary>
+        /// Sorts output fields by name and normalizes each field's arguments and directives.
+        /// </summary>
+        private static IReadOnlyList<FieldDefinitionNode> SortFields(IReadOnlyList<FieldDefinitionNode> fields)
+        {
+            return fields
+                .OrderBy(field => field.Name.Value, StringComparer.Ordinal)
+                .Select(field => field
+                    .WithArguments(SortInputValues(field.Arguments))
+                    .WithDirectives(SortDirectives(field.Directives)))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Sorts input values (input fields or field arguments) by name and normalizes their directives.
+        /// </summary>
+        private static IReadOnlyList<InputValueDefinitionNode> SortInputValues(IReadOnlyList<InputValueDefinitionNode> values)
+        {
+            return values
+                .OrderBy(value => value.Name.Value, StringComparer.Ordinal)
+                .Select(value => value.WithDirectives(SortDirectives(value.Directives)))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Grafts the relationship fields declared in the runtime config onto the matching CosmosDB object
+        /// types. Any embedded field of the same name is replaced by the relationship field, and when the
+        /// source and target share a container the embedded target projection (fields whose GraphQL type is
+        /// the target type) is stripped from the source. Stripping is keyed off the field's type rather than
+        /// a name match, so the source's own scalar fields that merely share a name with a target field
+        /// (e.g. <c>id</c>, <c>name</c>) are preserved. Join/source fields are always preserved.
+        /// </summary>
+        private void AddConfiguredRelationshipFieldsToCosmosTypes(Dictionary<string, ObjectTypeDefinitionNode> objectTypes)
+        {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+            {
+                DataSource ds = runtimeConfig.GetDataSourceFromEntityName(entityName);
+                if (ds.DatabaseType != DatabaseType.CosmosDB_NoSQL
+                    || !entity.GraphQL.Enabled
+                    || entity.Relationships is null || entity.Relationships.Count == 0
+                    || !objectTypes.TryGetValue(entityName, out ObjectTypeDefinitionNode? objectNode))
+                {
+                    continue;
+                }
+
+                List<FieldDefinitionNode> fields = objectNode.Fields.ToList();
+
+                // Source fields participate in joins, so they must survive the embedded-field stripping below.
+                HashSet<string> sourceFieldsInRelationships = entity.Relationships.Values
+                    .Where(r => r.SourceFields is not null)
+                    .SelectMany(r => r.SourceFields!)
+                    .ToHashSet();
+
+                // The relationship fields grafted below are themselves typed as their target type. When
+                // multiple relationships on this entity target the same shared-container type, the
+                // type-based stripping below would otherwise remove a relationship field added on an
+                // earlier iteration (leaving only the last one). Preserving all relationship names keeps
+                // every grafted relationship field intact.
+                HashSet<string> relationshipNames = entity.Relationships.Keys.ToHashSet();
+
+                foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships)
+                {
+                    string targetEntityName = relationship.TargetEntity;
+                    if (!runtimeConfig.Entities.TryGetValue(targetEntityName, out Entity? targetEntity))
+                    {
+                        continue;
+                    }
+
+                    // Replace any existing field of the same name (e.g. an embedded array) with the relationship field.
+                    fields.RemoveAll(f => f.Name.Value == relationshipName);
+
+                    // When source and target share a container, the target's data is embedded in the
+                    // source document. Strip only the embedded projection of the target, identified
+                    // positively by GraphQL type (the source field's named type equals the target type),
+                    // rather than by a name intersection. This avoids dropping the source's own scalar
+                    // fields that merely share a name with a target field (e.g. id, name). Join/source
+                    // fields and already-grafted relationship fields are always preserved.
+                    if (entity.Source.Object == targetEntity.Source.Object)
+                    {
+                        string targetTypeName = GetDefinedSingularName(targetEntityName, targetEntity);
+                        fields.RemoveAll(f =>
+                            f.Type.NamedType().Name.Value == targetTypeName
+                            && !sourceFieldsInRelationships.Contains(f.Name.Value)
+                            && !relationshipNames.Contains(f.Name.Value));
+                    }
+
+                    INullableTypeNode fieldType = relationship.Cardinality == Cardinality.One
+                        ? new NamedTypeNode(GetDefinedSingularName(targetEntityName, targetEntity))
+                        : new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(targetEntityName, targetEntity)));
+
+                    DirectiveNode relationshipDirective = new(
+                        RelationshipDirectiveType.DirectiveName,
+                        new ArgumentNode("target", GetDefinedSingularName(targetEntityName, targetEntity)),
+                        new ArgumentNode("cardinality", relationship.Cardinality.ToString()));
+
+                    fields.Add(new FieldDefinitionNode(
+                        location: null,
+                        new NameNode(relationshipName),
+                        description: null,
+                        new List<InputValueDefinitionNode>(),
+                        fieldType,
+                        new List<DirectiveNode> { relationshipDirective }));
+                }
+
+                objectTypes[entityName] = objectNode.WithFields(fields);
+            }
         }
 
         /// <summary>
@@ -729,11 +985,12 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 DataSource ds = runtimeConfig.GetDataSourceFromEntityName(entityName);
+                string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
 
                 switch (ds.DatabaseType)
                 {
                     case DatabaseType.CosmosDB_NoSQL:
-                        cosmosDataSourceNames.Add(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName));
+                        cosmosDataSourceNames.Add(dataSourceName);
                         break;
                     case DatabaseType.MSSQL or DatabaseType.MySQL or DatabaseType.PostgreSQL or DatabaseType.DWSQL:
                         sqlEntities.TryAdd(entityName, entity);

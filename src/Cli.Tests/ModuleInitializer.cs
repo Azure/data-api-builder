@@ -137,6 +137,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.EnableLegacyDateTimeScalar);
         // Ignore UserProvidedPath as that's not serialized in our config file.
         VerifierSettings.IgnoreMember<McpRuntimeOptions>(options => options.UserProvidedPath);
+        // Ignore UserProvidedAllowedHosts as that's not serialized in our config file.
+        VerifierSettings.IgnoreMember<McpRuntimeOptions>(options => options.UserProvidedAllowedHosts);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.
         VerifyBase.DerivePathInfo(
             (sourceFile, projectDirectory, type, method) => new(

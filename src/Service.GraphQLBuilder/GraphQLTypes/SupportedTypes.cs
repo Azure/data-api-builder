@@ -37,15 +37,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
     }
 
     /// <summary>
-    /// Class representing the sql datetime types supported by DAB which in addition to the sql datetime type,
-    /// all map to the same .NET type of DateTime and Hotchocolate scalar type of DateTime.
+    /// Class representing the sql datetime types supported by DAB. All types in this class
+    /// map to the Hotchocolate scalar type of DateTime. Most map to the .NET type of DateTime,
+    /// except DATETIMEOFFSET_TYPE which maps to the .NET type of DateTimeOffset.
     /// </summary>
     public static class SupportedDateTimeTypes
     {
         public const string DATE_TYPE = "date";
         public const string SMALLDATETIME_TYPE = "smalldatetime";
         public const string DATETIME2_TYPE = "datetime2";
-        public const string DATETIMEOFFSET_TYPE = "DateTimeOffset";
+        public const string DATETIMEOFFSET_TYPE = "datetimeoffset";
     }
 
     /// <summary>

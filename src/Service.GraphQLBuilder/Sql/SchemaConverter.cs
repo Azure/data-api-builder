@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 List<DirectiveNode> directives = new();
                 if (sourceDefinition.PrimaryKey.Contains(columnName))
                 {
-                    directives.Add(new DirectiveNode(PrimaryKeyDirectiveType.DirectiveName));
+                    directives.Add(new DirectiveNode(PrimaryKeyDirectiveType.DirectiveName, new ArgumentNode("databaseType", column.SystemType.Name)));
                 }
 
                 if (column.IsReadOnly)

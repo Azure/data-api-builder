@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Source definition for entity '{entityName}' has not been inferred.",
+                throw new DataApiBuilderException(message: $"Database object for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }

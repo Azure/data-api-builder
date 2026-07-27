@@ -242,6 +242,68 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(message.Contains("dml-tools: false"), "Error message should mention the config syntax");
         }
 
+        /// <summary>
+        /// Verifies that describe_entities filters entities
+        /// by role authorization. A role with no permissions on any entity receives an empty result.
+        /// This prevents information disclosure of schema metadata for unauthorized entities.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_RoleWithNoPermissions_ReturnsEmptyList()
+        {
+            // Arrange - Create config with entities that only the "admin" role can access
+            RuntimeConfig config = CreateConfigWithRestrictedRoleAccess();
+            IServiceProvider serviceProvider = CreateServiceProvider(config, role: "guest");
+            DescribeEntitiesTool tool = new();
+
+            // Act
+            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
+
+            // Assert - Guest role should see no entities because it has no permissions defined
+            AssertErrorResult(result, "NoEntitiesConfigured");
+        }
+
+        /// <summary>
+        /// Verifies that low-privilege roles see only entities
+        /// they have explicit permission on. A "reader" role that has READ permission on Book
+        /// should see Book but not GetBook (execute-only SP).
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_LowPrivRole_SeesOnlyAuthorizedEntities()
+        {
+            // Arrange - Create config where:
+            //   - "Book" entity: reader role has READ permission
+            //   - "GetBook" entity: admin role has EXECUTE permission (reader has none)
+            RuntimeConfig config = CreateConfigWithMixedRoleAccess();
+            IServiceProvider serviceProvider = CreateServiceProvider(config, role: "reader");
+            DescribeEntitiesTool tool = new();
+
+            // Act
+            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
+
+            // Assert - Reader role should see only Book, not GetBook
+            AssertSuccessResultWithEntityNames(result, new[] { "Book" }, new[] { "GetBook" });
+        }
+
+        /// <summary>
+        /// Verifies that a null/empty role (unauthenticated caller)
+        /// receives no entities, even if some entities have "anonymous" permissions.
+        /// describe_entities requires a valid role to be included in the response.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_NoRole_ReturnsEmptyList()
+        {
+            // Arrange - Config with entities
+            RuntimeConfig config = CreateConfigWithMixedEntityTypes();
+            IServiceProvider serviceProvider = CreateServiceProvider(config, role: null);
+            DescribeEntitiesTool tool = new();
+
+            // Act
+            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
+
+            // Assert - No role should result in empty entity list
+            AssertErrorResult(result, "NoEntitiesConfigured");
+        }
+
         #region Helper Methods
 
         /// <summary>
@@ -451,10 +513,80 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Creates a service provider with mocked dependencies for testing DescribeEntitiesTool.
-        /// Configures anonymous role and necessary DAB services.
+        /// Creates a runtime config with restricted role access.
+        /// Only "admin" role has READ permission on Book. 
+        /// "guest" role has no permissions on any entity.
+        /// Used to test that roles without any entity permissions see no entities.
         /// </summary>
-        private static IServiceProvider CreateServiceProvider(RuntimeConfig config)
+        private static RuntimeConfig CreateConfigWithRestrictedRoleAccess()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                ["Book"] = new Entity(
+                    Source: new("books", EntitySourceType.Table, null, null),
+                    GraphQL: new("Book", "Books"),
+                    Fields: null,
+                    Rest: new(Enabled: true),
+                    Permissions: new[] 
+                    { 
+                        new EntityPermission(Role: "admin", Actions: new[] { new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null) })
+                    },
+                    Mappings: null,
+                    Relationships: null,
+                    Mcp: null
+                )
+            };
+
+            return CreateRuntimeConfig(entities);
+        }
+
+        /// <summary>
+        /// Creates a runtime config with mixed role access.
+        /// "reader" role has READ permission on Book table.
+        /// "admin" role has EXECUTE permission on GetBook stored procedure.
+        /// Used to test that describe_entities shows only entities a role has permissions for.
+        /// </summary>
+        private static RuntimeConfig CreateConfigWithMixedRoleAccess()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                ["Book"] = new Entity(
+                    Source: new("books", EntitySourceType.Table, null, null),
+                    GraphQL: new("Book", "Books"),
+                    Fields: null,
+                    Rest: new(Enabled: true),
+                    Permissions: new[] 
+                    { 
+                        new EntityPermission(Role: "reader", Actions: new[] { new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null) }),
+                        new EntityPermission(Role: "admin", Actions: new[] { new EntityAction(Action: EntityActionOperation.All, Fields: null, Policy: null) })
+                    },
+                    Mappings: null,
+                    Relationships: null,
+                    Mcp: null
+                ),
+                ["GetBook"] = new Entity(
+                    Source: new("get_book", EntitySourceType.StoredProcedure, null, null),
+                    GraphQL: new("GetBook", "GetBook"),
+                    Fields: null,
+                    Rest: new(Enabled: true),
+                    Permissions: new[]
+                    {
+                        new EntityPermission(Role: "admin", Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) })
+                    },
+                    Mappings: null,
+                    Relationships: null,
+                    Mcp: null
+                )
+            };
+
+            return CreateRuntimeConfig(entities);
+        }
+
+        /// <summary>
+        /// Creates a service provider with mocked dependencies for testing DescribeEntitiesTool.
+        /// Configures specified role (or anonymous) and necessary DAB services.
+        /// </summary>
+        private static IServiceProvider CreateServiceProvider(RuntimeConfig config, string? role = "anonymous")
         {
             ServiceCollection services = new();
 
@@ -464,13 +596,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Mock IAuthorizationResolver
             Mock<IAuthorizationResolver> mockAuthResolver = new();
-            mockAuthResolver.Setup(x => x.IsValidRoleContext(It.IsAny<HttpContext>())).Returns(true);
+            mockAuthResolver.Setup(x => x.IsValidRoleContext(It.IsAny<HttpContext>())).Returns(role != null);
             services.AddSingleton(mockAuthResolver.Object);
 
-            // Mock HttpContext with anonymous role
+            // Mock HttpContext with specified role (or null for no role)
             Mock<HttpContext> mockHttpContext = new();
             Mock<HttpRequest> mockRequest = new();
-            mockRequest.Setup(x => x.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns("anonymous");
+            
+            if (role != null)
+            {
+                mockRequest.Setup(x => x.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(role);
+            }
+            else
+            {
+                // When role is null, simulate empty role header
+                mockRequest.Setup(x => x.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns("");
+            }
+            
             mockHttpContext.Setup(x => x.Request).Returns(mockRequest.Object);
 
             Mock<IHttpContextAccessor> mockHttpContextAccessor = new();

@@ -178,6 +178,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             continue;
                         }
 
+                        // Authorization filtering: skip entities the current role has no permission on.
+                        // This prevents information disclosure of schema metadata (entity/field/parameter names and descriptions)
+                        // for entities the caller is not authorized to access, matching REST/GraphQL/OpenAPI behavior.
+                        // If currentUserRole is null, no entities are visible (empty result).
+                        if (!HasAnyPermissionForEntity(entity, currentUserRole))
+                        {
+                            continue;
+                        }
+
                         try
                         {
                             DatabaseObject? databaseObject = null;
@@ -399,6 +408,45 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         private static bool ShouldIncludeEntity(string entityName, HashSet<string>? entityFilter)
         {
             return entityFilter == null || entityFilter.Count == 0 || entityFilter.Contains(entityName);
+        }
+
+        /// <summary>
+        /// Determines whether the specified entity is accessible to the given role.
+        /// An entity is accessible if the role has at least one permission defined for it.
+        /// This prevents information disclosure of schema metadata (entity names, fields, parameters, descriptions)
+        /// for unauthorized entities, matching REST/GraphQL/OpenAPI authorization behavior.
+        /// </summary>
+        /// <param name="entity">The entity to check.</param>
+        /// <param name="role">The role to check permissions for. If null, the entity is not accessible.</param>
+        /// <returns><see langword="true"/> if the role has permission on the entity; otherwise, <see langword="false"/>.</returns>
+        private static bool HasAnyPermissionForEntity(Entity entity, string? role)
+        {
+            // No role = no access to any entity (matches DML tool authorization model)
+            if (string.IsNullOrWhiteSpace(role))
+            {
+                return false;
+            }
+
+            // No permissions defined = not accessible
+            if (entity.Permissions == null || !entity.Permissions.Any())
+            {
+                return false;
+            }
+
+            // Check if this role has any permissions (actions) defined for the entity
+            foreach (EntityPermission permission in entity.Permissions)
+            {
+                if (string.Equals(permission.Role, role, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Role found - check if it has any actions
+                    if (permission.Actions != null && permission.Actions.Any())
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

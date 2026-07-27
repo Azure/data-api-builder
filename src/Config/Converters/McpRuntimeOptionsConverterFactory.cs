@@ -120,6 +120,7 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                                 while (reader.Read() && reader.TokenType is not JsonTokenType.EndArray)
                                 {
                                     string? host = reader.DeserializeString(_replacementSettings);
+
                                     if (!string.IsNullOrWhiteSpace(host))
                                     {
                                         allowedHosts.Add(host);

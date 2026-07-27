@@ -58,8 +58,9 @@ update Publisher --config "dab-config.PostgreSql.json" --permissions "database_p
 update Publisher --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:create"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:update" --policy-database "@item.id ne 1234"
 update Stock --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
-update Stock --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:create,read"
 update Stock --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:update" --policy-database "@item.pieceid ne 1"
+update Stock --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:create" --policy-database "@item.pieceid ne 6 and @item.piecesAvailable gt 0"
+update Stock --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:read"
 update Stock --config "dab-config.PostgreSql.json" --permissions "test_role_with_noread:create,update,delete"
 update Stock --config "dab-config.PostgreSql.json" --permissions "test_role_with_excluded_fields:create,update,delete"
 update Stock --config "dab-config.PostgreSql.json" --permissions "test_role_with_excluded_fields:read" --fields.exclude "categoryName"

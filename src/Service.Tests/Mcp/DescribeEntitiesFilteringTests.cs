@@ -527,8 +527,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     GraphQL: new("Book", "Books"),
                     Fields: null,
                     Rest: new(Enabled: true),
-                    Permissions: new[] 
-                    { 
+                    Permissions: new[]
+                    {
                         new EntityPermission(Role: "admin", Actions: new[] { new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null) })
                     },
                     Mappings: null,
@@ -555,8 +555,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     GraphQL: new("Book", "Books"),
                     Fields: null,
                     Rest: new(Enabled: true),
-                    Permissions: new[] 
-                    { 
+                    Permissions: new[]
+                    {
                         new EntityPermission(Role: "reader", Actions: new[] { new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null) }),
                         new EntityPermission(Role: "admin", Actions: new[] { new EntityAction(Action: EntityActionOperation.All, Fields: null, Policy: null) })
                     },
@@ -602,7 +602,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // Mock HttpContext with specified role (or null for no role)
             Mock<HttpContext> mockHttpContext = new();
             Mock<HttpRequest> mockRequest = new();
-            
+
             if (role != null)
             {
                 mockRequest.Setup(x => x.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(role);
@@ -612,7 +612,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 // When role is null, simulate empty role header
                 mockRequest.Setup(x => x.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns("");
             }
-            
+
             mockHttpContext.Setup(x => x.Request).Returns(mockRequest.Object);
 
             Mock<IHttpContextAccessor> mockHttpContextAccessor = new();

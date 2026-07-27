@@ -157,18 +157,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public async Task PutJsonType_Update()
         {
-            HttpResponseMessage response = await HttpClient.PutAsync(
-                $"{JSON_TYPE_REST_PATH}/id/1",
-                new StringContent("{ \"metadata\": \"{\\\"role\\\":\\\"owner\\\"}\" }", Encoding.UTF8, "application/json"));
-            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            Assert.AreEqual("owner", ParseMetadata(await GetRecordByIdAsync(1)).GetProperty("role").GetString());
-
-            // Restore original value.
-            HttpResponseMessage restore = await HttpClient.PutAsync(
-                $"{JSON_TYPE_REST_PATH}/id/1",
-                new StringContent("{ \"metadata\": \"{\\\"role\\\":\\\"admin\\\",\\\"tier\\\":3}\" }", Encoding.UTF8, "application/json"));
-            Assert.AreEqual(HttpStatusCode.OK, restore.StatusCode);
-            Assert.AreEqual("admin", ParseMetadata(await GetRecordByIdAsync(1)).GetProperty("role").GetString());
+            try
+            {
+                HttpResponseMessage response = await HttpClient.PutAsync(
+                    $"{JSON_TYPE_REST_PATH}/id/1",
+                    new StringContent("{ \"metadata\": \"{\\\"role\\\":\\\"owner\\\"}\" }", Encoding.UTF8, "application/json"));
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual("owner", ParseMetadata(await GetRecordByIdAsync(1)).GetProperty("role").GetString());
+            }
+            finally
+            {
+                // Restore original value so shared row 1 is left intact for other tests.
+                HttpResponseMessage restore = await HttpClient.PutAsync(
+                    $"{JSON_TYPE_REST_PATH}/id/1",
+                    new StringContent("{ \"metadata\": \"{\\\"role\\\":\\\"admin\\\",\\\"tier\\\":3}\" }", Encoding.UTF8, "application/json"));
+                Assert.AreEqual(HttpStatusCode.OK, restore.StatusCode);
+            }
         }
 
         /// <summary>
@@ -177,17 +181,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public async Task PatchJsonType_Update()
         {
-            HttpResponseMessage response = await HttpClient.PatchAsync(
-                $"{JSON_TYPE_REST_PATH}/id/1",
-                new StringContent("{ \"metadata\": \"{\\\"role\\\":\\\"editor\\\"}\" }", Encoding.UTF8, "application/json"));
-            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            Assert.AreEqual("editor", ParseMetadata(await GetRecordByIdAsync(1)).GetProperty("role").GetString());
-
-            // Restore original value.
-            HttpResponseMessage restore = await HttpClient.PutAsync(
-                $"{JSON_TYPE_REST_PATH}/id/1",
-                new StringContent("{ \"metadata\": \"{\\\"role\\\":\\\"admin\\\",\\\"tier\\\":3}\" }", Encoding.UTF8, "application/json"));
-            Assert.AreEqual(HttpStatusCode.OK, restore.StatusCode);
+            try
+            {
+                HttpResponseMessage response = await HttpClient.PatchAsync(
+                    $"{JSON_TYPE_REST_PATH}/id/1",
+                    new StringContent("{ \"metadata\": \"{\\\"role\\\":\\\"editor\\\"}\" }", Encoding.UTF8, "application/json"));
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual("editor", ParseMetadata(await GetRecordByIdAsync(1)).GetProperty("role").GetString());
+            }
+            finally
+            {
+                // Restore original value so shared row 1 is left intact for other tests.
+                HttpResponseMessage restore = await HttpClient.PutAsync(
+                    $"{JSON_TYPE_REST_PATH}/id/1",
+                    new StringContent("{ \"metadata\": \"{\\\"role\\\":\\\"admin\\\",\\\"tier\\\":3}\" }", Encoding.UTF8, "application/json"));
+                Assert.AreEqual(HttpStatusCode.OK, restore.StatusCode);
+            }
         }
 
         /// <summary>
@@ -196,17 +205,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public async Task PatchJsonType_ToNull()
         {
-            HttpResponseMessage response = await HttpClient.PatchAsync(
-                $"{JSON_TYPE_REST_PATH}/id/2",
-                new StringContent("{ \"metadata\": null }", Encoding.UTF8, "application/json"));
-            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            Assert.AreEqual(JsonValueKind.Null, (await GetRecordByIdAsync(2)).GetProperty("metadata").ValueKind);
-
-            // Restore original array payload.
-            HttpResponseMessage restore = await HttpClient.PutAsync(
-                $"{JSON_TYPE_REST_PATH}/id/2",
-                new StringContent("{ \"metadata\": \"{\\\"tags\\\":[\\\"a\\\",\\\"b\\\",\\\"c\\\"]}\" }", Encoding.UTF8, "application/json"));
-            Assert.AreEqual(HttpStatusCode.OK, restore.StatusCode);
+            try
+            {
+                HttpResponseMessage response = await HttpClient.PatchAsync(
+                    $"{JSON_TYPE_REST_PATH}/id/2",
+                    new StringContent("{ \"metadata\": null }", Encoding.UTF8, "application/json"));
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                Assert.AreEqual(JsonValueKind.Null, (await GetRecordByIdAsync(2)).GetProperty("metadata").ValueKind);
+            }
+            finally
+            {
+                // Restore original array payload so shared row 2 is left intact for other tests.
+                HttpResponseMessage restore = await HttpClient.PutAsync(
+                    $"{JSON_TYPE_REST_PATH}/id/2",
+                    new StringContent("{ \"metadata\": \"{\\\"tags\\\":[\\\"a\\\",\\\"b\\\",\\\"c\\\"]}\" }", Encoding.UTF8, "application/json"));
+                Assert.AreEqual(HttpStatusCode.OK, restore.StatusCode);
+            }
         }
 
         #endregion

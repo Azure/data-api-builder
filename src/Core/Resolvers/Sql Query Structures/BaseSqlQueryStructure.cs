@@ -91,9 +91,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (MetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL &&
                 !string.IsNullOrEmpty(paramName) &&
                 value is string stringValue &&
-                GetUnderlyingSourceDefinition().Columns.ContainsKey(paramName))
+                GetUnderlyingSourceDefinition().Columns.TryGetValue(paramName, out ColumnDefinition? columnDefinition))
             {
-                Type columnSystemType = GetColumnSystemType(paramName);
+                Type columnSystemType = columnDefinition.SystemType;
                 if (columnSystemType != typeof(string))
                 {
                     value = GetParamAsSystemType(stringValue, paramName, columnSystemType);

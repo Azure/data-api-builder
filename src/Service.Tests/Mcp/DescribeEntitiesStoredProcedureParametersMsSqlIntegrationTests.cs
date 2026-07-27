@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -291,8 +292,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             services.AddSingleton(_authorizationResolver);
 
             // Real HttpContext carrying the anonymous role header that DescribeEntitiesTool reads.
+            // Must also set up the ClaimsPrincipal with the role claim for IsValidRoleContext to return true.
             DefaultHttpContext httpContext = new();
             httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = AuthorizationResolver.ROLE_ANONYMOUS;
+
+            // Set up the ClaimsPrincipal with the anonymous role claim so IsValidRoleContext passes
+            ClaimsIdentity identity = new(
+                authenticationType: "TestAuth",
+                nameType: null,
+                roleType: AuthenticationOptions.ROLE_CLAIM_TYPE);
+            identity.AddClaim(new Claim(AuthenticationOptions.ROLE_CLAIM_TYPE, AuthorizationResolver.ROLE_ANONYMOUS));
+            httpContext.User = new ClaimsPrincipal(identity);
+
             IHttpContextAccessor httpContextAccessor = new HttpContextAccessor { HttpContext = httpContext };
             services.AddSingleton(httpContextAccessor);
 

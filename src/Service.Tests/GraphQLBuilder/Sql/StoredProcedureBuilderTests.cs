@@ -376,6 +376,27 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual(entityDescription, field.Description?.Value);
         }
 
+        [TestMethod]
+        public void StoredProcedure_Description_UsesDefaultWhenEntityDescriptionIsNull()
+        {
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spDescriptionTest")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+            };
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: new List<ParameterMetadata>(),
+                graphQLTypeName: "SpDescriptionType",
+                entityName: "SpDescription",
+                entityDescription: null);
+
+            // When entityDescription is null, verify the field uses the default generated description
+            string expectedDescription = "Execute Stored-Procedure SpDescriptionType and get results from the database";
+            Assert.AreEqual(expectedDescription, field.Description?.Value);
+        }
+
         /// <summary>
         /// Helper that builds a query schema for a stored-procedure entity and returns
         /// the generated execute* field so individual tests can assert on its argument

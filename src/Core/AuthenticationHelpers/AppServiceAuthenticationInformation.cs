@@ -15,18 +15,19 @@ public static class AppServiceAuthenticationInfo
     /// Environment variable key whose value represents whether AppService EasyAuth is enabled ("true" or "false").
     /// </summary>
     public const string APPSERVICESAUTH_ENABLED_ENVVAR = "WEBSITE_AUTH_ENABLED";
-    /// <summary>
-    /// Environment variable key whose value represents Identity Provider such as "AzureActiveDirectory"
-    /// </summary>
-    public const string APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR = "WEBSITE_AUTH_DEFAULT_PROVIDER";
+
+    // ── AppService messages ──────────────────────────────────────────────────────────────────────
     /// <summary>
     /// Error message used when AppService Authentication is configured in production mode in a non AppService Environment.
     /// </summary>
-    public const string APPSERVICE_PROD_MISSING_ENV_CONFIG = "AppService environment not detected while runtime is in production mode.";
+    public const string APPSERVICE_PROD_MISSING_ENV_CONFIG =
+        "App Service: Cannot start in production: EasyAuth is configured with host.mode set to production, but the Azure App Service environment could not be detected because the WEBSITE_AUTH_ENABLED environment variable was missing or did not have the value true. DAB requires an Azure App Service EasyAuth proxy in production because it trusts the X-MS-CLIENT-PRINCIPAL header as the authenticated user identity, and without the EasyAuth proxy this header could be forged. If this is a local or non-Azure deployment, set host.mode to development. If this is intended to run in production, deploy it behind Azure App Service, enable EasyAuth, and verify that WEBSITE_AUTH_ENABLED=true is available to the application.";
     /// <summary>
     /// Warning message logged when AppService environment not detected (applicable to development mode).
     /// </summary>
-    public const string APPSERVICE_DEV_MISSING_ENV_CONFIG = "AppService environment not detected, EasyAuth authentication may not behave as expected.";
+    public const string APPSERVICE_DEV_MISSING_ENV_CONFIG =
+        "AppService environment not detected. The X-MS-CLIENT-PRINCIPAL header is not cryptographically " +
+        "validated; EasyAuth authentication may not behave as expected outside an Azure App Service environment.";
 
     /// <summary>
     /// Returns a best guess whether AppService is enabled in the environment by checking for
@@ -39,14 +40,12 @@ public static class AppServiceAuthenticationInfo
     /// </summary>
     public static bool AreExpectedAppServiceEnvVarsPresent()
     {
+        // WEBSITE_AUTH_ENABLED is the only variable that is reliably injected by the Azure platform
+        // whenever App Service Authentication (EasyAuth) is enabled, regardless of how many identity
+        // providers are configured. WEBSITE_AUTH_DEFAULT_PROVIDER is only set when a *single* provider
+        // is selected; multi-provider configurations leave it unset, so it must not be required here.
         string? appServiceEnabled = Environment.GetEnvironmentVariable(APPSERVICESAUTH_ENABLED_ENVVAR);
-        string? appServiceIdentityProvider = Environment.GetEnvironmentVariable(APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR);
-
-        if (string.IsNullOrEmpty(appServiceEnabled) || string.IsNullOrEmpty(appServiceIdentityProvider))
-        {
-            return false;
-        }
-
-        return appServiceEnabled.Equals(value: "true", comparisonType: StringComparison.OrdinalIgnoreCase);
+        return appServiceEnabled is not null &&
+               appServiceEnabled.Equals(value: "true", comparisonType: StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -175,15 +175,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// Update an existing record's vector value via an update mutation and verify the new value is
         /// persisted, then restore the original value.
         /// </summary>
-        [TestMethod]
-        public async Task UpdateVectorType()
+        [DataTestMethod]
+        [DataRow("[9.5, 8.5, 7.5]", new[] { 9.5f, 8.5f, 7.5f }, DisplayName = "Update vector with decimal values")]
+        [DataRow("[1, 2, 3]", new[] { 1.0f, 2.0f, 3.0f }, DisplayName = "Update vector with integer values")]
+        [DataRow("null", null, DisplayName = "Update vector with null value")]
+        public async Task UpdateVectorType(string vectorLiteral, float[] expectedValue)
         {
             string updateMutationName = "updateVectorType";
 
             // Change vector value.
-            float[] expected = new[] { 9.5f, 8.5f, 7.5f };
             string updateMutation = @"mutation {
-                updateVectorType(id: 4, item: { vector_data: [9.5, 8.5, 7.5] }) {
+                updateVectorType(id: 4, item: { vector_data: " + vectorLiteral + @" }) {
                     id
                     vector_data
                 }
@@ -191,10 +193,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             JsonElement updated = await ExecuteGraphQLRequestAsync(updateMutation, updateMutationName, isAuthenticated: false);
             Assert.AreEqual(4, updated.GetProperty("id").GetInt32());
-            AssertVectorEquals(updated.GetProperty("vector_data"), expected);
+            AssertVectorEquals(updated.GetProperty("vector_data"), expectedValue);
 
             JsonElement readBack = await GetRecordByPkAsync(4);
-            AssertVectorEquals(readBack.GetProperty("vector_data"), expected);
+            AssertVectorEquals(readBack.GetProperty("vector_data"), expectedValue);
 
             // Restore vector value to original.
             float[] original = new[] { 1.0f, 2.0f, 3.0f };

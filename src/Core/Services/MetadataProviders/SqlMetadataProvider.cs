@@ -409,7 +409,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            fieldKind = 0;
+            fieldKind = default;
             return false;
         }
 

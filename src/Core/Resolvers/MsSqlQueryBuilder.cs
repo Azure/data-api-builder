@@ -666,8 +666,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     N'hierarchyid',
                                     N'sql_variant',
                                     N'xml',
-                                    N'rowversion',
-                                    N'vector'
+                                    N'rowversion'
                                 )
                         ) THEN 1
                         ELSE 0
@@ -712,8 +711,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     N'hierarchyid',
                                     N'sql_variant',
                                     N'xml',
-                                    N'rowversion',
-                                    N'vector'
+                                    N'rowversion'
                                 )
                         )
                     )

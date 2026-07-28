@@ -452,12 +452,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Final query to be executed for the given PUT/PATCH operation.
             StringBuilder upsertQuery = new(prefixQuery);
 
+            // Predicates to scope the UPDATE to the record(s) identified by the PK
+            // combined with any database policy defined for the update operation.
+            string updatePredicates = JoinPredicateStrings(pkPredicates, structure.GetDbPolicyForOperation(EntityActionOperation.Update));
+
             // Query to update record (if there exists one for given PK).
             StringBuilder updateQuery = new(
                 $"IF @ROWS_TO_UPDATE = 1 " +
                 $"BEGIN " +
                 $"UPDATE {tableName} " +
-                $"SET {updateOperations} ");
+                $"SET {updateOperations} " +
+                $"WHERE {updatePredicates} ");
 
             // End the IF block.
             updateQuery.Append("END ");

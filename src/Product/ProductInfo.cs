@@ -17,6 +17,13 @@ public static class ProductInfo
     /// </summary>
     public const string DAB_USER_AGENT_MARKER = "dab_oss_";
     public static readonly string DAB_USER_AGENT = $"{DAB_USER_AGENT_MARKER}{GetProductVersion()}";
+
+    /// <summary>
+    /// Marker shared by the open-source (<c>dab_oss_</c>) and hosted (<c>dab_hosted_</c>) telemetry
+    /// Application Name blocks. Decoding keys off this common prefix so both scenarios are recognized.
+    /// </summary>
+    public const string DAB_MARKER_PREFIX = "dab_";
+
     public static readonly string CLOUD_ROLE_NAME = "DataApiBuilder";
 
     /// <summary>
@@ -60,6 +67,24 @@ public static class ProductInfo
     public static string GetDataApiBuilderUserAgent()
     {
         return Environment.GetEnvironmentVariable(DAB_APP_NAME_ENV) ?? DAB_USER_AGENT;
+    }
+
+    /// <summary>
+    /// Returns the marker + version that the telemetry payload is appended to, based on the hosting
+    /// scenario: <c>dab_oss_&lt;version&gt;</c> for open source, or <c>&lt;DAB_APP_NAME_ENV&gt;_&lt;version&gt;</c>
+    /// (e.g. <c>dab_hosted_&lt;version&gt;</c>) when <c>DAB_APP_NAME_ENV</c> is set. In the hosted case the
+    /// <c>dab_oss_</c> marker is not present; <see cref="DAB_MARKER_PREFIX"/> is the shared marker.
+    /// </summary>
+    public static string GetTelemetryApplicationNameBase()
+    {
+        string? label = Environment.GetEnvironmentVariable(DAB_APP_NAME_ENV);
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return DAB_USER_AGENT;
+        }
+
+        string marker = label.EndsWith("_", StringComparison.Ordinal) ? label : label + "_";
+        return $"{marker}{GetProductVersion()}";
     }
 }
 

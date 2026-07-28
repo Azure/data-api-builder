@@ -446,9 +446,9 @@ public abstract class RuntimeConfigLoader
                 innerException: ex);
         }
 
-        // Idempotency guard: if DAB telemetry was already embedded into the Application Name (e.g. by
-        // the loader's post-processing), do not append it again — that would duplicate the payload.
-        if (connectionStringBuilder.ApplicationName?.Contains(ProductInfo.DAB_USER_AGENT_MARKER, StringComparison.Ordinal) == true)
+        // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a
+        // second telemetry block if either form is already present.
+        if (connectionStringBuilder.ApplicationName?.Contains(ProductInfo.DAB_MARKER_PREFIX, StringComparison.Ordinal) == true)
         {
             return connectionString;
         }
@@ -519,9 +519,9 @@ public abstract class RuntimeConfigLoader
                 innerException: ex);
         }
 
-        // Idempotency guard: if DAB telemetry was already embedded into the Application Name (e.g. by
-        // the loader's post-processing), do not append it again — that would duplicate the payload.
-        if (connectionStringBuilder.ApplicationName?.Contains(ProductInfo.DAB_USER_AGENT_MARKER, StringComparison.Ordinal) == true)
+        // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a
+        // second telemetry block if either form is already present.
+        if (connectionStringBuilder.ApplicationName?.Contains(ProductInfo.DAB_MARKER_PREFIX, StringComparison.Ordinal) == true)
         {
             return connectionString;
         }

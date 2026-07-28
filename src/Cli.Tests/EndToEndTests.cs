@@ -185,6 +185,31 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// The `appname` encode path accepts absolute config and output paths. The relative-path case is
+    /// covered by <see cref="TestAppNameEncodeAndDecode"/>.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeSupportsAbsolutePaths()
+    {
+        string configPath = _fileSystem!.Path.GetFullPath("absolute-appname-config.json");
+        string outputPath = _fileSystem.Path.GetFullPath("absolute-appname-output.txt");
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;"" },
+            ""entities"": { }
+        }";
+        _fileSystem.File.WriteAllText(configPath, configJson);
+
+        int code = Program.Execute(
+            new[] { "appname", "--config", configPath, "--output", outputPath },
+            _cliLogger!, _fileSystem, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.SUCCESS, code, "appname should support absolute config and output paths.");
+        Assert.IsTrue(_fileSystem.File.Exists(outputPath), "The absolute output path should be written.");
+        Assert.IsTrue(_fileSystem.File.ReadAllText(outputPath).StartsWith("dab_oss_", StringComparison.Ordinal));
+    }
+
+    /// <summary>
     /// The `appname` encode path returns GENERAL_ERROR (and writes no output file) when the config
     /// file cannot be found.
     /// </summary>

@@ -9,7 +9,7 @@ Data API builder (DAB) embeds a compact, anonymous **usage-telemetry token** int
 The token has the shape:
 
 ```text
-dab_oss_<version>+<context>|<runtime>|<entity>+
+dab_<environment>_<version>+<context>|<runtime>|<entity>+
 ```
 
 Example (an MSSQL pool, REST + GraphQL on, Static Web Apps auth):
@@ -54,11 +54,11 @@ DAB already appended a plain `dab_oss_<version>` user agent to the `Application 
 ## The token format
 
 ```text
-dab_oss_<version>+<context>|<runtime>|<entity>+
+dab_<environment>_<version>+<context>|<runtime>|<entity>+
 ```
 
-- `dab_oss_` &mdash; a fixed marker (`ProductInfo.DAB_USER_AGENT_MARKER`) used to locate the token and to decode it.
-- `<version>` &mdash; the product version `Major.Minor.Patch` (from `ProductInfo.DAB_USER_AGENT`). The telemetry is always based on the product version, so it is independent of any host label (see [Hosted label](#hosted-label-dab_app_name_env)).
+- `dab_oss_` &mdash; the marker for open-source deployments. The hosted scenario uses `dab_hosted_` instead (see [Hosted label](#hosted-label-dab_app_name_env)); `dab_` (`ProductInfo.DAB_MARKER_PREFIX`) is the shared prefix used to locate and decode the token in both cases.
+- `<version>` &mdash; the product version `Major.Minor.Patch`. The telemetry is always based on the product version.
 - The payload is wrapped in `+ ... +` and split into **three `|`-delimited sections**: `context`, `runtime`, and `entity`.
 
 > **Note on the issue's example.** The original issue's example string listed a fourth `general` segment, but the issue only defined three settings tables (Context, Runtime, Entity). `general` was never defined, so the implementation uses the three authoritative sections only.
@@ -146,8 +146,8 @@ An "**is any entity using X?**" fingerprint computed across the (merged) entity 
 
 A single class, `ApplicationNameTelemetry` (in `Azure.DataApiBuilder.Config.Telemetry`), owns the format:
 
-- `EncodeTelemetryString(config, liveDataSource)` produces the pure `dab_oss_<version>+...+` token. It is **independent of the opt-out switch and of any host label** &mdash; it always emits the full payload, which is why the CLI uses it for inspection.
-- `BuildApplicationNameSegment(config, liveDataSource)` produces what is actually embedded: it honors the opt-out switch and prepends any host label.
+- `EncodeTelemetryString(config, liveDataSource)` produces the full `<marker><version>+...+` token, using `dab_oss_` or the configured hosted marker. It is independent of the opt-out switch, which is why the CLI uses it for inspection.
+- `BuildApplicationNameSegment(config, liveDataSource)` produces what is actually embedded and honors the opt-out switch.
 - `Decode(applicationName)` turns a token back into human-readable lines and is tolerant of truncation, a missing trailing delimiter, an absent payload, and extra (newer) flags.
 
 Encode and decode are driven by **one ordered list of settings per section** (`_contextSettings`, `_runtimeSettings`, `_entitySettings`). Each setting knows how to encode itself and how to describe a decoded character, so the two directions can never drift apart, and adding a flag is a one-line, append-only change.
@@ -169,15 +169,15 @@ In a multi-database deployment each data source is its own pool, so the token is
 
 ### Idempotency
 
-Embedding is idempotent: the engine-specific helpers parse the existing `Application Name` and **skip** if it already contains the `dab_oss_` marker. This guarantees a value can never accumulate a duplicated payload (`...+...+,dab_oss_...+...+`) even if the embed path runs more than once (for example loader post-processing followed by the late-config provider). A user-supplied `Application Name` with no marker is preserved and the token is appended after a comma.
+Embedding is idempotent: the engine-specific helpers parse the existing `Application Name` and **skip** if it already contains the shared `dab_` marker. This prevents duplicate OSS or hosted payloads if embedding runs more than once. A user-supplied `Application Name` without that marker is preserved and the token is appended after a comma.
 
 ### Opt-out (`DAB_TELEMETRY_APPNAME_OPT_OUT`)
 
-Setting `DAB_TELEMETRY_APPNAME_OPT_OUT=1` reduces the embedded value to **version only** (`dab_oss_<version>`, no payload). Any other value (or unset) leaves telemetry on. The marker is preserved even when opted out so the version remains decodable.
+Setting `DAB_TELEMETRY_APPNAME_OPT_OUT=1` reduces the embedded value to **marker and version only** (`dab_oss_<version>` or `dab_hosted_<version>`, no payload). Any other value (or unset) leaves telemetry on.
 
 ### Hosted label (`DAB_APP_NAME_ENV`)
 
-When `DAB_APP_NAME_ENV` is set (DAB's hosted offering sets it to `dab_hosted`), its value is preserved as a **comma prefix**: `dab_hosted,dab_oss_<version>+...+`. Telemetry is always computed from the product version, so the host label **never suppresses** the token and the `dab_oss_` marker stays intact for decoding.
+When `DAB_APP_NAME_ENV` is set (DAB's hosted offering sets it to `dab_hosted`), it **replaces** the `dab_oss_` marker: the token becomes `dab_hosted_<version>+...+` (no `dab_oss_` present). Telemetry is still computed from the product version, so the host label **never suppresses** the token, and the shared `dab_` prefix keeps it locatable and decodable in both scenarios.
 
 ### CLI: `dab appname`
 
@@ -204,8 +204,8 @@ When the token is computed, DAB emits a single Debug log of the **token only** (
 | SQL Server / Azure SQL (`MSSQL`) | Yes (`Source = S`) | |
 | SQL Data Warehouse (`DWSQL`) | Yes (`Source = D`) | shares the SQL Server builder |
 | PostgreSQL | Yes (`Source = P`) | |
-| MySQL | No | connection string left unchanged |
-| Cosmos DB | No | connection string left unchanged |
+| MySQL | No | MySqlConnector has no `Application Name` connection-string property |
+| Cosmos DB | No | no SQL session/application-name equivalent |
 
 ## Decoding and observing in production
 
@@ -215,21 +215,21 @@ The token surfaces server-side as the connection's application name; the exact s
 
 ```sql
 SELECT program_name FROM sys.dm_exec_sessions
-WHERE program_name LIKE 'dab_oss%' OR program_name LIKE '%,dab_oss%';
+WHERE program_name LIKE '%dab[_]%';
 ```
 
 - **PostgreSQL** — `pg_stat_activity.application_name` (PostgreSQL truncates this to 63 bytes; the decoder tolerates truncation):
 
 ```sql
 SELECT application_name FROM pg_stat_activity
-WHERE application_name LIKE 'dab_oss%' OR application_name LIKE '%,dab_oss%';
+WHERE application_name LIKE '%dab\_%' ESCAPE '\';
 ```
 
 A captured token can be decoded back to a legend with `dab appname --decode "<token>"`.
 
 ## Testing
 
-- **Encoder / decoder unit tests** for token shape, each section's flag mapping, the Source and auth-provider maps, opt-out, the host-label prefix, and round-trip / truncation-tolerant decoding.
+- **Encoder / decoder unit tests** for token shape, each section's flag mapping, the Source and auth-provider maps, opt-out, hosted and OSS markers, and round-trip / truncation-tolerant decoding.
 - **Connection-string injection tests** for MSSQL, DWSQL, and PostgreSQL (including the user-supplied `Application Name` prefix case), and the no-op cases for MySQL / Cosmos.
 - **Multi-database tests** asserting child data sources encode the global runtime and merged entities, and a heterogeneous (MSSQL + PostgreSQL) case asserting the per-pool `Source` character.
 - **Hosted / late-config tests** asserting telemetry is embedded through `RuntimeConfigProvider.Initialize` for the single-source and multi-database cases, plus end-to-end `/configuration` and `/configuration/v2` endpoint tests.

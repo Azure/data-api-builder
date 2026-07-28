@@ -754,7 +754,7 @@ public class RuntimeConfigLoaderTests
     /// <summary>
     /// Extracts the three telemetry sections (context, runtime, entity) from the DAB usage-telemetry
     /// payload embedded in a connection string's "Application Name" property.
-    /// Payload shape: [{env},]dab_oss_&lt;version&gt;+&lt;context&gt;|&lt;runtime&gt;|&lt;entity&gt;+
+    /// Payload shape: &lt;marker&gt;&lt;version&gt;+&lt;context&gt;|&lt;runtime&gt;|&lt;entity&gt;+
     /// </summary>
     private static (string Context, string Runtime, string Entity) GetTelemetrySections(string connectionString)
     {
@@ -766,7 +766,7 @@ public class RuntimeConfigLoaderTests
         string applicationName = (string)applicationNameValue;
 
         Assert.IsTrue(
-            applicationName.Contains(ProductInfo.DAB_USER_AGENT_MARKER) && applicationName.EndsWith("+", StringComparison.Ordinal),
+            applicationName.Contains(ProductInfo.DAB_MARKER_PREFIX) && applicationName.EndsWith("+", StringComparison.Ordinal),
             $"Application Name '{applicationName}' should carry a DAB telemetry payload ending with '+'.");
 
         // Drop the trailing delimiter, then take the region after the last '+' (the version itself can
@@ -868,25 +868,75 @@ public class RuntimeConfigLoaderTests
     /// <summary>
     /// Embedding telemetry into a connection string that already carries the DAB telemetry marker must
     /// be a no-op (idempotent), so a value can never accumulate a duplicated payload
-    /// (<c>...+...+,dab_oss_...+...+</c>) if the embed ever runs more than once (e.g. the loader's
+    /// if the embed ever runs more than once (e.g. the loader's
     /// post-processing followed by the late-config provider).
     /// </summary>
-    [TestMethod]
-    public void GetConnectionStringWithApplicationName_IsIdempotent()
+    [DataTestMethod]
+    [DataRow(DatabaseType.MSSQL, false, DisplayName = "MSSQL open-source Application Name is idempotent")]
+    [DataRow(DatabaseType.MSSQL, true, DisplayName = "MSSQL hosted Application Name is idempotent")]
+    [DataRow(DatabaseType.PostgreSQL, false, DisplayName = "PostgreSQL open-source Application Name is idempotent")]
+    [DataRow(DatabaseType.PostgreSQL, true, DisplayName = "PostgreSQL hosted Application Name is idempotent")]
+    public void GetConnectionStringWithApplicationName_IsIdempotent(DatabaseType databaseType, bool hosted)
     {
-        DataSource dataSource = new(DatabaseType.MSSQL, "Server=localhost;Database=test;");
-        RuntimeConfig config = new(
-            Schema: "s",
-            DataSource: dataSource,
-            Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
+        string? originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+        Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, hosted ? "dab_hosted" : null);
 
-        string once = RuntimeConfigLoader.GetConnectionStringWithApplicationName("Server=localhost;Database=test;", config, dataSource);
-        string twice = RuntimeConfigLoader.GetConnectionStringWithApplicationName(once, config, dataSource);
+        try
+        {
+            string connectionString = databaseType == DatabaseType.PostgreSQL
+                ? "Host=localhost;Database=test;Username=test;"
+                : "Server=localhost;Database=test;";
+            DataSource dataSource = new(databaseType, connectionString);
+            RuntimeConfig config = new(
+                Schema: "s",
+                DataSource: dataSource,
+                Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
 
-        Assert.AreEqual(once, twice, "Re-embedding telemetry should be a no-op (idempotent).");
+            string once = RuntimeConfigLoader.GetConnectionStringWithApplicationName(connectionString, config, dataSource);
+            string twice = RuntimeConfigLoader.GetConnectionStringWithApplicationName(once, config, dataSource);
 
-        int markerOccurrences = (twice.Length - twice.Replace(ProductInfo.DAB_USER_AGENT_MARKER, string.Empty).Length) / ProductInfo.DAB_USER_AGENT_MARKER.Length;
-        Assert.AreEqual(1, markerOccurrences, $"Telemetry marker should appear exactly once but was '{twice}'.");
+            Assert.AreEqual(once, twice, "Re-embedding telemetry should be a no-op (idempotent).");
+
+            string expectedBase = ProductInfo.GetTelemetryApplicationNameBase();
+            int markerOccurrences = (twice.Length - twice.Replace(expectedBase, string.Empty).Length) / expectedBase.Length;
+            Assert.AreEqual(1, markerOccurrences, $"Telemetry marker should appear exactly once but was '{twice}'.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+        }
+    }
+
+    [DataTestMethod]
+    [DataRow(DatabaseType.MSSQL)]
+    [DataRow(DatabaseType.PostgreSQL)]
+    public void GetConnectionStringWithApplicationName_DoesNotMixHostedAndOssMarkers(DatabaseType databaseType)
+    {
+        string? originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+        Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+
+        try
+        {
+            string connectionString = databaseType == DatabaseType.PostgreSQL
+                ? "Host=localhost;Database=test;Username=test;"
+                : "Server=localhost;Database=test;";
+            DataSource dataSource = new(databaseType, connectionString);
+            RuntimeConfig config = new(
+                Schema: "s",
+                DataSource: dataSource,
+                Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
+
+            string ossConnectionString = RuntimeConfigLoader.GetConnectionStringWithApplicationName(connectionString, config, dataSource);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
+            string hostedAttempt = RuntimeConfigLoader.GetConnectionStringWithApplicationName(ossConnectionString, config, dataSource);
+
+            Assert.AreEqual(ossConnectionString, hostedAttempt, "Existing DAB telemetry should not receive a second environment marker.");
+            Assert.IsFalse(hostedAttempt.Contains("dab_hosted_", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+        }
     }
 
     /// <summary>

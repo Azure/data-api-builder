@@ -8,16 +8,17 @@ using Azure.DataApiBuilder.Product;
 namespace Azure.DataApiBuilder.Config.Telemetry;
 
 /// <summary>
-/// Encodes (and decodes) lightweight, anonymous DAB telemetry into the SQL Server
-/// <c>Application Name</c> connection-string property.
+/// Encodes (and decodes) lightweight, anonymous DAB telemetry into a data source
+/// connection string's <c>Application Name</c> property.
 ///
 /// Format:
 /// <code>
-/// dab_oss_&lt;version&gt;+&lt;context&gt;|&lt;runtime&gt;|&lt;entity&gt;+
+/// &lt;marker&gt;&lt;version&gt;+&lt;context&gt;|&lt;runtime&gt;|&lt;entity&gt;+
 /// </code>
-/// Example: <c>dab_oss_1.2.3+XXSX|11111M10...|10111101M...|11111011...+</c>
+/// Example: <c>dab_oss_1.2.3+XXSX|11111M10...|10111101M...+</c>
 ///
-/// The block is self-delimiting: it always starts with the <c>dab_oss_</c> marker and ends
+/// The block is self-delimiting: it always starts with a <c>dab_</c> marker (<c>dab_oss_</c> for open
+/// source or <c>dab_hosted_</c> when hosted) and ends
 /// with <c>+</c>, so it can be located and decoded even when it is appended after a user's
 /// custom Application Name (e.g. <c>MyApp,dab_oss_...+...+</c>) or an OBO per-user pool hash
 /// (e.g. <c>{hash}|MyApp,dab_oss_...+...+</c>). Because of this, the inner <c>|</c> separators
@@ -39,10 +40,13 @@ namespace Azure.DataApiBuilder.Config.Telemetry;
 /// </summary>
 public static class ApplicationNameTelemetry
 {
+    private const string HOSTED_USER_AGENT_MARKER = "dab_hosted_";
+
     /// <summary>
     /// Environment variable used to opt out of embedding telemetry in the Application Name.
-    /// When set to exactly <c>"1"</c> the payload is omitted and only <c>dab_oss_&lt;version&gt;</c>
-    /// is emitted. Any other value (including <c>"0"</c>, missing or invalid) keeps telemetry on.
+    /// When set to exactly <c>"1"</c> the payload is omitted and only
+    /// <c>&lt;marker&gt;&lt;version&gt;</c> is emitted. Any other value (including <c>"0"</c>,
+    /// missing or invalid) keeps telemetry on.
     /// </summary>
     public const string OPT_OUT_ENV_VAR = "DAB_TELEMETRY_APPNAME_OPT_OUT";
 
@@ -65,9 +69,10 @@ public static class ApplicationNameTelemetry
     private sealed record Setting(string Name, Func<EncodeInputs, char> Encode, Func<char, string> Describe);
 
     /// <summary>
-    /// Produces the pure telemetry string (<c>dab_oss_&lt;version&gt;+&lt;context&gt;|&lt;runtime&gt;|&lt;entity&gt;+</c>),
-    /// independent of the opt-out switch and of <c>DAB_APP_NAME_ENV</c>. Used by the CLI and as the
-    /// telemetry-bearing portion of the connection-string segment.
+    /// Produces the pure telemetry string (<c>&lt;marker&gt;&lt;version&gt;+&lt;context&gt;|&lt;runtime&gt;|&lt;entity&gt;+</c>),
+    /// where the marker is <c>dab_oss_</c> for open source or <c>dab_hosted_</c> when <c>DAB_APP_NAME_ENV</c>
+    /// is set. Independent of the opt-out switch. Used by the CLI and as the telemetry-bearing portion of
+    /// the connection-string segment.
     /// </summary>
     /// <param name="config">The runtime config to encode.</param>
     /// <param name="liveDataSource">
@@ -85,7 +90,7 @@ public static class ApplicationNameTelemetry
         string entity = EncodeSection(_entitySettings, inputs);
 
         return new StringBuilder()
-            .Append(ProductInfo.DAB_USER_AGENT)
+            .Append(ProductInfo.GetTelemetryApplicationNameBase())
             .Append(PAYLOAD_DELIMITER)
             .Append(context).Append(SECTION_SEPARATOR)
             .Append(runtime).Append(SECTION_SEPARATOR)
@@ -97,27 +102,22 @@ public static class ApplicationNameTelemetry
     /// <summary>
     /// Builds the DAB-owned portion of the <c>Application Name</c> to embed in a connection string.
     /// <list type="bullet">
-    /// <item>When opted out, only <c>dab_oss_&lt;version&gt;</c> is returned (no payload).</item>
-    /// <item>Telemetry is always based on the product version (<see cref="ProductInfo.DAB_USER_AGENT"/>),
-    /// so it is never suppressed by <c>DAB_APP_NAME_ENV</c>.</item>
-    /// <item>When <c>DAB_APP_NAME_ENV</c> is set, its value is preserved as a comma prefix
-    /// (e.g. <c>dab_hosted,dab_oss_...+...+</c>) so a host/custom label survives while the
-    /// <c>dab_oss_</c> marker remains intact for decoding.</item>
+    /// <item>Open source uses the <c>dab_oss_</c> marker; the hosted scenario (<c>DAB_APP_NAME_ENV</c> set)
+    /// uses <c>dab_hosted_</c> instead — the <c>dab_oss_</c> marker is not present in that case.</item>
+    /// <item>When opted out, only <c>&lt;marker&gt;&lt;version&gt;</c> is returned (no payload).</item>
+    /// <item>Telemetry is always based on the product version, so it is never suppressed by
+    /// <c>DAB_APP_NAME_ENV</c>.</item>
     /// </list>
     /// </summary>
     /// <param name="config">The runtime config to encode.</param>
     /// <param name="liveDataSource">The data source whose connection is being opened.</param>
     public static string BuildApplicationNameSegment(RuntimeConfig config, DataSource? liveDataSource)
     {
-        string telemetry = IsOptedOut()
-            ? ProductInfo.DAB_USER_AGENT
+        // The marker itself reflects the hosting scenario (dab_oss_ vs dab_hosted_), so no separate
+        // label prefix is needed. When opted out, only the marker+version is emitted (no payload).
+        return IsOptedOut()
+            ? ProductInfo.GetTelemetryApplicationNameBase()
             : EncodeTelemetryString(config, liveDataSource);
-
-        string? customLabel = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
-
-        return string.IsNullOrWhiteSpace(customLabel)
-            ? telemetry
-            : $"{customLabel},{telemetry}";
     }
 
     /// <summary>
@@ -138,10 +138,10 @@ public static class ApplicationNameTelemetry
             return lines;
         }
 
-        int markerIndex = applicationName.IndexOf(ProductInfo.DAB_USER_AGENT_MARKER, StringComparison.Ordinal);
+        int markerIndex = FindTelemetryMarker(applicationName);
         if (markerIndex < 0)
         {
-            lines.Add("No DAB telemetry found (missing 'dab_oss_' marker).");
+            lines.Add("No DAB telemetry found (missing DAB telemetry marker).");
             return lines;
         }
 
@@ -171,6 +171,20 @@ public static class ApplicationNameTelemetry
         DecodeSection(lines, "Entity", _entitySettings, sections, index: 2);
 
         return lines;
+    }
+
+    /// <summary>Finds the first supported DAB telemetry marker in an Application Name.</summary>
+    private static int FindTelemetryMarker(string applicationName)
+    {
+        int ossIndex = applicationName.IndexOf(ProductInfo.DAB_USER_AGENT_MARKER, StringComparison.Ordinal);
+        int hostedIndex = applicationName.IndexOf(HOSTED_USER_AGENT_MARKER, StringComparison.Ordinal);
+
+        if (ossIndex < 0)
+        {
+            return hostedIndex;
+        }
+
+        return hostedIndex < 0 ? ossIndex : Math.Min(ossIndex, hostedIndex);
     }
 
     /// <summary>Returns true when telemetry has been explicitly opted out via the environment variable.</summary>
@@ -373,9 +387,9 @@ public static class ApplicationNameTelemetry
     {
         'S' => "SQL",
         'D' => "DWSQL",
-        'P' => "Postgres",
+        'P' => "PostgreSQL",
         'M' => "MySQL",
-        'C' => "Cosmos",
+        'C' => "CosmosDB",
         NOT_APPLICABLE => "not applicable",
         _ => "unrecognized",
     };

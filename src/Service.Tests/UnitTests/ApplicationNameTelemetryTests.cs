@@ -292,22 +292,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
-        public void BuildApplicationNameSegment_AppNameEnv_RidesAsPrefixWithoutSuppressingTelemetry()
+        public void BuildApplicationNameSegment_AppNameEnv_UsesHostedMarkerWithTelemetry()
         {
             Environment.SetEnvironmentVariable(APP_NAME_VAR, "dab_hosted");
             string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), Source(DatabaseType.MSSQL));
 
-            Assert.IsTrue(segment.StartsWith("dab_hosted," + ProductInfo.DAB_USER_AGENT + "+", StringComparison.Ordinal), segment);
+            Assert.IsTrue(segment.StartsWith("dab_hosted_" + ProductInfo.GetProductVersion() + "+", StringComparison.Ordinal), segment);
             Assert.IsTrue(segment.EndsWith("+", StringComparison.Ordinal), segment);
         }
 
         [TestMethod]
-        public void BuildApplicationNameSegment_AppNameEnvWithOptOut_PrefixWithoutPayload()
+        public void BuildApplicationNameSegment_AppNameEnvWithOptOut_HostedMarkerWithoutPayload()
         {
             Environment.SetEnvironmentVariable(APP_NAME_VAR, "dab_hosted");
             Environment.SetEnvironmentVariable(OPT_OUT_VAR, "1");
             string segment = ApplicationNameTelemetry.BuildApplicationNameSegment(BuildConfig(), Source(DatabaseType.MSSQL));
-            Assert.AreEqual("dab_hosted," + ProductInfo.DAB_USER_AGENT, segment);
+            Assert.AreEqual("dab_hosted_" + ProductInfo.GetProductVersion(), segment);
         }
 
         // ----- Decode -------------------------------------------------------------------------
@@ -325,12 +325,46 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
+        public void Decode_HostedMarker_IsRecognizedWithoutHostedEnvironment()
+        {
+            Environment.SetEnvironmentVariable(APP_NAME_VAR, "dab_hosted");
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
+            Environment.SetEnvironmentVariable(APP_NAME_VAR, null);
+
+            IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode(telemetry);
+
+            Assert.IsTrue(
+                lines.Any(l => l.StartsWith("Version: dab_hosted_" + ProductInfo.GetProductVersion(), StringComparison.Ordinal)),
+                string.Join(Environment.NewLine, lines));
+        }
+
+        [DataTestMethod]
+        [DataRow(DatabaseType.PostgreSQL, "Source: P (PostgreSQL)")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Source: C (CosmosDB)")]
+        public void Decode_UsesDatabaseTypeNames(DatabaseType databaseType, string expectedSource)
+        {
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(databaseType));
+            IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode(telemetry);
+
+            Assert.IsTrue(lines.Any(l => l.Contains(expectedSource, StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
+        }
+
+        [TestMethod]
         public void Decode_IgnoresUserPrefixAndOboHash()
         {
             string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
             string fullAppName = $"abc123hash==|MyCustomApp,{telemetry}";
 
             IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode(fullAppName);
+            Assert.IsTrue(lines.Any(l => l.StartsWith("Version: " + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal)), string.Join('\n', lines));
+        }
+
+        [TestMethod]
+        public void Decode_IgnoresUnrelatedDabPrefixBeforeTelemetry()
+        {
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
+            IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode($"my_dab_app,{telemetry}");
+
             Assert.IsTrue(lines.Any(l => l.StartsWith("Version: " + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal)), string.Join('\n', lines));
         }
 

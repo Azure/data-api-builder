@@ -922,11 +922,11 @@ type Moon {
 
             try
             {
-                // The DAB-owned portion of the Application Name is always the dab_oss_<version> telemetry block.
-                // When DAB_APP_NAME_ENV is set, its value is preserved as a comma prefix. The encoded telemetry
-                // payload then follows, so we assert the Application Name prefix and that the payload terminates with '+'.
+                // The DAB-owned portion of the Application Name is the telemetry block: dab_oss_<version>
+                // for open source, or dab_hosted_<version> when DAB_APP_NAME_ENV is set (hosted). The encoded
+                // payload then follows, so we assert the Application Name prefix and that it terminates with '+'.
                 string expectedAppNamePrefix = expectedDabModifiedConnString
-                    + (dabEnvOverride ? $"dab_hosted,{ProductInfo.DAB_USER_AGENT}" : ProductInfo.DAB_USER_AGENT);
+                    + (dabEnvOverride ? $"dab_hosted_{ProductInfo.GetProductVersion()}" : ProductInfo.DAB_USER_AGENT);
 
                 RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
 
@@ -993,11 +993,11 @@ type Moon {
 
             try
             {
-                // The DAB-owned portion of the Application Name is always the dab_oss_<version> telemetry block.
-                // When DAB_APP_NAME_ENV is set, its value is preserved as a comma prefix. The encoded telemetry
-                // payload then follows, so we assert the Application Name prefix and that the payload terminates with '+'.
+                // The DAB-owned portion of the Application Name is the telemetry block: dab_oss_<version>
+                // for open source, or dab_hosted_<version> when DAB_APP_NAME_ENV is set (hosted). The encoded
+                // payload then follows, so we assert the Application Name prefix and that it terminates with '+'.
                 string expectedAppNamePrefix = expectedDabModifiedConnString
-                    + (dabEnvOverride ? $"dab_hosted,{ProductInfo.DAB_USER_AGENT}" : ProductInfo.DAB_USER_AGENT);
+                    + (dabEnvOverride ? $"dab_hosted_{ProductInfo.GetProductVersion()}" : ProductInfo.DAB_USER_AGENT);
 
                 RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.PostgreSQL, configProvidedConnString);
 
@@ -1142,8 +1142,8 @@ type Moon {
 
                 string connectionString = provider.GetConfig().DataSource.ConnectionString;
                 Assert.IsTrue(
-                    connectionString.Contains("Application Name=dab_hosted," + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal),
-                    $"Hosted connection string should carry the dab_hosted label and dab_oss marker but was '{connectionString}'.");
+                    connectionString.Contains("Application Name=dab_hosted_" + ProductInfo.GetProductVersion(), StringComparison.Ordinal),
+                    $"Hosted connection string should carry the dab_hosted_<version> marker but was '{connectionString}'.");
                 Assert.IsTrue(
                     connectionString.EndsWith("+", StringComparison.Ordinal),
                     $"Hosted connection string should carry the telemetry payload but was '{connectionString}'.");
@@ -1226,7 +1226,7 @@ type Moon {
                 Assert.IsTrue(initialized, "Hosted multi-database late-config initialization should succeed.");
 
                 RuntimeConfig loaded = provider.GetConfig();
-                string expectedAppName = "Application Name=dab_hosted," + ProductInfo.DAB_USER_AGENT;
+                string expectedAppName = "Application Name=dab_hosted_" + ProductInfo.GetProductVersion();
 
                 // Default data source: supplemented with the supplied connection string + telemetry.
                 Assert.IsTrue(

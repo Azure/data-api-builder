@@ -16,7 +16,7 @@ namespace Cli.Commands
     /// Options for the <c>appname</c> command, which encodes the DAB telemetry Application Name
     /// from a config file, or decodes a telemetry Application Name into a human-readable description.
     /// </summary>
-    [Verb("appname", isDefault: false, HelpText = "Show or decode the DAB telemetry 'Application Name' embedded in SQL connections.", Hidden = false)]
+    [Verb("appname", isDefault: false, HelpText = "Show or decode the DAB telemetry 'Application Name' embedded in datasource connections.", Hidden = false)]
     public class AppNameOptions : Options
     {
         public AppNameOptions(string? decode = null, string? output = null, string? config = null)

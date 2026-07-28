@@ -146,6 +146,11 @@ jobs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
+  # Publish this job's raw cobertura as a named pipeline artifact for aggregation.
+  - template: templates/publish-coverage-artifact.yml
+    parameters:
+      artifactName: 'coverage-dwsql'
+
 
 - job: windows
   pool:
@@ -250,6 +255,11 @@ jobs:
     inputs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+
+  # Publish the Windows job's raw cobertura as a uniquely-named artifact for aggregation.
+  - template: templates/publish-coverage-artifact.yml
+    parameters:
+      artifactName: 'coverage-dwsql-windows'
 
   - task: CopyFiles@2
     condition: eq(variables['publishverify'], 'Yes')

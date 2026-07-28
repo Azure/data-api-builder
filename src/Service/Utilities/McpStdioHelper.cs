@@ -76,24 +76,28 @@ namespace Azure.DataApiBuilder.Service.Utilities
         /// <param name="host"> The host to run.</param>
         public static bool RunMcpStdioHost(IHost host)
         {
-            host.Start();
+            try
+            {
+                Mcp.Core.McpToolRegistry registry =
+                    host.Services.GetRequiredService<Mcp.Core.McpToolRegistry>();
+                IEnumerable<Mcp.Model.IMcpTool> tools =
+                    host.Services.GetServices<Mcp.Model.IMcpTool>();
 
-            Mcp.Core.McpToolRegistry registry =
-                host.Services.GetRequiredService<Mcp.Core.McpToolRegistry>();
-            IEnumerable<Mcp.Model.IMcpTool> tools =
-                host.Services.GetServices<Mcp.Model.IMcpTool>();
+                Mcp.Core.McpToolRegistry.InitializeAndRegisterTools(tools, registry, host.Services);
 
-            Mcp.Core.McpToolRegistry.InitializeAndRegisterTools(tools, registry, host.Services);
+                IHostApplicationLifetime lifetime =
+                    host.Services.GetRequiredService<IHostApplicationLifetime>();
+                Mcp.Core.IMcpStdioServer stdio =
+                    host.Services.GetRequiredService<Mcp.Core.IMcpStdioServer>();
 
-            IHostApplicationLifetime lifetime =
-                host.Services.GetRequiredService<IHostApplicationLifetime>();
-            Mcp.Core.IMcpStdioServer stdio =
-                host.Services.GetRequiredService<Mcp.Core.IMcpStdioServer>();
+                stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
 
-            stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
-            host.StopAsync().GetAwaiter().GetResult();
-
-            return true;
+                return true;
+            }
+            finally
+            {
+                host.Dispose();
+            }
         }
     }
 }

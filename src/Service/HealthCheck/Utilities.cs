@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Mcp.Core;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
@@ -70,6 +71,28 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // Create the payload for the REST HTTP request.
             // "EntityName?$first=4"
             return $"/{entityName}?$first={first}";
+        }
+
+        public static string CreateHttpMcpQuery()
+        {
+            // Create a minimal MCP request (initialize) as a valid JSON-RPC request.
+            // 'initialize' is used because other methods (e.g. 'tools/list') require an active
+            // session in the MCP Streamable HTTP transport.
+            string protocolVersion = McpProtocolDefaults.ResolveProtocolVersion(configuration: null);
+            var payload = new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                method = "initialize",
+                @params = new
+                {
+                    protocolVersion,
+                    capabilities = new { },
+                    clientInfo = new { name = "dab-health-check", version = "1.0.0" }
+                }
+            };
+
+            return JsonSerializer.Serialize(payload);
         }
 
         public static string NormalizeConnectionString(string connectionString, DatabaseType dbType, ILogger? logger = null)

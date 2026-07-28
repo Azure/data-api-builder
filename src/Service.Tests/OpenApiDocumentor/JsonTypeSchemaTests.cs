@@ -12,9 +12,8 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
     /// <summary>
     /// Validates how a SQL Server 2025 native <c>json</c> column is surfaced in the generated
     /// OpenAPI document. DAB does nothing special for a JSON column - it is treated as a normal
-    /// <c>string</c>, so it must be described with <c>type: string</c>, no custom <c>format</c>,
-    /// and honoring the column's nullability. This is the schema-discovery counterpart to the
-    /// REST round-trip coverage in
+    /// <c>string</c>, so it must be described with <c>type: string</c> and no custom <c>format</c>.
+    /// This is the schema-discovery counterpart to the REST round-trip coverage in
     /// <see cref="SqlTests.RestApiTests.MsSqlRestJsonTypesTests"/>.
     /// NOTE: The native JSON data type requires SQL Server 2025 / Azure SQL.
     /// </summary>
@@ -26,23 +25,24 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         private const string DB_ENV = TestCategory.MSSQL;
 
         /// <summary>
-        /// The <c>profiles.metadata</c> (json, nullable) column must appear in the OpenAPI schema as
-        /// a plain nullable string with no format - proving JSON is not given a bespoke scalar/format.
+        /// The <c>profiles.metadata</c> (json) column must appear in the OpenAPI schema as a plain
+        /// string with no format - proving JSON is not given a bespoke scalar/format and is treated
+        /// exactly like any other string column. (DAB''s OpenAPI documentor does not express column
+        /// nullability on the property schema for any type, so that is not asserted here.)
         /// </summary>
         [TestMethod]
-        public async Task JsonColumn_IsDescribedAsNullableStringWithoutFormat()
+        public async Task JsonColumn_IsDescribedAsStringWithoutFormat()
         {
             OpenApiDocument doc = await GenerateProfileDocumentAsync();
 
             Assert.IsTrue(doc.Components.Schemas.ContainsKey("Profile"), "Schema should exist for the Profile entity.");
 
             OpenApiSchema profileSchema = doc.Components.Schemas["Profile"];
-            Assert.IsTrue(profileSchema.Properties.ContainsKey("metadata"), "The json 'metadata' column should be present in the schema.");
+            Assert.IsTrue(profileSchema.Properties.ContainsKey("metadata"), "The json ''metadata'' column should be present in the schema.");
 
             OpenApiSchema metadataSchema = profileSchema.Properties["metadata"];
             Assert.AreEqual("string", metadataSchema.Type, "A json column must be described as a plain string (treated like any string column).");
             Assert.IsTrue(string.IsNullOrEmpty(metadataSchema.Format), "A json column must not carry a bespoke OpenAPI format.");
-            Assert.IsTrue(metadataSchema.Nullable, "The nullable json column must be described as nullable.");
         }
 
         /// <summary>

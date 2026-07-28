@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -920,22 +921,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             EntityAction updateAction = new(Action: EntityActionOperation.Update, Fields: createUpdateFields, Policy: new(null, null));
             EntityAction deleteAction = new(Action: EntityActionOperation.Delete, Fields: null, Policy: new(null, null));
 
-            Azure.DataApiBuilder.Config.ObjectModel.EntityPermission permissionForEntity = new(
+            EntityPermission permissionForEntity = new(
                 Role: AuthorizationHelpers.TEST_ROLE,
                 Actions: new EntityAction[] { readAction, createAction, updateAction, deleteAction });
 
-            Azure.DataApiBuilder.Config.ObjectModel.Entity sampleEntity = new(
-                Source: new Azure.DataApiBuilder.Config.ObjectModel.EntitySource(AuthorizationHelpers.TEST_ENTITY, Azure.DataApiBuilder.Config.ObjectModel.EntitySourceType.Table, null, null),
+            Entity sampleEntity = new(
+                Source: new EntitySource(AuthorizationHelpers.TEST_ENTITY, EntitySourceType.Table, null, null),
                 Fields: null,
                 Rest: new(Array.Empty<SupportedHttpVerb>()),
                 GraphQL: new(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ENTITY),
-                Permissions: new Azure.DataApiBuilder.Config.ObjectModel.EntityPermission[] { permissionForEntity },
+                Permissions: new EntityPermission[] { permissionForEntity },
                 Relationships: null,
                 Mappings: null);
 
-            Azure.DataApiBuilder.Config.ObjectModel.RuntimeConfig runtimeConfig = new(
+            RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new Azure.DataApiBuilder.Config.ObjectModel.DataSource(Azure.DataApiBuilder.Config.ObjectModel.DatabaseType.MSSQL, "", new()),
+                DataSource: new DataSource(DatabaseType.MSSQL, "", new()),
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -943,7 +944,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                     Host: new(
                         Cors: null,
                         Authentication: new("AppService", null))),
-                Entities: new(new Dictionary<string, Azure.DataApiBuilder.Config.ObjectModel.Entity> { { AuthorizationHelpers.TEST_ENTITY, sampleEntity } }));
+                Entities: new(new Dictionary<string, Entity> { { AuthorizationHelpers.TEST_ENTITY, sampleEntity } }));
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
@@ -952,46 +953,54 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 operation: EntityActionOperation.Read,
-                new List<string> { "col1", "col3" }));
+                new List<string> { "col1", "col3" }),
+                "Read should allow all columns since no fields are excluded for the read action.");
 
             // Create should DENY col3 since it is excluded for create.
             Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 operation: EntityActionOperation.Create,
-                new List<string> { "col1", "col3" }));
+                new List<string> { "col1", "col3" }),
+                "Create should deny col3 since it is excluded for the create action.");
 
             // Update should DENY col3 since it is excluded for update.
             Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 operation: EntityActionOperation.Update,
-                new List<string> { "col1", "col3" }));
+                new List<string> { "col1", "col3" }),
+                "Update should deny col3 since it is excluded for the update action.");
 
             // Round-trip the config through JSON serialization/deserialization (as happens when DAB
             // loads a real config file from disk) to rule out any bug specific to the JSON converters
             // (e.g. shared/aliased Fields.Exclude HashSet instances across sibling actions).
             string json = runtimeConfig.ToJson();
-            Assert.IsTrue(Azure.DataApiBuilder.Config.RuntimeConfigLoader.TryParseConfig(json, out Azure.DataApiBuilder.Config.ObjectModel.RuntimeConfig? roundTrippedConfig));
+            Assert.IsTrue(
+                RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig? roundTrippedConfig),
+                "Round-tripped config should parse successfully.");
             AuthorizationResolver roundTrippedResolver = AuthorizationHelpers.InitAuthorizationResolver(roundTrippedConfig!);
 
             Assert.IsTrue(roundTrippedResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 operation: EntityActionOperation.Read,
-                new List<string> { "col1", "col3" }));
+                new List<string> { "col1", "col3" }),
+                "After round-trip, read should still allow all columns.");
 
             Assert.IsFalse(roundTrippedResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 operation: EntityActionOperation.Create,
-                new List<string> { "col1", "col3" }));
+                new List<string> { "col1", "col3" }),
+                "After round-trip, create should still deny excluded col3.");
 
             Assert.IsFalse(roundTrippedResolver.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
                 operation: EntityActionOperation.Update,
-                new List<string> { "col1", "col3" }));
+                new List<string> { "col1", "col3" }),
+                "After round-trip, update should still deny excluded col3.");
         }
 
         /// <summary>
@@ -1038,17 +1047,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             }";
 
             Assert.IsTrue(
-                Azure.DataApiBuilder.Config.RuntimeConfigLoader.TryParseConfig(configJson, out Azure.DataApiBuilder.Config.ObjectModel.RuntimeConfig? config),
+                RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig? config),
                 "Config should parse successfully.");
             Assert.IsNotNull(config);
 
-            Azure.DataApiBuilder.Config.ObjectModel.Entity bookEntity = config!.Entities["Book"];
-            Azure.DataApiBuilder.Config.ObjectModel.EntityPermission permission =
+            Entity bookEntity = config!.Entities["Book"];
+            EntityPermission permission =
                 bookEntity.Permissions.Single(p => p.Role == "test_role_with_excluded_fields_on_mutation");
 
-            Azure.DataApiBuilder.Config.ObjectModel.EntityAction createAction =
+            EntityAction createAction =
                 permission.Actions.Single(a => a.Action == EntityActionOperation.Create);
-            Azure.DataApiBuilder.Config.ObjectModel.EntityAction updateAction =
+            EntityAction updateAction =
                 permission.Actions.Single(a => a.Action == EntityActionOperation.Update);
 
             Assert.IsNotNull(createAction.Fields, "Create action Fields should not be null after parsing.");

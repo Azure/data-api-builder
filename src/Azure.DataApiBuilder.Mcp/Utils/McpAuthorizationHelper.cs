@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         {
             error = string.Empty;
 
-            List<string> requestedColumns = columns is null ? new List<string>() : columns.ToList();
+            List<string> requestedColumns = columns?.ToList() ?? new List<string>();
 
             // No columns supplied means nothing is written, so there is nothing to restrict.
             if (requestedColumns.Count == 0)

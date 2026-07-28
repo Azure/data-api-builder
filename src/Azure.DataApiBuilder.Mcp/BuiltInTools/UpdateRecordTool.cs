@@ -168,15 +168,22 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 // Column-level authorization: ensure the caller's effective role is permitted to write
                 // every column present in the request payload (fields.include/fields.exclude enforcement).
-                if (!McpAuthorizationHelper.AreColumnsAuthorizedForOperation(
-                        authResolver,
-                        entityName,
-                        effectiveRole!,
-                        EntityActionOperation.Update,
-                        fields.Keys,
-                        out string columnAuthError))
+                try
                 {
-                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "update", columnAuthError, logger);
+                    if (!McpAuthorizationHelper.AreColumnsAuthorizedForOperation(
+                            authResolver,
+                            entityName,
+                            effectiveRole!,
+                            EntityActionOperation.Update,
+                            fields.Keys,
+                            out string columnAuthError))
+                    {
+                        return McpErrorHelpers.PermissionDenied(toolName, entityName, "update", columnAuthError, logger);
+                    }
+                }
+                catch (Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException dabEx)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "ValidationFailed", $"Request validation failed: {dabEx.Message}", logger);
                 }
 
                 // 6) Build and validate Upsert (UpdateIncremental) context

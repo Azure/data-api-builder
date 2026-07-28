@@ -241,7 +241,7 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach (ObjectFieldNode currentEntityInputFieldNode in currentEntityInputFieldNodes)
             {
                 (IValueNode? fieldValue, SyntaxKind fieldKind) = GraphQLUtils.GetFieldDetails(currentEntityInputFieldNode.Value, context.Variables);
-                fieldKind = metadataProvider.TryGetUnderlyingFieldKind(entityName, currentEntityInputFieldNode.Name.Value, out SyntaxKind arrayFieldKind) ? arrayFieldKind : fieldKind;
+                fieldKind = metadataProvider.TryGetArrayElementSyntaxKind(entityName, currentEntityInputFieldNode.Name.Value, out SyntaxKind arrayFieldKind) ? arrayFieldKind : fieldKind;
                 if (fieldKind is not SyntaxKind.NullValue && !GraphQLUtils.IsScalarField(fieldKind))
                 {
                     // Process the relationship field.
@@ -574,7 +574,7 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach (ObjectFieldNode currentEntityInputField in currentEntityInputFields)
             {
                 Tuple<IValueNode?, SyntaxKind> fieldDetails = GraphQLUtils.GetFieldDetails(currentEntityInputField.Value, context.Variables);
-                SyntaxKind fieldKind = metadataProvider.TryGetUnderlyingFieldKind(entityName, currentEntityInputField.Name.Value, out SyntaxKind arrayFieldKind) ? arrayFieldKind : fieldDetails.Item2;
+                SyntaxKind fieldKind = metadataProvider.TryGetArrayElementSyntaxKind(entityName, currentEntityInputField.Name.Value, out SyntaxKind arrayFieldKind) ? arrayFieldKind : fieldDetails.Item2;
 
                 // For non-scalar fields, i.e. relationship fields, we have to recurse to process fields in the relationship field -
                 // which represents input data for a related entity.

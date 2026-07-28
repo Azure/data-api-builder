@@ -537,9 +537,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="fieldKind">The kind of the field in GraphQL.</param>
         /// <returns>False, as array types are not supported.</returns>
-        public bool TryGetUnderlyingFieldKind(string entityName, string fieldName, out SyntaxKind fieldKind)
+        public bool TryGetArrayElementSyntaxKind(string entityName, string fieldName, out SyntaxKind fieldKind)
         {
-            fieldKind = 0;
+            fieldKind = default;
             return false;
         }
 

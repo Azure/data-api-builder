@@ -1868,7 +1868,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach (ObjectFieldNode inputFieldNode in inputFieldNodes)
                 {
                     string fieldName = inputFieldNode.Name.Value;
-                    SyntaxKind fieldKind = metadataProvider.TryGetUnderlyingFieldKind(entityName, fieldName, out SyntaxKind arrayFieldKind)
+                    SyntaxKind fieldKind = metadataProvider.TryGetArrayElementSyntaxKind(entityName, fieldName, out SyntaxKind arrayFieldKind)
                         ? arrayFieldKind : inputFieldNode.Value.Kind;
 
                     // For the mutation pointMultipleCreateExample (outlined in the method summary),
@@ -2379,7 +2379,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             foreach (ObjectFieldNode field in fieldNodes)
             {
                 Tuple<IValueNode?, SyntaxKind> fieldDetails = GraphQLUtils.GetFieldDetails(field.Value, context.Variables);
-                SyntaxKind underlyingFieldKind = metadataProvider.TryGetUnderlyingFieldKind(entityName, field.Name.Value, out SyntaxKind arrayFieldKind) ? arrayFieldKind : fieldDetails.Item2;
+                SyntaxKind underlyingFieldKind = metadataProvider.TryGetArrayElementSyntaxKind(entityName, field.Name.Value, out SyntaxKind arrayFieldKind) ? arrayFieldKind : fieldDetails.Item2;
 
                 // For a column field, we do not have to recurse to process fields in the value - which is required for relationship fields.
                 if (GraphQLUtils.IsScalarField(underlyingFieldKind) || underlyingFieldKind is SyntaxKind.NullValue)

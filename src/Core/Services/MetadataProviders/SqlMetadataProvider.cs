@@ -395,7 +395,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public bool TryGetUnderlyingFieldKind(string entityName, string fieldName, out SyntaxKind fieldKind)
+        public bool TryGetArrayElementSyntaxKind(string entityName, string fieldName, out SyntaxKind fieldKind)
         {
             if (TryGetBackingColumn(entityName, fieldName, out string? columnName))
             {

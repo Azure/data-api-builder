@@ -25,8 +25,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
     [TestClass, TestCategory(TestCategory.MYSQL)]
     public class MySqlUpsertConcurrencyTests : RestApiTestBase
     {
-        private const string EntityPath = "commodities";
-
         #region Test Fixture Setup
 
         [ClassInitialize]
@@ -51,38 +49,65 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
 
         /// <summary>
         /// Two concurrent PUT requests targeting the same, initially-absent primary key must both succeed:
-        /// exactly one inserts (201 Created) and the other updates (200 OK). Neither request may fail with a
-        /// duplicate-key / database-operation error, which would occur if the insert-vs-update decision were
-        /// based on an unlocked pre-count.
+        /// exactly one inserts (201 Created) and the other updates (200 OK), exactly one row remains, and
+        /// neither request fails with a 5xx (which would surface a duplicate-key or deadlock database error).
+        /// The scenario is repeated over many distinct keys to expose the nondeterministic race, since HTTP
+        /// requests cannot be paused at the exact transaction point to force overlap on a single key.
         /// </summary>
         [TestMethod]
         public async Task ConcurrentPutOnSameMissingPrimaryKeyResolvesCleanly()
         {
-            // Primary key (0, 901) is absent at test start (not part of the seed data).
-            // categoryName must reference an existing comics.categoryName value (foreign key).
-            const string primaryKeyRoute = "categoryid/0/pieceid/901";
-            string firstBody = @"{ ""categoryName"": ""SciFi"", ""piecesAvailable"": 1, ""piecesRequired"": 1 }";
-            string secondBody = @"{ ""categoryName"": ""SciFi"", ""piecesAvailable"": 2, ""piecesRequired"": 2 }";
+            // Number of times to repeat the race on distinct, initially-absent primary keys.
+            const int iterations = 15;
 
-            // Issue both requests concurrently.
-            Task<HttpResponseMessage> firstRequest = SendPutAsync(primaryKeyRoute, firstBody);
-            Task<HttpResponseMessage> secondRequest = SendPutAsync(primaryKeyRoute, secondBody);
-
-            HttpResponseMessage[] responses = await Task.WhenAll(firstRequest, secondRequest);
-
-            foreach (HttpResponseMessage response in responses)
+            for (int iteration = 0; iteration < iterations; iteration++)
             {
-                Assert.IsTrue(
-                    response.StatusCode is HttpStatusCode.OK or HttpStatusCode.Created,
-                    $"Expected 200 OK or 201 Created but received {(int)response.StatusCode} ({response.StatusCode}). " +
-                    $"Body: {await response.Content.ReadAsStringAsync()}");
+                // A distinct primary key (0, 900+iteration) that is absent at the start of each iteration
+                // (not part of the seed data). categoryName references an existing comics.categoryName (FK).
+                int pieceId = 900 + iteration;
+                string primaryKeyRoute = $"categoryid/0/pieceid/{pieceId}";
+                string firstBody = @"{ ""categoryName"": ""SciFi"", ""piecesAvailable"": 1, ""piecesRequired"": 1 }";
+                string secondBody = @"{ ""categoryName"": ""SciFi"", ""piecesAvailable"": 2, ""piecesRequired"": 2 }";
+
+                // Issue both requests concurrently (both started before awaiting to maximize overlap).
+                Task<HttpResponseMessage> firstRequest = SendPutAsync(primaryKeyRoute, firstBody);
+                Task<HttpResponseMessage> secondRequest = SendPutAsync(primaryKeyRoute, secondBody);
+
+                HttpResponseMessage[] responses = await Task.WhenAll(firstRequest, secondRequest);
+
+                foreach (HttpResponseMessage response in responses)
+                {
+                    // A 5xx here would indicate a duplicate-key / deadlock (error 1213) database-operation
+                    // failure - the exact failure this fix must prevent.
+                    Assert.IsTrue(
+                        (int)response.StatusCode < 500,
+                        $"Iteration {iteration} (pieceid {pieceId}): request failed with {(int)response.StatusCode} " +
+                        $"({response.StatusCode}). Body: {await response.Content.ReadAsStringAsync()}");
+
+                    Assert.IsTrue(
+                        response.StatusCode is HttpStatusCode.OK or HttpStatusCode.Created,
+                        $"Iteration {iteration} (pieceid {pieceId}): expected 200 OK or 201 Created but received " +
+                        $"{(int)response.StatusCode} ({response.StatusCode}). Body: {await response.Content.ReadAsStringAsync()}");
+                }
+
+                int createdCount = responses.Count(response => response.StatusCode == HttpStatusCode.Created);
+                int okCount = responses.Count(response => response.StatusCode == HttpStatusCode.OK);
+
+                Assert.AreEqual(1, createdCount,
+                    $"Iteration {iteration} (pieceid {pieceId}): exactly one concurrent request should have created the record (201).");
+                Assert.AreEqual(1, okCount,
+                    $"Iteration {iteration} (pieceid {pieceId}): exactly one concurrent request should have updated the record (200).");
+
+                // Exactly one row must remain for the key.
+                string rowCountJson = await GetDatabaseResultAsync(
+                    "SELECT JSON_OBJECT('cnt', COUNT(*)) AS data FROM " + _Composite_NonAutoGenPK_TableName +
+                    $" WHERE categoryid = 0 AND pieceid = {pieceId}");
+                using JsonDocument rowCountDoc = JsonDocument.Parse(rowCountJson);
+                int rowCount = rowCountDoc.RootElement.GetProperty("cnt").GetInt32();
+
+                Assert.AreEqual(1, rowCount,
+                    $"Iteration {iteration} (pieceid {pieceId}): exactly one row must remain for the key after the concurrent upserts.");
             }
-
-            int createdCount = responses.Count(response => response.StatusCode == HttpStatusCode.Created);
-            int okCount = responses.Count(response => response.StatusCode == HttpStatusCode.OK);
-
-            Assert.AreEqual(1, createdCount, "Exactly one concurrent request should have created the record (201).");
-            Assert.AreEqual(1, okCount, "Exactly one concurrent request should have updated the record (200).");
         }
 
         /// <summary>
@@ -90,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         /// </summary>
         private static Task<HttpResponseMessage> SendPutAsync(string primaryKeyRoute, string requestBody)
         {
-            string endpoint = $"api/{EntityPath}/{primaryKeyRoute}";
+            string endpoint = $"api/{_Composite_NonAutoGenPK_EntityPath}/{primaryKeyRoute}";
             JsonElement requestBodyElement = JsonDocument.Parse(requestBody).RootElement.Clone();
 
             HttpRequestMessage request = new(HttpMethod.Put, endpoint)

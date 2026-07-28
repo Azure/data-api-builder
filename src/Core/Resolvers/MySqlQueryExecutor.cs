@@ -195,7 +195,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <see cref="MySqlQueryBuilder.Build(SqlUpsertQueryStructure)"/> to determine whether the
         /// operation resulted in an update or an insert, and to surface database policy failures.
         /// The upsert query returns:
-        ///   result set #1: the number of records already present for the given primary key.
+        ///   result set #1: 1 if the row already existed (update path), 0 if it was inserted or is absent (insert path).
         ///   result set #2: the output of the UPDATE (non-empty when a row matched the primary key and the update policy).
         ///   result set #3 (non-fallback only): the output of the INSERT (non-empty only when a record was inserted).
         /// </summary>
@@ -204,7 +204,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public override async Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
             DbDataReader dbDataReader, List<string>? args = null)
         {
-            // Result set #1: count (0/1) of records already present for the given primary key.
+            // Result set #1: 1 when the row already existed (update path), 0 when it was inserted or is
+            // absent (insert path). Reused below as numOfRecordsWithGivenPK to drive the update/insert branch.
             DbResultSet countResultSet = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
             DbResultSetRow? countResultSetRow = countResultSet.Rows.FirstOrDefault();
             int numOfRecordsWithGivenPK;

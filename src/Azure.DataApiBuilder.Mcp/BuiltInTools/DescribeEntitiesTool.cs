@@ -89,58 +89,26 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
 
-                // Get current user's role for permission filtering
-                // For discovery tools like describe_entities, we use the first valid role from the header
-                // This differs from operation-specific tools that check permissions per entity per operation
-                string? currentUserRole = null;
+                // Get the caller's roles for authorization filtering.
+                // All roles from the header are collected and an entity is visible if ANY role grants access,
+                // matching the behavior of other MCP tools (McpAuthorizationHelper.TryResolveAuthorizedRole)
+                // and REST/GraphQL endpoints.
+                string[]? currentUserRoles = null;
                 if (httpContext != null && authResolver.IsValidRoleContext(httpContext))
                 {
                     string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
                     if (!string.IsNullOrWhiteSpace(roleHeader))
                     {
-                        string[] roles = roleHeader
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-                        if (roles.Length > 1)
-                        {
-                            logger?.LogWarning("Multiple roles detected in request header: [{Roles}]. Using first role '{FirstRole}' for entity discovery. " +
-                                "Consider using a single role for consistent permission reporting.",
-                                string.Join(", ", roles), roles[0]);
-                        }
-
-                        // For discovery operations, take the first role from comma-separated list
-                        // This provides a consistent view of available entities for the primary role
-                        currentUserRole = roles.FirstOrDefault();
-                    }
-                }
-
-                // Get current user's role for permission filtering
-                // For discovery tools like describe_entities, we use the first valid role from the header
-                // This differs from operation-specific tools that check permissions per entity per operation
-                if (httpContext != null && authResolver.IsValidRoleContext(httpContext))
-                {
-                    string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
-                    if (!string.IsNullOrWhiteSpace(roleHeader))
-                    {
-                        string[] roles = roleHeader
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-                        if (roles.Length > 1)
-                        {
-                            logger?.LogWarning("Multiple roles detected in request header: [{Roles}]. Using first role '{FirstRole}' for entity discovery. " +
-                                "Consider using a single role for consistent permission reporting.",
-                                string.Join(", ", roles), roles[0]);
-                        }
-
-                        // For discovery operations, take the first role from comma-separated list
-                        // This provides a consistent view of available entities for the primary role
-                        currentUserRole = roles.FirstOrDefault();
+                        currentUserRoles = roleHeader
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .ToArray();
                     }
                 }
 
                 (bool nameOnly, HashSet<string>? entityFilter) = ParseArguments(arguments, logger);
 
-                if (currentUserRole == null)
+                if (currentUserRoles == null)
                 {
                     logger?.LogWarning("Current user role could not be determined from HTTP context or role header. " +
                         "Entity permissions will be empty (no permissions shown) rather than using anonymous permissions. " +
@@ -178,11 +146,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             continue;
                         }
 
-                        // Authorization filtering: skip entities the current role has no permission on.
+                        // Authorization filtering: skip entities none of the caller's roles have permission on.
                         // This prevents information disclosure of schema metadata (entity/field/parameter names and descriptions)
                         // for entities the caller is not authorized to access, matching REST/GraphQL/OpenAPI behavior.
-                        // If currentUserRole is null, no entities are visible (empty result).
-                        if (!HasAnyPermissionForEntity(entity, currentUserRole))
+                        // If currentUserRoles is null or empty, no entities are visible (empty result).
+                        if (!HasAnyPermissionForEntity(entity, currentUserRoles))
                         {
                             continue;
                         }
@@ -213,7 +181,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                             Dictionary<string, object?> entityInfo = nameOnly
                                 ? BuildBasicEntityInfo(entityName, entity)
-                                : BuildFullEntityInfo(entityName, entity, currentUserRole, databaseObject);
+                                : BuildFullEntityInfo(entityName, entity, currentUserRoles, databaseObject);
 
                             entityList.Add(entityInfo);
                         }
@@ -411,18 +379,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Determines whether the specified entity is accessible to the given role.
-        /// An entity is accessible if the role has at least one permission defined for it.
+        /// Determines whether the specified entity is accessible to any of the given roles.
+        /// An entity is accessible if at least one role has at least one permission defined for it.
         /// This prevents information disclosure of schema metadata (entity names, fields, parameters, descriptions)
         /// for unauthorized entities, matching REST/GraphQL/OpenAPI authorization behavior.
         /// </summary>
         /// <param name="entity">The entity to check.</param>
-        /// <param name="role">The role to check permissions for. If null, the entity is not accessible.</param>
-        /// <returns><see langword="true"/> if the role has permission on the entity; otherwise, <see langword="false"/>.</returns>
-        private static bool HasAnyPermissionForEntity(Entity entity, string? role)
+        /// <param name="roles">The roles to check permissions for. If null or empty, the entity is not accessible.</param>
+        /// <returns><see langword="true"/> if any role has permission on the entity; otherwise, <see langword="false"/>.</returns>
+        private static bool HasAnyPermissionForEntity(Entity entity, string[]? roles)
         {
-            // No role = no access to any entity (matches DML tool authorization model)
-            if (string.IsNullOrWhiteSpace(role))
+            // No roles = no access to any entity (matches DML tool authorization model)
+            if (roles == null || roles.Length == 0)
             {
                 return false;
             }
@@ -433,10 +401,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 return false;
             }
 
-            // Check if this role has any permissions (actions) defined for the entity
+            // Entity is accessible if ANY of the caller's roles has permissions (actions) defined for it
             foreach (EntityPermission permission in entity.Permissions)
             {
-                if (string.Equals(permission.Role, role, StringComparison.OrdinalIgnoreCase))
+                if (roles.Any(role => string.Equals(permission.Role, role, StringComparison.OrdinalIgnoreCase)))
                 {
                     // Role found - check if it has any actions
                     if (permission.Actions != null && permission.Actions.Any())
@@ -480,7 +448,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <returns>
         /// A dictionary containing the entity's name, description, fields, parameters (if applicable), and permissions.
         /// </returns>
-        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string? currentUserRole, DatabaseObject? databaseObject)
+        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string[]? currentUserRoles, DatabaseObject? databaseObject)
         {
             // Use GraphQL singular name as alias if available, otherwise use entity name
             string displayName = !string.IsNullOrWhiteSpace(entity.GraphQL?.Singular)
@@ -499,7 +467,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 info["parameters"] = BuildParameterMetadataInfo(databaseObject);
             }
 
-            info["permissions"] = BuildPermissionsInfo(entity, currentUserRole);
+            info["permissions"] = BuildPermissionsInfo(entity, currentUserRoles);
 
             return info;
         }
@@ -587,14 +555,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             };
 
         /// <summary>
-        /// Build a list of permission metadata info for the current user's role
+        /// Build a union of permission metadata for all of the current user's roles.
         /// </summary>
         /// <param name="entity">The entity object</param>
-        /// <param name="currentUserRole">The current user's role - if null, returns empty permissions</param>
-        /// <returns>A list of permissions available to the current user's role for this entity</returns>
-        private static string[] BuildPermissionsInfo(Entity entity, string? currentUserRole)
+        /// <param name="currentUserRoles">The current user's roles - if null or empty, returns empty permissions</param>
+        /// <returns>A sorted list of permissions available to any of the current user's roles for this entity</returns>
+        private static string[] BuildPermissionsInfo(Entity entity, string[]? currentUserRoles)
         {
-            if (entity.Permissions == null || string.IsNullOrWhiteSpace(currentUserRole))
+            if (entity.Permissions == null || currentUserRoles == null || currentUserRoles.Length == 0)
             {
                 return Array.Empty<string>();
             }
@@ -606,11 +574,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             HashSet<string> permissions = new(StringComparer.OrdinalIgnoreCase);
 
-            // Only include permissions for the current user's role
+            // Include permissions for any of the current user's roles (union)
             foreach (EntityPermission permission in entity.Permissions)
             {
-                // Check if this permission applies to the current user's role
-                if (!string.Equals(permission.Role, currentUserRole, StringComparison.OrdinalIgnoreCase))
+                // Check if this permission applies to any of the current user's roles
+                if (!currentUserRoles.Any(role => string.Equals(permission.Role, role, StringComparison.OrdinalIgnoreCase)))
                 {
                     continue;
                 }

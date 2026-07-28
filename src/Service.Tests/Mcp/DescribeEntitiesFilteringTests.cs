@@ -243,12 +243,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Verifies that describe_entities filters entities
-        /// by role authorization. A role with no permissions on any entity receives an empty result.
+        /// Verifies that describe_entities returns a NoEntitiesConfigured error
+        /// when the caller's role has no permissions on any entity.
         /// This prevents information disclosure of schema metadata for unauthorized entities.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_RoleWithNoPermissions_ReturnsEmptyList()
+        public async Task DescribeEntities_RoleWithNoPermissions_ReturnsNoEntitiesError()
         {
             // Arrange - Create config with entities that only the "admin" role can access
             RuntimeConfig config = CreateConfigWithRestrictedRoleAccess();
@@ -285,12 +285,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Verifies that a null/empty role (unauthenticated caller)
-        /// receives no entities, even if some entities have "anonymous" permissions.
-        /// describe_entities requires a valid role to be included in the response.
+        /// Verifies that describe_entities returns a NoEntitiesConfigured error
+        /// when no role header is provided (unauthenticated caller),
+        /// even if some entities have "anonymous" permissions.
+        /// describe_entities requires a valid role context to return results.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_NoRole_ReturnsEmptyList()
+        public async Task DescribeEntities_NoRole_ReturnsNoEntitiesError()
         {
             // Arrange - Config with entities
             RuntimeConfig config = CreateConfigWithMixedEntityTypes();
@@ -302,6 +303,30 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert - No role should result in empty entity list
             AssertErrorResult(result, "NoEntitiesConfigured");
+        }
+
+        /// <summary>
+        /// Verifies that when multiple roles are provided in the X-MS-API-ROLE header,
+        /// describe_entities returns the union of entities accessible to any of the roles.
+        /// A caller with "reader,admin" should see entities from both roles combined.
+        /// This matches the authorization behavior of other MCP tools (McpAuthorizationHelper.TryResolveAuthorizedRole).
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_MultiRole_ReturnsUnionOfAuthorizedEntities()
+        {
+            // Arrange - Config where:
+            //   - "Book" entity: reader role has READ permission
+            //   - "GetBook" entity: admin role has EXECUTE permission (reader has none)
+            // Caller sends both roles → should see both entities
+            RuntimeConfig config = CreateConfigWithMixedRoleAccess();
+            IServiceProvider serviceProvider = CreateServiceProvider(config, role: "reader,admin");
+            DescribeEntitiesTool tool = new();
+
+            // Act
+            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
+
+            // Assert - Union of reader + admin → both Book and GetBook visible
+            AssertSuccessResultWithEntityNames(result, new[] { "Book", "GetBook" }, Array.Empty<string>());
         }
 
         #region Helper Methods

@@ -735,6 +735,13 @@ type Moon {
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
+        [TestInitialize]
+        public void SetupAuthProviderEnvironmentVariables()
+        {
+            TestHelper.SetAppServiceEnvironmentVariable();
+            TestHelper.SetStaticWebAppsEnvironmentVariable();
+        }
+
         /// <summary>
         /// When updating config during runtime is possible, then For invalid config the Application continues to
         /// accept request with status code of 503.
@@ -3934,23 +3941,24 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         /// <param name="hostMode">HostMode in Runtime config - Development or Production.</param>
         /// <param name="authType">EasyAuth auth type - AppService or StaticWebApps.</param>
-        /// <param name="setEnvVars">Whether to set the AppService host environment variables.</param>
+        /// <param name="setAppServiceEnvVars">Whether to set the AppService host environment variables.</param>
+        /// <param name="setStaticWebAppsEnvVar">Whether to set the Static Web Apps host environment variable.</param>
         /// <param name="expectError">Whether an error is expected.</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(HostMode.Development, EasyAuthType.AppService, false, false, DisplayName = "AppService Dev - No EnvVars - No Error")]
-        [DataRow(HostMode.Development, EasyAuthType.AppService, true, false, DisplayName = "AppService Dev - EnvVars - No Error")]
-        [DataRow(HostMode.Production, EasyAuthType.AppService, false, false, DisplayName = "AppService Prod - No EnvVars - Error")]
-        [DataRow(HostMode.Production, EasyAuthType.AppService, true, false, DisplayName = "AppService Prod - EnvVars - Error")]
-        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Dev - No EnvVars - No Error")]
-        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Dev - EnvVars - No Error")]
-        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Prod - No EnvVars - No Error")]
-        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Prod - EnvVars - No Error")]
-        public void TestProductionModeAppServiceEnvironmentCheck(HostMode hostMode, EasyAuthType authType, bool setEnvVars, bool expectError)
+        [DataRow(HostMode.Development, EasyAuthType.AppService, false, false, false, DisplayName = "AppService Dev - No EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.AppService, true, false, false, DisplayName = "AppService Dev - EnvVars - No Error")]
+        [DataRow(HostMode.Production, EasyAuthType.AppService, false, false, true, DisplayName = "AppService Prod - No EnvVars - Error")]
+        [DataRow(HostMode.Production, EasyAuthType.AppService, true, false, false, DisplayName = "AppService Prod - EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, false, false, false, DisplayName = "SWA Dev - No EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, false, true, false, DisplayName = "SWA Dev - EnvVars - No Error")]
+        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, false, false, true, DisplayName = "SWA Prod - No EnvVars - Error")]
+        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, false, true, false, DisplayName = "SWA Prod - EnvVars - No Error")]
+        public void TestProductionModeAppServiceEnvironmentCheck(HostMode hostMode, EasyAuthType authType, bool setAppServiceEnvVars, bool setStaticWebAppsEnvVar, bool expectError)
         {
             // Clears or sets App Service Environment Variables based on test input.
-            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, setEnvVars ? "true" : null);
-            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR, setEnvVars ? "AzureActiveDirectory" : null);
+            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, setAppServiceEnvVars ? "true" : null);
+            Environment.SetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR, setStaticWebAppsEnvVar ? "test-site-name" : null);
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
 
             FileSystem fileSystem = new();
@@ -3987,7 +3995,16 @@ type Planet @model(name:""PlanetAlias"") {
             catch (DataApiBuilderException ex)
             {
                 Assert.IsTrue(expectError, message: ex.Message);
-                Assert.AreEqual(AppServiceAuthenticationInfo.APPSERVICE_PROD_MISSING_ENV_CONFIG, ex.Message);
+                Assert.AreEqual(
+                    expected: authType == EasyAuthType.AppService
+                        ? AppServiceAuthenticationInfo.APPSERVICE_PROD_MISSING_ENV_CONFIG
+                        : StaticWebAppsAuthentication.SWA_PROD_MISSING_ENV_CONFIG,
+                    actual: ex.Message);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, null);
+                Environment.SetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR, null);
             }
         }
 

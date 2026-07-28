@@ -151,8 +151,10 @@ jobs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
-
-# MsSql Integration Testing is split into two parallel jobs (~20 min each):
+  # Publish this job's raw cobertura as a named pipeline artifact for aggregation.
+  - template: templates/publish-coverage-artifact.yml
+    parameters:
+      artifactName: 'coverage-mssql'
 #
 # 1) windows_combined -> GraphQL, HotReload, REST, Unit, OpenApi, Auth,
 #    Telemetry, and Caching tests.

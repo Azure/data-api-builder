@@ -1847,8 +1847,8 @@ type Moon {
             List<string> exceptionMessagesList = configValidator.ConfigValidationExceptions.Select(x => x.Message).ToList();
             Assert.IsTrue(exceptionMessagesList.Contains("The entity Book does not have a valid source object."));
             Assert.IsTrue(exceptionMessagesList.Contains("The entity Publisher does not have a valid source object."));
-            Assert.IsTrue(exceptionMessagesList.Contains("Table Definition for Book has not been inferred."));
-            Assert.IsTrue(exceptionMessagesList.Contains("Table Definition for Publisher has not been inferred."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Database object for entity 'Book' has not been inferred."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Database object for entity 'Publisher' has not been inferred."));
             Assert.IsTrue(exceptionMessagesList.Contains("Could not infer database object for source entity: Publisher in relationship: books. Check if the entity: Publisher is correctly defined in the config."));
             Assert.IsTrue(exceptionMessagesList.Contains("Could not infer database object for target entity: Book in relationship: books. Check if the entity: Book is correctly defined in the config."));
         }

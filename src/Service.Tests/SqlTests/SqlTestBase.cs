@@ -423,9 +423,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Does the setup required to perform a test of the REST Api for both
-        /// MsSql and Postgress. Shared setup logic eliminates some code duplication
-        /// between MsSql and Postgress.
+        /// Does the setup required to perform a test of the REST API for both
+        /// MsSql and Postgres. Shared setup logic eliminates some code duplication
+        /// between MsSql and Postgres.
         /// </summary>
         /// <param name="primaryKeyRoute">string represents the primary key route</param>
         /// <param name="queryString">string represents the query string provided in URL</param>

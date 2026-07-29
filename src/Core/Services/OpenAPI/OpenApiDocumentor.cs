@@ -680,7 +680,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// This method adds the input parameters from the stored procedure definition to the OpenApi operation parameters.
-        /// A input parameter will be marked REQUIRED if default value is not available.
+        /// A input parameter will be marked REQUIRED when it is explicitly flagged in config or when no default value is available.
         /// </summary>
         private static void AddStoredProcedureInputParameters(OpenApiOperation operation, StoredProcedureDefinition spDefinition)
         {
@@ -690,7 +690,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     GetOpenApiQueryParameter(
                         name: paramKey,
                         description: "Input parameter for stored procedure arguments",
-                        required: false,
+                        required: parameterDefinition.Required ?? !parameterDefinition.HasConfigDefault,
                         type: TypeHelper.GetJsonDataTypeFromSystemType(parameterDefinition.SystemType).ToString().ToLower()
                     )
                 );

@@ -103,11 +103,32 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 Relationships: null,
                 Description: "Stored procedure with an explicit required override");
 
+            // Entity whose only parameter is explicitly marked required: false in config.
+            // Because no parameter is required, requestBody.Required and the GET query parameter's
+            // required flag must both be false, and the schema-level required set must be empty.
+            Entity entity4 = new(
+                Source: new(
+                    Object: "get_publisher_by_id",
+                    EntitySourceType.StoredProcedure,
+                    Parameters: new List<ParameterMetadata>
+                    {
+                        new() { Name = "id", Required = false }
+                    },
+                    KeyFields: null),
+                Fields: null,
+                GraphQL: new(Singular: null, Plural: null, Enabled: false),
+                Rest: new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Permissions: OpenApiTestBootstrap.CreateBasicPermissions(),
+                Mappings: null,
+                Relationships: null,
+                Description: "Stored procedure with all parameters marked required: false");
+
             Dictionary<string, Entity> entities = new()
             {
                 { "sp1", entity1 },
                 { "sp2", entity2 },
-                { "sp3", entity3 }
+                { "sp3", entity3 },
+                { "sp4", entity4 }
             };
 
             _runtimeEntities = new(entities);
@@ -119,16 +140,20 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         /// Also validates that the request body schema component flags the expected parameters
         /// as required: a parameter is required when it has no default value and is not explicitly
         /// marked required: false in the runtime config.
+        /// Also validates the body-level required flag on the OpenApiRequestBody object, which
+        /// should be true when any parameter is required and false when all parameters are optional.
         /// </summary>
         /// <param name="entityName">Entity name</param>
         /// <param name="expectedParameters">Expected parameters in request body</param>
         /// <param name="expectedParametersJsonTypes">Expected parameter value types in request body.</param>
         /// <param name="expectedRequiredParameters">Expected parameters flagged as required in the schema component.</param>
-        [DataRow("sp1", new string[] { "title", "publisher_name" }, new string[] { "string", "string" }, new string[] { "title", "publisher_name" }, DisplayName = "Parameters without defaults are all required.")]
-        [DataRow("sp2", new string[] { "title", "publisher_id" }, new string[] { "string", "integer" }, new string[] { "publisher_id" }, DisplayName = "Parameter with a config default is not required.")]
-        [DataRow("sp3", new string[] { "id", "title" }, new string[] { "integer", "string" }, new string[] { "id" }, DisplayName = "Parameter explicitly marked required: false is not required.")]
+        /// <param name="expectedRequestBodyRequired">Expected value of the body-level required flag.</param>
+        [DataRow("sp1", new string[] { "title", "publisher_name" }, new string[] { "string", "string" }, new string[] { "title", "publisher_name" }, true, DisplayName = "Parameters without defaults are all required.")]
+        [DataRow("sp2", new string[] { "title", "publisher_id" }, new string[] { "string", "integer" }, new string[] { "publisher_id" }, true, DisplayName = "Parameter with a config default is not required.")]
+        [DataRow("sp3", new string[] { "id", "title" }, new string[] { "integer", "string" }, new string[] { "id" }, true, DisplayName = "Parameter explicitly marked required: false is not required.")]
+        [DataRow("sp4", new string[] { "id" }, new string[] { "integer" }, new string[] { }, false, DisplayName = "All parameters marked required: false produces empty required set and optional request body.")]
         [DataTestMethod]
-        public void ValidateRequestBodyContents(string entityName, string[] expectedParameters, string[] expectedParametersJsonTypes, string[] expectedRequiredParameters)
+        public void ValidateRequestBodyContents(string entityName, string[] expectedParameters, string[] expectedParametersJsonTypes, string[] expectedRequiredParameters, bool expectedRequestBodyRequired)
         {
             Dictionary<OperationType, bool> configuredOperations = ResolveConfiguredOperations(_runtimeEntities[entityName]);
             foreach (OperationType opType in configuredOperations.Keys)
@@ -147,6 +172,9 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 OpenApiRequestBody requestBody = GetOperationRequestBody(entityName, opType);
                 OpenApiReference schemaComponentReference = GetRequestBodyReference(requestBody);
                 string expectedSchemaReferenceId = $"{entityName}{OpenApiDocumentor.SP_REQUEST_SUFFIX}";
+
+                // Validate the body-level required flag.
+                Assert.AreEqual(expectedRequestBodyRequired, requestBody.Required, message: "Unexpected request body required value.");
 
                 ValidateOpenApiReferenceContents(schemaComponentReference, expectedSchemaReferenceId, expectedParameters, expectedParametersJsonTypes);
 
@@ -202,6 +230,37 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             // Assert: There is a tag for the entity and it includes the description
             Assert.IsTrue(tags.Any(t => t.Name == entityName && t.Description == expectedDescription),
                 $"Expected tag for '{entityName}' with description '{expectedDescription}' not found.");
+        }
+
+        /// <summary>
+        /// Validates that the generated GET operation query parameters for stored procedure entities
+        /// have the correct required flag: a parameter without a config default and not explicitly
+        /// marked required: false is required; a parameter explicitly marked required: false is not.
+        /// </summary>
+        /// <param name="entityName">Entity name.</param>
+        /// <param name="expectedParameters">Expected query parameter names.</param>
+        /// <param name="expectedRequired">Whether each corresponding query parameter is expected to be required.</param>
+        [DataRow("sp1", new string[] { "title", "publisher_name" }, new bool[] { true, true }, DisplayName = "GET parameters without defaults are required.")]
+        [DataRow("sp4", new string[] { "id" }, new bool[] { false }, DisplayName = "GET parameter explicitly marked required: false is not required.")]
+        [DataTestMethod]
+        public void ValidateGetQueryParameters(string entityName, string[] expectedParameters, bool[] expectedRequired)
+        {
+            OpenApiOperation getOperation = _openApiDocument.Paths["/" + entityName].Operations[OperationType.Get];
+            Assert.IsNotNull(getOperation, "GET operation not found.");
+
+            // Filter to query parameters only (excludes the Authorization and X-MS-API-ROLE header parameters).
+            List<OpenApiParameter> spParams = getOperation.Parameters
+                .Where(p => p.In == ParameterLocation.Query)
+                .ToList();
+
+            Assert.AreEqual(expectedParameters.Length, spParams.Count, "Unexpected number of GET query parameters.");
+
+            for (int i = 0; i < expectedParameters.Length; i++)
+            {
+                OpenApiParameter param = spParams.FirstOrDefault(p => p.Name == expectedParameters[i]);
+                Assert.IsNotNull(param, $"Parameter '{expectedParameters[i]}' not found in GET query parameters.");
+                Assert.AreEqual(expectedRequired[i], param.Required, $"Unexpected required value for GET query parameter '{expectedParameters[i]}'.");
+            }
         }
 
         /// <summary>

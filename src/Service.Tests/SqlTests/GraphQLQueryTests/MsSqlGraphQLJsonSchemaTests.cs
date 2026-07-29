@@ -56,5 +56,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             Assert.AreEqual("SCALAR", metadataType.GetProperty("kind").GetString(), "A json column must map to a scalar, not a custom object/scalar type.");
             Assert.AreEqual("String", metadataType.GetProperty("name").GetString(), "A json column must use the built-in String scalar (no bespoke JSON scalar).");
         }
+
+        /// <summary>
+        /// profile_by_pk(id: 1) { metadata } - Verify that reading the json-backed field through GraphQL
+        /// succeeds and returns the payload as a JSON string. The String leaf resolver calls
+        /// JsonElement.GetString(), which only works because the engine casts the json column to
+        /// NVARCHAR(MAX) so it is emitted as an escaped string rather than an inlined JSON object.
+        /// This guards against the introspection test passing while a real read throws a GraphQLMapping error.
+        /// </summary>
+        [TestMethod]
+        public async Task JsonColumn_GraphQLRead_ReturnsPayloadAsString()
+        {
+            string query = @"{
+                profile_by_pk(id: 1) {
+                    metadata
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(query, "profile_by_pk", isAuthenticated: false);
+
+            JsonElement metadata = result.GetProperty("metadata");
+            Assert.AreEqual(JsonValueKind.String, metadata.ValueKind, "A json column must be returned as a JSON string through GraphQL (treated as a normal string).");
+
+            JsonElement parsed = JsonDocument.Parse(metadata.GetString()!).RootElement;
+            Assert.AreEqual("admin", parsed.GetProperty("role").GetString());
+            Assert.AreEqual(3, parsed.GetProperty("tier").GetInt32());
+        }
     }
 }

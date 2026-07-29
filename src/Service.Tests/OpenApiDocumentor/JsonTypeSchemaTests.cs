@@ -11,9 +11,10 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
 {
     /// <summary>
     /// Validates how a SQL Server 2025 native <c>json</c> column is surfaced in the generated
-    /// OpenAPI document. DAB does nothing special for a JSON column - it is treated as a normal
-    /// <c>string</c>, so it must be described with <c>type: string</c> and no custom <c>format</c>.
-    /// This is the schema-discovery counterpart to the REST round-trip coverage in
+    /// OpenAPI document. DAB treats a json column as a normal <c>string</c> for input and output,
+    /// so it must be described with <c>type: string</c> and no custom <c>format</c> in the response
+    /// schema as well as the POST / PUT / PATCH request-body schemas. This is the schema-discovery
+    /// counterpart to the REST round-trip coverage in
     /// <see cref="SqlTests.RestApiTests.MsSqlRestJsonTypesTests"/>.
     /// NOTE: The native JSON data type requires SQL Server 2025 / Azure SQL.
     /// </summary>
@@ -25,24 +26,36 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         private const string DB_ENV = TestCategory.MSSQL;
 
         /// <summary>
-        /// The <c>profiles.metadata</c> (json) column must appear in the OpenAPI schema as a plain
-        /// string with no format - proving JSON is not given a bespoke scalar/format and is treated
-        /// exactly like any other string column. (DAB''s OpenAPI documentor does not express column
-        /// nullability on the property schema for any type, so that is not asserted here.)
+        /// The <c>profiles.metadata</c> (json) column must be described as a plain string with no format
+        /// in the response schema and in both request-body schemas (POST => <c>Profile_NoAutoPK</c>,
+        /// PUT/PATCH => <c>Profile_NoPK</c>) - proving json is treated like a normal string for both input
+        /// and output, with no bespoke scalar/format. (DAB does not express column nullability on the
+        /// property schema for any type, so that is not asserted here.)
         /// </summary>
         [TestMethod]
-        public async Task JsonColumn_IsDescribedAsStringWithoutFormat()
+        public async Task JsonColumn_IsDescribedAsStringWithoutFormat_InResponseAndRequestBodies()
         {
             OpenApiDocument doc = await GenerateProfileDocumentAsync();
 
-            Assert.IsTrue(doc.Components.Schemas.ContainsKey("Profile"), "Schema should exist for the Profile entity.");
+            // Response body schema, plus the POST and PUT/PATCH request-body schemas.
+            AssertMetadataIsPlainString(doc, "Profile");
+            AssertMetadataIsPlainString(doc, "Profile_NoAutoPK");
+            AssertMetadataIsPlainString(doc, "Profile_NoPK");
+        }
 
-            OpenApiSchema profileSchema = doc.Components.Schemas["Profile"];
-            Assert.IsTrue(profileSchema.Properties.ContainsKey("metadata"), "The json ''metadata'' column should be present in the schema.");
+        /// <summary>
+        /// Asserts the named component schema exposes <c>metadata</c> as a plain string with no format.
+        /// </summary>
+        private static void AssertMetadataIsPlainString(OpenApiDocument doc, string schemaName)
+        {
+            Assert.IsTrue(doc.Components.Schemas.ContainsKey(schemaName), $"Schema {schemaName} should exist.");
 
-            OpenApiSchema metadataSchema = profileSchema.Properties["metadata"];
-            Assert.AreEqual("string", metadataSchema.Type, "A json column must be described as a plain string (treated like any string column).");
-            Assert.IsTrue(string.IsNullOrEmpty(metadataSchema.Format), "A json column must not carry a bespoke OpenAPI format.");
+            OpenApiSchema schema = doc.Components.Schemas[schemaName];
+            Assert.IsTrue(schema.Properties.ContainsKey("metadata"), $"The json metadata column should be present in {schemaName}.");
+
+            OpenApiSchema metadataSchema = schema.Properties["metadata"];
+            Assert.AreEqual("string", metadataSchema.Type, $"A json column must be described as a plain string in {schemaName}.");
+            Assert.IsTrue(string.IsNullOrEmpty(metadataSchema.Format), $"A json column must not carry a bespoke OpenAPI format in {schemaName}.");
         }
 
         /// <summary>

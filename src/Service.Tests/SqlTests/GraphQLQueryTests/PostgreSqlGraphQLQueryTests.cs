@@ -438,21 +438,21 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForAggregationsWithAliases()
         {
-            string msSqlQuery = @"
-                SELECT 
-                    MAX(categoryid) AS max, 
-                    MAX(price) AS max_price,
-                    MIN(price) AS min_price,
-                    AVG(price) AS avg_price,
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        MAX(categoryid) AS max,
+                        MAX(price) AS max_price,
+                        MIN(price) AS min_price,
+                        AVG(price) AS avg_price,
+                        SUM(price) AS sum_price
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForAggregationsWithAliases(msSqlQuery);
+            await TestSupportForAggregationsWithAliases(postgresQuery);
         }
 
         /// <summary>
@@ -460,23 +460,23 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByAggregationsWithAliases()
         {
-            string msSqlQuery = @"
-                SELECT
-                    MAX(categoryid) AS max,
-                    MAX(price) AS max_price,
-                    MIN(price) AS min_price,
-                    AVG(price) AS avg_price,
-                    SUM(price) AS sum_price,
-                    COUNT(categoryid) AS count
-                FROM stocks_price
-                GROUP BY categoryid
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        MAX(categoryid) AS max,
+                        MAX(price) AS max_price,
+                        MIN(price) AS min_price,
+                        AVG(price) AS avg_price,
+                        SUM(price) AS sum_price,
+                        COUNT(categoryid) AS count
+                    FROM stocks_price
+                    GROUP BY categoryid
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForGroupByAggregationsWithAliases(msSqlQuery);
+            await TestSupportForGroupByAggregationsWithAliases(postgresQuery);
         }
 
         /// <summary>
@@ -484,17 +484,17 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForMinAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    MIN(price) AS min_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        MIN(price) AS min_price
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForMinAggregation(msSqlQuery);
+            await TestSupportForMinAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -502,17 +502,17 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForMaxAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    MAX(price) AS max_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        MAX(price) AS max_price
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForMaxAggregation(msSqlQuery);
+            await TestSupportForMaxAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -520,17 +520,17 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForAvgAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    AVG(price) AS avg_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        AVG(price) AS avg_price
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForAvgAggregation(msSqlQuery);
+            await TestSupportForAvgAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -538,17 +538,17 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForSumAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        SUM(price) AS sum_price
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForSumAggregation(msSqlQuery);
+            await TestSupportForSumAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -556,17 +556,17 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForCountAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    COUNT(categoryid) AS count_categoryid
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        COUNT(categoryid) AS count_categoryid
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForCountAggregation(msSqlQuery);
+            await TestSupportForCountAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -574,18 +574,18 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForHavingAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                HAVING SUM(price) > 50
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        MAX(id) AS max
+                    FROM publishers
+                    HAVING MAX(id) > 2346
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForHavingAggregation(msSqlQuery);
+            await TestSupportForHavingAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -593,19 +593,19 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByHavingAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                GROUP BY categoryid, pieceid
-                HAVING SUM(price) > 50
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        SUM(price) AS sum_price
+                    FROM stocks_price
+                    GROUP BY categoryid, pieceid
+                    HAVING SUM(price) > 50
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForGroupByHavingAggregation(msSqlQuery);
+            await TestSupportForGroupByHavingAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -613,22 +613,22 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByHavingFieldsAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    categoryid,
-                    pieceid,
-                    SUM(price) AS sum_price,
-                    COUNT(pieceid) AS count_piece
-                FROM stocks_price
-                GROUP BY categoryid, pieceid
-                HAVING SUM(price) > 50 AND COUNT(pieceid) <= 100
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        categoryid,
+                        pieceid,
+                        SUM(price) AS sum_price,
+                        COUNT(pieceid) AS count_piece
+                    FROM stocks_price
+                    GROUP BY categoryid, pieceid
+                    HAVING SUM(price) > 50 AND COUNT(pieceid) <= 100
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForGroupByHavingFieldsAggregation(msSqlQuery);
+            await TestSupportForGroupByHavingFieldsAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -636,23 +636,22 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByNoAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    categoryid,
-                    pieceid
-                FROM stocks_price
-                GROUP BY categoryid, pieceid
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        categoryid,
+                        pieceid
+                    FROM stocks_price
+                    GROUP BY categoryid, pieceid
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForGroupByNoAggregation(msSqlQuery);
+            await TestSupportForGroupByNoAggregation(postgresQuery);
         }
 
         [TestMethod]
-        [Ignore]
         public override async Task TestNoAggregationOptionsForTableWithoutNumericFields()
         {
             await base.TestNoAggregationOptionsForTableWithoutNumericFields();

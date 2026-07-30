@@ -31,6 +31,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Environment.SetEnvironmentVariable(APP_NAME_VAR, null);
         }
 
+        /// <summary>Restore environment variables after each environment-sensitive test.</summary>
         [TestCleanup]
         public void ResetEnvironment()
         {
@@ -56,6 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(14, entity.Length, "entity width");
         }
 
+        /// <summary>Verifies that each database type is encoded with its expected Source character.</summary>
         [DataTestMethod]
         [DataRow(DatabaseType.MSSQL, 'S')]
         [DataRow(DatabaseType.DWSQL, 'D')]
@@ -73,6 +75,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual('X', context[3], "Role is a placeholder");
         }
 
+        /// <summary>Verifies that encoding without a live data source emits context placeholders.</summary>
         [TestMethod]
         public void EncodeTelemetryString_NoLiveSource_EmitsAllPlaceholders()
         {
@@ -81,6 +84,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual("XXXX", context);
         }
 
+        /// <summary>Verifies that flags owned by a missing runtime section are encoded as missing.</summary>
         [TestMethod]
         public void EncodeTelemetryString_RuntimeFlags_MissingSectionsEncodeAsM()
         {
@@ -95,6 +99,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual('M', runtime[17], "auth.provider missing");
         }
 
+        /// <summary>Verifies that configured runtime features produce the expected positional flags.</summary>
         [TestMethod]
         public void EncodeTelemetryString_RuntimeFlags_ReflectConfiguredValues()
         {
@@ -138,6 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual('0', r[19], "embedding.endpoint.enabled=false");
         }
 
+        /// <summary>Verifies the development and production host-mode encodings.</summary>
         [TestMethod]
         public void EncodeTelemetryString_HostMode_EncodesDevAndProd()
         {
@@ -148,6 +154,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual('1', Sections(ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(runtime: prod), Source(DatabaseType.MSSQL))).runtime[3]);
         }
 
+        /// <summary>Verifies that enabled on-behalf-of authentication is encoded in the runtime section.</summary>
         [TestMethod]
         public void EncodeTelemetryString_Obo_EncodesPresence()
         {
@@ -161,6 +168,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual('1', runtime[9], "data-source.obo=true");
         }
 
+        /// <summary>Verifies the single-character encoding for each authentication provider.</summary>
         [DataTestMethod]
         [DataRow("Unauthenticated", 'U')]
         [DataRow("Simulator", 'S')]
@@ -179,6 +187,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expected, r[17], $"auth.provider letter for '{provider}'");
         }
 
+        /// <summary>Verifies that an absent authentication configuration is encoded as missing.</summary>
         [TestMethod]
         public void EncodeTelemetryString_AuthProvider_MissingWhenNoAuthentication()
         {
@@ -187,6 +196,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual('M', r[17], "auth.provider is M when no authentication is configured");
         }
 
+        /// <summary>Verifies the missing and unsupported entity flags when no entities are configured.</summary>
         [TestMethod]
         public void EncodeTelemetryString_EntityFlags_MissingWhenNoEntities()
         {
@@ -199,6 +209,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual('?', entity[13], "parameter embed (not modeled)");
         }
 
+        /// <summary>Verifies that configured entity features produce the expected positional flags.</summary>
         [TestMethod]
         public void EncodeTelemetryString_EntityFlags_ReflectEntities()
         {
@@ -243,6 +254,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual('1', e[4], "any cache");
         }
 
+        /// <summary>Verifies that MCP DML and custom tool usage is represented in entity flags.</summary>
         [TestMethod]
         public void EncodeTelemetryString_EntityFlags_ReflectMcpToolUsage()
         {
@@ -263,6 +275,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         // ----- Opt-out + DAB_APP_NAME_ENV -----------------------------------------------------
 
+        /// <summary>Verifies that opted-in Application Names include a telemetry payload.</summary>
         [TestMethod]
         public void BuildApplicationNameSegment_OptedIn_ContainsPayload()
         {
@@ -271,6 +284,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(segment.EndsWith("+", StringComparison.Ordinal), segment);
         }
 
+        /// <summary>Verifies that opt-out emits only the OSS marker and product version.</summary>
         [TestMethod]
         public void BuildApplicationNameSegment_OptedOut_OmitsPayload()
         {
@@ -279,6 +293,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(ProductInfo.DAB_USER_AGENT, segment);
         }
 
+        /// <summary>Verifies that unsupported opt-out values do not suppress telemetry.</summary>
         [DataTestMethod]
         [DataRow("0")]
         [DataRow("")]
@@ -291,6 +306,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(segment.EndsWith("+", StringComparison.Ordinal), $"telemetry should remain on for '{optOutValue}': {segment}");
         }
 
+        /// <summary>Verifies that hosted telemetry uses the hosted marker and includes its payload.</summary>
         [TestMethod]
         public void BuildApplicationNameSegment_AppNameEnv_UsesHostedMarkerWithTelemetry()
         {
@@ -301,6 +317,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(segment.EndsWith("+", StringComparison.Ordinal), segment);
         }
 
+        /// <summary>Verifies that hosted opt-out emits only the hosted marker and product version.</summary>
         [TestMethod]
         public void BuildApplicationNameSegment_AppNameEnvWithOptOut_HostedMarkerWithoutPayload()
         {
@@ -312,6 +329,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         // ----- Decode -------------------------------------------------------------------------
 
+        /// <summary>Verifies that an encoded token decodes into its version and feature descriptions.</summary>
         [TestMethod]
         public void Decode_RoundTrips_ProducesReadableLines()
         {
@@ -324,6 +342,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(lines.Any(l => l.Contains("entities.any.table")), "decoded entity setting");
         }
 
+        /// <summary>Verifies that hosted tokens decode without requiring the hosted environment variable.</summary>
         [TestMethod]
         public void Decode_HostedMarker_IsRecognizedWithoutHostedEnvironment()
         {
@@ -338,6 +357,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 string.Join(Environment.NewLine, lines));
         }
 
+        /// <summary>Verifies that future general settings do not shift runtime or entity decoding.</summary>
         [TestMethod]
         public void Decode_FutureGeneralSettings_DoNotShiftKnownSections()
         {
@@ -350,6 +370,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(lines.Any(l => l.Contains("Entity > entities.any.table: M", StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
         }
 
+        /// <summary>Verifies the human-readable PostgreSQL and CosmosDB Source labels.</summary>
         [DataTestMethod]
         [DataRow(DatabaseType.PostgreSQL, "Source: P (PostgreSQL)")]
         [DataRow(DatabaseType.CosmosDB_NoSQL, "Source: C (CosmosDB)")]
@@ -361,6 +382,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(lines.Any(l => l.Contains(expectedSource, StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
         }
 
+        /// <summary>Verifies decoding when user and OBO prefixes precede the telemetry token.</summary>
         [TestMethod]
         public void Decode_IgnoresUserPrefixAndOboHash()
         {
@@ -371,6 +393,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(lines.Any(l => l.StartsWith("Version: " + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal)), string.Join('\n', lines));
         }
 
+        /// <summary>Verifies that an unrelated dab_ prefix does not hide a supported telemetry marker.</summary>
         [TestMethod]
         public void Decode_IgnoresUnrelatedDabPrefixBeforeTelemetry()
         {
@@ -380,6 +403,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(lines.Any(l => l.StartsWith("Version: " + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal)), string.Join('\n', lines));
         }
 
+        /// <summary>Verifies that a truncated payload is decoded partially without throwing.</summary>
         [TestMethod]
         public void Decode_TruncatedPayload_DoesNotThrowAndDecodesPartial()
         {
@@ -392,6 +416,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(lines.Any(l => l.StartsWith("Version:", StringComparison.Ordinal)));
         }
 
+        /// <summary>Verifies the friendly response when no supported telemetry marker is present.</summary>
         [TestMethod]
         public void Decode_NoMarker_ReturnsFriendlyMessage()
         {
@@ -400,6 +425,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             StringAssert.Contains(lines[0], "No DAB telemetry found");
         }
 
+        /// <summary>Verifies that a marker-and-version-only value is reported as having no payload.</summary>
         [TestMethod]
         public void Decode_VersionOnly_ReportsNoPayload()
         {
@@ -408,6 +434,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(lines.Any(l => l.Contains("none")), "should report no payload");
         }
 
+        /// <summary>Verifies friendly responses for null and whitespace Application Names.</summary>
         [TestMethod]
         public void Decode_NullOrEmpty_ReturnsFriendlyMessage()
         {

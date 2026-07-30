@@ -752,36 +752,6 @@ public class RuntimeConfigLoaderTests
     }
 
     /// <summary>
-    /// Extracts the populated telemetry sections (context, runtime, entity) from the DAB usage-telemetry
-    /// payload embedded in a connection string's "Application Name" property.
-    /// Payload shape: &lt;marker&gt;&lt;version&gt;+&lt;context&gt;||&lt;runtime&gt;|&lt;entity&gt;+
-    /// </summary>
-    private static (string Context, string Runtime, string Entity) GetTelemetrySections(string connectionString)
-    {
-        // Use the engine-agnostic base builder so this works for both SQL Server and PostgreSQL connection strings.
-        DbConnectionStringBuilder builder = new() { ConnectionString = connectionString };
-        Assert.IsTrue(
-            builder.TryGetValue("Application Name", out object applicationNameValue),
-            $"Connection string '{connectionString}' should contain an Application Name.");
-        string applicationName = (string)applicationNameValue;
-
-        Assert.IsTrue(
-            applicationName.Contains(ProductInfo.DAB_MARKER_PREFIX) && applicationName.EndsWith("+", StringComparison.Ordinal),
-            $"Application Name '{applicationName}' should carry a DAB telemetry payload ending with '+'.");
-
-        // Drop the trailing delimiter, then take the region after the last '+' (the version itself can
-        // contain '+' build metadata, so anchoring on the last '+' before the sections is robust).
-        string sectionsRegion = applicationName.TrimEnd('+');
-        sectionsRegion = sectionsRegion.Substring(sectionsRegion.LastIndexOf('+') + 1);
-
-        string[] sections = sectionsRegion.Split('|');
-        Assert.AreEqual(4, sections.Length, $"Telemetry payload in '{applicationName}' should have 4 positional sections, but was '{sectionsRegion}'.");
-        Assert.AreEqual(string.Empty, sections[1], "The reserved general-settings section should be empty.");
-
-        return (sections[0], sections[2], sections[3]);
-    }
-
-    /// <summary>
     /// Tests that EnableAggregation returns true by default when runtime.graphql section is absent.
     /// This is a regression test for the bug where EnableAggregation returned false (disabled)
     /// when Runtime.GraphQL was null, even though the default value for EnableAggregation is true.
@@ -908,6 +878,9 @@ public class RuntimeConfigLoaderTests
         }
     }
 
+    /// <summary>
+    /// Verifies that existing OSS telemetry prevents a hosted marker from being appended on re-embedding.
+    /// </summary>
     [DataTestMethod]
     [DataRow(DatabaseType.MSSQL)]
     [DataRow(DatabaseType.PostgreSQL)]
@@ -977,6 +950,36 @@ public class RuntimeConfigLoaderTests
         Assert.IsTrue(
             logger.Messages.Any(m => m.Contains("DAB telemetry Application Name computed")),
             "FlushLogBuffer should emit the buffered telemetry Debug log to the configured logger.");
+    }
+
+    /// <summary>
+    /// Extracts the populated telemetry sections (context, runtime, entity) from the DAB usage-telemetry
+    /// payload embedded in a connection string's "Application Name" property.
+    /// Payload shape: &lt;marker&gt;&lt;version&gt;+&lt;context&gt;||&lt;runtime&gt;|&lt;entity&gt;+
+    /// </summary>
+    private static (string Context, string Runtime, string Entity) GetTelemetrySections(string connectionString)
+    {
+        // Use the engine-agnostic base builder so this works for both SQL Server and PostgreSQL connection strings.
+        DbConnectionStringBuilder builder = new() { ConnectionString = connectionString };
+        Assert.IsTrue(
+            builder.TryGetValue("Application Name", out object applicationNameValue),
+            $"Connection string '{connectionString}' should contain an Application Name.");
+        string applicationName = (string)applicationNameValue;
+
+        Assert.IsTrue(
+            applicationName.Contains(ProductInfo.DAB_MARKER_PREFIX) && applicationName.EndsWith("+", StringComparison.Ordinal),
+            $"Application Name '{applicationName}' should carry a DAB telemetry payload ending with '+'.");
+
+        // Drop the trailing delimiter, then take the region after the last '+' (the version itself can
+        // contain '+' build metadata, so anchoring on the last '+' before the sections is robust).
+        string sectionsRegion = applicationName.TrimEnd('+');
+        sectionsRegion = sectionsRegion.Substring(sectionsRegion.LastIndexOf('+') + 1);
+
+        string[] sections = sectionsRegion.Split('|');
+        Assert.AreEqual(4, sections.Length, $"Telemetry payload in '{applicationName}' should have 4 positional sections, but was '{sectionsRegion}'.");
+        Assert.AreEqual(string.Empty, sections[1], "The reserved general-settings section should be empty.");
+
+        return (sections[0], sections[2], sections[3]);
     }
 
     /// <summary>Minimal in-memory <see cref="ILogger{T}"/> that records formatted messages for assertions.</summary>

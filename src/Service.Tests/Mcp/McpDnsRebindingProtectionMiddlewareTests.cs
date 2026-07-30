@@ -62,6 +62,27 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Host matching is exact: a value that is only a substring of a trusted host (for
+        /// example "local" versus "localhost") must be rejected. This guards against the trusted
+        /// host set being matched by partial/incomplete host names.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("local", DisplayName = "prefix of localhost")]
+        [DataRow("ocalhost", DisplayName = "suffix of localhost")]
+        [DataRow("127.0.0", DisplayName = "prefix of loopback IPv4")]
+        [DataRow("dab.intern", DisplayName = "prefix of configured host")]
+        public void IsRequestFromTrustedHost_PartialHostName_IsRejected(string host)
+        {
+            HttpRequest request = BuildRequest(host: host);
+
+            bool allowed = McpDnsRebindingProtectionMiddleware.IsRequestFromTrustedHost(
+                request, configuredAllowedHosts: new List<string> { "dab.internal" }, out string reason);
+
+            Assert.IsFalse(allowed, $"Partial host '{host}' must not match a trusted host.");
+            StringAssert.Contains(reason, "Host header");
+        }
+
+        /// <summary>
         /// The port component of the Host header is ignored; only the host name is validated.
         /// </summary>
         [TestMethod]
@@ -73,6 +94,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 request, configuredAllowedHosts: null, out string reason);
 
             Assert.IsTrue(allowed, $"Loopback host with a port should be trusted. Reason: {reason}");
+            Assert.IsNull(reason);
         }
 
         /// <summary>
@@ -87,6 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 request, configuredAllowedHosts: new List<string> { "dab.internal" }, out string reason);
 
             Assert.IsTrue(allowed, $"Configured host should be trusted. Reason: {reason}");
+            Assert.IsNull(reason);
         }
 
         /// <summary>
@@ -147,6 +170,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 request, configuredAllowedHosts: null, out string reason);
 
             Assert.IsTrue(allowed, $"Trusted Host and Origin should be allowed. Reason: {reason}");
+            Assert.IsNull(reason);
         }
 
         /// <summary>
@@ -175,9 +199,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             HttpRequest request = BuildRequest(host: "127.0.0.1");
 
             bool allowed = McpDnsRebindingProtectionMiddleware.IsRequestFromTrustedHost(
-                request, configuredAllowedHosts: null, out _);
+                request, configuredAllowedHosts: null, out string reason);
 
             Assert.IsTrue(allowed, "A request with a trusted Host and no Origin should be allowed.");
+            Assert.IsNull(reason);
         }
 
         /// <summary>

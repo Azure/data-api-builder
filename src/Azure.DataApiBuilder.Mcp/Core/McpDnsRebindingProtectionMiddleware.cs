@@ -4,6 +4,7 @@
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Mcp.Core
 {
@@ -122,7 +123,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             // Validate the Origin header when present (browser-initiated cross-origin requests).
-            if (request.Headers.TryGetValue("Origin", out Microsoft.Extensions.Primitives.StringValues originValues))
+            if (request.Headers.TryGetValue("Origin", out StringValues originValues))
             {
                 string? originValue = originValues.ToString();
                 if (!string.IsNullOrEmpty(originValue))

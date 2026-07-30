@@ -126,7 +126,7 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                                     }
 
                                     string normalizedHost = host.Trim('[', ']');
-                                    if (!string.Equals(host, "*", StringComparison.Ordinal) &&
+                                    if (!string.Equals(normalizedHost, "*", StringComparison.Ordinal) &&
                                         Uri.CheckHostName(normalizedHost) == UriHostNameType.Unknown)
                                     {
                                         throw new JsonException("Each entry in mcp.allowed-hosts must be a host name (or \"*\").");

@@ -338,17 +338,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 string.Join(Environment.NewLine, lines));
         }
 
-            [TestMethod]
-            public void Decode_FutureGeneralSettings_DoNotShiftKnownSections()
-            {
-                string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
-                string telemetryWithGeneralSettings = telemetry.Replace("||", "|10|", StringComparison.Ordinal);
+        [TestMethod]
+        public void Decode_FutureGeneralSettings_DoNotShiftKnownSections()
+        {
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
+            string telemetryWithGeneralSettings = telemetry.Replace("||", "|10|", StringComparison.Ordinal);
 
-                IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode(telemetryWithGeneralSettings);
+            IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode(telemetryWithGeneralSettings);
 
-                Assert.IsTrue(lines.Any(l => l.Contains("Runtime > runtime.rest.enabled: M", StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
-                Assert.IsTrue(lines.Any(l => l.Contains("Entity > entities.any.table: M", StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
-            }
+            Assert.IsTrue(lines.Any(l => l.Contains("Runtime > runtime.rest.enabled: M", StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
+            Assert.IsTrue(lines.Any(l => l.Contains("Entity > entities.any.table: M", StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
+        }
 
         [DataTestMethod]
         [DataRow(DatabaseType.PostgreSQL, "Source: P (PostgreSQL)")]

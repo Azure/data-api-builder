@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -11,6 +12,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlPutApiTests : PutApiTestBase
     {
+        [TestMethod]
+        public async Task ConcurrentSameKeyPutUpsertsAreSerialized()
+        {
+            await VerifyConcurrentSameKeyUpsertsAsync(HttpMethod.Put, categoryId: 910001);
+        }
+
         protected static Dictionary<string, string> _queryMap = new()
         {
             {

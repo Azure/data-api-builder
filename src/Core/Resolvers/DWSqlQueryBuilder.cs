@@ -442,7 +442,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string pkPredicates = JoinPredicateStrings(Build(structure.Predicates));
 
             string updateOperations = Build(structure.UpdateOperations, ", ");
-            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
+            // DW sources do not necessarily enforce configured logical keys. When INSERT is
+            // possible, hold an exclusive source-table lock through the ambient transaction so
+            // two missing-key requests cannot both insert. Update-only fallback cannot create a
+            // duplicate and retains the narrower existing behavior.
+            string lockHint = structure.IsFallbackToUpdate ? string.Empty : " WITH (TABLOCKX, HOLDLOCK)";
+            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName}{lockHint} WHERE {pkPredicates}";
 
             // Query to get the number of records with a given PK.
             string prefixQuery = $"DECLARE @ROWS_TO_UPDATE int;" +

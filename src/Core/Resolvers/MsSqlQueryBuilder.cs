@@ -284,7 +284,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string updateOperations = Build(structure.UpdateOperations, ", ");
             string columnsToBeReturned =
                 MakeOutputColumns(structure.OutputColumns, isUpdateTriggerEnabled ? string.Empty : OutputQualifier.Inserted.ToString());
-            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
+            // Hold an update/key-range lock through the ambient upsert transaction. HOLDLOCK is
+            // required to serialize the missing-key case; UPDLOCK prevents two existing-row
+            // upserts from both passing the decision read as shared readers.
+            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WITH (UPDLOCK, HOLDLOCK) WHERE {pkPredicates}";
 
             // Query to get the number of records with a given PK.
             string prefixQuery = $"DECLARE @ROWS_TO_UPDATE int;" +

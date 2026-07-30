@@ -152,9 +152,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public override async Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
             DbDataReader dbDataReader, List<string>? args = null)
         {
-            // RS1: COUNT of rows matching PK (no policy) — used to distinguish
+            // RS1: Confirmation that the transaction advisory lock was acquired. The function
+            // returns void, so only the row and expected column name are significant.
+            DbResultSet lockResultSet = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
+            DbResultSetRow? lockResultRow = lockResultSet.Rows.FirstOrDefault();
+            if (lockResultSet.Rows.Count != 1 ||
+                lockResultRow is null ||
+                !lockResultRow.Columns.ContainsKey(PostgresQueryBuilder.UPSERT_LOCK_RESULT))
+            {
+                throw CreateUnexpectedUpsertResultException();
+            }
+
+            // RS2: COUNT of rows matching PK (no policy) — used to distinguish
             // "row doesn't exist" from "row exists but policy blocked".
-            DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
+            DbResultSet resultSetWithCountOfRowsWithGivenPk = await dbDataReader.NextResultAsync()
+                ? await ExtractResultSetFromDbDataReaderAsync(dbDataReader)
+                : throw CreateUnexpectedUpsertResultException();
             DbResultSetRow? resultSetRowWithCountOfRowsWithGivenPk = resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault();
             int numOfRecordsWithGivenPK;
             bool isFallbackToUpdate;
@@ -169,19 +182,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                throw new DataApiBuilderException(
-                    message: $"Neither insert nor update could be performed.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                throw CreateUnexpectedUpsertResultException();
             }
 
-            // RS2: UPDATE result, or UPDATE+INSERT CTE result.
+            // RS3: UPDATE result, or UPDATE+INSERT CTE result.
             DbResultSet dbResultSet = await dbDataReader.NextResultAsync()
                 ? await ExtractResultSetFromDbDataReaderAsync(dbDataReader)
-                : throw new DataApiBuilderException(
-                    message: $"Neither insert nor update could be performed.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                : throw CreateUnexpectedUpsertResultException();
 
             if (numOfRecordsWithGivenPK == 1) // Row existed — we attempted an UPDATE.
             {
@@ -227,6 +234,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return dbResultSet;
+        }
+
+        private static DataApiBuilderException CreateUnexpectedUpsertResultException()
+        {
+            return new DataApiBuilderException(
+                message: "Neither insert nor update could be performed.",
+                statusCode: HttpStatusCode.InternalServerError,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
         }
 
         /// <summary>

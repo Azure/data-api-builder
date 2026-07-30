@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -16,6 +17,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlPutApiTests : PutApiTestBase
     {
+        [TestMethod]
+        public async Task ConcurrentSameKeyPutUpsertsAreSerialized()
+        {
+            await VerifyConcurrentSameKeyUpsertsAsync(HttpMethod.Put, categoryId: 910001);
+        }
+
         private static Dictionary<string, string> _queryMap = new()
         {
             {

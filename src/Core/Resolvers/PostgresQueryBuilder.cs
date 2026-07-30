@@ -19,6 +19,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private const string UPDATE_UPSERT = "updated";
         public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
         public const string IS_FALLBACK_TO_UPDATE = "is_fallback_to_update";
+        public const string UPSERT_LOCK_RESULT = "upsert_lock";
 
         private static DbCommandBuilder _builder = new NpgsqlCommandBuilder();
 
@@ -129,7 +130,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string pkPredicates = Build(structure.Predicates);
             string isFallbackToUpdateSqlLiteral = structure.IsFallbackToUpdate ? "TRUE" : "FALSE";
 
-            // RS1: COUNT of rows matching PK (no policy) — used to distinguish
+            // PostgreSQL cannot row-lock a key that does not exist. Serialize by source and all
+            // primary-key values with a transaction-level advisory lock. This must be a separate
+            // statement so a waiter takes a fresh READ COMMITTED snapshot for the count query
+            // after the preceding transaction commits.
+            string lockQuery = BuildUpsertLockQuery(structure);
+
+            // RS2: COUNT of rows matching PK (no policy) — used to distinguish
             // "row doesn't exist" from "row exists but policy blocked" in the executor.
             string countQuery = $"SELECT COUNT(*) AS {COUNT_ROWS_WITH_GIVEN_PK}, " +
                 $"{isFallbackToUpdateSqlLiteral} AS {IS_FALLBACK_TO_UPDATE} " +
@@ -143,8 +150,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (structure.IsFallbackToUpdate)
             {
-                // RS2: UPDATE only — no INSERT branch for autogen PK or missing required columns.
-                return $"{countQuery}; {updateQuery};";
+                // RS3: UPDATE only — no INSERT branch for autogen PK or missing required columns.
+                return $"{lockQuery}; {countQuery}; {updateQuery};";
             }
             else
             {
@@ -162,7 +169,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     structure.InsertColumns.Zip(structure.Values,
                         (col, val) => $"{val} AS {QuoteIdentifier(col)}"));
 
-                // RS2: CTE that attempts UPDATE first; falls through to INSERT only when row is absent.
+                // RS3: CTE that attempts UPDATE first; falls through to INSERT only when row is absent.
                 string cteQuery = $"WITH update_cte AS ( {updateQuery} ), insert_cte AS ( " +
                     $"INSERT INTO {tableName} ({Build(structure.InsertColumns)}) " +
                     $"SELECT {Build(structure.InsertColumns)} FROM (SELECT {namedValues}) AS T " +
@@ -171,8 +178,41 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     $"SELECT {BuildListOfLabels(structure.OutputColumns)}, {UPSERT_IDENTIFIER_COLUMN_NAME} FROM update_cte UNION ALL " +
                     $"SELECT {BuildListOfLabels(structure.OutputColumns)}, {UPSERT_IDENTIFIER_COLUMN_NAME} FROM insert_cte;";
 
-                return $"{countQuery}; {cteQuery}";
+                return $"{lockQuery}; {countQuery}; {cteQuery}";
             }
+        }
+
+        /// <summary>
+        /// Builds a stable transaction advisory-lock key from source identity and PK parameters.
+        /// JSON preserves value type and element boundaries before hashing. Hash collisions can
+        /// only reduce concurrency; they cannot allow equal logical keys to overlap.
+        /// </summary>
+        private static string BuildUpsertLockQuery(SqlUpsertQueryStructure structure)
+        {
+            Dictionary<string, string> parametersByColumn = structure.Predicates.ToDictionary(
+                predicate => predicate.Left?.AsColumn()?.ColumnName
+                    ?? throw new InvalidOperationException("An upsert PK predicate must have a column operand."),
+                predicate => predicate.Right.AsString()
+                    ?? throw new InvalidOperationException("An upsert PK predicate must have a parameter operand."),
+                StringComparer.Ordinal);
+
+            IEnumerable<string> primaryKeyParameters = structure.GetUnderlyingSourceDefinition().PrimaryKey.Select(
+                primaryKey => parametersByColumn.TryGetValue(primaryKey, out string? parameter)
+                    ? parameter
+                    : throw new InvalidOperationException($"Missing upsert predicate for primary-key column '{primaryKey}'."));
+
+            string schemaLiteral = EscapeSqlStringLiteral(structure.DatabaseObject.SchemaName);
+            string sourceLiteral = EscapeSqlStringLiteral(structure.DatabaseObject.Name);
+            string lockComponents = string.Join(", ",
+                new[] { $"'{schemaLiteral}'", $"'{sourceLiteral}'" }.Concat(primaryKeyParameters));
+
+            return $"SELECT pg_advisory_xact_lock(" +
+                $"hashtextextended(jsonb_build_array({lockComponents})::text, 0)) AS {UPSERT_LOCK_RESULT}";
+        }
+
+        private static string EscapeSqlStringLiteral(string value)
+        {
+            return value.Replace("'", "''", StringComparison.Ordinal);
         }
 
         /// <summary>

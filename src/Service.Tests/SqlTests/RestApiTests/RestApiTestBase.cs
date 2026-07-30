@@ -1,6 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
@@ -75,5 +82,79 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _tableWithDefaultValues = "default_books";
 
         public abstract string GetQuery(string key);
+
+        /// <summary>
+        /// Sends several insert-capable upserts for one missing composite key and verifies that
+        /// the provider serializes the insert decision. SQL-generation tests validate the exact
+        /// lock primitive; this integration test validates its end-to-end REST behavior.
+        /// </summary>
+        protected static async Task VerifyConcurrentSameKeyUpsertsAsync(
+            HttpMethod method,
+            int categoryId,
+            int requestCount = 8)
+        {
+            const int pieceId = 7001;
+            string endpoint = $"api/{_Composite_NonAutoGenPK_EntityPath}/categoryid/{categoryId}/pieceid/{pieceId}";
+            string deleteQuery = $"DELETE FROM {_Composite_NonAutoGenPK_TableName} WHERE categoryid = {categoryId} AND pieceid = {pieceId}";
+            await _queryExecutor.ExecuteQueryAsync<object>(
+                deleteQuery,
+                dataSourceName: string.Empty,
+                parameters: null,
+                dataReaderHandler: null);
+
+            TaskCompletionSource startGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            IEnumerable<Task<HttpResponseMessage>> requestTasks = Enumerable.Range(0, requestCount).Select(async requestNumber =>
+            {
+                await startGate.Task;
+                using HttpRequestMessage request = new(method, endpoint)
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        categoryName = "Concurrent upsert",
+                        piecesAvailable = requestNumber,
+                        piecesRequired = 1
+                    })
+                };
+
+                return await HttpClient.SendAsync(request);
+            });
+
+            Task<HttpResponseMessage>[] startedRequests = requestTasks.ToArray();
+            startGate.SetResult();
+            HttpResponseMessage[] responses = await Task.WhenAll(startedRequests);
+
+            try
+            {
+                string unexpectedResponses = string.Join(
+                    "; ",
+                    await Task.WhenAll(responses
+                        .Where(response => response.StatusCode is not HttpStatusCode.Created and not HttpStatusCode.OK)
+                        .Select(async response => $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}")));
+
+                Assert.AreEqual(
+                    1,
+                    responses.Count(response => response.StatusCode == HttpStatusCode.Created),
+                    $"Exactly one request must insert the missing key. Unexpected responses: {unexpectedResponses}");
+                Assert.AreEqual(
+                    requestCount - 1,
+                    responses.Count(response => response.StatusCode == HttpStatusCode.OK),
+                    $"Every request after the insert must update the same row. Unexpected responses: {unexpectedResponses}");
+
+                string countJson = await GetDatabaseResultAsync(
+                    $"SELECT COUNT(*) AS count FROM {_Composite_NonAutoGenPK_TableName} WHERE categoryid = {categoryId} AND pieceid = {pieceId}",
+                    expectJson: false);
+                List<Dictionary<string, int>>? countResult = JsonSerializer.Deserialize<List<Dictionary<string, int>>>(countJson);
+
+                Assert.IsNotNull(countResult);
+                Assert.AreEqual(1, countResult[0]["count"], "Concurrent upserts must persist exactly one logical row.");
+            }
+            finally
+            {
+                foreach (HttpResponseMessage response in responses)
+                {
+                    response.Dispose();
+                }
+            }
+        }
     }
 }

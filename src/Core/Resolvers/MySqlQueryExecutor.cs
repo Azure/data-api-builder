@@ -205,16 +205,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbDataReader dbDataReader, List<string>? args = null)
         {
             // Result set #1: 1 when the row already existed (update path), 0 when it was inserted or is
-            // absent (insert path). Reused below as numOfRecordsWithGivenPK to drive the update/insert branch.
-            DbResultSet countResultSet = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
-            DbResultSetRow? countResultSetRow = countResultSet.Rows.FirstOrDefault();
-            int numOfRecordsWithGivenPK;
+            // absent (insert path).
+            DbResultSet rowExistenceResultSet = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
+            DbResultSetRow? rowExistenceResultSetRow = rowExistenceResultSet.Rows.FirstOrDefault();
+            bool rowExistedBeforeUpsert;
 
-            if (countResultSetRow is not null &&
-                countResultSetRow.Columns.TryGetValue(MySqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, out object? rowsWithGivenPK) &&
-                rowsWithGivenPK is not null)
+            if (rowExistenceResultSetRow is not null &&
+                rowExistenceResultSetRow.Columns.TryGetValue(MySqlQueryBuilder.ROW_EXISTED_BEFORE_UPSERT, out object? rowExistenceIndicator) &&
+                rowExistenceIndicator is not null)
             {
-                numOfRecordsWithGivenPK = Convert.ToInt32(rowsWithGivenPK);
+                rowExistedBeforeUpsert = Convert.ToInt32(rowExistenceIndicator) == 1;
             }
             else
             {
@@ -231,7 +231,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ? await ExtractResultSetFromDbDataReaderAsync(dbDataReader)
                 : null;
 
-            if (numOfRecordsWithGivenPK == 1)
+            if (rowExistedBeforeUpsert)
             {
                 // A record existed for the given primary key, so an update was attempted.
                 if (updateResultSet is null || updateResultSet.Rows.Count == 0)

@@ -19,11 +19,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public const string DATABASE_NAME_PARAM = "databaseName";
 
         /// <summary>
-        /// Column alias under which the number of records already present for the given primary key
-        /// is returned as the first result set of an upsert query. Used by the query executor to
-        /// distinguish an update from an insert and to detect database policy failures.
+        /// Column alias for the upsert result indicator whose value is 1 when the target row existed
+        /// before the upsert decision and 0 otherwise. Used by the query executor to distinguish an
+        /// update from an insert and to detect database policy failures.
         /// </summary>
-        public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
+        public const string ROW_EXISTED_BEFORE_UPSERT = "row_existed_before_upsert";
 
         /// <summary>
         /// Adds database specific quotes to string identifier
@@ -147,7 +147,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return sets + ";\n" +
                     $"SET @cnt := (SELECT COUNT(*) FROM {tableName} WHERE {pkPredicates}); " +
                     $"SET @matched := (SELECT COUNT(*) FROM {tableName} WHERE {updatePredicates}); " +
-                    $"SELECT @cnt AS {QuoteIdentifier(COUNT_ROWS_WITH_GIVEN_PK)}; " +
+                    $"SELECT @cnt AS {QuoteIdentifier(ROW_EXISTED_BEFORE_UPSERT)}; " +
                     $"UPDATE {tableName} SET {updateOperations}, {updates} WHERE {updatePredicates}; " +
                     $"SELECT {select} WHERE @matched > 0;";
             }
@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // row satisfies the update policy; it is only consulted on the update path below.
                     $"SET @matched := (SELECT COUNT(*) FROM {tableName} WHERE {updatePredicates}); " +
                     // Surface whether the row already existed (1) or was inserted (0) as the first result set.
-                    $"SELECT @existed AS {QuoteIdentifier(COUNT_ROWS_WITH_GIVEN_PK)}; " +
+                    $"SELECT @existed AS {QuoteIdentifier(ROW_EXISTED_BEFORE_UPSERT)}; " +
                     // Apply the policy-aware update only when the row already existed.
                     $"UPDATE {tableName} SET {updateOperations}, {updates} WHERE @existed = 1 AND {updatePredicates}; " +
                     $"SELECT {select} WHERE @existed = 1 AND @matched > 0; " +

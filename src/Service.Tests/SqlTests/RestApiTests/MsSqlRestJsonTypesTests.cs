@@ -12,12 +12,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
 {
     /// <summary>
     /// Tests for SQL Server native JSON column support via REST endpoints (read and write).
-    /// DAB does nothing special for a JSON column - it is written from the request payload and
-    /// read back with no custom handling, new scalar, or format. On read, SQL Server's
-    /// FOR JSON PATH projection (which DAB uses to shape every result) inlines a native json
-    /// column as a nested JSON value, so the metadata surfaces at the REST boundary as a JSON
-    /// object rather than an escaped string. Writes still supply the payload as a JSON string,
-    /// exactly as a normal string column would be written.
+    /// DAB treats a JSON column exactly like a string: the raw JSON text is written from the
+    /// request payload and read back as a JSON string (the MSSQL query builder casts the native
+    /// json column to NVARCHAR(MAX) so FOR JSON PATH emits it as an escaped string rather than
+    /// inlining it as a nested object). No new scalar or format is involved.
     /// Assertions compare the returned metadata semantically so they are robust to any
     /// whitespace / key-order normalization the engine applies to the JSON type.
     /// NOTE: The native JSON data type requires SQL Server 2025 / Azure SQL.
@@ -38,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
 
         /// <summary>
         /// GET /api/Profile - Verify the whole collection (5 seeded rows) is returned and that
-        /// each metadata value renders either as a native JSON object payload or null (row 5).
+        /// each metadata value renders either as a JSON string payload or null (row 5).
         /// </summary>
         [TestMethod]
         public async Task GetJsonTypeList()
@@ -50,13 +48,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 .RootElement.GetProperty("value");
             Assert.AreEqual(5, items.GetArrayLength(), "Expected the 5 seeded profile rows.");
 
-            // Rows 1-4 carry a JSON payload (inlined as a native JSON object); row 5 is null.
+            // Rows 1-4 carry a JSON payload (returned as an escaped JSON string); row 5 is null.
             foreach (JsonElement record in items.EnumerateArray())
             {
                 JsonValueKind metadataKind = record.GetProperty("metadata").ValueKind;
                 Assert.IsTrue(
-                    metadataKind is JsonValueKind.Object or JsonValueKind.Null,
-                    $"Expected metadata to be a JSON object or null, but was {metadataKind}.");
+                    metadataKind is JsonValueKind.String or JsonValueKind.Null,
+                    $"Expected metadata to be a JSON string or null, but was {metadataKind}.");
             }
         }
 
@@ -248,19 +246,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
-        /// Returns the metadata field as a JSON element. DAB applies no special handling to a JSON
-        /// column, so SQL Server's FOR JSON PATH projection inlines it as a native JSON object at the
-        /// REST boundary. This helper asserts the value is a JSON object and returns it for inspection.
+        /// Returns the metadata field parsed as a JSON element. DAB treats a JSON column as a string,
+        /// so a non-null metadata value arrives at the REST boundary as a JSON string carrying the
+        /// payload. This helper asserts that and parses the string payload for semantic inspection.
         /// </summary>
         private static JsonElement ParseMetadata(JsonElement record)
         {
             JsonElement metadata = record.GetProperty("metadata");
             Assert.AreEqual(
-                JsonValueKind.Object,
+                JsonValueKind.String,
                 metadata.ValueKind,
-                "A native JSON column is inlined as a JSON object at the REST boundary via FOR JSON PATH.");
+                "A json column must be returned as a JSON string at the REST boundary (treated as a normal string).");
 
-            return metadata.Clone();
+            return JsonDocument.Parse(metadata.GetString()!).RootElement.Clone();
         }
 
         #endregion

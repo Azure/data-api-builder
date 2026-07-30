@@ -279,12 +279,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (insertResultSet.Rows.Count == 0)
             {
-                // No record existed but nothing was inserted - indicates the create database policy
-                // was not satisfied.
+                // MySQL does not support create-action database policies, and the generated insert path
+                // returns exactly one row after a successful insert. Reaching this branch therefore
+                // indicates that the result-set contract was violated, not an authorization failure.
                 throw new DataApiBuilderException(
-                    message: DataApiBuilderException.AUTHORIZATION_FAILURE,
-                    statusCode: HttpStatusCode.Forbidden,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+                    message: "The insert completed without returning the expected result row.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             return insertResultSet;

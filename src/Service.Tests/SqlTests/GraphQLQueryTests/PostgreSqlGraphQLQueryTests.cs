@@ -458,6 +458,9 @@ FROM
         /// <summary>
         /// Test to check GraphQL support for aggregations with aliases and groupby.
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// Note: an explicit ORDER BY categoryid is required here because DAB's actual generated query selects
+        /// categoryid as an extra column, which changes Postgres's query plan (and therefore GROUP BY row order)
+        /// compared to a query that only selects the aggregates.
         /// </summary>
         [TestMethod]
         public async Task TestSupportForGroupByAggregationsWithAliases()
@@ -473,6 +476,7 @@ FROM
                         COUNT(categoryid) AS count
                     FROM stocks_price
                     GROUP BY categoryid
+                    ORDER BY categoryid
                 ) AS table0";
 
             // Execute the test for the SQL query
@@ -576,8 +580,9 @@ FROM
         [TestMethod]
         public async Task TestSupportForHavingAggregation()
         {
+            // HAVING may exclude the only row; json_agg over zero rows returns NULL, not [].
             string postgresQuery = @"
-                SELECT json_agg(to_jsonb(table0)) FROM (
+                SELECT COALESCE(json_agg(to_jsonb(table0)), '[]') FROM (
                     SELECT
                         MAX(id) AS max
                     FROM publishers

@@ -9,13 +9,13 @@ Data API builder (DAB) embeds a compact, anonymous **usage-telemetry token** int
 The token has the shape:
 
 ```text
-dab_<environment>_<version>+<context>|<runtime>|<entity>+
+dab_<environment>_<version>+<context>||<runtime>|<entity>+
 ```
 
 Example (an MSSQL pool, REST + GraphQL on, Static Web Apps auth):
 
 ```text
-dab_oss_2.0.0+XXSX|110000M1M000MMMMMWMM|100?111001110?+
+dab_oss_2.0.0+XXSX||110000M1M000MMMMMWMM|100?111001110?+
 ```
 
 It is opt-out (`DAB_TELEMETRY_APPNAME_OPT_OUT=1`), carries no secrets or identifiers, and is purely additive to the existing `Application Name` value.
@@ -54,14 +54,14 @@ DAB already appended a plain `dab_oss_<version>` user agent to the `Application 
 ## The token format
 
 ```text
-dab_<environment>_<version>+<context>|<runtime>|<entity>+
+dab_<environment>_<version>+<context>||<runtime>|<entity>+
 ```
 
 - `dab_oss_` &mdash; the marker for open-source deployments. The hosted scenario uses `dab_hosted_` instead (see [Hosted label](#hosted-label-dab_app_name_env)); `dab_` (`ProductInfo.DAB_MARKER_PREFIX`) is the shared prefix used to locate and decode the token in both cases.
 - `<version>` &mdash; the product version `Major.Minor.Patch`. The telemetry is always based on the product version.
-- The payload is wrapped in `+ ... +` and split into **three `|`-delimited sections**: `context`, `runtime`, and `entity`.
+- The payload is wrapped in `+ ... +` and has four positional sections: `context`, `general`, `runtime`, and `entity`.
 
-> **Note on the issue's example.** The original issue's example string listed a fourth `general` segment, but the issue only defined three settings tables (Context, Runtime, Entity). `general` was never defined, so the implementation uses the three authoritative sections only.
+> **Reserved general section.** The tracking issue defines a `general` position but does not yet define any general settings. DAB therefore emits that section as empty (`||`). Reserving it now keeps the runtime and entity positions stable when general settings are added later.
 
 Each position in a section is a single character drawn from a small alphabet. The shared sentinel values are:
 
@@ -229,7 +229,7 @@ A captured token can be decoded back to a legend with `dab appname --decode "<to
 
 ## Testing
 
-- **Encoder / decoder unit tests** for token shape, each section's flag mapping, the Source and auth-provider maps, opt-out, hosted and OSS markers, and round-trip / truncation-tolerant decoding.
+- **Encoder / decoder unit tests** for token shape (including the reserved general section), each populated section's flag mapping, the Source and auth-provider maps, opt-out, hosted and OSS markers, and round-trip / truncation-tolerant decoding.
 - **Connection-string injection tests** for MSSQL, DWSQL, and PostgreSQL (including the user-supplied `Application Name` prefix case), and the no-op cases for MySQL / Cosmos.
 - **Multi-database tests** asserting child data sources encode the global runtime and merged entities, and a heterogeneous (MSSQL + PostgreSQL) case asserting the per-pool `Source` character.
 - **Hosted / late-config tests** asserting telemetry is embedded through `RuntimeConfigProvider.Initialize` for the single-source and multi-database cases, plus end-to-end `/configuration` and `/configuration/v2` endpoint tests.

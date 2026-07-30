@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// The encoded string must start with the product user agent, be wrapped in '+', and contain
-        /// exactly three '|'-separated sections of fixed widths (context=4, runtime=20, entity=14).
+        /// four positional sections: context, an empty reserved general section, runtime, and entity.
         /// </summary>
         [TestMethod]
         public void EncodeTelemetryString_HasExpectedShape()
@@ -338,6 +338,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 string.Join(Environment.NewLine, lines));
         }
 
+            [TestMethod]
+            public void Decode_FutureGeneralSettings_DoNotShiftKnownSections()
+            {
+                string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
+                string telemetryWithGeneralSettings = telemetry.Replace("||", "|10|", StringComparison.Ordinal);
+
+                IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode(telemetryWithGeneralSettings);
+
+                Assert.IsTrue(lines.Any(l => l.Contains("Runtime > runtime.rest.enabled: M", StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
+                Assert.IsTrue(lines.Any(l => l.Contains("Entity > entities.any.table: M", StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
+            }
+
         [DataTestMethod]
         [DataRow(DatabaseType.PostgreSQL, "Source: P (PostgreSQL)")]
         [DataRow(DatabaseType.CosmosDB_NoSQL, "Source: C (CosmosDB)")]
@@ -450,7 +462,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             int firstPlus = telemetry.IndexOf('+');
             string payload = telemetry[(firstPlus + 1)..].TrimEnd('+');
             string[] parts = payload.Split('|');
-            return (parts[0], parts[1], parts[2]);
+            Assert.AreEqual(4, parts.Length, $"Telemetry payload should have four positional sections but was '{payload}'.");
+            Assert.AreEqual(string.Empty, parts[1], "The reserved general-settings section should be empty.");
+            return (parts[0], parts[2], parts[3]);
         }
     }
 }

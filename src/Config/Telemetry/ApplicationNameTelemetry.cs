@@ -13,9 +13,9 @@ namespace Azure.DataApiBuilder.Config.Telemetry;
 ///
 /// Format:
 /// <code>
-/// &lt;marker&gt;&lt;version&gt;+&lt;context&gt;|&lt;runtime&gt;|&lt;entity&gt;+
+/// &lt;marker&gt;&lt;version&gt;+&lt;context&gt;||&lt;runtime&gt;|&lt;entity&gt;+
 /// </code>
-/// Example: <c>dab_oss_1.2.3+XXSX|11111M10...|10111101M...+</c>
+/// Example: <c>dab_oss_1.2.3+XXSX||11111M10...|10111101M...+</c>
 ///
 /// The block is self-delimiting: it always starts with a <c>dab_</c> marker (<c>dab_oss_</c> for open
 /// source or <c>dab_hosted_</c> when hosted) and ends
@@ -69,10 +69,11 @@ public static class ApplicationNameTelemetry
     private sealed record Setting(string Name, Func<EncodeInputs, char> Encode, Func<char, string> Describe);
 
     /// <summary>
-    /// Produces the pure telemetry string (<c>&lt;marker&gt;&lt;version&gt;+&lt;context&gt;|&lt;runtime&gt;|&lt;entity&gt;+</c>),
+    /// Produces the pure telemetry string (<c>&lt;marker&gt;&lt;version&gt;+&lt;context&gt;||&lt;runtime&gt;|&lt;entity&gt;+</c>),
     /// where the marker is <c>dab_oss_</c> for open source or <c>dab_hosted_</c> when <c>DAB_APP_NAME_ENV</c>
     /// is set. Independent of the opt-out switch. Used by the CLI and as the telemetry-bearing portion of
-    /// the connection-string segment.
+    /// the connection-string segment. The empty section after context reserves the general-settings
+    /// position for future use.
     /// </summary>
     /// <param name="config">The runtime config to encode.</param>
     /// <param name="liveDataSource">
@@ -93,6 +94,9 @@ public static class ApplicationNameTelemetry
             .Append(ProductInfo.GetTelemetryApplicationNameBase())
             .Append(PAYLOAD_DELIMITER)
             .Append(context).Append(SECTION_SEPARATOR)
+            // General settings are not defined yet. Reserve their position so adding them later
+            // does not shift the runtime and entity sections or make the payload ambiguous.
+            .Append(SECTION_SEPARATOR)
             .Append(runtime).Append(SECTION_SEPARATOR)
             .Append(entity)
             .Append(PAYLOAD_DELIMITER)
@@ -167,8 +171,9 @@ public static class ApplicationNameTelemetry
 
         string[] sections = payload.Split(SECTION_SEPARATOR);
         DecodeSection(lines, "Context", _contextSettings, sections, index: 0);
-        DecodeSection(lines, "Runtime", _runtimeSettings, sections, index: 1);
-        DecodeSection(lines, "Entity", _entitySettings, sections, index: 2);
+        // Index 1 is the reserved general-settings section.
+        DecodeSection(lines, "Runtime", _runtimeSettings, sections, index: 2);
+        DecodeSection(lines, "Entity", _entitySettings, sections, index: 3);
 
         return lines;
     }

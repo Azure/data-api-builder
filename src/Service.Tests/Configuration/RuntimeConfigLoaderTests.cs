@@ -752,9 +752,9 @@ public class RuntimeConfigLoaderTests
     }
 
     /// <summary>
-    /// Extracts the three telemetry sections (context, runtime, entity) from the DAB usage-telemetry
+    /// Extracts the populated telemetry sections (context, runtime, entity) from the DAB usage-telemetry
     /// payload embedded in a connection string's "Application Name" property.
-    /// Payload shape: &lt;marker&gt;&lt;version&gt;+&lt;context&gt;|&lt;runtime&gt;|&lt;entity&gt;+
+    /// Payload shape: &lt;marker&gt;&lt;version&gt;+&lt;context&gt;||&lt;runtime&gt;|&lt;entity&gt;+
     /// </summary>
     private static (string Context, string Runtime, string Entity) GetTelemetrySections(string connectionString)
     {
@@ -775,9 +775,10 @@ public class RuntimeConfigLoaderTests
         sectionsRegion = sectionsRegion.Substring(sectionsRegion.LastIndexOf('+') + 1);
 
         string[] sections = sectionsRegion.Split('|');
-        Assert.AreEqual(3, sections.Length, $"Telemetry payload in '{applicationName}' should have 3 sections, but was '{sectionsRegion}'.");
+        Assert.AreEqual(4, sections.Length, $"Telemetry payload in '{applicationName}' should have 4 positional sections, but was '{sectionsRegion}'.");
+        Assert.AreEqual(string.Empty, sections[1], "The reserved general-settings section should be empty.");
 
-        return (sections[0], sections[1], sections[2]);
+        return (sections[0], sections[2], sections[3]);
     }
 
     /// <summary>

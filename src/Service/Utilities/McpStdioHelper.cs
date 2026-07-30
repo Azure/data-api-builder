@@ -78,12 +78,9 @@ namespace Azure.DataApiBuilder.Service.Utilities
         {
             try
             {
-                Mcp.Core.McpToolRegistry registry =
-                    host.Services.GetRequiredService<Mcp.Core.McpToolRegistry>();
-                IEnumerable<Mcp.Model.IMcpTool> tools =
-                    host.Services.GetServices<Mcp.Model.IMcpTool>();
-
-                Mcp.Core.McpToolRegistry.InitializeAndRegisterTools(tools, registry, host.Services);
+                Mcp.Core.IMcpToolRegistryRefreshService refreshService =
+                    host.Services.GetRequiredService<Mcp.Core.IMcpToolRegistryRefreshService>();
+                refreshService.EnsureInitialized();
 
                 IHostApplicationLifetime lifetime =
                     host.Services.GetRequiredService<IHostApplicationLifetime>();

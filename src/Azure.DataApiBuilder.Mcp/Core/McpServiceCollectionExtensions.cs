@@ -6,6 +6,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Azure.DataApiBuilder.Mcp.Core
 {
@@ -33,13 +34,15 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             // Register core MCP services
             services.AddSingleton<McpToolRegistry>();
-            services.AddHostedService<McpToolRegistryInitializer>();
+            services.AddSingleton<McpToolRegistryRefreshService>();
+            services.AddSingleton<IMcpToolRegistryRefreshService>(serviceProvider =>
+                serviceProvider.GetRequiredService<McpToolRegistryRefreshService>());
+            services.AddSingleton<IHostedService>(serviceProvider =>
+                serviceProvider.GetRequiredService<McpToolRegistryRefreshService>());
 
-            // Auto-discover and register all MCP tools
+            // Auto-discover and register built-in MCP tools. Custom tools are configuration-
+            // generation objects and are created by McpToolRegistryRefreshService.
             RegisterAllMcpTools(services);
-
-            // Register custom tools from configuration
-            RegisterCustomTools(services, runtimeConfig);
 
             // Configure MCP server and propagate runtime description to MCP initialize instructions.
             services.ConfigureMcpServer(runtimeConfig.Runtime?.Mcp?.Description);
@@ -66,16 +69,5 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
         }
 
-        /// <summary>
-        /// Registers custom MCP tools generated from stored procedure entity configurations.
-        /// </summary>
-        private static void RegisterCustomTools(IServiceCollection services, RuntimeConfig config)
-        {
-            // Create custom tools and register each as a singleton
-            foreach (IMcpTool customTool in CustomMcpToolFactory.CreateCustomTools(config))
-            {
-                services.AddSingleton<IMcpTool>(customTool);
-            }
-        }
     }
 }

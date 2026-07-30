@@ -73,47 +73,69 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         public McpToolRegistryUpdateResult ReplaceAll(IEnumerable<IMcpTool> tools, RuntimeConfig config)
         {
+            return PublishCandidate(CreateCandidate(tools, config));
+        }
+
+        /// <summary>
+        /// Builds and validates a complete replacement without publishing it.
+        /// </summary>
+        internal static McpToolRegistryCandidate CreateCandidate(
+            IEnumerable<IMcpTool> tools,
+            RuntimeConfig config)
+        {
             ArgumentNullException.ThrowIfNull(tools);
             ArgumentNullException.ThrowIfNull(config);
 
-            lock (_writerLock)
+            ImmutableDictionary<string, IMcpTool>.Builder toolBuilder =
+                ImmutableDictionary.CreateBuilder<string, IMcpTool>(StringComparer.OrdinalIgnoreCase);
+            List<Tool> advertisedMetadata = new();
+
+            foreach (IMcpTool tool in tools)
             {
-                ImmutableDictionary<string, IMcpTool>.Builder toolBuilder =
-                    ImmutableDictionary.CreateBuilder<string, IMcpTool>(StringComparer.OrdinalIgnoreCase);
-                List<Tool> advertisedMetadata = new();
+                ArgumentNullException.ThrowIfNull(tool);
 
-                foreach (IMcpTool tool in tools)
+                Tool metadata = tool.GetToolMetadata();
+                string toolName = ValidateToolName(metadata);
+
+                if (toolBuilder.TryGetValue(toolName, out IMcpTool? existingTool))
                 {
-                    ArgumentNullException.ThrowIfNull(tool);
-
-                    Tool metadata = tool.GetToolMetadata();
-                    string toolName = ValidateToolName(metadata);
-
-                    if (toolBuilder.TryGetValue(toolName, out IMcpTool? existingTool))
+                    if (ReferenceEquals(existingTool, tool))
                     {
-                        if (ReferenceEquals(existingTool, tool))
-                        {
-                            continue;
-                        }
-
-                        throw CreateDuplicateToolException(toolName, existingTool, tool);
+                        continue;
                     }
 
-                    toolBuilder.Add(toolName, tool);
-                    if (tool.IsEnabled(config))
-                    {
-                        advertisedMetadata.Add(metadata);
-                    }
+                    throw CreateDuplicateToolException(toolName, existingTool, tool);
                 }
 
-                ImmutableArray<Tool> advertisedTools = SortMetadata(advertisedMetadata);
-                string fingerprint = CreateDiscoveryFingerprint(advertisedTools);
+                toolBuilder.Add(toolName, tool);
+                if (tool.IsEnabled(config))
+                {
+                    advertisedMetadata.Add(metadata);
+                }
+            }
+
+            ImmutableArray<Tool> advertisedTools = SortMetadata(advertisedMetadata);
+            return new McpToolRegistryCandidate(
+                Tools: toolBuilder.ToImmutable(),
+                AdvertisedTools: advertisedTools,
+                DiscoveryFingerprint: CreateDiscoveryFingerprint(advertisedTools));
+        }
+
+        /// <summary>
+        /// Atomically publishes a previously built and validated candidate.
+        /// </summary>
+        internal McpToolRegistryUpdateResult PublishCandidate(McpToolRegistryCandidate candidate)
+        {
+            ArgumentNullException.ThrowIfNull(candidate);
+
+            lock (_writerLock)
+            {
                 McpToolRegistrySnapshot current = _snapshot;
                 McpToolRegistrySnapshot replacement = new(
                     Version: current.Version + 1,
-                    Tools: toolBuilder.ToImmutable(),
-                    AdvertisedTools: advertisedTools,
-                    DiscoveryFingerprint: fingerprint);
+                    Tools: candidate.Tools,
+                    AdvertisedTools: candidate.AdvertisedTools,
+                    DiscoveryFingerprint: candidate.DiscoveryFingerprint);
 
                 Interlocked.Exchange(ref _snapshot, replacement);
 
@@ -156,26 +178,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public bool TryGetTool(string toolName, out IMcpTool? tool)
         {
             return Volatile.Read(ref _snapshot).Tools.TryGetValue(toolName, out tool);
-        }
-
-        /// <summary>
-        /// Initializes and registers all MCP tools, enriching custom tools with DB metadata schemas.
-        /// Shared by both HTTP hosted-service and stdio startup paths.
-        /// </summary>
-        public static void InitializeAndRegisterTools(
-            IEnumerable<IMcpTool> tools,
-            McpToolRegistry registry,
-            IServiceProvider serviceProvider)
-        {
-            foreach (IMcpTool tool in tools)
-            {
-                if (tool is DynamicCustomTool customTool)
-                {
-                    customTool.InitializeMetadata(serviceProvider);
-                }
-
-                registry.RegisterTool(tool);
-            }
         }
 
         private static string ValidateToolName(Tool metadata)
@@ -244,4 +246,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
         bool DiscoveryChanged,
         int RegisteredToolCount,
         int AdvertisedToolCount);
+
+    /// <summary>
+    /// A fully materialized and validated registry generation awaiting publication.
+    /// </summary>
+    internal sealed record McpToolRegistryCandidate(
+        ImmutableDictionary<string, IMcpTool> Tools,
+        ImmutableArray<Tool> AdvertisedTools,
+        string DiscoveryFingerprint);
 }

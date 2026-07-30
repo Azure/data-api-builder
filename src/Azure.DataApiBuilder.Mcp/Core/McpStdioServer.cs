@@ -287,16 +287,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private void HandleListTools(JsonElement? id)
         {
             List<object> toolsWire = new();
-            int count = 0;
 
-            // Resolve runtime config to filter out disabled tools.
-            RuntimeConfigProvider runtimeConfigProvider = _serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            IEnumerable<Tool> tools = _toolRegistry.GetEnabledTools(runtimeConfig);
-
-            foreach (Tool tool in tools)
+            foreach (Tool tool in _toolRegistry.GetAdvertisedTools())
             {
-                count++;
                 toolsWire.Add(new
                 {
                     name = tool.Name,

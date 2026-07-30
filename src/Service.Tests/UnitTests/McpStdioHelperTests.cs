@@ -22,8 +22,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ServiceCollection services = new();
             TestApplicationLifetime lifetime = new();
             TestMcpStdioServer stdioServer = new();
+            TestMcpToolRegistryRefreshService refreshService = new();
 
-            services.AddSingleton<McpToolRegistry>();
+            services.AddSingleton<IMcpToolRegistryRefreshService>(refreshService);
             services.AddSingleton<IHostApplicationLifetime>(lifetime);
             services.AddSingleton<IMcpStdioServer>(stdioServer);
 
@@ -39,10 +40,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "MCP stdio mode should not stop a host that was never started.");
             Assert.AreEqual(1, stdioServer.RunAsyncCallCount,
                 "MCP stdio mode should still run the stdio JSON-RPC loop.");
+            Assert.AreEqual(1, refreshService.EnsureInitializedCallCount,
+                "MCP stdio mode should initialize the shared tool registry before running the loop.");
             Assert.AreEqual(lifetime.ApplicationStopping, stdioServer.CancellationToken,
                 "The stdio loop should keep using the host lifetime cancellation token.");
             Assert.AreEqual(1, host.DisposeCallCount,
                 "MCP stdio mode should dispose the host after the stdio loop exits.");
+        }
+
+        private sealed class TestMcpToolRegistryRefreshService : IMcpToolRegistryRefreshService
+        {
+            public int EnsureInitializedCallCount { get; private set; }
+
+            public void EnsureInitialized()
+            {
+                EnsureInitializedCallCount++;
+            }
         }
 
         private sealed class TestHost : IHost

@@ -144,7 +144,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         /// <summary>
         /// Test that registering the same tool instance twice is silently ignored (idempotent).
-        /// This supports stdio mode where both McpToolRegistryInitializer and McpStdioHelper may register the same tools.
+        /// This preserves the compatibility registration API's idempotent behavior.
         /// </summary>
         [TestMethod]
         public void RegisterTool_SameInstanceTwice_IsIdempotent()

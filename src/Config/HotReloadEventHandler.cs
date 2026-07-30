@@ -31,6 +31,7 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
             { MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, null },
             { DOCUMENTOR_ON_CONFIG_CHANGED, null },
             { AUTHZ_RESOLVER_ON_CONFIG_CHANGED, null },
+            { MCP_TOOL_REGISTRY_ON_CONFIG_CHANGED, null },
             { GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, null },
             { GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, null },
             { GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, null },

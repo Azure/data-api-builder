@@ -105,6 +105,10 @@ public abstract class RuntimeConfigLoader
             // this function is called.
             OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
 
+            // Custom MCP tool schemas depend on refreshed database metadata. Publish the new
+            // registry only after query, mutation, and authorization dependencies are ready.
+            OnConfigChangedEvent(new HotReloadEventArgs(MCP_TOOL_REGISTRY_ON_CONFIG_CHANGED, message));
+
             // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
             OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, message));
             OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, message));

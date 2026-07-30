@@ -87,20 +87,21 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return;
             }
 
-            InitializeMetadata(configProvider.GetConfig(), metadataProviderFactory);
+            _ = InitializeMetadata(configProvider.GetConfig(), metadataProviderFactory);
         }
 
         /// <summary>
         /// Initializes the input schema using an explicit configuration and metadata-provider
         /// generation. Falls back to config-based metadata when database metadata is unavailable.
         /// </summary>
-        public void InitializeMetadata(
+        public bool InitializeMetadata(
             RuntimeConfig config,
             IMetadataProviderFactory metadataProviderFactory)
         {
             ArgumentNullException.ThrowIfNull(config);
             ArgumentNullException.ThrowIfNull(metadataProviderFactory);
             _cachedInputSchema = BuildInputSchemaFromDbMetadata(config, metadataProviderFactory);
+            return _cachedInputSchema.HasValue;
         }
 
         /// <summary>

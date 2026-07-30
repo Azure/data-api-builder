@@ -3,6 +3,8 @@
 
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions; // Added for DataApiBuilderException
 using Microsoft.Extensions.DependencyInjection;
 
@@ -46,7 +48,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             string entityName,
             RuntimeConfig config,
             IServiceProvider serviceProvider,
-            out Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider sqlMetadataProvider,
+            out ISqlMetadataProvider sqlMetadataProvider,
             out DatabaseObject dbObject,
             out string dataSourceName,
             out string error,
@@ -65,13 +67,47 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             }
 
             // Use GetService (not GetRequiredService) so the helper honours its Try* contract.
-            Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory? metadataProviderFactory =
-                serviceProvider.GetService<Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory>();
+            IMetadataProviderFactory? metadataProviderFactory =
+                serviceProvider.GetService<IMetadataProviderFactory>();
             if (metadataProviderFactory is null)
             {
                 error = "Metadata provider factory is not registered.";
                 return false;
             }
+
+            return TryResolveMetadata(
+                entityName,
+                config,
+                metadataProviderFactory,
+                out sqlMetadataProvider,
+                out dbObject,
+                out dataSourceName,
+                out error,
+                cancellationToken);
+        }
+
+        /// <summary>
+        /// Resolves database metadata using the exact runtime configuration and metadata-provider
+        /// generation supplied by the caller.
+        /// </summary>
+        public static bool TryResolveMetadata(
+            string entityName,
+            RuntimeConfig config,
+            IMetadataProviderFactory metadataProviderFactory,
+            out ISqlMetadataProvider sqlMetadataProvider,
+            out DatabaseObject dbObject,
+            out string dataSourceName,
+            out string error,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(config);
+            ArgumentNullException.ThrowIfNull(metadataProviderFactory);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            sqlMetadataProvider = default!;
+            dbObject = default!;
+            dataSourceName = string.Empty;
+            error = string.Empty;
 
             // Resolve datasource name for the entity.
             try

@@ -50,8 +50,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     {
                         logger?.LogError(
                             ex,
-                            "Failed to create custom tool for entity '{EntityName}'. Skipping.",
+                            "Failed to create custom MCP tool for entity '{EntityName}'.",
                             entityName);
+
+                        throw new InvalidOperationException(
+                            $"Failed to create custom MCP tool for entity '{entityName}'.",
+                            ex);
                     }
                 }
             }

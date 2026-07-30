@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -365,6 +366,190 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Replacing the registry publishes a complete, deterministically ordered snapshot and
+        /// removes tools that belonged only to the previous generation.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_PublishesCompleteOrderedSnapshot()
+        {
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("old_tool", ToolType.Custom) },
+                config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new IMcpTool[]
+                {
+                    new MockMcpTool("z_tool", ToolType.Custom),
+                    new MockMcpTool("A_tool", ToolType.BuiltIn)
+                },
+                config);
+
+            Assert.IsFalse(registry.TryGetTool("old_tool", out _));
+            Assert.IsTrue(registry.TryGetTool("a_TOOL", out _));
+            Assert.IsTrue(registry.TryGetTool("z_tool", out _));
+            CollectionAssert.AreEqual(
+                new[] { "A_tool", "z_tool" },
+                registry.GetAdvertisedTools().Select(tool => tool.Name).ToArray());
+            Assert.AreEqual(2, result.Version);
+            Assert.IsTrue(result.DiscoveryChanged);
+            Assert.AreEqual(2, result.RegisteredToolCount);
+            Assert.AreEqual(2, result.AdvertisedToolCount);
+        }
+
+        /// <summary>
+        /// A candidate containing a duplicate name is rejected before publication, leaving the
+        /// complete previous snapshot active.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithDuplicateName_PreservesPreviousSnapshot()
+        {
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            IMcpTool previousTool = new MockMcpTool("previous_tool", ToolType.BuiltIn);
+            registry.ReplaceAll(new[] { previousTool }, config);
+
+            Assert.ThrowsException<DataApiBuilderException>(() => registry.ReplaceAll(
+                new IMcpTool[]
+                {
+                    new MockMcpTool("duplicate", ToolType.BuiltIn),
+                    new MockMcpTool("DUPLICATE", ToolType.Custom)
+                },
+                config));
+
+            Assert.IsTrue(registry.TryGetTool("previous_tool", out IMcpTool? actualTool));
+            Assert.AreSame(previousTool, actualTool);
+            Assert.IsFalse(registry.TryGetTool("duplicate", out _));
+            CollectionAssert.AreEqual(
+                new[] { "previous_tool" },
+                registry.GetAdvertisedTools().Select(tool => tool.Name).ToArray());
+        }
+
+        /// <summary>
+        /// Replacing tool instances with semantically identical discovery metadata advances the
+        /// registry generation without reporting a client-visible discovery change.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithEquivalentMetadata_DoesNotReportDiscoveryChange()
+        {
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, description: "Same description") },
+                config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, description: "Same description") },
+                config);
+
+            Assert.AreEqual(2, result.Version);
+            Assert.IsFalse(result.DiscoveryChanged);
+        }
+
+        /// <summary>
+        /// A metadata-only change is reported so connected clients can refresh their cached list.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithChangedDescription_ReportsDiscoveryChange()
+        {
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, description: "Old description") },
+                config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, description: "New description") },
+                config);
+
+            Assert.IsTrue(result.DiscoveryChanged);
+            Assert.AreEqual("New description", registry.GetAdvertisedTools().Single().Description);
+        }
+
+        /// <summary>
+        /// Advertised metadata and callable lookup state are built from one candidate generation.
+        /// Disabled built-ins remain callable so execution can return the existing structured
+        /// tool-disabled response, but they are absent from discovery.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_CapturesVisibilityFromCandidateConfig()
+        {
+            McpToolRegistry registry = new();
+            IMcpTool configAwareTool = new MockMcpTool(
+                "create_record",
+                ToolType.BuiltIn,
+                isEnabledFunc: config => config.McpDmlTools?.CreateRecord == true);
+
+            RuntimeConfig disabledConfig = CreateRuntimeConfig(new DmlToolsConfig(createRecord: false));
+            registry.ReplaceAll(new[] { configAwareTool }, disabledConfig);
+
+            Assert.AreEqual(0, registry.GetAdvertisedTools().Count);
+            Assert.IsTrue(registry.TryGetTool("create_record", out _));
+
+            RuntimeConfig enabledConfig = CreateRuntimeConfig(new DmlToolsConfig(createRecord: true));
+            registry.ReplaceAll(new[] { configAwareTool }, enabledConfig);
+
+            Assert.AreEqual(1, registry.GetAdvertisedTools().Count);
+        }
+
+        /// <summary>
+        /// Concurrent readers see only a complete old or complete new advertised snapshot while
+        /// registry generations are repeatedly replaced.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithConcurrentReaders_NeverExposesPartialSnapshot()
+        {
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            IMcpTool[] generationA =
+            {
+                new MockMcpTool("a_one", ToolType.BuiltIn),
+                new MockMcpTool("a_two", ToolType.Custom)
+            };
+            IMcpTool[] generationB =
+            {
+                new MockMcpTool("b_one", ToolType.BuiltIn),
+                new MockMcpTool("b_two", ToolType.Custom)
+            };
+            registry.ReplaceAll(generationA, config);
+
+            ConcurrentQueue<string> invalidSnapshots = new();
+            Task writer = Task.Run(() =>
+            {
+                for (int i = 0; i < 500; i++)
+                {
+                    registry.ReplaceAll(i % 2 == 0 ? generationB : generationA, config);
+                }
+            });
+
+            Task[] readers = Enumerable.Range(0, 4)
+                .Select(_ => Task.Run(() =>
+                {
+                    for (int i = 0; i < 2_000; i++)
+                    {
+                        string[] names = registry.GetAdvertisedTools()
+                            .Select(tool => tool.Name)
+                            .ToArray();
+                        bool isGenerationA = names.SequenceEqual(new[] { "a_one", "a_two" });
+                        bool isGenerationB = names.SequenceEqual(new[] { "b_one", "b_two" });
+                        if (!isGenerationA && !isGenerationB)
+                        {
+                            invalidSnapshots.Enqueue(string.Join(",", names));
+                        }
+                    }
+                }))
+                .ToArray();
+
+            Task.WaitAll(readers.Append(writer).ToArray());
+
+            Assert.AreEqual(
+                0,
+                invalidSnapshots.Count,
+                $"Observed partial snapshots: {string.Join(" | ", invalidSnapshots.Take(5))}");
+        }
+
+        /// <summary>
         /// Validates IsEnabled for each real built-in tool matches the DmlToolsConfig flag value.
         /// </summary>
         [DataTestMethod]
@@ -461,12 +646,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             private readonly string _toolName;
             private readonly Func<RuntimeConfig, bool>? _isEnabledFunc;
+            private readonly string _description;
 
-            public MockMcpTool(string toolName, ToolType toolType, Func<RuntimeConfig, bool>? isEnabledFunc = null)
+            public MockMcpTool(
+                string toolName,
+                ToolType toolType,
+                Func<RuntimeConfig, bool>? isEnabledFunc = null,
+                string? description = null)
             {
                 _toolName = toolName;
                 ToolType = toolType;
                 _isEnabledFunc = isEnabledFunc;
+                _description = description ?? $"Mock {toolType} tool";
             }
 
             public ToolType ToolType { get; }
@@ -483,7 +674,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 return new Tool
                 {
                     Name = _toolName,
-                    Description = $"Mock {ToolType} tool",
+                    Description = _description,
                     InputSchema = doc.RootElement.Clone()
                 };
             }

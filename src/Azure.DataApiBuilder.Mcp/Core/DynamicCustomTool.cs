@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -28,13 +29,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
     /// <summary>
     /// Dynamic custom MCP tool generated from stored procedure entity configuration.
     /// Each custom tool represents a single stored procedure exposed as a dedicated MCP tool.
-    /// 
-    /// Note: The entity configuration is captured at tool construction time. If the RuntimeConfig
-    /// is hot-reloaded, GetToolMetadata() will return cached metadata (name, description, parameters)
-    /// from the original configuration. This is acceptable because:
-    /// 1. MCP clients typically call tools/list once at startup
-    /// 2. ExecuteAsync always validates against the current runtime configuration
-    /// 3. Cached metadata improves performance for repeated metadata requests
+    /// A new instance is created for each MCP registry generation so its cached metadata remains
+    /// aligned with the runtime configuration used to advertise it.
     /// </summary>
     public class DynamicCustomTool : IMcpTool
     {
@@ -82,7 +78,29 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public void InitializeMetadata(IServiceProvider serviceProvider)
         {
             ArgumentNullException.ThrowIfNull(serviceProvider);
-            _cachedInputSchema = BuildInputSchemaFromDbMetadata(serviceProvider);
+
+            RuntimeConfigProvider? configProvider = serviceProvider.GetService<RuntimeConfigProvider>();
+            IMetadataProviderFactory? metadataProviderFactory = serviceProvider.GetService<IMetadataProviderFactory>();
+            if (configProvider is null || metadataProviderFactory is null)
+            {
+                _cachedInputSchema = null;
+                return;
+            }
+
+            InitializeMetadata(configProvider.GetConfig(), metadataProviderFactory);
+        }
+
+        /// <summary>
+        /// Initializes the input schema using an explicit configuration and metadata-provider
+        /// generation. Falls back to config-based metadata when database metadata is unavailable.
+        /// </summary>
+        public void InitializeMetadata(
+            RuntimeConfig config,
+            IMetadataProviderFactory metadataProviderFactory)
+        {
+            ArgumentNullException.ThrowIfNull(config);
+            ArgumentNullException.ThrowIfNull(metadataProviderFactory);
+            _cachedInputSchema = BuildInputSchemaFromDbMetadata(config, metadataProviderFactory);
         }
 
         /// <summary>
@@ -322,20 +340,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// Builds the input schema from DB metadata (StoredProcedureDefinition.Parameters).
         /// Returns null if metadata cannot be resolved (caller should fall back to config-based schema).
         /// </summary>
-        private JsonElement? BuildInputSchemaFromDbMetadata(IServiceProvider serviceProvider)
+        private JsonElement? BuildInputSchemaFromDbMetadata(
+            RuntimeConfig config,
+            IMetadataProviderFactory metadataProviderFactory)
         {
-            RuntimeConfigProvider? configProvider = serviceProvider.GetService<RuntimeConfigProvider>();
-            if (configProvider is null)
-            {
-                return null;
-            }
-
-            RuntimeConfig config = configProvider.GetConfig();
-
             if (!McpMetadataHelper.TryResolveMetadata(
                     EntityName,
                     config,
-                    serviceProvider,
+                    metadataProviderFactory,
                     out _,
                     out DatabaseObject dbObject,
                     out _,

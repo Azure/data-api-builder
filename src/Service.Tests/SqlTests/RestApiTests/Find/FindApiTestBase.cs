@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for FindByDateTimePk operation without a query string.
+        /// Tests the REST API for FindByDateTimePk operation without a query string.
         /// </summary>
         [TestMethod]
         public virtual async Task FindByDateTimePKTest()
@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for find many operation on stored procedure
+        /// Tests the REST API for find many operation on stored procedure
         /// Stored procedure result is not necessarily json.
         /// </summary>
         [TestMethod]
@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for find one operation using required parameter
+        /// Tests the REST API for find one operation using required parameter
         /// For Find operations, parameters must be passed in query string
         /// </summary>
         [TestMethod]
@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operations on empty result sets
+        /// Tests the REST API for Find operations on empty result sets
         /// 1. GET an entity with no rows (empty table)
         /// 2. GET an entity with rows, filtered to none by query parameter
         /// Should be a 200 response with an empty array
@@ -113,7 +113,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the Rest Api to validate that unique unicode
+        /// Tests the REST API to validate that unique unicode
         /// characters work in queries.
         /// </summary>
         /// <returns></returns>
@@ -128,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the Rest Api to validate that queries work
+        /// Tests the REST API to validate that queries work
         /// when there is the same table name in two different
         /// schemas. In this test we have two tables both
         /// named magazines but with one in the schema "foo" and
@@ -240,7 +240,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
         /// <summary>
         /// Validates the repsonse when both $select and $orderby query strings are
-        /// used with Find API reqeusts. The response is expected to contain only the 
+        /// used with Find API reqeusts. The response is expected to contain only the
         /// fields requested in $select clause.
         /// This test is executed against a table.
         /// </summary>
@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
         /// <summary>
         /// Validates the repsonse when both $select and $orderby query strings are
-        /// used with Find API reqeusts. The response is expected to contain only the 
+        /// used with Find API reqeusts. The response is expected to contain only the
         /// fields requested in $select clause.
         /// This test is executed against a view.
         /// </summary>

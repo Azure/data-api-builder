@@ -148,6 +148,115 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [TestMethod]
+        public void EnsureInitialized_WhenDatabaseMetadataUnavailable_PublishesConfigFallbackSchema()
+        {
+            RuntimeConfig currentConfig = CreateRuntimeConfigWithParameter(
+                parameterDescription: "Configured identifier");
+            TestContext context = CreateContext(() => currentConfig);
+
+            context.Service.EnsureInitialized();
+
+            Tool customTool = context.Registry.GetAdvertisedTools().Single();
+            JsonElement properties = customTool.InputSchema.GetProperty("properties");
+            JsonElement idSchema = properties.GetProperty("id");
+            CollectionAssert.AreEqual(
+                new[] { "string", "number", "boolean", "null" },
+                idSchema.GetProperty("type").EnumerateArray().Select(value => value.GetString()).ToArray());
+            Assert.AreEqual("Configured identifier", idSchema.GetProperty("description").GetString());
+            CollectionAssert.AreEqual(
+                new[] { "id" },
+                customTool.InputSchema.GetProperty("required")
+                    .EnumerateArray()
+                    .Select(value => value.GetString())
+                    .ToArray());
+        }
+
+        [TestMethod]
+        public void HotReload_WithInputSchemaOnlyChange_NotifiesClient()
+        {
+            RuntimeConfig currentConfig = CreateRuntimeConfigWithParameter("Old parameter description");
+            TestContext context = CreateContext(() => currentConfig);
+            context.Service.EnsureInitialized();
+
+            currentConfig = CreateRuntimeConfigWithParameter("New parameter description");
+            RaiseRegistryChanged(context.HotReloadEventHandler);
+
+            Assert.AreEqual(
+                "New parameter description",
+                context.Registry.GetAdvertisedTools()
+                    .Single()
+                    .InputSchema
+                    .GetProperty("properties")
+                    .GetProperty("id")
+                    .GetProperty("description")
+                    .GetString());
+            context.Notifier.Verify(notifier => notifier.NotifyToolsListChanged(), Times.Once);
+        }
+
+        [TestMethod]
+        public void HotReload_WhenNotifierThrows_PreservesPublicationAndContinuesNotifying()
+        {
+            RuntimeConfig currentConfig = CreateRuntimeConfig();
+            ThrowingNotifier throwingNotifier = new();
+            Mock<IMcpToolListChangedNotifier> healthyNotifier = new();
+            TestContext context = CreateContextWithNotifiers(
+                () => currentConfig,
+                healthyNotifier,
+                new IMcpToolListChangedNotifier[] { throwingNotifier, healthyNotifier.Object });
+            context.Service.EnsureInitialized();
+
+            currentConfig = CreateRuntimeConfig(("GetBook", "New tool"));
+            RaiseRegistryChanged(context.HotReloadEventHandler);
+
+            Assert.IsTrue(context.Registry.TryGetTool("get_book", out _));
+            Assert.AreEqual(1, throwingNotifier.CallCount);
+            healthyNotifier.Verify(notifier => notifier.NotifyToolsListChanged(), Times.Once);
+        }
+
+        [TestMethod]
+        public void HotReload_AfterRejectedCandidate_RecoversOnNextConfig()
+        {
+            RuntimeConfig currentConfig = CreateRuntimeConfig();
+            TestMcpTool builtIn = new("read_records", ToolType.BuiltIn);
+            TestContext context = CreateContext(() => currentConfig, builtIn);
+            context.Service.EnsureInitialized();
+
+            currentConfig = CreateRuntimeConfig(("ReadRecords", "Conflicting custom tool"));
+            RaiseRegistryChanged(context.HotReloadEventHandler);
+            Assert.AreSame(builtIn, GetRequiredTool(context.Registry, "read_records"));
+            Assert.IsFalse(context.Registry.TryGetTool("get_book", out _));
+
+            currentConfig = CreateRuntimeConfig(("GetBook", "Recovered tool"));
+            RaiseRegistryChanged(context.HotReloadEventHandler);
+
+            Assert.IsTrue(context.Registry.TryGetTool("get_book", out _));
+            Assert.AreEqual(
+                "Recovered tool",
+                context.Registry.GetAdvertisedTools().Single(tool => tool.Name == "get_book").Description);
+            context.Notifier.Verify(notifier => notifier.NotifyToolsListChanged(), Times.Once);
+        }
+
+        [TestMethod]
+        public void HotReload_WithSuccessiveConfigurations_PublishesLatestGeneration()
+        {
+            RuntimeConfig currentConfig = CreateRuntimeConfig();
+            TestContext context = CreateContext(() => currentConfig);
+            context.Service.EnsureInitialized();
+
+            currentConfig = CreateRuntimeConfig(("FirstTool", "First generation"));
+            RaiseRegistryChanged(context.HotReloadEventHandler);
+            currentConfig = CreateRuntimeConfig(("LatestTool", "Latest generation"));
+            RaiseRegistryChanged(context.HotReloadEventHandler);
+
+            Assert.IsFalse(context.Registry.TryGetTool("first_tool", out _));
+            Assert.IsTrue(context.Registry.TryGetTool("latest_tool", out _));
+            CollectionAssert.AreEqual(
+                new[] { "latest_tool" },
+                context.Registry.GetAdvertisedTools().Select(tool => tool.Name).ToArray());
+            context.Notifier.Verify(notifier => notifier.NotifyToolsListChanged(), Times.Exactly(2));
+        }
+
+        [TestMethod]
         public void HotReload_DiscardsCandidateWhenNewerConfigBecomesActive()
         {
             RuntimeConfig initialConfig = CreateRuntimeConfig();
@@ -219,6 +328,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Func<RuntimeConfig> getConfig,
             params IMcpTool[] builtInTools)
         {
+            Mock<IMcpToolListChangedNotifier> notifier = new();
+            return CreateContextWithNotifiers(
+                getConfig,
+                notifier,
+                new[] { notifier.Object },
+                builtInTools);
+        }
+
+        private static TestContext CreateContextWithNotifiers(
+            Func<RuntimeConfig> getConfig,
+            Mock<IMcpToolListChangedNotifier> primaryNotifier,
+            IEnumerable<IMcpToolListChangedNotifier> notifiers,
+            params IMcpTool[] builtInTools)
+        {
             Mock<RuntimeConfigLoader> configLoader = new(null, null);
             Mock<RuntimeConfigProvider> configProvider = new(configLoader.Object);
             configProvider.Setup(provider => provider.GetConfig()).Returns(getConfig);
@@ -232,7 +355,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 .Setup(factory => factory.GetMetadataProvider(It.IsAny<string>()))
                 .Returns(sqlMetadataProvider.Object);
 
-            Mock<IMcpToolListChangedNotifier> notifier = new();
             McpToolRegistry registry = new();
             HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
             McpToolRegistryRefreshService service = new(
@@ -240,14 +362,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 builtInTools,
                 registry,
                 metadataProviderFactory.Object,
-                new[] { notifier.Object },
+                notifiers,
                 NullLogger<McpToolRegistryRefreshService>.Instance,
                 hotReloadEventHandler);
 
             return new TestContext(
                 service,
                 registry,
-                notifier,
+                primaryNotifier,
                 hotReloadEventHandler);
         }
 
@@ -284,6 +406,53 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     Mcp: new(Enabled: true),
                     Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)),
                 Entities: new(entities));
+        }
+
+        private static RuntimeConfig CreateRuntimeConfigWithParameter(string parameterDescription)
+        {
+            Entity entity = new(
+                Source: new(
+                    "test_procedure",
+                    EntitySourceType.StoredProcedure,
+                    Parameters: new List<ParameterMetadata>
+                    {
+                        new()
+                        {
+                            Name = "id",
+                            Description = parameterDescription,
+                            Required = true
+                        }
+                    },
+                    KeyFields: null),
+                GraphQL: new("GetBook", "GetBooks"),
+                Rest: new(Enabled: true),
+                Fields: null,
+                Permissions: new[]
+                {
+                    new EntityPermission(
+                        Role: "anonymous",
+                        Actions: new[]
+                        {
+                            new EntityAction(
+                                Action: EntityActionOperation.Execute,
+                                Fields: null,
+                                Policy: null)
+                        })
+                },
+                Relationships: null,
+                Mappings: null,
+                Description: "Stable tool description",
+                Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: null));
+
+            return new RuntimeConfig(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType.MSSQL, string.Empty, Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(Enabled: true),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)),
+                Entities: new(new Dictionary<string, Entity> { ["GetBook"] = entity }));
         }
 
         private static IMcpTool GetRequiredTool(McpToolRegistry registry, string name)
@@ -347,6 +516,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 CancellationToken cancellationToken = default)
             {
                 throw new NotImplementedException();
+            }
+        }
+
+        private sealed class ThrowingNotifier : IMcpToolListChangedNotifier
+        {
+            public int CallCount { get; private set; }
+
+            public void NotifyToolsListChanged()
+            {
+                CallCount++;
+                throw new InvalidOperationException("Expected notification failure.");
             }
         }
 

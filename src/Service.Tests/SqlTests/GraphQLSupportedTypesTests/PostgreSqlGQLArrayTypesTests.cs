@@ -225,6 +225,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// Query multiple rows with array columns and verify the list result.
         /// </summary>
         [TestMethod]
+        [Ignore("Certain data types are not yet supported in PostgreSQL. See issue #3735 for details.")]
         public async Task QueryMultipleRowsWithArrayColumns()
         {
             string gqlQuery = @"{

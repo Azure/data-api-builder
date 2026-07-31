@@ -184,12 +184,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     else if (mutationOperation is EntityActionOperation.Create && _runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled())
                     {
                         bool isPointMutation = IsPointMutation(context);
-
+                        
                         List<IDictionary<string, object?>> primaryKeysOfCreatedItems = PerformMultipleCreateOperation(
                                     entityName,
                                     context,
                                     parameters,
                                     sqlMetadataProvider,
+                                    _runtimeConfigProvider.GetConfig(),
                                     !isPointMutation);
 
                         // For point create multiple mutation operation, a single item is created in the
@@ -1066,6 +1067,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IMiddlewareContext context,
                 IDictionary<string, object?> mutationInputParamsFromGQLContext,
                 ISqlMetadataProvider sqlMetadataProvider,
+                RuntimeConfig runtimeConfig,
                 bool isMultipleInputType = false)
         {
             // rootFieldName can be either "item" or "items" depending on whether the operation
@@ -1073,7 +1075,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string rootFieldName = isMultipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
 
             // Parse the hotchocolate input parameters into .net object types
-            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, rootFieldName, mutationInputParamsFromGQLContext, sqlMetadataProvider, entityName);
+            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, rootFieldName, mutationInputParamsFromGQLContext, sqlMetadataProvider, entityName, runtimeConfig);
 
             if (parsedInputParams is null)
             {
@@ -1745,14 +1747,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string rootFieldName,
                 IDictionary<string, object?> mutationParameters,
                 ISqlMetadataProvider metadataProvider,
-                string entityName)
+                string entityName,
+                RuntimeConfig runtimeConfig)
         {
             if (mutationParameters.TryGetValue(rootFieldName, out object? inputParameters))
             {
                 ObjectField fieldSchema = context.Selection.Field;
                 IInputValueDefinition itemsArgumentSchema = fieldSchema.Arguments[rootFieldName];
                 InputObjectType inputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
-                return GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, inputParameters, metadataProvider, entityName);
+                return GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, inputParameters, metadataProvider, entityName, runtimeConfig);
             }
             else
             {
@@ -1802,7 +1805,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             InputObjectType inputObjectType,
             object? inputParameters,
             ISqlMetadataProvider metadataProvider,
-            string entityName)
+            string entityName,
+            RuntimeConfig runtimeConfig)
         {
             // This condition is met for input types that accept an array of values
             // where the mutation input field is 'items' such as
@@ -1826,7 +1830,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                             inputObjectType: inputObjectType,
                                             inputParameters: inputField.Value,
                                             metadataProvider: metadataProvider,
-                                            entityName: entityName);
+                                            entityName: entityName,
+                                            runtimeConfig: runtimeConfig);
                     if (parsedInputFieldItem is not null)
                     {
                         parsedInputFieldItems.Add((IDictionary<string, object?>)parsedInputFieldItem);
@@ -1853,7 +1858,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach (ObjectFieldNode inputFieldNode in inputFieldNodes)
                 {
                     string fieldName = inputFieldNode.Name.Value;
-                    SyntaxKind fieldKind = metadataProvider.TryGetArrayElementSyntaxKind(entityName, fieldName, out SyntaxKind arrayFieldKind)
+                    string targetEntityName = entityName;
+                    Dictionary<string, EntityRelationship>? entityRelationships = runtimeConfig.Entities![entityName].Relationships;
+                    if (entityRelationships is not null && entityRelationships.ContainsKey(fieldName))
+                    {
+                        targetEntityName = entityRelationships[fieldName].TargetEntity;
+                    }
+
+                    SyntaxKind fieldKind = metadataProvider.TryGetArrayElementSyntaxKind(targetEntityName, fieldName, out SyntaxKind arrayFieldKind)
                         ? arrayFieldKind : inputFieldNode.Value.Kind;
 
                     // For the mutation pointMultipleCreateExample (outlined in the method summary),
@@ -1870,7 +1882,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 GetInputObjectTypeForAField(fieldName, inputObjectType.Fields),
                                 inputFieldNode.Value.Value,
                                 metadataProvider,
-                                entityName));
+                                targetEntityName,
+                                runtimeConfig));
                     }
                     // For the mutation pointMultipleCreateExample (outlined in the method summary),
                     // the following condition will evaluate to true for fields 'publishers'.
@@ -1886,7 +1899,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 GetInputObjectTypeForAField(fieldName, inputObjectType.Fields),
                                 inputFieldNode.Value.Value,
                                 metadataProvider,
-                                entityName));
+                                targetEntityName,
+                                runtimeConfig));
                     }
                     // The flow enters this block for all scalar input fields.
                     else

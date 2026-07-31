@@ -86,6 +86,100 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Query the list of vector records with a filter to ensure it fails with the appropriate error message.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryVectorTypeWithFilter()
+        {
+            string graphQLQueryName = "vectorTypes";
+            string graphQLQuery = @"{
+                vectorTypes(filter: { vector_data: { eq: [0.5, 0.25, 0.75] } }) {
+                    items {
+                        id
+                        vector_data
+                    }
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+
+            JsonElement items = result[0];
+            string message = items.GetProperty("message").GetString();
+            Assert.IsTrue(message.Equals("The specified value type of field `eq` does not match the field type."));
+        }
+
+        /// <summary>
+        /// Query the list of vector records with orderby to ensure it fails with the appropriate error message.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryVectorTypeWithOrderBy()
+        {
+            string graphQLQueryName = "vectorTypes";
+            string graphQLQuery = @"{
+                vectorTypes(orderBy: { vector_data: ASC }) {
+                    items {
+                        id
+                        vector_data
+                    }
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+
+            JsonElement items = result[0];
+            string message = items.GetProperty("message").GetString();
+            Assert.IsTrue(message.Equals("The specified input object field `vector_data` does not exist."));
+        }
+
+        /// <summary>
+        /// Query the list of vector records with groupby filter to ensure it fails with the appropriate error message.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryVectorTypeGroupBy()
+        {
+            string graphQLQueryName = "vectorTypes";
+            string graphQLQuery = @"{
+                vectorTypes {
+                    groupBy(fields: [vector_data]) {
+                        fields {
+                            vector_data
+                        }
+                    }
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+
+            JsonElement items = result[0];
+            string message = items.GetProperty("message").GetString();
+            Assert.IsTrue(message.Equals("The vector data types cannot be compared or sorted, except when using the IS NULL operator."));
+        }
+
+        /// <summary>
+        /// Query the list of vector records with a numeric aggregate to ensure it fails with the appropriate error message.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryVectorTypeAggregate()
+        {
+            string graphQLQueryName = "vectorTypes";
+            string graphQLQuery = @"{
+                vectorTypes {
+                    groupBy {
+                        aggregations {
+                            sum(field: vector_data)
+                        }
+                    }
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+
+            JsonElement items = result[0];
+            string message = items.GetProperty("message").GetString();
+            Assert.IsTrue(message.Equals("The specified argument value does not match the argument type."));
+        }
+
+        /// <summary>
         /// Query the maximum-dimension vector column and verify the returned list has the expected number
         /// of components and the correct values.
         /// </summary>
@@ -149,6 +243,89 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             AssertVectorEquals(readBack.GetProperty("vector_data"), expectedValue);
 
             await DeleteVectorTypeAsync(newId);
+        }
+
+        /// <summary>
+        /// Insert a new record with a nested vector value via a create mutation and verify the persisted value is
+        /// returned as a list and can be read back correctly. The record is deleted afterwards to keep the
+        /// table clean.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertNestedVectorType()
+        {
+            string createMutationName = "createVectorOwner";
+            string createMutation = @"mutation {
+              createVectorOwner(
+                item: {
+                  name: ""Owner #3"",
+                  vectors: [
+                    { vector_data: [0.5, 0.25, 0.75] }
+                  ]
+                }
+              ) {
+                id
+                name
+                vectors {
+                        items
+                        {
+                            id
+                            vector_data
+                        }
+                    }
+                }
+            }";
+
+            await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false);
+
+            // Confirm the value was persisted by reading it back.
+            float[] expectedValue = new[] { 0.5f, 0.25f, 0.75f };
+            JsonElement readBack = await GetRecordByPkAsync(5001);
+            AssertVectorEquals(readBack.GetProperty("vector_data"), expectedValue);
+
+            await DeleteNestedVectorTypeAsync(5001);
+        }
+
+        /// <summary>
+        /// Insert a new record with a vector value via a create mutation and verify the persisted value is
+        /// returned as a list and can be read back correctly. The record is deleted afterwards to keep the
+        /// table clean.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMultipleNestedVectorType()
+        {
+            string createMutationName = "createVectorOwners";
+            string createMutation = @"mutation {
+              createVectorOwners(
+                items: [
+                  { name: ""Owner #1"", vectors: [ { vector_data: [0.5, 0.25, 0.75] } ] },
+                  { name: ""Owner #2"", vectors: [ { vector_data: [1.5, -2.5, 3.5] } ] }
+                ]
+              ) {
+                    items {
+                        id
+                        name
+                        vectors {
+                            items {
+                                id
+                                vector_data
+                            }
+                        }
+                    }
+                }
+            }";
+            
+            await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false);
+
+            // Confirm the value was persisted by reading it back.
+            float[] expectedValue = new[] { 0.5f, 0.25f, 0.75f };
+            JsonElement readBackFirstVal = await GetRecordByPkAsync(5001);
+            AssertVectorEquals(readBackFirstVal.GetProperty("vector_data"), expectedValue);
+            await DeleteNestedVectorTypeAsync(5001);
+
+            float[] expectedSecondValue = new[] { 1.5f, -2.5f, 3.5f };
+            JsonElement readBackSecondVal = await GetRecordByPkAsync(5002);
+            AssertVectorEquals(readBackSecondVal.GetProperty("vector_data"), expectedSecondValue);
+            await DeleteNestedVectorTypeAsync(5002);
         }
 
         /// <summary>
@@ -242,6 +419,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 deleteVectorType(id: " + id + @") {
                     id
                 }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(deleteMutation, deleteMutationName, isAuthenticated: false);
+            Assert.AreEqual(id, result.GetProperty("id").GetInt32());
+        }
+
+        /// <summary>
+        /// Deletes a VectorOwner record with the VectorType record nested by its primary key via a delete mutation.
+        /// </summary>
+        private async Task DeleteNestedVectorTypeAsync(int id)
+        {
+            string deleteMutationName = "deleteVectorOwner";
+            string deleteMutation = @"mutation {
+              deleteVectorOwner(id: " + id + @") {
+                id
+                name
+                vectors {
+                  items {
+                    id
+                    vector_data
+                  }
+                }
+              }
             }";
 
             JsonElement result = await ExecuteGraphQLRequestAsync(deleteMutation, deleteMutationName, isAuthenticated: false);

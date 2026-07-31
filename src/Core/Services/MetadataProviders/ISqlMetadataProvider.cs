@@ -253,7 +253,7 @@ namespace Azure.DataApiBuilder.Core.Services
             bool isMToNRelationship) => throw new NotImplementedException();
 
         /// <summary>
-        /// Tries to get the underlying field kind for a given field inside an entity.
+        /// Tries to get the GraphQL syntax kind of an array column's element type.
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
         /// <param name="fieldName">The name of the field.</param>

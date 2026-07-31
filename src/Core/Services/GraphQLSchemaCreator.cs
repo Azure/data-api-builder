@@ -295,9 +295,9 @@ namespace Azure.DataApiBuilder.Core.Services
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                     SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
                     bool isStoredProcedure = entity.Source.Type is EntitySourceType.StoredProcedure;
+                    EntityActionOperation operation = isStoredProcedure ? EntityActionOperation.Execute : EntityActionOperation.Read;
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        EntityActionOperation operation = isStoredProcedure ? EntityActionOperation.Execute : EntityActionOperation.Read;
                         IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: operation);
                         if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                         {
@@ -309,7 +309,6 @@ namespace Azure.DataApiBuilder.Core.Services
                         }
                     }
 
-                    // The roles allowed for Fields are the roles allowed to READ the fields, so any role that has a read definition for the field.
                     // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.
                     if (rolesAllowedForEntity.Any())
                     {
@@ -397,23 +396,18 @@ namespace Azure.DataApiBuilder.Core.Services
                 GenerateSourceTargetLinkingObjectDefinitions(objectTypes, linkingObjectTypes);
             }
 
-            // Return a list of all the object types to be exposed in the schema.
-            Dictionary<string, FieldDefinitionNode> fields = new();
+            NameNode nameNode = new(value: GraphQLUtils.DB_OPERATION_RESULT_TYPE);
 
             // Add the DBOperationResult type to the schema
-            NameNode nameNode = new(value: GraphQLUtils.DB_OPERATION_RESULT_TYPE);
-            FieldDefinitionNode field = GetDbOperationResultField();
-
-            fields.TryAdd(GraphQLUtils.DB_OPERATION_RESULT_FIELD_NAME, field);
-
             objectTypes.Add(GraphQLUtils.DB_OPERATION_RESULT_TYPE, new ObjectTypeDefinitionNode(
                 location: null,
                 name: nameNode,
                 description: null,
                 new List<DirectiveNode>(),
                 new List<NamedTypeNode>(),
-                fields.Values.ToImmutableList()));
+                ImmutableList.Create(GetDbOperationResultField())));
 
+            // Return a list of all the object types to be exposed in the schema.
             List<IDefinitionNode> nodes = new(objectTypes.Values);
             nodes.AddRange(enumTypes.Values);
             return new DocumentNode(nodes);
@@ -748,7 +742,7 @@ namespace Azure.DataApiBuilder.Core.Services
             DocumentNode cosmosResult = GenerateCosmosGraphQLObjects(cosmosDataSourceNames, inputObjects);
             DocumentNode sqlResult = GenerateSqlGraphQLObjects(sql, inputObjects);
             // Create Root node with definitions from both cosmos and sql.
-            DocumentNode root = new(cosmosResult.Definitions.Concat(sqlResult.Definitions).ToImmutableList());
+            DocumentNode root = cosmosResult.WithDefinitions(cosmosResult.Definitions.Concat(sqlResult.Definitions).ToImmutableList());
 
             // Merge the inputobjectType definitions from cosmos and sql onto the root.
             return (root.WithDefinitions(root.Definitions.Concat(inputObjects.Values).ToImmutableList()), inputObjects);

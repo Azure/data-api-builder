@@ -251,19 +251,19 @@ The host resolves the singleton through `IHostedService` early enough to subscri
 hot-reload events, but `StartAsync()` does not publish the initial snapshot. ASP.NET Core starts
 hosted services before `Startup.Configure` finishes initializing database metadata.
 
-After `Startup.PerformOnConfigChangeAsync()` successfully initializes
-`IMetadataProviderFactory`, it invokes the refresh service's idempotent initialization method.
-This prevents the initial registry from advertising a configuration-only fallback schema while
-database metadata is still being initialized.
+`Startup.PerformOnConfigChangeAsync()` invokes a shared runtime-initialization helper. Configuration
+capture and validation, `IMetadataProviderFactory` initialization, and the refresh service's
+idempotent registry publication execute as one asynchronous operation under the
+`FileSystemRuntimeConfigLoader` serialization gate. A file callback therefore cannot replace the
+active configuration between those steps.
 
 The DI registration must ensure that resolving the concrete refresh service and resolving `IHostedService` return the same object, for example by registering the concrete singleton and mapping `IHostedService` to it.
 
 #### Stdio mode
 
 Stdio intentionally does not start the ASP.NET Core host, so `Startup.Configure` does not initialize
-database metadata. `McpStdioHelper` explicitly initializes `IMetadataProviderFactory`, then resolves
-the same refresh-service singleton and invokes its idempotent initialization method before starting
-the stdio loop.
+database metadata. `McpStdioHelper` invokes the same serialized initial dependency operation used by
+HTTP startup before starting the stdio loop.
 
 This replaces the current duplicate per-tool registration path and gives both transports identical validation and metadata behavior.
 
@@ -271,11 +271,12 @@ This replaces the current duplicate per-tool registration path and gives both tr
 
 Distinct file edits can produce overlapping hot-reload callbacks even though duplicate notifications for one file content are suppressed by `ConfigFileWatcher`.
 
-`FileSystemRuntimeConfigLoader` serializes the complete reload operation per loader instance. The
-gate is acquired before loading the new configuration and remains held until every synchronous
-`SignalConfigChanged()` handler returns. Consequently, configuration, metadata, authorization, MCP,
-GraphQL, and logging handlers for generation A complete before generation B can replace the active
-configuration or begin updating dependencies.
+`FileSystemRuntimeConfigLoader` serializes initial dependency construction and the complete reload
+operation per loader instance. Its async-capable gate is held across initial configuration capture
+and validation, metadata initialization, and MCP registry publication. For reload, the gate is
+acquired before loading the new configuration and remains held until every synchronous
+`SignalConfigChanged()` handler returns. Consequently, one complete generation finishes before
+another path can replace the active configuration or begin updating dependencies.
 
 The refresh service retains its own writer gate and stale-generation guard as defense in depth:
 
@@ -488,10 +489,11 @@ An in-flight `tools/call` retains the resolved tool instance. A later swap does 
 
 ### Multiple configuration changes
 
-The per-loader reload gate ensures one file generation completes all ordered handlers before the next
-file notification begins loading. The stale-generation guard additionally prevents publication when
-the active `RuntimeConfig` changes during candidate construction through another code path. The latest
-callback eventually publishes the latest generation.
+The per-loader gate ensures initial metadata and registry construction cannot overlap a file reload,
+and that one file generation completes all ordered handlers before the next notification begins
+loading. The stale-generation guard additionally prevents publication when the active `RuntimeConfig`
+changes during candidate construction through another code path. The latest callback eventually
+publishes the latest generation.
 
 Serialization is scoped to each `FileSystemRuntimeConfigLoader`; independent loaders do not block one
 another. Transactional rollback is still tracked separately.
@@ -571,6 +573,7 @@ The exact file split may change during implementation, but the expected touchpoi
 - [DabConfigEvents.cs](../../src/Config/DabConfigEvents.cs): add the MCP registry event name.
 - [HotReloadEventHandler.cs](../../src/Config/HotReloadEventHandler.cs): register the event slot.
 - [RuntimeConfigLoader.cs](../../src/Config/RuntimeConfigLoader.cs): raise the event at the agreed position.
+- [FileSystemRuntimeConfigLoader.cs](../../src/Config/FileSystemRuntimeConfigLoader.cs): serialize initial dependency construction and complete file-reload pipelines with one async-capable per-loader gate.
 
 ### MCP project
 
@@ -586,6 +589,7 @@ The exact file split may change during implementation, but the expected touchpoi
 
 ### Service project
 
+- [RuntimeInitializationHelper.cs](../../src/Service/Utilities/RuntimeInitializationHelper.cs): coordinate serialized configuration validation, metadata initialization, and initial registry publication for both transports.
 - [McpStdioHelper.cs](../../src/Service/Utilities/McpStdioHelper.cs): invoke shared idempotent initialization.
 - [Program.cs](../../src/Service/Program.cs): register the stdio notifier with the shared stdout writer.
 
@@ -649,6 +653,8 @@ The exact file split may change during implementation, but the expected touchpoi
 7. A duplicate name leaves the previous registry active.
 8. Correcting a failed configuration allows the next refresh to succeed.
 9. Rapid successive configurations cannot publish an older registry after a newer one.
+10. A reload paused before metadata refresh cannot overlap initial metadata and registry construction;
+    the final advertised schema comes from the reload generation's database metadata.
 
 Database-backed schema tests should reuse existing MCP stored-procedure fixtures where database metadata is required. Pure membership, collision, notification, and atomicity behavior should remain unit-testable without a live database.
 

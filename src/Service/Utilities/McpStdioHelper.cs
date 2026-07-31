@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -80,15 +79,12 @@ namespace Azure.DataApiBuilder.Service.Utilities
             try
             {
                 // Stdio deliberately does not start the web host, so Startup.Configure does not
-                // initialize metadata. Do that explicitly before publishing the initial registry
-                // to keep custom tool schemas identical across transports.
-                IMetadataProviderFactory metadataProviderFactory =
-                    host.Services.GetRequiredService<IMetadataProviderFactory>();
-                metadataProviderFactory.InitializeAsync().GetAwaiter().GetResult();
-
-                Mcp.Core.IMcpToolRegistryRefreshService refreshService =
-                    host.Services.GetRequiredService<Mcp.Core.IMcpToolRegistryRefreshService>();
-                refreshService.EnsureInitialized();
+                // initialize runtime dependencies. Run the same serialized validation, metadata,
+                // and registry sequence used by HTTP startup before opening the stdio loop.
+                RuntimeInitializationHelper
+                    .InitializeRuntimeDependenciesAsync(host.Services)
+                    .GetAwaiter()
+                    .GetResult();
 
                 IHostApplicationLifetime lifetime =
                     host.Services.GetRequiredService<IHostApplicationLifetime>();

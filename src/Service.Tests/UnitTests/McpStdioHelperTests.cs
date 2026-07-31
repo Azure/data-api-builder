@@ -4,13 +4,17 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Service.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -26,6 +30,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TestApplicationLifetime lifetime = new();
             TestMcpStdioServer stdioServer = new();
             List<string> initializationOrder = new();
+            MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>
+            {
+                [FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME] =
+                    new MockFileData(TestHelper.INITIAL_CONFIG)
+            });
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, isCliLoader: true);
+            RuntimeConfigProvider runtimeConfigProvider = new(configLoader);
+            RuntimeConfigValidator runtimeConfigValidator = new(
+                runtimeConfigProvider,
+                fileSystem,
+                NullLogger<RuntimeConfigValidator>.Instance);
             Mock<IMetadataProviderFactory> metadataProviderFactory = new();
             metadataProviderFactory
                 .Setup(factory => factory.InitializeAsync())
@@ -33,6 +48,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 .Returns(Task.CompletedTask);
             TestMcpToolRegistryRefreshService refreshService = new(initializationOrder);
 
+            services.AddSingleton(configLoader);
+            services.AddSingleton(runtimeConfigProvider);
+            services.AddSingleton(runtimeConfigValidator);
             services.AddSingleton(metadataProviderFactory.Object);
             services.AddSingleton<IMcpToolRegistryRefreshService>(refreshService);
             services.AddSingleton<IHostApplicationLifetime>(lifetime);

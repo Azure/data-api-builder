@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Config;
 /// </remarks>
 public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 {
-    private readonly object _hotReloadGate = new();
+    private readonly SemaphoreSlim _hotReloadGate = new(initialCount: 1, maxCount: 1);
     private bool _disposed;
     /// <summary>
     /// This stores either the default config name e.g. dab-config.json
@@ -113,7 +113,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     public void Dispose()
     {
         ConfigFileWatcher? configFileWatcher;
-        lock (_hotReloadGate)
+        _hotReloadGate.Wait();
+        try
         {
             if (_disposed)
             {
@@ -128,6 +129,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             {
                 configFileWatcher.NewFileContentsDetected -= OnNewFileContentsDetected;
             }
+        }
+        finally
+        {
+            _hotReloadGate.Release();
         }
 
         // FileSystemWatcher disposal can block while an OS callback completes. Do not hold the
@@ -225,7 +230,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     {
         beforeEnteringGate?.Invoke();
 
-        lock (_hotReloadGate)
+        _hotReloadGate.Wait();
+        try
         {
             if (_disposed)
             {
@@ -245,6 +251,37 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
                     LogLevel.Error,
                     $"Unable to hot reload configuration file due to {ex.Message}");
             }
+        }
+        finally
+        {
+            _hotReloadGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Executes initial runtime dependency construction under the same per-loader gate used by
+    /// file-triggered hot reload. The operation may be asynchronous, and the gate remains held
+    /// until it completes so a configuration cannot change between metadata initialization and
+    /// dependent component publication.
+    /// </summary>
+    /// <param name="operation">The complete initial configuration operation to serialize.</param>
+    public async Task ExecuteWithHotReloadSerializationAsync(Func<Task> operation)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        await _hotReloadGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
+            }
+
+            await operation().ConfigureAwait(false);
+        }
+        finally
+        {
+            _hotReloadGate.Release();
         }
     }
 

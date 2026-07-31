@@ -270,6 +270,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// <summary>
         /// Parameterized test verifying GetEnabledTools returns only enabled tools.
         /// </summary>
+#pragma warning disable CS0618 // Compatibility API behavior remains covered until removal.
         [DataTestMethod]
         [DataRow(1, 1, DisplayName = "Mixed: 1 enabled, 1 disabled → returns 1")]
         [DataRow(3, 0, DisplayName = "All enabled → returns all")]
@@ -360,6 +361,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsFalse(enabledTools.Any(t => t.Name == "create_record"));
             Assert.IsFalse(enabledTools.Any(t => t.Name == "delete_record"));
         }
+#pragma warning restore CS0618
 
         /// <summary>
         /// Replacing the registry publishes a complete, deterministically ordered snapshot and

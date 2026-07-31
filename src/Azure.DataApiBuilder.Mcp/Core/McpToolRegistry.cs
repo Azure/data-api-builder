@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 ImmutableDictionary<string, IMcpTool> tools = current.Tools.Add(toolName, tool);
                 ImmutableArray<Tool> advertisedTools = SortMetadata(current.AdvertisedTools.Add(metadata));
-                string fingerprint = CreateDiscoveryFingerprint(advertisedTools);
+                string discoveryCanonicalJson = CreateDiscoveryCanonicalJson(advertisedTools);
 
                 Interlocked.Exchange(
                     ref _snapshot,
@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         Version: current.Version + 1,
                         Tools: tools,
                         AdvertisedTools: advertisedTools,
-                        DiscoveryFingerprint: fingerprint));
+                        DiscoveryCanonicalJson: discoveryCanonicalJson));
             }
         }
 
@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             return new McpToolRegistryCandidate(
                 Tools: toolBuilder.ToImmutable(),
                 AdvertisedTools: advertisedTools,
-                DiscoveryFingerprint: CreateDiscoveryFingerprint(advertisedTools));
+                DiscoveryCanonicalJson: CreateDiscoveryCanonicalJson(advertisedTools));
         }
 
         /// <summary>
@@ -136,15 +136,15 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     Version: current.Version + 1,
                     Tools: candidate.Tools,
                     AdvertisedTools: candidate.AdvertisedTools,
-                    DiscoveryFingerprint: candidate.DiscoveryFingerprint);
+                    DiscoveryCanonicalJson: candidate.DiscoveryCanonicalJson);
 
                 Interlocked.Exchange(ref _snapshot, replacement);
 
                 return new McpToolRegistryUpdateResult(
                     Version: replacement.Version,
                     DiscoveryChanged: !string.Equals(
-                        current.DiscoveryFingerprint,
-                        replacement.DiscoveryFingerprint,
+                        current.DiscoveryCanonicalJson,
+                        replacement.DiscoveryCanonicalJson,
                         StringComparison.Ordinal),
                     RegisteredToolCount: replacement.Tools.Count,
                     AdvertisedToolCount: replacement.AdvertisedTools.Length);
@@ -154,6 +154,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <summary>
         /// Gets the metadata snapshot advertised by <c>tools/list</c>.
         /// </summary>
+        /// <remarks>
+        /// Returns defensive deep clones so callers cannot mutate the private snapshot shared by
+        /// concurrent readers. The JSON round trip is intentional and occurs only for discovery
+        /// requests, not for tool lookup or execution.
+        /// </remarks>
         public IReadOnlyList<Tool> GetAdvertisedTools()
         {
             McpToolRegistrySnapshot snapshot = Volatile.Read(ref _snapshot);
@@ -167,6 +172,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// Retained for compatibility; MCP handlers should use <see cref="GetAdvertisedTools"/> so
         /// lookup and discovery come from the same registry generation.
         /// </summary>
+        [Obsolete(
+            "GetEnabledTools combines a registry snapshot with caller-supplied configuration. " +
+            "Use GetAdvertisedTools so discovery comes from one published generation.")]
         public IEnumerable<Tool> GetEnabledTools(RuntimeConfig config)
         {
             ArgumentNullException.ThrowIfNull(config);
@@ -231,7 +239,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 .ToImmutableArray();
         }
 
-        private static string CreateDiscoveryFingerprint(ImmutableArray<Tool> metadata)
+        private static string CreateDiscoveryCanonicalJson(ImmutableArray<Tool> metadata)
         {
             JsonElement serializedMetadata = JsonSerializer.SerializeToElement(
                 metadata.ToArray(),
@@ -304,13 +312,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
             long Version,
             ImmutableDictionary<string, IMcpTool> Tools,
             ImmutableArray<Tool> AdvertisedTools,
-            string DiscoveryFingerprint)
+            string DiscoveryCanonicalJson)
         {
             public static McpToolRegistrySnapshot Empty { get; } = new(
                 Version: 0,
                 Tools: ImmutableDictionary.Create<string, IMcpTool>(StringComparer.OrdinalIgnoreCase),
                 AdvertisedTools: ImmutableArray<Tool>.Empty,
-                DiscoveryFingerprint: "[]");
+                DiscoveryCanonicalJson: "[]");
         }
     }
 
@@ -329,5 +337,5 @@ namespace Azure.DataApiBuilder.Mcp.Core
     internal sealed record McpToolRegistryCandidate(
         ImmutableDictionary<string, IMcpTool> Tools,
         ImmutableArray<Tool> AdvertisedTools,
-        string DiscoveryFingerprint);
+        string DiscoveryCanonicalJson);
 }

@@ -144,7 +144,7 @@ Keeping lookup state and advertised metadata in the same snapshot prevents a req
 Protocol `Tool` objects are mutable SDK models, so the registry defensively clones metadata during
 candidate construction and again when returning public discovery results. Neither a tool retaining
 its source metadata object nor a caller mutating a returned object can modify a published snapshot
-or invalidate its fingerprint.
+or invalidate its canonical discovery representation.
 
 Tool names must be nonempty and must not contain leading or trailing whitespace. Rejecting rather
 than trimming guarantees that every exact name returned by `tools/list` resolves through
@@ -324,16 +324,24 @@ Notification rules:
 - Do not queue a missed pre-initialization notification; the client has not yet established its cache and will request the initial list.
 - Notify only when the advertised tool list or metadata changed.
 - Send after atomic publication.
+- Invoke transport notifiers after releasing the registry writer lock.
+- Check initialization state before enqueueing delivery, then perform potentially blocking stdout
+    I/O on a worker so the reload pipeline can continue to later handlers.
 - Route the frame through the shared `McpStdoutWriter` so it cannot interleave with responses or logging notifications.
 - Notification write failure is logged and does not roll back the registry.
 
-A small stdio notifier service will own initialization state and frame writing. `McpStdioServer` marks it initialized when handling `notifications/initialized`. The refresh service depends on zero or more tool-list notifiers; HTTP mode has no notifier registered in this iteration.
+A small stdio notifier service owns initialization state and queued frame writing. Multiple changes
+while one stdout write is pending may be coalesced because any delivered invalidation causes the
+client to request the latest complete snapshot. `McpStdioServer` marks the notifier initialized when
+handling `notifications/initialized`. The refresh service depends on zero or more tool-list
+notifiers; HTTP mode has no notifier registered in this iteration.
 
 ### 13. HTTP reads are immediately current, but HTTP push is deferred
 
 The HTTP MCP SDK handlers execute against the registry singleton per request. Once the snapshot is swapped, the next `tools/list` and `tools/call` request sees it without rebuilding the MCP server.
 
-HTTP `listChanged` capability must not be advertised until HTTP notification delivery is implemented.
+HTTP `listChanged` capability is explicitly set to false and must not be advertised as supported
+until HTTP notification delivery is implemented.
 
 The installed MCP SDK can send a notification through an individual `McpServer` session, but broadcasting requires tracking all active sessions through an experimental `RunSessionHandler`. Depending on that experimental API is not necessary for registry correctness and is deferred to focused follow-up work.
 
@@ -377,6 +385,10 @@ McpToolRegistryUpdateResult ReplaceAll(
 8. Returns the new version and whether discovery metadata changed.
 
 The current public `RegisterTool` method is not used by the new production path. Because it is public, implementation should preserve it unless API review explicitly approves removal. If retained, it must use copy-on-write under the writer gate and must never mutate a published dictionary in place.
+
+The compatibility `GetEnabledTools(RuntimeConfig)` accessor is obsolete because combining a
+published tool map with caller-supplied configuration can cross generations. Production discovery
+must use `GetAdvertisedTools()`, whose visibility and metadata were captured with the snapshot.
 
 The obsolete `McpToolRegistryInitializer` compatibility fallback collects all tools and invokes
 `ReplaceAll` with the current `RuntimeConfig`; it does not incrementally advertise disabled tools.
@@ -641,6 +653,7 @@ The exact file split may change during implementation, but the expected touchpoi
 7. Stdio serializes notifications through `McpStdoutWriter` without interleaving.
 8. Stdio notification failure does not revert the registry.
 9. HTTP does not advertise `listChanged` in this iteration.
+10. A blocked stdio writer does not block the ordered hot-reload pipeline.
 
 ### Hot-reload integration tests
 

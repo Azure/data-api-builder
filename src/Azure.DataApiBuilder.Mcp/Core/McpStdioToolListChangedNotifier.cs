@@ -3,6 +3,8 @@
 
 using System.Text.Json;
 using Azure.DataApiBuilder.Mcp.Model;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;
 
 namespace Azure.DataApiBuilder.Mcp.Core
@@ -24,12 +26,25 @@ namespace Azure.DataApiBuilder.Mcp.Core
     /// </summary>
     public sealed class McpStdioToolListChangedNotifier : IMcpStdioToolListChangedNotifier
     {
-        private readonly McpStdoutWriter _stdoutWriter;
-        private int _isInitialized;
+        private static readonly string _notificationJson = JsonSerializer.Serialize(new
+        {
+            jsonrpc = McpStdioJsonRpcErrorCodes.JSON_RPC_VERSION,
+            method = NotificationMethods.ToolListChangedNotification,
+            @params = new { }
+        });
 
-        public McpStdioToolListChangedNotifier(McpStdoutWriter stdoutWriter)
+        private readonly McpStdoutWriter _stdoutWriter;
+        private readonly ILogger<McpStdioToolListChangedNotifier> _logger;
+        private int _isInitialized;
+        private int _pendingNotificationCount;
+        private int _notificationWorkerScheduled;
+
+        public McpStdioToolListChangedNotifier(
+            McpStdoutWriter stdoutWriter,
+            ILogger<McpStdioToolListChangedNotifier>? logger = null)
         {
             _stdoutWriter = stdoutWriter;
+            _logger = logger ?? NullLogger<McpStdioToolListChangedNotifier>.Instance;
         }
 
         /// <inheritdoc />
@@ -46,14 +61,57 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return;
             }
 
-            var notification = new
-            {
-                jsonrpc = McpStdioJsonRpcErrorCodes.JSON_RPC_VERSION,
-                method = NotificationMethods.ToolListChangedNotification,
-                @params = new { }
-            };
+            Interlocked.Increment(ref _pendingNotificationCount);
+            ScheduleNotificationWorker();
+        }
 
-            _stdoutWriter.WriteLine(JsonSerializer.Serialize(notification));
+        private void ScheduleNotificationWorker()
+        {
+            if (Interlocked.CompareExchange(ref _notificationWorkerScheduled, 1, 0) != 0)
+            {
+                return;
+            }
+
+            if (!ThreadPool.QueueUserWorkItem(
+                    static notifier => notifier.ProcessPendingNotifications(),
+                    this,
+                    preferLocal: false))
+            {
+                Interlocked.Exchange(ref _pendingNotificationCount, 0);
+                Volatile.Write(ref _notificationWorkerScheduled, 0);
+                _logger.LogError("Failed to queue an MCP tool-list change notification.");
+            }
+        }
+
+        private void ProcessPendingNotifications()
+        {
+            try
+            {
+                while (Interlocked.Exchange(ref _pendingNotificationCount, 0) > 0)
+                {
+                    try
+                    {
+                        _stdoutWriter.WriteLine(_notificationJson);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            ex,
+                            "Failed to write an MCP tool-list change notification.");
+                    }
+                }
+            }
+            finally
+            {
+                Volatile.Write(ref _notificationWorkerScheduled, 0);
+
+                // A publication can race with worker shutdown after the final pending-count
+                // exchange. Reschedule so that invalidation is never lost in that window.
+                if (Volatile.Read(ref _pendingNotificationCount) > 0)
+                {
+                    ScheduleNotificationWorker();
+                }
+            }
         }
     }
 }

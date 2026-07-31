@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Mcp.Core
@@ -18,16 +17,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         /// <param name="config">The runtime configuration containing entity definitions.</param>
         /// <param name="logger">Optional logger for diagnostic information.</param>
-        /// <returns>Enumerable of custom tools generated from configuration.</returns>
-        public static IEnumerable<IMcpTool> CreateCustomTools(RuntimeConfig config, ILogger? logger = null)
+        /// <returns>Enumerable of dynamic custom tools generated from configuration.</returns>
+        public static IEnumerable<DynamicCustomTool> CreateCustomTools(RuntimeConfig config, ILogger? logger = null)
         {
             if (config.Entities == null)
             {
                 logger?.LogWarning("No entities found in runtime configuration for custom tool generation.");
-                return Enumerable.Empty<IMcpTool>();
+                return Enumerable.Empty<DynamicCustomTool>();
             }
 
-            List<IMcpTool> customTools = new();
+            List<DynamicCustomTool> customTools = new();
 
             foreach ((string entityName, Entity entity) in config.Entities)
             {

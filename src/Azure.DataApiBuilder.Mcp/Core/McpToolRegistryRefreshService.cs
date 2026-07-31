@@ -67,7 +67,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <inheritdoc />
         public void EnsureInitialized()
         {
-            RefreshRegistry();
+            if (RefreshRegistry())
+            {
+                NotifyToolsListChanged();
+            }
         }
 
         /// <inheritdoc />
@@ -93,7 +96,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             try
             {
-                RefreshRegistry();
+                if (RefreshRegistry())
+                {
+                    // Transport notification is deliberately outside _refreshLock. Implementations
+                    // must enqueue any potentially blocking I/O so the ordered reload pipeline can
+                    // continue to GraphQL and logging handlers.
+                    NotifyToolsListChanged();
+                }
             }
             catch (Exception ex)
             {
@@ -104,21 +113,25 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
         }
 
-        private void RefreshRegistry()
+        /// <returns>
+        /// <see langword="true"/> when an initialized client should be notified after the writer
+        /// lock is released; otherwise <see langword="false"/>.
+        /// </returns>
+        private bool RefreshRegistry()
         {
             lock (_refreshLock)
             {
                 RuntimeConfig config = _runtimeConfigProvider.GetConfig();
                 if (ReferenceEquals(config, _lastAppliedConfig))
                 {
-                    return;
+                    return false;
                 }
 
-                List<IMcpTool> customTools = CustomMcpToolFactory
+                List<DynamicCustomTool> customTools = CustomMcpToolFactory
                     .CreateCustomTools(config, _logger)
                     .ToList();
 
-                foreach (DynamicCustomTool customTool in customTools.Cast<DynamicCustomTool>())
+                foreach (DynamicCustomTool customTool in customTools)
                 {
                     bool initializedFromDatabase = customTool.InitializeMetadata(
                         config,
@@ -144,7 +157,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     _logger.LogWarning(
                         "Discarded a stale MCP tool registry candidate because a newer runtime " +
                         "configuration became active during the rebuild.");
-                    return;
+                    return false;
                 }
 
                 bool isInitialGeneration = _lastAppliedConfig is null;
@@ -163,10 +176,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     result.AdvertisedToolCount,
                     result.DiscoveryChanged);
 
-                if (!isInitialGeneration && result.DiscoveryChanged)
-                {
-                    NotifyToolsListChanged();
-                }
+                return !isInitialGeneration && result.DiscoveryChanged;
             }
         }
 
@@ -194,7 +204,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
     public interface IMcpToolListChangedNotifier
     {
         /// <summary>
-        /// Notifies a connected, initialized client that it should refresh <c>tools/list</c>.
+        /// Enqueues notification of a connected, initialized client that it should refresh
+        /// <c>tools/list</c>. Implementations must not block on transport I/O.
         /// </summary>
         void NotifyToolsListChanged();
     }

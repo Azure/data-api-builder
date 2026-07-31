@@ -78,6 +78,10 @@ namespace Azure.DataApiBuilder.Service.Utilities
         {
             try
             {
+                // This process entry point is deliberately synchronous and runs without an
+                // ASP.NET, UI, or other custom SynchronizationContext. Bridging the two async
+                // operations with GetAwaiter().GetResult() therefore cannot deadlock on a
+                // captured context and preserves direct exception propagation.
                 // Stdio deliberately does not start the web host, so Startup.Configure does not
                 // initialize runtime dependencies. Run the same serialized validation, metadata,
                 // and registry sequence used by HTTP startup before opening the stdio loop.

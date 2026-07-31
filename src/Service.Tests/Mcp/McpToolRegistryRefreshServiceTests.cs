@@ -223,6 +223,44 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [TestMethod]
+        public async Task HotReload_WhenNotifierBlocks_DoesNotRetainRefreshLock()
+        {
+            RuntimeConfig currentConfig = CreateRuntimeConfig();
+            BlockingFirstNotifier blockingNotifier = new();
+            Mock<IMcpToolListChangedNotifier> healthyNotifier = new();
+            TestContext context = CreateContextWithNotifiers(
+                () => currentConfig,
+                healthyNotifier,
+                new IMcpToolListChangedNotifier[] { blockingNotifier, healthyNotifier.Object });
+            context.Service.EnsureInitialized();
+
+            currentConfig = CreateRuntimeConfig(("FirstTool", "First generation"));
+            Task firstRefresh = Task.Run(() => RaiseRegistryChanged(context.HotReloadEventHandler));
+            Task secondRefresh = Task.CompletedTask;
+
+            try
+            {
+                Assert.IsTrue(
+                    blockingNotifier.FirstCallEntered.Wait(TimeSpan.FromSeconds(5)),
+                    "The first notification did not reach the blocking transport.");
+
+                currentConfig = CreateRuntimeConfig(("LatestTool", "Latest generation"));
+                secondRefresh = Task.Run(() => RaiseRegistryChanged(context.HotReloadEventHandler));
+
+                Assert.IsTrue(
+                    blockingNotifier.SecondCallEntered.Wait(TimeSpan.FromSeconds(5)),
+                    "A blocked notifier must not retain the registry refresh writer lock.");
+                Assert.IsTrue(context.Registry.TryGetTool("latest_tool", out _));
+                Assert.IsFalse(context.Registry.TryGetTool("first_tool", out _));
+            }
+            finally
+            {
+                blockingNotifier.ReleaseFirstCall.Set();
+                await Task.WhenAll(firstRefresh, secondRefresh).WaitAsync(TimeSpan.FromSeconds(5));
+            }
+        }
+
+        [TestMethod]
         public void HotReload_AfterRejectedCandidate_RecoversOnNextConfig()
         {
             RuntimeConfig currentConfig = CreateRuntimeConfig();
@@ -555,6 +593,33 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             {
                 CallCount++;
                 throw new InvalidOperationException("Expected notification failure.");
+            }
+        }
+
+        private sealed class BlockingFirstNotifier : IMcpToolListChangedNotifier
+        {
+            private int _callCount;
+
+            public ManualResetEventSlim FirstCallEntered { get; } = new();
+
+            public ManualResetEventSlim SecondCallEntered { get; } = new();
+
+            public ManualResetEventSlim ReleaseFirstCall { get; } = new();
+
+            public void NotifyToolsListChanged()
+            {
+                if (Interlocked.Increment(ref _callCount) == 1)
+                {
+                    FirstCallEntered.Set();
+                    if (!ReleaseFirstCall.Wait(TimeSpan.FromSeconds(10)))
+                    {
+                        throw new TimeoutException("Timed out waiting to release the first notifier call.");
+                    }
+
+                    return;
+                }
+
+                SecondCallEntered.Set();
             }
         }
 

@@ -91,6 +91,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 options.ServerInfo = new() { Name = McpProtocolDefaults.MCP_SERVER_NAME, Version = McpProtocolDefaults.MCP_SERVER_VERSION };
                 options.Capabilities ??= new();
                 options.Capabilities.Tools ??= new();
+                // WithListToolsHandler enables tool discovery, but HTTP session broadcast is not
+                // implemented. Do not promise list-change notifications to HTTP clients. Stdio
+                // advertises and implements this capability in its separate initialize handler.
+                options.Capabilities.Tools.ListChanged = false;
                 options.ServerInstructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null;
             });
 

@@ -49,6 +49,42 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [TestMethod]
+        public void HotReload_AfterOutOfBandInitialization_RebuildsWithOrderedMetadataGeneration()
+        {
+            RuntimeConfig configA = CreateRuntimeConfig(("GetBook", "Stable description"));
+            RuntimeConfig configB = CreateRuntimeConfig(("GetBook", "Stable description"));
+            RuntimeConfig currentConfig = configA;
+            Dictionary<string, DatabaseObject> currentMetadata =
+                CreateStoredProcedureMetadata("old_parameter", "Metadata generation A");
+            TestContext context = CreateContextWithDatabaseMetadata(
+                () => currentConfig,
+                () => currentMetadata);
+            context.Service.EnsureInitialized();
+
+            // RuntimeConfigProvider exposes B before B's ordered metadata refresh runs. Simulate
+            // an out-of-band caller publishing B while the metadata provider still contains A.
+            currentConfig = configB;
+            context.Service.EnsureInitialized();
+            CollectionAssert.AreEqual(
+                new[] { "old_parameter" },
+                GetAdvertisedParameterNames(context.Registry));
+
+            // The metadata event installs B before the ordered MCP event. That event must rebuild
+            // even though the same RuntimeConfig reference was already applied above.
+            currentMetadata = CreateStoredProcedureMetadata(
+                "new_parameter",
+                "Metadata generation B");
+            RaiseRegistryChanged(context.HotReloadEventHandler);
+
+            CollectionAssert.AreEqual(
+                new[] { "new_parameter" },
+                GetAdvertisedParameterNames(context.Registry));
+            context.Notifier.Verify(
+                notifier => notifier.NotifyToolsListChanged(),
+                Times.Once);
+        }
+
+        [TestMethod]
         public async Task HostedStart_DefersInitializationToStartupOrchestrator()
         {
             RuntimeConfig currentConfig = CreateRuntimeConfig();
@@ -447,6 +483,34 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             IEnumerable<IMcpToolListChangedNotifier> notifiers,
             params IMcpTool[] builtInTools)
         {
+            return CreateContextCore(
+                getConfig,
+                primaryNotifier,
+                notifiers,
+                () => new Dictionary<string, DatabaseObject>(),
+                builtInTools);
+        }
+
+        private static TestContext CreateContextWithDatabaseMetadata(
+            Func<RuntimeConfig> getConfig,
+            Func<Dictionary<string, DatabaseObject>> getMetadata)
+        {
+            Mock<IMcpToolListChangedNotifier> notifier = new();
+            return CreateContextCore(
+                getConfig,
+                notifier,
+                new[] { notifier.Object },
+                getMetadata,
+                Array.Empty<IMcpTool>());
+        }
+
+        private static TestContext CreateContextCore(
+            Func<RuntimeConfig> getConfig,
+            Mock<IMcpToolListChangedNotifier> primaryNotifier,
+            IEnumerable<IMcpToolListChangedNotifier> notifiers,
+            Func<Dictionary<string, DatabaseObject>> getMetadata,
+            IEnumerable<IMcpTool> registeredTools)
+        {
             Mock<RuntimeConfigLoader> configLoader = new(null, null);
             Mock<RuntimeConfigProvider> configProvider = new(configLoader.Object);
             configProvider.Setup(provider => provider.GetConfig()).Returns(getConfig);
@@ -454,7 +518,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Mock<ISqlMetadataProvider> sqlMetadataProvider = new();
             sqlMetadataProvider
                 .SetupGet(provider => provider.EntityToDatabaseObject)
-                .Returns(new Dictionary<string, DatabaseObject>());
+                .Returns(getMetadata);
             Mock<IMetadataProviderFactory> metadataProviderFactory = new();
             metadataProviderFactory
                 .Setup(factory => factory.GetMetadataProvider(It.IsAny<string>()))
@@ -465,7 +529,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Mock<ILogger<McpToolRegistryRefreshService>> logger = new();
             McpToolRegistryRefreshService service = new(
                 configProvider.Object,
-                builtInTools,
+                registeredTools,
                 registry,
                 metadataProviderFactory.Object,
                 notifiers,
@@ -478,6 +542,45 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 primaryNotifier,
                 hotReloadEventHandler,
                 logger);
+        }
+
+        private static string[] GetAdvertisedParameterNames(McpToolRegistry registry)
+        {
+            return registry.GetAdvertisedTools()
+                .Single()
+                .InputSchema
+                .GetProperty("properties")
+                .EnumerateObject()
+                .Select(property => property.Name)
+                .ToArray();
+        }
+
+        private static Dictionary<string, DatabaseObject> CreateStoredProcedureMetadata(
+            string parameterName,
+            string description)
+        {
+            DatabaseStoredProcedure storedProcedure = new("dbo", "test_procedure")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new StoredProcedureDefinition
+                {
+                    Parameters = new Dictionary<string, ParameterDefinition>
+                    {
+                        [parameterName] = new ParameterDefinition
+                        {
+                            Name = parameterName,
+                            Description = description,
+                            Required = true,
+                            SystemType = typeof(string)
+                        }
+                    }
+                }
+            };
+
+            return new Dictionary<string, DatabaseObject>
+            {
+                ["GetBook"] = storedProcedure
+            };
         }
 
         private static RuntimeConfig CreateRuntimeConfig(

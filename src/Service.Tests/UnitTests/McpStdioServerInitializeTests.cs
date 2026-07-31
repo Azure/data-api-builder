@@ -85,7 +85,32 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(1, CountOutputLines(stdoutCapture));
         }
 
-        private static McpStdioServer CreateServer(string? description, out StringWriter stdoutCapture)
+        [TestMethod]
+        public void HandleInitialize_WithoutNotifier_AdvertisesListChangedFalse()
+        {
+            McpStdioServer server = CreateServer(
+                description: null,
+                out StringWriter stdoutCapture,
+                registerNotifier: false);
+
+            JsonElement responseRoot = InvokeHandleInitialize(
+                server,
+                stdoutCapture,
+                """
+                {"jsonrpc":"2.0","id":3,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"client","version":"1.0.0"}}}
+                """);
+
+            AssertInitializeEnvelopeAndCapabilities(
+                responseRoot,
+                expectedId: 3,
+                expectedProtocolVersion: "2025-11-25",
+                expectedListChanged: false);
+        }
+
+        private static McpStdioServer CreateServer(
+            string? description,
+            out StringWriter stdoutCapture,
+            bool registerNotifier = true)
         {
             stdoutCapture = new StringWriter();
             McpStdoutWriter stdoutWriter = new(stdoutCapture);
@@ -102,11 +127,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigProvider runtimeConfigProvider = new StubRuntimeConfigProvider(runtimeConfig);
 
             IConfiguration configuration = new ConfigurationBuilder().Build();
-            ServiceProvider serviceProvider = new ServiceCollection()
-                .AddSingleton(configuration)
-                .AddSingleton(stdoutWriter)
-                .AddSingleton(runtimeConfigProvider)
-                .BuildServiceProvider();
+            ServiceCollection services = new();
+            services.AddSingleton(configuration);
+            services.AddSingleton(stdoutWriter);
+            services.AddSingleton(runtimeConfigProvider);
+            if (registerNotifier)
+            {
+                services.AddSingleton<IMcpStdioToolListChangedNotifier>(
+                    new McpStdioToolListChangedNotifier(stdoutWriter));
+            }
+
+            ServiceProvider serviceProvider = services.BuildServiceProvider();
 
             return new McpStdioServer(new McpToolRegistry(), serviceProvider);
         }
@@ -120,17 +151,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             JsonElement requestRoot = request.RootElement;
             JsonElement? id = requestRoot.TryGetProperty("id", out JsonElement idElement) ? idElement : null;
 
-            object? initializeCompleted = handleInitialize.Invoke(
+            handleInitialize.Invoke(
                 server,
                 new object?[] { id, requestRoot });
-            Assert.AreEqual(true, initializeCompleted);
 
             string output = ExtractSingleOutputLine(stdoutCapture);
             using JsonDocument response = JsonDocument.Parse(output);
             return response.RootElement.Clone();
         }
 
-        private static void AssertInitializeEnvelopeAndCapabilities(JsonElement responseRoot, object expectedId, string expectedProtocolVersion)
+        private static void AssertInitializeEnvelopeAndCapabilities(
+            JsonElement responseRoot,
+            object expectedId,
+            string expectedProtocolVersion,
+            bool expectedListChanged = true)
         {
             Assert.AreEqual("2.0", responseRoot.GetProperty("jsonrpc").GetString());
             if (expectedId is int expectedNumericId)
@@ -146,7 +180,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expectedProtocolVersion, result.GetProperty("protocolVersion").GetString());
 
             JsonElement capabilities = result.GetProperty("capabilities");
-            Assert.IsTrue(capabilities.GetProperty("tools").GetProperty("listChanged").GetBoolean());
+            Assert.AreEqual(
+                expectedListChanged,
+                capabilities.GetProperty("tools").GetProperty("listChanged").GetBoolean());
             Assert.AreEqual(JsonValueKind.Object, capabilities.GetProperty("logging").ValueKind);
 
             JsonElement serverInfo = result.GetProperty("serverInfo");

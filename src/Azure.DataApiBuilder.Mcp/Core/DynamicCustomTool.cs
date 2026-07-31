@@ -63,6 +63,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         public ToolType ToolType { get; } = ToolType.Custom;
 
+        /// <summary>
+        /// Returns true because <see cref="CustomMcpToolFactory"/> creates an instance only when
+        /// the source entity has <c>mcp.custom-tool</c> enabled for the candidate configuration.
+        /// Each registry generation recreates that membership, so an extant dynamic tool is
+        /// enabled by construction. Execution still revalidates enablement against current state.
+        /// </summary>
         public bool IsEnabled(RuntimeConfig config) => true;
 
         /// <summary>

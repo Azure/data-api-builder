@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <inheritdoc />
         public void EnsureInitialized()
         {
-            if (RefreshRegistry())
+            if (RefreshRegistry(forceRebuildForCurrentConfig: false))
             {
                 NotifyToolsListChanged();
             }
@@ -99,7 +99,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             try
             {
-                if (RefreshRegistry())
+                // The runtime config becomes current before its ordered dependency events run.
+                // An out-of-band EnsureInitialized call can therefore observe this config while
+                // the metadata provider still represents the previous generation. Always rebuild
+                // at the ordered MCP event, after metadata and authorization have been refreshed.
+                if (RefreshRegistry(forceRebuildForCurrentConfig: true))
                 {
                     // Transport notification is deliberately outside _refreshLock. Implementations
                     // must enqueue any potentially blocking I/O so the ordered reload pipeline can
@@ -120,12 +124,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <see langword="true"/> when an initialized client should be notified after the writer
         /// lock is released; otherwise <see langword="false"/>.
         /// </returns>
-        private bool RefreshRegistry()
+        private bool RefreshRegistry(bool forceRebuildForCurrentConfig)
         {
             lock (_refreshLock)
             {
                 RuntimeConfig config = _runtimeConfigProvider.GetConfig();
-                if (ReferenceEquals(config, _lastAppliedConfig))
+                if (!forceRebuildForCurrentConfig && ReferenceEquals(config, _lastAppliedConfig))
                 {
                     return false;
                 }

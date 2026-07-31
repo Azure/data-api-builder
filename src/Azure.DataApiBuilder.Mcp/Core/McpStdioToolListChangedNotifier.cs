@@ -35,6 +35,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         private readonly McpStdoutWriter _stdoutWriter;
         private readonly ILogger<McpStdioToolListChangedNotifier> _logger;
+        private readonly Func<Action, bool> _tryScheduleWorker;
         private int _isInitialized;
         private int _notificationPending;
         private int _notificationWorkerScheduled;
@@ -42,9 +43,19 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public McpStdioToolListChangedNotifier(
             McpStdoutWriter stdoutWriter,
             ILogger<McpStdioToolListChangedNotifier>? logger = null)
+            : this(stdoutWriter, logger, TryScheduleOnThreadPool)
         {
-            _stdoutWriter = stdoutWriter;
+        }
+
+        internal McpStdioToolListChangedNotifier(
+            McpStdoutWriter stdoutWriter,
+            ILogger<McpStdioToolListChangedNotifier>? logger,
+            Func<Action, bool> tryScheduleWorker)
+        {
+            _stdoutWriter = stdoutWriter ?? throw new ArgumentNullException(nameof(stdoutWriter));
             _logger = logger ?? NullLogger<McpStdioToolListChangedNotifier>.Instance;
+            _tryScheduleWorker = tryScheduleWorker ??
+                throw new ArgumentNullException(nameof(tryScheduleWorker));
         }
 
         /// <inheritdoc />
@@ -74,14 +85,48 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return;
             }
 
-            if (!ThreadPool.QueueUserWorkItem(
-                    static notifier => notifier.ProcessPendingNotifications(),
-                    this,
-                    preferLocal: false))
+            Action worker = ProcessPendingNotifications;
+            if (!_tryScheduleWorker(worker))
             {
-                Interlocked.Exchange(ref _notificationPending, 0);
+                // Do not clear _notificationPending: this invalidation is still required even if
+                // no later configuration change occurs. A dedicated background thread is a rare
+                // fallback for ThreadPool queue rejection and preserves the nonblocking contract.
+                _logger.LogWarning(
+                    "Failed to queue an MCP tool-list change notification on the thread pool. " +
+                    "Starting a dedicated fallback worker.");
+                StartDedicatedFallbackWorker(worker);
+            }
+        }
+
+        private static bool TryScheduleOnThreadPool(Action worker)
+        {
+            return ThreadPool.QueueUserWorkItem(
+                static callback => callback(),
+                worker,
+                preferLocal: false);
+        }
+
+        private void StartDedicatedFallbackWorker(Action worker)
+        {
+            try
+            {
+                Thread fallbackWorker = new(
+                    static callback => ((Action)callback!).Invoke())
+                {
+                    IsBackground = true,
+                    Name = "DAB MCP tool-list notification fallback"
+                };
+                fallbackWorker.Start(worker);
+            }
+            catch (Exception ex)
+            {
+                // Retain the pending flag and reopen the scheduling gate. A later notification can
+                // retry delivery if the process could not create the fallback thread.
                 Volatile.Write(ref _notificationWorkerScheduled, 0);
-                _logger.LogError("Failed to queue an MCP tool-list change notification.");
+                _logger.LogError(
+                    ex,
+                    "Failed to start the MCP tool-list notification fallback worker. " +
+                    "The notification remains pending.");
             }
         }
 

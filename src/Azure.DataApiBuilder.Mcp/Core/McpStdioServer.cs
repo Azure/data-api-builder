@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // By default read via Console.In so the loop honors the configured
             // Console.InputEncoding in stdio mode.
             TextReader reader = _inputReader ?? Console.In;
-            bool initializeResponseCompleted = false;
+            bool initializeResponseWritten = false;
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -130,7 +130,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         switch (method)
                         {
                             case "initialize":
-                                initializeResponseCompleted = HandleInitialize(id, root);
+                                HandleInitialize(id, root);
+                                // This assignment is reached only after WriteResult succeeds.
+                                initializeResponseWritten = true;
                                 break;
 
                             case "notifications/initialized":
@@ -138,7 +140,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 // server successfully wrote its initialize response. Ignore an
                                 // out-of-order notification rather than enabling capabilities the
                                 // client has not negotiated.
-                                if (initializeResponseCompleted)
+                                if (initializeResponseWritten)
                                 {
                                     _toolListChangedNotifier?.MarkInitialized();
                                 }
@@ -190,11 +192,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// server-supported version and client-requested version, and includes supported capabilities and server information. No notifications
         /// are sent here; the server waits for the client to send "notifications/initialized" before sending any notifications.
         /// </remarks>
-        private bool HandleInitialize(JsonElement? id, JsonElement root)
+        private void HandleInitialize(JsonElement? id, JsonElement root)
         {
             string? clientRequestedProtocolVersion = GetClientProtocolVersion(root);
             string negotiatedProtocolVersion =
                 McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(_protocolVersion, clientRequestedProtocolVersion);
+            bool supportsToolListChanged = _toolListChangedNotifier is not null;
 
             // Get the description from runtime config if available
             string? description = null;
@@ -224,7 +227,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
-                        tools = new { listChanged = true },
+                        tools = new { listChanged = supportsToolListChanged },
                         logging = new { }
                     },
                     serverInfo = new
@@ -242,7 +245,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
-                        tools = new { listChanged = true },
+                        tools = new { listChanged = supportsToolListChanged },
                         logging = new { }
                     },
                     serverInfo = new
@@ -260,7 +263,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
-                        tools = new { listChanged = true },
+                        tools = new { listChanged = supportsToolListChanged },
                         logging = new { }
                     },
                     serverInfo = new
@@ -272,7 +275,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             WriteResult(id, result);
-            return true;
         }
 
         private static string? GetClientProtocolVersion(JsonElement root)

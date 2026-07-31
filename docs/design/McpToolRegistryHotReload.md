@@ -130,7 +130,9 @@ The registry snapshot will conceptually contain:
 internal sealed record McpToolRegistrySnapshot(
     long Version,
     ImmutableDictionary<string, IMcpTool> Tools,
-    ImmutableArray<Tool> AdvertisedTools);
+    int AdvertisedToolCount,
+    string DiscoveryJson,
+    string DiscoveryCanonicalJson);
 ```
 
 `Tools` contains:
@@ -139,15 +141,21 @@ internal sealed record McpToolRegistrySnapshot(
 - Every independently DI-registered `IMcpTool` implementation.
 - Every configuration-generated custom tool enabled in the configuration used to build the snapshot.
 
-`AdvertisedTools` contains precomputed metadata for tools whose `IsEnabled(config)` result was true for that same configuration generation. It is sorted deterministically by tool name.
+`DiscoveryJson` contains precomputed metadata for tools whose `IsEnabled(config)` result was true
+for that same configuration generation. Tools are sorted deterministically by name, while nested
+schema-property insertion order is preserved for clients that render parameters in wire order.
+`DiscoveryCanonicalJson` is a separate recursively property-sorted representation used only for
+semantic change comparison. `AdvertisedToolCount` avoids retaining a duplicate object graph solely
+for diagnostics.
 
 Keeping lookup state and advertised metadata in the same snapshot prevents a request from combining tools from one generation with enablement or metadata from another generation.
 
 Protocol `Tool` objects are mutable SDK models, so the registry defensively clones metadata during
 candidate construction and again when returning public discovery results. Candidate publication
-pre-serializes the complete canonical discovery representation, which the accessor deserializes to
-produce caller-owned clones without reserializing every tool per request. Neither a tool retaining
-its source metadata object nor a caller mutating a returned object can modify a published snapshot.
+pre-serializes the order-preserving discovery representation, which the accessor deserializes to
+produce caller-owned clones without reserializing every tool per request. The separate canonical
+representation is never served. Neither a tool retaining its source metadata object nor a caller
+mutating a returned object can modify a published snapshot.
 
 Tool names must be nonempty and must not contain leading or trailing whitespace. Rejecting rather
 than trimming guarantees that every exact name returned by `tools/list` resolves through
@@ -159,7 +167,7 @@ A candidate snapshot is built completely before the live registry is changed. Th
 
 Readers capture the current snapshot once per operation:
 
-- `tools/list` reads `AdvertisedTools` from one snapshot.
+- `tools/list` deserializes caller-owned metadata from one snapshot's order-preserving discovery JSON.
 - `tools/call` resolves a tool from `Tools` in one snapshot.
 
 Readers do not acquire the rebuild lock. They observe either the complete previous snapshot or the complete replacement snapshot.
@@ -188,7 +196,7 @@ Its responsibilities are:
 8. Notify configured transports if advertised metadata changed.
 9. Log success or failure.
 
-`McpToolRegistry` owns registry invariants and publication. The refresh service owns lifecycle and dependencies.
+`McpToolRegistry` owns registry invariants and publication. The refresh service owns lifecycle and dependencies. The bulk construction and publication surface is internal to the MCP runtime assembly rather than an advertised embedding API.
 
 ### 6. Custom tool creation is strict
 
@@ -206,9 +214,7 @@ Database metadata unavailability is a deliberate exception to this strict behavi
 
 ### 7. Metadata initialization uses explicit dependencies
 
-`DynamicCustomTool.InitializeMetadata(IServiceProvider)` is a service-locator pattern and allows metadata initialization to retrieve a `RuntimeConfig` different from the generation being built.
-
-The initialization path will instead receive explicit dependencies, conceptually:
+The metadata initialization path receives explicit dependencies:
 
 ```csharp
 void InitializeMetadata(
@@ -247,6 +253,12 @@ The refresh callback catches and logs hot-reload failures so an MCP candidate fa
 ### 9. Initialization is shared and idempotent
 
 The refresh service exposes one idempotent initialization path.
+
+Direct `EnsureInitialized()` calls remain no-ops after the current `RuntimeConfig` reference has
+successfully been applied. The ordered hot-reload event is intentionally different: it always
+rebuilds the current configuration because the configuration becomes visible before its metadata
+event runs. This distinction prevents an out-of-band initialization during that interval from
+permanently publishing the new configuration with the previous metadata generation.
 
 #### HTTP mode
 
@@ -291,10 +303,14 @@ The refresh service retains its own writer gate and stale-generation guard as de
 
 A callback for the newer configuration will build the latest snapshot. The service tracks only successfully applied configuration references, so a later event can retry after an earlier failure.
 
-The loader gate prevents mixed dependency generations. The stale guard also prevents an older,
-slower registry rebuild initiated outside the file-loader pipeline from overwriting a newer registry
-generation. Neither mechanism provides transactional rollback after a handler failure; that remains
-separate work.
+The loader gate prevents mixed dependency generations within the normal serialized startup/reload
+path. An out-of-band `EnsureInitialized()` can still run after a new configuration is installed but
+before that configuration's metadata event. Such a call may publish an intermediate mixed snapshot.
+The later ordered MCP event therefore bypasses config-reference idempotency and rebuilds after
+metadata and authorization refresh, replacing the intermediate snapshot. The stale guard also
+prevents an older, slower registry rebuild initiated outside the file-loader pipeline from
+overwriting a newer registry generation. Neither mechanism provides transactional rollback after a
+handler failure; that remains separate work.
 
 ### 11. Existing tool-call safety is preserved
 
@@ -308,7 +324,9 @@ A request that resolved a tool immediately before a swap may finish with that to
 
 ### 12. Stdio sends tool-list change notifications
 
-The stdio initialize response already advertises `tools.listChanged = true`, so the server must implement the corresponding notification.
+Production stdio composition registers a tool-list notifier and advertises
+`tools.listChanged = true`. Alternative composition without that notifier advertises `false` so the
+initialize response never promises a notification path that is unavailable.
 
 After a successful noninitial refresh, send:
 
@@ -340,6 +358,9 @@ client to request the latest complete snapshot. `McpStdioServer` tracks successf
 completion for the connection and marks the notifier initialized only when a subsequent
 `notifications/initialized` arrives; an out-of-order notification is ignored. The refresh service
 depends on zero or more tool-list notifiers; HTTP mode has no notifier registered in this iteration.
+If the thread pool rejects the initial worker request, the notifier retains the pending invalidation
+and starts one dedicated background fallback worker. This rare fallback keeps reload callbacks
+nonblocking and avoids losing the only invalidation when no later configuration change occurs.
 
 ### 13. HTTP reads are immediately current, but HTTP push is deferred
 
@@ -360,6 +381,10 @@ preserving array order. The comparison therefore ignores semantically irrelevant
 order while still covering the complete tool metadata, including name, description, input schema,
 and any future advertised fields.
 
+Canonical JSON is comparison-only. The separately stored discovery representation preserves nested
+object insertion order, including stored-procedure parameter order, so canonicalization does not
+introduce a wire-order behavior change for clients that render schema properties in received order.
+
 The swap still occurs when advertised metadata is equal, but `notifications/tools/list_changed` is emitted only when discovery metadata differs.
 
 ## Registry API Behavior
@@ -373,7 +398,7 @@ IReadOnlyList<Tool> GetAdvertisedTools();
 
 bool TryGetTool(string toolName, out IMcpTool? tool);
 
-McpToolRegistryUpdateResult ReplaceAll(
+internal McpToolRegistryUpdateResult ReplaceAll(
     IEnumerable<IMcpTool> tools,
     RuntimeConfig config);
 ```
@@ -395,6 +420,21 @@ not documented APIs from a supported reference package. Removing them leaves one
 the refresh service builds and atomically publishes a complete configuration-aware generation.
 Production discovery uses `GetAdvertisedTools()`, whose visibility and metadata were captured with
 that same snapshot.
+
+### Intentional cleanup of CLR-public implementation members
+
+This change deliberately removes or narrows members that happened to be declared `public`, including
+the `RegisterTool()` overloads, `GetEnabledTools()`, `InitializeAndRegisterTools()`, and the former
+`McpToolRegistryInitializer`; bulk candidate construction/publication is now `internal`. This is an
+intentional source/API-surface change, not an accidental compatibility omission.
+
+Those members were used only by DAB's own startup and test implementation. They were not documented
+as extension APIs, and `Azure.DataApiBuilder.Mcp.dll` is runtime payload of the DAB tool rather than a
+supported reference package. The supported `Microsoft.DataApiBuilder.Core` embedding package does
+not expose the MCP implementation assembly. A consumer that manually referenced the runtime DLL and
+called these methods was depending on unsupported internals solely because their CLR visibility was
+too broad. Retaining obsolete shims would preserve two conflicting construction models and undermine
+the atomic-snapshot invariant, so the implementation-only surface is removed instead.
 
 ## Detailed Flows
 
@@ -629,6 +669,7 @@ The exact file split may change during implementation, but the expected touchpoi
 11. Equivalent metadata does not report a discovery change.
 12. Name, description, input-schema, addition, removal, and visibility changes report a discovery change.
 13. Concurrent readers observe no exceptions or partial snapshots during repeated swaps.
+14. Served input-schema properties preserve their source insertion order even though comparison is canonicalized.
 
 ### Refresh-service unit tests
 
@@ -641,9 +682,10 @@ The exact file split may change during implementation, but the expected touchpoi
 7. Startup failure propagates.
 8. Hot-reload failure is caught and logged.
 9. A stale candidate is discarded.
-10. Repeated callbacks for an already successfully applied configuration do not publish duplicate generations unnecessarily.
-11. Notifications occur only after a successful noninitial semantic discovery change.
-12. Independently DI-registered custom implementations remain published after refresh.
+10. Repeated direct initialization for an already successfully applied configuration does not publish duplicate generations unnecessarily.
+11. An ordered MCP event rebuilds after refreshed metadata even when an out-of-band initialization already applied the same configuration reference.
+12. Notifications occur only after a successful noninitial semantic discovery change.
+13. Independently DI-registered custom implementations remain published after refresh.
 
 ### Handler and transport tests
 
@@ -659,6 +701,11 @@ The exact file split may change during implementation, but the expected touchpoi
 9. HTTP does not advertise `listChanged` in this iteration.
 10. A blocked stdio writer does not block the ordered hot-reload pipeline.
 11. The real HTTP handler omits tools disabled in the published registry snapshot.
+12. The physical HTTP failure-path test observes completion of the rejected candidate before
+    checking retained discovery and writing a recovery configuration.
+13. Stdio advertises `listChanged = false` when no stdio notifier is composed.
+14. A rejected primary worker schedule retains and delivers the pending notification through the fallback worker.
+15. Multiple changes while a write is blocked coalesce to one additional pending notification.
 
 ### Hot-reload integration tests
 
@@ -689,6 +736,7 @@ Use structured logs from the refresh service for:
 - Config-schema fallback, including entity name and reason.
 - Candidate failure, including entity/tool context and exception.
 - Notification delivery failure.
+- Primary notification-worker scheduling failure and fallback-worker creation failure.
 
 Do not log connection strings, stored-procedure argument values, or other secrets.
 

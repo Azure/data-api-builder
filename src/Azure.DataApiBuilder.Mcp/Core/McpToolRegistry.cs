@@ -75,10 +75,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             ImmutableArray<Tool> advertisedTools = SortMetadata(advertisedMetadata);
+            string discoveryJson = CreateDiscoveryJson(advertisedTools);
             return new McpToolRegistryCandidate(
                 Tools: toolBuilder.ToImmutable(),
                 AdvertisedToolCount: advertisedTools.Length,
-                DiscoveryCanonicalJson: CreateDiscoveryCanonicalJson(advertisedTools));
+                DiscoveryJson: discoveryJson,
+                DiscoveryCanonicalJson: CreateDiscoveryCanonicalJson(discoveryJson));
         }
 
         /// <summary>
@@ -95,6 +97,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     Version: current.Version + 1,
                     Tools: candidate.Tools,
                     AdvertisedToolCount: candidate.AdvertisedToolCount,
+                    DiscoveryJson: candidate.DiscoveryJson,
                     DiscoveryCanonicalJson: candidate.DiscoveryCanonicalJson);
 
                 Interlocked.Exchange(ref _snapshot, replacement);
@@ -115,17 +118,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         /// <remarks>
         /// Returns defensive deep clones so callers cannot mutate the private snapshot shared by
-        /// concurrent readers. Candidate construction already serializes the complete metadata
-        /// array for semantic comparison, so discovery deserializes that representation instead
-        /// of serializing every tool again on each request. This still allocates caller-owned
-        /// objects per request; canonical object-property ordering is not semantically observable
-        /// in JSON or JSON Schema.
+        /// concurrent readers. Candidate construction serializes an order-preserving discovery
+        /// representation for serving and a separate canonical representation for semantic change
+        /// comparison. Discovery deserializes the serving representation instead of serializing
+        /// every tool again on each request, while still allocating caller-owned objects.
         /// </remarks>
         public IReadOnlyList<Tool> GetAdvertisedTools()
         {
             McpToolRegistrySnapshot snapshot = Volatile.Read(ref _snapshot);
             return JsonSerializer.Deserialize<Tool[]>(
-                snapshot.DiscoveryCanonicalJson,
+                snapshot.DiscoveryJson,
                 _discoveryJsonOptions)
                 ?? throw new InvalidOperationException(
                     "Failed to clone advertised MCP tool metadata.");
@@ -186,15 +188,20 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 .ToImmutableArray();
         }
 
-        private static string CreateDiscoveryCanonicalJson(ImmutableArray<Tool> metadata)
+        private static string CreateDiscoveryJson(ImmutableArray<Tool> metadata)
         {
-            JsonElement serializedMetadata = JsonSerializer.SerializeToElement(
+            return JsonSerializer.Serialize(
                 metadata.ToArray(),
                 _discoveryJsonOptions);
+        }
+
+        private static string CreateDiscoveryCanonicalJson(string discoveryJson)
+        {
+            using JsonDocument serializedMetadata = JsonDocument.Parse(discoveryJson);
             using MemoryStream canonicalJson = new();
             using (Utf8JsonWriter writer = new(canonicalJson))
             {
-                WriteCanonicalJson(writer, serializedMetadata);
+                WriteCanonicalJson(writer, serializedMetadata.RootElement);
             }
 
             return Encoding.UTF8.GetString(canonicalJson.ToArray());
@@ -259,12 +266,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
             long Version,
             ImmutableDictionary<string, IMcpTool> Tools,
             int AdvertisedToolCount,
+            string DiscoveryJson,
             string DiscoveryCanonicalJson)
         {
             public static McpToolRegistrySnapshot Empty { get; } = new(
                 Version: 0,
                 Tools: ImmutableDictionary.Create<string, IMcpTool>(StringComparer.OrdinalIgnoreCase),
                 AdvertisedToolCount: 0,
+                DiscoveryJson: "[]",
                 DiscoveryCanonicalJson: "[]");
         }
     }
@@ -284,5 +293,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
     internal sealed record McpToolRegistryCandidate(
         ImmutableDictionary<string, IMcpTool> Tools,
         int AdvertisedToolCount,
+        string DiscoveryJson,
         string DiscoveryCanonicalJson);
 }

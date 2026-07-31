@@ -208,6 +208,34 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Canonical property sorting is used only for change detection. The discovery payload
+        /// preserves schema-property insertion order for clients that render parameters in wire
+        /// order even though JSON Schema does not assign that order semantic meaning.
+        /// </summary>
+        [TestMethod]
+        public void GetAdvertisedTools_PreservesInputSchemaPropertyOrder()
+        {
+            const string SCHEMA =
+                "{\"type\":\"object\",\"properties\":{" +
+                "\"second\":{\"type\":\"string\"}," +
+                "\"first\":{\"type\":\"integer\"}}}";
+            McpToolRegistry registry = new();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("ordered_tool", ToolType.Custom, inputSchemaJson: SCHEMA) },
+                CreateRuntimeConfig());
+
+            string[] propertyNames = registry.GetAdvertisedTools()
+                .Single()
+                .InputSchema
+                .GetProperty("properties")
+                .EnumerateObject()
+                .Select(property => property.Name)
+                .ToArray();
+
+            CollectionAssert.AreEqual(new[] { "second", "first" }, propertyNames);
+        }
+
+        /// <summary>
         /// A real input-schema change remains client-visible after canonicalization.
         /// </summary>
         [TestMethod]

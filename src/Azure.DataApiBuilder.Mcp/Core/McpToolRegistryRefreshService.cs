@@ -70,7 +70,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <inheritdoc />
         public void EnsureInitialized()
         {
-            if (RefreshRegistry(forceRebuildForCurrentConfig: false))
+            if (RefreshRegistry(
+                    forceRebuildForCurrentConfig: false,
+                    CancellationToken.None))
             {
                 NotifyToolsListChanged();
             }
@@ -99,17 +101,24 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             try
             {
+                args.CancellationToken.ThrowIfCancellationRequested();
                 // The runtime config becomes current before its ordered dependency events run.
                 // An out-of-band EnsureInitialized call can therefore observe this config while
                 // the metadata provider still represents the previous generation. Always rebuild
                 // at the ordered MCP event, after metadata and authorization have been refreshed.
-                if (RefreshRegistry(forceRebuildForCurrentConfig: true))
+                if (RefreshRegistry(
+                    forceRebuildForCurrentConfig: true,
+                    args.CancellationToken))
                 {
                     // Transport notification is deliberately outside _refreshLock. Implementations
                     // must enqueue any potentially blocking I/O so the ordered reload pipeline can
                     // continue to GraphQL and logging handlers.
                     NotifyToolsListChanged();
                 }
+            }
+            catch (OperationCanceledException) when (args.CancellationToken.IsCancellationRequested)
+            {
+                // Host shutdown canceled this generation before publication.
             }
             catch (Exception ex)
             {
@@ -124,10 +133,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <see langword="true"/> when an initialized client should be notified after the writer
         /// lock is released; otherwise <see langword="false"/>.
         /// </returns>
-        private bool RefreshRegistry(bool forceRebuildForCurrentConfig)
+        private bool RefreshRegistry(
+            bool forceRebuildForCurrentConfig,
+            CancellationToken cancellationToken)
         {
             lock (_refreshLock)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 RuntimeConfig config = _runtimeConfigProvider.GetConfig();
                 if (!forceRebuildForCurrentConfig && ReferenceEquals(config, _lastAppliedConfig))
                 {
@@ -140,6 +152,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 foreach (DynamicCustomTool customTool in customTools)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     bool initializedFromDatabase = customTool.InitializeMetadata(
                         config,
                         _metadataProviderFactory,
@@ -159,6 +172,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     _registeredTools.Concat(customTools),
                     config);
 
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!ReferenceEquals(config, _runtimeConfigProvider.GetConfig()))
                 {
                     _logger.LogWarning(

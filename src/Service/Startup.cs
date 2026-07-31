@@ -138,6 +138,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(fileSystem);
             services.AddSingleton<FileSystemRuntimeConfigLoader>(sp => configLoader);
             services.AddSingleton<RuntimeConfigProvider>(sp => configProvider);
+            services.AddSingleton<RuntimeConfigLoaderShutdownService>();
 
             bool runtimeConfigAvailable = configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
 
@@ -605,6 +606,12 @@ namespace Azure.DataApiBuilder.Service
             ConfigureResponseCompression(services, runtimeConfig);
 
             services.AddControllers();
+
+            // Hosted services stop in reverse registration order. Register the loader drain last
+            // so reload work exits before any other hosted service begins shutting down and before
+            // the root provider disposes reload subscribers or their dependencies.
+            services.AddSingleton<IHostedService>(serviceProvider =>
+                serviceProvider.GetRequiredService<RuntimeConfigLoaderShutdownService>());
         }
 
         /// <summary>

@@ -4,6 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
+using Azure.DataApiBuilder.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -101,6 +103,11 @@ namespace Azure.DataApiBuilder.Service.Utilities
             }
             finally
             {
+                host.Services
+                    .GetService<FileSystemRuntimeConfigLoader>()?
+                    .StopAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
                 host.Dispose();
             }
         }

@@ -9,9 +9,18 @@ public class HotReloadEventArgs : EventArgs
 
     public string Message { get; set; }
 
-    public HotReloadEventArgs(string eventName, string message)
+    /// <summary>
+    /// Cancels the current ordered hot-reload generation during loader shutdown.
+    /// </summary>
+    public CancellationToken CancellationToken { get; }
+
+    public HotReloadEventArgs(
+        string eventName,
+        string message,
+        CancellationToken cancellationToken = default)
     {
         EventName = eventName;
         Message = message;
+        CancellationToken = cancellationToken;
     }
 }

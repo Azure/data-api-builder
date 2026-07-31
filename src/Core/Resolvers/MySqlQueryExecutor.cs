@@ -106,8 +106,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
         /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
-        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName)
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(
+            DbConnection conn,
+            string dataSourceName,
+            CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.
             if (string.IsNullOrEmpty(dataSourceName))
             {
@@ -126,7 +130,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string? accessToken = accessTokenFromController ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
-                        await GetAccessTokenAsync());
+                        await GetAccessTokenAsync(cancellationToken));
 
                 if (accessToken is not null)
                 {
@@ -170,11 +174,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <returns>The string representation of the access token if found,
         /// null otherwise.</returns>
-        private async Task<string?> GetAccessTokenAsync()
+        private async Task<string?> GetAccessTokenAsync(
+            CancellationToken cancellationToken)
         {
             try
             {
-                _defaultAccessToken = await AzureCredential.GetTokenAsync(new TokenRequestContext(new[] { DATABASE_SCOPE }));
+                _defaultAccessToken = await AzureCredential.GetTokenAsync(
+                    new TokenRequestContext(new[] { DATABASE_SCOPE }),
+                    cancellationToken);
             }
             catch (CredentialUnavailableException ex)
             {

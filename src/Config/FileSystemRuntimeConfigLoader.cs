@@ -34,8 +34,11 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 {
     private readonly SemaphoreSlim _hotReloadGate = new(initialCount: 1, maxCount: 1);
     private readonly CancellationTokenSource _disposeCancellation = new();
+    private readonly object _operationLock = new();
     private readonly object _watcherLock = new();
     private readonly Func<IFileSystem, string, string, IConfigFileWatcher> _configFileWatcherFactory;
+    private TaskCompletionSource _activeOperationsDrained = CreateCompletedDrainSignal();
+    private int _activeOperationCount;
     private int _disposed;
     /// <summary>
     /// This stores either the default config name e.g. dab-config.json
@@ -136,17 +139,41 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 
     /// <summary>
     /// Disposes the config file watcher to release file handles and stop
-    /// monitoring the config file for changes. Disposal deliberately does not wait for an active
-    /// hot-reload pipeline, which can be blocked in external database metadata initialization.
+    /// monitoring the config file for changes. Active serialized work is canceled and drained
+    /// before this method returns so it cannot outlive host-owned dependencies.
     /// </summary>
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Stops accepting hot-reload work, requests cancellation of the active operation, and waits
+    /// until all serialized work has exited. Host shutdown calls this before singleton disposal.
+    /// </summary>
+    internal async Task StopAsync(CancellationToken cancellationToken)
+    {
+        Task activeOperationsDrained = BeginShutdown();
+        await activeOperationsDrained.WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private Task BeginShutdown()
+    {
+        bool firstShutdownRequest = Interlocked.Exchange(ref _disposed, 1) == 0;
+        if (firstShutdownRequest)
         {
-            return;
+            _disposeCancellation.Cancel();
+            StopAndDisposeConfigFileWatcher();
         }
 
-        _disposeCancellation.Cancel();
+        lock (_operationLock)
+        {
+            return _activeOperationsDrained.Task;
+        }
+    }
+
+    private void StopAndDisposeConfigFileWatcher()
+    {
 
         IConfigFileWatcher? configFileWatcher;
         lock (_watcherLock)
@@ -289,19 +316,26 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             return;
         }
 
+        if (!TryBeginSerializedOperation())
+        {
+            _hotReloadGate.Release();
+            return;
+        }
+
         try
         {
-            if (IsDisposed)
-            {
-                return;
-            }
-
             try
             {
                 if (RuntimeConfig is not null)
                 {
-                    HotReloadConfig(RuntimeConfig.IsDevelopmentMode());
+                    HotReloadConfig(
+                        RuntimeConfig.IsDevelopmentMode(),
+                        _disposeCancellation.Token);
                 }
+            }
+            catch (OperationCanceledException) when (IsDisposed)
+            {
+                // Host shutdown canceled this generation before it could finish publication.
             }
             catch (Exception ex)
             {
@@ -312,6 +346,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         }
         finally
         {
+            EndSerializedOperation();
             _hotReloadGate.Release();
         }
     }
@@ -323,7 +358,22 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// dependent component publication.
     /// </summary>
     /// <param name="operation">The complete initial configuration operation to serialize.</param>
-    public async Task ExecuteWithHotReloadSerializationAsync(Func<Task> operation)
+    public Task ExecuteWithHotReloadSerializationAsync(Func<Task> operation)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        return ExecuteWithHotReloadSerializationAsync(_ => operation());
+    }
+
+    /// <summary>
+    /// Executes initial runtime dependency construction under the same per-loader gate used by
+    /// file-triggered hot reload, with cooperative shutdown cancellation.
+    /// </summary>
+    /// <param name="operation">
+    /// The complete initial configuration operation to serialize. The supplied token is canceled
+    /// when loader shutdown begins.
+    /// </param>
+    public async Task ExecuteWithHotReloadSerializationAsync(
+        Func<CancellationToken, Task> operation)
     {
         ArgumentNullException.ThrowIfNull(operation);
 
@@ -341,22 +391,65 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
         }
 
+        if (!TryBeginSerializedOperation())
+        {
+            _hotReloadGate.Release();
+            throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
+        }
+
         try
         {
-            if (IsDisposed)
-            {
-                throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
-            }
-
-            await operation().ConfigureAwait(false);
+            await operation(_disposeCancellation.Token).ConfigureAwait(false);
         }
         finally
         {
+            EndSerializedOperation();
             _hotReloadGate.Release();
         }
     }
 
     private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+    private bool TryBeginSerializedOperation()
+    {
+        lock (_operationLock)
+        {
+            if (IsDisposed)
+            {
+                return false;
+            }
+
+            if (_activeOperationCount++ == 0)
+            {
+                _activeOperationsDrained = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+
+            return true;
+        }
+    }
+
+    private void EndSerializedOperation()
+    {
+        TaskCompletionSource? drainedSignal = null;
+        lock (_operationLock)
+        {
+            if (--_activeOperationCount == 0)
+            {
+                drainedSignal = _activeOperationsDrained;
+            }
+        }
+
+        drainedSignal?.TrySetResult();
+    }
+
+    private static TaskCompletionSource CreateCompletedDrainSignal()
+    {
+        TaskCompletionSource signal = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        signal.SetResult();
+        return signal;
+    }
 
     private void ScheduleConfigFileWatcherDisposal(IConfigFileWatcher configFileWatcher)
     {
@@ -414,8 +507,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         [NotNullWhen(true)] out RuntimeConfig? config,
         ILogger? logger = null,
         bool? isDevMode = null,
-        DeserializationVariableReplacementSettings? replacementSettings = null)
+        DeserializationVariableReplacementSettings? replacementSettings = null,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IsParseErrorEmitted = false;
         if (_fileSystem.File.Exists(path))
         {
@@ -431,6 +526,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             string json = string.Empty;
             while (runCount <= FileUtilities.RunLimit)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     json = _fileSystem.File.ReadAllText(path);
@@ -445,7 +541,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
                         throw;
                     }
 
-                    Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(FileUtilities.ExponentialRetryBase, runCount)));
+                    TimeSpan retryDelay = TimeSpan.FromSeconds(
+                        Math.Pow(FileUtilities.ExponentialRetryBase, runCount));
+                    if (cancellationToken.WaitHandle.WaitOne(retryDelay))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+
                     runCount++;
                 }
             }
@@ -528,8 +630,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// Hot Reloads the runtime config when the file watcher
     /// is active and detects a change to the underlying config file.
     /// </summary>
-    private void HotReloadConfig(bool isDevMode)
+    private void HotReloadConfig(bool isDevMode, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         SendLogToBufferOrLogger(
             LogLevel.Information,
             $"Starting hot-reload process for config: {ConfigFilePath}");
@@ -537,7 +640,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         // Use default replacement settings for hot reload
         DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
 
-        if (!TryLoadConfig(ConfigFilePath, out _, isDevMode: isDevMode, replacementSettings: replacementSettings))
+        if (!TryLoadConfig(
+            ConfigFilePath,
+            out _,
+            isDevMode: isDevMode,
+            replacementSettings: replacementSettings,
+            cancellationToken: cancellationToken))
         {
             throw new DataApiBuilderException(
                 message: "Deserialization of the configuration file failed.",
@@ -547,7 +655,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 
         IsNewConfigDetected = true;
         IsNewConfigValidated = false;
-        SignalConfigChanged();
+        SignalConfigChanged(cancellationToken: cancellationToken);
 
         SendLogToBufferOrLogger(LogLevel.Information, "Hot-reload process finished.");
     }

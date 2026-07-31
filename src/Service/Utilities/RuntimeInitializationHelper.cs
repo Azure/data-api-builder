@@ -32,8 +32,9 @@ namespace Azure.DataApiBuilder.Service.Utilities
                 serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>();
             RuntimeConfig? initializedConfig = null;
 
-            await configLoader.ExecuteWithHotReloadSerializationAsync(async () =>
+            await configLoader.ExecuteWithHotReloadSerializationAsync(async cancellationToken =>
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 RuntimeConfigProvider runtimeConfigProvider =
                     serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 initializedConfig = runtimeConfigProvider.GetConfig();
@@ -44,9 +45,12 @@ namespace Azure.DataApiBuilder.Service.Utilities
 
                 IMetadataProviderFactory metadataProviderFactory =
                     serviceProvider.GetRequiredService<IMetadataProviderFactory>();
-                await metadataProviderFactory.InitializeAsync().ConfigureAwait(false);
+                await metadataProviderFactory
+                    .InitializeAsync(cancellationToken)
+                    .ConfigureAwait(false);
 
                 // MCP services are absent when MCP was disabled at startup.
+                cancellationToken.ThrowIfCancellationRequested();
                 IMcpToolRegistryRefreshService? mcpToolRegistryRefreshService =
                     serviceProvider.GetService<IMcpToolRegistryRefreshService>();
                 mcpToolRegistryRefreshService?.EnsureInitialized();

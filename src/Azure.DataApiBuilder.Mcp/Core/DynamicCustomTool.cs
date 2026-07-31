@@ -35,6 +35,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
     public class DynamicCustomTool : IMcpTool
     {
         private readonly Entity _entity;
+        private readonly string _toolName;
         private JsonElement? _cachedInputSchema;
 
         /// <summary>
@@ -46,6 +47,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             EntityName = entityName ?? throw new ArgumentNullException(nameof(entityName));
             _entity = entity ?? throw new ArgumentNullException(nameof(entity));
+            _toolName = ConvertToToolName(entityName);
 
             // Validate that this is a stored procedure
             if (_entity.Source.Type != EntitySourceType.StoredProcedure)
@@ -69,26 +71,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public string EntityName { get; }
 
         /// <summary>
-        /// Initializes the tool's input schema using DB metadata from the service provider.
-        /// Called after DI initialization to enrich the tool schema with DB-discovered parameters
-        /// and type information that aren't available at construction time.
-        /// Falls back to a config-based schema if DB metadata is unavailable.
+        /// Gets the normalized MCP tool name without materializing the complete metadata schema.
         /// </summary>
-        /// <param name="serviceProvider">The application service provider with initialized metadata providers.</param>
-        public void InitializeMetadata(IServiceProvider serviceProvider)
-        {
-            ArgumentNullException.ThrowIfNull(serviceProvider);
-
-            RuntimeConfigProvider? configProvider = serviceProvider.GetService<RuntimeConfigProvider>();
-            IMetadataProviderFactory? metadataProviderFactory = serviceProvider.GetService<IMetadataProviderFactory>();
-            if (configProvider is null || metadataProviderFactory is null)
-            {
-                _cachedInputSchema = null;
-                return;
-            }
-
-            _ = InitializeMetadata(configProvider.GetConfig(), metadataProviderFactory);
-        }
+        internal string ToolName => _toolName;
 
         /// <summary>
         /// Initializes the input schema using an explicit configuration and metadata-provider
@@ -125,15 +110,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         public Tool GetToolMetadata()
         {
-            string toolName = ConvertToToolName(EntityName);
-            string description = _entity.Description ?? $"Executes the {toolName} stored procedure";
+            string description = _entity.Description ?? $"Executes the {_toolName} stored procedure";
 
             // Build input schema based on parameters
             JsonElement inputSchema = BuildInputSchema();
 
             return new Tool
             {
-                Name = toolName,
+                Name = _toolName,
                 Description = description,
                 InputSchema = inputSchema
             };
@@ -148,7 +132,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             CancellationToken cancellationToken = default)
         {
             ILogger<DynamicCustomTool>? logger = serviceProvider.GetService<ILogger<DynamicCustomTool>>();
-            string toolName = GetToolMetadata().Name;
+            string toolName = _toolName;
 
             try
             {

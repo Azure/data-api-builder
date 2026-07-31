@@ -145,7 +145,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         _logger.LogWarning(
                             "Using configuration-derived input schema for custom MCP tool " +
                             "'{ToolName}' on entity '{EntityName}'. Reason: {FallbackReason}",
-                            customTool.GetToolMetadata().Name,
+                            customTool.ToolName,
                             customTool.EntityName,
                             fallbackReason);
                     }

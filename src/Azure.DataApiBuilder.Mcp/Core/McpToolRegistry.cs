@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// Replaces the complete registry with a snapshot built for <paramref name="config"/>.
         /// The candidate is validated and materialized before it is atomically published.
         /// </summary>
-        public McpToolRegistryUpdateResult ReplaceAll(IEnumerable<IMcpTool> tools, RuntimeConfig config)
+        internal McpToolRegistryUpdateResult ReplaceAll(IEnumerable<IMcpTool> tools, RuntimeConfig config)
         {
             return PublishCandidate(CreateCandidate(tools, config));
         }
@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             ImmutableArray<Tool> advertisedTools = SortMetadata(advertisedMetadata);
             return new McpToolRegistryCandidate(
                 Tools: toolBuilder.ToImmutable(),
-                AdvertisedTools: advertisedTools,
+                AdvertisedToolCount: advertisedTools.Length,
                 DiscoveryCanonicalJson: CreateDiscoveryCanonicalJson(advertisedTools));
         }
 
@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 McpToolRegistrySnapshot replacement = new(
                     Version: current.Version + 1,
                     Tools: candidate.Tools,
-                    AdvertisedTools: candidate.AdvertisedTools,
+                    AdvertisedToolCount: candidate.AdvertisedToolCount,
                     DiscoveryCanonicalJson: candidate.DiscoveryCanonicalJson);
 
                 Interlocked.Exchange(ref _snapshot, replacement);
@@ -106,7 +106,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         replacement.DiscoveryCanonicalJson,
                         StringComparison.Ordinal),
                     RegisteredToolCount: replacement.Tools.Count,
-                    AdvertisedToolCount: replacement.AdvertisedTools.Length);
+                    AdvertisedToolCount: replacement.AdvertisedToolCount);
             }
         }
 
@@ -117,7 +117,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// Returns defensive deep clones so callers cannot mutate the private snapshot shared by
         /// concurrent readers. Candidate construction already serializes the complete metadata
         /// array for semantic comparison, so discovery deserializes that representation instead
-        /// of serializing every tool again on each request.
+        /// of serializing every tool again on each request. This still allocates caller-owned
+        /// objects per request; canonical object-property ordering is not semantically observable
+        /// in JSON or JSON Schema.
         /// </remarks>
         public IReadOnlyList<Tool> GetAdvertisedTools()
         {
@@ -256,13 +258,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private sealed record McpToolRegistrySnapshot(
             long Version,
             ImmutableDictionary<string, IMcpTool> Tools,
-            ImmutableArray<Tool> AdvertisedTools,
+            int AdvertisedToolCount,
             string DiscoveryCanonicalJson)
         {
             public static McpToolRegistrySnapshot Empty { get; } = new(
                 Version: 0,
                 Tools: ImmutableDictionary.Create<string, IMcpTool>(StringComparer.OrdinalIgnoreCase),
-                AdvertisedTools: ImmutableArray<Tool>.Empty,
+                AdvertisedToolCount: 0,
                 DiscoveryCanonicalJson: "[]");
         }
     }
@@ -270,7 +272,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
     /// <summary>
     /// Describes the result of atomically replacing an MCP registry snapshot.
     /// </summary>
-    public readonly record struct McpToolRegistryUpdateResult(
+    internal readonly record struct McpToolRegistryUpdateResult(
         long Version,
         bool DiscoveryChanged,
         int RegisteredToolCount,
@@ -281,6 +283,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
     /// </summary>
     internal sealed record McpToolRegistryCandidate(
         ImmutableDictionary<string, IMcpTool> Tools,
-        ImmutableArray<Tool> AdvertisedTools,
+        int AdvertisedToolCount,
         string DiscoveryCanonicalJson);
 }

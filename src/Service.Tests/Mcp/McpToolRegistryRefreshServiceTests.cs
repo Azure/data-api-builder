@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -273,40 +274,47 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [TestMethod]
-        public async Task HotReload_WhenNotifierBlocks_DoesNotRetainRefreshLock()
+        public async Task HotReload_WhenNotifierBlocks_DoesNotBlockPublicationOrLaterHandlers()
         {
             RuntimeConfig currentConfig = CreateRuntimeConfig();
-            BlockingFirstNotifier blockingNotifier = new();
-            Mock<IMcpToolListChangedNotifier> healthyNotifier = new();
+            BlockingStringWriter output = new();
+            using McpStdoutWriter stdoutWriter = new(output);
+            McpStdioToolListChangedNotifier notifier = new(stdoutWriter);
+            notifier.MarkInitialized();
+            ManualResetEventSlim laterHandlerCalled = new();
             TestContext context = CreateContextWithNotifiers(
                 () => currentConfig,
-                healthyNotifier,
-                new IMcpToolListChangedNotifier[] { blockingNotifier, healthyNotifier.Object });
+                new Mock<IMcpToolListChangedNotifier>(),
+                new IMcpToolListChangedNotifier[] { notifier });
+            context.HotReloadEventHandler.Subscribe(
+                GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED,
+                (_, _) => laterHandlerCalled.Set());
             context.Service.EnsureInitialized();
 
             currentConfig = CreateRuntimeConfig(("FirstTool", "First generation"));
-            Task firstRefresh = Task.Run(() => RaiseRegistryChanged(context.HotReloadEventHandler));
-            Task secondRefresh = Task.CompletedTask;
+            TestRuntimeConfigLoader loader = new(context.HotReloadEventHandler)
+            {
+                RuntimeConfig = currentConfig
+            };
+            Task firstRefresh = Task.Run(loader.RaiseConfigChanged);
 
             try
             {
                 Assert.IsTrue(
-                    blockingNotifier.FirstCallEntered.Wait(TimeSpan.FromSeconds(5)),
-                    "The first notification did not reach the blocking transport.");
-
-                currentConfig = CreateRuntimeConfig(("LatestTool", "Latest generation"));
-                secondRefresh = Task.Run(() => RaiseRegistryChanged(context.HotReloadEventHandler));
-
+                    output.WriteEntered.Wait(TimeSpan.FromSeconds(5)),
+                    "The stdio notification worker did not reach the blocking writer.");
                 Assert.IsTrue(
-                    blockingNotifier.SecondCallEntered.Wait(TimeSpan.FromSeconds(5)),
-                    "A blocked notifier must not retain the registry refresh writer lock.");
-                Assert.IsTrue(context.Registry.TryGetTool("latest_tool", out _));
-                Assert.IsFalse(context.Registry.TryGetTool("first_tool", out _));
+                    laterHandlerCalled.Wait(TimeSpan.FromSeconds(5)),
+                    "A blocked transport must not prevent later ordered hot-reload handlers.");
+                Assert.IsTrue(context.Registry.TryGetTool("first_tool", out _));
             }
             finally
             {
-                blockingNotifier.ReleaseFirstCall.Set();
-                await Task.WhenAll(firstRefresh, secondRefresh).WaitAsync(TimeSpan.FromSeconds(5));
+                output.ReleaseWrite.Set();
+                await firstRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.IsTrue(
+                    output.LineWritten.Wait(TimeSpan.FromSeconds(5)),
+                    "The queued notification did not finish after stdout resumed.");
             }
         }
 
@@ -646,30 +654,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             }
         }
 
-        private sealed class BlockingFirstNotifier : IMcpToolListChangedNotifier
+        private sealed class BlockingStringWriter : StringWriter
         {
-            private int _callCount;
+            public ManualResetEventSlim WriteEntered { get; } = new();
 
-            public ManualResetEventSlim FirstCallEntered { get; } = new();
+            public ManualResetEventSlim ReleaseWrite { get; } = new();
 
-            public ManualResetEventSlim SecondCallEntered { get; } = new();
+            public ManualResetEventSlim LineWritten { get; } = new();
 
-            public ManualResetEventSlim ReleaseFirstCall { get; } = new();
-
-            public void NotifyToolsListChanged()
+            public override void WriteLine(string? value)
             {
-                if (Interlocked.Increment(ref _callCount) == 1)
+                WriteEntered.Set();
+                if (!ReleaseWrite.Wait(TimeSpan.FromSeconds(10)))
                 {
-                    FirstCallEntered.Set();
-                    if (!ReleaseFirstCall.Wait(TimeSpan.FromSeconds(10)))
-                    {
-                        throw new TimeoutException("Timed out waiting to release the first notifier call.");
-                    }
-
-                    return;
+                    throw new TimeoutException("Timed out waiting to release the stdout write.");
                 }
 
-                SecondCallEntered.Set();
+                base.WriteLine(value);
+                LineWritten.Set();
             }
         }
 

@@ -60,9 +60,8 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             dataSourceName = string.Empty;
             error = string.Empty;
 
-            if (string.IsNullOrWhiteSpace(entityName))
+            if (!TryValidateEntityName(entityName, out error))
             {
-                error = "Entity name cannot be null or empty.";
                 return false;
             }
 
@@ -108,6 +107,11 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             dbObject = default!;
             dataSourceName = string.Empty;
             error = string.Empty;
+
+            if (!TryValidateEntityName(entityName, out error))
+            {
+                return false;
+            }
 
             // Resolve datasource name for the entity.
             try
@@ -156,6 +160,18 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             }
 
             dbObject = temp;
+            return true;
+        }
+
+        private static bool TryValidateEntityName(string? entityName, out string error)
+        {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                error = "Entity name cannot be null or empty.";
+                return false;
+            }
+
+            error = string.Empty;
             return true;
         }
     }

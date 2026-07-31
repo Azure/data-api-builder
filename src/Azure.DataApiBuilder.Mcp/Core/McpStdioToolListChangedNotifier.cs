@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly McpStdoutWriter _stdoutWriter;
         private readonly ILogger<McpStdioToolListChangedNotifier> _logger;
         private int _isInitialized;
-        private int _pendingNotificationCount;
+        private int _notificationPending;
         private int _notificationWorkerScheduled;
 
         public McpStdioToolListChangedNotifier(
@@ -61,7 +61,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return;
             }
 
-            Interlocked.Increment(ref _pendingNotificationCount);
+            // One pending invalidation is sufficient: after receiving it, the client requests the
+            // latest complete snapshot. This keeps queued state bounded while stdout is blocked.
+            Interlocked.Exchange(ref _notificationPending, 1);
             ScheduleNotificationWorker();
         }
 
@@ -77,7 +79,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     this,
                     preferLocal: false))
             {
-                Interlocked.Exchange(ref _pendingNotificationCount, 0);
+                Interlocked.Exchange(ref _notificationPending, 0);
                 Volatile.Write(ref _notificationWorkerScheduled, 0);
                 _logger.LogError("Failed to queue an MCP tool-list change notification.");
             }
@@ -87,7 +89,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             try
             {
-                while (Interlocked.Exchange(ref _pendingNotificationCount, 0) > 0)
+                while (Interlocked.Exchange(ref _notificationPending, 0) != 0)
                 {
                     try
                     {
@@ -105,9 +107,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
             {
                 Volatile.Write(ref _notificationWorkerScheduled, 0);
 
-                // A publication can race with worker shutdown after the final pending-count
+                // A publication can race with worker shutdown after the final pending-flag
                 // exchange. Reschedule so that invalidation is never lost in that window.
-                if (Volatile.Read(ref _pendingNotificationCount) > 0)
+                if (Volatile.Read(ref _notificationPending) != 0)
                 {
                     ScheduleNotificationWorker();
                 }

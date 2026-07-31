@@ -120,7 +120,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             JsonElement requestRoot = request.RootElement;
             JsonElement? id = requestRoot.TryGetProperty("id", out JsonElement idElement) ? idElement : null;
 
-            handleInitialize.Invoke(server, new object?[] { id, requestRoot });
+            object? initializeCompleted = handleInitialize.Invoke(
+                server,
+                new object?[] { id, requestRoot });
+            Assert.AreEqual(true, initializeCompleted);
 
             string output = ExtractSingleOutputLine(stdoutCapture);
             using JsonDocument response = JsonDocument.Parse(output);

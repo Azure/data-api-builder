@@ -130,8 +130,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         switch (method)
                         {
                             case "initialize":
-                                HandleInitialize(id, root);
-                                initializeResponseCompleted = true;
+                                initializeResponseCompleted = HandleInitialize(id, root);
                                 break;
 
                             case "notifications/initialized":
@@ -191,7 +190,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// server-supported version and client-requested version, and includes supported capabilities and server information. No notifications
         /// are sent here; the server waits for the client to send "notifications/initialized" before sending any notifications.
         /// </remarks>
-        private void HandleInitialize(JsonElement? id, JsonElement root)
+        private bool HandleInitialize(JsonElement? id, JsonElement root)
         {
             string? clientRequestedProtocolVersion = GetClientProtocolVersion(root);
             string negotiatedProtocolVersion =
@@ -273,6 +272,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             WriteResult(id, result);
+            return true;
         }
 
         private static string? GetClientProtocolVersion(JsonElement root)

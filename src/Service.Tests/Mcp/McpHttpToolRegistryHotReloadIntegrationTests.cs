@@ -14,8 +14,10 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Mcp
@@ -52,7 +54,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     $"--ConfigFileName={configPath}",
                     "--no-https-redirect"
                 };
-                using TestServer server = new(Program.CreateWebHostBuilder(args));
+                using RejectedCandidateLogObserver rejectedCandidateLogObserver = new();
+                using TestServer server = new(
+                    Program.CreateWebHostBuilder(args)
+                        .ConfigureLogging(logging =>
+                            logging.AddProvider(rejectedCandidateLogObserver)));
                 using HttpClient client = server.CreateClient();
 
                 McpHttpResponse initialize = await SendMcpAsync(
@@ -193,7 +199,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                         connectionString.ConnectionString,
                         ("DuplicateTool", "First duplicate"),
                         ("duplicate_tool", "Second duplicate")));
-                await Task.Delay(500);
+                await rejectedCandidateLogObserver.WaitForRejectionAsync(
+                    TimeSpan.FromSeconds(10));
+
                 JsonElement afterFailure = await ListToolsAsync(client, sessionId, requestId: 6);
                 AssertTool(afterFailure, "latest_book", "Latest");
                 Assert.IsFalse(HasTool(afterFailure, "duplicate_tool"));
@@ -496,5 +504,50 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         private sealed record McpHttpResponse(string? SessionId, JsonElement? Payload);
+
+        private sealed class RejectedCandidateLogObserver : ILoggerProvider
+        {
+            private readonly TaskCompletionSource _rejectionObserved = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public ILogger CreateLogger(string categoryName)
+            {
+                return new RejectedCandidateLogger(_rejectionObserved);
+            }
+
+            public async Task WaitForRejectionAsync(TimeSpan timeout)
+            {
+                await _rejectionObserved.Task.WaitAsync(timeout);
+            }
+
+            public void Dispose()
+            {
+            }
+
+            private sealed class RejectedCandidateLogger(
+                TaskCompletionSource rejectionObserved) : ILogger
+            {
+                public IDisposable? BeginScope<TState>(TState state)
+                    where TState : notnull => null;
+
+                public bool IsEnabled(LogLevel logLevel) => true;
+
+                public void Log<TState>(
+                    LogLevel logLevel,
+                    EventId eventId,
+                    TState state,
+                    Exception? exception,
+                    Func<TState, Exception?, string> formatter)
+                {
+                    if (logLevel == LogLevel.Error &&
+                        formatter(state, exception).Contains(
+                            "Failed to refresh the MCP tool registry after a runtime configuration change.",
+                            StringComparison.Ordinal))
+                    {
+                        rejectionObserved.TrySetResult();
+                    }
+                }
+            }
+        }
     }
 }

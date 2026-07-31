@@ -47,11 +47,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     }
                     catch (Exception ex)
                     {
-                        logger?.LogError(
-                            ex,
-                            "Failed to create custom MCP tool for entity '{EntityName}'.",
-                            entityName);
-
+                        // Preserve entity context without logging here. The caller owns failure
+                        // logging and can include whether startup failed or a snapshot was retained.
                         throw new InvalidOperationException(
                             $"Failed to create custom MCP tool for entity '{entityName}'.",
                             ex);

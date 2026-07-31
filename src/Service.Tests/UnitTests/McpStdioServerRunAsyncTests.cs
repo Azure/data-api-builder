@@ -60,7 +60,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
-        public async Task RunAsync_InitializedNotification_MarksToolListNotifierReady()
+        public async Task RunAsync_CompleteInitializationHandshake_MarksToolListNotifierReady()
+        {
+            Mock<IMcpStdioToolListChangedNotifier> notifier = new();
+            string input =
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1.0\"}}}" + Environment.NewLine +
+                "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}" + Environment.NewLine +
+                "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"shutdown\"}" + Environment.NewLine;
+            (McpStdioServer server, _) = CreateServerWithCapturedOutput(
+                new StringReader(input),
+                notifier.Object);
+
+            await server.RunAsync(CancellationToken.None);
+
+            notifier.Verify(value => value.MarkInitialized(), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task RunAsync_InitializedNotificationBeforeInitialize_DoesNotMarkNotifierReady()
         {
             Mock<IMcpStdioToolListChangedNotifier> notifier = new();
             string input =
@@ -72,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             await server.RunAsync(CancellationToken.None);
 
-            notifier.Verify(value => value.MarkInitialized(), Times.Once);
+            notifier.Verify(value => value.MarkInitialized(), Times.Never);
         }
 
         private static (McpStdioServer server, StringWriter stdoutCapture) CreateServerWithCapturedOutput(

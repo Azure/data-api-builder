@@ -17,6 +17,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ModelContextProtocol.Protocol;
@@ -83,6 +84,54 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 "Gets one book",
                 context.Registry.GetAdvertisedTools().Single(tool => tool.Name == "get_book").Description);
             context.Notifier.Verify(notifier => notifier.NotifyToolsListChanged(), Times.Once);
+        }
+
+        [TestMethod]
+        public void HotReload_PreservesExplicitlyDiRegisteredCustomTool()
+        {
+            RuntimeConfig currentConfig = CreateRuntimeConfig();
+            Mock<RuntimeConfigLoader> configLoader = new(null, null);
+            configLoader.Object.RuntimeConfig = currentConfig;
+            Mock<RuntimeConfigProvider> configProvider = new(configLoader.Object);
+            configProvider.Setup(provider => provider.GetConfig()).Returns(() => currentConfig);
+
+            Mock<ISqlMetadataProvider> sqlMetadataProvider = new();
+            sqlMetadataProvider
+                .SetupGet(provider => provider.EntityToDatabaseObject)
+                .Returns(new Dictionary<string, DatabaseObject>());
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            metadataProviderFactory
+                .Setup(factory => factory.GetMetadataProvider(It.IsAny<string>()))
+                .Returns(sqlMetadataProvider.Object);
+
+            TestMcpTool registeredCustomTool = new("extension_tool", ToolType.Custom);
+            HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
+            ServiceCollection services = new();
+            services.AddLogging();
+            services.AddSingleton(configProvider.Object);
+            services.AddSingleton(metadataProviderFactory.Object);
+            services.AddSingleton(hotReloadEventHandler);
+            services.AddSingleton<IMcpTool>(registeredCustomTool);
+            services.AddDabMcpServer(configProvider.Object);
+            using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            McpToolRegistryRefreshService refreshService = serviceProvider
+                .GetRequiredService<McpToolRegistryRefreshService>();
+            McpToolRegistry registry = serviceProvider.GetRequiredService<McpToolRegistry>();
+
+            refreshService.EnsureInitialized();
+            Assert.IsTrue(registry.TryGetTool("extension_tool", out IMcpTool? initialTool));
+            Assert.AreSame(registeredCustomTool, initialTool);
+            Assert.IsTrue(registry.GetAdvertisedTools().Any(tool => tool.Name == "extension_tool"));
+
+            currentConfig = CreateRuntimeConfig();
+            RaiseRegistryChanged(hotReloadEventHandler);
+
+            Assert.IsTrue(registry.TryGetTool("extension_tool", out IMcpTool? refreshedTool));
+            Assert.AreSame(
+                registeredCustomTool,
+                refreshedTool,
+                "Independent DI-owned tools must remain published across configuration generations.");
+            Assert.IsTrue(registry.GetAdvertisedTools().Any(tool => tool.Name == "extension_tool"));
         }
 
         [TestMethod]
@@ -176,7 +225,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             VerifyLogContains(
                 context.Logger,
                 LogLevel.Information,
-                "with 0 built-in tools, 1 custom tools, 1 registered tools, and 1 advertised tools. " +
+                "with 0 built-in tools, 0 DI-registered custom tools, " +
+                "1 configuration-generated custom tools, 1 registered tools, and 1 advertised tools. " +
                 "Discovery changed: True.");
         }
 

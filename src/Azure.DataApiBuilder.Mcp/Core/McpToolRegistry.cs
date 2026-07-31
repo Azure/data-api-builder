@@ -28,47 +28,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private McpToolRegistrySnapshot _snapshot = McpToolRegistrySnapshot.Empty;
 
         /// <summary>
-        /// Registers a tool in the registry using copy-on-write publication.
-        /// This compatibility API is retained for callers that incrementally construct a registry;
-        /// production initialization and hot-reload use <see cref="ReplaceAll"/>.
-        /// </summary>
-        /// <exception cref="DataApiBuilderException">Thrown when tool name is invalid or duplicate</exception>
-        public void RegisterTool(IMcpTool tool)
-        {
-            ArgumentNullException.ThrowIfNull(tool);
-
-            Tool metadata = CloneMetadata(tool.GetToolMetadata());
-            string toolName = ValidateToolName(metadata);
-
-            lock (_writerLock)
-            {
-                McpToolRegistrySnapshot current = _snapshot;
-
-                if (current.Tools.TryGetValue(toolName, out IMcpTool? existingTool))
-                {
-                    if (ReferenceEquals(existingTool, tool))
-                    {
-                        return;
-                    }
-
-                    throw CreateDuplicateToolException(toolName, existingTool, tool);
-                }
-
-                ImmutableDictionary<string, IMcpTool> tools = current.Tools.Add(toolName, tool);
-                ImmutableArray<Tool> advertisedTools = SortMetadata(current.AdvertisedTools.Add(metadata));
-                string discoveryCanonicalJson = CreateDiscoveryCanonicalJson(advertisedTools);
-
-                Interlocked.Exchange(
-                    ref _snapshot,
-                    new McpToolRegistrySnapshot(
-                        Version: current.Version + 1,
-                        Tools: tools,
-                        AdvertisedTools: advertisedTools,
-                        DiscoveryCanonicalJson: discoveryCanonicalJson));
-            }
-        }
-
-        /// <summary>
         /// Replaces the complete registry with a snapshot built for <paramref name="config"/>.
         /// The candidate is validated and materialized before it is atomically published.
         /// </summary>
@@ -156,32 +115,18 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         /// <remarks>
         /// Returns defensive deep clones so callers cannot mutate the private snapshot shared by
-        /// concurrent readers. The JSON round trip is intentional and occurs only for discovery
-        /// requests, not for tool lookup or execution.
+        /// concurrent readers. Candidate construction already serializes the complete metadata
+        /// array for semantic comparison, so discovery deserializes that representation instead
+        /// of serializing every tool again on each request.
         /// </remarks>
         public IReadOnlyList<Tool> GetAdvertisedTools()
         {
             McpToolRegistrySnapshot snapshot = Volatile.Read(ref _snapshot);
-            return snapshot.AdvertisedTools
-                .Select(CloneMetadata)
-                .ToArray();
-        }
-
-        /// <summary>
-        /// Gets metadata for all registered tools that are enabled in the given runtime configuration.
-        /// Retained for compatibility; MCP handlers should use <see cref="GetAdvertisedTools"/> so
-        /// lookup and discovery come from the same registry generation.
-        /// </summary>
-        [Obsolete(
-            "GetEnabledTools combines a registry snapshot with caller-supplied configuration. " +
-            "Use GetAdvertisedTools so discovery comes from one published generation.")]
-        public IEnumerable<Tool> GetEnabledTools(RuntimeConfig config)
-        {
-            ArgumentNullException.ThrowIfNull(config);
-            McpToolRegistrySnapshot snapshot = Volatile.Read(ref _snapshot);
-            return snapshot.Tools.Values
-                .Where(t => t.IsEnabled(config))
-                .Select(t => CloneMetadata(t.GetToolMetadata()));
+            return JsonSerializer.Deserialize<Tool[]>(
+                snapshot.DiscoveryCanonicalJson,
+                _discoveryJsonOptions)
+                ?? throw new InvalidOperationException(
+                    "Failed to clone advertised MCP tool metadata.");
         }
 
         /// <summary>

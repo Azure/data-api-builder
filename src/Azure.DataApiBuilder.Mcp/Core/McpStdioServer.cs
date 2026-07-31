@@ -68,6 +68,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // By default read via Console.In so the loop honors the configured
             // Console.InputEncoding in stdio mode.
             TextReader reader = _inputReader ?? Console.In;
+            bool initializeResponseCompleted = false;
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -130,10 +131,19 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         {
                             case "initialize":
                                 HandleInitialize(id, root);
+                                initializeResponseCompleted = true;
                                 break;
 
                             case "notifications/initialized":
-                                _toolListChangedNotifier?.MarkInitialized();
+                                // This notification completes the MCP handshake only after the
+                                // server successfully wrote its initialize response. Ignore an
+                                // out-of-order notification rather than enabling capabilities the
+                                // client has not negotiated.
+                                if (initializeResponseCompleted)
+                                {
+                                    _toolListChangedNotifier?.MarkInitialized();
+                                }
+
                                 break;
 
                             case "tools/list":

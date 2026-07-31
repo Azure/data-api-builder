@@ -31,24 +31,24 @@ Consequently, a configuration hot-reload can leave MCP discovery stale in severa
 
 Built-in tool visibility already evaluates the current configuration during each `tools/list` request, but it is combined with a fixed startup registry. This avoids some stale built-in visibility, but does not solve stale custom tools or provide a single consistent registry generation.
 
-## Current Implementation
+## Previous Implementation
 
 ### Registry construction
 
-[McpServiceCollectionExtensions.cs](../../src/Azure.DataApiBuilder.Mcp/Core/McpServiceCollectionExtensions.cs) currently:
+Before this change, [McpServiceCollectionExtensions.cs](../../src/Azure.DataApiBuilder.Mcp/Core/McpServiceCollectionExtensions.cs):
 
 1. Registers `McpToolRegistry` as a singleton.
 2. Registers `McpToolRegistryInitializer` as a hosted service.
 3. Discovers built-in `IMcpTool` implementations and registers them as singletons.
 4. Builds custom tools from the startup `RuntimeConfig` and registers each custom tool as a singleton.
 
-[McpToolRegistryInitializer.cs](../../src/Azure.DataApiBuilder.Mcp/Core/McpToolRegistryInitializer.cs) resolves every `IMcpTool` and registers it once when the host starts.
+The former `McpToolRegistryInitializer` resolved every `IMcpTool` and registered it once when the host started.
 
 [McpStdioHelper.cs](../../src/Service/Utilities/McpStdioHelper.cs) separately initializes the registry because stdio mode deliberately builds, but does not start, the ASP.NET Core web host.
 
 ### Registry state
 
-[McpToolRegistry.cs](../../src/Azure.DataApiBuilder.Mcp/Core/McpToolRegistry.cs) stores tools in a mutable, case-insensitive `Dictionary<string, IMcpTool>`. It supports individual registration, lookup by name, and filtering enabled tools using a supplied `RuntimeConfig`.
+[McpToolRegistry.cs](../../src/Azure.DataApiBuilder.Mcp/Core/McpToolRegistry.cs) stored tools in a mutable, case-insensitive `Dictionary<string, IMcpTool>`. It supported individual registration, lookup by name, and filtering enabled tools using a supplied `RuntimeConfig`.
 
 The dictionary is safe under current startup-only mutation, but it cannot be modified concurrently with MCP requests.
 
@@ -95,6 +95,7 @@ The MCP registry needs refreshed database metadata and must not publish newly ca
 10. Keep the implementation compatible with the existing ordered hot-reload architecture.
 11. Avoid dynamic mutation of the DI container.
 12. Provide deterministic behavior and sufficient logging for diagnosis.
+13. Preserve independently DI-registered `IMcpTool` extensions across registry generations.
 
 ## Non-Goals
 
@@ -135,16 +136,18 @@ internal sealed record McpToolRegistrySnapshot(
 `Tools` contains:
 
 - Every built-in tool, including built-ins currently disabled by DML tool configuration.
-- Every custom tool enabled in the configuration used to build the snapshot.
+- Every independently DI-registered `IMcpTool` implementation.
+- Every configuration-generated custom tool enabled in the configuration used to build the snapshot.
 
 `AdvertisedTools` contains precomputed metadata for tools whose `IsEnabled(config)` result was true for that same configuration generation. It is sorted deterministically by tool name.
 
 Keeping lookup state and advertised metadata in the same snapshot prevents a request from combining tools from one generation with enablement or metadata from another generation.
 
 Protocol `Tool` objects are mutable SDK models, so the registry defensively clones metadata during
-candidate construction and again when returning public discovery results. Neither a tool retaining
-its source metadata object nor a caller mutating a returned object can modify a published snapshot
-or invalidate its canonical discovery representation.
+candidate construction and again when returning public discovery results. Candidate publication
+pre-serializes the complete canonical discovery representation, which the accessor deserializes to
+produce caller-owned clones without reserializing every tool per request. Neither a tool retaining
+its source metadata object nor a caller mutating a returned object can modify a published snapshot.
 
 Tool names must be nonempty and must not contain leading or trailing whitespace. Rejecting rather
 than trimming guarantees that every exact name returned by `tools/list` resolves through
@@ -161,11 +164,11 @@ Readers capture the current snapshot once per operation:
 
 Readers do not acquire the rebuild lock. They observe either the complete previous snapshot or the complete replacement snapshot.
 
-### 4. Built-in and custom tool lifetimes differ
+### 4. DI-owned and configuration-generated tool lifetimes differ
 
-Built-in tools remain DI-owned application singletons because they are stateless and their execution paths already read current request/configuration state.
+Built-in tools remain DI-owned application singletons because they are stateless and their execution paths already read current request/configuration state. Independently registered custom `IMcpTool` implementations are also DI-owned and remain part of every candidate; `IMcpTool` remains an extension point regardless of the implementation's `ToolType` value.
 
-Custom tools are removed from DI registration. They are configuration-generation objects and are recreated for every registry candidate.
+Only `DynamicCustomTool` objects generated from entity configuration are removed from automatic DI registration. They are configuration-generation objects and are recreated for every registry candidate. A name collision between an independently registered tool and a generated tool rejects the candidate rather than silently discarding either implementation.
 
 This avoids treating the immutable DI service collection as a dynamic registry.
 
@@ -176,8 +179,8 @@ A singleton `McpToolRegistryRefreshService` will coordinate initialization and h
 Its responsibilities are:
 
 1. Capture the current `RuntimeConfig` generation.
-2. Obtain the DI-owned built-in tools.
-3. Create fresh custom tools from the captured configuration.
+2. Obtain all DI-owned `IMcpTool` implementations, including independently registered custom tools.
+3. Create fresh configuration-generated custom tools from the captured configuration.
 4. Enrich custom tool schemas from refreshed database metadata.
 5. Ask the registry to validate and build a complete candidate snapshot.
 6. Verify that the captured configuration is still current.
@@ -320,7 +323,8 @@ After a successful noninitial refresh, send:
 Notification rules:
 
 - Do not notify for initial registry construction.
-- Do not notify before the client sends `notifications/initialized`.
+- Do not notify before the server successfully completes the `initialize` response and the client
+    subsequently sends `notifications/initialized`.
 - Do not queue a missed pre-initialization notification; the client has not yet established its cache and will request the initial list.
 - Notify only when the advertised tool list or metadata changed.
 - Send after atomic publication.
@@ -332,9 +336,10 @@ Notification rules:
 
 A small stdio notifier service owns initialization state and queued frame writing. Multiple changes
 while one stdout write is pending may be coalesced because any delivered invalidation causes the
-client to request the latest complete snapshot. `McpStdioServer` marks the notifier initialized when
-handling `notifications/initialized`. The refresh service depends on zero or more tool-list
-notifiers; HTTP mode has no notifier registered in this iteration.
+client to request the latest complete snapshot. `McpStdioServer` tracks successful initialize-response
+completion for the connection and marks the notifier initialized only when a subsequent
+`notifications/initialized` arrives; an out-of-order notification is ignored. The refresh service
+depends on zero or more tool-list notifiers; HTTP mode has no notifier registered in this iteration.
 
 ### 13. HTTP reads are immediately current, but HTTP push is deferred
 
@@ -384,16 +389,12 @@ McpToolRegistryUpdateResult ReplaceAll(
 7. Atomically publishes the candidate.
 8. Returns the new version and whether discovery metadata changed.
 
-The current public `RegisterTool` method is not used by the new production path. Because it is public, implementation should preserve it unless API review explicitly approves removal. If retained, it must use copy-on-write under the writer gate and must never mutate a published dictionary in place.
-
-The compatibility `GetEnabledTools(RuntimeConfig)` accessor is obsolete because combining a
-published tool map with caller-supplied configuration can cross generations. Production discovery
-must use `GetAdvertisedTools()`, whose visibility and metadata were captured with the snapshot.
-
-The obsolete `McpToolRegistryInitializer` compatibility fallback collects all tools and invokes
-`ReplaceAll` with the current `RuntimeConfig`; it does not incrementally advertise disabled tools.
-Manually assembled service providers using this fallback must register `RuntimeConfigProvider`,
-because accurate snapshot discovery cannot be constructed without a configuration generation.
+The registry no longer exposes incremental registration or caller-configured filtering. Those
+helpers and the former startup initializer were implementation plumbing in the MCP runtime assembly,
+not documented APIs from a supported reference package. Removing them leaves one construction model:
+the refresh service builds and atomically publishes a complete configuration-aware generation.
+Production discovery uses `GetAdvertisedTools()`, whose visibility and metadata were captured with
+that same snapshot.
 
 ## Detailed Flows
 
@@ -569,12 +570,13 @@ The intended registrations are:
 
 - `McpToolRegistry`: singleton.
 - Built-in `IMcpTool` implementations: singleton.
+- Independently registered custom `IMcpTool` implementations: DI-owned and retained across generations.
 - `McpToolRegistryRefreshService`: singleton.
 - `IHostedService`: resolves the same refresh-service singleton.
-- Custom tools: not registered in DI.
+- Configuration-generated `DynamicCustomTool` instances: not registered in DI.
 - Stdio tool-list notifier: singleton, registered only in stdio mode.
 
-The refresh service receives `IEnumerable<IMcpTool>` containing built-ins only. Reflection-based built-in discovery remains unchanged except for continuing to exclude `DynamicCustomTool`.
+The refresh service preserves every implementation in its DI-provided `IEnumerable<IMcpTool>`. Reflection-based discovery of DAB's own implementations continues to exclude `DynamicCustomTool`; those instances come only from the per-generation factory during normal startup and reload.
 
 ## Anticipated Source Changes
 
@@ -590,7 +592,7 @@ The exact file split may change during implementation, but the expected touchpoi
 ### MCP project
 
 - [McpToolRegistry.cs](../../src/Azure.DataApiBuilder.Mcp/Core/McpToolRegistry.cs): immutable snapshots, bulk replacement, and atomic reads/publication.
-- [McpToolRegistryInitializer.cs](../../src/Azure.DataApiBuilder.Mcp/Core/McpToolRegistryInitializer.cs): replace with or evolve into the refresh service.
+- Remove the former `McpToolRegistryInitializer`; the refresh service owns initialization.
 - [McpServiceCollectionExtensions.cs](../../src/Azure.DataApiBuilder.Mcp/Core/McpServiceCollectionExtensions.cs): register the shared refresh service and stop registering custom tools in DI.
 - [CustomMcpToolFactory.cs](../../src/Azure.DataApiBuilder.Mcp/Core/CustomMcpToolFactory.cs): strict candidate creation.
 - [DynamicCustomTool.cs](../../src/Azure.DataApiBuilder.Mcp/Core/DynamicCustomTool.cs): explicit metadata dependencies and removal of the stale-metadata assumption.
@@ -630,7 +632,7 @@ The exact file split may change during implementation, but the expected touchpoi
 
 ### Refresh-service unit tests
 
-1. Initial construction uses DI-owned built-ins and newly created custom tools.
+1. Initial construction uses all DI-owned tools and newly created configuration-generated tools.
 2. Every refresh creates new custom tool instances.
 3. Built-in instances are reused.
 4. Metadata initialization uses the captured configuration and refreshed metadata factory.
@@ -641,19 +643,22 @@ The exact file split may change during implementation, but the expected touchpoi
 9. A stale candidate is discarded.
 10. Repeated callbacks for an already successfully applied configuration do not publish duplicate generations unnecessarily.
 11. Notifications occur only after a successful noninitial semantic discovery change.
+12. Independently DI-registered custom implementations remain published after refresh.
 
 ### Handler and transport tests
 
 1. HTTP `tools/list` reads only registry snapshot metadata.
 2. HTTP `tools/call` resolves from the current snapshot.
 3. Stdio `tools/list` reads only registry snapshot metadata.
-4. Stdio does not notify before `notifications/initialized`.
+4. Stdio ignores an out-of-order `notifications/initialized` and does not notify before a complete
+    successful initialization handshake.
 5. Stdio does not notify for initial construction.
 6. Stdio emits the exact `notifications/tools/list_changed` frame after an applicable refresh.
 7. Stdio serializes notifications through `McpStdoutWriter` without interleaving.
 8. Stdio notification failure does not revert the registry.
 9. HTTP does not advertise `listChanged` in this iteration.
 10. A blocked stdio writer does not block the ordered hot-reload pipeline.
+11. The real HTTP handler omits tools disabled in the published registry snapshot.
 
 ### Hot-reload integration tests
 
@@ -668,6 +673,8 @@ The exact file split may change during implementation, but the expected touchpoi
 9. Rapid successive configurations cannot publish an older registry after a newer one.
 10. A reload paused before metadata refresh cannot overlap initial metadata and registry construction;
     the final advertised schema comes from the reload generation's database metadata.
+11. A physical stdio config-file write traverses the complete ordered pipeline, emits exactly one
+    notification for one net-new file content, and returns updated discovery.
 
 Database-backed schema tests should reuse existing MCP stored-procedure fixtures where database metadata is required. Pure membership, collision, notification, and atomicity behavior should remain unit-testable without a live database.
 
@@ -736,7 +743,6 @@ Deferred because registry correctness does not require it and the current SDK ex
 | Stdio notification corrupts JSON-RPC output | Use the shared locked `McpStdoutWriter`. |
 | HTTP clients cache old list | Every explicit list request is current; HTTP push is tracked as follow-up. |
 | Config commits while MCP refresh fails | Preserve valid registry, log degraded state, and rely on future transactional hot-reload work for global rollback. |
-| Public `RegisterTool` API conflicts with snapshot design | Preserve via safe copy-on-write unless API review approves removal. |
 
 ## Acceptance Criteria
 
@@ -756,6 +762,7 @@ The implementation is complete when:
 12. HTTP requests immediately observe the new snapshot without experimental session APIs.
 13. Existing execution-time configuration and authorization validation remains intact.
 14. Unit, concurrency, transport, and hot-reload tests cover the behaviors listed in this document.
+15. Independently DI-registered `IMcpTool` extensions survive startup and every refresh.
 
 ## Follow-Up Work
 

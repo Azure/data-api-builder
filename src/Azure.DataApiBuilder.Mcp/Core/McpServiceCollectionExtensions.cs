@@ -40,8 +40,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
             services.AddSingleton<IHostedService>(serviceProvider =>
                 serviceProvider.GetRequiredService<McpToolRegistryRefreshService>());
 
-            // Auto-discover and register built-in MCP tools. Custom tools are configuration-
-            // generation objects and are created by McpToolRegistryRefreshService.
+            // Auto-discover MCP tool implementations from this assembly. Configuration-generated
+            // DynamicCustomTool objects are created separately by McpToolRegistryRefreshService;
+            // independently registered IMcpTool extensions remain in DI across generations.
             RegisterAllMcpTools(services);
 
             // Configure MCP server and propagate runtime description to MCP initialize instructions.

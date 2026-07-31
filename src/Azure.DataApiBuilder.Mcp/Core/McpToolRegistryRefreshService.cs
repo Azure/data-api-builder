@@ -33,12 +33,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
         IHostedService
     {
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
-        private readonly IReadOnlyList<IMcpTool> _builtInTools;
+        private readonly IReadOnlyList<IMcpTool> _registeredTools;
         private readonly McpToolRegistry _toolRegistry;
         private readonly IMetadataProviderFactory _metadataProviderFactory;
         private readonly IReadOnlyList<IMcpToolListChangedNotifier> _notifiers;
         private readonly ILogger<McpToolRegistryRefreshService> _logger;
         private readonly object _refreshLock = new();
+        // RuntimeConfigLoader publishes a new object for every parsed generation. Reference
+        // identity is therefore the generation token used by both idempotency and stale guards.
         private RuntimeConfig? _lastAppliedConfig;
 
         public McpToolRegistryRefreshService(
@@ -51,9 +53,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
             HotReloadEventHandler<HotReloadEventArgs>? hotReloadEventHandler = null)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
-            _builtInTools = tools
-                .Where(tool => tool.ToolType == ToolType.BuiltIn)
-                .ToArray();
+            // Configuration-generated DynamicCustomTool instances are created separately for each
+            // generation. Every tool explicitly registered in DI remains an independent extension
+            // and must be retained regardless of its declared ToolType.
+            _registeredTools = tools.ToArray();
             _toolRegistry = toolRegistry;
             _metadataProviderFactory = metadataProviderFactory;
             _notifiers = notifiers.ToArray();
@@ -149,7 +152,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
 
                 McpToolRegistryCandidate candidate = McpToolRegistry.CreateCandidate(
-                    _builtInTools.Concat(customTools),
+                    _registeredTools.Concat(customTools),
                     config);
 
                 if (!ReferenceEquals(config, _runtimeConfigProvider.GetConfig()))
@@ -166,11 +169,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 _logger.LogInformation(
                     "Published MCP tool registry version {Version} with {BuiltInToolCount} " +
-                    "built-in tools, {CustomToolCount} custom tools, {RegisteredToolCount} " +
+                    "built-in tools, {RegisteredCustomToolCount} DI-registered custom tools, " +
+                    "{GeneratedCustomToolCount} configuration-generated custom tools, {RegisteredToolCount} " +
                     "registered tools, and {AdvertisedToolCount} advertised tools. " +
                     "Discovery changed: {DiscoveryChanged}.",
                     result.Version,
-                    _builtInTools.Count,
+                    _registeredTools.Count(tool => tool.ToolType == ToolType.BuiltIn),
+                    _registeredTools.Count(tool => tool.ToolType != ToolType.BuiltIn),
                     customTools.Count,
                     result.RegisteredToolCount,
                     result.AdvertisedToolCount,

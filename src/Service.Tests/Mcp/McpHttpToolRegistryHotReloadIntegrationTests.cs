@@ -105,6 +105,57 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     "Initial HTTP discovery should use database metadata.");
                 await AssertToolCallSucceedsAsync(client, sessionId, "get_book", requestId: 3);
 
+                // Change only the backing stored procedure. The refreshed metadata provider must
+                // supply update_book_title's additional @title parameter to the new tool schema.
+                await WriteConfigAsync(
+                    configPath,
+                    CreateConfig(
+                        connectionString.ConnectionString,
+                        storedProcedure: "update_book_title",
+                        dmlToolsEnabled: false,
+                        ("GetBook", "Initial description")));
+                JsonElement changedSchemaList = await WaitForToolSchemaPropertyAsync(
+                    client,
+                    sessionId,
+                    toolName: "get_book",
+                    propertyName: "title");
+                JsonElement changedProperties = GetTools(changedSchemaList)
+                    .Single(tool => tool.GetProperty("name").GetString() == "get_book")
+                    .GetProperty("inputSchema")
+                    .GetProperty("properties");
+                Assert.AreEqual("integer", changedProperties.GetProperty("id").GetProperty("type").GetString());
+                Assert.AreEqual("string", changedProperties.GetProperty("title").GetProperty("type").GetString());
+
+                // Global built-in DML visibility is also snapshot state. Toggle it through real
+                // file changes and observe the production HTTP tools/list handler in both directions.
+                await WriteConfigAsync(
+                    configPath,
+                    CreateConfig(
+                        connectionString.ConnectionString,
+                        storedProcedure: "update_book_title",
+                        dmlToolsEnabled: true,
+                        ("GetBook", "Initial description")));
+                JsonElement dmlEnabledList = await WaitForToolSetAsync(
+                    client,
+                    sessionId,
+                    expectedName: "create_record",
+                    absentName: "not_a_tool");
+                Assert.IsTrue(HasTool(dmlEnabledList, "get_book"));
+
+                await WriteConfigAsync(
+                    configPath,
+                    CreateConfig(
+                        connectionString.ConnectionString,
+                        storedProcedure: "update_book_title",
+                        dmlToolsEnabled: false,
+                        ("GetBook", "Initial description")));
+                JsonElement dmlDisabledList = await WaitForToolSetAsync(
+                    client,
+                    sessionId,
+                    expectedName: "get_book",
+                    absentName: "create_record");
+                Assert.IsFalse(HasTool(dmlDisabledList, "create_record"));
+
                 await WriteConfigAsync(
                     configPath,
                     CreateConfig(connectionString.ConnectionString, ("LookupBook", "Reloaded description")));
@@ -167,11 +218,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             string connectionString,
             params (string EntityName, string Description)[] tools)
         {
+            return CreateConfig(
+                connectionString,
+                storedProcedure: "get_book_by_id",
+                dmlToolsEnabled: false,
+                tools);
+        }
+
+        private static RuntimeConfig CreateConfig(
+            string connectionString,
+            string storedProcedure,
+            bool dmlToolsEnabled,
+            params (string EntityName, string Description)[] tools)
+        {
             Dictionary<string, Entity> entities = tools.ToDictionary(
                 tool => tool.EntityName,
                 tool => new Entity(
                     Source: new(
-                        Object: "get_book_by_id",
+                        Object: storedProcedure,
                         Type: EntitySourceType.StoredProcedure,
                         Parameters: null,
                         KeyFields: null),
@@ -208,7 +272,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     Mcp: new(
                         Enabled: true,
                         Path: MCP_PATH,
-                        DmlTools: DmlToolsConfig.FromBoolean(false)),
+                        DmlTools: DmlToolsConfig.FromBoolean(dmlToolsEnabled)),
                     Host: new(
                         Cors: null,
                         Authentication: new(
@@ -302,6 +366,36 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             }
 
             Assert.Fail($"Timed out waiting for MCP tool '{expectedName}' to replace '{absentName}'.");
+            return default;
+        }
+
+        private static async Task<JsonElement> WaitForToolSchemaPropertyAsync(
+            HttpClient client,
+            string sessionId,
+            string toolName,
+            string propertyName)
+        {
+            for (int attempt = 0; attempt < 100; attempt++)
+            {
+                JsonElement response = await ListToolsAsync(client, sessionId, 300 + attempt);
+                JsonElement? matchingTool = GetTools(response)
+                    .Cast<JsonElement?>()
+                    .SingleOrDefault(tool =>
+                        tool?.GetProperty("name").GetString() == toolName);
+                if (matchingTool.HasValue &&
+                    matchingTool.Value
+                        .GetProperty("inputSchema")
+                        .GetProperty("properties")
+                        .TryGetProperty(propertyName, out _))
+                {
+                    return response;
+                }
+
+                await Task.Delay(100);
+            }
+
+            Assert.Fail(
+                $"Timed out waiting for MCP tool '{toolName}' schema property '{propertyName}'.");
             return default;
         }
 

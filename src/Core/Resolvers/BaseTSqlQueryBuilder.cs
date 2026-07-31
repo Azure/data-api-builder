@@ -1,5 +1,4 @@
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Models;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {

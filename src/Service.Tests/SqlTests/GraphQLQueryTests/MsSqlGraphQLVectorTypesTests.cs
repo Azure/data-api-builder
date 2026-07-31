@@ -313,7 +313,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     }
                 }
             }";
-            
+
             await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false);
 
             // Confirm the value was persisted by reading it back.

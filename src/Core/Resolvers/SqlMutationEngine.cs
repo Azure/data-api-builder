@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     else if (mutationOperation is EntityActionOperation.Create && _runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled())
                     {
                         bool isPointMutation = IsPointMutation(context);
-                        
+
                         List<IDictionary<string, object?>> primaryKeysOfCreatedItems = PerformMultipleCreateOperation(
                                     entityName,
                                     context,

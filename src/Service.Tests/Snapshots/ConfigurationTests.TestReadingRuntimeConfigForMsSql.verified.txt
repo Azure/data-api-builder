@@ -913,7 +913,12 @@
             Role: test_role_with_excluded_fields_on_mutation,
             Actions: [
               {
-                Action: Read
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    publisher_id
+                  ]
+                }
               },
               {
                 Action: Create,
@@ -924,12 +929,7 @@
                 }
               },
               {
-                Action: Update,
-                Fields: {
-                  Exclude: [
-                    publisher_id
-                  ]
-                }
+                Action: Read
               },
               {
                 Action: Delete
@@ -1624,7 +1624,12 @@
             Role: test_role_with_excluded_fields_on_mutation,
             Actions: [
               {
-                Action: Read
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    username
+                  ]
+                }
               },
               {
                 Action: Create,
@@ -1635,12 +1640,7 @@
                 }
               },
               {
-                Action: Update,
-                Fields: {
-                  Exclude: [
-                    username
-                  ]
-                }
+                Action: Read
               },
               {
                 Action: Delete

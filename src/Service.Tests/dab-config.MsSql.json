@@ -937,6 +937,33 @@
           ]
         },
         {
+          "role": "test_role_with_excluded_fields_on_mutation",
+          "actions": [
+            {
+              "action": "read"
+            },
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
+            },
+            {
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
           "role": "role_multiple_create_policy_tester",
           "actions": [
             {
@@ -1677,6 +1704,33 @@
               "action": "update"
             }
           ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_mutation",
+          "actions": [
+            {
+              "action": "read"
+            },
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "username"
+                ]
+              }
+            },
+            {
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "username"
+                ]
+              }
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
       ],
       "relationships": {
@@ -1812,6 +1866,58 @@
         "type": {
           "singular": "VectorType",
           "plural": "VectorTypes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        }
+      ]
+    },
+    "Profile": {
+      "source": {
+        "object": "profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Profile",
+          "plural": "Profiles"
         }
       },
       "rest": {

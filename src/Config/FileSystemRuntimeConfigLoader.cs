@@ -32,6 +32,7 @@ namespace Azure.DataApiBuilder.Config;
 /// </remarks>
 public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 {
+    private readonly object _hotReloadGate = new();
     private bool _disposed;
     /// <summary>
     /// This stores either the default config name e.g. dab-config.json
@@ -111,19 +112,28 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (_disposed)
+        ConfigFileWatcher? configFileWatcher;
+        lock (_hotReloadGate)
         {
-            return;
-        }
+            if (_disposed)
+            {
+                return;
+            }
 
-        _disposed = true;
-
-        if (_configFileWatcher is not null)
-        {
-            _configFileWatcher.NewFileContentsDetected -= OnNewFileContentsDetected;
-            _configFileWatcher.Dispose();
+            _disposed = true;
+            configFileWatcher = _configFileWatcher;
             _configFileWatcher = null;
+
+            if (configFileWatcher is not null)
+            {
+                configFileWatcher.NewFileContentsDetected -= OnNewFileContentsDetected;
+            }
         }
+
+        // FileSystemWatcher disposal can block while an OS callback completes. Do not hold the
+        // reload gate during that external operation. Any callback already queued will observe
+        // _disposed after it acquires the gate and return without loading another generation.
+        configFileWatcher?.Dispose();
     }
 
     /// <summary>
@@ -198,18 +208,43 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// </summary>
     private void OnNewFileContentsDetected(object? sender, EventArgs e)
     {
-        try
+        ProcessHotReloadNotification();
+    }
+
+    /// <summary>
+    /// Processes one file-change notification while serializing the complete hot-reload pipeline
+    /// for this loader instance. The gate begins before the current configuration is inspected and
+    /// remains held through all synchronous <see cref="RuntimeConfigLoader.SignalConfigChanged"/>
+    /// handlers so dependencies cannot be mixed across generations.
+    /// </summary>
+    /// <param name="beforeEnteringGate">
+    /// Optional observer invoked immediately before waiting for the serialization gate. This is
+    /// used by deterministic concurrency tests to prove a second notification reached the gate.
+    /// </param>
+    internal void ProcessHotReloadNotification(Action? beforeEnteringGate = null)
+    {
+        beforeEnteringGate?.Invoke();
+
+        lock (_hotReloadGate)
         {
-            if (RuntimeConfig is not null)
+            if (_disposed)
             {
-                HotReloadConfig(RuntimeConfig.IsDevelopmentMode());
+                return;
             }
-        }
-        catch (Exception ex)
-        {
-            // Need to remove the dependencies in startup on the RuntimeConfigProvider
-            // before we can have an ILogger here.
-            Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
+
+            try
+            {
+                if (RuntimeConfig is not null)
+                {
+                    HotReloadConfig(RuntimeConfig.IsDevelopmentMode());
+                }
+            }
+            catch (Exception ex)
+            {
+                SendLogToBufferOrLogger(
+                    LogLevel.Error,
+                    $"Unable to hot reload configuration file due to {ex.Message}");
+            }
         }
     }
 
@@ -341,14 +376,16 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// Hot Reloads the runtime config when the file watcher
     /// is active and detects a change to the underlying config file.
     /// </summary>
-    private void HotReloadConfig(bool isDevMode, ILogger? logger = null)
+    private void HotReloadConfig(bool isDevMode)
     {
-        logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
+        SendLogToBufferOrLogger(
+            LogLevel.Information,
+            $"Starting hot-reload process for config: {ConfigFilePath}");
 
         // Use default replacement settings for hot reload
         DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
 
-        if (!TryLoadConfig(ConfigFilePath, out _, logger: logger, isDevMode: isDevMode, replacementSettings: replacementSettings))
+        if (!TryLoadConfig(ConfigFilePath, out _, isDevMode: isDevMode, replacementSettings: replacementSettings))
         {
             throw new DataApiBuilderException(
                 message: "Deserialization of the configuration file failed.",
@@ -360,7 +397,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         IsNewConfigValidated = false;
         SignalConfigChanged();
 
-        logger?.LogInformation("Hot-reload process finished.");
+        SendLogToBufferOrLogger(LogLevel.Information, "Hot-reload process finished.");
     }
 
     /// <summary>

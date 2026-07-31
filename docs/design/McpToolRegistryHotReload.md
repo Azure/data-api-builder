@@ -271,7 +271,13 @@ This replaces the current duplicate per-tool registration path and gives both tr
 
 Distinct file edits can produce overlapping hot-reload callbacks even though duplicate notifications for one file content are suppressed by `ConfigFileWatcher`.
 
-The refresh service serializes its own rebuilds and uses a stale-generation guard:
+`FileSystemRuntimeConfigLoader` serializes the complete reload operation per loader instance. The
+gate is acquired before loading the new configuration and remains held until every synchronous
+`SignalConfigChanged()` handler returns. Consequently, configuration, metadata, authorization, MCP,
+GraphQL, and logging handlers for generation A complete before generation B can replace the active
+configuration or begin updating dependencies.
+
+The refresh service retains its own writer gate and stale-generation guard as defense in depth:
 
 1. Acquire the refresh writer gate.
 2. Capture `RuntimeConfig config = runtimeConfigProvider.GetConfig()`.
@@ -281,7 +287,10 @@ The refresh service serializes its own rebuilds and uses a stale-generation guar
 
 A callback for the newer configuration will build the latest snapshot. The service tracks only successfully applied configuration references, so a later event can retry after an earlier failure.
 
-This guard prevents an older, slower registry rebuild from overwriting a newer registry generation. It does not claim to make the full DAB hot-reload pipeline transactional; that remains separate work.
+The loader gate prevents mixed dependency generations. The stale guard also prevents an older,
+slower registry rebuild initiated outside the file-loader pipeline from overwriting a newer registry
+generation. Neither mechanism provides transactional rollback after a handler failure; that remains
+separate work.
 
 ### 11. Existing tool-call safety is preserved
 
@@ -479,9 +488,13 @@ An in-flight `tools/call` retains the resolved tool instance. A later swap does 
 
 ### Multiple configuration changes
 
-The stale-generation guard prevents publication when the active `RuntimeConfig` changed during candidate construction. The latest callback eventually publishes the latest generation.
+The per-loader reload gate ensures one file generation completes all ordered handlers before the next
+file notification begins loading. The stale-generation guard additionally prevents publication when
+the active `RuntimeConfig` changes during candidate construction through another code path. The latest
+callback eventually publishes the latest generation.
 
-The design intentionally does not lock the entire DAB hot-reload pipeline. Global serialization and transactional rollback are tracked separately.
+Serialization is scoped to each `FileSystemRuntimeConfigLoader`; independent loaders do not block one
+another. Transactional rollback is still tracked separately.
 
 ## Failure Semantics
 

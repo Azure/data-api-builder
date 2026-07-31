@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// Initializes the tool's input schema using DB metadata from the service provider.
         /// Called after DI initialization to enrich the tool schema with DB-discovered parameters
         /// and type information that aren't available at construction time.
-        /// Falls back silently to config-based schema if DB metadata is unavailable.
+        /// Falls back to a config-based schema if DB metadata is unavailable.
         /// </summary>
         /// <param name="serviceProvider">The application service provider with initialized metadata providers.</param>
         public void InitializeMetadata(IServiceProvider serviceProvider)
@@ -98,9 +98,25 @@ namespace Azure.DataApiBuilder.Mcp.Core
             RuntimeConfig config,
             IMetadataProviderFactory metadataProviderFactory)
         {
+            return InitializeMetadata(config, metadataProviderFactory, out _);
+        }
+
+        /// <summary>
+        /// Initializes the input schema using an explicit configuration and metadata-provider
+        /// generation and reports why configuration metadata was used when database enrichment
+        /// is unavailable.
+        /// </summary>
+        public bool InitializeMetadata(
+            RuntimeConfig config,
+            IMetadataProviderFactory metadataProviderFactory,
+            out string fallbackReason)
+        {
             ArgumentNullException.ThrowIfNull(config);
             ArgumentNullException.ThrowIfNull(metadataProviderFactory);
-            _cachedInputSchema = BuildInputSchemaFromDbMetadata(config, metadataProviderFactory);
+            _cachedInputSchema = BuildInputSchemaFromDbMetadata(
+                config,
+                metadataProviderFactory,
+                out fallbackReason);
             return _cachedInputSchema.HasValue;
         }
 
@@ -343,7 +359,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         private JsonElement? BuildInputSchemaFromDbMetadata(
             RuntimeConfig config,
-            IMetadataProviderFactory metadataProviderFactory)
+            IMetadataProviderFactory metadataProviderFactory,
+            out string fallbackReason)
         {
             if (!McpMetadataHelper.TryResolveMetadata(
                     EntityName,
@@ -352,15 +369,19 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     out _,
                     out DatabaseObject dbObject,
                     out _,
-                    out _))
+                    out fallbackReason))
             {
                 return null;
             }
 
             if (dbObject is not DatabaseStoredProcedure storedProcedure)
             {
+                fallbackReason =
+                    $"Database object '{dbObject.FullName}' for entity '{EntityName}' is not a stored procedure.";
                 return null;
             }
+
+            fallbackReason = string.Empty;
 
             StoredProcedureDefinition spDefinition = storedProcedure.StoredProcedureDefinition;
             if (spDefinition.Parameters is null || spDefinition.Parameters.Count == 0)

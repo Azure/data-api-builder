@@ -195,13 +195,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-                    if (!string.Equals(toolName, toolName.Trim(), StringComparison.Ordinal))
-                    {
-                    throw new DataApiBuilderException(
-                        message: "MCP tool name cannot contain leading or trailing whitespace.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                    }
+            if (!string.Equals(toolName, toolName.Trim(), StringComparison.Ordinal))
+            {
+                throw new DataApiBuilderException(
+                    message: "MCP tool name cannot contain leading or trailing whitespace.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
 
             return toolName;
         }

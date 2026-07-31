@@ -150,7 +150,8 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             // Validate entity exists in metadata mapping.
             if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? temp) || temp is null)
             {
-                error = $"Entity '{entityName}' is not defined in the configuration.";
+                error = $"Database metadata for entity '{entityName}' was not available from " +
+                    $"data source '{dataSourceName}'.";
                 return false;
             }
 

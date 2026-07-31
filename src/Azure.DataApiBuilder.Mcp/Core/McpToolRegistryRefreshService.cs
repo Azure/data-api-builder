@@ -122,14 +122,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 {
                     bool initializedFromDatabase = customTool.InitializeMetadata(
                         config,
-                        _metadataProviderFactory);
+                        _metadataProviderFactory,
+                        out string fallbackReason);
                     if (!initializedFromDatabase)
                     {
                         _logger.LogWarning(
-                            "Database metadata was unavailable for custom MCP tool '{ToolName}' " +
-                            "on entity '{EntityName}'. Using configuration-derived input schema.",
+                            "Using configuration-derived input schema for custom MCP tool " +
+                            "'{ToolName}' on entity '{EntityName}'. Reason: {FallbackReason}",
                             customTool.GetToolMetadata().Name,
-                            customTool.EntityName);
+                            customTool.EntityName,
+                            fallbackReason);
                     }
                 }
 
@@ -150,11 +152,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 _lastAppliedConfig = config;
 
                 _logger.LogInformation(
-                    "Published MCP tool registry version {Version} with {RegisteredToolCount} " +
-                    "registered tools and {AdvertisedToolCount} advertised tools.",
+                    "Published MCP tool registry version {Version} with {BuiltInToolCount} " +
+                    "built-in tools, {CustomToolCount} custom tools, {RegisteredToolCount} " +
+                    "registered tools, and {AdvertisedToolCount} advertised tools. " +
+                    "Discovery changed: {DiscoveryChanged}.",
                     result.Version,
+                    _builtInTools.Count,
+                    customTools.Count,
                     result.RegisteredToolCount,
-                    result.AdvertisedToolCount);
+                    result.AdvertisedToolCount,
+                    result.DiscoveryChanged);
 
                 if (!isInitialGeneration && result.DiscoveryChanged)
                 {

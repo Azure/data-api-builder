@@ -1,15 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
 
@@ -156,6 +161,141 @@ public class ConfigFileWatcherUnitTests
         if (File.Exists(configName))
         {
             File.Delete(configName);
+        }
+    }
+
+    [TestMethod]
+    public async Task ConcurrentHotReloadNotifications_SerializeCompletePipelines()
+    {
+        string testDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dab-config-reload-serialization-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(testDirectory);
+        string configPath = Path.Combine(testDirectory, "dab-config.json");
+        FileSystem fileSystem = new();
+        fileSystem.File.WriteAllText(
+            configPath,
+            GenerateRuntimeSectionStringFromParams(
+                restPath: "/initial",
+                gqlPath: "/graphql",
+                restEnabled: true,
+                gqlEnabled: true,
+                gqlIntrospection: true,
+                mode: HostMode.Development));
+
+        HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
+        using FileSystemRuntimeConfigLoader configLoader = new(
+            fileSystem,
+            hotReloadEventHandler,
+            configPath,
+            connectionString: string.Empty,
+            isCliLoader: true);
+        Assert.IsTrue(configLoader.TryLoadKnownConfig(out _));
+
+        string[] orderedEvents =
+        {
+            QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED,
+            METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED,
+            QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED,
+            MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED,
+            DOCUMENTOR_ON_CONFIG_CHANGED,
+            AUTHZ_RESOLVER_ON_CONFIG_CHANGED,
+            MCP_TOOL_REGISTRY_ON_CONFIG_CHANGED,
+            GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED,
+            GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED,
+            GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED,
+            LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE
+        };
+        List<string> observedEvents = new();
+        object observedEventsLock = new();
+        using ManualResetEventSlim generationAEnteredPipeline = new();
+        using ManualResetEventSlim releaseGenerationA = new();
+        using ManualResetEventSlim generationBReachedGate = new();
+
+        foreach (string eventName in orderedEvents)
+        {
+            hotReloadEventHandler.Subscribe(eventName, (_, args) =>
+            {
+                string generation = configLoader.RuntimeConfig!.Runtime!.Rest!.Path;
+                lock (observedEventsLock)
+                {
+                    observedEvents.Add($"{generation}:{args.EventName}");
+                }
+
+                if (string.Equals(generation, "/generation-a", StringComparison.Ordinal) &&
+                    string.Equals(args.EventName, QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, StringComparison.Ordinal))
+                {
+                    generationAEnteredPipeline.Set();
+                    if (!releaseGenerationA.Wait(TimeSpan.FromSeconds(10)))
+                    {
+                        throw new TimeoutException("Timed out waiting to release generation A.");
+                    }
+                }
+            });
+        }
+
+        Task reloadA = Task.CompletedTask;
+        Task reloadB = Task.CompletedTask;
+        try
+        {
+            fileSystem.File.WriteAllText(
+                configPath,
+                GenerateRuntimeSectionStringFromParams(
+                    restPath: "/generation-a",
+                    gqlPath: "/graphql",
+                    restEnabled: true,
+                    gqlEnabled: true,
+                    gqlIntrospection: true,
+                    mode: HostMode.Development));
+            reloadA = Task.Run(() => configLoader.ProcessHotReloadNotification());
+            Assert.IsTrue(
+                generationAEnteredPipeline.Wait(TimeSpan.FromSeconds(10)),
+                "Generation A did not reach its first ordered handler.");
+
+            fileSystem.File.WriteAllText(
+                configPath,
+                GenerateRuntimeSectionStringFromParams(
+                    restPath: "/generation-b",
+                    gqlPath: "/graphql",
+                    restEnabled: true,
+                    gqlEnabled: true,
+                    gqlIntrospection: true,
+                    mode: HostMode.Development));
+            reloadB = Task.Run(() => configLoader.ProcessHotReloadNotification(
+                beforeEnteringGate: generationBReachedGate.Set));
+            Assert.IsTrue(
+                generationBReachedGate.Wait(TimeSpan.FromSeconds(10)),
+                "Generation B did not reach the loader serialization gate.");
+
+            Assert.AreEqual(
+                "/generation-a",
+                configLoader.RuntimeConfig!.Runtime!.Rest!.Path,
+                "Generation B must not replace RuntimeConfig while generation A handlers are running.");
+
+            releaseGenerationA.Set();
+            await Task.WhenAll(reloadA, reloadB).WaitAsync(TimeSpan.FromSeconds(10));
+
+            string[] expectedEvents = orderedEvents
+                .Select(eventName => $"/generation-a:{eventName}")
+                .Concat(orderedEvents.Select(eventName => $"/generation-b:{eventName}"))
+                .ToArray();
+            string[] actualEvents;
+            lock (observedEventsLock)
+            {
+                actualEvents = observedEvents.ToArray();
+            }
+
+            CollectionAssert.AreEqual(
+                expectedEvents,
+                actualEvents,
+                "Every generation A handler must finish before generation B starts its pipeline.");
+            Assert.AreEqual("/generation-b", configLoader.RuntimeConfig!.Runtime!.Rest!.Path);
+        }
+        finally
+        {
+            releaseGenerationA.Set();
+            await Task.WhenAll(reloadA, reloadB).WaitAsync(TimeSpan.FromSeconds(10));
+            Directory.Delete(testDirectory, recursive: true);
         }
     }
 

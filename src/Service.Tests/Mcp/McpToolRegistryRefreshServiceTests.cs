@@ -17,7 +17,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ModelContextProtocol.Protocol;
 using Moq;
@@ -169,6 +169,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     .EnumerateArray()
                     .Select(value => value.GetString())
                     .ToArray());
+            VerifyLogContains(
+                context.Logger,
+                LogLevel.Warning,
+                "Reason: Database metadata for entity 'GetBook' was not available from data source");
+            VerifyLogContains(
+                context.Logger,
+                LogLevel.Information,
+                "with 0 built-in tools, 1 custom tools, 1 registered tools, and 1 advertised tools. " +
+                "Discovery changed: True.");
         }
 
         [TestMethod]
@@ -357,20 +366,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             McpToolRegistry registry = new();
             HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
+            Mock<ILogger<McpToolRegistryRefreshService>> logger = new();
             McpToolRegistryRefreshService service = new(
                 configProvider.Object,
                 builtInTools,
                 registry,
                 metadataProviderFactory.Object,
                 notifiers,
-                NullLogger<McpToolRegistryRefreshService>.Instance,
+                logger.Object,
                 hotReloadEventHandler);
 
             return new TestContext(
                 service,
                 registry,
                 primaryNotifier,
-                hotReloadEventHandler);
+                hotReloadEventHandler,
+                logger);
         }
 
         private static RuntimeConfig CreateRuntimeConfig(
@@ -480,11 +491,28 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             };
         }
 
+        private static void VerifyLogContains(
+            Mock<ILogger<McpToolRegistryRefreshService>> logger,
+            LogLevel logLevel,
+            string expectedMessage)
+        {
+            logger.Verify(
+                value => value.Log(
+                    logLevel,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((state, _) =>
+                        state.ToString()!.Contains(expectedMessage, StringComparison.Ordinal)),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+                Times.Once);
+        }
+
         private sealed record TestContext(
             McpToolRegistryRefreshService Service,
             McpToolRegistry Registry,
             Mock<IMcpToolListChangedNotifier> Notifier,
-            HotReloadEventHandler<HotReloadEventArgs> HotReloadEventHandler);
+            HotReloadEventHandler<HotReloadEventArgs> HotReloadEventHandler,
+            Mock<ILogger<McpToolRegistryRefreshService>> Logger);
 
         private sealed class TestMcpTool : IMcpTool
         {

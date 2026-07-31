@@ -141,7 +141,14 @@ internal sealed record McpToolRegistrySnapshot(
 
 Keeping lookup state and advertised metadata in the same snapshot prevents a request from combining tools from one generation with enablement or metadata from another generation.
 
-Protocol `Tool` objects stored in the snapshot are treated as immutable after construction. A list handler may create a new list container, but it must not mutate snapshot metadata.
+Protocol `Tool` objects are mutable SDK models, so the registry defensively clones metadata during
+candidate construction and again when returning public discovery results. Neither a tool retaining
+its source metadata object nor a caller mutating a returned object can modify a published snapshot
+or invalidate its fingerprint.
+
+Tool names must be nonempty and must not contain leading or trailing whitespace. Rejecting rather
+than trimming guarantees that every exact name returned by `tools/list` resolves through
+`TryGetTool()`.
 
 ### 3. Publication is atomic
 
@@ -324,7 +331,11 @@ The installed MCP SDK can send a notification through an individual `McpServer` 
 
 Every applicable configuration hot-reload rebuilds and publishes a generation so custom tool instances align with the current configuration. However, an unrelated configuration change should not claim that the tool list changed.
 
-The registry compares the previous and candidate advertised metadata in deterministic name order. The comparison covers the complete serialized tool metadata, including name, description, input schema, and any future advertised fields.
+The registry compares the previous and candidate advertised metadata in deterministic name order.
+Before comparison it canonicalizes serialized JSON recursively by sorting object properties while
+preserving array order. The comparison therefore ignores semantically irrelevant object insertion
+order while still covering the complete tool metadata, including name, description, input schema,
+and any future advertised fields.
 
 The swap still occurs when advertised metadata is equal, but `notifications/tools/list_changed` is emitted only when discovery metadata differs.
 
@@ -356,6 +367,11 @@ McpToolRegistryUpdateResult ReplaceAll(
 8. Returns the new version and whether discovery metadata changed.
 
 The current public `RegisterTool` method is not used by the new production path. Because it is public, implementation should preserve it unless API review explicitly approves removal. If retained, it must use copy-on-write under the writer gate and must never mutate a published dictionary in place.
+
+The obsolete `McpToolRegistryInitializer` compatibility fallback collects all tools and invokes
+`ReplaceAll` with the current `RuntimeConfig`; it does not incrementally advertise disabled tools.
+Manually assembled service providers using this fallback must register `RuntimeConfigProvider`,
+because accurate snapshot discovery cannot be constructed without a configuration generation.
 
 ## Detailed Flows
 

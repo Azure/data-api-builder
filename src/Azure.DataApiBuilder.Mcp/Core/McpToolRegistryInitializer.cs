@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -37,17 +38,21 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return Task.CompletedTask;
             }
 
-            // Preserve the legacy behavior for manually assembled service providers that have not
-            // registered the refresh service.
-            foreach (IMcpTool tool in _serviceProvider.GetServices<IMcpTool>())
+            // Preserve compatibility for manually assembled service providers without publishing
+            // disabled tools. Snapshot discovery requires the configuration used to evaluate each
+            // tool's visibility, so this fallback now requires RuntimeConfigProvider as well.
+            RuntimeConfigProvider runtimeConfigProvider =
+                _serviceProvider.GetService<RuntimeConfigProvider>()
+                ?? throw new InvalidOperationException(
+                    $"{nameof(RuntimeConfigProvider)} must be registered when using the legacy " +
+                    $"{nameof(McpToolRegistryInitializer)} fallback.");
+            IMcpTool[] tools = _serviceProvider.GetServices<IMcpTool>().ToArray();
+            foreach (DynamicCustomTool customTool in tools.OfType<DynamicCustomTool>())
             {
-                if (tool is DynamicCustomTool customTool)
-                {
-                    customTool.InitializeMetadata(_serviceProvider);
-                }
-
-                _toolRegistry.RegisterTool(tool);
+                customTool.InitializeMetadata(_serviceProvider);
             }
+
+            _toolRegistry.ReplaceAll(tools, runtimeConfigProvider.GetConfig());
 
             return Task.CompletedTask;
         }

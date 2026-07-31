@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -36,7 +37,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             ArgumentNullException.ThrowIfNull(tool);
 
-            Tool metadata = tool.GetToolMetadata();
+            Tool metadata = CloneMetadata(tool.GetToolMetadata());
             string toolName = ValidateToolName(metadata);
 
             lock (_writerLock)
@@ -94,7 +95,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             {
                 ArgumentNullException.ThrowIfNull(tool);
 
-                Tool metadata = tool.GetToolMetadata();
+                Tool metadata = CloneMetadata(tool.GetToolMetadata());
                 string toolName = ValidateToolName(metadata);
 
                 if (toolBuilder.TryGetValue(toolName, out IMcpTool? existingTool))
@@ -155,7 +156,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         public IReadOnlyList<Tool> GetAdvertisedTools()
         {
-            return Volatile.Read(ref _snapshot).AdvertisedTools;
+            McpToolRegistrySnapshot snapshot = Volatile.Read(ref _snapshot);
+            return snapshot.AdvertisedTools
+                .Select(CloneMetadata)
+                .ToArray();
         }
 
         /// <summary>
@@ -169,7 +173,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             McpToolRegistrySnapshot snapshot = Volatile.Read(ref _snapshot);
             return snapshot.Tools.Values
                 .Where(t => t.IsEnabled(config))
-                .Select(t => t.GetToolMetadata());
+                .Select(t => CloneMetadata(t.GetToolMetadata()));
         }
 
         /// <summary>
@@ -182,7 +186,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         private static string ValidateToolName(Tool metadata)
         {
-            string toolName = metadata.Name?.Trim() ?? string.Empty;
+            string toolName = metadata.Name ?? string.Empty;
             if (string.IsNullOrWhiteSpace(toolName))
             {
                 throw new DataApiBuilderException(
@@ -190,6 +194,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
+
+                    if (!string.Equals(toolName, toolName.Trim(), StringComparison.Ordinal))
+                    {
+                    throw new DataApiBuilderException(
+                        message: "MCP tool name cannot contain leading or trailing whitespace.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
 
             return toolName;
         }
@@ -221,7 +233,71 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         private static string CreateDiscoveryFingerprint(ImmutableArray<Tool> metadata)
         {
-            return JsonSerializer.Serialize(metadata.ToArray(), _discoveryJsonOptions);
+            JsonElement serializedMetadata = JsonSerializer.SerializeToElement(
+                metadata.ToArray(),
+                _discoveryJsonOptions);
+            using MemoryStream canonicalJson = new();
+            using (Utf8JsonWriter writer = new(canonicalJson))
+            {
+                WriteCanonicalJson(writer, serializedMetadata);
+            }
+
+            return Encoding.UTF8.GetString(canonicalJson.ToArray());
+        }
+
+        private static Tool CloneMetadata(Tool metadata)
+        {
+            ArgumentNullException.ThrowIfNull(metadata);
+
+            byte[] serializedMetadata = JsonSerializer.SerializeToUtf8Bytes(
+                metadata,
+                _discoveryJsonOptions);
+            return JsonSerializer.Deserialize<Tool>(serializedMetadata, _discoveryJsonOptions)
+                ?? throw new InvalidOperationException("Failed to clone MCP tool metadata.");
+        }
+
+        private static void WriteCanonicalJson(Utf8JsonWriter writer, JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    writer.WriteStartObject();
+                    foreach (JsonProperty property in element
+                        .EnumerateObject()
+                        .OrderBy(property => property.Name, StringComparer.Ordinal))
+                    {
+                        writer.WritePropertyName(property.Name);
+                        WriteCanonicalJson(writer, property.Value);
+                    }
+
+                    writer.WriteEndObject();
+                    break;
+
+                case JsonValueKind.Array:
+                    writer.WriteStartArray();
+                    foreach (JsonElement item in element.EnumerateArray())
+                    {
+                        WriteCanonicalJson(writer, item);
+                    }
+
+                    writer.WriteEndArray();
+                    break;
+
+                case JsonValueKind.String:
+                    writer.WriteStringValue(element.GetString());
+                    break;
+
+                case JsonValueKind.Number:
+                case JsonValueKind.True:
+                case JsonValueKind.False:
+                case JsonValueKind.Null:
+                    element.WriteTo(writer);
+                    break;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Unsupported JSON value kind '{element.ValueKind}' in MCP tool metadata.");
+            }
         }
 
         private sealed record McpToolRegistrySnapshot(

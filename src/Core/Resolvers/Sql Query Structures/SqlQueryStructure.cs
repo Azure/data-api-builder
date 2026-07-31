@@ -379,6 +379,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Exposes the groupBy fields of this structure as a list of OrderByColumn,
+        /// giving groupBy queries a deterministic row order (in the absence of an explicit
+        /// client-provided orderBy) since Postgres/MSSQL do not guarantee GROUP BY row order otherwise.
+        /// </summary>
+        private List<OrderByColumn> GroupByColumnsAsOrderByColumns()
+        {
+            List<OrderByColumn> groupByColumnsAsOrderByColumns = new();
+
+            foreach (Column column in GroupByMetadata.Fields.Values)
+            {
+                groupByColumnsAsOrderByColumns.Add(new OrderByColumn(tableSchema: column.TableSchema,
+                                                                     tableName: column.TableName,
+                                                                     columnName: column.ColumnName,
+                                                                     tableAlias: column.TableAlias));
+            }
+
+            return groupByColumnsAsOrderByColumns;
+        }
+
+        /// <summary>
         /// Private constructor that is used for recursive query generation,
         /// for each subquery that's necessary to resolve a nested GraphQL
         /// request.
@@ -511,8 +531,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            // primary key should only be added to order by for non groupby queries.
-            OrderByColumns = isGroupByQuery ? [] : PrimaryKeyAsOrderByColumns();
+            // groupBy queries default to ordering by the grouped columns (since Postgres/MSSQL
+            // don't guarantee GROUP BY row order otherwise); non-groupBy queries default to the primary key.
+            OrderByColumns = isGroupByQuery ? GroupByColumnsAsOrderByColumns() : PrimaryKeyAsOrderByColumns();
             if (IsListQuery && queryParams.ContainsKey(QueryBuilder.ORDER_BY_FIELD_NAME))
             {
                 object? orderByObject = queryParams[QueryBuilder.ORDER_BY_FIELD_NAME];

@@ -299,6 +299,181 @@ public class ConfigFileWatcherUnitTests
         }
     }
 
+    [TestMethod]
+    public async Task Dispose_WhileHotReloadPipelineIsBlocked_DoesNotWaitForPipeline()
+    {
+        string testDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dab-config-dispose-during-reload-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(testDirectory);
+        string configPath = Path.Combine(testDirectory, "dab-config.json");
+        FileSystem fileSystem = new();
+        fileSystem.File.WriteAllText(
+            configPath,
+            GenerateRuntimeSectionStringFromParams(
+                restPath: "/initial",
+                gqlPath: "/graphql",
+                restEnabled: true,
+                gqlEnabled: true,
+                gqlIntrospection: true,
+                mode: HostMode.Development));
+
+        HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
+        BlockingDisposeConfigFileWatcher configFileWatcher = new();
+        FileSystemRuntimeConfigLoader configLoader = new(
+            fileSystem,
+            hotReloadEventHandler,
+            configPath,
+            connectionString: string.Empty,
+            isCliLoader: false,
+            logger: null,
+            configFileWatcherFactory: (_, _, _) => configFileWatcher);
+        Assert.IsTrue(configLoader.TryLoadKnownConfig(out _));
+
+        using ManualResetEventSlim reloadHandlerEntered = new();
+        using ManualResetEventSlim releaseReloadHandler = new();
+        using ManualResetEventSlim queuedReloadReachedGate = new();
+        hotReloadEventHandler.Subscribe(
+            METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED,
+            (_, _) =>
+            {
+                reloadHandlerEntered.Set();
+                if (!releaseReloadHandler.Wait(TimeSpan.FromSeconds(10)))
+                {
+                    throw new TimeoutException("Timed out waiting to release the simulated metadata refresh.");
+                }
+            });
+
+        Task activeReload = Task.CompletedTask;
+        Task queuedReload = Task.CompletedTask;
+        try
+        {
+            fileSystem.File.WriteAllText(
+                configPath,
+                GenerateRuntimeSectionStringFromParams(
+                    restPath: "/blocked",
+                    gqlPath: "/graphql",
+                    restEnabled: true,
+                    gqlEnabled: true,
+                    gqlIntrospection: true,
+                    mode: HostMode.Development));
+            activeReload = Task.Run(() => configLoader.ProcessHotReloadNotification());
+            Assert.IsTrue(
+                reloadHandlerEntered.Wait(TimeSpan.FromSeconds(5)),
+                "The hot-reload pipeline did not reach the blocking metadata handler.");
+
+            queuedReload = Task.Run(() => configLoader.ProcessHotReloadNotification(
+                beforeEnteringGate: queuedReloadReachedGate.Set));
+            Assert.IsTrue(
+                queuedReloadReachedGate.Wait(TimeSpan.FromSeconds(5)),
+                "The queued callback did not reach the serialization gate.");
+
+            Task disposeTask = Task.Run(configLoader.Dispose);
+            Assert.AreSame(
+                disposeTask,
+                await Task.WhenAny(disposeTask, Task.Delay(TimeSpan.FromSeconds(1))),
+                "Dispose must not wait for a hot-reload pipeline blocked in external metadata work.");
+            Assert.IsTrue(
+                configFileWatcher.StopWatchingCalled.Wait(TimeSpan.FromSeconds(1)),
+                "Dispose must synchronously disable the watcher before returning.");
+            Assert.IsTrue(
+                configFileWatcher.DisposeEntered.Wait(TimeSpan.FromSeconds(5)),
+                "Watcher resource disposal was not scheduled.");
+            Assert.IsFalse(
+                configFileWatcher.DisposeCompleted.IsSet,
+                "Loader disposal must not wait for potentially blocking watcher resource cleanup.");
+            Assert.AreSame(
+                queuedReload,
+                await Task.WhenAny(queuedReload, Task.Delay(TimeSpan.FromSeconds(1))),
+                "A callback waiting on the serialization gate must be canceled during disposal.");
+            Assert.IsFalse(
+                activeReload.IsCompleted,
+                "Disposal must not require the active external metadata operation to finish.");
+
+            releaseReloadHandler.Set();
+            await Task.WhenAll(activeReload, queuedReload).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.AreEqual(
+                "/blocked",
+                configLoader.RuntimeConfig!.Runtime!.Rest!.Path,
+                "A callback queued before disposal must exit without loading another generation.");
+        }
+        finally
+        {
+            releaseReloadHandler.Set();
+            configFileWatcher.ReleaseDispose.Set();
+            configLoader.Dispose();
+            await Task.WhenAll(activeReload, queuedReload).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.IsTrue(
+                configFileWatcher.DisposeCompleted.Wait(TimeSpan.FromSeconds(5)),
+                "The watcher disposal worker did not finish after it was released.");
+            Directory.Delete(testDirectory, recursive: true);
+        }
+    }
+
+    private sealed class BlockingDisposeConfigFileWatcher : IConfigFileWatcher
+    {
+        public event EventHandler? NewFileContentsDetected
+        {
+            add { }
+            remove { }
+        }
+
+        public ManualResetEventSlim StopWatchingCalled { get; } = new();
+
+        public ManualResetEventSlim DisposeEntered { get; } = new();
+
+        public ManualResetEventSlim ReleaseDispose { get; } = new();
+
+        public ManualResetEventSlim DisposeCompleted { get; } = new();
+
+        public void StopWatching()
+        {
+            StopWatchingCalled.Set();
+        }
+
+        public void Dispose()
+        {
+            DisposeEntered.Set();
+            if (!ReleaseDispose.Wait(TimeSpan.FromSeconds(10)))
+            {
+                throw new TimeoutException("Timed out waiting to release watcher disposal.");
+            }
+
+            DisposeCompleted.Set();
+        }
+    }
+
+    [TestMethod]
+    public void ConfigFileWatcher_StopWatching_DisablesAndDetachesUnderlyingWatcher()
+    {
+        IFileSystem fileSystem = Mock.Of<IFileSystem>();
+        Mock.Get(fileSystem)
+            .Setup(fs => fs.File.Exists(It.IsAny<string>()))
+            .Returns(true);
+        Mock.Get(fileSystem)
+            .Setup(fs => fs.File.ReadAllBytes(It.IsAny<string>()))
+            .Returns(Encoding.UTF8.GetBytes("InitialValue"));
+        Mock<IFileSystemWatcher> fileSystemWatcher = new();
+        fileSystemWatcher
+            .Setup(watcher => watcher.FileSystem)
+            .Returns(fileSystem);
+        IConfigFileWatcher configFileWatcher = new ConfigFileWatcher(
+            fileSystemWatcher.Object,
+            Directory.GetCurrentDirectory(),
+            "dab-config.json");
+
+        configFileWatcher.StopWatching();
+        configFileWatcher.Dispose();
+
+        fileSystemWatcher.VerifySet(
+            watcher => watcher.EnableRaisingEvents = false,
+            Times.Once);
+        fileSystemWatcher.VerifyRemove(
+            watcher => watcher.Changed -= It.IsAny<FileSystemEventHandler>(),
+            Times.Once);
+        fileSystemWatcher.Verify(watcher => watcher.Dispose(), Times.Once);
+    }
+
     #region ConfigFileWatcher NewFileContentsDetected event invocation tests
 
     private const string UNEXPECTED_INVOCATION_COUNT_ERR = "Unexpected number of invocations of the NewFileContentsDetected event.";

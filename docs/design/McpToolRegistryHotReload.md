@@ -312,6 +312,13 @@ prevents an older, slower registry rebuild initiated outside the file-loader pip
 overwriting a newer registry generation. Neither mechanism provides transactional rollback after a
 handler failure; that remains separate work.
 
+Loader shutdown does not wait to acquire this gate. `FileSystemRuntimeConfigLoader.Dispose()` first
+atomically marks the loader disposed, detaches and disables its file watcher under a separate
+watcher-lifecycle lock, and then schedules potentially blocking OS watcher resource disposal on a
+background worker. An active reload may finish, but cancellation releases callbacks waiting to
+enter the gate. This prevents host shutdown from waiting indefinitely when a reload is stalled in
+external database metadata initialization.
+
 ### 11. Existing tool-call safety is preserved
 
 After a successful swap:
@@ -722,6 +729,8 @@ The exact file split may change during implementation, but the expected touchpoi
     the final advertised schema comes from the reload generation's database metadata.
 11. A physical stdio config-file write traverses the complete ordered pipeline, emits exactly one
     notification for one net-new file content, and returns updated discovery.
+12. Disposing the file loader while a reload handler is blocked returns without waiting for the
+    pipeline, and callbacks queued on the loader gate exit after disposal begins.
 
 Database-backed schema tests should reuse existing MCP stored-procedure fixtures where database metadata is required. Pure membership, collision, notification, and atomicity behavior should remain unit-testable without a live database.
 

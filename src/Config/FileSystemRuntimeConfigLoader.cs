@@ -33,7 +33,10 @@ namespace Azure.DataApiBuilder.Config;
 public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 {
     private readonly SemaphoreSlim _hotReloadGate = new(initialCount: 1, maxCount: 1);
-    private bool _disposed;
+    private readonly CancellationTokenSource _disposeCancellation = new();
+    private readonly object _watcherLock = new();
+    private readonly Func<IFileSystem, string, string, IConfigFileWatcher> _configFileWatcherFactory;
+    private int _disposed;
     /// <summary>
     /// This stores either the default config name e.g. dab-config.json
     /// or user provided config file which could be a relative file path,
@@ -54,7 +57,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// <summary>
     /// Watches the config file for changes and triggers hot-reload when a change is detected.
     /// </summary>
-    private ConfigFileWatcher? _configFileWatcher;
+    private IConfigFileWatcher? _configFileWatcher;
 
     /// <summary>
     /// File system abstraction used to interact with the runtime config file.
@@ -97,9 +100,34 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         string? connectionString = null,
         bool isCliLoader = false,
         ILogger<FileSystemRuntimeConfigLoader>? logger = null)
+        : this(
+            fileSystem,
+            handler,
+            baseConfigFilePath,
+            connectionString,
+            isCliLoader,
+            logger,
+            static (watcherFileSystem, directoryName, configFileName) =>
+                new ConfigFileWatcher(
+                    new FileSystemWatcherWrapper(watcherFileSystem),
+                    directoryName,
+                    configFileName))
+    {
+    }
+
+    internal FileSystemRuntimeConfigLoader(
+        IFileSystem fileSystem,
+        HotReloadEventHandler<HotReloadEventArgs>? handler,
+        string baseConfigFilePath,
+        string? connectionString,
+        bool isCliLoader,
+        ILogger<FileSystemRuntimeConfigLoader>? logger,
+        Func<IFileSystem, string, string, IConfigFileWatcher> configFileWatcherFactory)
         : base(handler, connectionString)
     {
-        _fileSystem = fileSystem;
+        _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+        _configFileWatcherFactory = configFileWatcherFactory ??
+            throw new ArgumentNullException(nameof(configFileWatcherFactory));
         _baseConfigFilePath = baseConfigFilePath;
         ConfigFilePath = GetFinalConfigFilePath();
         _isCliLoader = isCliLoader;
@@ -108,20 +136,21 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 
     /// <summary>
     /// Disposes the config file watcher to release file handles and stop
-    /// monitoring the config file for changes.
+    /// monitoring the config file for changes. Disposal deliberately does not wait for an active
+    /// hot-reload pipeline, which can be blocked in external database metadata initialization.
     /// </summary>
     public void Dispose()
     {
-        ConfigFileWatcher? configFileWatcher;
-        _hotReloadGate.Wait();
-        try
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
         {
-            if (_disposed)
-            {
-                return;
-            }
+            return;
+        }
 
-            _disposed = true;
+        _disposeCancellation.Cancel();
+
+        IConfigFileWatcher? configFileWatcher;
+        lock (_watcherLock)
+        {
             configFileWatcher = _configFileWatcher;
             _configFileWatcher = null;
 
@@ -130,15 +159,24 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
                 configFileWatcher.NewFileContentsDetected -= OnNewFileContentsDetected;
             }
         }
-        finally
-        {
-            _hotReloadGate.Release();
-        }
 
-        // FileSystemWatcher disposal can block while an OS callback completes. Do not hold the
-        // reload gate during that external operation. Any callback already queued will observe
-        // _disposed after it acquires the gate and return without loading another generation.
-        configFileWatcher?.Dispose();
+        if (configFileWatcher is not null)
+        {
+            try
+            {
+                configFileWatcher.StopWatching();
+            }
+            catch (Exception ex)
+            {
+                SendLogToBufferOrLogger(
+                    LogLevel.Warning,
+                    $"Unable to disable the configuration file watcher during shutdown due to {ex.Message}");
+            }
+
+            // Underlying FileSystemWatcher disposal can block while an OS callback completes.
+            // Dispose it on a background worker so host shutdown never waits for an active reload.
+            ScheduleConfigFileWatcherDisposal(configFileWatcher);
+        }
     }
 
     /// <summary>
@@ -174,36 +212,43 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// </summary>
     private bool TrySetupConfigFileWatcher()
     {
-        // File watching / hot-reload isn't used for the CLI.
-        if (_isCliLoader)
+        lock (_watcherLock)
         {
-            return false;
-        }
-
-        // If the file watcher is already set up, we don't need to do it again.
-        if (_configFileWatcher is not null)
-        {
-            return false;
-        }
-
-        if (RuntimeConfig is not null)
-        {
-            try
+            // File watching / hot-reload isn't used for the CLI and must not start once disposal
+            // begins, including when disposal races with initial configuration loading.
+            if (_isCliLoader || IsDisposed)
             {
-                _configFileWatcher = new(new FileSystemWatcherWrapper(_fileSystem), GetConfigDirectoryName(), GetConfigFileName());
-                _configFileWatcher.NewFileContentsDetected += OnNewFileContentsDetected;
-            }
-            catch (Exception ex)
-            {
-                // Need to remove the dependencies in startup on the RuntimeConfigProvider
-                // before we can have an ILogger here.
-                Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
+                return false;
             }
 
-            return _configFileWatcher is not null;
-        }
+            // If the file watcher is already set up, we don't need to do it again.
+            if (_configFileWatcher is not null)
+            {
+                return false;
+            }
 
-        return false;
+            if (RuntimeConfig is not null)
+            {
+                try
+                {
+                    _configFileWatcher = _configFileWatcherFactory(
+                        _fileSystem,
+                        GetConfigDirectoryName(),
+                        GetConfigFileName());
+                    _configFileWatcher.NewFileContentsDetected += OnNewFileContentsDetected;
+                }
+                catch (Exception ex)
+                {
+                    // Need to remove the dependencies in startup on the RuntimeConfigProvider
+                    // before we can have an ILogger here.
+                    Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
+                }
+
+                return _configFileWatcher is not null;
+            }
+
+            return false;
+        }
     }
 
     /// <summary>
@@ -230,10 +275,23 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     {
         beforeEnteringGate?.Invoke();
 
-        _hotReloadGate.Wait();
+        if (IsDisposed)
+        {
+            return;
+        }
+
         try
         {
-            if (_disposed)
+            _hotReloadGate.Wait(_disposeCancellation.Token);
+        }
+        catch (OperationCanceledException) when (IsDisposed)
+        {
+            return;
+        }
+
+        try
+        {
+            if (IsDisposed)
             {
                 return;
             }
@@ -269,10 +327,23 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     {
         ArgumentNullException.ThrowIfNull(operation);
 
-        await _hotReloadGate.WaitAsync().ConfigureAwait(false);
+        if (IsDisposed)
+        {
+            throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
+        }
+
         try
         {
-            if (_disposed)
+            await _hotReloadGate.WaitAsync(_disposeCancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (IsDisposed)
+        {
+            throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
+        }
+
+        try
+        {
+            if (IsDisposed)
             {
                 throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
             }
@@ -282,6 +353,50 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         finally
         {
             _hotReloadGate.Release();
+        }
+    }
+
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+    private void ScheduleConfigFileWatcherDisposal(IConfigFileWatcher configFileWatcher)
+    {
+        Action disposeWatcher = () =>
+        {
+            try
+            {
+                configFileWatcher.Dispose();
+            }
+            catch (Exception ex)
+            {
+                SendLogToBufferOrLogger(
+                    LogLevel.Warning,
+                    $"Unable to dispose the configuration file watcher due to {ex.Message}");
+            }
+        };
+
+        if (ThreadPool.QueueUserWorkItem(
+                static callback => callback(),
+                disposeWatcher,
+                preferLocal: false))
+        {
+            return;
+        }
+
+        try
+        {
+            Thread fallbackWorker = new(
+                static callback => ((Action)callback!).Invoke())
+            {
+                IsBackground = true,
+                Name = "DAB configuration watcher disposal"
+            };
+            fallbackWorker.Start(disposeWatcher);
+        }
+        catch (Exception ex)
+        {
+            SendLogToBufferOrLogger(
+                LogLevel.Warning,
+                $"Unable to schedule configuration file watcher disposal due to {ex.Message}");
         }
     }
 

@@ -47,6 +47,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [TestMethod]
+        public async Task HostedStart_DefersInitializationToStartupOrchestrator()
+        {
+            RuntimeConfig currentConfig = CreateRuntimeConfig();
+            TestContext context = CreateContext(
+                () => currentConfig,
+                new TestMcpTool("read_records", ToolType.BuiltIn));
+
+            await context.Service.StartAsync(CancellationToken.None);
+
+            Assert.AreEqual(0, context.Registry.GetAdvertisedTools().Count,
+                "Hosted service startup occurs before metadata initialization and must not publish.");
+
+            context.Service.EnsureInitialized();
+
+            Assert.AreEqual(1, context.Registry.GetAdvertisedTools().Count,
+                "The startup orchestrator should publish after metadata initialization.");
+        }
+
+        [TestMethod]
         public void HotReload_AddsFreshCustomToolAndNotifiesClient()
         {
             RuntimeConfig currentConfig = CreateRuntimeConfig();

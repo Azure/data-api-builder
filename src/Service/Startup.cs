@@ -1439,6 +1439,13 @@ namespace Azure.DataApiBuilder.Service
                     app.ApplicationServices.GetRequiredService<IMetadataProviderFactory>();
                 await sqlMetadataProviderFactory.InitializeAsync();
 
+                // Hosted services start before this metadata initialization. Publish the initial
+                // MCP registry only now so custom tool schemas use this initialized metadata
+                // generation. MCP services are absent when MCP was disabled at startup.
+                IMcpToolRegistryRefreshService? mcpToolRegistryRefreshService =
+                    app.ApplicationServices.GetService<IMcpToolRegistryRefreshService>();
+                mcpToolRegistryRefreshService?.EnsureInitialized();
+
                 // Manually trigger DI service instantiation of GraphQLSchemaCreator and RestService
                 // to attempt to reduce chances that the first received client request
                 // triggers instantiation and encounters undesired instantiation latency.

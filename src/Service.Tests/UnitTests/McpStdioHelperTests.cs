@@ -3,13 +3,16 @@
 
 #nullable enable
 
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Service.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -22,8 +25,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ServiceCollection services = new();
             TestApplicationLifetime lifetime = new();
             TestMcpStdioServer stdioServer = new();
-            TestMcpToolRegistryRefreshService refreshService = new();
+            List<string> initializationOrder = new();
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            metadataProviderFactory
+                .Setup(factory => factory.InitializeAsync())
+                .Callback(() => initializationOrder.Add("metadata"))
+                .Returns(Task.CompletedTask);
+            TestMcpToolRegistryRefreshService refreshService = new(initializationOrder);
 
+            services.AddSingleton(metadataProviderFactory.Object);
             services.AddSingleton<IMcpToolRegistryRefreshService>(refreshService);
             services.AddSingleton<IHostApplicationLifetime>(lifetime);
             services.AddSingleton<IMcpStdioServer>(stdioServer);
@@ -42,6 +52,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "MCP stdio mode should still run the stdio JSON-RPC loop.");
             Assert.AreEqual(1, refreshService.EnsureInitializedCallCount,
                 "MCP stdio mode should initialize the shared tool registry before running the loop.");
+            CollectionAssert.AreEqual(
+                new[] { "metadata", "registry" },
+                initializationOrder,
+                "MCP stdio mode should initialize metadata before publishing the registry.");
             Assert.AreEqual(lifetime.ApplicationStopping, stdioServer.CancellationToken,
                 "The stdio loop should keep using the host lifetime cancellation token.");
             Assert.AreEqual(1, host.DisposeCallCount,
@@ -50,11 +64,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         private sealed class TestMcpToolRegistryRefreshService : IMcpToolRegistryRefreshService
         {
+            private readonly List<string> _initializationOrder;
+
+            public TestMcpToolRegistryRefreshService(List<string> initializationOrder)
+            {
+                _initializationOrder = initializationOrder;
+            }
+
             public int EnsureInitializedCallCount { get; private set; }
 
             public void EnsureInitialized()
             {
                 EnsureInitializedCallCount++;
+                _initializationOrder.Add("registry");
             }
         }
 

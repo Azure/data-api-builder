@@ -74,7 +74,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public Task StartAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            EnsureInitialized();
+
+            // Startup.Configure initializes database metadata after hosted services start.
+            // The HTTP startup orchestrator calls EnsureInitialized once that dependency is
+            // ready. Keeping this hosted-service registration ensures this singleton is created
+            // early enough to subscribe to ordered hot-reload events without publishing a
+            // config-only schema first.
             return Task.CompletedTask;
         }
 

@@ -240,13 +240,23 @@ The refresh service exposes one idempotent initialization path.
 
 #### HTTP mode
 
-The host starts the same singleton through `IHostedService.StartAsync()`.
+The host resolves the singleton through `IHostedService` early enough to subscribe to ordered
+hot-reload events, but `StartAsync()` does not publish the initial snapshot. ASP.NET Core starts
+hosted services before `Startup.Configure` finishes initializing database metadata.
+
+After `Startup.PerformOnConfigChangeAsync()` successfully initializes
+`IMetadataProviderFactory`, it invokes the refresh service's idempotent initialization method.
+This prevents the initial registry from advertising a configuration-only fallback schema while
+database metadata is still being initialized.
 
 The DI registration must ensure that resolving the concrete refresh service and resolving `IHostedService` return the same object, for example by registering the concrete singleton and mapping `IHostedService` to it.
 
 #### Stdio mode
 
-Stdio intentionally does not start the ASP.NET Core host, so hosted services do not run. `McpStdioHelper` explicitly resolves the same refresh-service singleton and invokes its idempotent initialization method before starting the stdio loop.
+Stdio intentionally does not start the ASP.NET Core host, so `Startup.Configure` does not initialize
+database metadata. `McpStdioHelper` explicitly initializes `IMetadataProviderFactory`, then resolves
+the same refresh-service singleton and invokes its idempotent initialization method before starting
+the stdio loop.
 
 This replaces the current duplicate per-tool registration path and gives both transports identical validation and metadata behavior.
 
@@ -354,12 +364,16 @@ The current public `RegisterTool` method is not used by the new production path.
 ```mermaid
 sequenceDiagram
     participant Host
+    participant Startup
     participant Refresh as McpToolRegistryRefreshService
     participant Factory as CustomMcpToolFactory
     participant Metadata as IMetadataProviderFactory
     participant Registry as McpToolRegistry
 
-    Host->>Refresh: StartAsync()
+    Host->>Refresh: StartAsync (subscribe only)
+    Startup->>Metadata: InitializeAsync()
+    Metadata-->>Startup: DB metadata ready
+    Startup->>Refresh: EnsureInitialized()
     Refresh->>Refresh: Capture current RuntimeConfig
     Refresh->>Factory: Create custom tools(config)
     Factory-->>Refresh: Fresh custom tools
@@ -378,9 +392,12 @@ An invalid or duplicate tool causes startup to fail, preserving current strict s
 sequenceDiagram
     participant Helper as McpStdioHelper
     participant Refresh as McpToolRegistryRefreshService
+    participant Metadata as IMetadataProviderFactory
     participant Registry as McpToolRegistry
     participant Server as McpStdioServer
 
+    Helper->>Metadata: InitializeAsync()
+    Metadata-->>Helper: DB metadata ready
     Helper->>Refresh: EnsureInitialized()
     Refresh->>Registry: Build and publish initial snapshot
     Helper->>Server: RunAsync()

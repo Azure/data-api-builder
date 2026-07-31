@@ -913,12 +913,7 @@
             Role: test_role_with_excluded_fields_on_mutation,
             Actions: [
               {
-                Action: Update,
-                Fields: {
-                  Exclude: [
-                    publisher_id
-                  ]
-                }
+                Action: Read
               },
               {
                 Action: Create,
@@ -929,7 +924,12 @@
                 }
               },
               {
-                Action: Read
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    publisher_id
+                  ]
+                }
               },
               {
                 Action: Delete
@@ -1624,12 +1624,7 @@
             Role: test_role_with_excluded_fields_on_mutation,
             Actions: [
               {
-                Action: Update,
-                Fields: {
-                  Exclude: [
-                    username
-                  ]
-                }
+                Action: Read
               },
               {
                 Action: Create,
@@ -1640,7 +1635,12 @@
                 }
               },
               {
-                Action: Read
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    username
+                  ]
+                }
               },
               {
                 Action: Delete
@@ -1768,6 +1768,70 @@
       }
     },
     {
+      VectorOwner: {
+        Source: {
+          Object: vector_owners,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: VectorOwner,
+          Plural: VectorOwners,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Update
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Update
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          vectors: {
+            Cardinality: Many,
+            TargetEntity: VectorType,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              owner_id
+            ]
+          }
+        }
+      }
+    },
+    {
       VectorType: {
         Source: {
           Object: vector_type_table,
@@ -1816,7 +1880,18 @@
               }
             ]
           }
-        ]
+        ],
+        Relationships: {
+          owner: {
+            TargetEntity: VectorOwner,
+            SourceFields: [
+              owner_id
+            ],
+            TargetFields: [
+              id
+            ]
+          }
+        }
       }
     },
     {

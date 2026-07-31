@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -275,14 +276,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false);
+            JsonElement result = await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false);
+
+            int ownerId = result.GetProperty("id").GetInt32();
+            int vectorId = result.GetProperty("vectors").GetProperty("items")[0].GetProperty("id").GetInt32();
 
             // Confirm the value was persisted by reading it back.
             float[] expectedValue = new[] { 0.5f, 0.25f, 0.75f };
-            JsonElement readBack = await GetRecordByPkAsync(5001);
+            JsonElement readBack = await GetRecordByPkAsync(vectorId);
             AssertVectorEquals(readBack.GetProperty("vector_data"), expectedValue);
 
-            await DeleteNestedVectorTypeAsync(5001);
+            await DeleteNestedVectorTypeAsync(ownerId);
         }
 
         /// <summary>
@@ -314,18 +318,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false);
+            JsonElement result = await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false);
+            JsonElement owners = result.GetProperty("items");
 
             // Confirm the value was persisted by reading it back.
+            int owner1Id = owners[0].GetProperty("id").GetInt32();
+            int vector1Id = owners[0].GetProperty("vectors").GetProperty("items")[0].GetProperty("id").GetInt32();
             float[] expectedValue = new[] { 0.5f, 0.25f, 0.75f };
-            JsonElement readBackFirstVal = await GetRecordByPkAsync(5001);
+            JsonElement readBackFirstVal = await GetRecordByPkAsync(vector1Id);
             AssertVectorEquals(readBackFirstVal.GetProperty("vector_data"), expectedValue);
-            await DeleteNestedVectorTypeAsync(5001);
+            await DeleteNestedVectorTypeAsync(owner1Id);
 
+            int owner2Id = owners[1].GetProperty("id").GetInt32();
+            int vector2Id = owners[1].GetProperty("vectors").GetProperty("items")[0].GetProperty("id").GetInt32();
             float[] expectedSecondValue = new[] { 1.5f, -2.5f, 3.5f };
-            JsonElement readBackSecondVal = await GetRecordByPkAsync(5002);
+            JsonElement readBackSecondVal = await GetRecordByPkAsync(vector2Id);
             AssertVectorEquals(readBackSecondVal.GetProperty("vector_data"), expectedSecondValue);
-            await DeleteNestedVectorTypeAsync(5002);
+            await DeleteNestedVectorTypeAsync(owner2Id);
         }
 
         /// <summary>

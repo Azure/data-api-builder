@@ -28,6 +28,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly McpToolRegistry _toolRegistry;
         private readonly IServiceProvider _serviceProvider;
         private readonly McpStdoutWriter _stdoutWriter;
+        private readonly IMcpStdioToolListChangedNotifier? _toolListChangedNotifier;
         private readonly TextReader? _inputReader;
         private readonly string _protocolVersion;
 
@@ -50,6 +51,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // notifications/message frames are serialized through one lock.
             // Falls back to a fresh instance if DI didn't register one (defensive).
             _stdoutWriter = _serviceProvider.GetService<McpStdoutWriter>() ?? new McpStdoutWriter();
+            _toolListChangedNotifier = _serviceProvider.GetService<IMcpStdioToolListChangedNotifier>();
 
             // Allow protocol version to be configured via IConfiguration, using centralized defaults.
             IConfiguration? configuration = _serviceProvider.GetService<IConfiguration>();
@@ -131,6 +133,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 break;
 
                             case "notifications/initialized":
+                                _toolListChangedNotifier?.MarkInitialized();
                                 break;
 
                             case "tools/list":

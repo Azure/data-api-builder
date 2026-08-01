@@ -35,7 +35,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
     public class DynamicCustomTool : IMcpTool
     {
         private readonly Entity _entity;
-        private readonly string _toolName;
         private JsonElement? _cachedInputSchema;
 
         /// <summary>
@@ -47,7 +46,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             EntityName = entityName ?? throw new ArgumentNullException(nameof(entityName));
             _entity = entity ?? throw new ArgumentNullException(nameof(entity));
-            _toolName = ConvertToToolName(entityName);
+            ToolName = ConvertToToolName(entityName);
 
             // Validate that this is a stored procedure
             if (_entity.Source.Type != EntitySourceType.StoredProcedure)
@@ -79,7 +78,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <summary>
         /// Gets the normalized MCP tool name without materializing the complete metadata schema.
         /// </summary>
-        internal string ToolName => _toolName;
+        internal string ToolName { get; }
 
         /// <summary>
         /// Initializes the input schema using an explicit configuration and metadata-provider
@@ -116,14 +115,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         public Tool GetToolMetadata()
         {
-            string description = _entity.Description ?? $"Executes the {_toolName} stored procedure";
+            string description = _entity.Description ?? $"Executes the {ToolName} stored procedure";
 
             // Build input schema based on parameters
             JsonElement inputSchema = BuildInputSchema();
 
             return new Tool
             {
-                Name = _toolName,
+                Name = ToolName,
                 Description = description,
                 InputSchema = inputSchema
             };
@@ -138,7 +137,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             CancellationToken cancellationToken = default)
         {
             ILogger<DynamicCustomTool>? logger = serviceProvider.GetService<ILogger<DynamicCustomTool>>();
-            string toolName = _toolName;
+            string toolName = ToolName;
 
             try
             {

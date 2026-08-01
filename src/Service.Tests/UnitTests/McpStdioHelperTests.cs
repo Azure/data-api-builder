@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 NullLogger<RuntimeConfigValidator>.Instance);
             Mock<IMetadataProviderFactory> metadataProviderFactory = new();
             metadataProviderFactory
-                .Setup(factory => factory.InitializeAsync())
+                .Setup(factory => factory.InitializeAsync(It.IsAny<CancellationToken>()))
                 .Callback(() => initializationOrder.Add("metadata"))
                 .Returns(Task.CompletedTask);
             TestMcpToolRegistryRefreshService refreshService = new(initializationOrder);
@@ -70,6 +70,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "MCP stdio mode should still run the stdio JSON-RPC loop.");
             Assert.AreEqual(1, refreshService.EnsureInitializedCallCount,
                 "MCP stdio mode should initialize the shared tool registry before running the loop.");
+            metadataProviderFactory.Verify(
+                factory => factory.InitializeAsync(It.IsAny<CancellationToken>()),
+                Times.Once);
             CollectionAssert.AreEqual(
                 new[] { "metadata", "registry" },
                 initializationOrder,

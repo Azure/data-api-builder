@@ -23,6 +23,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// same successfully applied configuration are no-ops.
         /// </summary>
         void EnsureInitialized();
+
+        /// <summary>
+        /// Initializes the registry with cooperative cancellation. Implementations that do not
+        /// override this member retain their existing initialization behavior.
+        /// </summary>
+        void EnsureInitialized(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            EnsureInitialized();
+        }
     }
 
     /// <summary>
@@ -70,9 +80,15 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <inheritdoc />
         public void EnsureInitialized()
         {
+            EnsureInitialized(CancellationToken.None);
+        }
+
+        /// <inheritdoc />
+        public void EnsureInitialized(CancellationToken cancellationToken)
+        {
             if (RefreshRegistry(
                     forceRebuildForCurrentConfig: false,
-                    CancellationToken.None))
+                    cancellationToken))
             {
                 NotifyToolsListChanged();
             }
@@ -170,7 +186,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 McpToolRegistryCandidate candidate = McpToolRegistry.CreateCandidate(
                     _registeredTools.Concat(customTools),
-                    config);
+                    config,
+                    cancellationToken);
 
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!ReferenceEquals(config, _runtimeConfigProvider.GetConfig()))

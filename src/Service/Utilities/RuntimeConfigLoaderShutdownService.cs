@@ -22,9 +22,9 @@ namespace Azure.DataApiBuilder.Service.Utilities
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            // The loader's own shutdown token cancels supported external I/O. Do not detach an
-            // active operation on host timeout: doing so would let it use disposed singletons.
-            return configLoader.StopAsync(CancellationToken.None);
+            // The loader first requests cancellation through its own token, then this host token
+            // bounds the drain according to HostOptions.ShutdownTimeout.
+            return configLoader.StopAsync(cancellationToken);
         }
     }
 }

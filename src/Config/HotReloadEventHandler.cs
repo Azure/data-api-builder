@@ -47,6 +47,11 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
         }
     }
 
+    /// <summary>
+    /// Subscribes a synchronous ordered hot-reload callback. Handlers must observe
+    /// <see cref="HotReloadEventArgs.CancellationToken"/> and must not block indefinitely;
+    /// host shutdown is allowed to stop waiting when its configured timeout expires.
+    /// </summary>
     public void Subscribe(string eventName, EventHandler<TEventArgs> handler)
     {
         if (_eventHandlers.ContainsKey(eventName))

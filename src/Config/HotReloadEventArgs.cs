@@ -14,10 +14,15 @@ public class HotReloadEventArgs : EventArgs
     /// </summary>
     public CancellationToken CancellationToken { get; }
 
+    public HotReloadEventArgs(string eventName, string message)
+        : this(eventName, message, CancellationToken.None)
+    {
+    }
+
     public HotReloadEventArgs(
         string eventName,
         string message,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         EventName = eventName;
         Message = message;

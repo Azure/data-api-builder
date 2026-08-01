@@ -83,7 +83,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     .Setup(factory => factory.GetMetadataProvider(It.IsAny<string>()))
                     .Returns(sqlMetadataProvider.Object);
                 metadataProviderFactory
-                    .Setup(factory => factory.InitializeAsync())
+                    .Setup(factory => factory.InitializeAsync(It.IsAny<CancellationToken>()))
                     .Callback(initialMetadataInitializationEntered.Set)
                     .Returns(initialMetadataMayComplete.Task);
 
@@ -183,7 +183,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 }
 
                 Assert.IsTrue(initialMetadataInitializationEntered.IsSet);
-                metadataProviderFactory.Verify(factory => factory.InitializeAsync(), Times.Once);
+                metadataProviderFactory.Verify(
+                    factory => factory.InitializeAsync(It.IsAny<CancellationToken>()),
+                    Times.Once);
 
                 Tool advertisedTool = registry.GetAdvertisedTools().Single();
                 Assert.AreEqual("get_book", advertisedTool.Name);

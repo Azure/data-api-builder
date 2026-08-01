@@ -60,6 +60,21 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
+        public override Task PopulateTriggerMetadataForTable(
+            string entityName,
+            string schemaName,
+            string tableName,
+            SourceDefinition sourceDefinition)
+        {
+            return PopulateTriggerMetadataForTable(
+                entityName,
+                schemaName,
+                tableName,
+                sourceDefinition,
+                CancellationToken.None);
+        }
+
+        /// <inheritdoc/>
         public override async Task PopulateTriggerMetadataForTable(
             string entityName,
             string schemaName,
@@ -325,6 +340,15 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
+        protected override Task GenerateAutoentitiesIntoEntities(
+            IReadOnlyDictionary<string, Autoentity>? autoentities)
+        {
+            return GenerateAutoentitiesIntoEntities(
+                autoentities,
+                CancellationToken.None);
+        }
+
+        /// <inheritdoc/>
         protected override async Task GenerateAutoentitiesIntoEntities(
             IReadOnlyDictionary<string, Autoentity>? autoentities,
             CancellationToken cancellationToken)
@@ -452,10 +476,23 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="autoentityName">The name of the autoentity definition.</param>
         /// <param name="autoentity">The autoentity definition containing patterns for inclusion, exclusion, and name.</param>
         /// <returns>A JsonArray containing the queried autoentities, or an empty array if none are found.</returns>
+        public Task<JsonArray?> QueryAutoentitiesAsync(
+            string autoentityName,
+            Autoentity autoentity)
+        {
+            return QueryAutoentitiesAsync(
+                autoentityName,
+                autoentity,
+                CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Queries the database for autoentities with cooperative cancellation.
+        /// </summary>
         public async Task<JsonArray?> QueryAutoentitiesAsync(
             string autoentityName,
             Autoentity autoentity,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             string include = string.Join(",", autoentity.Patterns.Include);
             string exclude = string.Join(",", autoentity.Patterns.Exclude);

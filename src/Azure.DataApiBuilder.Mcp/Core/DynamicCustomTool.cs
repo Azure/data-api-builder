@@ -284,6 +284,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     cancellationToken.ThrowIfCancellationRequested();
                     queryResult = await queryEngine.ExecuteAsync(context, dataSourceName).ConfigureAwait(false);
                 }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
                 catch (DataApiBuilderException dabEx)
                 {
                     logger?.LogError(dabEx, "Error executing custom tool {ToolName} for entity {Entity}", toolName, EntityName);

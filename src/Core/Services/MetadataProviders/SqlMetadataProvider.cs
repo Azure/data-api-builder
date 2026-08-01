@@ -407,6 +407,25 @@ namespace Azure.DataApiBuilder.Core.Services
             return false;
         }
 
+        /// <inheritdoc/>
+        public bool TryGetArrayElementSyntaxKind(string entityName, string fieldName, out SyntaxKind fieldKind)
+        {
+            if (TryGetBackingColumn(entityName, fieldName, out string? columnName))
+            {
+                SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
+                ColumnDefinition column = sourceDefinition.Columns[columnName];
+
+                // If the column is an array type, we need to get the syntax kind from the element system type.
+                if (column.IsArrayType && TypeHelper.TryGetSyntaxKindFromSystemType(column.ElementSystemType!, out fieldKind))
+                {
+                    return true;
+                }
+            }
+
+            fieldKind = default;
+            return false;
+        }
+
         /// <summary>
         /// Log Primary key information. Function only called when not
         /// in a hosted scenario. Log relevant information about Primary keys
@@ -583,10 +602,28 @@ namespace Azure.DataApiBuilder.Core.Services
             string entityName,
             string schemaName,
             string tableName,
+            SourceDefinition sourceDefinition)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Updates trigger metadata with cooperative cancellation. Derived implementations that
+        /// only override the established member retain their existing behavior.
+        /// </summary>
+        public virtual Task PopulateTriggerMetadataForTable(
+            string entityName,
+            string schemaName,
+            string tableName,
             SourceDefinition sourceDefinition,
             CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            cancellationToken.ThrowIfCancellationRequested();
+            return PopulateTriggerMetadataForTable(
+                entityName,
+                schemaName,
+                tableName,
+                sourceDefinition);
         }
 
         /// <summary>
@@ -741,10 +778,21 @@ namespace Azure.DataApiBuilder.Core.Services
         /// This method is only called for tables in MsSql.
         /// </summary>
         protected virtual Task GenerateAutoentitiesIntoEntities(
+            IReadOnlyDictionary<string, Autoentity>? autoentities)
+        {
+            throw new NotSupportedException($"{GetType().Name} does not support autoentities yet.");
+        }
+
+        /// <summary>
+        /// Creates autoentities with cooperative cancellation. Derived implementations that only
+        /// override the established member retain their existing behavior.
+        /// </summary>
+        protected virtual Task GenerateAutoentitiesIntoEntities(
             IReadOnlyDictionary<string, Autoentity>? autoentities,
             CancellationToken cancellationToken)
         {
-            throw new NotSupportedException($"{GetType().Name} does not support autoentities yet.");
+            cancellationToken.ThrowIfCancellationRequested();
+            return GenerateAutoentitiesIntoEntities(autoentities);
         }
 
         /// <summary>
@@ -1886,8 +1934,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
             await conn.OpenAsync(cancellationToken);
 
-            DataAdapterT adapterForTable = new();
-            CommandT selectCommand = new()
+            using DataAdapterT adapterForTable = new();
+            using CommandT selectCommand = new()
             {
                 Connection = conn
             };
@@ -1898,7 +1946,38 @@ namespace Azure.DataApiBuilder.Core.Services
             adapterForTable.SelectCommand = selectCommand;
 
             cancellationToken.ThrowIfCancellationRequested();
-            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableNameWithSchemaPrefix);
+            using CancellationTokenRegistration cancellationRegistration =
+                cancellationToken.Register(
+                    static commandState =>
+                    {
+                        try
+                        {
+                            ((DbCommand)commandState!).Cancel();
+                        }
+                        catch (Exception)
+                        {
+                            // Cancellation is best effort. The provider operation reports its
+                            // own completion or failure to the thread executing FillSchema.
+                        }
+                    },
+                    selectCommand);
+
+            DataTable[] dataTable;
+            try
+            {
+                dataTable = adapterForTable.FillSchema(
+                    EntitiesDataSet,
+                    SchemaType.Source,
+                    tableNameWithSchemaPrefix);
+            }
+            catch (Exception ex) when (cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(
+                    "Schema discovery was canceled during shutdown.",
+                    ex,
+                    cancellationToken);
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
             return dataTable[0];
         }

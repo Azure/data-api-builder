@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Utilities
                 cancellationToken.ThrowIfCancellationRequested();
                 IMcpToolRegistryRefreshService? mcpToolRegistryRefreshService =
                     serviceProvider.GetService<IMcpToolRegistryRefreshService>();
-                mcpToolRegistryRefreshService?.EnsureInitialized();
+                mcpToolRegistryRefreshService?.EnsureInitialized(cancellationToken);
             }).ConfigureAwait(false);
 
             return initializedConfig!;

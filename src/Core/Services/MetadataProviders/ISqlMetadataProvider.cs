@@ -24,8 +24,14 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Initializes this metadata provider for the runtime with cooperative cancellation.
+        /// Implementations that do not override this member retain their existing initialization
+        /// behavior.
         /// </summary>
-        Task InitializeAsync(CancellationToken cancellationToken);
+        Task InitializeAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return InitializeAsync();
+        }
 
         /// <summary>
         /// Obtains the underlying source object's schema name (SQL) or container name (Cosmos).
@@ -256,5 +262,17 @@ namespace Azure.DataApiBuilder.Core.Services
             string referencedEntityName,
             [NotNullWhen(true)] out ForeignKeyDefinition? foreignKeyDefinition,
             bool isMToNRelationship) => throw new NotImplementedException();
+
+        /// <summary>
+        /// Tries to get the GraphQL syntax kind of an array column's element type.
+        /// </summary>
+        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="fieldName">The name of the field.</param>
+        /// <param name="fieldKind">The kind of the field.</param>
+        /// <returns>Returns true if the field kind is found, false otherwise.</returns>
+        public bool TryGetArrayElementSyntaxKind(
+            string entityName,
+            string fieldName,
+            [NotNullWhen(true)] out SyntaxKind fieldKind);
     }
 }

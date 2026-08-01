@@ -49,6 +49,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [TestMethod]
+        public void EnsureInitialized_WithCanceledToken_DoesNotPublish()
+        {
+            RuntimeConfig currentConfig = CreateRuntimeConfig();
+            TestContext context = CreateContext(
+                () => currentConfig,
+                new TestMcpTool("read_records", ToolType.BuiltIn));
+            using CancellationTokenSource cancellation = new();
+            cancellation.Cancel();
+
+            Assert.ThrowsException<OperationCanceledException>(() =>
+                context.Service.EnsureInitialized(cancellation.Token));
+
+            Assert.AreEqual(0, context.Registry.GetAdvertisedTools().Count);
+            context.Notifier.Verify(
+                notifier => notifier.NotifyToolsListChanged(),
+                Times.Never);
+        }
+
+        [TestMethod]
         public void HotReload_AfterOutOfBandInitialization_RebuildsWithOrderedMetadataGeneration()
         {
             RuntimeConfig configA = CreateRuntimeConfig(("GetBook", "Stable description"));

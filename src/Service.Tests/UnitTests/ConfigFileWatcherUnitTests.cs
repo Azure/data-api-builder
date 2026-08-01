@@ -528,6 +528,96 @@ public class ConfigFileWatcherUnitTests
         }
     }
 
+    [TestMethod]
+    public async Task ShutdownService_HonorsHostCancellationForUncooperativeHandler()
+    {
+        string testDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dab-config-host-timeout-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(testDirectory);
+        string configPath = Path.Combine(testDirectory, "dab-config.json");
+        FileSystem fileSystem = new();
+        fileSystem.File.WriteAllText(
+            configPath,
+            GenerateRuntimeSectionStringFromParams(
+                restPath: "/initial",
+                gqlPath: "/graphql",
+                restEnabled: true,
+                gqlEnabled: true,
+                gqlIntrospection: true,
+                mode: HostMode.Development));
+
+        HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
+        FileSystemRuntimeConfigLoader configLoader = new(
+            fileSystem,
+            hotReloadEventHandler,
+            configPath,
+            connectionString: string.Empty,
+            isCliLoader: true);
+        Assert.IsTrue(configLoader.TryLoadKnownConfig(out _));
+
+        using ManualResetEventSlim handlerEntered = new();
+        using ManualResetEventSlim releaseHandler = new();
+        hotReloadEventHandler.Subscribe(
+            METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED,
+            (_, _) =>
+            {
+                handlerEntered.Set();
+                if (!releaseHandler.Wait(TimeSpan.FromSeconds(10)))
+                {
+                    throw new TimeoutException("Timed out waiting to release the handler.");
+                }
+            });
+
+        Task activeReload = Task.CompletedTask;
+        try
+        {
+            fileSystem.File.WriteAllText(
+                configPath,
+                GenerateRuntimeSectionStringFromParams(
+                    restPath: "/active",
+                    gqlPath: "/graphql",
+                    restEnabled: true,
+                    gqlEnabled: true,
+                    gqlIntrospection: true,
+                    mode: HostMode.Development));
+            activeReload = Task.Run(() => configLoader.ProcessHotReloadNotification());
+            Assert.IsTrue(
+                handlerEntered.Wait(TimeSpan.FromSeconds(5)),
+                "The active reload did not reach the uncooperative handler.");
+
+            RuntimeConfigLoaderShutdownService shutdownService = new(configLoader);
+            using CancellationTokenSource hostCancellation = new();
+            Task stopTask = shutdownService.StopAsync(hostCancellation.Token);
+            Assert.IsFalse(
+                stopTask.IsCompleted,
+                "The drain should still be waiting before the host timeout expires.");
+
+            hostCancellation.Cancel();
+            try
+            {
+                await stopTask.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.Fail("Hosted shutdown should observe the host cancellation token.");
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected: the configured host shutdown bound expired.
+            }
+
+            Assert.IsFalse(
+                activeReload.IsCompleted,
+                "Host timeout must not falsely report that an uncooperative handler was drained.");
+        }
+        finally
+        {
+            releaseHandler.Set();
+            await activeReload.WaitAsync(TimeSpan.FromSeconds(5));
+            await configLoader.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+            configLoader.Dispose();
+            Directory.Delete(testDirectory, recursive: true);
+        }
+    }
+
     private sealed class ReloadDependency : IDisposable
     {
         private int _disposed;

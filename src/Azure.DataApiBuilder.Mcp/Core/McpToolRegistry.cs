@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         internal McpToolRegistryUpdateResult ReplaceAll(IEnumerable<IMcpTool> tools, RuntimeConfig config)
         {
-            return PublishCandidate(CreateCandidate(tools, config));
+            return PublishCandidate(CreateCandidate(tools, config, CancellationToken.None));
         }
 
         /// <summary>
@@ -41,10 +41,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         internal static McpToolRegistryCandidate CreateCandidate(
             IEnumerable<IMcpTool> tools,
-            RuntimeConfig config)
+            RuntimeConfig config,
+            CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(tools);
             ArgumentNullException.ThrowIfNull(config);
+            cancellationToken.ThrowIfCancellationRequested();
 
             ImmutableDictionary<string, IMcpTool>.Builder toolBuilder =
                 ImmutableDictionary.CreateBuilder<string, IMcpTool>(StringComparer.OrdinalIgnoreCase);
@@ -52,6 +54,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             foreach (IMcpTool tool in tools)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 ArgumentNullException.ThrowIfNull(tool);
 
                 Tool metadata = CloneMetadata(tool.GetToolMetadata());

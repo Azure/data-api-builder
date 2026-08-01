@@ -29,9 +29,14 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public Task InitializeAsync();
 
         /// <summary>
-        /// Initializes the metadata providers with cooperative cancellation.
+        /// Initializes the metadata providers with cooperative cancellation. Implementations that
+        /// do not override this member retain their existing initialization behavior.
         /// </summary>
-        public Task InitializeAsync(CancellationToken cancellationToken);
+        public Task InitializeAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return InitializeAsync();
+        }
 
         /// <summary>
         /// Initializes the metadata providers with parameters

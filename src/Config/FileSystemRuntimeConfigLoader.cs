@@ -38,6 +38,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     private readonly object _watcherLock = new();
     private readonly Func<IFileSystem, string, string, IConfigFileWatcher> _configFileWatcherFactory;
     private TaskCompletionSource _activeOperationsDrained = CreateCompletedDrainSignal();
+    private Task _cancellationCallbacksCompleted = Task.CompletedTask;
     private int _activeOperationCount;
     private int _disposed;
     /// <summary>
@@ -138,20 +139,20 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     }
 
     /// <summary>
-    /// Disposes the config file watcher to release file handles and stop
-    /// monitoring the config file for changes. Active serialized work is canceled and drained
-    /// before this method returns so it cannot outlive host-owned dependencies.
+    /// Stops admitting new work and requests cancellation of active work. Coordinated hosts call
+    /// <see cref="StopAsync"/> before disposing dependencies when they need to drain active work.
+    /// Synchronous disposal does not wait indefinitely for an uncooperative event subscriber.
     /// </summary>
     public void Dispose()
     {
-        StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+        _ = BeginShutdown();
     }
 
     /// <summary>
     /// Stops accepting hot-reload work, requests cancellation of the active operation, and waits
     /// until all serialized work has exited. Host shutdown calls this before singleton disposal.
     /// </summary>
-    internal async Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         Task activeOperationsDrained = BeginShutdown();
         await activeOperationsDrained.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -159,16 +160,51 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 
     private Task BeginShutdown()
     {
-        bool firstShutdownRequest = Interlocked.Exchange(ref _disposed, 1) == 0;
+        bool firstShutdownRequest;
+        TaskCompletionSource? cancellationCallbacksCompleted = null;
+        Task shutdownCompleted;
+        lock (_operationLock)
+        {
+            firstShutdownRequest = Interlocked.Exchange(ref _disposed, 1) == 0;
+            if (firstShutdownRequest)
+            {
+                cancellationCallbacksCompleted = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                _cancellationCallbacksCompleted = cancellationCallbacksCompleted.Task;
+            }
+
+            shutdownCompleted = Task.WhenAll(
+                _activeOperationsDrained.Task,
+                _cancellationCallbacksCompleted);
+        }
+
         if (firstShutdownRequest)
         {
-            _disposeCancellation.Cancel();
+            // Cancellation callbacks are user-extensible and may block. CancelAsync marks the
+            // token canceled without running those callbacks on the host's stopping thread.
+            _ = RequestOperationCancellationAsync(cancellationCallbacksCompleted!);
             StopAndDisposeConfigFileWatcher();
         }
 
-        lock (_operationLock)
+        return shutdownCompleted;
+    }
+
+    private async Task RequestOperationCancellationAsync(
+        TaskCompletionSource cancellationCallbacksCompleted)
+    {
+        try
         {
-            return _activeOperationsDrained.Task;
+            await _disposeCancellation.CancelAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            SendLogToBufferOrLogger(
+                LogLevel.Warning,
+                $"A hot-reload cancellation callback failed during shutdown due to {ex.Message}");
+        }
+        finally
+        {
+            cancellationCallbacksCompleted.TrySetResult();
         }
     }
 
@@ -507,8 +543,27 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         [NotNullWhen(true)] out RuntimeConfig? config,
         ILogger? logger = null,
         bool? isDevMode = null,
-        DeserializationVariableReplacementSettings? replacementSettings = null,
-        CancellationToken cancellationToken = default)
+        DeserializationVariableReplacementSettings? replacementSettings = null)
+    {
+        return TryLoadConfig(
+            path,
+            out config,
+            logger,
+            isDevMode,
+            replacementSettings,
+            CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Loads runtime configuration with cooperative cancellation for retry waits.
+    /// </summary>
+    public bool TryLoadConfig(
+        string path,
+        [NotNullWhen(true)] out RuntimeConfig? config,
+        ILogger? logger,
+        bool? isDevMode,
+        DeserializationVariableReplacementSettings? replacementSettings,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         IsParseErrorEmitted = false;
@@ -643,6 +698,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         if (!TryLoadConfig(
             ConfigFilePath,
             out _,
+            logger: null,
             isDevMode: isDevMode,
             replacementSettings: replacementSettings,
             cancellationToken: cancellationToken))
@@ -655,7 +711,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 
         IsNewConfigDetected = true;
         IsNewConfigValidated = false;
-        SignalConfigChanged(cancellationToken: cancellationToken);
+        SignalConfigChanged(message: string.Empty, cancellationToken);
+
+        // Telemetry (and any other) logs buffered during the reload parse are otherwise only
+        // drained once at startup. Flush them now so hot-reload logs are actually emitted and the
+        // shared static buffer does not accumulate entries across successive reloads.
+        FlushLogBuffer();
 
         SendLogToBufferOrLogger(LogLevel.Information, "Hot-reload process finished.");
     }
@@ -848,13 +909,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     }
 
     /// <summary>
-    /// Flush all logs from the buffer after the log level is set from the RuntimeConfig.
-    /// Logger needs to be present, or else the logs will be lost.
+    /// The logger this loader emits to once set, consumed by the base
+    /// <see cref="RuntimeConfigLoader.FlushLogBuffer"/> to drain buffered logs.
     /// </summary>
-    public void FlushLogBuffer()
-    {
-        _logBuffer.FlushToLogger(_logger!);
-    }
+    protected override ILogger? Logger => _logger;
 
     /// <summary>
     /// Helper method that sends the log to the buffer if the logger has not being set up.

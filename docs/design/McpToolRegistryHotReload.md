@@ -2,23 +2,56 @@
 
 ## Status
 
-Proposed.
+Implemented by this change; retained as the design and review record.
 
-This document describes the agreed design for refreshing Data API builder's MCP tool registry when runtime configuration is hot-reloaded. It is intended to guide implementation and review.
+This document describes the implemented design for refreshing Data API builder's MCP tool registry
+when runtime configuration is hot-reloaded. It records not only the final behavior but also the
+compatibility boundaries, lifecycle guarantees, rejected alternatives, and known limitations that
+are important during review.
 
-Source links in this document point to the current implementation that will be changed; they are not examples of the proposed implementation.
+Source links point to the implementation delivered by this change.
 
 ## Summary
 
-DAB currently builds its MCP tool registry once at startup. A hot-reloaded `RuntimeConfig` can change which custom tools exist and can change their names, descriptions, and input schemas, but the registry continues serving the startup tool instances and startup metadata.
+Before this change, DAB built its MCP tool registry once at startup. A hot-reloaded `RuntimeConfig`
+could change which custom tools existed and could change their names, descriptions, and input
+schemas, but the registry continued serving the startup tool instances and startup metadata.
 
-The proposed design keeps `McpToolRegistry` as a singleton and changes its contents to an atomically published immutable snapshot. A singleton refresh service builds a complete candidate snapshot after the existing metadata, engine, and authorization hot-reload handlers have run. If candidate construction succeeds, the service atomically swaps the snapshot. If it fails, the previous snapshot remains active.
+The implemented design keeps `McpToolRegistry` as a singleton and changes its contents to an atomically published immutable snapshot. A singleton refresh service builds a complete candidate snapshot after the existing metadata, engine, and authorization hot-reload handlers have run. If candidate construction succeeds, the service atomically swaps the snapshot. If it fails, the previous snapshot remains active.
 
 The design also sends `notifications/tools/list_changed` to an initialized stdio client when the advertised tool list or metadata changes. HTTP requests always read the current snapshot, but HTTP push notifications are deferred because the installed MCP SDK requires experimental session tracking APIs for broadcast notifications.
 
+## Reviewer Guide: Deliberate Design Calls
+
+The following decisions are intentional. They are summarized here because they are the places most
+likely to look surprising when reviewing the implementation in isolation.
+
+| Design call | Why this design was chosen | Accepted consequence |
+|---|---|---|
+| Replace the complete registry instead of mutating it or DI | One atomic reference swap gives lookup and discovery one generation and preserves the previous generation on failure. | Every applicable reload rebuilds all generated custom tools. |
+| Keep both a loader serialization gate and a registry writer lock | The loader gate protects cross-component metadata/config ordering; the registry lock protects publication from direct or out-of-band callers. They have different ownership and neither is redundant. | Registry rebuilds are serialized even outside the normal file-loader path. |
+| Defer initial publication from hosted-service `StartAsync()` | Generic hosted services start before `Startup.Configure` completes database metadata initialization. Publishing there would advertise config-only or stale schemas. | The hosted service subscribes early, while the shared startup helper performs strict initial publication after metadata is ready. |
+| Use `RuntimeConfig` reference identity as the generation token | The loader creates and publishes a new configuration object for each parsed generation. Reference identity is cheaper and less error-prone than structural comparison or maintaining a second version counter. | Callers that replace the current configuration object create a new generation even when values are equal. |
+| Publish a fresh generation even when discovery metadata is equivalent | Generated tool instances must align with the current configuration and metadata generation. | Registry version and instances change, but no `list_changed` notification is sent for semantically equivalent discovery. |
+| Retain the previous registry when a reload candidate fails | A complete previously validated snapshot is safer than a partial or invalid new snapshot. | Until a later successful reload, runtime configuration can be newer than MCP discovery; execution-time revalidation prevents obsolete authorization or execution. |
+| Permit configuration-schema fallback when DB enrichment is unavailable | Existing custom-tool behavior already has a usable configuration-derived schema, and metadata unavailability should not silently remove an otherwise callable tool. | Discovery can be less precise; the fallback reason is logged. All other construction failures reject the whole candidate. |
+| Keep ordered hot-reload callbacks synchronous | Existing DAB ordering is defined by synchronous event completion. Returning early or introducing an untracked queue would let later components publish before earlier ones finish. | A watcher callback can remain occupied for the reload duration; concurrent callbacks wait on the loader gate and shutdown cancels queued waiters. |
+| Add cancellation through Core rather than only canceling gate waits | Shutdown cannot safely drain a reload if metadata connection opening, schema discovery, query execution, or token acquisition ignores cancellation. | The change necessarily touches shared query and metadata paths; default interface implementations preserve existing implementers. |
+| Bound shutdown by `HostOptions.ShutdownTimeout` | An unbounded drain can hang process shutdown forever when an extension callback does not cooperate. | A successful drain guarantees dependency safety; after timeout, the host may dispose dependencies while non-cooperative extension code is still running. .NET cannot forcibly terminate that code. |
+| Make synchronous `Dispose()` nonblocking | `Dispose()` can run after the host's bounded drain has already timed out and must not reintroduce an infinite wait. | Coordinated hosts and direct consumers that need a drain must call `StopAsync()` before disposing dependent services. |
+| Dispose the OS watcher and blocked stdout resources without joining them | `FileSystemWatcher.Dispose()` and an abandoned stdout pipe can block independently of reload correctness. | Event admission is stopped synchronously; exceptional resource cleanup is left to a background worker or process teardown rather than delaying host shutdown. |
+| Coalesce stdio invalidations and do not replay pre-initialization changes | `list_changed` is an invalidation, not a change log; one frame tells the client to fetch the latest complete snapshot. Before initialization the client has no established cache to invalidate. | Intermediate generations are not individually reported. |
+| Advertise stdio push but not HTTP push | Stdio has one owned connection. HTTP broadcast requires experimental MCP SDK session interception and tracking. | HTTP clients see the latest snapshot on their next explicit `tools/list` request but receive no push invalidation in this change. |
+| Remove CLR-public MCP implementation plumbing but preserve supported Core interfaces | Incremental registry methods permit a second, non-atomic construction model and the MCP assembly is not a supported reference package. Core interfaces are supported extension points. | Manual consumers of unsupported MCP runtime members must migrate; Core implementers remain source- and binary-compatible through default interface methods. |
+| Allow an in-flight call to retain its resolved old tool instance | Invalidating or canceling arbitrary requests at the instant of publication would require per-request generation tracking. | The call can finish, but generated tools revalidate current configuration, metadata, and authorization before execution. |
+
+The detailed sections below define the exact guarantees and alternatives behind these calls.
+
 ## Motivation
 
-Custom MCP tools are generated from stored-procedure entities with `mcp.custom-tool` enabled. Today, those tools are constructed from the startup configuration and registered as DI singletons. The registry is then populated once by a hosted service.
+Custom MCP tools are generated from stored-procedure entities with `mcp.custom-tool` enabled. Before
+this change, those tools were constructed from the startup configuration and registered as DI
+singletons. The registry was then populated once by a hosted service.
 
 Consequently, a configuration hot-reload can leave MCP discovery stale in several ways:
 
@@ -29,7 +62,9 @@ Consequently, a configuration hot-reload can leave MCP discovery stale in severa
 - Changing stored-procedure parameters does not update the advertised input schema.
 - A custom tool can retain metadata derived from an old database metadata generation.
 
-Built-in tool visibility already evaluates the current configuration during each `tools/list` request, but it is combined with a fixed startup registry. This avoids some stale built-in visibility, but does not solve stale custom tools or provide a single consistent registry generation.
+Built-in tool visibility already evaluated the current configuration during each `tools/list`
+request, but combined it with a fixed startup registry. This avoided some stale built-in visibility,
+but did not solve stale custom tools or provide a single consistent registry generation.
 
 ## Previous Implementation
 
@@ -50,7 +85,7 @@ The former `McpToolRegistryInitializer` resolved every `IMcpTool` and registered
 
 [McpToolRegistry.cs](../../src/Azure.DataApiBuilder.Mcp/Core/McpToolRegistry.cs) stored tools in a mutable, case-insensitive `Dictionary<string, IMcpTool>`. It supported individual registration, lookup by name, and filtering enabled tools using a supplied `RuntimeConfig`.
 
-The dictionary is safe under current startup-only mutation, but it cannot be modified concurrently with MCP requests.
+The dictionary was safe under startup-only mutation, but could not be modified concurrently with MCP requests.
 
 ### Custom tool metadata
 
@@ -64,7 +99,7 @@ Execution is safer than discovery: `ExecuteAsync()` retrieves the current `Runti
 
 [McpStdioServer.cs](../../src/Azure.DataApiBuilder.Mcp/Core/McpStdioServer.cs) implements the equivalent stdio JSON-RPC handlers.
 
-Both transports currently combine a fixed registry with the latest runtime configuration during `tools/list`.
+Both transports combined a fixed registry with the latest runtime configuration during `tools/list`.
 
 ### Existing hot-reload pipeline
 
@@ -99,7 +134,7 @@ The MCP registry needs refreshed database metadata and must not publish newly ca
 
 ## Non-Goals
 
-This work will not:
+This work does not:
 
 - Dynamically enable MCP when it was disabled at application startup.
 - Dynamically disable or unmap an MCP endpoint.
@@ -120,11 +155,11 @@ Changes to startup-bound MCP settings continue to require a process restart. Imp
 
 HTTP and stdio request handlers already retain a reference to the registry. Keeping one singleton avoids rebuilding MCP servers, handlers, transports, or service providers.
 
-The singleton will no longer expose a dictionary that is incrementally mutated during normal operation. Instead, it will hold one current immutable snapshot reference.
+The singleton no longer exposes a dictionary that is incrementally mutated during normal operation. Instead, it holds one current immutable snapshot reference.
 
 ### 2. Registry generations are immutable snapshots
 
-The registry snapshot will conceptually contain:
+The registry snapshot conceptually contains:
 
 ```csharp
 internal sealed record McpToolRegistrySnapshot(
@@ -182,7 +217,7 @@ This avoids treating the immutable DI service collection as a dynamic registry.
 
 ### 5. Refresh orchestration is separate from state storage
 
-A singleton `McpToolRegistryRefreshService` will coordinate initialization and hot-reload. It will also implement `IHostedService` for normal HTTP-host startup.
+A singleton `McpToolRegistryRefreshService` coordinates initialization and hot-reload. It also implements `IHostedService` for normal HTTP-host startup.
 
 Its responsibilities are:
 
@@ -200,7 +235,8 @@ Its responsibilities are:
 
 ### 6. Custom tool creation is strict
 
-`CustomMcpToolFactory` currently catches broad exceptions and skips individual entities. That would allow a partial candidate to be published.
+`CustomMcpToolFactory` previously caught broad exceptions and skipped individual entities. Retaining
+that behavior would allow a partial candidate to be published.
 
 For registry initialization and refresh:
 
@@ -222,7 +258,7 @@ void InitializeMetadata(
     IMetadataProviderFactory metadataProviderFactory);
 ```
 
-`McpMetadataHelper` may gain an overload that accepts `IMetadataProviderFactory` directly. Existing execution call sites may retain the service-provider overload where resolving request services is appropriate.
+`McpMetadataHelper` has an overload that accepts `IMetadataProviderFactory` directly. Execution call sites retain the service-provider overload where resolving request services is appropriate.
 
 This ensures that:
 
@@ -280,7 +316,7 @@ Stdio intentionally does not start the ASP.NET Core host, so `Startup.Configure`
 database metadata. `McpStdioHelper` invokes the same serialized initial dependency operation used by
 HTTP startup before starting the stdio loop.
 
-This replaces the current duplicate per-tool registration path and gives both transports identical validation and metadata behavior.
+This replaces the former duplicate per-tool registration path and gives both transports identical validation and metadata behavior.
 
 ### 10. A stale candidate is never published
 
@@ -292,6 +328,8 @@ and validation, metadata initialization, and MCP registry publication. For reloa
 acquired before loading the new configuration and remains held until every synchronous
 `SignalConfigChanged()` handler returns. Consequently, one complete generation finishes before
 another path can replace the active configuration or begin updating dependencies.
+
+#### Serialization layers and lock ordering
 
 The refresh service retains its own writer gate and stale-generation guard as defense in depth:
 
@@ -312,12 +350,71 @@ prevents an older, slower registry rebuild initiated outside the file-loader pip
 overwriting a newer registry generation. Neither mechanism provides transactional rollback after a
 handler failure; that remains separate work.
 
-Loader shutdown does not wait to acquire this gate. `FileSystemRuntimeConfigLoader.Dispose()` first
-atomically marks the loader disposed, detaches and disables its file watcher under a separate
-watcher-lifecycle lock, and then schedules potentially blocking OS watcher resource disposal on a
-background worker. An active reload may finish, but cancellation releases callbacks waiting to
-enter the gate. This prevents host shutdown from waiting indefinitely when a reload is stalled in
-external database metadata initialization.
+The two locks protect different invariants. The loader gate spans configuration publication and all
+ordered component callbacks. The refresh lock spans only registry candidate creation and
+publication, including direct `EnsureInitialized()` calls that do not own the loader gate. Normal
+startup and file reload acquire them in loader-then-refresh order. The refresh service never calls
+back into an operation that acquires the loader gate while holding its own lock, and transport
+notification occurs after the refresh lock is released. This fixed ownership prevents lock-order
+cycles while retaining defense against out-of-band callers.
+
+Reference identity is deliberately checked after candidate construction, immediately before
+publication. Checking only before construction would not detect a configuration replacement that
+occurs while tools and metadata are being materialized.
+
+#### Shutdown contract
+
+Loader shutdown does not wait to acquire this gate. It atomically stops admission, cancels callbacks
+waiting to enter the gate, and requests cooperative cancellation of the active generation.
+Cancellation is propagated through every DAB-owned ordered handler and metadata database operation,
+including connection opening, schema discovery, query execution, access-token acquisition, and the
+otherwise synchronous `FillSchema` command. Cancellation is checked before later MCP, GraphQL,
+authorization, and logging publications, so a canceled owned generation does not continue through
+the remaining pipeline.
+
+The loader tracks each operation that owns the serialization gate and exposes an idempotent
+`StopAsync(CancellationToken)` drain. An `IHostedService` invokes that drain during the host stopping
+phase, before the root service provider disposes reload subscribers or their dependencies. The
+host-supplied token bounds the drain according to `HostOptions.ShutdownTimeout`. Stdio composition,
+which constructs but does not start the ASP.NET Core host, explicitly applies the same configured
+timeout before disposing its host. Synchronous `FileSystemRuntimeConfigLoader.Dispose()` only stops
+admission and requests cancellation; it does not reintroduce an unbounded wait after a host timeout.
+
+.NET cannot forcibly terminate arbitrary synchronous subscriber code. A successful drain guarantees
+that no reload operation remains and dependency disposal is safe. If the host timeout expires, the
+host stops waiting; DAB-owned subscribers are designed to observe cancellation, while extension
+subscribers are contractually required to observe `HotReloadEventArgs.CancellationToken` and avoid
+indefinite blocking. Isolating non-cooperative extension callbacks from root-provider lifetime would
+require a separately owned dependency container and is outside this feature's scope.
+
+The resulting guarantees are:
+
+| Shutdown path | Guarantee |
+|---|---|
+| Active DAB-owned handler observes cancellation | `StopAsync()` waits for the gate owner and cancellation callbacks to exit, then dependencies may be safely disposed. |
+| Queued reload waiting for the loader gate | The loader token cancels the wait; the callback never becomes an active generation. |
+| Extension handler ignores cancellation but exits before the host timeout | The drain still completes and dependency disposal remains ordered after the handler. |
+| Extension handler remains blocked when the host timeout expires | `StopAsync()` observes the host token and returns cancellation; the host may continue disposal. No stronger lifetime guarantee is possible for arbitrary in-process synchronous code. |
+| Direct synchronous `Dispose()` | New work is rejected and cancellation starts, but no drain is promised. A direct owner requiring dependency ordering must call `StopAsync()` first. |
+
+Cancellation callbacks are also extension points and can block. Shutdown uses `CancelAsync()` and
+tracks callback completion rather than running callbacks inline on the host stopping thread. The
+tracked callback task participates in a successful drain, while the caller's shutdown token still
+bounds the wait.
+
+#### Watcher callback and resource-lifetime decision
+
+`ConfigFileWatcher` invokes the reload entry point synchronously rather than creating a detached
+task. This preserves the existing ordered event contract and ensures every admitted reload is
+tracked as either a gate waiter or gate owner. File-system implementations may invoke another
+callback concurrently; the loader gate serializes those callbacks and shutdown cancels queued
+waiters. Introducing another queue would require separate task ownership, ordering, coalescing, and
+drain rules without improving registry atomicity.
+
+Watcher callback admission is disabled synchronously under a separate watcher-lifecycle lock.
+Potentially blocking operating-system watcher resource disposal is scheduled on a background worker;
+this resource cleanup is independent of the reload-operation drain and does not retain access to the
+reload subscribers.
 
 ### 11. Existing tool-call safety is preserved
 
@@ -368,6 +465,10 @@ depends on zero or more tool-list notifiers; HTTP mode has no notifier registere
 If the thread pool rejects the initial worker request, the notifier retains the pending invalidation
 and starts one dedicated background fallback worker. This rare fallback keeps reload callbacks
 nonblocking and avoids losing the only invalidation when no later configuration change occurs.
+Because an abandoned client can leave stdout blocked indefinitely, `McpStdoutWriter.Dispose()`
+first rejects future writes and releases the underlying writer only when its serialization lock is
+immediately available. Host disposal therefore does not wait behind a blocked notification; in that
+exceptional case the process-owned stdout handle is reclaimed when the process exits.
 
 ### 13. HTTP reads are immediately current, but HTTP push is deferred
 
@@ -431,9 +532,11 @@ that same snapshot.
 ### Intentional cleanup of CLR-public implementation members
 
 This change deliberately removes or narrows members that happened to be declared `public`, including
-the `RegisterTool()` overloads, `GetEnabledTools()`, `InitializeAndRegisterTools()`, and the former
-`McpToolRegistryInitializer`; bulk candidate construction/publication is now `internal`. This is an
-intentional source/API-surface change, not an accidental compatibility omission.
+the `RegisterTool()` overloads, `GetEnabledTools()`, `InitializeAndRegisterTools()`,
+`DynamicCustomTool.InitializeMetadata(IServiceProvider)`, and the former
+`McpToolRegistryInitializer`. `CustomMcpToolFactory.CreateCustomTools()` now exposes its concrete
+generated-tool result type, and bulk candidate construction/publication is `internal`. These are
+intentional source/API-surface changes, not accidental compatibility omissions.
 
 Those members were used only by DAB's own startup and test implementation. They were not documented
 as extension APIs, and `Azure.DataApiBuilder.Mcp.dll` is runtime payload of the DAB tool rather than a
@@ -442,6 +545,45 @@ not expose the MCP implementation assembly. A consumer that manually referenced 
 called these methods was depending on unsupported internals solely because their CLR visibility was
 too broad. Retaining obsolete shims would preserve two conflicting construction models and undermine
 the atomic-snapshot invariant, so the implementation-only surface is removed instead.
+
+Cancellation-aware overloads added to the supported `Microsoft.DataApiBuilder.Core` interfaces are
+different: they use default interface implementations that check pre-cancellation and delegate to
+the established parameterless members. Existing third-party implementations therefore remain
+source- and binary-compatible. DAB's built-in implementations override the overloads to propagate
+cancellation through database I/O.
+
+### Cancellation API compatibility and legacy behavior
+
+The cancellation additions intentionally extend rather than replace established contracts:
+
+- `IMetadataProviderFactory`, `ISqlMetadataProvider`, and `IQueryExecutor` retain all legacy
+    members. Their new token overloads are default interface methods that reject an already canceled
+    call and otherwise delegate to the legacy member.
+- A legacy third-party implementation therefore compiles and runs unchanged. Once its legacy call
+    begins, DAB cannot impose cooperative cancellation on work that does not accept a token; this is
+    the compatibility trade-off. DAB-owned implementations override the new members and carry the
+    token to connection opening, commands, readers, retries, and access-token acquisition.
+- `HotReloadEventArgs` adds a read-only token and a three-argument constructor while retaining the
+    original two-argument constructor. Existing compiled and source callers remain valid, while the
+    file loader uses the new overload with its owned shutdown token.
+- Existing public and protected Config/Core members retain their original signatures and virtual
+    slots. `TryLoadConfig()`, `SignalConfigChanged()`, `PopulateTriggerMetadataForTable()`,
+    `GenerateAutoentitiesIntoEntities()`, and `QueryAutoentitiesAsync()` delegate to or are invoked
+    by explicit token-aware overloads. Existing compiled callers and derived providers therefore do
+    not need to recompile or add overrides.
+- `IMcpToolRegistryRefreshService` retains parameterless `EnsureInitialized()` and provides the
+    token overload through a default implementation. The shared startup path uses the token overload;
+    existing test or embedding implementations that only provide the original member continue to
+    work.
+- The otherwise synchronous provider `FillSchema()` call cannot be made truly asynchronous. DAB
+    registers cancellation to invoke `DbCommand.Cancel()` and converts a provider exception observed
+    after cancellation into `OperationCanceledException`. This is best-effort and remains dependent
+    on the database provider honoring command cancellation.
+
+`FileSystemRuntimeConfigLoader.StopAsync(CancellationToken)` is public because the Service assembly
+and direct hosts must coordinate Config-owned work before disposing their own dependency graph. It
+is a lifecycle operation, not a replacement for `Dispose()`; repeated calls join the same shutdown
+and may use different caller-side timeout tokens.
 
 ## Detailed Flows
 
@@ -457,9 +599,9 @@ sequenceDiagram
     participant Registry as McpToolRegistry
 
     Host->>Refresh: StartAsync (subscribe only)
-    Startup->>Metadata: InitializeAsync()
+    Startup->>Metadata: InitializeAsync(loader cancellation token)
     Metadata-->>Startup: DB metadata ready
-    Startup->>Refresh: EnsureInitialized()
+    Startup->>Refresh: EnsureInitialized(loader cancellation token)
     Refresh->>Refresh: Capture current RuntimeConfig
     Refresh->>Factory: Create custom tools(config)
     Factory-->>Refresh: Fresh custom tools
@@ -482,9 +624,9 @@ sequenceDiagram
     participant Registry as McpToolRegistry
     participant Server as McpStdioServer
 
-    Helper->>Metadata: InitializeAsync()
+    Helper->>Metadata: InitializeAsync(loader cancellation token)
     Metadata-->>Helper: DB metadata ready
-    Helper->>Refresh: EnsureInitialized()
+    Helper->>Refresh: EnsureInitialized(loader cancellation token)
     Refresh->>Registry: Build and publish initial snapshot
     Helper->>Server: RunAsync()
     Server->>Server: Handle initialize
@@ -625,9 +767,9 @@ The intended registrations are:
 
 The refresh service preserves every implementation in its DI-provided `IEnumerable<IMcpTool>`. Reflection-based discovery of DAB's own implementations continues to exclude `DynamicCustomTool`; those instances come only from the per-generation factory during normal startup and reload.
 
-## Anticipated Source Changes
+## Implementation Map
 
-The exact file split may change during implementation, but the expected touchpoints are:
+The implementation is split across the following touchpoints:
 
 ### Config project
 
@@ -713,6 +855,8 @@ The exact file split may change during implementation, but the expected touchpoi
 13. Stdio advertises `listChanged = false` when no stdio notifier is composed.
 14. A rejected primary worker schedule retains and delivers the pending notification through the fallback worker.
 15. Multiple changes while a write is blocked coalesce to one additional pending notification.
+16. Disposing the shared stdout writer while a notification write is blocked returns immediately,
+    rejects later writes, and does not corrupt the in-flight frame when the pipe resumes.
 
 ### Hot-reload integration tests
 
@@ -729,8 +873,15 @@ The exact file split may change during implementation, but the expected touchpoi
     the final advertised schema comes from the reload generation's database metadata.
 11. A physical stdio config-file write traverses the complete ordered pipeline, emits exactly one
     notification for one net-new file content, and returns updated discovery.
-12. Disposing the file loader while a reload handler is blocked returns without waiting for the
-    pipeline, and callbacks queued on the loader gate exit after disposal begins.
+12. Shutdown cancels an active cancellation-aware reload handler, prevents later ordered handlers
+    from running, cancels callbacks queued on the loader gate, and waits for the active handler to
+    exit before the drain completes.
+13. Hosted shutdown drains active reload work before earlier hosted services stop and before the
+    root provider disposes reload subscribers or their dependencies.
+14. Hosted shutdown observes its supplied cancellation token when a non-cooperative subscriber
+    prevents the drain from completing.
+15. Potentially blocking operating-system watcher disposal does not delay the reload-operation
+    drain after watcher callbacks have been synchronously disabled and detached.
 
 Database-backed schema tests should reuse existing MCP stored-procedure fixtures where database metadata is required. Pure membership, collision, notification, and atomicity behavior should remain unit-testable without a live database.
 
@@ -788,6 +939,67 @@ Rejected because handlers already dereference the registry per request. Rebuildi
 
 Deferred because registry correctness does not require it and the current SDK exposes active-session interception through an experimental API.
 
+### Queue file-watcher reloads onto detached tasks
+
+Rejected because the existing ordered pipeline defines completion synchronously. A detached queue
+would need a second ordering and coalescing model, explicit task ownership, exception observation,
+and another shutdown drain. Keeping callbacks synchronous and serializing them at the loader gate
+makes every admitted operation observable to shutdown.
+
+### Wait without a timeout until every reload subscriber exits
+
+Rejected because extension callbacks are arbitrary synchronous code and can block forever. An
+unbounded wait would make `HostOptions.ShutdownTimeout` ineffective. The implementation requests
+cooperative cancellation and drains normally, but honors the host's timeout when code does not
+cooperate.
+
+### Dispose dependencies immediately without draining reload work
+
+Rejected because DAB-owned reload handlers use singleton metadata, query, authorization, and
+logging dependencies. Disposing those while a cooperative generation is unwinding creates avoidable
+use-after-dispose races. The shutdown hosted service is registered last so it stops first and drains
+the loader before earlier hosted services and the root provider stop.
+
+### Isolate reload subscribers in a separately owned service provider
+
+Deferred. A child provider could remain alive after the root host timeout and would provide a
+stronger lifetime boundary for non-cooperative extensions, but it would duplicate or proxy a large
+singleton graph and change existing hot-reload ownership. That is disproportionate to this registry
+feature and does not make arbitrary code forcibly cancelable.
+
+### Run cancellation callbacks inline on the stopping thread
+
+Rejected because token registrations are extension points and may themselves block. `CancelAsync()`
+allows cancellation to be requested without trapping the host stopping thread inside a callback,
+while callback completion still participates in a successful bounded drain.
+
+### Preserve obsolete public registry methods as compatibility shims
+
+Rejected because `RegisterTool()`, caller-configured filtering, and bulk initialization expose a
+second incremental construction path that can violate the atomic-generation invariant. These were
+implementation members of the unsupported MCP runtime assembly. Supported Core interface additions
+instead use default methods to preserve compatibility.
+
+### Notify for every published generation
+
+Rejected because configuration and metadata generations can change without changing MCP discovery.
+Notifications are client cache invalidations, so emitting them for equivalent advertised metadata
+causes unnecessary `tools/list` traffic. The implementation still publishes fresh tool instances
+but compares canonical discovery metadata before notifying.
+
+### Canonicalize the JSON served to clients
+
+Rejected because recursively sorting schema properties would alter stored-procedure parameter wire
+order. The registry stores separate order-preserving serving JSON and canonical comparison JSON so
+semantic comparison does not change client-visible ordering.
+
+### Block disposal until an abandoned stdio write completes
+
+Rejected because a client can stop reading while leaving the pipe open, causing the write lock to
+remain held indefinitely. Disposal marks the writer closed to new work and releases resources only
+when the lock is immediately available; otherwise process teardown reclaims the process-owned
+stdout handle.
+
 ## Risks and Mitigations
 
 | Risk | Mitigation |
@@ -800,6 +1012,17 @@ Deferred because registry correctness does not require it and the current SDK ex
 | Stdio notification corrupts JSON-RPC output | Use the shared locked `McpStdoutWriter`. |
 | HTTP clients cache old list | Every explicit list request is current; HTTP push is tracked as follow-up. |
 | Config commits while MCP refresh fails | Preserve valid registry, log degraded state, and rely on future transactional hot-reload work for global rollback. |
+| Mutable SDK metadata is changed by a tool or caller | Deep-clone metadata into the candidate and return caller-owned clones from discovery. |
+| Raw JSON order creates false discovery changes | Compare separately canonicalized JSON while preserving source property order in served JSON. |
+| Startup publishes before DB metadata exists | Hosted service subscribes only; the shared startup helper publishes under the loader gate after metadata initialization. |
+| Shutdown cancels only gate waiters but not active database work | Propagate the loader token through DAB-owned handlers, metadata providers, query executors, connections, commands, and token acquisition. |
+| Synchronous `FillSchema()` ignores cancellation | Register `DbCommand.Cancel()` as best-effort provider cancellation and translate cancellation-triggered provider failures. |
+| Cancellation callback blocks the host stopping thread | Request cancellation with `CancelAsync()` and include callback completion in the bounded drain. |
+| Non-cooperative extension prevents shutdown drain | Honor the host timeout and document that extension callbacks must observe the event token; stronger isolation is follow-up architecture. |
+| OS watcher disposal blocks behind a callback | Disable and detach admission synchronously, then dispose the watcher independently on a background worker. |
+| Stdio client stops reading stdout | Keep notification I/O off the reload path and make writer disposal reject new writes without waiting for a blocked write lock. |
+| Notification queue grows while stdout is blocked | Store one pending invalidation bit and coalesce all intermediate changes. |
+| New cancellation overloads break third-party Core implementations | Use default interface implementations that precheck cancellation and delegate to legacy members. |
 
 ## Acceptance Criteria
 
@@ -820,6 +1043,11 @@ The implementation is complete when:
 13. Existing execution-time configuration and authorization validation remains intact.
 14. Unit, concurrency, transport, and hot-reload tests cover the behaviors listed in this document.
 15. Independently DI-registered `IMcpTool` extensions survive startup and every refresh.
+16. Initial construction and every DAB-owned reload generation observe loader shutdown cancellation.
+17. A successful loader drain completes before dependent hosted services and the root provider are disposed.
+18. A non-cooperative extension cannot make the host ignore `HostOptions.ShutdownTimeout`.
+19. Existing Core interface implementers and legacy `HotReloadEventArgs` construction remain source- and binary-compatible.
+20. Blocked watcher or stdio resource cleanup cannot indefinitely delay coordinated host shutdown.
 
 ## Follow-Up Work
 
@@ -829,3 +1057,7 @@ The following work remains intentionally separate:
 - Dynamic MCP endpoint enablement and path changes.
 - HTTP session tracking and `notifications/tools/list_changed` broadcast.
 - Dynamic initialize instructions for future HTTP sessions, if required.
+- Separate dependency ownership or process isolation for non-cooperative extension callbacks, if a
+    stronger post-timeout lifetime guarantee becomes a product requirement.
+- Truly asynchronous schema-table discovery if database providers add an alternative to synchronous
+    `DbDataAdapter.FillSchema()`; command cancellation remains best-effort until then.

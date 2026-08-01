@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataApiBuilder.Service.Utilities
 {
@@ -103,11 +104,28 @@ namespace Azure.DataApiBuilder.Service.Utilities
             }
             finally
             {
-                host.Services
-                    .GetService<FileSystemRuntimeConfigLoader>()?
-                    .StopAsync(CancellationToken.None)
-                    .GetAwaiter()
-                    .GetResult();
+                FileSystemRuntimeConfigLoader? configLoader =
+                    host.Services.GetService<FileSystemRuntimeConfigLoader>();
+                if (configLoader is not null)
+                {
+                    TimeSpan shutdownTimeout = host.Services
+                        .GetService<IOptions<HostOptions>>()?
+                        .Value.ShutdownTimeout ?? new HostOptions().ShutdownTimeout;
+                    using CancellationTokenSource shutdownCancellation = new(shutdownTimeout);
+                    try
+                    {
+                        configLoader
+                            .StopAsync(shutdownCancellation.Token)
+                            .GetAwaiter()
+                            .GetResult();
+                    }
+                    catch (OperationCanceledException)
+                        when (shutdownCancellation.IsCancellationRequested)
+                    {
+                        // Match Generic Host shutdown semantics: cancellation bounds the drain.
+                    }
+                }
+
                 host.Dispose();
             }
         }

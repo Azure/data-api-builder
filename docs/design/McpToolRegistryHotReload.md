@@ -496,9 +496,11 @@ Every applicable configuration hot-reload rebuilds and publishes a generation so
 
 The registry compares the previous and candidate advertised metadata in deterministic name order.
 Before comparison it canonicalizes serialized JSON recursively by sorting object properties while
-preserving array order. The comparison therefore ignores semantically irrelevant object insertion
-order while still covering the complete tool metadata, including name, description, input schema,
-and any future advertised fields.
+sorting primitive-string arrays only for the order-insensitive JSON Schema set keywords `required`,
+`type`, and `enum`. All other arrays preserve order because values such as an array-valued `default`
+or `examples` entry can be order-sensitive advertised metadata. The comparison therefore ignores
+semantically irrelevant object insertion and schema-set order while still covering the complete
+tool metadata, including name, description, input schema, and any future advertised fields.
 
 Canonical JSON is comparison-only. The separately stored discovery representation preserves nested
 object insertion order, including stored-procedure parameter order, so canonicalization does not
@@ -880,6 +882,8 @@ The implementation is split across the following touchpoints:
 12. Name, description, input-schema, addition, removal, and visibility changes report a discovery change.
 13. Concurrent readers observe no exceptions or partial snapshots during repeated swaps.
 14. Served input-schema properties preserve their source insertion order even though comparison is canonicalized.
+15. Reordering string values in JSON Schema `required`, `type`, or `enum` arrays does not report a discovery change.
+16. Reordering an order-sensitive primitive array such as an array-valued `default` still reports a discovery change.
 
 ### Refresh-service unit tests
 

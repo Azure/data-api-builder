@@ -208,6 +208,63 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// JSON Schema string arrays used as sets do not change schema semantics when rebuilt in a
+        /// different order and therefore must not invalidate client discovery.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithEquivalentSchemaSetArrayOrder_DoesNotReportDiscoveryChange()
+        {
+            const string SCHEMA_AB =
+                "{\"type\":\"object\",\"properties\":{" +
+                "\"a\":{\"type\":[\"string\",\"null\"],\"enum\":[\"alpha\",\"beta\"]}," +
+                "\"b\":{\"type\":\"integer\"}},\"required\":[\"a\",\"b\"]}";
+            const string SCHEMA_BA =
+                "{\"required\":[\"b\",\"a\"],\"properties\":{" +
+                "\"b\":{\"type\":\"integer\"}," +
+                "\"a\":{\"enum\":[\"beta\",\"alpha\"],\"type\":[\"null\",\"string\"]}}," +
+                "\"type\":\"object\"}";
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, inputSchemaJson: SCHEMA_AB) },
+                config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, inputSchemaJson: SCHEMA_BA) },
+                config);
+
+            Assert.IsFalse(result.DiscoveryChanged);
+        }
+
+        /// <summary>
+        /// Primitive arrays are not universally sets. Reordering an array-valued default changes
+        /// the advertised default instance and must remain a discovery change.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithReorderedArrayDefault_ReportsDiscoveryChange()
+        {
+            const string SCHEMA_AB =
+                "{\"type\":\"object\",\"properties\":{\"values\":{" +
+                "\"type\":\"array\",\"items\":{\"type\":\"string\"}," +
+                "\"default\":[\"a\",\"b\"]}}}";
+            const string SCHEMA_BA =
+                "{\"type\":\"object\",\"properties\":{\"values\":{" +
+                "\"type\":\"array\",\"items\":{\"type\":\"string\"}," +
+                "\"default\":[\"b\",\"a\"]}}}";
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, inputSchemaJson: SCHEMA_AB) },
+                config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, inputSchemaJson: SCHEMA_BA) },
+                config);
+
+            Assert.IsTrue(result.DiscoveryChanged);
+        }
+
+        /// <summary>
         /// Canonical property sorting is used only for change detection. The discovery payload
         /// preserves schema-property insertion order for clients that render parameters in wire
         /// order even though JSON Schema does not assign that order semantic meaning.
@@ -218,7 +275,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             const string SCHEMA =
                 "{\"type\":\"object\",\"properties\":{" +
                 "\"second\":{\"type\":\"string\"}," +
-                "\"first\":{\"type\":\"integer\"}}}";
+                "\"first\":{\"type\":\"integer\"}}," +
+                "\"required\":[\"second\",\"first\"]}";
             McpToolRegistry registry = new();
             registry.ReplaceAll(
                 new[] { new MockMcpTool("ordered_tool", ToolType.Custom, inputSchemaJson: SCHEMA) },
@@ -233,6 +291,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 .ToArray();
 
             CollectionAssert.AreEqual(new[] { "second", "first" }, propertyNames);
+
+            string[] requiredNames = registry.GetAdvertisedTools()
+                .Single()
+                .InputSchema
+                .GetProperty("required")
+                .EnumerateArray()
+                .Select(item => item.GetString()!)
+                .ToArray();
+
+            CollectionAssert.AreEqual(new[] { "second", "first" }, requiredNames);
         }
 
         /// <summary>

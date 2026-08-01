@@ -221,7 +221,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 ?? throw new InvalidOperationException("Failed to clone MCP tool metadata.");
         }
 
-        private static void WriteCanonicalJson(Utf8JsonWriter writer, JsonElement element)
+        private static void WriteCanonicalJson(
+            Utf8JsonWriter writer,
+            JsonElement element,
+            string? propertyName = null,
+            bool isWithinJsonSchema = false)
         {
             switch (element.ValueKind)
             {
@@ -232,7 +236,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         .OrderBy(property => property.Name, StringComparer.Ordinal))
                     {
                         writer.WritePropertyName(property.Name);
-                        WriteCanonicalJson(writer, property.Value);
+                        WriteCanonicalJson(
+                            writer,
+                            property.Value,
+                            property.Name,
+                            isWithinJsonSchema ||
+                                property.NameEquals("inputSchema") ||
+                                property.NameEquals("outputSchema"));
                     }
 
                     writer.WriteEndObject();
@@ -240,9 +250,20 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 case JsonValueKind.Array:
                     writer.WriteStartArray();
-                    foreach (JsonElement item in element.EnumerateArray())
+                    if (!TryWriteOrderInsensitiveJsonSchemaStringArray(
+                            writer,
+                            element,
+                            propertyName,
+                            isWithinJsonSchema))
                     {
-                        WriteCanonicalJson(writer, item);
+                        foreach (JsonElement item in element.EnumerateArray())
+                        {
+                            WriteCanonicalJson(
+                                writer,
+                                item,
+                                propertyName: null,
+                                isWithinJsonSchema);
+                        }
                     }
 
                     writer.WriteEndArray();
@@ -263,6 +284,42 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     throw new InvalidOperationException(
                         $"Unsupported JSON value kind '{element.ValueKind}' in MCP tool metadata.");
             }
+        }
+
+        private static bool TryWriteOrderInsensitiveJsonSchemaStringArray(
+            Utf8JsonWriter writer,
+            JsonElement element,
+            string? propertyName,
+            bool isWithinJsonSchema)
+        {
+            // JSON Schema defines these arrays as sets, so their order does not change validation
+            // semantics. Do not sort every primitive array: values under keywords such as
+            // "default" and "examples" can be ordered JSON array instances whose order is part of
+            // the advertised metadata.
+            if (!isWithinJsonSchema ||
+                propertyName is not ("required" or "type" or "enum"))
+            {
+                return false;
+            }
+
+            List<string> values = new();
+            foreach (JsonElement item in element.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.String)
+                {
+                    return false;
+                }
+
+                values.Add(item.GetString()!);
+            }
+
+            values.Sort(StringComparer.Ordinal);
+            foreach (string value in values)
+            {
+                writer.WriteStringValue(value);
+            }
+
+            return true;
         }
 
         private sealed record McpToolRegistrySnapshot(

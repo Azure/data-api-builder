@@ -211,7 +211,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             HttpContext? httpContext,
             List<string>? args)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            CancellationToken requestAborted =
+                httpContext?.RequestAborted ?? CancellationToken.None;
+            using CancellationTokenSource? linkedCancellation =
+                cancellationToken.CanBeCanceled &&
+                requestAborted.CanBeCanceled &&
+                cancellationToken != requestAborted
+                    ? CancellationTokenSource.CreateLinkedTokenSource(
+                        cancellationToken,
+                        requestAborted)
+                    : null;
+            CancellationToken operationCancellationToken = linkedCancellation?.Token ??
+                (cancellationToken.CanBeCanceled ? cancellationToken : requestAborted);
+
+            operationCancellationToken.ThrowIfCancellationRequested();
             int retryAttempt = 0;
 
             if (string.IsNullOrEmpty(dataSourceName))
@@ -233,7 +246,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             await SetManagedIdentityAccessTokenIfAnyAsync(
                 conn,
                 dataSourceName,
-                cancellationToken);
+                operationCancellationToken);
 
             TResult? result = default(TResult);
 
@@ -250,6 +263,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
                     }
 
+                    // Preserve virtual dispatch to the established overload for legacy callers
+                    // and test doubles. The token-aware overload is required when the caller
+                    // supplied a token; retryCancellationToken then represents that token linked
+                    // with HttpContext.RequestAborted when both are cancellable.
                     TResult? result = cancellationToken.CanBeCanceled
                         ? await ExecuteQueryAgainstDbAsync(
                             conn,
@@ -297,7 +314,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         throw DbExceptionParser.Parse(e);
                     }
                 }
-            }, cancellationToken);
+            }, operationCancellationToken);
 
             return result;
         }

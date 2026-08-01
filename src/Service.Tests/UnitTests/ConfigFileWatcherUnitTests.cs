@@ -403,6 +403,9 @@ public class ConfigFileWatcherUnitTests
             Assert.IsFalse(
                 stopTask.IsCompleted,
                 "Shutdown must drain the active reload before host-owned dependencies can be disposed.");
+            Assert.IsFalse(
+                configLoader.ShutdownResourcesDisposed,
+                "Synchronization resources cannot be disposed while a gate owner is still active.");
             Assert.AreEqual(
                 0,
                 Volatile.Read(ref laterHandlerInvocationCount),
@@ -410,6 +413,9 @@ public class ConfigFileWatcherUnitTests
 
             releaseReloadHandler.Set();
             await Task.WhenAll(activeReload, queuedReload, stopTask).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.IsTrue(
+                configLoader.ShutdownResourcesDisposed,
+                "StopAsync must dispose loader-owned synchronization resources after the drain.");
             Assert.AreEqual(
                 0,
                 Volatile.Read(ref laterHandlerInvocationCount),
@@ -430,6 +436,45 @@ public class ConfigFileWatcherUnitTests
                 "The watcher disposal worker did not finish after it was released.");
             Directory.Delete(testDirectory, recursive: true);
         }
+    }
+
+    [TestMethod]
+    public async Task Dispose_IsNonBlockingAndEventuallyDisposesOwnedResources()
+    {
+        FileSystemRuntimeConfigLoader configLoader = new(
+            new FileSystem(),
+            isCliLoader: true);
+        TaskCompletionSource operationEntered = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseOperation = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        Task activeOperation = configLoader.ExecuteWithHotReloadSerializationAsync(
+            async _ =>
+            {
+                operationEntered.TrySetResult();
+                await releaseOperation.Task.ConfigureAwait(false);
+            });
+
+        try
+        {
+            await operationEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Task disposeCall = Task.Run(configLoader.Dispose);
+            await disposeCall.WaitAsync(TimeSpan.FromSeconds(1));
+
+            Assert.IsFalse(
+                configLoader.ShutdownResourcesDisposed,
+                "Dispose must not tear down synchronization resources while admitted work remains.");
+        }
+        finally
+        {
+            releaseOperation.TrySetResult();
+            await activeOperation.WaitAsync(TimeSpan.FromSeconds(5));
+            await configLoader.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        Assert.IsTrue(
+            configLoader.ShutdownResourcesDisposed,
+            "Dispose must eventually release loader-owned synchronization resources.");
     }
 
     [TestMethod]

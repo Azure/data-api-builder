@@ -37,6 +37,7 @@ likely to look surprising when reviewing the implementation in isolation.
 | Permit configuration-schema fallback when DB enrichment is unavailable | Existing custom-tool behavior already has a usable configuration-derived schema, and metadata unavailability should not silently remove an otherwise callable tool. | Discovery can be less precise; the fallback reason is logged. All other construction failures reject the whole candidate. |
 | Keep ordered hot-reload callbacks synchronous | Existing DAB ordering is defined by synchronous event completion. Returning early or introducing an untracked queue would let later components publish before earlier ones finish. | A watcher callback can remain occupied for the reload duration; concurrent callbacks wait on the loader gate and shutdown cancels queued waiters. |
 | Add cancellation through Core rather than only canceling gate waits | Shutdown cannot safely drain a reload if metadata connection opening, schema discovery, query execution, or token acquisition ignores cancellation. | The change necessarily touches shared query and metadata paths; default interface implementations preserve existing implementers. |
+| Link an explicit query token with `HttpContext.RequestAborted` | Either the owning operation or the disconnected HTTP client must be able to cancel the same database work. | A linked token source is allocated only when both distinct tokens are cancellable; tokenless legacy calls retain their established virtual dispatch. |
 | Bound shutdown by `HostOptions.ShutdownTimeout` | An unbounded drain can hang process shutdown forever when an extension callback does not cooperate. | A successful drain guarantees dependency safety; after timeout, the host may dispose dependencies while non-cooperative extension code is still running. .NET cannot forcibly terminate that code. |
 | Make synchronous `Dispose()` nonblocking | `Dispose()` can run after the host's bounded drain has already timed out and must not reintroduce an infinite wait. | Coordinated hosts and direct consumers that need a drain must call `StopAsync()` before disposing dependent services. |
 | Dispose the OS watcher and blocked stdout resources without joining them | `FileSystemWatcher.Dispose()` and an abandoned stdout pipe can block independently of reload correctness. | Event admission is stopped synchronously; exceptional resource cleanup is left to a background worker or process teardown rather than delaying host shutdown. |
@@ -402,6 +403,15 @@ tracks callback completion rather than running callbacks inline on the host stop
 tracked callback task participates in a successful drain, while the caller's shutdown token still
 bounds the wait.
 
+`SemaphoreSlim` and `CancellationTokenSource` are loader-owned disposable resources. Cleanup cannot
+run merely when the gate owner exits because a canceled waiter may still be unwinding from `Wait()`.
+The loader therefore counts every operation admitted before shutdown, including gate waiters. The
+last operation releases the gate before marking itself drained. A single shutdown-completion task
+then waits for both admitted operations and `CancelAsync()` callbacks before disposing the semaphore
+and token source. `StopAsync()` joins that task; synchronous `Dispose()` starts the same task and
+returns without blocking. If the host times out behind non-cooperative work, cleanup remains pending
+and occurs when that work eventually exits rather than racing it.
+
 #### Watcher callback and resource-lifetime decision
 
 `ConfigFileWatcher` invokes the reload entry point synchronously rather than creating a detached
@@ -563,6 +573,11 @@ The cancellation additions intentionally extend rather than replace established 
     begins, DAB cannot impose cooperative cancellation on work that does not accept a token; this is
     the compatibility trade-off. DAB-owned implementations override the new members and carry the
     token to connection opening, commands, readers, retries, and access-token acquisition.
+- `QueryExecutor.ExecuteQueryAsync()` combines an explicit operation token with
+    `HttpContext.RequestAborted` when both are cancellable, so either owner can stop retries and
+    database I/O. Calls through the established tokenless overload still dispatch through the
+    established virtual database-execution member; this preserves existing subclasses and Moq
+    setups while that member continues to consume `RequestAborted`.
 - `HotReloadEventArgs` adds a read-only token and a three-argument constructor while retaining the
     original two-argument constructor. Existing compiled and source callers remain valid, while the
     file loader uses the new overload with its owned shutdown token.
@@ -1018,6 +1033,8 @@ stdout handle.
 | Shutdown cancels only gate waiters but not active database work | Propagate the loader token through DAB-owned handlers, metadata providers, query executors, connections, commands, and token acquisition. |
 | Synchronous `FillSchema()` ignores cancellation | Register `DbCommand.Cancel()` as best-effort provider cancellation and translate cancellation-triggered provider failures. |
 | Cancellation callback blocks the host stopping thread | Request cancellation with `CancelAsync()` and include callback completion in the bounded drain. |
+| Loader synchronization fields leak or are disposed while waiters unwind | Track gate waiters as admitted operations, release before signaling drain, then dispose the semaphore and token source from the shared shutdown-completion task. |
+| Explicit query cancellation hides `RequestAborted` | Link distinct cancellable tokens and use the result for access-token acquisition, retry waits, connection opening, and command execution. |
 | Non-cooperative extension prevents shutdown drain | Honor the host timeout and document that extension callbacks must observe the event token; stronger isolation is follow-up architecture. |
 | OS watcher disposal blocks behind a callback | Disable and detach admission synchronously, then dispose the watcher independently on a background worker. |
 | Stdio client stops reading stdout | Keep notification I/O off the reload path and make writer disposal reject new writes without waiting for a blocked write lock. |

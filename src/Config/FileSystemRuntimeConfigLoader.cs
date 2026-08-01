@@ -38,9 +38,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     private readonly object _watcherLock = new();
     private readonly Func<IFileSystem, string, string, IConfigFileWatcher> _configFileWatcherFactory;
     private TaskCompletionSource _activeOperationsDrained = CreateCompletedDrainSignal();
-    private Task _cancellationCallbacksCompleted = Task.CompletedTask;
+    private Task _shutdownCompleted = Task.CompletedTask;
     private int _activeOperationCount;
     private int _disposed;
+    private int _shutdownResourcesDisposed;
     /// <summary>
     /// This stores either the default config name e.g. dab-config.json
     /// or user provided config file which could be a relative file path,
@@ -154,9 +155,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// </summary>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        Task activeOperationsDrained = BeginShutdown();
-        await activeOperationsDrained.WaitAsync(cancellationToken).ConfigureAwait(false);
+        Task shutdownCompleted = BeginShutdown();
+        await shutdownCompleted.WaitAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    internal bool ShutdownResourcesDisposed =>
+        Volatile.Read(ref _shutdownResourcesDisposed) != 0;
 
     private Task BeginShutdown()
     {
@@ -170,12 +174,14 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             {
                 cancellationCallbacksCompleted = new TaskCompletionSource(
                     TaskCreationOptions.RunContinuationsAsynchronously);
-                _cancellationCallbacksCompleted = cancellationCallbacksCompleted.Task;
+                Task drainCompleted = Task.WhenAll(
+                    _activeOperationsDrained.Task,
+                    cancellationCallbacksCompleted.Task);
+                _shutdownCompleted = DisposeSynchronizationResourcesAfterDrainAsync(
+                    drainCompleted);
             }
 
-            shutdownCompleted = Task.WhenAll(
-                _activeOperationsDrained.Task,
-                _cancellationCallbacksCompleted);
+            shutdownCompleted = _shutdownCompleted;
         }
 
         if (firstShutdownRequest)
@@ -187,6 +193,18 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         }
 
         return shutdownCompleted;
+    }
+
+    private async Task DisposeSynchronizationResourcesAfterDrainAsync(Task drainCompleted)
+    {
+        await drainCompleted.ConfigureAwait(false);
+
+        // Every operation admitted before shutdown, including gate waiters, has exited and every
+        // cancellation callback has completed. SemaphoreSlim and CancellationTokenSource can now
+        // be disposed without racing Wait, Release, token registration, or CancelAsync.
+        _hotReloadGate.Dispose();
+        _disposeCancellation.Dispose();
+        Volatile.Write(ref _shutdownResourcesDisposed, 1);
     }
 
     private async Task RequestOperationCancellationAsync(
@@ -338,28 +356,24 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     {
         beforeEnteringGate?.Invoke();
 
-        if (IsDisposed)
-        {
-            return;
-        }
-
-        try
-        {
-            _hotReloadGate.Wait(_disposeCancellation.Token);
-        }
-        catch (OperationCanceledException) when (IsDisposed)
-        {
-            return;
-        }
-
         if (!TryBeginSerializedOperation())
         {
-            _hotReloadGate.Release();
             return;
         }
 
+        bool gateEntered = false;
         try
         {
+            try
+            {
+                _hotReloadGate.Wait(_disposeCancellation.Token);
+                gateEntered = true;
+            }
+            catch (OperationCanceledException) when (IsDisposed)
+            {
+                return;
+            }
+
             try
             {
                 if (RuntimeConfig is not null)
@@ -382,8 +396,14 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         }
         finally
         {
+            if (gateEntered)
+            {
+                // Release before completing the tracked operation. The final operation can make
+                // the shutdown continuation dispose the semaphore immediately.
+                _hotReloadGate.Release();
+            }
+
             EndSerializedOperation();
-            _hotReloadGate.Release();
         }
     }
 
@@ -418,29 +438,34 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
         }
 
-        try
-        {
-            await _hotReloadGate.WaitAsync(_disposeCancellation.Token).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (IsDisposed)
-        {
-            throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
-        }
-
         if (!TryBeginSerializedOperation())
         {
-            _hotReloadGate.Release();
             throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
         }
 
+        bool gateEntered = false;
         try
         {
+            try
+            {
+                await _hotReloadGate.WaitAsync(_disposeCancellation.Token).ConfigureAwait(false);
+                gateEntered = true;
+            }
+            catch (OperationCanceledException) when (IsDisposed)
+            {
+                throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
+            }
+
             await operation(_disposeCancellation.Token).ConfigureAwait(false);
         }
         finally
         {
+            if (gateEntered)
+            {
+                _hotReloadGate.Release();
+            }
+
             EndSerializedOperation();
-            _hotReloadGate.Release();
         }
     }
 

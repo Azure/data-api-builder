@@ -37,6 +37,7 @@ likely to look surprising when reviewing the implementation in isolation.
 | Permit configuration-schema fallback when DB enrichment is unavailable | Existing custom-tool behavior already has a usable configuration-derived schema, and metadata unavailability should not silently remove an otherwise callable tool. | Discovery can be less precise; the fallback reason is logged. All other construction failures reject the whole candidate. |
 | Keep ordered hot-reload callbacks synchronous | Existing DAB ordering is defined by synchronous event completion. Returning early or introducing an untracked queue would let later components publish before earlier ones finish. | A watcher callback can remain occupied for the reload duration; concurrent callbacks wait on the loader gate and shutdown cancels queued waiters. |
 | Add cancellation through Core rather than only canceling gate waits | Shutdown cannot safely drain a reload if metadata connection opening, schema discovery, query execution, or token acquisition ignores cancellation. | The change necessarily touches shared query and metadata paths; default interface implementations preserve existing implementers. |
+| Replace two tokenless `SqlMetadataProvider` protected virtual slots with token-bearing slots | `FillSchemaForStoredProcedureAsync()` and `GetColumnsAsync()` directly own database metadata I/O that must observe loader shutdown. They are implementation hooks for DAB's closed set of built-in providers, not part of a documented custom-provider plug-in contract. | A manually authored subclass that overrode either old signature must recompile and update the override. This is an explicit, limited source/binary compatibility exception. |
 | Link an explicit query token with `HttpContext.RequestAborted` | Either the owning operation or the disconnected HTTP client must be able to cancel the same database work. | A linked token source is allocated only when both distinct tokens are cancellable; tokenless legacy calls retain their established virtual dispatch. |
 | Bound shutdown by `HostOptions.ShutdownTimeout` | An unbounded drain can hang process shutdown forever when an extension callback does not cooperate. | A successful drain guarantees dependency safety; after timeout, the host may dispose dependencies while non-cooperative extension code is still running. .NET cannot forcibly terminate that code. |
 | Make synchronous `Dispose()` nonblocking | `Dispose()` can run after the host's bounded drain has already timed out and must not reintroduce an infinite wait. | Coordinated hosts and direct consumers that need a drain must call `StopAsync()` before disposing dependent services. |
@@ -581,11 +582,12 @@ The cancellation additions intentionally extend rather than replace established 
 - `HotReloadEventArgs` adds a read-only token and a three-argument constructor while retaining the
     original two-argument constructor. Existing compiled and source callers remain valid, while the
     file loader uses the new overload with its owned shutdown token.
-- Existing public and protected Config/Core members retain their original signatures and virtual
-    slots. `TryLoadConfig()`, `SignalConfigChanged()`, `PopulateTriggerMetadataForTable()`,
+- Except for the two explicitly documented `SqlMetadataProvider` metadata-I/O slots below, existing
+    public and protected Config/Core members retain their original signatures and virtual slots.
+    `TryLoadConfig()`, `SignalConfigChanged()`, `PopulateTriggerMetadataForTable()`,
     `GenerateAutoentitiesIntoEntities()`, and `QueryAutoentitiesAsync()` delegate to or are invoked
     by explicit token-aware overloads. Existing compiled callers and derived providers therefore do
-    not need to recompile or add overrides.
+    not need to recompile or add overrides for those members.
 - `IMcpToolRegistryRefreshService` retains parameterless `EnsureInitialized()` and provides the
     token overload through a default implementation. The shared startup path uses the token overload;
     existing test or embedding implementations that only provide the original member continue to
@@ -594,6 +596,50 @@ The cancellation additions intentionally extend rather than replace established 
     registers cancellation to invoke `DbCommand.Cancel()` and converts a provider exception observed
     after cancellation into `OperationCanceledException`. This is best-effort and remains dependent
     on the database provider honoring command cancellation.
+
+#### Intentional replacement of two protected metadata-provider virtual slots
+
+`SqlMetadataProvider<ConnectionT, DataAdapterT, CommandT>` is a public class in the supported
+`Microsoft.DataApiBuilder.Core` package. This design therefore explicitly acknowledges that replacing
+these protected virtual members is observable to a consumer that subclasses the implementation:
+
+```csharp
+// Previous slots
+FillSchemaForStoredProcedureAsync(
+     Entity, string, string, string, StoredProcedureDefinition)
+
+GetColumnsAsync(string, string)
+
+// Replacement slots
+FillSchemaForStoredProcedureAsync(
+     Entity, string, string, string, StoredProcedureDefinition, CancellationToken)
+
+GetColumnsAsync(string, string, CancellationToken)
+```
+
+This is an intentional and narrowly scoped source/binary compatibility break, not an accidental
+omission. It is accepted for the following reasons:
+
+1. Neither member appears on `ISqlMetadataProvider`, in the Core package usage documentation, or in
+    a supported custom-database-provider registration contract. `MetadataProviderFactory` constructs
+    a closed set of DAB-owned providers from `DatabaseType`; it has no provider plug-in registration
+    point. The only overrides in this repository are the DAB-owned SQL Server and MySQL providers.
+2. These methods are exactly where potentially long-running schema calls acquire credentials, open
+    connections, and query provider metadata. Bounded shutdown requires the loader token to reach
+    those operations; prechecking a token only at the caller is insufficient once I/O has begun.
+3. Keeping a tokenless overload but invoking only the new overload would preserve metadata shape
+    while silently bypassing an existing override. Invoking the old override would preserve dispatch
+    but create an uncancelable hole in the shutdown path. Either shim would imply a compatibility
+    guarantee that the runtime could not honor together with end-to-end cancellation.
+4. Normal package consumers, embedders that use `ISqlMetadataProvider`, and implementations of the
+    public Core interfaces are unaffected. The impact is limited to consumers that directly derived
+    from this implementation class and overrode one of these undocumented provider-internal hooks.
+
+Migration for such a subclass is mechanical: recompile against the new Core package, add the
+`CancellationToken` parameter to the override, and pass it through credential acquisition,
+`OpenAsync()`, and schema/query APIs. A future supported custom-provider SPI should define lifecycle
+and cancellation as part of its initial contract rather than relying on protected implementation
+hooks.
 
 `FileSystemRuntimeConfigLoader.StopAsync(CancellationToken)` is public because the Service assembly
 and direct hosts must coordinate Config-owned work before disposing their own dependency graph. It
@@ -995,6 +1041,14 @@ second incremental construction path that can violate the atomic-generation inva
 implementation members of the unsupported MCP runtime assembly. Supported Core interface additions
 instead use default methods to preserve compatibility.
 
+### Retain the two tokenless metadata-provider virtual slots as shims
+
+Rejected for this change. Calling a legacy override would allow arbitrary schema I/O to outlive the
+bounded reload drain because the override has no cancellation input. Keeping the old slots but no
+longer dispatching through them would avoid some loader failures while still changing subclass
+behavior silently. The design instead makes the break explicit and requires any direct subclass to
+adopt the token-bearing contract.
+
 ### Notify for every published generation
 
 Rejected because configuration and metadata generations can change without changing MCP discovery.
@@ -1040,6 +1094,7 @@ stdout handle.
 | Stdio client stops reading stdout | Keep notification I/O off the reload path and make writer disposal reject new writes without waiting for a blocked write lock. |
 | Notification queue grows while stdout is blocked | Store one pending invalidation bit and coalesce all intermediate changes. |
 | New cancellation overloads break third-party Core implementations | Use default interface implementations that precheck cancellation and delegate to legacy members. |
+| Replacing protected metadata-provider slots breaks a direct subclass | Accept the limited break because there is no documented custom-provider SPI, identify both slots explicitly, and provide a mechanical token-propagation migration path. |
 
 ## Acceptance Criteria
 
@@ -1063,7 +1118,7 @@ The implementation is complete when:
 16. Initial construction and every DAB-owned reload generation observe loader shutdown cancellation.
 17. A successful loader drain completes before dependent hosted services and the root provider are disposed.
 18. A non-cooperative extension cannot make the host ignore `HostOptions.ShutdownTimeout`.
-19. Existing Core interface implementers and legacy `HotReloadEventArgs` construction remain source- and binary-compatible.
+19. Existing Core interface implementers and legacy `HotReloadEventArgs` construction remain source- and binary-compatible; the only accepted Core virtual-slot breaks are the two metadata-provider hooks documented above.
 20. Blocked watcher or stdio resource cleanup cannot indefinitely delay coordinated host shutdown.
 
 ## Follow-Up Work
@@ -1078,3 +1133,5 @@ The following work remains intentionally separate:
     stronger post-timeout lifetime guarantee becomes a product requirement.
 - Truly asynchronous schema-table discovery if database providers add an alternative to synchronous
     `DbDataAdapter.FillSchema()`; command cancellation remains best-effort until then.
+- A supported custom metadata-provider SPI, if required, with explicit registration, ownership,
+    lifecycle, compatibility, and cancellation contracts instead of protected implementation hooks.

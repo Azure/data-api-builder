@@ -473,6 +473,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Verify that the stored procedure exists in the database schema, then populate its database object parameters accordingly
         /// </summary>
+        /// <remarks>
+        /// The cancellation-token signature intentionally replaces the former tokenless protected
+        /// virtual slot. This method owns cancellable database schema I/O, and custom metadata
+        /// provider subclassing is not a documented provider plug-in contract. Direct subclasses
+        /// must update their override and propagate <paramref name="cancellationToken"/>. See
+        /// <c>docs/design/McpToolRegistryHotReload.md</c> for the compatibility decision.
+        /// </remarks>
         protected virtual async Task FillSchemaForStoredProcedureAsync(
             Entity procedureEntity,
             string entityName,
@@ -2015,6 +2022,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <returns>A data table where each row corresponds to a
         /// column of the table.</returns>
+        /// <remarks>
+        /// The cancellation-token signature intentionally replaces the former tokenless protected
+        /// virtual slot. This method owns cancellable database schema I/O, and custom metadata
+        /// provider subclassing is not a documented provider plug-in contract. Direct subclasses
+        /// must update their override and propagate <paramref name="cancellationToken"/>. See
+        /// <c>docs/design/McpToolRegistryHotReload.md</c> for the compatibility decision.
+        /// </remarks>
         protected virtual async Task<DataTable> GetColumnsAsync(
             string schemaName,
             string tableName,

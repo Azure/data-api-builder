@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -756,8 +757,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task TestSupportForAggregationsWithAliases()
         {
             string msSqlQuery = @"
-                SELECT 
-                    MAX(categoryid) AS max, 
+                SELECT
+                    MAX(categoryid) AS max,
                     MAX(price) AS max_price,
                     MIN(price) AS min_price,
                     AVG(price) AS avg_price,
@@ -953,6 +954,51 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             // Execute the test for the SQL query
             await TestSupportForGroupByNoAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for groupBy with aggregations on an entity whose columns are
+        /// mapped (aliased) in the runtime config (e.g. backing column '__column1' exposed as 'column1').
+        /// Regression test: previously the SELECT clause referenced the exposed field name instead of the
+        /// backing column name, causing the query to fail because the exposed name is not a real database column.
+        /// This verifies that both the group-by field and the aggregation resolve to the backing column,
+        /// while the result is projected back under the exposed (mapped) names.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByAggregationWithMappedColumns()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+                aggregations {
+                    max_column1: max(field: column1)
+                    count_column1: count(field: column1)
+                }
+            }
+        }
+    }";
+
+            string msSqlQuery = @"
+                SELECT
+                    __column1 AS column1,
+                    MAX(__column1) AS max_column1,
+                    COUNT(__column1) AS count_column1
+                FROM GQLmappings
+                GROUP BY __column1
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray);
         }
 
         /// <summary>

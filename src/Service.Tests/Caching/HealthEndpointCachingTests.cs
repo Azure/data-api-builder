@@ -22,6 +22,12 @@ public class HealthEndpointCachingTests
 {
     private const string CUSTOM_CONFIG_FILENAME = "custom-config.json";
 
+    [TestInitialize]
+    public void SetupAuthProviderEnvironmentVariables()
+    {
+        TestHelper.SetAppServiceEnvironmentVariable();
+    }
+
     [TestCleanup]
     public void CleanupAfterEachTest()
     {

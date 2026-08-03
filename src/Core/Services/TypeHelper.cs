@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// which throws error when inserting/updating dateTime values due to type mismatch.
         /// Therefore, seperate logic exists for proper mapping conversion in BaseSqlQueryStructure.
         /// </summary>
-        private static Dictionary<Type, DbType> _systemTypeToDbTypeMap = new()
+        private static readonly Dictionary<Type, DbType> _systemTypeToDbTypeMap = new()
         {
             [typeof(byte)] = DbType.Byte,
             [typeof(sbyte)] = DbType.SByte,
@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// (the helper used to access key/values in this dictionary)
         /// resolves the underlying type when a nullable type is used for lookup.
         /// </summary>
-        private static Dictionary<Type, JsonDataType> _systemTypeToJsonDataTypeMap = new()
+        private static readonly Dictionary<Type, JsonDataType> _systemTypeToJsonDataTypeMap = new()
         {
             [typeof(byte)] = JsonDataType.Integer,
             [typeof(sbyte)] = JsonDataType.Integer,
@@ -119,13 +119,19 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.Vector] = typeof(float)
         };
 
-        private static Dictionary<SqlDbType, DbType> _sqlDbDateTimeTypeToDbType = new()
+        private static readonly Dictionary<SqlDbType, DbType> _sqlDbDateTimeTypeToDbType = new()
         {
             [SqlDbType.Date] = DbType.Date,
             [SqlDbType.DateTime] = DbType.DateTime,
             [SqlDbType.SmallDateTime] = DbType.DateTime,
             [SqlDbType.DateTime2] = DbType.DateTime2,
             [SqlDbType.DateTimeOffset] = DbType.DateTimeOffset
+        };
+
+        private static readonly Dictionary<Type, SyntaxKind> _systemTypeToFieldKind = new()
+        {
+            // TODO: Currently we are only adding Write support for the MSSQL Vector data type, we will add support for other array data types in the future. Task #3718.
+            [typeof(float)] = SyntaxKind.FloatValue,
         };
 
         /// <summary>
@@ -308,6 +314,17 @@ namespace Azure.DataApiBuilder.Core.Services
         public static bool TryGetDbTypeFromSqlDbDateTimeType(SqlDbType sqlDbType, [NotNullWhen(true)] out DbType dbType)
         {
             return _sqlDbDateTimeTypeToDbType.TryGetValue(sqlDbType, out dbType);
+        }
+
+        /// <summary>
+        /// Helper method to get the SyntaxKind corresponding to the given System type for columns that are Array types.
+        /// </summary>
+        /// <param name="systemType">The System type of the column.</param>
+        /// <param name="syntaxKind">The corresponding SyntaxKind if found.</param>
+        /// <returns>True if a corresponding SyntaxKind is found, else false.</returns>
+        public static bool TryGetSyntaxKindFromSystemType(Type systemType, [NotNullWhen(true)] out SyntaxKind syntaxKind)
+        {
+            return _systemTypeToFieldKind.TryGetValue(systemType, out syntaxKind);
         }
 
         /// <summary>

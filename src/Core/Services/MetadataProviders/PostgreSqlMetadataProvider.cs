@@ -104,6 +104,31 @@ namespace Azure.DataApiBuilder.Core.Services
         };
 
         /// <summary>
+        /// Maps PostgreSQL array data_type prefixes to their CLR element types.
+        /// PostgreSQL array types in information_schema use udt_name with a leading underscore
+        /// (e.g., integer[] for int[], text[] for text[]).
+        /// </summary>
+        private static readonly Dictionary<string, Type> _pgArrayDataTypeToElementType = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["smallint[]"] = typeof(short),
+            ["integer[]"] = typeof(int),
+            ["bigint[]"] = typeof(long),
+            ["real[]"] = typeof(float),
+            ["double precision[]"] = typeof(double),
+            ["numeric[]"] = typeof(decimal),
+            ["boolean[]"] = typeof(bool),
+            ["text[]"] = typeof(string),
+            ["character varying[]"] = typeof(string),
+            ["character[]"] = typeof(string),
+            ["uuid[]"] = typeof(Guid),
+            ["timestamp without time zone[]"] = typeof(DateTime),
+            ["timestamp with time zone[]"] = typeof(DateTimeOffset),
+            ["json[]"] = typeof(string),
+            ["jsonb[]"] = typeof(string),
+            ["money[]"] = typeof(decimal),
+        };
+
+        /// <summary>
         /// Override to detect PostgreSQL array columns using information_schema metadata.
         /// Npgsql's DataAdapter reports array columns as System.Array (the abstract base class),
         /// so we use the data_type and udt_name from information_schema.columns to identify arrays
@@ -134,6 +159,16 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         string udtName = columnInfo["UDT_NAME"] is string udt ? udt : string.Empty;
                         if (_pgArrayUdtToElementType.TryGetValue(udtName, out Type? elementType))
+                        {
+                            columnDefinition.IsArrayType = true;
+                            columnDefinition.ElementSystemType = elementType;
+                            columnDefinition.SystemType = elementType.MakeArrayType();
+                            columnDefinition.IsReadOnly = true;
+                        }
+                    }
+                    else if (dataType.Contains("[]", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (_pgArrayDataTypeToElementType.TryGetValue(dataType, out Type? elementType))
                         {
                             columnDefinition.IsArrayType = true;
                             columnDefinition.ElementSystemType = elementType;

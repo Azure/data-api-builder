@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Data.Common;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -456,8 +457,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 structure.Columns.Select(
                     c => structure.IsSubqueryColumn(c) ?
                         WrapSubqueryColumn(c, structure.JoinQueries[c.TableAlias!]) + $" AS {QuoteIdentifier(c.Label)}" :
-                        Build(c)
+                        BuildResultColumn(c, structure)
             ));
+        }
+
+        /// <summary>
+        /// Builds a top-level (non-subquery) result column.
+        /// A SQL Server native <c>json</c> column is cast to NVARCHAR(MAX) so that the trailing
+        /// FOR JSON PATH clause emits it as an escaped JSON string instead of inlining it as a nested
+        /// JSON value. DAB treats a json column as a normal string, so its raw JSON text must
+        /// round-trip as a string at the REST/GraphQL boundary.
+        /// </summary>
+        private string BuildResultColumn(LabelledColumn column, SqlQueryStructure structure)
+        {
+            if (IsJsonColumn(column, structure))
+            {
+                return $"CAST({Build(column as Column)} AS NVARCHAR(MAX)) AS {QuoteIdentifier(column.Label)}";
+            }
+
+            return Build(column);
+        }
+
+        /// <summary>
+        /// Returns true when the given column is backed by a SQL Server native <c>json</c> column.
+        /// </summary>
+        private static bool IsJsonColumn(LabelledColumn column, SqlQueryStructure structure)
+        {
+            return structure.GetUnderlyingSourceDefinition().Columns.TryGetValue(column.ColumnName, out ColumnDefinition? columnDefinition)
+                && columnDefinition.SqlDbType == SqlDbType.Json;
         }
 
         /// <summary>

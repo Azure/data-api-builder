@@ -1121,6 +1121,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Regression test for orderBy on a mapped (aliased) column within a groupBy query.
+        /// The orderBy validation resolves the exposed field to its backing column and requires it to be
+        /// present in GroupByMetadata.Fields (keyed by backing column). This verifies that ordering a
+        /// groupBy result by a mapped column is accepted (not incorrectly rejected with
+        /// "OrderBy field '...' must be present in the groupBy fields.") and that the DESC order is
+        /// actually applied to the returned groups.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByWithOrderByOnMappedColumn()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings(orderBy: { column1: DESC }) {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    { ""fields"": { ""column1"": 5 } },
+                    { ""fields"": { ""column1"": 4 } },
+                    { ""fields"": { ""column1"": 3 } },
+                    { ""fields"": { ""column1"": 1 } }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Test to check that an exception is thrown when both items and groupBy are present in the same query.
         /// </summary>
         [TestMethod]

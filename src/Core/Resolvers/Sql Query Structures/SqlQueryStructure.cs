@@ -904,7 +904,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         );
                     }
 
-                    GroupByMetadata.Fields[fieldName] = new Column(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, SourceAlias);
+                    GroupByMetadata.Fields[columnName] = new Column(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, SourceAlias);
                     AddColumn(columnName: columnName, labelName: fieldName);
                     fieldsInArgument.Add(fieldName);
                 }

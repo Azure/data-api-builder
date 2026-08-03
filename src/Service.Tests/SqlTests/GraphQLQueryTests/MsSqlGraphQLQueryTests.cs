@@ -1002,6 +1002,125 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// End-to-end regression test for aggregations over a mapped (aliased) column.
+        /// Runs a real GraphQL request against the database and asserts the exact returned values
+        /// (rather than comparing against a re-generated SQL query). The 'gQLmappings' entity exposes
+        /// backing column '__column1' as 'column1', seeded with values {1, 3, 4, 5}.
+        /// This proves the aggregation functions resolve to the backing column while the result is
+        /// projected back under the exposed alias.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForAggregationWithMappedColumnReturnsExpectedValues()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings {
+            groupBy {
+                aggregations {
+                    max_column1: max(field: column1)
+                    min_column1: min(field: column1)
+                    sum_column1: sum(field: column1)
+                    count_column1: count(field: column1)
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    {
+                        ""aggregations"": {
+                            ""max_column1"": 5,
+                            ""min_column1"": 1,
+                            ""sum_column1"": 13,
+                            ""count_column1"": 4
+                        }
+                    }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// End-to-end regression test for a groupBy that selects only the mapped (aliased) field
+        /// (no aggregations). This specifically exercises ProcessGroupByFieldSelections in
+        /// SqlQueryStructure: the GROUP BY must reference the backing column '__column1' while the
+        /// projected 'fields' object must use the exposed alias 'column1'. Asserts the exact grouped
+        /// values {1, 3, 4, 5}.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByFieldsOnlyWithMappedColumnReturnsExpectedValues()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    { ""fields"": { ""column1"": 1 } },
+                    { ""fields"": { ""column1"": 3 } },
+                    { ""fields"": { ""column1"": 4 } },
+                    { ""fields"": { ""column1"": 5 } }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// End-to-end regression test combining a groupBy on the mapped (aliased) field with an
+        /// aggregation on the same mapped field. Because '__column1' (exposed as 'column1') is the
+        /// primary key, each value forms its own group with a count of 1. Asserts the exact shape and
+        /// values, verifying both the grouped 'fields' projection and the aggregation use the mapped
+        /// name in the response while targeting the backing column in SQL.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByFieldsAndAggregationWithMappedColumnReturnsExpectedValues()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+                aggregations {
+                    count_column1: count(field: column1)
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    { ""fields"": { ""column1"": 1 }, ""aggregations"": { ""count_column1"": 1 } },
+                    { ""fields"": { ""column1"": 3 }, ""aggregations"": { ""count_column1"": 1 } },
+                    { ""fields"": { ""column1"": 4 }, ""aggregations"": { ""count_column1"": 1 } },
+                    { ""fields"": { ""column1"": 5 }, ""aggregations"": { ""count_column1"": 1 } }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Test to check that an exception is thrown when both items and groupBy are present in the same query.
         /// </summary>
         [TestMethod]

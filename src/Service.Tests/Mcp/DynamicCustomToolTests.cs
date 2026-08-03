@@ -215,6 +215,44 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(desc.GetString()!.Contains("userId"));
         }
 
+        /// <summary>
+        /// Per spec #3331, the MCP custom tool's input schema must surface the auto-embed
+        /// indicator in the parameter description so MCP-aware clients (including LLMs)
+        /// see that DAB will convert the value to an embedding before executing the
+        /// stored procedure. The schema type is intentionally left as the existing
+        /// multi-type array — runtime validation (ParameterEmbeddingHelper) rejects
+        /// non-string inputs to auto-embed params with a 400, so the schema doesn't
+        /// need to encode that constraint.
+        /// </summary>
+        [TestMethod]
+        public void GetToolMetadata_AutoEmbedParam_DescriptionContainsAutoEmbedIndicator()
+        {
+            // Arrange — one auto-embed param + one normal param, so we can assert that
+            // only the auto-embed param's description picks up the indicator.
+            ParameterMetadata[] parameters = new[]
+            {
+                new ParameterMetadata { Name = "queryText", AutoEmbed = true, Description = "Search text" },
+                new ParameterMetadata { Name = "topK",      AutoEmbed = false, Description = "Result count" }
+            };
+            Entity entity = CreateTestStoredProcedureEntity(parameters: parameters);
+            DynamicCustomTool tool = new("SearchProducts", entity);
+
+            // Act
+            ModelContextProtocol.Protocol.Tool metadata = tool.GetToolMetadata();
+            JsonDocument schemaDoc = JsonDocument.Parse(metadata.InputSchema.GetRawText());
+            JsonElement props = schemaDoc.RootElement.GetProperty("properties");
+
+            // Auto-embed param: description mentions auto-embed
+            JsonElement autoParam = props.GetProperty("queryText");
+            StringAssert.Contains(autoParam.GetProperty("description").GetString()!, "auto-embed",
+                "Auto-embed param description should mention the auto-embed behavior.");
+
+            // Non-auto-embed param: description does NOT mention auto-embed
+            JsonElement normalParam = props.GetProperty("topK");
+            Assert.IsFalse(normalParam.GetProperty("description").GetString()!.Contains("auto-embed"),
+                "Non-auto-embed param description must not contain the auto-embed indicator.");
+        }
+
         #region Parameter Validation Tests (ExecuteAsync)
 
         /// <summary>

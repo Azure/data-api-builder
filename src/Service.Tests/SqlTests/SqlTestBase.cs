@@ -22,6 +22,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Controllers;
 using Microsoft.AspNetCore.Authorization;
@@ -62,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static IAuthorizationResolver _authorizationResolver;
         protected static WebApplicationFactory<Program> _application;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
-        protected static ILogger<SqlMutationEngine> _mutationEngineLogger;
+        protected static ILogger<IMutationEngine> _mutationEngineLogger;
         protected static ILogger<IQueryEngine> _queryEngineLogger;
         protected static ILogger<RestController> _restControllerLogger;
         protected static GQLFilterParser _gqlFilterParser;
@@ -150,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
 
             _queryEngineLogger = new Mock<ILogger<IQueryEngine>>().Object;
-            _mutationEngineLogger = new Mock<ILogger<SqlMutationEngine>>().Object;
+            _mutationEngineLogger = new Mock<ILogger<IMutationEngine>>().Object;
             _restControllerLogger = new Mock<ILogger<RestController>>().Object;
 
             SetUpSQLMetadataProvider(runtimeConfigProvider);
@@ -206,7 +207,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _gqlFilterParser,
                                 _queryEngineLogger,
                                 runtimeConfigProvider,
-                                cacheService);
+                                cacheService,
+                                NullEmbeddingService.Instance);
                         });
                         services.AddSingleton<IMutationEngine>(implementationFactory: serviceProvider =>
                         {
@@ -217,7 +219,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _authorizationResolver,
                                 _gqlFilterParser,
                                 ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
-                                runtimeConfigProvider);
+                                runtimeConfigProvider,
+                                NullEmbeddingService.Instance,
+                                _mutationEngineLogger);
                         });
                         services.AddSingleton(_sqlMetadataProvider);
                         services.AddSingleton(_authorizationResolver);

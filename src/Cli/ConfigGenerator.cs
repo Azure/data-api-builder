@@ -552,7 +552,7 @@ namespace Cli
 
             if (hasOldParams && hasNewParams)
             {
-                _logger.LogError("Cannot use both --source.params and --parameters.name/description/required/default together. Please use only one format.");
+                _logger.LogError("Cannot use both --source.params and --parameters.name/description/required/default/auto-embed together. Please use only one format.");
                 return false;
             }
 
@@ -564,6 +564,7 @@ namespace Cli
                 List<string> descriptions = options.ParametersDescriptionCollection?.ToList() ?? new List<string>();
                 List<string> requiredFlags = options.ParametersRequiredCollection?.ToList() ?? new List<string>();
                 List<string> defaults = options.ParametersDefaultCollection?.ToList() ?? new List<string>();
+                List<string> autoEmbedFlags = options.ParametersAutoEmbedCollection?.ToList() ?? new List<string>();
 
                 parameters = [];
                 for (int i = 0; i < names.Count; i++)
@@ -573,7 +574,8 @@ namespace Cli
                         Name = names[i],
                         Description = descriptions.ElementAtOrDefault(i),
                         Required = requiredFlags.ElementAtOrDefault(i)?.ToLower() == "true",
-                        Default = defaults.ElementAtOrDefault(i)
+                        Default = defaults.ElementAtOrDefault(i),
+                        AutoEmbed = autoEmbedFlags.ElementAtOrDefault(i)?.ToLower() == "true"
                     });
                 }
             }
@@ -585,7 +587,7 @@ namespace Cli
                     return false;
                 }
 
-                _logger.LogWarning("The --source.params format is deprecated. Please use --parameters.name/description/required/default instead.");
+                _logger.LogWarning("The --source.params format is deprecated. Please use --parameters.name/description/required/default/auto-embed instead.");
 
             }
 
@@ -2752,6 +2754,13 @@ namespace Cli
             // Support for new parameter format
             bool hasOldParams = options.SourceParameters is not null && options.SourceParameters.Any();
             bool hasNewParams = options.ParametersNameCollection is not null && options.ParametersNameCollection.Any();
+            // Track whether the user supplied --parameters.auto-embed at all. If not, the
+            // merge logic below preserves existing AutoEmbed values instead of overriding
+            // them with the CLI build's default `false`. Without this flag, the `||` merge
+            // (now replaced) couldn't distinguish "user supplied false" from "user supplied
+            // nothing" — both produced AutoEmbed=false in the new ParameterMetadata, so
+            // `dab update --parameters.auto-embed:false` was silently dropped.
+            bool autoEmbedFlagSupplied = options.ParametersAutoEmbedCollection is not null && options.ParametersAutoEmbedCollection.Any();
 
             // If SourceType provided by user is not null, update type
             if (options.SourceType is not null)
@@ -2801,7 +2810,7 @@ namespace Cli
             // Warn and error if both formats are provided
             if (hasOldParams && hasNewParams)
             {
-                _logger.LogError("Cannot use both --source.params and --parameters.name/description/required/default together. Please use only one format.");
+                _logger.LogError("Cannot use both --source.params and --parameters.name/description/required/default/auto-embed together. Please use only one format.");
                 return false;
             }
 
@@ -2814,6 +2823,7 @@ namespace Cli
                 List<string> descriptions = options.ParametersDescriptionCollection?.ToList() ?? new List<string>();
                 List<string> requiredFlags = options.ParametersRequiredCollection?.ToList() ?? new List<string>();
                 List<string> defaults = options.ParametersDefaultCollection?.ToList() ?? new List<string>();
+                List<string> autoEmbedFlags = options.ParametersAutoEmbedCollection?.ToList() ?? new List<string>();
 
                 parameters = [];
                 for (int i = 0; i < names.Count; i++)
@@ -2823,7 +2833,8 @@ namespace Cli
                         Name = names[i],
                         Description = descriptions.ElementAtOrDefault(i),
                         Required = requiredFlags.ElementAtOrDefault(i)?.ToLower() == "true",
-                        Default = defaults.ElementAtOrDefault(i)
+                        Default = defaults.ElementAtOrDefault(i),
+                        AutoEmbed = autoEmbedFlags.ElementAtOrDefault(i)?.ToLower() == "true"
                     });
                 }
             }
@@ -2835,7 +2846,7 @@ namespace Cli
                     return false;
                 }
 
-                _logger.LogWarning("The --source.params format is deprecated. Please use --parameters.name/description/required/default instead.");
+                _logger.LogWarning("The --source.params format is deprecated. Please use --parameters.name/description/required/default/auto-embed instead.");
             }
 
             // In TryGetUpdatedSourceObjectWithOptions, before TryCreateSourceObject:
@@ -2884,7 +2895,8 @@ namespace Cli
                                 Name = newParam.Name,
                                 Description = newParam.Description != null ? newParam.Description : match.Description,
                                 Required = newParam.Required != null ? newParam.Required : match.Required,
-                                Default = newParam.Default != null ? newParam.Default : match.Default
+                                Default = newParam.Default != null ? newParam.Default : match.Default,
+                                AutoEmbed = autoEmbedFlagSupplied ? newParam.AutoEmbed : match.AutoEmbed
                             });
                         }
                         else

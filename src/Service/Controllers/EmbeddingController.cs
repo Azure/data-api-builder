@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Controllers;
 [ApiController]
 public class EmbeddingController : ControllerBase
 {
-    private readonly IEmbeddingService? _embeddingService;
+    private readonly IEmbeddingService _embeddingService;
     private readonly RuntimeConfigProvider _runtimeConfigProvider;
     private readonly ILogger<EmbeddingController> _logger;
 
@@ -43,7 +43,7 @@ public class EmbeddingController : ControllerBase
     public EmbeddingController(
         RuntimeConfigProvider runtimeConfigProvider,
         ILogger<EmbeddingController> logger,
-        IEmbeddingService? embeddingService = null)
+        IEmbeddingService embeddingService)
     {
         _runtimeConfigProvider = runtimeConfigProvider;
         _logger = logger;

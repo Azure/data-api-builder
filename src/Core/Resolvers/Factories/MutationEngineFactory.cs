@@ -7,9 +7,11 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
@@ -29,18 +31,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly GQLFilterParser _gQLFilterParser;
+        private readonly IEmbeddingService _embeddingService;
+        private readonly ILogger<IMutationEngine> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MutationEngineFactory"/> class.
         /// </summary>
-        /// <param name="runtimeConfigProvider">runtimeConfigProvider.</param>
-        /// <param name="queryManagerFactory">queryManagerFactory</param>
-        /// <param name="metadataProviderFactory">metadataProviderFactory.</param>
-        /// <param name="cosmosClientProvider">cosmosClientProvider</param>
-        /// <param name="queryEngineFactory">queryEngineFactory.</param>
-        /// <param name="httpContextAccessor">httpContextAccessor.</param>
-        /// <param name="authorizationResolver">authorizationResolver.</param>
-        /// <param name="gQLFilterParser">GqlFilterParser.</param>
+        /// <param name="runtimeConfigProvider">Provides runtime configuration access.</param>
+        /// <param name="queryManagerFactory">Factory for database-specific query managers.</param>
+        /// <param name="metadataProviderFactory">Factory for database-specific metadata providers.</param>
+        /// <param name="cosmosClientProvider">Provider for CosmosDB client instances.</param>
+        /// <param name="queryEngineFactory">Factory for database-specific query engines.</param>
+        /// <param name="httpContextAccessor">Accessor for the current HTTP context.</param>
+        /// <param name="authorizationResolver">Resolver for authorization rules and policies.</param>
+        /// <param name="gQLFilterParser">Parser for GraphQL filter expressions.</param>
+        /// <param name="handler">Optional hot-reload event handler for runtime config changes.</param>
+        /// <param name="embeddingService">Embedding service for auto-embed parameter substitution; use NullEmbeddingService when embeddings are not configured.</param>
+        /// <param name="logger">Logger for mutation engine diagnostics.</param>
         public MutationEngineFactory(RuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
             IMetadataProviderFactory metadataProviderFactory,
@@ -49,7 +56,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            HotReloadEventHandler<HotReloadEventArgs>? handler)
+            HotReloadEventHandler<HotReloadEventArgs>? handler,
+            IEmbeddingService embeddingService,
+            ILogger<IMutationEngine> logger)
 
         {
             handler?.Subscribe(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
@@ -61,6 +70,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             _queryEngineFactory = queryEngineFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
             _gQLFilterParser = gQLFilterParser;
+            _embeddingService = embeddingService;
+            _logger = logger;
             _mutationEngines = new Dictionary<DatabaseType, IMutationEngine>();
             ConfigureMutationEngines();
         }
@@ -78,7 +89,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                     _authorizationResolver,
                     _gQLFilterParser,
                     _httpContextAccessor,
-                    _runtimeConfigProvider);
+                    _runtimeConfigProvider,
+                    _embeddingService,
+                    _logger);
                 _mutationEngines.Add(DatabaseType.MySQL, mutationEngine);
                 _mutationEngines.Add(DatabaseType.MSSQL, mutationEngine);
                 _mutationEngines.Add(DatabaseType.PostgreSQL, mutationEngine);

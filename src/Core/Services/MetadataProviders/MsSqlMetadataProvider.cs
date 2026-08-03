@@ -239,12 +239,45 @@ namespace Azure.DataApiBuilder.Core.Services
                         parameterDefinition.Default = paramMetadata.Default;
                         parameterDefinition.HasConfigDefault = paramMetadata.Default is not null;
                         parameterDefinition.ConfigDefaultValue = paramMetadata.Default?.ToString();
+
+                        // Validate that auto-embed params are string-compatible.
+                        ValidateAutoEmbedStringCompatibility(
+                            paramMetadata, parameterDefinition, schemaName, storedProcedureSourceName, configParamKey);
                     }
                 }
             }
 
             // Generating exposed stored-procedure query/mutation name and adding to the dictionary mapping it to its entity name.
             GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureGraphQLFieldName(entityName, procedureEntity), entityName);
+        }
+
+        /// <summary>
+        /// Auto-embed parameters must be string-compatible (nvarchar, varchar,
+        /// etc.) so DAB can pass the embedding JSON as a plain string. The stored procedure
+        /// is responsible for any CAST to VECTOR. Rejects non-string types at startup.
+        /// </summary>
+        internal static void ValidateAutoEmbedStringCompatibility(
+            ParameterMetadata paramMetadata,
+            ParameterDefinition parameterDefinition,
+            string schemaName,
+            string storedProcedureName,
+            string parameterName)
+        {
+            if (!paramMetadata.AutoEmbed)
+            {
+                return;
+            }
+
+            if (parameterDefinition.SystemType != typeof(string))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Procedure '{schemaName}.{storedProcedureName}': " +
+                             $"parameter '{parameterName}' has 'auto-embed: true' in config but is " +
+                             $"declared as '{parameterDefinition.SystemType.Name}' in the stored procedure. " +
+                             $"Auto-embed parameters must be string-compatible (nvarchar, varchar, etc.).",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
         }
 
         /// <inheritdoc/>

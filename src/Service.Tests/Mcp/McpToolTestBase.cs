@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
@@ -74,7 +75,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 _gqlFilterParser,
                 new Mock<ILogger<IQueryEngine>>().Object,
                 configProvider,
-                cacheService);
+                cacheService,
+                NullEmbeddingService.Instance);
 
             Mock<IQueryEngineFactory> queryEngineFactory = new();
             queryEngineFactory
@@ -123,7 +125,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 _gqlFilterParser,
                 new Mock<ILogger<IQueryEngine>>().Object,
                 configProvider,
-                cacheService);
+                cacheService,
+                NullEmbeddingService.Instance);
 
             Mock<IQueryEngineFactory> queryEngineFactory = new();
             queryEngineFactory
@@ -137,7 +140,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 _authorizationResolver,
                 _gqlFilterParser,
                 httpContextAccessor,
-                configProvider);
+                configProvider,
+                NullEmbeddingService.Instance,
+                new Mock<ILogger<IMutationEngine>>().Object);
 
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
             mutationEngineFactory

@@ -44,6 +44,10 @@ public class EmbeddingsHealthCheckTests
     {
         _mockLogger = new Mock<ILogger<HealthCheckHelper>>();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
+        // Tests in this fixture exercise the health-check path, which now consults
+        // IsEnabled before running. Default to enabled; the "service disabled"
+        // scenario uses NullEmbeddingService.Instance directly.
+        _mockEmbeddingService.Setup(s => s.IsEnabled).Returns(true);
 
         // Create HttpUtilities with mocked dependencies.
         // HttpUtilities won't be called since data source and entity health checks are disabled.
@@ -443,13 +447,13 @@ public class EmbeddingsHealthCheckTests
     /// no embedding health check entry is added to the report.
     /// </summary>
     [TestMethod]
-    public async Task EmbeddingsHealthCheck_Skipped_WhenEmbeddingServiceNull()
+    public async Task EmbeddingsHealthCheck_Skipped_WhenEmbeddingServiceDisabled()
     {
         // Arrange
         RuntimeConfig config = CreateRuntimeConfig(
             embeddingsHealth: new EmbeddingsHealthCheckConfig(enabled: true));
 
-        HealthCheckHelper helper = new(_mockLogger.Object, _httpUtilities, embeddingService: null);
+        HealthCheckHelper helper = new(_mockLogger.Object, _httpUtilities, embeddingService: NullEmbeddingService.Instance);
 
         // Act
         ComprehensiveHealthCheckReport report = await helper.GetHealthCheckResponseAsync(config, "", "");

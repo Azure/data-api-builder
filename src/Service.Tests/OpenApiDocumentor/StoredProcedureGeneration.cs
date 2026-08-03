@@ -234,8 +234,8 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
 
         /// <summary>
         /// Validates that the generated GET operation query parameters for stored procedure entities
-        /// have the correct required flag: a parameter without a config default and not explicitly
-        /// marked required: false is required; a parameter explicitly marked required: false is not.
+        /// have the correct required flag: a parameter is required when it has no config default and is
+        /// not explicitly marked required: false; a parameter explicitly marked required: false is optional.
         /// </summary>
         /// <param name="entityName">Entity name.</param>
         /// <param name="expectedParameters">Expected query parameter names.</param>

@@ -1259,7 +1259,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "Book", bookWithUpperCase }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType, conflictingEntityName: "book");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType, "book");
         }
 
         /// <summary>
@@ -1302,7 +1302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "executeBook", bookTable },
                 { "Book_by_pk", bookByPkStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType, conflictingEntityName: "Book_by_pk");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType, "Book_by_pk");
         }
 
         /// <summary>
@@ -1346,7 +1346,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "ExecuteBooks", bookTable },
                 { "AddBook", addBookStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType, conflictingEntityName: "AddBook");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType, "AddBook");
         }
 
         /// <summary>
@@ -1384,7 +1384,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, conflictingEntityName: "book");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
         }
 
         /// <summary>
@@ -1427,7 +1427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, conflictingEntityName: "book");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
         }
 
         /// <summary>
@@ -1465,7 +1465,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             entityCollection.Add("book_alt", book_alt);
             entityCollection.Add("book", book);
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, conflictingEntityName: "book");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
         }
 
         /// <summary>

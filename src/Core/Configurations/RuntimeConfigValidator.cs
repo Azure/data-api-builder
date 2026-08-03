@@ -989,8 +989,11 @@ public class RuntimeConfigValidator : IConfigValidator
                     ? $"  {entityName}"
                     : $"  {conflictingEntityName}{Environment.NewLine}  {entityName}";
 
-                string message = $"GraphQL naming conflict detected.{Environment.NewLine}"
-                    + $"{Environment.NewLine}Entities:{Environment.NewLine}{entitiesStr}"
+                string entityNamesStr = $"  {GraphQLNaming.GetDefinedSingularName(entityName, entity)}{Environment.NewLine}  {GraphQLNaming.GetDefinedPluralName(entityName, entity)}";
+
+                string message = $"{Environment.NewLine}GraphQL naming conflict detected."
+                    + $"{Environment.NewLine}{Environment.NewLine}Entities:{Environment.NewLine}{entitiesStr}"
+                    + $"{Environment.NewLine}{Environment.NewLine}Both entities generate the following GraphQL names:{Environment.NewLine}{entityNamesStr}"
                     + $"{Environment.NewLine}{Environment.NewLine}Configure distinct GraphQL singular and plural names for one of the entities to resolve this conflict.";
 
                 HandleOrRecordException(new DataApiBuilderException(

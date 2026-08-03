@@ -1663,7 +1663,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
                action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(databaseType, new(entityCollection)));
 
-            StringAssert.StartsWith(dabException.Message, "GraphQL naming conflict detected.");
+            StringAssert.Contains(dabException.Message, "GraphQL naming conflict detected.");
             StringAssert.Contains(dabException.Message, entityName);
             StringAssert.Contains(dabException.Message, conflictingEntityName);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);

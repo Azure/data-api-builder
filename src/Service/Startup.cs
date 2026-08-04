@@ -999,6 +999,12 @@ namespace Azure.DataApiBuilder.Service
             // without proper authorization headers.
             app.UseClientRoleHeaderAuthorizationMiddleware();
 
+            // Protect the browser-reachable MCP Streamable HTTP transport against DNS rebinding
+            // attacks by validating the Host and Origin headers before the request reaches the
+            // MCP endpoint. Loopback hosts are always trusted; additional trusted hosts can be
+            // configured via runtime.mcp.allowed-hosts.
+            app.UseMiddleware<McpDnsRebindingProtectionMiddleware>();
+
             IRequestExecutorManager requestExecutorManager = app.ApplicationServices.GetRequiredService<IRequestExecutorManager>();
             _hotReloadEventHandler.Subscribe(
                 "GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED",
@@ -1146,6 +1152,7 @@ namespace Azure.DataApiBuilder.Service
                 else if (authOptions.IsEasyAuthAuthenticationProvider())
                 {
                     EasyAuthType easyAuthType = EnumExtensions.Deserialize<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider);
+                    bool isProductionMode = mode != HostMode.Development;
                     bool isProductionMode = mode != HostMode.Development;
                     bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
                     bool swaEnvironmentDetected = StaticWebAppsAuthentication.AreExpectedSWAEnvVarsPresent();

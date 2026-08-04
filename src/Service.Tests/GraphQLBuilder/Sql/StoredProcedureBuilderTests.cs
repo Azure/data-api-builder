@@ -356,6 +356,48 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         }
 
         [TestMethod]
+        public void StoredProcedure_Description_UsesEntityDescription()
+        {
+            const string entityDescription = "Entity description from config";
+
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spDescriptionTest")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+            };
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: new List<ParameterMetadata>(),
+                graphQLTypeName: "SpDescriptionType",
+                entityName: "SpDescription",
+                entityDescription: entityDescription);
+
+            Assert.AreEqual(entityDescription, field.Description?.Value);
+        }
+
+        [TestMethod]
+        public void StoredProcedure_Description_UsesDefaultWhenEntityDescriptionIsNull()
+        {
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spDescriptionTest")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+            };
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: new List<ParameterMetadata>(),
+                graphQLTypeName: "SpDescriptionType",
+                entityName: "SpDescription",
+                entityDescription: null);
+
+            // When entityDescription is null, verify the field uses the default generated description
+            string expectedDescription = "Execute Stored-Procedure SpDescriptionType and get results from the database";
+            Assert.AreEqual(expectedDescription, field.Description?.Value);
+        }
+
+        [TestMethod]
         public void StoredProcedure_ParameterDescription_UsesConfigDescription()
         {
             const string parameterName = "title";
@@ -462,12 +504,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             DatabaseObject spDbObj,
             List<ParameterMetadata> configParameters,
             string graphQLTypeName,
-            string entityName)
+            string entityName,
+            string? entityDescription = null)
         {
             Entity spEntity = GraphQLTestHelpers.GenerateStoredProcedureEntity(
                 graphQLTypeName: graphQLTypeName,
                 graphQLOperation: GraphQLOperation.Query,
-                parameters: configParameters);
+                parameters: configParameters) with
+            { Description = entityDescription };
 
             ObjectTypeDefinitionNode objectType = CreateGraphQLTypeForEntity(spEntity, entityName, spDbObj);
 

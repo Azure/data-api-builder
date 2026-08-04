@@ -387,6 +387,23 @@
                 Action: Delete
               }
             ]
+          },
+          {
+            Role: database_policy_tester,
+            Actions: [
+              {
+                Action: Read
+              },
+              {
+                Action: Create
+              },
+              {
+                Action: Update,
+                Policy: {
+                  Database: @item.pieceid ne 1
+                }
+              }
+            ]
           }
         ],
         Relationships: {

@@ -98,9 +98,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement result = await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false, expectsError: true);
+            JsonElement errors = await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false);
 
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+            Assert.AreEqual(JsonValueKind.Array, errors.ValueKind, "Expected a GraphQL errors array for malformed JSON payload.");
+            Assert.IsTrue(errors.GetArrayLength() > 0, "Expected at least one GraphQL error.");
         }
     }
 }

@@ -1158,6 +1158,131 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// End-to-end regression test for a field-level HAVING filter on an aggregation over a mapped
+        /// (aliased) column, without selecting the grouped fields. Groups by the mapped 'column1'
+        /// (backing '__column1', PK values {1, 3, 4, 5}); HAVING max(column1) &gt; 3 keeps only groups 4
+        /// and 5. Verifies the HAVING clause targets the backing column and the response projects only
+        /// the requested aggregation under its alias.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByHavingAggregationOnMappedColumn()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings {
+            groupBy(fields: [column1]) {
+                aggregations {
+                    max_column1: max(field: column1, having: { gt: 3 })
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    { ""aggregations"": { ""max_column1"": 4 } },
+                    { ""aggregations"": { ""max_column1"": 5 } }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// End-to-end regression test combining grouped fields, multiple aggregations, and a field-level
+        /// HAVING filter on a mapped (aliased) column (no ordering). Groups by the mapped 'column1'
+        /// (backing '__column1', PK values {1, 3, 4, 5}); HAVING max(column1) &gt; 3 keeps groups 4 and 5.
+        /// Verifies the grouped 'fields' projection, the non-filtered aggregation, and the HAVING-filtered
+        /// aggregation all use the mapped name in the response while targeting the backing column in SQL.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByFieldsAggregationsAndHavingOnMappedColumn()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+                aggregations {
+                    max_column1: max(field: column1, having: { gt: 3 })
+                    count_column1: count(field: column1)
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    {
+                        ""fields"": { ""column1"": 4 },
+                        ""aggregations"": { ""max_column1"": 4, ""count_column1"": 1 }
+                    },
+                    {
+                        ""fields"": { ""column1"": 5 },
+                        ""aggregations"": { ""max_column1"": 5, ""count_column1"": 1 }
+                    }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// End-to-end regression test exercising every groupBy dimension together on a mapped (aliased)
+        /// column: grouping by the mapped field, selecting the mapped field, multiple aggregations on the
+        /// mapped field, a field-level HAVING filter on one aggregation, and an orderBy on the mapped field.
+        /// The 'gQLmappings' entity exposes backing '__column1' as 'column1' (PK, values {1, 3, 4, 5}), so
+        /// each value forms its own group. HAVING max(column1) &gt; 3 keeps only groups 4 and 5, and
+        /// orderBy DESC returns them as 5 then 4. This proves the backing column is used consistently in
+        /// GROUP BY, HAVING and ORDER BY while the response projects the mapped names.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByWithFieldsAggregationsHavingAndOrderByOnMappedColumn()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings(orderBy: { column1: DESC }) {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+                aggregations {
+                    max_column1: max(field: column1, having: { gt: 3 })
+                    min_column1: min(field: column1)
+                    count_column1: count(field: column1)
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    {
+                        ""fields"": { ""column1"": 5 },
+                        ""aggregations"": { ""max_column1"": 5, ""min_column1"": 5, ""count_column1"": 1 }
+                    },
+                    {
+                        ""fields"": { ""column1"": 4 },
+                        ""aggregations"": { ""max_column1"": 4, ""min_column1"": 4, ""count_column1"": 1 }
+                    }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Test to check that an exception is thrown when both items and groupBy are present in the same query.
         /// </summary>
         [TestMethod]

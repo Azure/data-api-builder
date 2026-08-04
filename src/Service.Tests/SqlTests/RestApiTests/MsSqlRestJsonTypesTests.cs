@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public async Task FilterJsonColumnIsNotNull_Succeeds()
         {
-            HttpResponseMessage response = await HttpClient.GetAsync($"{JSON_TYPE_REST_PATH}?$filter=metadata ne null");
+            HttpResponseMessage response = await HttpClient.GetAsync($"{JSON_TYPE_REST_PATH}?$filter=metadata%20ne%20null");
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, "Filtering a json column as a string should pass through and succeed.");
 
             JsonElement items = JsonDocument.Parse(await response.Content.ReadAsStringAsync())

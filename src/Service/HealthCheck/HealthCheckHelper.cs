@@ -169,6 +169,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             comprehensiveHealthCheckReport.Checks = new List<HealthCheckResultEntry>();
             await UpdateDataSourceHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig);
             await UpdateEntityHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig, roleHeader, roleToken);
+            await UpdateMcpHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig, roleHeader, roleToken);
             await UpdateEmbeddingsHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig);
         }
 
@@ -211,6 +212,51 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
 
             return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
+        }
+
+        // Updates the MCP Health Check Result in the response.
+        // The check verifies that the MCP endpoint is reachable and responds within the threshold.
+        // It runs only when MCP is enabled in the runtime configuration.
+        private async Task UpdateMcpHealthCheckResultsAsync(ComprehensiveHealthCheckReport comprehensiveHealthCheckReport, RuntimeConfig runtimeConfig, string roleHeader, string roleToken)
+        {
+            if (comprehensiveHealthCheckReport.Checks is null || !runtimeConfig.IsMcpEnabled)
+            {
+                return;
+            }
+
+            (int, string?) response = await ExecuteMcpQueryAsync(runtimeConfig.McpPath, roleHeader, roleToken);
+            bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS;
+
+            comprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
+            {
+                Name = HealthCheckConstants.MCP,
+                ResponseTimeData = new ResponseTimeData
+                {
+                    ResponseTimeMs = response.Item1,
+                    ThresholdMs = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS
+                },
+                Tags = [HealthCheckConstants.MCP],
+                Exception = response.Item2 ?? (!isResponseTimeWithinThreshold ? TIME_EXCEEDED_ERROR_MESSAGE : null),
+                Status = isResponseTimeWithinThreshold ? HealthStatus.Healthy : HealthStatus.Unhealthy
+            });
+        }
+
+        // Executes the MCP Query and keeps track of the response time and error message.
+        private async Task<(int, string?)> ExecuteMcpQueryAsync(string mcpUriSuffix, string roleHeader, string roleToken)
+        {
+            if (string.IsNullOrEmpty(mcpUriSuffix))
+            {
+                return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, "MCP is enabled but no MCP path is configured.");
+            }
+
+            Stopwatch stopwatch = new();
+            stopwatch.Start();
+            string? errorMessage = await _httpUtility.ExecuteMcpQueryAsync(mcpUriSuffix, roleHeader, roleToken);
+            stopwatch.Stop();
+
+            return string.IsNullOrEmpty(errorMessage)
+                ? ((int)stopwatch.ElapsedMilliseconds, errorMessage)
+                : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
         }
 
         // Updates the Entity Health Check Results in the response.

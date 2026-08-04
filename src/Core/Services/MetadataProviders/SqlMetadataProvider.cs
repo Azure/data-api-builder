@@ -123,18 +123,7 @@ namespace Azure.DataApiBuilder.Core.Services
             _databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
             _logger = logger;
             _isValidateOnly = isValidateOnly;
-            foreach ((string entityName, Entity entityMetatdata) in Entities)
-            {
-                if (runtimeConfig.IsRestEnabled)
-                {
-                    string restPath = entityMetatdata.Rest?.Path ?? entityName;
-                    _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
-                }
-                else
-                {
-                    _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
-                }
-            }
+            LogRestPathsForEntities(runtimeConfig, Entities);
 
             ConnectionString = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).ConnectionString;
             EntitiesDataSet = new();
@@ -169,7 +158,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Database object for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -187,7 +176,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Database object for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -200,7 +189,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Database object for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -213,7 +202,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Stored Procedure Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Stored procedure definition for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -402,6 +391,25 @@ namespace Azure.DataApiBuilder.Core.Services
                 return true;
             }
 
+            return false;
+        }
+
+        /// <inheritdoc/>
+        public bool TryGetArrayElementSyntaxKind(string entityName, string fieldName, out SyntaxKind fieldKind)
+        {
+            if (TryGetBackingColumn(entityName, fieldName, out string? columnName))
+            {
+                SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
+                ColumnDefinition column = sourceDefinition.Columns[columnName];
+
+                // If the column is an array type, we need to get the syntax kind from the element system type.
+                if (column.IsArrayType && TypeHelper.TryGetSyntaxKindFromSystemType(column.ElementSystemType!, out fieldKind))
+                {
+                    return true;
+                }
+            }
+
+            fieldKind = default;
             return false;
         }
 
@@ -733,6 +741,33 @@ namespace Azure.DataApiBuilder.Core.Services
             _runtimeConfigProvider.RemoveGeneratedAutoentitiesFromConfig();
         }
 
+        /// <summary>
+        /// Removes whitespace from the generated entity name and capitalizes the character
+        /// immediately following each removed whitespace (camelCase join).
+        /// For example, "Order Items" becomes "OrderItems" and "dbo_Order Items" becomes "dbo_OrderItems".
+        /// </summary>
+        /// <param name="name">The entity name to process.</param>
+        /// <returns>The entity name with whitespace removed and following characters capitalized.</returns>
+        protected static string RemoveWhitespaceAddCamelCase(string name)
+        {
+            StringBuilder result = new(name.Length);
+            bool capitalizeNext = false;
+
+            foreach (char character in name)
+            {
+                if (char.IsWhiteSpace(character))
+                {
+                    capitalizeNext = true;
+                    continue;
+                }
+
+                result.Append(capitalizeNext ? char.ToUpperInvariant(character) : character);
+                capitalizeNext = false;
+            }
+
+            return result.ToString();
+        }
+
         protected void PopulateDatabaseObjectForEntity(
             Entity entity,
             string entityName,
@@ -1017,6 +1052,30 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, DatabaseObject> sourceObjects)
         {
             return;
+        }
+
+        /// <summary>
+        /// Helper method that logs the REST paths for all entities and shows if the REST calls are enabled/disabled for any entity.
+        /// </summary>
+        /// <param name="runtimeConfig"></param>
+        /// <param name="entities"></param>
+        protected void LogRestPathsForEntities(RuntimeConfig runtimeConfig, IReadOnlyDictionary<string, Entity> entities)
+        {
+            if (!_isValidateOnly)
+            {
+                foreach ((string entityName, Entity entityMetatdata) in entities)
+                {
+                    if (runtimeConfig.IsRestEnabled)
+                    {
+                        string restPath = entityMetatdata.Rest?.Path ?? entityName;
+                        _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
+                    }
+                    else
+                    {
+                        _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -1693,7 +1752,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Using a data adapter, obtains the schema of the given table name
-        /// and adds the corresponding entity in the data set.
+        /// and adds the corresponding DataTable to the entities data set.
         /// </summary>
         private async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,

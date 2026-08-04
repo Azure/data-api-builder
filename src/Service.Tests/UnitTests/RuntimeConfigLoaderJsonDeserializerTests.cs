@@ -958,7 +958,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.IsTrue(parsed, "Config should parse successfully.");
                 Assert.IsNotNull(config);
 
-                string expected = RuntimeConfigLoader.GetConnectionStringWithApplicationName(finalSecretValue);
+                string expected = RuntimeConfigLoader.GetMsSqlConnectionStringWithApplicationName(finalSecretValue);
                 var builderExpected = new SqlConnectionStringBuilder(expected);
                 var builderActual = new SqlConnectionStringBuilder(config.DataSource.ConnectionString);
                 Assert.AreEqual(builderExpected["Data Source"], builderActual["Data Source"], "Data Source should match.");

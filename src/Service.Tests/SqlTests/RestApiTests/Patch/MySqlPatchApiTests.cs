@@ -96,6 +96,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 "
             },
             {
+                "PatchOneUpdateWithDatabasePolicy",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 100 AND pieceid = 99 AND categoryName ='Historical' AND piecesAvailable = 4
+                        AND piecesRequired = 0 AND pieceid != 1
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOne_Insert_Empty_Test",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
@@ -295,6 +308,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         };
 
         #region overridden tests
+
+        // Create-action database policies are only supported for MSSQL and DWSQL. Since MySQL does not
+        // support a database policy on the create action, the PATCH tests that rely on a create policy
+        // (insert path) remain unsupported here. The update-policy path is validated by
+        // PatchOneUpdateWithDatabasePolicy and PatchOneUpdateWithUnsatisfiedDatabasePolicy.
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOneInsertWithDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOneInsertWithUnsatisfiedDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
         [TestMethod]
         [Ignore]
         public override Task PatchOneInsertInViewTest()
@@ -312,34 +344,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         [TestMethod]
         [Ignore]
         public void PatchOneViewBadRequestTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneUpdateWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneInsertWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneUpdateWithDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneInsertWithDatabasePolicy()
         {
             throw new NotImplementedException();
         }

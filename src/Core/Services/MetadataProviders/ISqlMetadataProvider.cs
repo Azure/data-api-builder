@@ -251,5 +251,17 @@ namespace Azure.DataApiBuilder.Core.Services
             string referencedEntityName,
             [NotNullWhen(true)] out ForeignKeyDefinition? foreignKeyDefinition,
             bool isMToNRelationship) => throw new NotImplementedException();
+
+        /// <summary>
+        /// Tries to get the GraphQL syntax kind of an array column's element type.
+        /// </summary>
+        /// <param name="entityName">The name of the entity.</param>
+        /// <param name="fieldName">The name of the field.</param>
+        /// <param name="fieldKind">The kind of the field.</param>
+        /// <returns>Returns true if the field kind is found, false otherwise.</returns>
+        public bool TryGetArrayElementSyntaxKind(
+            string entityName,
+            string fieldName,
+            [NotNullWhen(true)] out SyntaxKind fieldKind);
     }
 }

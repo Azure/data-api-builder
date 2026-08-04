@@ -82,5 +82,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             Assert.AreEqual("admin", parsed.GetProperty("role").GetString());
             Assert.AreEqual(3, parsed.GetProperty("tier").GetInt32());
         }
+
+        /// <summary>
+        /// createProfile with malformed JSON in the metadata field must fail with a GraphQL error
+        /// (surfaced from SQL Server's json validation) rather than persisting invalid data.
+        /// </summary>
+        [TestMethod]
+        public async Task JsonColumn_GraphQLCreateWithMalformedJson_Fails()
+        {
+            string createMutationName = "createProfile";
+            string createMutation = @"mutation {
+                createProfile(item: { metadata: ""{ not valid json"" }) {
+                    id
+                    metadata
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false, expectsError: true);
+
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+        }
     }
 }

@@ -4,6 +4,7 @@
 using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -91,6 +92,80 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Hold the groupBy metadata for the query
         /// </summary>
         public GroupByMetadata GroupByMetadata { get; private set; }
+
+        /// <summary>
+        /// True when semantic search arguments are present on the request.
+        /// </summary>
+        public bool SemanticSearchRequested { get; private set; }
+
+        /// <summary>
+        /// True when a user supplied ordering expression.
+        /// </summary>
+        public bool HasUserSpecifiedOrdering { get; private set; }
+
+        /// <summary>
+        /// Primary-key signature to semantic distance map.
+        /// </summary>
+        public Dictionary<string, double> SemanticDistanceByPrimaryKeySignature { get; }
+
+        /// <summary>
+        /// Applies a semantic narrowing predicate of the form:
+        /// (col1 = ... AND col2 = ...) OR (...)
+        /// </summary>
+        public void ApplySemanticCandidates(IReadOnlyList<SemanticSearchCandidate> candidates)
+        {
+            if (candidates.Count == 0)
+            {
+                Predicates.Add(Predicate.MakeFalsePredicate());
+                return;
+            }
+
+            Predicate? combinedOr = null;
+
+            foreach (SemanticSearchCandidate candidate in candidates)
+            {
+                Predicate? andPredicate = null;
+                foreach ((string columnName, object? value) in candidate.ColumnValues)
+                {
+                    if (value is null)
+                    {
+                        continue;
+                    }
+
+                    string parameterName = MakeDbConnectionParam(
+                        GetParamAsSystemType(value.ToString()!, columnName, GetColumnSystemType(columnName)),
+                        columnName);
+
+                    Predicate equalsPredicate = new(
+                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, SourceAlias)),
+                        PredicateOperation.Equal,
+                        new PredicateOperand(parameterName),
+                        addParenthesis: true);
+
+                    andPredicate = andPredicate is null
+                        ? equalsPredicate
+                        : new Predicate(new PredicateOperand(andPredicate), PredicateOperation.AND, new PredicateOperand(equalsPredicate), addParenthesis: true);
+                }
+
+                if (andPredicate is null)
+                {
+                    continue;
+                }
+
+                combinedOr = combinedOr is null
+                    ? andPredicate
+                    : new Predicate(new PredicateOperand(combinedOr), PredicateOperation.OR, new PredicateOperand(andPredicate), addParenthesis: true);
+            }
+
+            if (combinedOr is null)
+            {
+                Predicates.Add(Predicate.MakeFalsePredicate());
+            }
+            else
+            {
+                Predicates.Add(combinedOr);
+            }
+        }
 
         public virtual string? CacheControlOption { get; set; }
 
@@ -280,6 +355,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IsListQuery = context.IsMany;
             SourceAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
             AddFields(context, sqlMetadataProvider);
+            SemanticSearchRequested = !string.IsNullOrWhiteSpace(context.SemanticSearch);
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
                 sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
@@ -293,6 +369,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // to only Find, we populate the SourceAlias in this constructor where we know we have a Find operation.
             OrderByColumns = context.OrderByClauseOfBackingColumns is not null ?
                 context.OrderByClauseOfBackingColumns : PrimaryKeyAsOrderByColumns();
+            HasUserSpecifiedOrdering = context.OrderByClauseOfBackingColumns is not null;
 
             foreach (OrderByColumn column in OrderByColumns)
             {
@@ -444,6 +521,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             EntityName = sqlMetadataProvider.GetDatabaseType() == DatabaseType.DWSQL ? GraphQLUtils.GetEntityNameFromContext(ctx) : _underlyingFieldType.Name;
             bool isGroupByQuery = queryField?.Name.Value == QueryBuilder.GROUP_BY_FIELD_NAME;
 
+            SemanticSearchRequested = queryParams.TryGetValue(QueryBuilder.SEMANTIC_SEARCH_ARGUMENT_NAME, out object? semanticValue)
+                && semanticValue is string semanticSearchText
+                && !string.IsNullOrWhiteSpace(semanticSearchText);
+
+            if (SemanticSearchRequested && isGroupByQuery)
+            {
+                throw new DataApiBuilderException(
+                    message: "Semantic search is not supported for aggregate queries.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
             if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
             {
                 EntityName = modelName;
@@ -520,6 +609,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (orderByObject is not null)
                 {
                     OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject, queryArgumentSchemas[QueryBuilder.ORDER_BY_FIELD_NAME], isGroupByQuery);
+                    HasUserSpecifiedOrdering = true;
                 }
             }
 
@@ -575,6 +665,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             PaginationMetadata = new(this);
             GroupByMetadata = new();
             ColumnLabelToParam = new();
+            SemanticDistanceByPrimaryKeySignature = new(StringComparer.Ordinal);
             FilterPredicates = string.Empty;
             OrderByColumns = new();
             AddCacheControlOptions(httpRequestHeaders);
@@ -733,6 +824,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // TODO : This is inefficient and could lead to errors. we should rewrite this to use the ISelection API.
         private void AddGraphQLFields(IReadOnlyList<ISelectionNode> selections, RuntimeConfigProvider runtimeConfigProvider)
         {
+            bool entitySemanticEnabled = runtimeConfigProvider.GetConfig().Entities.TryGetValue(EntityName, out Entity? entity)
+                && entity.SemanticSearch?.Enabled is true;
+
             foreach (ISelectionNode node in selections)
             {
                 if (node.Kind == SyntaxKind.FragmentSpread)
@@ -784,6 +878,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (field.SelectionSet is null)
                 {
+                    if (entitySemanticEnabled
+                        && string.Equals(fieldName, SemanticSearchConstants.GRAPHQL_DISTANCE_FIELD, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
                     if (MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? name)
                         && !string.IsNullOrWhiteSpace(name))
                     {
@@ -796,6 +896,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
                 else
                 {
+                    if (SemanticSearchRequested)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Semantic search is not supported with relationship expansion.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+
                     ObjectField? subschemaField = _underlyingFieldType.Fields[fieldName];
 
                     if (_ctx == null)

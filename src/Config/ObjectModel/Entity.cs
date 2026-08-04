@@ -37,6 +37,8 @@ public record Entity
     public Dictionary<string, string>? Mappings { get; init; }
     public Dictionary<string, EntityRelationship>? Relationships { get; init; }
     public EntityCacheOptions? Cache { get; init; }
+    [JsonPropertyName("semantic-search")]
+    public EntitySemanticSearchOptions? SemanticSearch { get; init; }
     public EntityHealthCheckConfig? Health { get; init; }
 
     [JsonConverter(typeof(EntityMcpOptionsConverterFactory))]
@@ -62,7 +64,8 @@ public record Entity
         EntityHealthCheckConfig? Health = null,
         string? Description = null,
         EntityMcpOptions? Mcp = null,
-        bool IsAutoentity = false)
+        bool IsAutoentity = false,
+        EntitySemanticSearchOptions? SemanticSearch = null)
     {
         this.Health = Health;
         this.Source = Source;
@@ -73,6 +76,7 @@ public record Entity
         this.Mappings = Mappings;
         this.Relationships = Relationships;
         this.Cache = Cache;
+        this.SemanticSearch = SemanticSearch;
         this.IsLinkingEntity = IsLinkingEntity;
         this.Description = Description;
         this.Mcp = Mcp;

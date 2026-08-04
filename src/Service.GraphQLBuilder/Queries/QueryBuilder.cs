@@ -30,6 +30,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public const string GROUP_BY_AGGREGATE_FIELD_ARG_NAME = "field";
         public const string GROUP_BY_AGGREGATE_FIELD_DISTINCT_NAME = "distinct";
         public const string GROUP_BY_AGGREGATE_FIELD_HAVING_NAME = "having";
+        public const string SEMANTIC_SEARCH_ARGUMENT_NAME = "semanticSearch";
+        public const string SEMANTIC_THRESHOLD_ARGUMENT_NAME = "semanticThreshold";
+        public const string SEMANTIC_DISTANCE_FIELD_NAME = "semanticDistance";
 
         // Define the enabled database types for aggregation
         public static readonly HashSet<DatabaseType> AggregationEnabledDatabaseTypes = new()
@@ -191,21 +194,29 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 location: null,
                 new NameNode(GenerateListQueryName(name.Value, entity)),
                 new StringValueNode($"Get a list of all the {GetDefinedSingularName(name.Value, entity)} items from the database"),
-                QueryArgumentsForField(filterInputName, orderByInputName),
+                QueryArgumentsForField(filterInputName, orderByInputName, includeSemanticArguments: entity.SemanticSearch?.Enabled ?? false),
                 new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
                 fieldDefinitionNodeDirectives
             );
         }
 
-        public static List<InputValueDefinitionNode> QueryArgumentsForField(string filterInputName, string orderByInputName)
+        public static List<InputValueDefinitionNode> QueryArgumentsForField(string filterInputName, string orderByInputName, bool includeSemanticArguments = false)
         {
-            return new()
+            List<InputValueDefinitionNode> args = new()
             {
                 new(location: null, new NameNode(PAGE_START_ARGUMENT_NAME), description: new StringValueNode("The number of items to return from the page start point"), new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
                 new(location: null, new NameNode(PAGINATION_TOKEN_ARGUMENT_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
                 new(location: null, new NameNode(FILTER_FIELD_NAME), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>()),
                 new(location: null, new NameNode(ORDER_BY_FIELD_NAME), new StringValueNode("Ordering options for query"), new NamedTypeNode(orderByInputName), defaultValue: null, new List<DirectiveNode>()),
             };
+
+            if (includeSemanticArguments)
+            {
+                args.Add(new(location: null, new NameNode(SEMANTIC_SEARCH_ARGUMENT_NAME), new StringValueNode("Natural language value used for semantic search."), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()));
+                args.Add(new(location: null, new NameNode(SEMANTIC_THRESHOLD_ARGUMENT_NAME), new StringValueNode("Minimum semantic similarity threshold between 0.0 and 1.0."), new FloatType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()));
+            }
+
+            return args;
         }
 
         public static ObjectTypeDefinitionNode AddQueryArgumentsForRelationships(ObjectTypeDefinitionNode node, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)

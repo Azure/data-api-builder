@@ -3587,6 +3587,162 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             configValidator.ValidateEmbeddingsOptions(runtimeConfig);
         }
 
+        [TestMethod]
+        public void ValidateSemanticSearchRequiresRedisLevel2Configuration()
+        {
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            Entity entity = new(
+                Source: new EntitySource(Object: "dbo.Product", Type: EntitySourceType.Table, Parameters: null, KeyFields: null),
+                Fields: null,
+                GraphQL: new EntityGraphQLOptions("Product", "Products"),
+                Rest: new EntityRestOptions(),
+                Permissions: [new EntityPermission("anonymous", [new EntityAction(EntityActionOperation.Read, null, null)])],
+                Mappings: null,
+                Relationships: null,
+                SemanticSearch: new EntitySemanticSearchOptions
+                {
+                    Enabled = true,
+                    RedisIndexName = "idx:product-semantic"
+                });
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "Server=.", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null)),
+                Entities: new(new Dictionary<string, Entity> { ["Product"] = entity }));
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
+            Assert.AreEqual(
+                "Semantic search requires runtime.cache.level-2.provider to be 'redis' and runtime.cache.level-2.connection-string to be configured.",
+                ex.Message);
+        }
+
+        [TestMethod]
+        public void ValidateSemanticSearchRequiresRedisIndexNameWhenEnabled()
+        {
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            Entity entity = new(
+                Source: new EntitySource(Object: "dbo.Product", Type: EntitySourceType.Table, Parameters: null, KeyFields: null),
+                Fields: null,
+                GraphQL: new EntityGraphQLOptions("Product", "Products"),
+                Rest: new EntityRestOptions(),
+                Permissions: [new EntityPermission("anonymous", [new EntityAction(EntityActionOperation.Read, null, null)])],
+                Mappings: null,
+                Relationships: null,
+                SemanticSearch: new EntitySemanticSearchOptions
+                {
+                    Enabled = true
+                });
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "Server=.", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null),
+                    Cache: new RuntimeCacheOptions
+                    {
+                        Level2 = new RuntimeCacheLevel2Options(Provider: "redis", ConnectionString: "localhost:6379")
+                    }),
+                Entities: new(new Dictionary<string, Entity> { ["Product"] = entity }));
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
+            Assert.AreEqual(
+                "semantic-search.redis-index-name is required when semantic-search.enabled is true for entity 'Product'.",
+                ex.Message);
+        }
+
+        [TestMethod]
+        public void ValidateSemanticSearchRequiresEmbeddingsConfiguration()
+        {
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            Entity entity = new(
+                Source: new EntitySource(Object: "dbo.Product", Type: EntitySourceType.Table, Parameters: null, KeyFields: null),
+                Fields: null,
+                GraphQL: new EntityGraphQLOptions("Product", "Products"),
+                Rest: new EntityRestOptions(),
+                Permissions: [new EntityPermission("anonymous", [new EntityAction(EntityActionOperation.Read, null, null)])],
+                Mappings: null,
+                Relationships: null,
+                SemanticSearch: new EntitySemanticSearchOptions
+                {
+                    Enabled = true,
+                    RedisIndexName = "idx:product-semantic"
+                });
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "Server=.", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null),
+                    Cache: new RuntimeCacheOptions
+                    {
+                        Level2 = new RuntimeCacheLevel2Options(Provider: "redis", ConnectionString: "localhost:6379")
+                    }),
+                Entities: new(new Dictionary<string, Entity> { ["Product"] = entity }));
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
+            Assert.AreEqual(
+                "Semantic search requires runtime.embeddings to be configured and enabled.",
+                ex.Message);
+        }
+
+        [TestMethod]
+        public void ValidateSemanticSearchRejectsReservedFieldName()
+        {
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            Entity entity = new(
+                Source: new EntitySource(Object: "dbo.Product", Type: EntitySourceType.Table, Parameters: null, KeyFields: null),
+                Fields: [new FieldMetadata { Name = "id" }, new FieldMetadata { Name = "semantic_distance" }],
+                GraphQL: new EntityGraphQLOptions("Product", "Products"),
+                Rest: new EntityRestOptions(),
+                Permissions: [new EntityPermission("anonymous", [new EntityAction(EntityActionOperation.Read, null, null)])],
+                Mappings: null,
+                Relationships: null,
+                SemanticSearch: new EntitySemanticSearchOptions
+                {
+                    Enabled = true,
+                    RedisIndexName = "idx:product-semantic"
+                });
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "Server=.", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null),
+                    Cache: new RuntimeCacheOptions
+                    {
+                        Level2 = new RuntimeCacheLevel2Options(Provider: "redis", ConnectionString: "localhost:6379")
+                    },
+                    Embeddings: new EmbeddingsOptions(
+                        Provider: EmbeddingProviderType.OpenAI,
+                        BaseUrl: "https://api.openai.com",
+                        ApiKey: "test-api-key",
+                        Enabled: true)),
+                Entities: new(new Dictionary<string, Entity> { ["Product"] = entity }));
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
+            Assert.AreEqual(
+                "Entity 'Product' cannot enable semantic search because field name 'semantic_distance' is reserved.",
+                ex.Message);
+        }
+
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
         {
             MockFileSystem fileSystem = new();

@@ -472,6 +472,14 @@ namespace Cli
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
             EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtlSeconds, options.CacheLevel);
             EntityHealthCheckConfig? entityHealthOptions = ConstructEntityHealthOptions(options.HealthEnabled);
+            EntitySemanticSearchOptions? semanticSearchOptions = ConstructSemanticSearchOptions(
+                options.SemanticSearchEnabled,
+                options.SemanticSearchRedisIndexName,
+                options.SemanticSearchRedisIndexType,
+                options.SemanticSearchRedisIndexMultiplier,
+                options.SemanticSearchSimilarityThreshold,
+                options.SemanticSearchInputDescription,
+                options.SemanticSearchOutputDescription);
             EntityMcpOptions? mcpOptions = null;
 
             if (options.McpDmlTools is not null || options.McpCustomTool is not null)
@@ -495,6 +503,7 @@ namespace Cli
                 Relationships: null,
                 Mappings: null,
                 Cache: cacheOptions,
+                SemanticSearch: semanticSearchOptions,
                 Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description,
                 Mcp: mcpOptions,
                 Health: entityHealthOptions);
@@ -1002,7 +1011,9 @@ namespace Cli
 
             // Cache: Enabled and TTL
             if (options.RuntimeCacheEnabled != null ||
-                options.RuntimeCacheTTL != null)
+                options.RuntimeCacheTTL != null ||
+                options.RuntimeCacheLevel2Provider != null ||
+                options.RuntimeCacheLevel2ConnectionString != null)
             {
                 RuntimeCacheOptions? updatedCacheOptions = runtimeConfig?.Runtime?.Cache ?? new();
                 bool status = TryUpdateConfiguredCacheValues(options, ref updatedCacheOptions);
@@ -1557,6 +1568,43 @@ namespace Cli
                         _logger.LogError("Failed to update Runtime.Cache.ttl-seconds as '{updatedValue}' value in TTL is not valid.", updatedValue);
                         return false;
                     }
+                }
+
+                // Runtime.Cache.level-2.provider
+                updatedValue = options?.RuntimeCacheLevel2Provider;
+                if (updatedValue != null)
+                {
+                    string provider = ((string)updatedValue).Trim();
+                    if (!string.Equals(provider, "redis", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogError("Failed to update Runtime.Cache.level-2.provider as '{updatedValue}'. Supported value is 'redis'.", updatedValue);
+                        return false;
+                    }
+
+                    RuntimeCacheLevel2Options currentLevel2 = updatedCacheOptions?.Level2 ?? new();
+                    updatedCacheOptions = updatedCacheOptions! with
+                    {
+                        Level2 = currentLevel2 with
+                        {
+                            Provider = provider.ToLowerInvariant()
+                        }
+                    };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Cache.level-2.provider as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Cache.level-2.connection-string
+                updatedValue = options?.RuntimeCacheLevel2ConnectionString;
+                if (updatedValue != null)
+                {
+                    RuntimeCacheLevel2Options currentLevel2 = updatedCacheOptions?.Level2 ?? new();
+                    updatedCacheOptions = updatedCacheOptions! with
+                    {
+                        Level2 = currentLevel2 with
+                        {
+                            ConnectionString = (string)updatedValue
+                        }
+                    };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Cache.level-2.connection-string.");
                 }
 
                 return true;
@@ -2327,6 +2375,14 @@ namespace Cli
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
             EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtlSeconds, options.CacheLevel) ?? entity.Cache;
             EntityHealthCheckConfig? updatedEntityHealthOptions = ConstructEntityHealthOptions(options.HealthEnabled) ?? entity.Health;
+            EntitySemanticSearchOptions? updatedSemanticSearchOptions = ConstructSemanticSearchOptions(
+                options.SemanticSearchEnabled,
+                options.SemanticSearchRedisIndexName,
+                options.SemanticSearchRedisIndexType,
+                options.SemanticSearchRedisIndexMultiplier,
+                options.SemanticSearchSimilarityThreshold,
+                options.SemanticSearchInputDescription,
+                options.SemanticSearchOutputDescription);
 
             // Determine if the entity is or will be a stored procedure
             bool isStoredProcedureAfterUpdate = doOptionsRepresentStoredProcedure || (isCurrentEntityStoredProcedure && options.SourceType is null);
@@ -2588,6 +2644,7 @@ namespace Cli
                 Relationships: updatedRelationships,
                 Mappings: updatedMappings,
                 Cache: updatedCacheOptions,
+                SemanticSearch: updatedSemanticSearchOptions ?? entity.SemanticSearch,
                 Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description,
                 Mcp: updatedMcpOptions,
                 Health: updatedEntityHealthOptions

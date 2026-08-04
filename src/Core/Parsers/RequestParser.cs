@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Net;
 using System.Web;
 using Azure.DataApiBuilder.Core.Models;
@@ -36,6 +37,14 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// Prefix used for specifying paging in the query string of the URL.
         /// </summary>
         public const string AFTER_URL = "$after";
+        /// <summary>
+        /// Prefix used for specifying semantic search text in the query string of the URL.
+        /// </summary>
+        public const string SEMANTIC_SEARCH_URL = SemanticSearchConstants.REST_SEARCH_QUERY_PARAM;
+        /// <summary>
+        /// Prefix used for specifying semantic similarity threshold in the query string of the URL.
+        /// </summary>
+        public const string SEMANTIC_THRESHOLD_URL = SemanticSearchConstants.REST_THRESHOLD_QUERY_PARAM;
 
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key
@@ -139,6 +148,14 @@ namespace Azure.DataApiBuilder.Core.Parsers
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }
 
+                        if (ContainsSemanticDistanceOrderByToken(rawSortValue))
+                        {
+                            throw new DataApiBuilderException(
+                                message: "semantic_distance cannot be used in orderBy.",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
+
                         (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = GenerateOrderByLists(context, sqlMetadataProvider, $"?{SORT_URL}={rawSortValue}");
                         break;
                     case AFTER_URL:
@@ -147,6 +164,22 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     case FIRST_URL:
                         context.First = RequestValidator.CheckFirstValidity(context.ParsedQueryString[key]!);
                         break;
+                    case SEMANTIC_SEARCH_URL:
+                        context.SemanticSearch = context.ParsedQueryString[key];
+                        break;
+                    case SEMANTIC_THRESHOLD_URL:
+                        if (!double.TryParse(context.ParsedQueryString[key], NumberStyles.Float, CultureInfo.InvariantCulture, out double semanticThreshold)
+                            || semanticThreshold < 0.0
+                            || semanticThreshold > 1.0)
+                        {
+                            throw new DataApiBuilderException(
+                                message: "semantic_threshold must be a decimal value between 0.0 and 1.0.",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
+
+                        context.SemanticThreshold = semanticThreshold;
+                        break;
                     default:
                         throw new DataApiBuilderException(
                             message: $"Invalid Query Parameter: {key}",
@@ -154,6 +187,28 @@ namespace Azure.DataApiBuilder.Core.Parsers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
             }
+        }
+
+        private static bool ContainsSemanticDistanceOrderByToken(string rawSortValue)
+        {
+            string decoded = Uri.UnescapeDataString(rawSortValue);
+
+            foreach (string part in decoded.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                string[] tokens = part.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (tokens.Length == 0)
+                {
+                    continue;
+                }
+
+                string columnToken = tokens[0].Trim('\'', '"');
+                if (string.Equals(columnToken, SemanticSearchConstants.REST_DISTANCE_FIELD, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

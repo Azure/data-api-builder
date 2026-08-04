@@ -1,8 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
+using System.Reflection;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -14,6 +21,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass]
     public class RequestParserUnitTests
     {
+        private const string DEFAULT_ENTITY = "Book";
+        private const string DEFAULT_SCHEMA = "dbo";
+
         /// <summary>
         /// Tests that ExtractRawQueryParameter correctly extracts URL-encoded
         /// parameter values, preserving special characters like ampersand (&).
@@ -75,6 +85,85 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(expectedValue, result,
                 $"Expected '{expectedValue}' but got '{result}' for parameter '{parameterName}' in query '{queryString}'");
+        }
+
+        [TestMethod]
+        public void ParseQueryString_SetsSemanticInputs_ForUserRequest()
+        {
+            FindRequestContext context = new(
+                entityName: DEFAULT_ENTITY,
+                dbo: new DatabaseTable(DEFAULT_SCHEMA, DEFAULT_ENTITY),
+                isList: true)
+            {
+                RawQueryString = "?$semantic_search=wireless%20headphones&$semantic_threshold=0.83"
+            };
+
+            context.ParsedQueryString.Add(RequestParser.SEMANTIC_SEARCH_URL, "wireless headphones");
+            context.ParsedQueryString.Add(RequestParser.SEMANTIC_THRESHOLD_URL, "0.83");
+
+            RequestParser.ParseQueryString(context, new Mock<ISqlMetadataProvider>().Object);
+
+            Assert.AreEqual("wireless headphones", context.SemanticSearch);
+            Assert.AreEqual(0.83, context.SemanticThreshold);
+        }
+
+        [DataTestMethod]
+        [DataRow("-0.01")]
+        [DataRow("1.01")]
+        [DataRow("not-a-number")]
+        public void ParseQueryString_RejectsInvalidSemanticThreshold_ForUserRequest(string threshold)
+        {
+            FindRequestContext context = new(
+                entityName: DEFAULT_ENTITY,
+                dbo: new DatabaseTable(DEFAULT_SCHEMA, DEFAULT_ENTITY),
+                isList: true)
+            {
+                RawQueryString = $"?$semantic_threshold={threshold}"
+            };
+
+            context.ParsedQueryString.Add(RequestParser.SEMANTIC_THRESHOLD_URL, threshold);
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => RequestParser.ParseQueryString(context, new Mock<ISqlMetadataProvider>().Object));
+
+            StringAssert.Contains(ex.Message, "semantic_threshold must be a decimal value between 0.0 and 1.0.");
+        }
+
+        [DataTestMethod]
+        [DataRow("?$orderby=semantic_distance%20asc")]
+        [DataRow("?$orderby=Semantic_Distance%20desc")]
+        public void ParseQueryString_RejectsOrderBySemanticDistance_ForUserRequest(string rawQuery)
+        {
+            FindRequestContext context = new(
+                entityName: DEFAULT_ENTITY,
+                dbo: new DatabaseTable(DEFAULT_SCHEMA, DEFAULT_ENTITY),
+                isList: true)
+            {
+                RawQueryString = rawQuery
+            };
+
+            context.ParsedQueryString.Add(RequestParser.SORT_URL, rawQuery.Contains("desc", StringComparison.OrdinalIgnoreCase) ? "Semantic_Distance desc" : "semantic_distance asc");
+
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => RequestParser.ParseQueryString(context, new Mock<ISqlMetadataProvider>().Object));
+
+            StringAssert.Contains(ex.Message, "semantic_distance cannot be used in orderBy.");
+        }
+
+        [DataTestMethod]
+        [DataRow("semantic_distance asc", true)]
+        [DataRow("Semantic_Distance desc", true)]
+        [DataRow("semantic_distance_score asc", false)]
+        [DataRow("title asc,semantic_distance_score desc", false)]
+        public void ContainsSemanticDistanceOrderByToken_UsesExactColumnMatch(string rawSortValue, bool expected)
+        {
+            MethodInfo method = typeof(RequestParser).GetMethod(
+                "ContainsSemanticDistanceOrderByToken",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.IsNotNull(method, "Expected private helper method to exist.");
+            bool actual = (bool)method!.Invoke(null, new object[] { rawSortValue })!;
+            Assert.AreEqual(expected, actual);
         }
     }
 }

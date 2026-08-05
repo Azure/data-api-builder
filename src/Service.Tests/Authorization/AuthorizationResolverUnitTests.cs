@@ -1370,40 +1370,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// The legacy public API keeps its string return type for source and binary compatibility,
-        /// but fails closed because claim values cannot be represented safely in policy text.
-        /// </summary>
-        [TestMethod]
-        public void DbPolicy_LegacyStringContractWithClaims_FailsClosed()
-        {
-            RuntimeConfig runtimeConfig = InitRuntimeConfig(
-                entityName: TEST_ENTITY,
-                roleName: TEST_ROLE,
-                operation: TEST_OPERATION,
-                includedCols: new HashSet<string> { "col1" },
-                databasePolicy: "@item.col1 eq @claims.userId");
-            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
-
-            Mock<HttpContext> context = new();
-            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
-            identity.AddClaim(new Claim("userId", "alice", ClaimValueTypes.String));
-            context.Setup(x => x.User).Returns(new ClaimsPrincipal(identity));
-            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
-
-            Assert.AreEqual(
-                typeof(string),
-                typeof(IAuthorizationResolver).GetMethod(nameof(IAuthorizationResolver.ProcessDBPolicy))!.ReturnType);
-
-            #pragma warning disable CS0618 // Explicitly validates the preserved legacy API contract.
-            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
-                authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object));
-            #pragma warning restore CS0618
-
-            Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed, exception.SubStatusCode);
-        }
-
-        /// <summary>
         /// Tests authorization policy processing mechanism by validating value type compatibility
         /// of claims present in HttpContext.User.Claims.
         /// </summary>
@@ -1614,7 +1580,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
         // Indirectly tests the AuthorizationResolver private method:
         // GetDBPolicyForRequest(string entityName, string roleName, string operation)
-        // by calling public method TryProcessDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object)
+        // by calling public method ResolveDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object)
         // The result of executing that method will determine whether execution behaves as expected.
         // When string.Empty is returned,
         // then no policy is found for the provided entity, role, and operation combination, therefore,
@@ -1657,17 +1623,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(clientRole);
 
-            #pragma warning disable CS0618 // Explicitly validates the preserved legacy API contract.
-            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object);
-            #pragma warning restore CS0618
-            string errorMessage = "TryProcessDBPolicy returned unexpected value.";
+            ResolvedDatabasePolicy parsedPolicy = authZResolver.ResolveDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object);
+            string errorMessage = "ResolveDBPolicy returned unexpected value.";
             if (expectPolicy)
             {
-                Assert.AreEqual(actual: parsedPolicy, expected: policy, message: errorMessage);
+                Assert.AreEqual(actual: parsedPolicy.Policy, expected: policy, message: errorMessage);
             }
             else
             {
-                Assert.AreEqual(actual: parsedPolicy, expected: string.Empty, message: errorMessage);
+                Assert.AreEqual(actual: parsedPolicy.Policy, expected: string.Empty, message: errorMessage);
             }
         }
 

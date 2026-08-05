@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Net;
 using System.Security.Claims;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -210,60 +209,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(expectedCosmosPredicate, cosmosPredicate);
             AssertParameterValues(cosmosStructure, 6, true, true);
-        }
-
-        /// <summary>
-        /// Verifies existing authorization resolver implementations remain usable for static policies.
-        /// </summary>
-        [TestMethod]
-        public void LegacyAuthorizationResolver_StaticPolicy_RemainsSupported()
-        {
-            Mock<IAuthorizationResolver> resolver = new();
-            resolver
-                .Setup(instance => instance.GetDBPolicyForRequest(ENTITY_NAME, ROLE_NAME, OPERATION))
-                .Returns("@item.intCol eq 42");
-            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
-            TestSqlQueryStructure sqlStructure = new(metadataProvider.Object, resolver.Object);
-            DefaultHttpContext context = new();
-            context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = ROLE_NAME;
-
-            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                OPERATION,
-                sqlStructure,
-                context,
-                resolver.Object,
-                metadataProvider.Object);
-
-            Assert.AreEqual("([intCol] = @param0)", sqlStructure.GetDbPolicyForOperation(OPERATION));
-            AssertParameterValues(sqlStructure, 42);
-        }
-
-        /// <summary>
-        /// Verifies existing string-only resolver implementations fail closed for claim-bearing policies.
-        /// </summary>
-        [TestMethod]
-        public void LegacyAuthorizationResolver_ClaimPolicy_FailsClosed()
-        {
-            Mock<IAuthorizationResolver> resolver = new();
-            resolver
-                .Setup(instance => instance.GetDBPolicyForRequest(ENTITY_NAME, ROLE_NAME, OPERATION))
-                .Returns("@item.textCol eq @claims.value");
-            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
-            TestSqlQueryStructure sqlStructure = new(metadataProvider.Object, resolver.Object);
-            DefaultHttpContext context = new();
-            context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = ROLE_NAME;
-
-            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
-                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                    OPERATION,
-                    sqlStructure,
-                    context,
-                    resolver.Object,
-                    metadataProvider.Object));
-
-            Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed, exception.SubStatusCode);
-            Assert.AreEqual(0, sqlStructure.Parameters.Count);
         }
 
         /// <summary>

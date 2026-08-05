@@ -13,6 +13,16 @@ namespace Azure.DataApiBuilder.Auth;
 public sealed record ResolvedDatabasePolicy
 {
     /// <summary>
+    /// Policy text containing OData parameter aliases.
+    /// </summary>
+    public string Policy { get; }
+
+    /// <summary>
+    /// Immutable snapshot of typed claim values keyed by parameter alias.
+    /// </summary>
+    public IReadOnlyDictionary<string, object?> ClaimValues { get; }
+
+    /// <summary>
     /// Initializes a resolved database policy and takes an immutable snapshot of its claim values.
     /// </summary>
     /// <param name="policy">Policy text containing OData parameter aliases.</param>
@@ -26,16 +36,6 @@ public sealed record ResolvedDatabasePolicy
         ClaimValues = new ReadOnlyDictionary<string, object?>(
             new Dictionary<string, object?>(claimValues, StringComparer.Ordinal));
     }
-
-    /// <summary>
-    /// Policy text containing OData parameter aliases.
-    /// </summary>
-    public string Policy { get; }
-
-    /// <summary>
-    /// Immutable snapshot of typed claim values keyed by parameter alias.
-    /// </summary>
-    public IReadOnlyDictionary<string, object?> ClaimValues { get; }
 
     /// <summary>
     /// Represents an operation without a database authorization policy.

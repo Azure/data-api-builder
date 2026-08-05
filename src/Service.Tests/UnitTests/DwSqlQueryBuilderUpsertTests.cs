@@ -139,9 +139,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     => _columnMapping.TryGetValue(field, out column)))
                 .Returns((string entity, string field, string? column) => _columnMapping.ContainsKey(field));
 
-            // The update policy is injected directly onto the structure, so this test does not
-            // invoke the resolver while constructing the query structure.
+            // The update policy is injected directly onto the structure after construction.
             Mock<IAuthorizationResolver> authorizationResolver = new();
+            authorizationResolver
+                .Setup(x => x.ResolveDBPolicy(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<EntityActionOperation>(),
+                    It.IsAny<HttpContext>()))
+                .Returns(ResolvedDatabasePolicy.Empty);
 
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
             Mock<IMetadataProviderFactory> metadataProviderFactory = new();

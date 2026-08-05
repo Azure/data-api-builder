@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Authorization;
 /// Authorization stages that require passing before a request is executed
 /// against a database.
 /// </summary>
-public class AuthorizationResolver : IAuthorizationResolver, IResolvedDatabasePolicyProvider
+public class AuthorizationResolver : IAuthorizationResolver
 {
     private readonly RuntimeConfigProvider _runtimeConfigProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
@@ -203,28 +203,6 @@ public class AuthorizationResolver : IAuthorizationResolver, IResolvedDatabasePo
 
         // OperationMetadata lookup failed.
         return false;
-    }
-
-    /// <inheritdoc />
-    [Obsolete("Use IResolvedDatabasePolicyProvider.ResolveDBPolicy to keep claim values separate from policy text.")]
-    public string ProcessDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext)
-    {
-        string dbPolicy = GetDBPolicyForRequest(entityName, roleName, operation);
-
-        if (string.IsNullOrWhiteSpace(dbPolicy))
-        {
-            return string.Empty;
-        }
-
-        if (dbPolicy.Contains(CLAIM_PREFIX, StringComparison.Ordinal))
-        {
-            throw new DataApiBuilderException(
-                message: "Claim-bearing database policies require typed claim binding.",
-                statusCode: HttpStatusCode.Forbidden,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
-        }
-
-        return dbPolicy.Replace(FIELD_PREFIX, string.Empty);
     }
 
     /// <inheritdoc />

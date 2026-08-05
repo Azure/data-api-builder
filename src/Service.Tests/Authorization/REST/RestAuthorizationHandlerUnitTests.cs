@@ -99,14 +99,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardOperation();
             HttpContext httpContext = CreateHttpContext(httpMethod: httpMethod, clientRole: "admin");
 
-            #pragma warning disable CS0618 // Explicitly validates the preserved legacy API contract.
-            Assert.AreEqual(expected: string.Empty, actual: authorizationResolver.ProcessDBPolicy(
+            ResolvedDatabasePolicy resolvedPolicy = authorizationResolver.ResolveDBPolicy(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: "admin",
                 operation: RestService.HttpVerbToOperations(httpVerbName: httpMethod),
-                httpContext: httpContext)
-            );
-            #pragma warning restore CS0618
+                httpContext: httpContext);
+
+            Assert.AreEqual(expected: string.Empty, actual: resolvedPolicy.Policy);
         }
 
         /// <summary>

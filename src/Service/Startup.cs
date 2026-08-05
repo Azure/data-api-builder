@@ -1168,6 +1168,8 @@ namespace Azure.DataApiBuilder.Service
 
                         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                         {
+                            ValidAudience = authOptions.Jwt.Audience,
+                            ValidIssuer = authOptions.Jwt.Issuer,
                             ValidateIssuer = true,
                             ValidateAudience = true,
                             ValidateLifetime = true,
@@ -1175,7 +1177,7 @@ namespace Azure.DataApiBuilder.Service
                             IssuerSigningKeys = jwks.Keys,
                             // Instructs the asp.net core middleware which JWT claim to use for User.IsInRole()
                             // Defaults to "roles" when not explicitly configured.
-                            RoleClaimType = authOptions.Jwt!.ResolvedRoleClaimType
+                            RoleClaimType = authOptions.Jwt.ResolvedRoleClaimType
                         };
 
                         options.Events = new JwtBearerEvents

@@ -6,14 +6,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
+using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
@@ -402,7 +406,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         {
             const string parameterName = "title";
             const string configDescription = "Title from runtime config";
-            const string dbDescription = "Title from database metadata";
+            const string definitionDescription = "Description already on the parameter definition (config should win)";
 
             DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spParamDesc")
             {
@@ -411,7 +415,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 {
                     Parameters = new()
                     {
-                        { parameterName, new() { SystemType = typeof(string), Description = dbDescription } }
+                        { parameterName, new() { SystemType = typeof(string), Description = definitionDescription } }
                     }
                 }
             };
@@ -438,10 +442,10 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         }
 
         [TestMethod]
-        public void StoredProcedure_ParameterDescription_FallsBackToDatabaseDescription()
+        public void StoredProcedure_ParameterDescription_FallsBackToDefinitionDescriptionWhenNoConfigDescription()
         {
             const string parameterName = "title";
-            const string dbDescription = "Title from database metadata";
+            const string definitionDescription = "Title description on the parameter definition";
 
             DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spParamDescFallback")
             {
@@ -450,7 +454,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 {
                     Parameters = new()
                     {
-                        { parameterName, new() { SystemType = typeof(string), Description = dbDescription } }
+                        { parameterName, new() { SystemType = typeof(string), Description = definitionDescription } }
                     }
                 }
             };
@@ -464,7 +468,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             InputValueDefinitionNode arg = field.Arguments.First(a => a.Name.Value == parameterName);
             Assert.IsNotNull(arg.Description);
-            Assert.AreEqual(dbDescription, arg.Description!.Value);
+            Assert.AreEqual(definitionDescription, arg.Description!.Value);
         }
 
         [TestMethod]
@@ -487,6 +491,84 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
                 spDbObj: spDbObj,
                 configParameters: new List<ParameterMetadata>(),
+                graphQLTypeName: graphQLTypeName,
+                entityName: entityName);
+
+            InputValueDefinitionNode arg = field.Arguments.First(a => a.Name.Value == parameterName);
+            Assert.IsNotNull(arg.Description);
+            Assert.AreEqual($"parameters for {graphQLTypeName} stored-procedure", arg.Description!.Value);
+        }
+
+        [DataTestMethod]
+        [DataRow("", DisplayName = "Empty config description falls back to definition description")]
+        [DataRow("   ", DisplayName = "Whitespace config description falls back to definition description")]
+        public void StoredProcedure_ParameterDescription_WhitespaceConfigDescriptionFallsBackToDefinitionDescription(string whitespaceDescription)
+        {
+            const string parameterName = "title";
+            const string definitionDescription = "Title description on the parameter definition";
+
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spParamDescWhitespace")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+                {
+                    Parameters = new()
+                    {
+                        { parameterName, new() { SystemType = typeof(string), Description = definitionDescription } }
+                    }
+                }
+            };
+            spDbObj.SourceDefinition.Columns.TryAdd("col1", new() { SystemType = typeof(string) });
+
+            List<ParameterMetadata> configParameters = new()
+            {
+                new ParameterMetadata { Name = parameterName, Description = whitespaceDescription }
+            };
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: configParameters,
+                graphQLTypeName: "SpParamDescWhitespaceType",
+                entityName: "SpParamDescWhitespace");
+
+            InputValueDefinitionNode arg = field.Arguments.First(a => a.Name.Value == parameterName);
+            Assert.IsNotNull(arg.Description);
+            Assert.AreEqual(definitionDescription, arg.Description!.Value);
+        }
+
+        [DataTestMethod]
+        [DataRow("", "", DisplayName = "Both empty — falls back to default text")]
+        [DataRow("   ", "   ", DisplayName = "Both whitespace — falls back to default text")]
+        [DataRow("", "   ", DisplayName = "Empty config, whitespace definition — falls back to default text")]
+        [DataRow("   ", "", DisplayName = "Whitespace config, empty definition — falls back to default text")]
+        public void StoredProcedure_ParameterDescription_BothWhitespaceFallsBackToDefaultText(
+            string whitespaceConfigDescription, string whitespaceDefinitionDescription)
+        {
+            const string parameterName = "title";
+            const string graphQLTypeName = "SpParamDescBothWhitespaceType";
+            const string entityName = "SpParamDescBothWhitespace";
+
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spParamDescBothWhitespace")
+            {
+                SourceType = EntitySourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+                {
+                    Parameters = new()
+                    {
+                        { parameterName, new() { SystemType = typeof(string), Description = whitespaceDefinitionDescription } }
+                    }
+                }
+            };
+            spDbObj.SourceDefinition.Columns.TryAdd("col1", new() { SystemType = typeof(string) });
+
+            List<ParameterMetadata> configParameters = new()
+            {
+                new ParameterMetadata { Name = parameterName, Description = whitespaceConfigDescription }
+            };
+
+            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
+                spDbObj: spDbObj,
+                configParameters: configParameters,
                 graphQLTypeName: graphQLTypeName,
                 entityName: entityName);
 

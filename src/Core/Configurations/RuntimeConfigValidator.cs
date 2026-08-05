@@ -1011,6 +1011,28 @@ public class RuntimeConfigValidator : IConfigValidator
                 ValidateNameRequirements(entity.GraphQL.Singular);
                 ValidateNameRequirements(entity.GraphQL.Plural);
             }
+
+            // Validate that stored procedure config parameters do not contain duplicate names.
+            // Duplicate names produce inconsistent behavior: GraphQL uses the first match (FirstOrDefault),
+            // while metadata hydration overwrites with the last match — so descriptions, required, and
+            // default values can silently diverge between GraphQL, OpenAPI, and MCP responses.
+            if (entity.Source.Type is EntitySourceType.StoredProcedure
+                && entity.Source.Parameters is not null)
+            {
+                HashSet<string> seenParamNames = new(StringComparer.OrdinalIgnoreCase);
+                foreach (ParameterMetadata param in entity.Source.Parameters)
+                {
+                    if (!seenParamNames.Add(param.Name))
+                    {
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity '{entityName}' has duplicate parameter name '{param.Name}' in its stored procedure parameters configuration. " +
+                                "Parameter names must be unique (case-insensitive).",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                        break;
+                    }
+                }
+            }
         }
     }
 

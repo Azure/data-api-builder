@@ -1153,7 +1153,6 @@ namespace Azure.DataApiBuilder.Service
                 {
                     EasyAuthType easyAuthType = EnumExtensions.Deserialize<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider);
                     bool isProductionMode = mode != HostMode.Development;
-                    bool isProductionMode = mode != HostMode.Development;
                     bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
                     bool swaEnvironmentDetected = StaticWebAppsAuthentication.AreExpectedSWAEnvVarsPresent();
 

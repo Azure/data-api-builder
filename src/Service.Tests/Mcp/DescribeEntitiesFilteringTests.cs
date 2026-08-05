@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -265,7 +266,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// <summary>
         /// Verifies that low-privilege roles see only entities
         /// they have explicit permission on. A "reader" role that has READ permission on Book
-        /// should see Book but not GetBook (execute-only SP).
+        /// should see Book but not GetBook (execute-only SP). Also asserts the exact
+        /// permission set so <see cref="DescribeEntitiesTool"/>'s <c>BuildPermissionsInfo</c>
+        /// cannot silently return an over-broad set.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_LowPrivRole_SeesOnlyAuthorizedEntities()
@@ -282,6 +285,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert - Reader role should see only Book, not GetBook
             AssertSuccessResultWithEntityNames(result, new[] { "Book" }, new[] { "GetBook" });
+            AssertEntityPermissions(result, "Book", new[] { "READ" });
         }
 
         /// <summary>
@@ -306,27 +310,57 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Verifies that when multiple roles are provided in the X-MS-API-ROLE header,
-        /// describe_entities returns the union of entities accessible to any of the roles.
-        /// A caller with "reader,admin" should see entities from both roles combined.
-        /// This matches the authorization behavior of other MCP tools (McpAuthorizationHelper.TryResolveAuthorizedRole).
+        /// Verifies that a high-privilege single role sees every entity it has any permission on
+        /// and that the returned permission sets reflect resolver-driven wildcard expansion
+        /// (<c>Action=All</c> expands to CRUD on a table, Execute on a stored procedure).
+        /// DAB uses a single-role request model: the value validated by <c>IsValidRoleContext</c>
+        /// is the role used for the rest of the request, matching REST, GraphQL, and the DML MCP tools.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_MultiRole_ReturnsUnionOfAuthorizedEntities()
+        public async Task DescribeEntities_AdminRole_SeesEveryAuthorizedEntityWithWildcardExpansion()
         {
             // Arrange - Config where:
-            //   - "Book" entity: reader role has READ permission
-            //   - "GetBook" entity: admin role has EXECUTE permission (reader has none)
-            // Caller sends both roles → should see both entities
+            //   - "Book" entity: admin role has Action=All permission
+            //   - "GetBook" entity: admin role has EXECUTE permission
             RuntimeConfig config = CreateConfigWithMixedRoleAccess();
-            IServiceProvider serviceProvider = CreateServiceProvider(config, role: "reader,admin");
+            IServiceProvider serviceProvider = CreateServiceProvider(config, role: "admin");
             DescribeEntitiesTool tool = new();
 
             // Act
             CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
 
-            // Assert - Union of reader + admin → both Book and GetBook visible
+            // Assert - Admin sees both entities and wildcard 'All' expands to the full CRUD set on Book;
+            // GetBook (SP) shows EXECUTE only.
             AssertSuccessResultWithEntityNames(result, new[] { "Book", "GetBook" }, Array.Empty<string>());
+            AssertEntityPermissions(result, "Book", new[] { "CREATE", "DELETE", "READ", "UPDATE" });
+            AssertEntityPermissions(result, "GetBook", new[] { "EXECUTE" });
+        }
+
+        /// <summary>
+        /// Verifies that entity visibility and the returned permissions honor the same role-inheritance
+        /// chain the production <see cref="AuthorizationResolver"/> applies: anonymous permissions are
+        /// inherited by authenticated, and a named role that is not explicitly configured on an entity
+        /// falls back to authenticated. Without this, describe_entities would under-report permissions
+        /// or hide entities the caller can actually reach via REST/GraphQL.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_HonorsRoleInheritance_AnonymousIntoAuthenticatedIntoNamedRole()
+        {
+            // Arrange - "Book" grants READ to anonymous only. authenticated and any named role
+            // should inherit that READ per resolver semantics.
+            RuntimeConfig config = CreateConfigWithAnonymousReadOnlyBook();
+
+            // authenticated inherits anonymous's READ.
+            IServiceProvider authedProvider = CreateServiceProvider(config, role: "authenticated");
+            CallToolResult authedResult = await new DescribeEntitiesTool().ExecuteAsync(null, authedProvider, CancellationToken.None);
+            AssertSuccessResultWithEntityNames(authedResult, new[] { "Book" }, Array.Empty<string>());
+            AssertEntityPermissions(authedResult, "Book", new[] { "READ" });
+
+            // Unconfigured named role inherits authenticated → which itself inherited from anonymous.
+            IServiceProvider namedProvider = CreateServiceProvider(config, role: "some_unconfigured_role");
+            CallToolResult namedResult = await new DescribeEntitiesTool().ExecuteAsync(null, namedProvider, CancellationToken.None);
+            AssertSuccessResultWithEntityNames(namedResult, new[] { "Book" }, Array.Empty<string>());
+            AssertEntityPermissions(namedResult, "Book", new[] { "READ" });
         }
 
         #region Helper Methods
@@ -377,6 +411,32 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
             Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
             Assert.AreEqual(expectedErrorType, errorType.GetString());
+        }
+
+        /// <summary>
+        /// Asserts that the entity's permissions array is exactly the given set (order-insensitive,
+        /// case-insensitive). Guards against BuildPermissionsInfo silently returning a partial or
+        /// over-broad union of the caller's roles' operations.
+        /// </summary>
+        private static void AssertEntityPermissions(CallToolResult result, string entityName, string[] expectedPermissions)
+        {
+            JsonElement content = GetContentFromResult(result);
+            Assert.IsTrue(content.TryGetProperty("entities", out JsonElement entities));
+
+            JsonElement entity = entities.EnumerateArray()
+                .FirstOrDefault(e => string.Equals(e.GetProperty("name").GetString(), entityName, StringComparison.Ordinal));
+            Assert.AreNotEqual(default(JsonElement).ValueKind, entity.ValueKind, $"entity '{entityName}' not found in result");
+
+            Assert.IsTrue(entity.TryGetProperty("permissions", out JsonElement permissions), $"entity '{entityName}' missing 'permissions'");
+
+            HashSet<string> actual = permissions.EnumerateArray()
+                .Select(p => p.GetString()!)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> expected = new(expectedPermissions, StringComparer.OrdinalIgnoreCase);
+
+            Assert.IsTrue(
+                actual.SetEquals(expected),
+                $"entity '{entityName}' permissions mismatch. expected=[{string.Join(",", expected.OrderBy(s => s))}] actual=[{string.Join(",", actual.OrderBy(s => s))}]");
         }
 
         /// <summary>
@@ -608,8 +668,41 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Creates a runtime config where "Book" grants READ to anonymous only, with no other roles
+        /// declared on the entity. Used to verify role inheritance semantics: authenticated should
+        /// inherit anonymous's READ, and any named role should fall through authenticated → anonymous.
+        /// </summary>
+        private static RuntimeConfig CreateConfigWithAnonymousReadOnlyBook()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                ["Book"] = new Entity(
+                    Source: new("books", EntitySourceType.Table, null, null),
+                    GraphQL: new("Book", "Books"),
+                    Fields: null,
+                    Rest: new(Enabled: true),
+                    Permissions: new[]
+                    {
+                        new EntityPermission(
+                            Role: AuthorizationResolver.ROLE_ANONYMOUS,
+                            Actions: new[] { new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null) })
+                    },
+                    Mappings: null,
+                    Relationships: null,
+                    Mcp: null
+                )
+            };
+
+            return CreateRuntimeConfig(entities);
+        }
+
+        /// <summary>
+        /// <summary>
         /// Creates a service provider with mocked dependencies for testing DescribeEntitiesTool.
-        /// Configures specified role (or anonymous) and necessary DAB services.
+        /// Wires a real <see cref="DefaultHttpContext"/> populated with a <see cref="ClaimsPrincipal"/>
+        /// that carries a role claim, and mocks <see cref="IAuthorizationResolver.IsValidRoleContext"/>
+        /// with the exact production semantic (<c>User.IsInRole(header)</c>), so the auth boundary
+        /// is exercised through real claim/header logic rather than an unconditional test bypass.
         /// </summary>
         private static IServiceProvider CreateServiceProvider(RuntimeConfig config, string? role = "anonymous")
         {
@@ -619,29 +712,51 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
             services.AddSingleton<RuntimeConfigProvider>(sp => configProvider);
 
-            // Mock IAuthorizationResolver
-            Mock<IAuthorizationResolver> mockAuthResolver = new();
-            mockAuthResolver.Setup(x => x.IsValidRoleContext(It.IsAny<HttpContext>())).Returns(role != null);
-            services.AddSingleton(mockAuthResolver.Object);
-
-            // Mock HttpContext with specified role (or null for no role)
-            Mock<HttpContext> mockHttpContext = new();
-            Mock<HttpRequest> mockRequest = new();
-
+            // Build a real HttpContext with the X-MS-API-ROLE header set and, when a role is provided,
+            // a ClaimsPrincipal carrying that role claim. This matches production wiring: the header
+            // is what IsValidRoleContext reads, and IsInRole checks the principal's claims.
+            DefaultHttpContext httpContext = new();
             if (role != null)
             {
-                mockRequest.Setup(x => x.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(role);
-            }
-            else
-            {
-                // When role is null, simulate empty role header
-                mockRequest.Setup(x => x.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns("");
+                httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = role;
+                ClaimsIdentity identity = new(
+                    new[] { new Claim(ClaimTypes.Role, role) },
+                    authenticationType: "TestAuth");
+                httpContext.User = new ClaimsPrincipal(identity);
             }
 
-            mockHttpContext.Setup(x => x.Request).Returns(mockRequest.Object);
+            // Mock IAuthorizationResolver
+            Mock<IAuthorizationResolver> mockAuthResolver = new();
+
+            // Exact production semantic: exactly-one non-empty header value + User.IsInRole(header).
+            // Aaron flagged the previous "return role != null" mock as bypassing the auth boundary;
+            // this replicates the production check so a comma-in-header case (case #3 in the review)
+            // would not silently split into two roles.
+            mockAuthResolver
+                .Setup(x => x.IsValidRoleContext(It.IsAny<HttpContext>()))
+                .Returns((HttpContext ctx) =>
+                {
+                    string headerValue = ctx.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
+                    return !string.IsNullOrWhiteSpace(headerValue)
+                        && ctx.User is not null
+                        && ctx.User.IsInRole(headerValue);
+                });
+
+            // Model production AreRoleAndOperationDefinedForEntity semantics over the test config:
+            //   * wildcard EntityActionOperation.All expands to CRUD (table/view) or Execute (SP);
+            //   * anonymous permissions are inherited by authenticated (setup-time copy);
+            //   * a named role not configured on the entity falls back to authenticated (which itself
+            //     may have inherited from anonymous). Mirrors AuthorizationResolver.GetEffectiveRoleName.
+            mockAuthResolver
+                .Setup(x => x.AreRoleAndOperationDefinedForEntity(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EntityActionOperation>()))
+                .Returns((string entityName, string requestedRole, EntityActionOperation op) =>
+                    IsRoleAndOperationDefinedForEntity(config, entityName, requestedRole, op));
+
+            services.AddSingleton(mockAuthResolver.Object);
 
             Mock<IHttpContextAccessor> mockHttpContextAccessor = new();
-            mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
+            mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
             services.AddSingleton(mockHttpContextAccessor.Object);
 
             // Register a stub IMetadataProviderFactory that returns a populated DatabaseStoredProcedure
@@ -655,6 +770,89 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             services.AddLogging();
 
             return services.BuildServiceProvider();
+        }
+
+        /// <summary>
+        /// Resolves whether (<paramref name="requestedRole"/>, <paramref name="op"/>) has a permission
+        /// defined for <paramref name="entityName"/> in <paramref name="config"/>, mirroring the
+        /// production <c>AuthorizationResolver</c>: wildcard actions are expanded, anonymous permissions
+        /// are inherited by authenticated, and a named role not configured on the entity falls back to
+        /// authenticated.
+        /// </summary>
+        private static bool IsRoleAndOperationDefinedForEntity(
+            RuntimeConfig config,
+            string entityName,
+            string requestedRole,
+            EntityActionOperation op)
+        {
+            if (!config.Entities.TryGetValue(entityName, out Entity? entity) || entity.Permissions == null)
+            {
+                return false;
+            }
+
+            HashSet<EntityActionOperation> validOperations = entity.Source.Type == EntitySourceType.StoredProcedure
+                ? EntityAction.ValidStoredProcedurePermissionOperations
+                : EntityAction.ValidPermissionOperations;
+
+            // Only ask about operations that are valid for this entity's source type;
+            // e.g. CRUD ops on a stored procedure entity never resolve to true.
+            if (!validOperations.Contains(op))
+            {
+                return false;
+            }
+
+            static bool RoleHasOp(Entity entity, string role, EntityActionOperation op, HashSet<EntityActionOperation> validOps)
+            {
+                foreach (EntityPermission permission in entity.Permissions)
+                {
+                    if (!string.Equals(permission.Role, role, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    if (permission.Actions == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (EntityAction action in permission.Actions)
+                    {
+                        if (action.Action == EntityActionOperation.All && validOps.Contains(op))
+                        {
+                            return true;
+                        }
+
+                        if (action.Action == op)
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            bool anonymousHasOp = RoleHasOp(entity, AuthorizationResolver.ROLE_ANONYMOUS, op, validOperations);
+
+            if (string.Equals(requestedRole, AuthorizationResolver.ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase))
+            {
+                return anonymousHasOp;
+            }
+
+            bool authenticatedHasOp = RoleHasOp(entity, AuthorizationResolver.ROLE_AUTHENTICATED, op, validOperations) || anonymousHasOp;
+
+            if (string.Equals(requestedRole, AuthorizationResolver.ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase))
+            {
+                return authenticatedHasOp;
+            }
+
+            // Named role: use its own permissions if configured on the entity, else fall through to authenticated.
+            bool namedRoleConfigured = entity.Permissions.Any(p =>
+                string.Equals(p.Role, requestedRole, StringComparison.OrdinalIgnoreCase));
+
+            return namedRoleConfigured
+                ? RoleHasOp(entity, requestedRole, op, validOperations)
+                : authenticatedHasOp;
         }
 
         /// <summary>

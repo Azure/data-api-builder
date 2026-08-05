@@ -925,8 +925,12 @@ public class AuthorizationResolver : IAuthorizationResolver, IResolvedDatabasePo
 
     private static DataApiBuilderException CreateUnsupportedClaimValueException(Claim claim, Exception? innerException = null)
     {
+        string message = innerException is null
+            ? $"The claim value for claim: {claim.Type} belonging to the user has an unsupported data type."
+            : $"The claim value for claim: {claim.Type} belonging to the user is invalid for its declared data type.";
+
         return new DataApiBuilderException(
-            message: $"The claim value for claim: {claim.Type} belonging to the user has an unsupported data type.",
+            message: message,
             statusCode: HttpStatusCode.Forbidden,
             subStatusCode: DataApiBuilderException.SubStatusCodes.UnsupportedClaimValueType,
             innerException: innerException);

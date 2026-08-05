@@ -73,7 +73,9 @@ internal sealed class ParameterAliasRewriter
 
     private static SingleValueNode NormalizeBooleanPredicate(SingleValueNode node, bool isPredicate)
     {
-        if (!isPredicate || node.TypeReference?.PrimitiveKind() is not EdmPrimitiveTypeKind.Boolean)
+        if (!isPredicate ||
+            node.TypeReference?.PrimitiveKind() is not EdmPrimitiveTypeKind.Boolean ||
+            IsPredicateExpression(node))
         {
             return node;
         }
@@ -82,5 +84,21 @@ internal sealed class ParameterAliasRewriter
             BinaryOperatorKind.Equal,
             node,
             new ConstantNode(true));
+    }
+
+    /// <summary>
+    /// Returns whether a Boolean node already represents a predicate rather than a bare value.
+    /// OData can wrap comparison predicates in one or more conversion nodes when binding logical
+    /// operators. Such predicates must not be rewritten as "predicate eq true", which is invalid SQL.
+    /// </summary>
+    private static bool IsPredicateExpression(SingleValueNode node)
+    {
+        return node switch
+        {
+            BinaryOperatorNode => true,
+            UnaryOperatorNode => true,
+            ConvertNode convertNode => IsPredicateExpression(convertNode.Source),
+            _ => false
+        };
     }
 }

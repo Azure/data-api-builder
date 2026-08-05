@@ -146,6 +146,73 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Verifies ordinary comparison predicates are not rewritten as comparisons to Boolean true.
+        /// </summary>
+        [TestMethod]
+        public void StaticComparisonPolicy_RemainsValidAcrossSqlAndCosmos()
+        {
+            const string policy = "@item.intCol ne 6 and @item.doubleCol gt 0";
+            const string expectedSqlPredicate = "(([intCol] != @param0) AND ([doubleCol] > @param1))";
+            const string expectedCosmosPredicate = "((c.intCol != @param0) AND (c.doubleCol > @param1))";
+            (AuthorizationResolver resolver, DefaultHttpContext context) = CreateAuthorizationContext(policy);
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
+
+            TestSqlQueryStructure sqlStructure = new(metadataProvider.Object, resolver);
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                OPERATION,
+                sqlStructure,
+                context,
+                resolver,
+                metadataProvider.Object);
+
+            Assert.AreEqual(expectedSqlPredicate, sqlStructure.GetDbPolicyForOperation(OPERATION));
+            AssertParameterValues(sqlStructure, 6, 0d);
+
+            FilterClause filterClause = ResolveFilterClause(resolver, context, metadataProvider.Object);
+            TestQueryStructure cosmosStructure = new(metadataProvider.Object, resolver);
+            string cosmosPredicate = filterClause.Expression.Accept(
+                new ODataASTCosmosVisitor("c", cosmosStructure));
+
+            Assert.AreEqual(expectedCosmosPredicate, cosmosPredicate);
+            AssertParameterValues(cosmosStructure, 6, 0d);
+        }
+
+        /// <summary>
+        /// Verifies a bare Boolean claim can be combined with an ordinary comparison without
+        /// rewriting the comparison predicate as "predicate equals true".
+        /// </summary>
+        [TestMethod]
+        public void BooleanClaim_CombinedWithComparison_OnlyNormalizesBareClaim()
+        {
+            const string policy = "@item.intCol ne 6 and @claims.allowed";
+            const string expectedSqlPredicate = "(([intCol] != @param0) AND (@param1 = @param2))";
+            const string expectedCosmosPredicate = "((c.intCol != @param0) AND (@param1 = @param2))";
+            (AuthorizationResolver resolver, DefaultHttpContext context) = CreateAuthorizationContext(
+                policy,
+                new Claim("allowed", "true", ClaimValueTypes.Boolean));
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
+
+            TestSqlQueryStructure sqlStructure = new(metadataProvider.Object, resolver);
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                OPERATION,
+                sqlStructure,
+                context,
+                resolver,
+                metadataProvider.Object);
+
+            Assert.AreEqual(expectedSqlPredicate, sqlStructure.GetDbPolicyForOperation(OPERATION));
+            AssertParameterValues(sqlStructure, 6, true, true);
+
+            FilterClause filterClause = ResolveFilterClause(resolver, context, metadataProvider.Object);
+            TestQueryStructure cosmosStructure = new(metadataProvider.Object, resolver);
+            string cosmosPredicate = filterClause.Expression.Accept(
+                new ODataASTCosmosVisitor("c", cosmosStructure));
+
+            Assert.AreEqual(expectedCosmosPredicate, cosmosPredicate);
+            AssertParameterValues(cosmosStructure, 6, true, true);
+        }
+
+        /// <summary>
         /// Verifies existing authorization resolver implementations remain usable for static policies.
         /// </summary>
         [TestMethod]

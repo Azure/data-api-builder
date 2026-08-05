@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     parser.Resolver = customResolver;
                 }
 
-                if (parameterAliasNodes is not null)
+                if (parameterAliasNodes is { Count: > 0 })
                 {
                     foreach ((string alias, SingleValueNode valueNode) in parameterAliasNodes)
                     {
@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 }
 
                 FilterClause filterClause = parser.ParseFilter();
-                return parameterAliasNodes is null
+                return parameterAliasNodes is not { Count: > 0 }
                     ? filterClause
                     : new ParameterAliasRewriter(parameterAliasNodes).Rewrite(filterClause);
             }

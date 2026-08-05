@@ -37,19 +37,26 @@ namespace Azure.DataApiBuilder.Core.Parsers
             ResolveClaimAlias(ref leftNode);
             ResolveClaimAlias(ref rightNode);
 
-            if (leftNode.TypeReference.PrimitiveKind() != rightNode.TypeReference.PrimitiveKind())
+            EdmPrimitiveTypeKind? leftPrimitiveKind = leftNode.TypeReference?.PrimitiveKind();
+            EdmPrimitiveTypeKind? rightPrimitiveKind = rightNode.TypeReference?.PrimitiveKind();
+
+            if (leftPrimitiveKind != rightPrimitiveKind)
             {
-                if ((leftNode.Kind == QueryNodeKind.SingleValuePropertyAccess) && (rightNode is ConstantNode))
+                if (leftPrimitiveKind.HasValue &&
+                    leftNode.Kind == QueryNodeKind.SingleValuePropertyAccess &&
+                    rightNode is ConstantNode)
                 {
                     TryConvertNodeToTargetType(
-                        targetType: leftNode.TypeReference.PrimitiveKind(),
+                        targetType: leftPrimitiveKind.Value,
                         operandToConvert: ref rightNode
                         );
                 }
-                else if (rightNode.Kind == QueryNodeKind.SingleValuePropertyAccess && leftNode is ConstantNode)
+                else if (rightPrimitiveKind.HasValue &&
+                    rightNode.Kind == QueryNodeKind.SingleValuePropertyAccess &&
+                    leftNode is ConstantNode)
                 {
                     TryConvertNodeToTargetType(
-                        targetType: rightNode.TypeReference.PrimitiveKind(),
+                        targetType: rightPrimitiveKind.Value,
                         operandToConvert: ref leftNode
                         );
                 }

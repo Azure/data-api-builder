@@ -1513,6 +1513,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.UnsupportedClaimValueType, exception.SubStatusCode);
+            Assert.AreEqual(
+                "The claim value for claim: testClaim belonging to the user is invalid for its declared data type.",
+                exception.Message);
         }
 
         /// <summary>

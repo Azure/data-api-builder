@@ -80,15 +80,24 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             SetUpSQLMetadataProvider(tamperedProvider);
             await _sqlMetadataProvider.InitializeAsync();
 
-            DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
-            FieldDefinitionNode field = GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(
-                name: new NameNode(entityName),
-                entity: tamperedEntity,
-                dbObject: dbObject);
+            try
+            {
+                DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
+                FieldDefinitionNode field = GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(
+                    name: new NameNode(entityName),
+                    entity: tamperedEntity,
+                    dbObject: dbObject);
 
-            InputValueDefinitionNode idArg = field.Arguments.First(a => a.Name.Value == "id");
-            Assert.IsNotNull(idArg.Description);
-            Assert.AreEqual(expected: configDescription, actual: idArg.Description!.Value);
+                InputValueDefinitionNode idArg = field.Arguments.First(a => a.Name.Value == "id");
+                Assert.IsNotNull(idArg.Description);
+                Assert.AreEqual(expected: configDescription, actual: idArg.Description!.Value);
+            }
+            finally
+            {
+                RuntimeConfigProvider sharedProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(_baseConfig);
+                SetUpSQLMetadataProvider(sharedProvider);
+                await _sqlMetadataProvider.InitializeAsync();
+            }
         }
 
         /// <summary>

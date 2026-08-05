@@ -1019,14 +1019,14 @@ public class RuntimeConfigValidator : IConfigValidator
             if (entity.Source.Type is EntitySourceType.StoredProcedure
                 && entity.Source.Parameters is not null)
             {
-                HashSet<string> seenParamNames = new(StringComparer.OrdinalIgnoreCase);
+                HashSet<string> seenParamNames = new(StringComparer.Ordinal);
                 foreach (ParameterMetadata param in entity.Source.Parameters)
                 {
                     if (!seenParamNames.Add(param.Name))
                     {
                         HandleOrRecordException(new DataApiBuilderException(
                             message: $"Entity '{entityName}' has duplicate parameter name '{param.Name}' in its stored procedure parameters configuration. " +
-                                "Parameter names must be unique (case-insensitive).",
+                                "Parameter names must be unique.",
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                         break;

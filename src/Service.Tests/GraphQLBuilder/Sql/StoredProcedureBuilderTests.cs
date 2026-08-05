@@ -398,46 +398,6 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         }
 
         [TestMethod]
-        public void StoredProcedure_ParameterDescription_UsesConfigDescription()
-        {
-            const string parameterName = "title";
-            const string configDescription = "Title from runtime config";
-            const string definitionDescription = "Description already on the parameter definition (config should win)";
-
-            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "spParamDesc")
-            {
-                SourceType = EntitySourceType.StoredProcedure,
-                StoredProcedureDefinition = new()
-                {
-                    Parameters = new()
-                    {
-                        { parameterName, new() { SystemType = typeof(string), Description = definitionDescription } }
-                    }
-                }
-            };
-            spDbObj.SourceDefinition.Columns.TryAdd("col1", new() { SystemType = typeof(string) });
-
-            List<ParameterMetadata> configParameters = new()
-            {
-                new ParameterMetadata
-                {
-                    Name = parameterName,
-                    Description = configDescription
-                }
-            };
-
-            FieldDefinitionNode field = BuildSchemaAndGetExecuteField(
-                spDbObj: spDbObj,
-                configParameters: configParameters,
-                graphQLTypeName: "SpParamDescType",
-                entityName: "SpParamDesc");
-
-            InputValueDefinitionNode arg = field.Arguments.First(a => a.Name.Value == parameterName);
-            Assert.IsNotNull(arg.Description);
-            Assert.AreEqual(configDescription, arg.Description!.Value);
-        }
-
-        [TestMethod]
         public void StoredProcedure_ParameterDescription_FallsBackToDefinitionDescriptionWhenNoConfigDescription()
         {
             const string parameterName = "title";

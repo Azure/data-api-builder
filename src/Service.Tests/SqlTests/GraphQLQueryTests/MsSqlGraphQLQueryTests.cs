@@ -1058,7 +1058,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQueryName = "gQLmappings";
             string graphQLQuery = @"
     {
-        gQLmappings {
+        gQLmappings(orderBy: { column1: ASC }) {
             groupBy(fields: [column1]) {
                 fields {
                     column1
@@ -1094,7 +1094,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQueryName = "gQLmappings";
             string graphQLQuery = @"
     {
-        gQLmappings {
+        gQLmappings(orderBy: { column1: ASC }) {
             groupBy(fields: [column1]) {
                 fields {
                     column1
@@ -1170,7 +1170,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQueryName = "gQLmappings";
             string graphQLQuery = @"
     {
-        gQLmappings {
+        gQLmappings(orderBy: { column1: ASC }) {
             groupBy(fields: [column1]) {
                 aggregations {
                     max_column1: max(field: column1, having: { gt: 3 })
@@ -1204,7 +1204,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQueryName = "gQLmappings";
             string graphQLQuery = @"
     {
-        gQLmappings {
+        gQLmappings(orderBy: { column1: ASC }) {
             groupBy(fields: [column1]) {
                 fields {
                     column1

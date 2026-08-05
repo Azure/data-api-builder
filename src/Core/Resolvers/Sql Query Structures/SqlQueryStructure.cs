@@ -905,7 +905,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
 
                     GroupByMetadata.Fields[columnName] = new Column(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, SourceAlias);
-                    AddColumn(fieldName, backingColumn ?? fieldName);
+                    AddColumn(columnName: columnName, labelName: fieldName);
                     fieldsInArgument.Add(fieldName);
                 }
             }
@@ -953,7 +953,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
 
                 string columnName = MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? backingColumn) ? backingColumn : fieldName;
-                AddColumn(fieldName, columnName);
+                AddColumn(columnName: columnName, labelName: fieldName);
             }
 
         }

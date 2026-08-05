@@ -1134,7 +1134,10 @@ namespace Azure.DataApiBuilder.Service
 
                 if (authOptions.IsJwtConfiguredIdentityProvider() && authOptions.Jwt is null)
                 {
-                    return;
+                    throw new DataApiBuilderException(
+                        message: "JWT configuration (runtime.host.authentication.jwt) is required when using a JWT identity provider.",
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
 
                 HostMode mode = runtimeConfig.Runtime.Host.Mode;

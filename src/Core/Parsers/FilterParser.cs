@@ -73,7 +73,10 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     }
                 }
 
-                return parser.ParseFilter();
+                FilterClause filterClause = parser.ParseFilter();
+                return parameterAliasNodes is null
+                    ? filterClause
+                    : new ParameterAliasRewriter(parameterAliasNodes).Rewrite(filterClause);
             }
             catch (ODataException e)
             {

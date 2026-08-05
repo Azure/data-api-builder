@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     fromClause = pathConfig.JoinStatement;
                                     predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(
                                         pathConfig.Alias,
-                                        value => cosmosQueryStructure.MakeDbConnectionParam(value)));
+                                        cosmosQueryStructure));
 
                                     existQuery = CosmosQueryBuilder.BuildExistsQueryForCosmos(fromClause, predicates);
                                 }
@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 {
                                     predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(
                                         $"{pathConfig.Path}.{pathConfig.ColumnName}",
-                                        value => cosmosQueryStructure.MakeDbConnectionParam(value)));
+                                        cosmosQueryStructure));
                                 }
 
                                 if (pathConfig.EntityName == entity.Key)
@@ -164,11 +164,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<FilterClause> filterClauses = new();
             foreach (EntityActionOperation elementalOperation in elementalOperations)
             {
-                ResolvedDatabasePolicy dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
-                entityName,
-                clientRoleHeader,
-                elementalOperation,
-                context);
+                ResolvedDatabasePolicy dbQueryPolicy = ResolveDatabasePolicy(
+                    authorizationResolver,
+                    entityName,
+                    clientRoleHeader,
+                    elementalOperation,
+                    context);
 
                 FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
                     dbQueryPolicy,
@@ -180,6 +181,42 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return filterClauses;
+        }
+
+        /// <summary>
+        /// Uses typed claim binding when supported. Legacy authorization resolver implementations
+        /// remain compatible for static policies, but claim-bearing policies fail closed because
+        /// the legacy string contract cannot keep claim data separate from policy syntax.
+        /// </summary>
+        private static ResolvedDatabasePolicy ResolveDatabasePolicy(
+            IAuthorizationResolver authorizationResolver,
+            string entityName,
+            string roleName,
+            EntityActionOperation operation,
+            HttpContext context)
+        {
+            if (authorizationResolver is IResolvedDatabasePolicyProvider resolvedPolicyProvider)
+            {
+                return resolvedPolicyProvider.ResolveDBPolicy(entityName, roleName, operation, context);
+            }
+
+            string policy = authorizationResolver.GetDBPolicyForRequest(entityName, roleName, operation);
+            if (string.IsNullOrWhiteSpace(policy))
+            {
+                return ResolvedDatabasePolicy.Empty;
+            }
+
+            if (policy.Contains(AuthorizationResolver.CLAIM_PREFIX, StringComparison.Ordinal))
+            {
+                throw new DataApiBuilderException(
+                    message: "The authorization resolver does not support typed database policy claims.",
+                    statusCode: System.Net.HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            return new ResolvedDatabasePolicy(
+                policy.Replace(AuthorizationResolver.FIELD_PREFIX, string.Empty),
+                new Dictionary<string, object?>());
         }
 
         /// <summary>

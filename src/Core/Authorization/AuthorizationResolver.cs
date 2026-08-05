@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Authorization;
 /// Authorization stages that require passing before a request is executed
 /// against a database.
 /// </summary>
-public class AuthorizationResolver : IAuthorizationResolver
+public class AuthorizationResolver : IAuthorizationResolver, IResolvedDatabasePolicyProvider
 {
     private readonly RuntimeConfigProvider _runtimeConfigProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
@@ -206,7 +206,29 @@ public class AuthorizationResolver : IAuthorizationResolver
     }
 
     /// <inheritdoc />
-    public ResolvedDatabasePolicy ProcessDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext)
+    [Obsolete("Use IResolvedDatabasePolicyProvider.ResolveDBPolicy to keep claim values separate from policy text.")]
+    public string ProcessDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext)
+    {
+        string dbPolicy = GetDBPolicyForRequest(entityName, roleName, operation);
+
+        if (string.IsNullOrWhiteSpace(dbPolicy))
+        {
+            return string.Empty;
+        }
+
+        if (dbPolicy.Contains(CLAIM_PREFIX, StringComparison.Ordinal))
+        {
+            throw new DataApiBuilderException(
+                message: "Claim-bearing database policies require typed claim binding.",
+                statusCode: HttpStatusCode.Forbidden,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+        }
+
+        return dbPolicy.Replace(FIELD_PREFIX, string.Empty);
+    }
+
+    /// <inheritdoc />
+    public ResolvedDatabasePolicy ResolveDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext)
     {
         string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, operation);
 
@@ -872,7 +894,7 @@ public class AuthorizationResolver : IAuthorizationResolver
                 case ClaimValueTypes.UInteger64:
                     return (decimal)ulong.Parse(claim.Value, NumberStyles.Integer, CultureInfo.InvariantCulture);
                 case ClaimValueTypes.Double:
-                    return double.Parse(claim.Value, NumberStyles.Float, CultureInfo.InvariantCulture);
+                    return ParseFiniteDoubleClaimValue(claim.Value);
                 case JsonClaimValueTypes.JsonNull:
                     return null;
                 default:
@@ -884,6 +906,21 @@ public class AuthorizationResolver : IAuthorizationResolver
         {
             throw CreateUnsupportedClaimValueException(claim, ex);
         }
+    }
+
+    /// <summary>
+    /// Parses a floating-point claim and rejects values that database providers cannot
+    /// represent consistently, including NaN and positive or negative infinity.
+    /// </summary>
+    private static double ParseFiniteDoubleClaimValue(string value)
+    {
+        double parsedValue = double.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture);
+        if (!double.IsFinite(parsedValue))
+        {
+            throw new FormatException("The floating-point claim value must be finite.");
+        }
+
+        return parsedValue;
     }
 
     private static DataApiBuilderException CreateUnsupportedClaimValueException(Claim claim, Exception? innerException = null)

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.OData.UriParser;
 
 /// <summary>
@@ -12,17 +13,17 @@ namespace Azure.DataApiBuilder.Core.Parsers
     internal class ODataASTCosmosVisitor : QueryNodeVisitor<string>
     {
         private string _prefix;
-        private readonly Func<object?, string> _makeDbConnectionParam;
+        private readonly BaseQueryStructure _queryStructure;
 
         /// <summary>
         /// Constructor for the visitor to append prefix to the column names which would be the path from container to the column
         /// </summary>
         /// <param name="prefix"></param>
-        /// <param name="makeDbConnectionParam">Creates a bound Cosmos DB query parameter.</param>
-        public ODataASTCosmosVisitor(string prefix, Func<object?, string> makeDbConnectionParam)
+        /// <param name="queryStructure">Stores bound Cosmos DB query parameters.</param>
+        public ODataASTCosmosVisitor(string prefix, BaseQueryStructure queryStructure)
         {
             this._prefix = prefix;
-            _makeDbConnectionParam = makeDbConnectionParam;
+            _queryStructure = queryStructure;
         }
 
         /// <summary>
@@ -126,7 +127,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 return "NULL";
             }
 
-            return _makeDbConnectionParam(nodeIn.Value);
+            return _queryStructure.MakeDbConnectionParam(nodeIn.Value);
         }
 
         /// <summary>

@@ -104,6 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
                 roleName: "admin",
                 operation: RestService.HttpVerbToOperations(httpVerbName: httpMethod),
                 httpContext: httpContext)
+                .Policy
             );
         }
 

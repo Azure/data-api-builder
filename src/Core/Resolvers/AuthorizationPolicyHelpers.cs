@@ -105,13 +105,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     cosmosQueryStructure.TableCounter.Next();
 
                                     fromClause = pathConfig.JoinStatement;
-                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(pathConfig.Alias));
+                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(
+                                        pathConfig.Alias,
+                                        value => cosmosQueryStructure.MakeDbConnectionParam(value)));
 
                                     existQuery = CosmosQueryBuilder.BuildExistsQueryForCosmos(fromClause, predicates);
                                 }
                                 else
                                 {
-                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor($"{pathConfig.Path}.{pathConfig.ColumnName}"));
+                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(
+                                        $"{pathConfig.Path}.{pathConfig.ColumnName}",
+                                        value => cosmosQueryStructure.MakeDbConnectionParam(value)));
                                 }
 
                                 if (pathConfig.EntityName == entity.Key)
@@ -160,7 +164,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<FilterClause> filterClauses = new();
             foreach (EntityActionOperation elementalOperation in elementalOperations)
             {
-                string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
+                ResolvedDatabasePolicy dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
                 entityName,
                 clientRoleHeader,
                 elementalOperation,
@@ -179,31 +183,36 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Given a dbPolicyClause string, appends the string formatting needed to be processed by ODataParser
+        /// Appends the filter query formatting to a resolved database policy and parses it with ODataParser.
         /// </summary>
-        /// <param name="dbPolicyClause">string representation of a processed database authorization policy.</param>
+        /// <param name="dbPolicy">Database authorization policy text and separately bound claim values.</param>
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="resourcePath">Name of the schema. e.g. `dbo` for MsSql.</param>
         /// <param name="sqlMetadataProvider">Provides helper method to process ODataFilterClause.</param>
         public static FilterClause? GetDBPolicyClauseForQueryStructure(
-            string dbPolicyClause,
+            ResolvedDatabasePolicy dbPolicy,
             string entityName,
             string resourcePath,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            if (!string.IsNullOrEmpty(dbPolicyClause))
+            if (!string.IsNullOrEmpty(dbPolicy.Policy))
             {
+                Dictionary<string, SingleValueNode> claimValueNodes = dbPolicy.ClaimValues.ToDictionary(
+                    claimValue => claimValue.Key,
+                    claimValue => (SingleValueNode)new ConstantNode(claimValue.Value));
+
                 // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
                 // ?$filter= so that it conforms with the format followed by other filter predicates.
                 // This enables the ODataVisitor helpers to parse the policy text properly.
-                dbPolicyClause = $"?{RequestParser.FILTER_URL}={dbPolicyClause}";
+                string dbPolicyClause = $"?{RequestParser.FILTER_URL}={dbPolicy.Policy}";
 
                 // Parse and save the values that are needed to later generate SQL query predicates
                 // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
                 return sqlMetadataProvider.GetODataParser().GetFilterClause(
                     filterQueryString: dbPolicyClause,
                     resourcePath: resourcePath,
-                    customResolver: new ClaimsTypeDataUriResolver());
+                    customResolver: new ClaimsTypeDataUriResolver(claimValueNodes),
+                    parameterAliasNodes: claimValueNodes);
             }
 
             return null;

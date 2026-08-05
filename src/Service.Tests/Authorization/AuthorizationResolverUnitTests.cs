@@ -1286,14 +1286,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="expectedParsedPolicy">The policy which is expected to be generated after parsing.</param>
         [DataTestMethod]
         [DataRow("@claims.user_email ne @item.col1 and @claims.contact_no eq @item.col2 and not(@claims.name eq @item.col3)",
-            "'xyz@microsoft.com' ne col1 and 1234 eq col2 and not('Aaron' eq col3)",
+            "@dabClaim0 ne col1 and @dabClaim1 eq col2 and not(@dabClaim2 eq col3)",
             DisplayName = "Valid policy parsing test for string and int64 claimvaluetypes.")]
         [DataRow("(@claims.isemployee eq @item.col1 and @item.col2 ne @claims.user_email) or" +
-            "('David' ne @item.col3 and @claims.contact_no ne @item.col3)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
-            "('David' ne col3 and 1234 ne col3)", DisplayName = "Valid policy parsing test for constant string and int64 claimvaluetypes.")]
+            "('David' ne @item.col3 and @claims.contact_no ne @item.col3)", "(@dabClaim0 eq col1 and col2 ne @dabClaim1) or" +
+            "('David' ne col3 and @dabClaim2 ne col3)", DisplayName = "Valid policy parsing test for constant string and int64 claimvaluetypes.")]
         [DataRow("(@item.rating gt @claims.emprating) and (@claims.isemployee eq true)",
-            "(rating gt 4.2) and (true eq true)", DisplayName = "Valid policy parsing test for double and boolean claimvaluetypes.")]
-        [DataRow("@item.rating eq @claims.emprating)", "rating eq 4.2)", DisplayName = "Valid policy parsing test for double claimvaluetype.")]
+            "(rating gt @dabClaim0) and (@dabClaim1 eq true)", DisplayName = "Valid policy parsing test for double and boolean claimvaluetypes.")]
+        [DataRow("@item.rating eq @claims.emprating)", "rating eq @dabClaim0)", DisplayName = "Valid policy parsing test for double claimvaluetype.")]
         public void ParseValidDbPolicy(string policy, string expectedParsedPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
@@ -1317,40 +1317,33 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
-            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
-            Assert.AreEqual(parsedPolicy, expectedParsedPolicy);
+            ResolvedDatabasePolicy parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+            Assert.AreEqual(parsedPolicy.Policy, expectedParsedPolicy);
         }
 
         /// <summary>
-        /// Validates that single quote characters embedded in a string-typed claim value are
-        /// escaped (doubled) per OData 4.01 ABNF when substituted into a database authorization
-        /// policy. Without escaping, an attacker who can influence a referenced JWT claim could
-        /// break out of the string literal and inject additional OData predicates - bypassing
-        /// row-level authorization. The substituted claim must remain enclosed in a single
-        /// string literal regardless of its contents.
+        /// Validates that a string claim is kept out of database authorization policy text and
+        /// associated with an inert OData parameter alias. This prevents claim contents from
+        /// being reinterpreted as policy syntax during URI parsing.
         /// </summary>
         /// <param name="claimValue">The raw claim value (as it appears in the JWT) to substitute.</param>
-        /// <param name="expectedParsedPolicy">The parsed policy after safe substitution.</param>
         [DataTestMethod]
         [DataRow(
             "alice' or 1 eq 1 or '",
-            "col1 eq 'alice'' or 1 eq 1 or '''",
-            DisplayName = "Injection attempt with OR predicate is neutralized by escaping single quotes")]
+            DisplayName = "Literal quote injection remains outside policy text")]
         [DataRow(
             "O'Brien",
-            "col1 eq 'O''Brien'",
-            DisplayName = "Legitimate single-quote-bearing value (e.g. surname) is safely escaped")]
+            DisplayName = "Legitimate single-quote-bearing value remains unchanged")]
         [DataRow(
-            "''",
-            "col1 eq ''''''",
-            DisplayName = "Value composed solely of single quotes is fully escaped")]
+            "alice%27 or 1 eq 1 or %27",
+            DisplayName = "Encoded quote injection remains outside policy text")]
         [DataRow(
-            "no quotes here",
-            "col1 eq 'no quotes here'",
-            DisplayName = "Value without single quotes is unchanged aside from enclosing quotes")]
-        public void DbPolicy_StringClaim_SingleQuotesEscaped_PreventsODataInjection(
-            string claimValue,
-            string expectedParsedPolicy)
+            "alice%2527 or 1 eq 1 or %2527",
+            DisplayName = "Double-encoded quote injection remains outside policy text")]
+        [DataRow(
+            "50% complete",
+            DisplayName = "Legitimate percent characters remain unchanged")]
+        public void DbPolicy_StringClaim_UsesTypedParameterAlias(string claimValue)
         {
             const string policyDefinition = "@item.col1 eq @claims.userId";
 
@@ -1370,9 +1363,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
-            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+            ResolvedDatabasePolicy parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
 
-            Assert.AreEqual(expectedParsedPolicy, parsedPolicy);
+            Assert.AreEqual("col1 eq @dabClaim0", parsedPolicy.Policy);
+            Assert.AreEqual(claimValue, parsedPolicy.ClaimValues["@dabClaim0"]);
         }
 
         /// <summary>
@@ -1403,11 +1397,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         #pragma warning restore format
         public void DbPolicy_ClaimValueTypeParsing(string claimValueType, string claimValue, bool supportedValueType)
         {
-            // To adhere with OData 4 ABNF construction rules (Section 7: Literal Data Values)
-            // - Primitive string literals in URLS must be enclosed within single quotes.
-            // - http://docs.oasis-open.org/odata/odata/v4.01/cs01/abnf/odata-abnf-construction-rules.txt
-            string odataClaimValue = (claimValueType == ClaimValueTypes.String) ? "'" + claimValue + "'" : claimValue;
-            string expectedPolicy = odataClaimValue + " eq col1";
+            string expectedPolicy = "@dabClaim0 eq col1";
             string policyDefinition = "@claims.testClaim eq @item.col1";
 
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
@@ -1431,9 +1421,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             try
             {
-                string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+                ResolvedDatabasePolicy parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
                 Assert.IsTrue(supportedValueType);
-                Assert.AreEqual(expectedPolicy, parsedPolicy);
+                Assert.AreEqual(expectedPolicy, parsedPolicy.Policy);
+
+                object? typedClaimValue = parsedPolicy.ClaimValues["@dabClaim0"];
+                if (claimValueType == JsonClaimValueTypes.JsonNull)
+                {
+                    Assert.IsNull(typedClaimValue);
+                }
+                else
+                {
+                    Assert.AreEqual(
+                        claimValue.ToLowerInvariant(),
+                        Convert.ToString(typedClaimValue, System.Globalization.CultureInfo.InvariantCulture)?.ToLowerInvariant());
+                }
             }
             catch (DataApiBuilderException ex)
             {
@@ -1444,6 +1446,34 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                     message: "Test expected to fail- a claim value for claim belonging to the user had datatype " +
                     "which is not currently supported by DAB.");
             }
+        }
+
+        /// <summary>
+        /// A claim whose value does not match its declared primitive type must fail before
+        /// policy parsing and must never be interpreted as OData syntax.
+        /// </summary>
+        [TestMethod]
+        public void DbPolicy_MalformedPrimitiveClaim_FailsClosed()
+        {
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                entityName: TEST_ENTITY,
+                roleName: TEST_ROLE,
+                operation: TEST_OPERATION,
+                includedCols: new HashSet<string> { "col1" },
+                databasePolicy: "@claims.testClaim eq @item.col1");
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            Mock<HttpContext> context = new();
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            identity.AddClaim(new Claim("testClaim", "1 or 1 eq 1", ClaimValueTypes.Integer));
+            context.Setup(x => x.User).Returns(new ClaimsPrincipal(identity));
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object));
+
+            Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.UnsupportedClaimValueType, exception.SubStatusCode);
         }
 
         /// <summary>
@@ -1531,11 +1561,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // Act
-            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+            ResolvedDatabasePolicy parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
 
             // Assert
-            string expectedPolicy = $"'profile' eq col2 and '1111' eq col3";
-            Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
+            string expectedPolicy = "@dabClaim0 eq col2 and @dabClaim1 eq col3";
+            Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy.Policy);
+            Assert.AreEqual("profile", parsedPolicy.ClaimValues["@dabClaim0"]);
+            Assert.AreEqual("1111", parsedPolicy.ClaimValues["@dabClaim1"]);
         }
 
         // Indirectly tests the AuthorizationResolver private method:
@@ -1583,15 +1615,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(clientRole);
 
-            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object);
+            ResolvedDatabasePolicy parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object);
             string errorMessage = "TryProcessDBPolicy returned unexpected value.";
             if (expectPolicy)
             {
-                Assert.AreEqual(actual: parsedPolicy, expected: policy, message: errorMessage);
+                Assert.AreEqual(actual: parsedPolicy.Policy, expected: policy, message: errorMessage);
             }
             else
             {
-                Assert.AreEqual(actual: parsedPolicy, expected: string.Empty, message: errorMessage);
+                Assert.AreEqual(actual: parsedPolicy.Policy, expected: string.Empty, message: errorMessage);
             }
         }
 

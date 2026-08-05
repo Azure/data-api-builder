@@ -144,7 +144,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IAuthorizationResolver> authorizationResolver = new();
             authorizationResolver
                 .Setup(x => x.ProcessDBPolicy(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EntityActionOperation>(), It.IsAny<HttpContext>()))
-                .Returns(string.Empty);
+                .Returns(ResolvedDatabasePolicy.Empty);
 
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
             Mock<IMetadataProviderFactory> metadataProviderFactory = new();

@@ -12,14 +12,17 @@ namespace Azure.DataApiBuilder.Core.Parsers
     internal class ODataASTCosmosVisitor : QueryNodeVisitor<string>
     {
         private string _prefix;
+        private readonly Func<object?, string> _makeDbConnectionParam;
 
         /// <summary>
         /// Constructor for the visitor to append prefix to the column names which would be the path from container to the column
         /// </summary>
         /// <param name="prefix"></param>
-        public ODataASTCosmosVisitor(string prefix)
+        /// <param name="makeDbConnectionParam">Creates a bound Cosmos DB query parameter.</param>
+        public ODataASTCosmosVisitor(string prefix, Func<object?, string> makeDbConnectionParam)
         {
             this._prefix = prefix;
+            _makeDbConnectionParam = makeDbConnectionParam;
         }
 
         /// <summary>
@@ -123,7 +126,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 return "NULL";
             }
 
-            return $"'{nodeIn.Value}'";
+            return _makeDbConnectionParam(nodeIn.Value);
         }
 
         /// <summary>

@@ -363,6 +363,113 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertEntityPermissions(namedResult, "Book", new[] { "READ" });
         }
 
+        /// <summary>
+        /// Column-level authorization regression: when a role's READ permission has fields.exclude
+        /// on a sensitive column, that column must be absent from fields[] while permitted columns
+        /// remain. Verifies <see cref="DescribeEntitiesTool"/>'s use of
+        /// <see cref="IAuthorizationResolver.GetAllowedExposedColumns"/> for column projection.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_ExcludesRestrictedColumnsFromFieldsArray()
+        {
+            const string EntityName = "Book";
+            List<FieldMetadata> fields = new()
+            {
+                new() { Name = "title",        Description = "Book title" },
+                new() { Name = "publisher_id", Description = "Publisher FK" },
+                new() { Name = "salary",       Description = "Internal cost" }   // sensitive – excluded
+            };
+
+            Entity bookEntity = new(
+                Source: new("books", EntitySourceType.Table, null, null),
+                GraphQL: new(EntityName, "Books"),
+                Fields: fields,
+                Rest: new(Enabled: true),
+                Permissions: new[]
+                {
+                    new EntityPermission(Role: "anonymous", Actions: new[]
+                    {
+                        new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null)
+                    })
+                },
+                Mappings: null,
+                Relationships: null,
+                Mcp: null);
+
+            RuntimeConfig config = CreateRuntimeConfig(new Dictionary<string, Entity> { [EntityName] = bookEntity });
+
+            // anonymous READ exposes title and publisher_id but not salary.
+            HashSet<string> allowedColumns = new(StringComparer.OrdinalIgnoreCase) { "title", "publisher_id" };
+            IServiceProvider serviceProvider = CreateServiceProviderWithColumnAccess(config, role: "anonymous", allowedColumns);
+            DescribeEntitiesTool tool = new();
+
+            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
+
+            Assert.IsTrue(result.IsError == false || result.IsError == null);
+            JsonElement content = GetContentFromResult(result);
+            JsonElement entity = content.GetProperty("entities").EnumerateArray().Single();
+            JsonElement returnedFields = entity.GetProperty("fields");
+
+            List<string> fieldNames = returnedFields.EnumerateArray()
+                .Select(f => f.GetProperty("name").GetString()!)
+                .ToList();
+
+            CollectionAssert.Contains(fieldNames, "title", "title should be visible");
+            CollectionAssert.Contains(fieldNames, "publisher_id", "publisher_id should be visible");
+            Assert.IsFalse(fieldNames.Contains("salary"), "salary must be excluded by column-level authz");
+        }
+
+        /// <summary>
+        /// SP entities must not apply column-level filtering: <c>ComputeAllowedFieldNames</c>
+        /// returns null for stored procedures, so every entry in Fields passes through untouched.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_StoredProcedure_DoesNotFilterFields()
+        {
+            const string EntityName = "GetBook";
+            List<FieldMetadata> resultFields = new()
+            {
+                new() { Name = "id",    Description = "Book id" },
+                new() { Name = "title", Description = "Book title" }
+            };
+
+            Entity spEntity = new(
+                Source: new("get_book", EntitySourceType.StoredProcedure, null, null),
+                GraphQL: new(EntityName, EntityName),
+                Fields: resultFields,
+                Rest: new(Enabled: true),
+                Permissions: new[]
+                {
+                    new EntityPermission(Role: "anonymous", Actions: new[]
+                    {
+                        new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
+                    })
+                },
+                Mappings: null,
+                Relationships: null,
+                Mcp: null);
+
+            RuntimeConfig config = CreateRuntimeConfig(new Dictionary<string, Entity> { [EntityName] = spEntity });
+
+            // Even with an empty allowed-column set the SP fields must not be filtered.
+            IServiceProvider serviceProvider = CreateServiceProviderWithColumnAccess(config, role: "anonymous", allowedColumns: new HashSet<string>());
+            DescribeEntitiesTool tool = new();
+
+            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
+
+            Assert.IsTrue(result.IsError == false || result.IsError == null);
+            JsonElement content = GetContentFromResult(result);
+            JsonElement entity = content.GetProperty("entities").EnumerateArray().Single();
+            JsonElement returnedFields = entity.GetProperty("fields");
+
+            List<string> fieldNames = returnedFields.EnumerateArray()
+                .Select(f => f.GetProperty("name").GetString()!)
+                .ToList();
+
+            CollectionAssert.Contains(fieldNames, "id", "SP result field 'id' must not be filtered");
+            CollectionAssert.Contains(fieldNames, "title", "SP result field 'title' must not be filtered");
+        }
+
         #region Helper Methods
 
         /// <summary>
@@ -907,6 +1014,65 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsNotNull(firstContent.Text);
 
             return JsonDocument.Parse(firstContent.Text).RootElement;
+        }
+
+        /// <summary>
+        /// Variant of <see cref="CreateServiceProvider"/> that also mocks
+        /// <see cref="IAuthorizationResolver.GetAllowedExposedColumns"/> so column-level
+        /// filtering tests can control which field names are projected for a given role.
+        /// </summary>
+        private static IServiceProvider CreateServiceProviderWithColumnAccess(
+            RuntimeConfig config,
+            string? role,
+            HashSet<string> allowedColumns)
+        {
+            ServiceCollection services = new();
+
+            RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
+            services.AddSingleton<RuntimeConfigProvider>(sp => configProvider);
+
+            DefaultHttpContext httpContext = new();
+            if (role != null)
+            {
+                httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = role;
+                ClaimsIdentity identity = new(
+                    new[] { new Claim(ClaimTypes.Role, role) },
+                    authenticationType: "TestAuth");
+                httpContext.User = new ClaimsPrincipal(identity);
+            }
+
+            Mock<IAuthorizationResolver> mockAuthResolver = new();
+            mockAuthResolver
+                .Setup(x => x.IsValidRoleContext(It.IsAny<HttpContext>()))
+                .Returns((HttpContext ctx) =>
+                {
+                    string headerValue = ctx.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
+                    return !string.IsNullOrWhiteSpace(headerValue)
+                        && ctx.User is not null
+                        && ctx.User.IsInRole(headerValue);
+                });
+            mockAuthResolver
+                .Setup(x => x.AreRoleAndOperationDefinedForEntity(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EntityActionOperation>()))
+                .Returns((string entityName, string requestedRole, EntityActionOperation op) =>
+                    IsRoleAndOperationDefinedForEntity(config, entityName, requestedRole, op));
+            // Return the caller-supplied set for every entity/role/operation combination so the
+            // test fully controls which column names pass through ComputeAllowedFieldNames.
+            mockAuthResolver
+                .Setup(x => x.GetAllowedExposedColumns(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EntityActionOperation>()))
+                .Returns(allowedColumns);
+
+            services.AddSingleton(mockAuthResolver.Object);
+
+            Mock<IHttpContextAccessor> mockHttpContextAccessor = new();
+            mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
+            services.AddSingleton(mockHttpContextAccessor.Object);
+
+            RegisterStubMetadataProvider(services, config);
+            services.AddLogging();
+
+            return services.BuildServiceProvider();
         }
 
         #endregion

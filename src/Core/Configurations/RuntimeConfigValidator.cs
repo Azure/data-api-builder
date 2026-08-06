@@ -1012,25 +1012,38 @@ public class RuntimeConfigValidator : IConfigValidator
                 ValidateNameRequirements(entity.GraphQL.Plural);
             }
 
-            // Validate that stored procedure config parameters do not contain duplicate names.
-            // Duplicate names produce inconsistent behavior: GraphQL uses the first match (FirstOrDefault),
-            // while metadata hydration overwrites with the last match — so descriptions, required, and
-            // default values can silently diverge between GraphQL, OpenAPI, and MCP responses.
-            if (entity.Source.Type is EntitySourceType.StoredProcedure
-                && entity.Source.Parameters is not null)
+        }
+    }
+
+    /// <summary>
+    /// Validates that no stored-procedure entity in the config declares duplicate parameter names.
+    /// Duplicate names produce inconsistent behavior across GraphQL, OpenAPI, and MCP because each
+    /// consumer resolves duplicates differently (first-wins vs. last-wins). This check runs in both
+    /// development and production mode so that ambiguous configs are rejected at startup regardless
+    /// of the host mode.
+    /// </summary>
+    /// <param name="runtimeConfig">The runtime configuration.</param>
+    public void ValidateStoredProcedureDuplicateParameters(RuntimeConfig runtimeConfig)
+    {
+        foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+        {
+            if (entity.Source.Type is not EntitySourceType.StoredProcedure
+                || entity.Source.Parameters is null)
             {
-                HashSet<string> seenParamNames = new(StringComparer.Ordinal);
-                foreach (ParameterMetadata param in entity.Source.Parameters)
+                continue;
+            }
+
+            HashSet<string> seenParamNames = new(StringComparer.Ordinal);
+            foreach (ParameterMetadata param in entity.Source.Parameters)
+            {
+                if (!seenParamNames.Add(param.Name))
                 {
-                    if (!seenParamNames.Add(param.Name))
-                    {
-                        HandleOrRecordException(new DataApiBuilderException(
-                            message: $"Entity '{entityName}' has duplicate parameter name '{param.Name}' in its stored procedure parameters configuration. " +
-                                "Parameter names must be unique.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                        break;
-                    }
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}' has duplicate parameter name '{param.Name}' in its stored procedure parameters configuration. " +
+                            "Parameter names must be unique.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    break;
                 }
             }
         }
@@ -1937,6 +1950,9 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="runtimeConfig">The runtime configuration.</param>
     public void ValidateEntityAndAutoentityConfigurations(RuntimeConfig runtimeConfig)
     {
+        // Runs in both modes: duplicate SP parameter names cause silent inconsistency at runtime.
+        ValidateStoredProcedureDuplicateParameters(runtimeConfig);
+
         if (runtimeConfig.IsDevelopmentMode())
         {
             ValidateEntityConfiguration(runtimeConfig);

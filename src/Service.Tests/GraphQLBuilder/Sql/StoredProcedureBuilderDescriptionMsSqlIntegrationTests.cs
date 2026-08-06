@@ -77,11 +77,11 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Dictionary<string, Entity> entityMap = new() { [entityName] = tamperedEntity };
             RuntimeConfig tamperedConfig = _baseConfig with { Entities = new(entityMap) };
             RuntimeConfigProvider tamperedProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(tamperedConfig);
-            SetUpSQLMetadataProvider(tamperedProvider);
-            await _sqlMetadataProvider.InitializeAsync();
-
             try
             {
+                SetUpSQLMetadataProvider(tamperedProvider);
+                await _sqlMetadataProvider.InitializeAsync();
+
                 DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
                 FieldDefinitionNode field = GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(
                     name: new NameNode(entityName),
@@ -135,11 +135,11 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Dictionary<string, Entity> entityMap = new() { [entityName] = tamperedEntity };
             RuntimeConfig tamperedConfig = _baseConfig with { Entities = new(entityMap) };
             RuntimeConfigProvider tamperedProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(tamperedConfig);
-            SetUpSQLMetadataProvider(tamperedProvider);
-            await _sqlMetadataProvider.InitializeAsync();
-
             try
             {
+                SetUpSQLMetadataProvider(tamperedProvider);
+                await _sqlMetadataProvider.InitializeAsync();
+
                 DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
                 FieldDefinitionNode field = GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(
                     name: new NameNode(entityName),

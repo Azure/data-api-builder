@@ -41,10 +41,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
 
-            string query = $"SELECT {MakeSelectColumns(structure)}"
+            string aggregations = BuildAggregationColumns(structure);
+
+            string query = $"SELECT {MakeSelectColumns(structure)}{aggregations}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
-                + $" ORDER BY {Build(structure.OrderByColumns)}"
+                + BuildGroupBy(structure)
+                + BuildHaving(structure)
+                + BuildOrderBy(structure)
                 + $" LIMIT {structure.Limit()}";
 
             string subqueryName = QuoteIdentifier($"subq{structure.Counter.Next()}");

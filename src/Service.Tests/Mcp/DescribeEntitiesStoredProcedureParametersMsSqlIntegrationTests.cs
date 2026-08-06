@@ -155,10 +155,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             SetUpSQLMetadataProvider(tamperedProvider);
             await _sqlMetadataProvider.InitializeAsync();
 
-            // Refresh the metadata-provider factory mock so DescribeEntitiesTool sees the
-            // tampered provider through the standard service-provider wiring.
+            // Refresh the metadata-provider factory mock and authorization resolver so
+            // DescribeEntitiesTool sees the tampered provider and HasAnyPermissionForEntity
+            // resolves permissions for UpdateBookTitlePartial from the tampered config.
             _metadataProviderFactory = new Mock<IMetadataProviderFactory>();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider);
+            _authorizationResolver = new AuthorizationResolver(tamperedProvider, _metadataProviderFactory.Object);
 
             try
             {
@@ -170,12 +172,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             }
             finally
             {
-                // Restore the shared fixture's provider/factory so subsequent tests are unaffected.
+                // Restore the shared fixture's provider/factory/resolver so subsequent tests are unaffected.
                 RuntimeConfigProvider sharedProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfig);
                 SetUpSQLMetadataProvider(sharedProvider);
                 await _sqlMetadataProvider.InitializeAsync();
                 _metadataProviderFactory = new Mock<IMetadataProviderFactory>();
                 _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider);
+                _authorizationResolver = new AuthorizationResolver(sharedProvider, _metadataProviderFactory.Object);
             }
         }
 

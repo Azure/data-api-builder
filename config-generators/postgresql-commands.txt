@@ -176,3 +176,4 @@ add dbo_DimAccount --config "dab-config.PostgreSql.json" --source "dimaccount" -
 update dbo_DimAccount --config "dab-config.PostgreSql.json" --map "parentaccountkey:ParentAccountKey,accountkey:AccountKey" 
 update dbo_DimAccount --config "dab-config.PostgreSql.json" --relationship parent_account --target.entity dbo_DimAccount --cardinality one --relationship.fields "parentaccountkey:accountkey"
 update dbo_DimAccount --config "dab-config.PostgreSql.json" --relationship child_accounts --target.entity dbo_DimAccount --cardinality many --relationship.fields "accountkey:parentaccountkey"
+add DateOnlyTable --config "dab-config.PostgreSql.json" --source "date_only_table" --permissions "anonymous:*" --rest true --graphql true --source.key-fields "event_date"

@@ -945,12 +945,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task TestSupportForGroupByNoAggregation()
         {
+            // ORDER BY makes explicit the row order that groupBy defaults to (declared groupBy field order) absent an orderBy argument.
             string msSqlQuery = @"
                 SELECT
                     categoryid,
                     pieceid
                 FROM stocks_price
                 GROUP BY categoryid, pieceid
+                ORDER BY categoryid, pieceid
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             // Execute the test for the SQL query

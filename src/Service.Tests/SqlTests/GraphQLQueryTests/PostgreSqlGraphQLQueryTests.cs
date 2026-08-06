@@ -645,6 +645,7 @@ FROM
         [TestMethod]
         public async Task TestSupportForGroupByNoAggregation()
         {
+            // ORDER BY makes explicit the row order that groupBy defaults to (declared groupBy field order) absent an orderBy argument.
             string postgresQuery = @"
                 SELECT json_agg(to_jsonb(table0)) FROM (
                     SELECT
@@ -652,6 +653,7 @@ FROM
                         pieceid
                     FROM stocks_price
                     GROUP BY categoryid, pieceid
+                    ORDER BY categoryid, pieceid
                 ) AS table0";
 
             // Execute the test for the SQL query

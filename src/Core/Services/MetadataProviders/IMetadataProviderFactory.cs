@@ -29,6 +29,16 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public Task InitializeAsync();
 
         /// <summary>
+        /// Initializes the metadata providers with cooperative cancellation. Implementations that
+        /// do not override this member retain their existing initialization behavior.
+        /// </summary>
+        public Task InitializeAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return InitializeAsync();
+        }
+
+        /// <summary>
         /// Initializes the metadata providers with parameters
         /// Note : this is used in GraphQL workload to call the parameterized initialize async method in providers
         /// </summary>

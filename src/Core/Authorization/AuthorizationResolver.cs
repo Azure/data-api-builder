@@ -76,6 +76,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// </summary>
     protected void OnConfigChanged(object? sender, HotReloadEventArgs args)
     {
+        args.CancellationToken.ThrowIfCancellationRequested();
         SetEntityPermissionMap(_runtimeConfigProvider.GetConfig());
     }
 

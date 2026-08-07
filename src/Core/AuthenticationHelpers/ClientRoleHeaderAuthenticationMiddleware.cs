@@ -89,7 +89,7 @@ public class ClientRoleHeaderAuthenticationMiddleware
         // Manually set the httpContext.User to the Principal from the AuthenticateResult
         // when we exclude setting a default authentication scheme in Startup.cs AddAuthentication().
         // https://learn.microsoft.com/aspnet/core/security/authorization/limitingidentitybyscheme
-        if (authNResult.Succeeded)
+        if (authNResult.Succeeded && authNResult.Principal is not null)
         {
             httpContext.User = authNResult.Principal;
         }
@@ -198,7 +198,8 @@ public class ClientRoleHeaderAuthenticationMiddleware
             return UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME;
         }
         else if (string.Equals(configuredProviderName, SupportedAuthNProviders.AZURE_AD, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(configuredProviderName, SupportedAuthNProviders.ENTRA_ID, StringComparison.OrdinalIgnoreCase))
+            string.Equals(configuredProviderName, SupportedAuthNProviders.ENTRA_ID, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(configuredProviderName, SupportedAuthNProviders.GENERIC_OAUTH, StringComparison.OrdinalIgnoreCase))
         {
             return JwtBearerDefaults.AuthenticationScheme;
         }

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
@@ -376,6 +377,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
 
             public ToolType ToolType { get; }
+
+            public bool IsEnabled(RuntimeConfig config) => true;
 
             public Tool GetToolMetadata() => new() { Name = "mock_tool", Description = "Mock tool for testing" };
 

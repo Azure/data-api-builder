@@ -6,7 +6,7 @@ namespace Cli.Tests;
 /// <summary>
 /// Tests for <see cref="CustomLoggerProvider"/> covering both the standard CLI
 /// path (writes to stdout/stderr with abbreviated labels) and the MCP stdio path
-/// (suppressed by default, opt-in via either CLI <c>--LogLevel</c> or the
+/// (suppressed by default, opt-in via either CLI <c>--log-level</c> or the
 /// runtime config's <c>log-level</c>, always routed to stderr to keep the
 /// JSON-RPC channel on stdout uncorrupted).
 /// </summary>
@@ -23,8 +23,8 @@ public class CustomLoggerTests
     public void ResetMcpStaticState()
     {
         Cli.Utils.IsMcpStdioMode = false;
-        Cli.Utils.IsLogLevelOverriddenByCli = false;
-        Cli.Utils.IsLogLevelOverriddenByConfig = false;
+        Cli.Utils.IsCliOverriding = false;
+        Cli.Utils.IsConfigOverriding = false;
         Cli.Utils.CliLogLevel = LogLevel.Information;
         Cli.Utils.ConfigLogLevel = LogLevel.Information;
     }
@@ -85,7 +85,7 @@ public class CustomLoggerTests
     }
 
     /// <summary>
-    /// MCP stdio mode with no overrides (neither CLI <c>--LogLevel</c> nor
+    /// MCP stdio mode with no overrides (neither CLI <c>--log-level</c> nor
     /// config <c>log-level</c>): all output must be suppressed so the JSON-RPC
     /// channel stays clean.
     /// </summary>
@@ -106,7 +106,7 @@ public class CustomLoggerTests
     }
 
     /// <summary>
-    /// MCP stdio mode with a CLI-supplied <c>--LogLevel</c>: logs must always
+    /// MCP stdio mode with a CLI-supplied <c>--log-level</c>: logs must always
     /// go to stderr (never stdout) and the level threshold from
     /// <see cref="Cli.Utils.CliLogLevel"/> must be honored.
     /// </summary>
@@ -114,7 +114,7 @@ public class CustomLoggerTests
     public void Mcp_CliOverride_WritesToStderrAndHonorsCliLevel()
     {
         Cli.Utils.IsMcpStdioMode = true;
-        Cli.Utils.IsLogLevelOverriddenByCli = true;
+        Cli.Utils.IsCliOverriding = true;
         Cli.Utils.CliLogLevel = LogLevel.Warning;
 
         (string stdout, string stderr) = CaptureConsole(() =>
@@ -140,7 +140,7 @@ public class CustomLoggerTests
     public void Mcp_ConfigOverride_WritesToStderrAndHonorsConfigLevel()
     {
         Cli.Utils.IsMcpStdioMode = true;
-        Cli.Utils.IsLogLevelOverriddenByConfig = true;
+        Cli.Utils.IsConfigOverriding = true;
         Cli.Utils.ConfigLogLevel = LogLevel.Information;
 
         (string stdout, string stderr) = CaptureConsole(() =>
@@ -163,9 +163,9 @@ public class CustomLoggerTests
     public void Mcp_CliOverridePrecedesConfigOverride()
     {
         Cli.Utils.IsMcpStdioMode = true;
-        Cli.Utils.IsLogLevelOverriddenByCli = true;
+        Cli.Utils.IsCliOverriding = true;
         Cli.Utils.CliLogLevel = LogLevel.Warning;
-        Cli.Utils.IsLogLevelOverriddenByConfig = true;
+        Cli.Utils.IsConfigOverriding = true;
         Cli.Utils.ConfigLogLevel = LogLevel.Information;
 
         (_, string stderr) = CaptureConsole(() =>

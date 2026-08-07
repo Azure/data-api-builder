@@ -13,6 +13,35 @@ namespace Azure.DataApiBuilder.Mcp.Utils
     /// </summary>
     public static class McpMetadataHelper
     {
+        /// <summary>
+        /// Convenience wrapper around <see cref="TryResolveMetadata"/> for callers that only need the
+        /// resolved <see cref="DatabaseObject"/>. Returns the database object on success, or <c>null</c>
+        /// when metadata cannot be resolved (with the failure reason surfaced via <paramref name="error"/>).
+        /// Callers are responsible for logging at the appropriate verbosity for their tool context.
+        /// </summary>
+        public static DatabaseObject? TryResolveDatabaseObject(
+            string entityName,
+            RuntimeConfig config,
+            IServiceProvider serviceProvider,
+            out string error,
+            CancellationToken cancellationToken = default)
+        {
+            if (TryResolveMetadata(
+                    entityName,
+                    config,
+                    serviceProvider,
+                    out _,
+                    out DatabaseObject dbObject,
+                    out _,
+                    out error,
+                    cancellationToken))
+            {
+                return dbObject;
+            }
+
+            return null;
+        }
+
         public static bool TryResolveMetadata(
             string entityName,
             RuntimeConfig config,
@@ -35,7 +64,14 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 return false;
             }
 
-            var metadataProviderFactory = serviceProvider.GetRequiredService<Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory>();
+            // Use GetService (not GetRequiredService) so the helper honours its Try* contract.
+            Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory? metadataProviderFactory =
+                serviceProvider.GetService<Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory>();
+            if (metadataProviderFactory is null)
+            {
+                error = "Metadata provider factory is not registered.";
+                return false;
+            }
 
             // Resolve datasource name for the entity.
             try

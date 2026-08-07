@@ -60,9 +60,9 @@ namespace Cli
                 {
                     Utils.IsMcpStdioMode = true;
                 }
-                else if (string.Equals(arg, "--LogLevel", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                else if (string.Equals(arg, "--log-level", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                 {
-                    Utils.IsLogLevelOverriddenByCli = true;
+                    Utils.IsCliOverriding = true;
                     if (Enum.TryParse<LogLevel>(args[i + 1], ignoreCase: true, out LogLevel cliLogLevel))
                     {
                         Utils.CliLogLevel = cliLogLevel;
@@ -88,7 +88,7 @@ namespace Cli
             });
 
             // Parsing user arguments and executing required methods.
-            int result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions, AddTelemetryOptions, ConfigureOptions, AutoConfigOptions, AutoConfigSimulateOptions>(args)
+            int result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions, AddTelemetryOptions, ConfigureOptions, AutoConfigOptions, AutoConfigSimulateOptions, AppNameOptions>(args)
                 .MapResult(
                     (InitOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (AddOptions options) => options.Handler(cliLogger, loader, fileSystem),
@@ -100,6 +100,7 @@ namespace Cli
                     (AutoConfigOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (AutoConfigSimulateOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (ExportOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (AppNameOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     errors => DabCliParserErrorHandler.ProcessErrorsAndReturnExitCode(errors));
 
             return result;

@@ -28,15 +28,15 @@ public class CustomLoggerProvider : ILoggerProvider
         private readonly LogLevel _minimumLogLevel;
 
         // Minimum LogLevel for CLI output.
-        // For MCP mode: prefer CLI's --LogLevel, fall back to config's log-level, otherwise suppress all.
+        // For MCP mode: prefer CLI's --log-level, fall back to config's log-level, otherwise suppress all.
         // For non-MCP mode: always use the level passed to the constructor.
-        // Note: --LogLevel is meant for the ENGINE's log level, not CLI's output.
+        // Note: --log-level is meant for the ENGINE's log level, not CLI's output.
         public CustomConsoleLogger(LogLevel minimumLogLevel = LogLevel.Information)
         {
             _minimumLogLevel = Cli.Utils.IsMcpStdioMode
-                ? (Cli.Utils.IsLogLevelOverriddenByCli
+                ? (Cli.Utils.IsCliOverriding
                     ? Cli.Utils.CliLogLevel
-                    : Cli.Utils.IsLogLevelOverriddenByConfig
+                    : Cli.Utils.IsConfigOverriding
                         ? Cli.Utils.ConfigLogLevel
                         : LogLevel.None)
                 : minimumLogLevel;
@@ -93,17 +93,17 @@ public class CustomLoggerProvider : ILoggerProvider
         /// <summary>
         /// Creates Log message by setting console message color based on LogLevel.
         /// In MCP stdio mode:
-        /// - If user explicitly set --LogLevel (CLI) or log-level (config): write to stderr (colored output)
+        /// - If user explicitly set --log-level (CLI) or log-level (config): write to stderr (colored output)
         /// - Otherwise: suppress entirely to keep stdout clean for JSON-RPC protocol.
         /// </summary>
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             // In MCP stdio mode, only output logs if user explicitly requested a log level
-            // via either the CLI --LogLevel flag or the runtime config file's log-level.
+            // via either the CLI --log-level flag or the runtime config file's log-level.
             // In that case, write to stderr to keep stdout clean for JSON-RPC.
             if (Cli.Utils.IsMcpStdioMode)
             {
-                if (!Cli.Utils.IsLogLevelOverriddenByCli && !Cli.Utils.IsLogLevelOverriddenByConfig)
+                if (!Cli.Utils.IsCliOverriding && !Cli.Utils.IsConfigOverriding)
                 {
                     return; // Suppress entirely when no explicit log level
                 }

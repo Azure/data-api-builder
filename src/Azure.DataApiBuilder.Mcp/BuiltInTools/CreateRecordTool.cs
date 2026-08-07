@@ -25,6 +25,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
     {
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
+        public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.CreateRecord ?? true;
+
         public Tool GetToolMetadata()
         {
             return new Tool
@@ -121,6 +123,30 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out string authError))
                 {
                     return McpErrorHelpers.PermissionDenied(toolName, entityName, "create", authError, logger);
+                }
+
+                // Column-level authorization: ensure the caller's effective role is permitted to write
+                // every column present in the request payload (fields.include/fields.exclude enforcement).
+                IEnumerable<string> requestedColumns = dataElement.ValueKind == JsonValueKind.Object
+                    ? dataElement.EnumerateObject().Select(property => property.Name)
+                    : Enumerable.Empty<string>();
+
+                try
+                {
+                    if (!McpAuthorizationHelper.AreColumnsAuthorizedForOperation(
+                            authorizationResolver,
+                            entityName,
+                            effectiveRole!,
+                            EntityActionOperation.Create,
+                            requestedColumns,
+                            out string columnAuthError))
+                    {
+                        return McpErrorHelpers.PermissionDenied(toolName, entityName, "create", columnAuthError, logger);
+                    }
+                }
+                catch (Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException dabEx)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "ValidationFailed", $"Request validation failed: {dabEx.Message}", logger);
                 }
 
                 JsonElement insertPayloadRoot = dataElement.Clone();

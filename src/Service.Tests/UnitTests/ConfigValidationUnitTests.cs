@@ -180,12 +180,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test that permission configuration validation fails when a database policy
-        /// is defined for the Create operation for mysql/postgresql and passes for mssql.
+        /// is defined for the Create operation for mysql and passes for mssql/postgresql.
         /// </summary>
         /// <param name="dbPolicy">Database policy.</param>
         /// <param name="errorExpected">Whether an error is expected.</param>
         [DataTestMethod]
-        [DataRow(DatabaseType.PostgreSQL, "1 eq @item.col1", true, DisplayName = "Database Policy defined for Create fails for PostgreSQL")]
+        [DataRow(DatabaseType.PostgreSQL, "1 eq @item.col1", false, DisplayName = "Database Policy defined for Create passes for PostgreSQL")]
         [DataRow(DatabaseType.PostgreSQL, null, false, DisplayName = "Database Policy set as null for Create passes on PostgreSQL.")]
         [DataRow(DatabaseType.PostgreSQL, "", false, DisplayName = "Database Policy left empty for Create passes for PostgreSQL.")]
         [DataRow(DatabaseType.PostgreSQL, " ", false, DisplayName = "Database Policy only whitespace for Create passes for PostgreSQL.")]
@@ -1683,6 +1683,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "GraphQL path prefix containing space at the start and underscore in between.")]
         [DataRow("/", null, ApiType.REST, false,
             DisplayName = "REST path containing only a forward slash.")]
+        [DataRow("/api/v2", null, ApiType.REST, false,
+            DisplayName = "REST path containing multiple segments.")]
+        [DataRow("/api/v2", null, ApiType.GraphQL, false,
+            DisplayName = "GraphQL path containing multiple segments.")]
+        [DataRow("/api/", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path containing a trailing slash.")]
+        [DataRow("/api//v2", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path containing an empty segment.")]
         public void ValidateApiURIsAreWellFormed(
             string apiPathPrefix,
             string expectedErrorMessage,
@@ -2685,7 +2693,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// This test checks that the final config used by runtime engine doesn't lose the directory information
         /// if provided by the user.
         /// It also validates that if config file is provided by the user, it will be used directly irrespective of
-        /// environment variable being set or not. 
+        /// environment variable being set or not.
         /// When user doesn't provide a config file, we check if environment variable is set and if it is, we use
         /// the config file specified by the environment variable, else we use the default config file.
         /// <param name="userProvidedConfigFilePath"></param>

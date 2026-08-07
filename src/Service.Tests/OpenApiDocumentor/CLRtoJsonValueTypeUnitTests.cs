@@ -22,6 +22,10 @@ public class CLRtoJsonValueTypeUnitTests
     private const string SQLDBTYPE_RESOLUTION_ERROR = "failed to resolve to SqlDbType.";
     private const string SQLDBTYPE_UNEXPECTED_RESOLUTION_ERROR = "should have resolved to a SqlDbType.";
     private const string JSONDATATYPE_RESOLUTION_ERROR = "(when supported) should map to a system type and associated JsonDataType.";
+
+    // Placeholder for future DbType resolution assertions (mirrors JSONDATATYPE_RESOLUTION_ERROR).
+    // Reserved for when DbType mapping is supported; intentionally retained though not yet referenced.
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0051:Remove unused private members", Justification = "Reserved for future DbType support; currently unused, suppressing IDE0051.")]
     private const string DBTYPE_RESOLUTION_ERROR = "(when supported) should map to a system type and associated DbType.";
 
     /// <summary>
@@ -106,5 +110,18 @@ public class CLRtoJsonValueTypeUnitTests
     {
         Assert.AreNotEqual(notExpected: JsonDataType.Undefined, actual: TypeHelper.GetJsonDataTypeFromSystemType(nullableType));
         Assert.IsNotNull(TypeHelper.GetDbTypeFromSystemType(nullableType));
+    }
+
+    /// <summary>
+    /// Validates that the SQL Server 2025+ 'json' data type literal resolves to the
+    /// CLR string type and maps to JsonDataType.String, i.e. DAB treats a JSON column
+    /// just like a string column.
+    /// </summary>
+    [TestMethod]
+    public void JsonSqlDbTypeResolvesToString()
+    {
+        Type resolvedType = TypeHelper.GetSystemTypeFromSqlDbType("json");
+        Assert.AreEqual(typeof(string), resolvedType);
+        Assert.AreEqual(JsonDataType.String, TypeHelper.GetJsonDataTypeFromSystemType(resolvedType));
     }
 }

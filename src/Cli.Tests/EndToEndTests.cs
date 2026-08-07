@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service;
 using Cli.Constants;
@@ -128,7 +129,10 @@ public class EndToEndTests
             replacementSettings: replacementSettings));
 
         SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource!.ConnectionString);
-        Assert.AreEqual(ProductInfo.GetDataApiBuilderUserAgent(), builder.ApplicationName);
+        // Application Name now embeds the dab_oss telemetry block (dab_oss_<version>+<payload>+),
+        // so assert it begins with the product user agent rather than exact-matching it.
+        Assert.IsTrue(builder.ApplicationName.StartsWith(ProductInfo.GetDataApiBuilderUserAgent()),
+            $"Expected Application Name to start with '{ProductInfo.GetDataApiBuilderUserAgent()}' but was '{builder.ApplicationName}'.");
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
@@ -137,6 +141,158 @@ public class EndToEndTests
         Assert.IsFalse(runtimeConfig.Runtime.Rest?.Enabled);
         Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL?.Path);
         Assert.IsTrue(runtimeConfig.Runtime.GraphQL?.Enabled);
+    }
+
+    /// <summary>
+    /// The `appname` command encodes the telemetry Application Name from a config (offline — no
+    /// validation and no database connection) and decodes a telemetry string back into a
+    /// human-readable description.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeAndDecode()
+    {
+        // Arrange: a minimal, self-contained MSSQL config in the mock file system.
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;User Id=sa;Password=Placeholder1;"" },
+            ""runtime"": { ""rest"": { ""enabled"": true }, ""graphql"": { ""enabled"": true }, ""host"": { ""mode"": ""development"", ""authentication"": { ""provider"": ""StaticWebApps"" } } },
+            ""entities"": { ""Book"": { ""source"": { ""object"": ""dbo.books"", ""type"": ""table"" }, ""permissions"": [ { ""role"": ""anonymous"", ""actions"": [ ""read"" ] } ] } }
+        }";
+        _fileSystem!.File.WriteAllText("appname-config.json", configJson);
+
+        // Act: encode to an output file. This must succeed offline (no validation / no DB connection).
+        int encodeCode = Program.Execute(
+            new[] { "appname", "--config", "appname-config.json", "--output", "appname-out.txt" },
+            _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: encode succeeded and produced a well-formed telemetry string.
+        Assert.AreEqual(0, encodeCode, "appname --config should succeed offline");
+        string telemetry = _fileSystem.File.ReadAllText("appname-out.txt");
+        Assert.IsTrue(telemetry.StartsWith("dab_oss_"), telemetry);
+        Assert.IsTrue(telemetry.EndsWith("+"), telemetry);
+
+        // Act: decode the produced string back into a human-readable description.
+        int decodeCode = Program.Execute(
+            new[] { "appname", "--decode", telemetry, "--output", "appname-decoded.txt" },
+            _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: decode succeeded and produced recognizable lines.
+        Assert.AreEqual(0, decodeCode, "appname --decode should succeed");
+        string decoded = _fileSystem.File.ReadAllText("appname-decoded.txt");
+        Assert.IsTrue(decoded.Contains("Version: dab_oss_"), decoded);
+        Assert.IsTrue(decoded.Contains("runtime.rest.enabled"), decoded);
+        Assert.IsTrue(decoded.Contains("entities.any.table"), decoded);
+    }
+
+    /// <summary>
+    /// The `appname` encode path accepts absolute config and output paths. The relative-path case is
+    /// covered by <see cref="TestAppNameEncodeAndDecode"/>.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeSupportsAbsolutePaths()
+    {
+        string configPath = _fileSystem!.Path.GetFullPath("absolute-appname-config.json");
+        string outputPath = _fileSystem.Path.GetFullPath("absolute-appname-output.txt");
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;"" },
+            ""entities"": { }
+        }";
+        _fileSystem.File.WriteAllText(configPath, configJson);
+
+        int code = Program.Execute(
+            new[] { "appname", "--config", configPath, "--output", outputPath },
+            _cliLogger!, _fileSystem, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.SUCCESS, code, "appname should support absolute config and output paths.");
+        Assert.IsTrue(_fileSystem.File.Exists(outputPath), "The absolute output path should be written.");
+        Assert.IsTrue(_fileSystem.File.ReadAllText(outputPath).StartsWith("dab_oss_", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The `appname` encode path returns GENERAL_ERROR (and writes no output file) when the config
+    /// file cannot be found.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeFailsWhenConfigMissing()
+    {
+        int code = Program.Execute(
+            new[] { "appname", "--config", "does-not-exist.json", "--output", "appname-out.txt" },
+            _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.AreEqual(CliReturnCode.GENERAL_ERROR, code, "appname encode should fail when the config cannot be found.");
+        Assert.IsFalse(_fileSystem!.File.Exists("appname-out.txt"), "No output file should be written on failure.");
+    }
+
+    /// <summary>
+    /// The `appname` encode path writes the telemetry string to stdout when --output is omitted.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeWritesToStdout()
+    {
+        string configJson = @"{
+            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+            ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;User Id=sa;Password=Placeholder1;"" },
+            ""runtime"": { ""rest"": { ""enabled"": true }, ""graphql"": { ""enabled"": true } },
+            ""entities"": { }
+        }";
+        _fileSystem!.File.WriteAllText("appname-config.json", configJson);
+
+        TextWriter originalOut = Console.Out;
+        StringWriter capturedOut = new();
+        Console.SetOut(capturedOut);
+        int code;
+        try
+        {
+            code = Program.Execute(
+                new[] { "appname", "--config", "appname-config.json" },
+                _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+
+        Assert.AreEqual(CliReturnCode.SUCCESS, code, "appname encode to stdout should succeed.");
+        string stdout = capturedOut.ToString();
+        Assert.IsTrue(stdout.Contains("dab_oss_"), $"stdout should contain the telemetry marker but was '{stdout}'.");
+        Assert.IsTrue(stdout.TrimEnd().EndsWith("+"), $"stdout telemetry should end with '+' but was '{stdout}'.");
+    }
+
+    /// <summary>
+    /// The `appname` command is a design-time inspection tool: it always shows the full telemetry
+    /// encoding so users can see what would be collected, independent of the runtime opt-out switch
+    /// (DAB_TELEMETRY_APPNAME_OPT_OUT). This pins that intentional behavior.
+    /// </summary>
+    [TestMethod]
+    public void TestAppNameEncodeIsIndependentOfOptOut()
+    {
+        string? originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+        Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, "1");
+        try
+        {
+            string configJson = @"{
+                ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=localhost;Database=demo;User Id=sa;Password=Placeholder1;"" },
+                ""runtime"": { ""rest"": { ""enabled"": true }, ""graphql"": { ""enabled"": true } },
+                ""entities"": { }
+            }";
+            _fileSystem!.File.WriteAllText("appname-config.json", configJson);
+
+            int code = Program.Execute(
+                new[] { "appname", "--config", "appname-config.json", "--output", "appname-out.txt" },
+                _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+            Assert.AreEqual(CliReturnCode.SUCCESS, code, "appname encode should succeed even when opted out.");
+            string telemetry = _fileSystem.File.ReadAllText("appname-out.txt");
+            Assert.IsTrue(
+                telemetry.StartsWith("dab_oss_") && telemetry.EndsWith("+"),
+                $"appname should show the full telemetry encoding regardless of opt-out, but was '{telemetry}'.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+        }
     }
 
     /// <summary>
@@ -343,11 +499,12 @@ public class EndToEndTests
     [DataRow("/updatedPath", true, DisplayName = "Success in updated GraphQL Path to /updatedPath.")]
     [DataRow("/updated-Path", true, DisplayName = "Success in updated GraphQL Path to /updated-Path.")]
     [DataRow("/updated_Path", true, DisplayName = "Success in updated GraphQL Path to /updated_Path.")]
+    [DataRow("/api/v2", true, DisplayName = "Success in updated GraphQL Path to multi-segment path /api/v2.")]
     [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
     [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
     [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]
     [DataRow("/updated@Path", false, DisplayName = "Failure due reserved chars '@'.")]
-    [DataRow("/updated/Path", false, DisplayName = "Failure due reserved chars '/'.")]
+    [DataRow("/api//v2", false, DisplayName = "Failure due to empty path segment.")]
     public void TestUpdateGraphQLPathRuntimeSettings(string path, bool isSuccess)
     {
         // Initialize the config file.
@@ -405,11 +562,12 @@ public class EndToEndTests
     [DataRow("/updatedPath", true, DisplayName = "Successfully updated Rest Path to /updatedPath.")]
     [DataRow("/updated-Path", true, DisplayName = "Successfully updated Rest Path to /updated-Path.")]
     [DataRow("/updated_Path", true, DisplayName = "Successfully updated Rest Path to /updated_Path.")]
+    [DataRow("/api/v2", true, DisplayName = "Successfully updated Rest Path to multi-segment path /api/v2.")]
     [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
     [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
     [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]
     [DataRow("/updated@Path", false, DisplayName = "Failure due reserved chars '@'.")]
-    [DataRow("/updated/Path", false, DisplayName = "Failure due reserved chars '/'.")]
+    [DataRow("/api//v2", false, DisplayName = "Failure due to empty path segment.")]
     public void TestUpdateRestPathRuntimeSettings(string path, bool isSuccess)
     {
         // Initialize the config file.
@@ -814,7 +972,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate that the engine starts successfully when --verbose and --LogLevel
+    /// Test to validate that the engine starts successfully when --verbose and --log-level
     /// options are used with the start command
     /// This test does not validate whether the engine logs messages at the specified log level
     /// </summary>
@@ -822,15 +980,17 @@ public class EndToEndTests
     [DataTestMethod]
     [DataRow("", DisplayName = "No logging from command line.")]
     [DataRow("--verbose", DisplayName = "Verbose logging from command line.")]
-    [DataRow("--LogLevel 0", DisplayName = "LogLevel 0 from command line.")]
-    [DataRow("--LogLevel 1", DisplayName = "LogLevel 1 from command line.")]
-    [DataRow("--LogLevel 2", DisplayName = "LogLevel 2 from command line.")]
-    [DataRow("--LogLevel Trace", DisplayName = "LogLevel Trace from command line.")]
-    [DataRow("--LogLevel Debug", DisplayName = "LogLevel Debug from command line.")]
-    [DataRow("--LogLevel Information", DisplayName = "LogLevel Information from command line.")]
-    [DataRow("--LogLevel tRace", DisplayName = "Case sensitivity: LogLevel Trace from command line.")]
-    [DataRow("--LogLevel DebUG", DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
-    [DataRow("--LogLevel information", DisplayName = "Case sensitivity: LogLevel Information from command line.")]
+    [DataRow("--log-level 0", DisplayName = "LogLevel 0 from command line.")]
+    [DataRow("--log-level 1", DisplayName = "LogLevel 1 from command line.")]
+    [DataRow("--log-level 2", DisplayName = "LogLevel 2 from command line.")]
+    [DataRow("--log-level Trace", DisplayName = "LogLevel Trace from command line.")]
+    [DataRow("--log-level Debug", DisplayName = "LogLevel Debug from command line.")]
+    [DataRow("--log-level Information", DisplayName = "LogLevel Information from command line.")]
+    [DataRow("--log-level tRace", DisplayName = "Case sensitivity: LogLevel Trace from command line.")]
+    [DataRow("--log-level DebUG", DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
+    [DataRow("--log-level information", DisplayName = "Case sensitivity: LogLevel Information from command line.")]
+    [DataRow("--LogLevel 0", DisplayName = "Case sensitivity: LogLevel 0 legacy from command line.")]
+    [DataRow("--LogLevel information", DisplayName = "Case sensitivity: LogLevel Information legacy from command line.")]
     public void TestEngineStartUpWithVerboseAndLogLevelOptions(string logLevelOption)
     {
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
@@ -850,7 +1010,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate that the engine starts successfully when --LogLevel is set to Warning
+    /// Test to validate that the engine starts successfully when --log-level is set to Warning
     /// or above. At these levels, CLI phase messages (logged at Information) are suppressed,
     /// so no stdout output with message 'info' is expected during the CLI phase.
     /// </summary>
@@ -871,7 +1031,7 @@ public class EndToEndTests
         StringWriter consoleOutput = new();
         Console.SetOut(consoleOutput);
 
-        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--LogLevel", logLevelOption };
+        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--log-level", logLevelOption };
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
         // Run Program.Execute on a background task because StartEngine blocks until the host shuts down.
@@ -886,7 +1046,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate that the engine starts successfully when --LogLevel is set to None.
+    /// Test to validate that the engine starts successfully when --log-level is set to None.
     /// At these levels, CLI phase messages (logged at Information) are suppressed,
     /// so no stdout output is expected during the CLI phase.
     /// </summary>
@@ -901,7 +1061,7 @@ public class EndToEndTests
         StringWriter consoleOutput = new();
         Console.SetOut(consoleOutput);
 
-        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--LogLevel", logLevelOption };
+        string[] args = { "start", "--config", TEST_RUNTIME_CONFIG_FILE, "--log-level", logLevelOption };
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
         // Run Program.Execute on a background task because StartEngine blocks until the host shuts down.
@@ -914,17 +1074,17 @@ public class EndToEndTests
         Assert.IsTrue(string.IsNullOrEmpty(engineStdOut), $"Expected no output at LogLevel {logLevelOption}, but got: {engineStdOut}");
     }
 
-    /// Validates that `dab start` correctly sets <see cref="Startup.IsLogLevelOverriddenByCli"/>
-    /// based on whether the --LogLevel CLI flag is provided.
+    /// Validates that `dab start` correctly sets <see cref="Startup.IsCliOverriding"/>
+    /// based on whether the --log-level CLI flag is provided.
     ///
-    /// When the --LogLevel flag is provided, IsLogLevelOverriddenByCli should be true.
-    /// When the --LogLevel flag is omitted (log level comes from the config file), IsLogLevelOverriddenByCli should be false.
+    /// When the --log-level flag is provided, IsCliOverriding should be true.
+    /// When the --log-level flag is omitted (log level comes from the config file), IsCliOverriding should be false.
     /// </summary>
-    /// <param name="cliLogLevel">The --LogLevel CLI flag value, or null to omit the flag.</param>
-    /// <param name="expectedIsOverridden">Expected value of Startup.IsLogLevelOverriddenByCli.</param>
+    /// <param name="cliLogLevel">The --log-level CLI flag value, or null to omit the flag.</param>
+    /// <param name="expectedIsOverridden">Expected value of Startup.IsCliOverriding.</param>
     [DataTestMethod]
-    [DataRow(null, false, DisplayName = "IsLogLevelOverriddenByCli is false")]
-    [DataRow(LogLevel.Error, true, DisplayName = "IsLogLevelOverriddenByCli is true")]
+    [DataRow(null, false, DisplayName = "IsCliOverriding is false")]
+    [DataRow(LogLevel.Error, true, DisplayName = "IsCliOverriding is true")]
     public async Task TestStartCommandResolvesLogLevelFromConfigOrFlag(
         LogLevel? cliLogLevel,
         bool expectedIsOverridden)
@@ -978,6 +1138,7 @@ public class EndToEndTests
             isHttpsRedirectionDisabled: false,
             mcpStdio: false,
             mcpRole: null,
+            logLevelLegacy: null,
             config: TEST_RUNTIME_CONFIG_FILE);
 
         // Run TryStartEngineWithOptions on a background task because StartEngine blocks until the host shuts down.
@@ -987,7 +1148,7 @@ public class EndToEndTests
         // Wait for the engine to finish loading the config.
         await Task.Delay(TimeSpan.FromSeconds(5));
 
-        Assert.AreEqual(expectedIsOverridden, Startup.IsLogLevelOverriddenByCli);
+        Assert.AreEqual(expectedIsOverridden, Startup.IsCliOverriding);
     }
 
     /// <summary>

@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,7 +32,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     throw new InvalidOperationException("Tool registry is not available.");
                 }
 
-                List<Tool> tools = toolRegistry.GetAllTools().ToList();
+                RuntimeConfigProvider runtimeConfigProvider = request.Services!.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+                List<Tool> tools = toolRegistry.GetEnabledTools(runtimeConfig).ToList();
 
                 return ValueTask.FromResult(new ListToolsResult
                 {

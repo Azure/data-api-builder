@@ -31,6 +31,41 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
 /// Unit tests for EmbeddingController.
 /// Covers fixed route metadata, authorization, request body parsing,
 /// service availability, error handling, and integration with IEmbeddingService.
+///
+/// =====================================================================================
+/// REGRESSION GUARD — DO NOT WEAKEN OR DELETE THE TESTS IN THIS CLASS WITHOUT REVIEW.
+/// =====================================================================================
+/// The /embed endpoint is NOT served through the standard MVC controller pipeline.
+/// It is wired manually in Startup.Configure via
+///     endpoints.MapPost(embedPath, ctx => ActivatorUtilities.CreateInstance&lt;EmbeddingController&gt;(...).PostAsync(...))
+/// so that the configurable, literal embeddings path wins over RestController's global
+/// catch-all attribute route ({*route}) by route specificity.
+///
+/// Because this bypasses MVC's filter pipeline, the following protections do NOT apply
+/// to PostAsync and the controller MUST enforce them itself in C# code:
+///   1. [Authorize] / authorization filters — NOT executed (controller checks IsRoleAllowed).
+///   2. Action filters / exception filters — NOT executed.
+///   3. Model binding &amp; validation — NOT executed.
+///   4. Content negotiation via [Consumes]/[Produces] — inert (controller checks Accept/Content-Type).
+///
+/// Therefore the tests in this class are the ONLY automated guarantee that the
+/// security-and-correctness checks performed inside PostAsync remain in place after
+/// future refactors. In particular, these tests will fail (by design) if anyone
+/// accidentally removes or weakens:
+///   * The "embeddings configured / enabled" guard            → returns 404.
+///   * The "endpoint configured / enabled" guard               → returns 404.
+///   * The request-path matching guard                         → returns 404.
+///   * The role-based authorization check (IsRoleAllowed)      → returns 403.
+///   * The development-vs-production default-role behaviour    → varies by HostMode.
+///   * The "service is not invoked when the request is rejected" invariant
+///     (verifies no information leak / no upstream call on a denied/disabled request).
+///   * The request-body validation (empty/whitespace/invalid JSON shapes).
+///   * The Accept-header / content-type negotiation behaviour.
+///
+/// If you change the routing (e.g. move to attribute routing), update or remove these
+/// tests deliberately — do not silently delete a failing test. A failing test here
+/// is a signal that a security-relevant invariant has been broken.
+/// =====================================================================================
 /// </summary>
 [TestClass]
 public class EmbeddingControllerTests
@@ -43,24 +78,39 @@ public class EmbeddingControllerTests
     {
         _mockLogger = new Mock<ILogger<EmbeddingController>>();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
+        _mockEmbeddingService.Setup(s => s.IsEnabled).Returns(true);
     }
 
     #region Fixed Endpoint Route Tests
 
     /// <summary>
-    /// Tests that the controller action is bound to a dynamic path route.
+    /// Tests that the controller action is NOT bound to an attribute route.
+    /// The endpoint is registered explicitly in Startup using the configured
+    /// embeddings endpoint path, so it wins over RestController's catch-all
+    /// route by route specificity. The action carries [NonAction] so MVC
+    /// attribute routing ignores it.
     /// </summary>
     [TestMethod]
-    public void PostAsync_UsesFixedEmbedRoute()
+    public void PostAsync_HasNoAttributeRoute_AndIsNonAction()
     {
-        RouteAttribute? routeAttribute = typeof(EmbeddingController)
-            .GetMethod(nameof(EmbeddingController.PostAsync))?
+        System.Reflection.MethodInfo? method = typeof(EmbeddingController)
+            .GetMethod(nameof(EmbeddingController.PostAsync));
+
+        Assert.IsNotNull(method);
+
+        RouteAttribute? routeAttribute = method!
             .GetCustomAttributes(typeof(RouteAttribute), inherit: false)
             .Cast<RouteAttribute>()
             .SingleOrDefault();
 
-        Assert.IsNotNull(routeAttribute);
-        Assert.AreEqual("{*path}", routeAttribute.Template, "Route should be dynamic to support configurable paths");
+        Assert.IsNull(routeAttribute, "PostAsync must not declare a [Route] attribute; the route is registered in Startup.");
+
+        NonActionAttribute? nonAction = method
+            .GetCustomAttributes(typeof(NonActionAttribute), inherit: false)
+            .Cast<NonActionAttribute>()
+            .SingleOrDefault();
+
+        Assert.IsNotNull(nonAction, "PostAsync must be marked [NonAction] so MVC attribute routing ignores it.");
     }
 
     /// <summary>
@@ -122,8 +172,9 @@ public class EmbeddingControllerTests
             ApiKey: "key",
             Enabled: false,
             Endpoint: new EmbeddingsEndpointOptions(enabled: true, path: "/embed"));
-        var mockProvider = CreateMockConfigProvider(embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        var controller = new EmbeddingController(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
         {
             ControllerContext = CreateControllerContext("/embed")
         };
@@ -147,8 +198,9 @@ public class EmbeddingControllerTests
             BaseUrl: "https://api.openai.com",
             ApiKey: "key",
             Endpoint: null);
-        var mockProvider = CreateMockConfigProvider(embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        var controller = new EmbeddingController(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
         {
             ControllerContext = CreateControllerContext("/embed")
         };
@@ -172,8 +224,9 @@ public class EmbeddingControllerTests
             BaseUrl: "https://api.openai.com",
             ApiKey: "key",
             Endpoint: new EmbeddingsEndpointOptions(enabled: false, path: "/embed"));
-        var mockProvider = CreateMockConfigProvider(embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
-        var controller = new EmbeddingController(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
         {
             ControllerContext = CreateControllerContext("/embed")
         };
@@ -626,9 +679,12 @@ public class EmbeddingControllerTests
             hostMode: HostMode.Development);
 
         // Act
-        await controller.PostAsync("embed");
+        IActionResult result = await controller.PostAsync("embed");
 
         // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        Assert.IsInstanceOfType(okResult.Value, typeof(EmbeddingResponse));
         _mockEmbeddingService.Verify(
             s => s.TryEmbedAsync(inputText, It.IsAny<CancellationToken>()),
             Times.Once());
@@ -673,9 +729,14 @@ public class EmbeddingControllerTests
             hostMode: HostMode.Development);
 
         // Act
-        await controller.PostAsync("embed");
+        IActionResult result = await controller.PostAsync("embed");
 
         // Assert
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.BadRequest, (int)value!.error.status);
         _mockEmbeddingService.Verify(
             s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never());
@@ -696,9 +757,14 @@ public class EmbeddingControllerTests
             clientRole: "unauthorized-role");
 
         // Act
-        await controller.PostAsync("embed");
+        IActionResult result = await controller.PostAsync("embed");
 
         // Assert
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, (int)value!.error.status);
         _mockEmbeddingService.Verify(
             s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never());
@@ -1721,6 +1787,371 @@ public class EmbeddingControllerTests
                 acceptHeader: acceptHeader)
         };
         return controller;
+    }
+
+    #endregion
+
+    #region Regression Guards — Service Must Not Be Invoked When Request Is Rejected
+
+    /// <summary>
+    /// REGRESSION: When embeddings config is null, the controller MUST short-circuit with 404
+    /// BEFORE invoking IEmbeddingService. This protects against accidental removal of the
+    /// "embeddings is null" guard in PostAsync.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_DoesNotCallService_WhenEmbeddingsConfigIsNull()
+    {
+        // Arrange
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(embeddingsOptions: null);
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed", "some text", "text/plain")
+        };
+
+        // Act
+        IActionResult result = await controller.PostAsync("embed");
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(NotFoundResult));
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never(),
+            "Service must not be called when embeddings config is null.");
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()),
+            Times.Never(),
+            "Batch service must not be called when embeddings config is null.");
+    }
+
+    /// <summary>
+    /// REGRESSION: When embeddings.enabled is false, the controller MUST short-circuit with 404
+    /// BEFORE invoking IEmbeddingService. This protects against accidental removal of the
+    /// "!embeddingsOptions.Enabled" guard in PostAsync.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_DoesNotCallService_WhenEmbeddingsIsDisabled()
+    {
+        // Arrange
+        EmbeddingsOptions embeddingsOptions = new(
+            Provider: EmbeddingProviderType.OpenAI,
+            BaseUrl: "https://api.openai.com",
+            ApiKey: "key",
+            Enabled: false, // disabled
+            Endpoint: new EmbeddingsEndpointOptions(enabled: true, roles: new[] { "anonymous" }, path: "/embed"));
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed", "some text", "text/plain")
+        };
+
+        // Act
+        IActionResult result = await controller.PostAsync("embed");
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(NotFoundResult));
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never(),
+            "Service must not be called when embeddings is disabled.");
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()),
+            Times.Never(),
+            "Batch service must not be called when embeddings is disabled.");
+    }
+
+    /// <summary>
+    /// REGRESSION: When endpoint config is null, the controller MUST short-circuit with 404
+    /// BEFORE invoking IEmbeddingService. This protects against accidental removal of the
+    /// "endpointOptions is null" guard in PostAsync.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_DoesNotCallService_WhenEndpointIsNull()
+    {
+        // Arrange
+        EmbeddingsOptions embeddingsOptions = new(
+            Provider: EmbeddingProviderType.OpenAI,
+            BaseUrl: "https://api.openai.com",
+            ApiKey: "key",
+            Enabled: true,
+            Endpoint: null); // endpoint null
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed", "some text", "text/plain")
+        };
+
+        // Act
+        IActionResult result = await controller.PostAsync("embed");
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(NotFoundResult));
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    /// <summary>
+    /// REGRESSION: When endpoint.enabled is false, the controller MUST short-circuit with 404
+    /// BEFORE invoking IEmbeddingService. This protects against accidental removal of the
+    /// "!endpointOptions.Enabled" guard in PostAsync.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_DoesNotCallService_WhenEndpointIsDisabled()
+    {
+        // Arrange
+        EmbeddingsOptions embeddingsOptions = new(
+            Provider: EmbeddingProviderType.OpenAI,
+            BaseUrl: "https://api.openai.com",
+            ApiKey: "key",
+            Enabled: true,
+            Endpoint: new EmbeddingsEndpointOptions(enabled: false, roles: new[] { "anonymous" }, path: "/embed"));
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+        EmbeddingController controller = new(mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed", "some text", "text/plain")
+        };
+
+        // Act
+        IActionResult result = await controller.PostAsync("embed");
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(NotFoundResult));
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    #endregion
+
+    #region Regression Guards — Request Path Validation
+
+    /// <summary>
+    /// REGRESSION: When the request path does not match the configured embeddings endpoint
+    /// path, the controller MUST return 404 and MUST NOT invoke IEmbeddingService. This
+    /// protects against accidental removal of the path-match guard, which would otherwise
+    /// allow the manually-routed PostAsync to be invoked from unexpected URLs.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsNotFound_WhenPathDoesNotMatchConfiguredPath()
+    {
+        // Arrange — config path is "/embed" but caller passes "/wrong-path"
+        EmbeddingController controller = CreateController(
+            requestPath: "/wrong-path",
+            requestBody: "some text",
+            hostMode: HostMode.Development);
+
+        // Act — pass a 'path' arg that does NOT match config's "/embed"
+        IActionResult result = await controller.PostAsync("wrong-path");
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(NotFoundResult));
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never(),
+            "Service must not be called when the request path does not match the configured embed path.");
+    }
+
+    /// <summary>
+    /// REGRESSION: Path matching MUST be case-insensitive and MUST ignore a leading '/'.
+    /// This documents the intended normalization in PostAsync so a future "tightening"
+    /// (e.g. switching to ordinal comparison) is caught by this test.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_PathMatchingIsCaseInsensitive()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f };
+        SetupSuccessfulEmbedding(embedding);
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/EMBED",
+            requestBody: "test",
+            hostMode: HostMode.Development);
+
+        // Act — pass uppercase path
+        IActionResult result = await controller.PostAsync("EMBED");
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+    }
+
+    /// <summary>
+    /// REGRESSION: When the embeddings endpoint is configured with a non-default path,
+    /// PostAsync MUST honor that configured path (via EffectivePath) instead of any
+    /// hard-coded value. Protects against accidental hard-coding of "/embed".
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_HonorsConfiguredCustomPath()
+    {
+        // Arrange — configure a non-default endpoint path
+        float[] embedding = new[] { 0.1f, 0.2f };
+        SetupSuccessfulEmbedding(embedding);
+
+        EmbeddingsOptions embeddingsOptions = new(
+            Provider: EmbeddingProviderType.OpenAI,
+            BaseUrl: "https://api.openai.com",
+            ApiKey: "key",
+            Enabled: true,
+            Endpoint: new EmbeddingsEndpointOptions(
+                enabled: true,
+                roles: new[] { "anonymous" },
+                path: "/custom-vectorize"));
+
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Development);
+
+        EmbeddingController controller = new(
+            mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/custom-vectorize", "test", "text/plain")
+        };
+
+        // Act — call with the configured (non-default) path
+        IActionResult resultMatched = await controller.PostAsync("custom-vectorize");
+        Assert.IsInstanceOfType(resultMatched, typeof(OkObjectResult));
+
+        // And — calling with the default "/embed" against a custom-path config MUST return 404
+        EmbeddingController controllerWrongPath = new(
+            mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed", "test", "text/plain")
+        };
+        IActionResult resultMismatched = await controllerWrongPath.PostAsync("embed");
+        Assert.IsInstanceOfType(resultMismatched, typeof(NotFoundResult));
+    }
+
+    #endregion
+
+    #region Regression Guards — Authorization Defaults
+
+    /// <summary>
+    /// REGRESSION: When endpoint.roles is configured as an empty array (`roles: []`),
+    /// GetEffectiveRoles MUST treat it as "not configured" and fall back to the
+    /// HostMode-based defaults (production → "authenticated"). An anonymous request
+    /// in production with empty roles MUST therefore be denied with 403.
+    ///
+    /// Protects against a subtle bug where someone changes the `Roles.Length > 0` guard
+    /// to a `Roles is not null` check, which would silently allow no roles to bypass auth.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsForbidden_WhenRolesIsEmptyArray_InProductionMode()
+    {
+        // Arrange
+        EmbeddingsOptions embeddingsOptions = new(
+            Provider: EmbeddingProviderType.OpenAI,
+            BaseUrl: "https://api.openai.com",
+            ApiKey: "key",
+            Enabled: true,
+            Endpoint: new EmbeddingsEndpointOptions(
+                enabled: true,
+                roles: Array.Empty<string>(), // explicit empty
+                path: "/embed"));
+
+        Mock<RuntimeConfigProvider> mockProvider = CreateMockConfigProvider(
+            embeddingsOptions: embeddingsOptions, hostMode: HostMode.Production);
+
+        EmbeddingController controller = new(
+            mockProvider.Object, _mockLogger.Object, _mockEmbeddingService.Object)
+        {
+            ControllerContext = CreateControllerContext("/embed", "test", "text/plain", clientRole: null)
+        };
+
+        // Act
+        IActionResult result = await controller.PostAsync("embed");
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, (int)value!.error.status);
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never(),
+            "Service must not be called when authorization is denied.");
+    }
+
+    /// <summary>
+    /// REGRESSION: The authorization check MUST run BEFORE the request body is read or
+    /// the embedding service is called. This ensures that a denied caller cannot trigger
+    /// upstream resource consumption (network I/O, embedding-provider quota) merely by
+    /// sending a large body.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_AuthorizationCheckRunsBeforeServiceCall()
+    {
+        // Arrange — denied role; provide a very large body to make sure
+        // even oversized bodies do not reach the service.
+        string largeBody = new('Z', 200_000);
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed",
+            requestBody: largeBody,
+            hostMode: HostMode.Production,
+            endpointRoles: new[] { "admin" },
+            clientRole: "anonymous");
+
+        // Act
+        IActionResult result = await controller.PostAsync("embed");
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, (int)value!.error.status);
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    /// <summary>
+    /// REGRESSION: An authenticated, non-matching client role in production MUST be denied
+    /// even when the request body and content-type are otherwise valid. Protects against
+    /// regressions that move the role check after body parsing or batch dispatch.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_DoesNotCallBatchService_WhenAuthorizationFails_ForDocumentArray()
+    {
+        // Arrange — denied role + valid JSON document array body
+        string requestBody = """
+            [
+                {"key": "doc-1", "text": "First document"}
+            ]
+            """;
+
+        EmbeddingController controller = CreateController(
+            requestPath: "/embed",
+            requestBody: requestBody,
+            contentType: "application/json",
+            hostMode: HostMode.Production,
+            endpointRoles: new[] { "admin" },
+            clientRole: "unauthorized-role");
+
+        // Act
+        IActionResult result = await controller.PostAsync("embed");
+
+        // Assert — denied before batch service is invoked
+        Assert.IsInstanceOfType(result, typeof(JsonResult));
+        JsonResult jsonResult = (JsonResult)result;
+        dynamic? value = jsonResult.Value;
+        Assert.IsNotNull(value);
+        Assert.AreEqual((int)HttpStatusCode.Forbidden, (int)value!.error.status);
+        _mockEmbeddingService.Verify(
+            s => s.TryEmbedBatchAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()),
+            Times.Never(),
+            "Batch service must not be called for document-array requests when authorization is denied.");
     }
 
     #endregion

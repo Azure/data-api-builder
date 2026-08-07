@@ -13,11 +13,10 @@ namespace Azure.DataApiBuilder.Config.Converters;
 /// </summary>
 internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
 {
-    public EmbeddingsOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings = null)
+    public EmbeddingsOptionsConverterFactory(DeserializationVariableReplacementSettings? _ = null)
     {
         // Note: replacementSettings is not used in this converter because the environment variable
         // replacement is handled by the string deserializers registered in the JsonSerializerOptions.
-        _ = replacementSettings;
     }
 
     /// <inheritdoc/>
@@ -52,6 +51,7 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
             EmbeddingsEndpointOptions? endpoint = null;
             EmbeddingsHealthCheckConfig? health = null;
             EmbeddingsChunkingOptions? chunking = null;
+            EmbeddingsCacheOptions? cache = null;
 
             while (reader.Read())
             {
@@ -113,6 +113,9 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                     case "chunking":
                         chunking = ReadChunkingOptions(ref reader, options);
                         break;
+                    case "cache":
+                        cache = JsonSerializer.Deserialize<EmbeddingsCacheOptions>(ref reader, options);
+                        break;
                     default:
                         reader.Skip();
                         break;
@@ -145,7 +148,8 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                 TimeoutMs: timeoutMs,
                 Endpoint: endpoint,
                 Health: health,
-                Chunking: chunking);
+                Chunking: chunking,
+                Cache: cache);
         }
 
         /// <summary>
@@ -356,6 +360,12 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
             {
                 writer.WritePropertyName("chunking");
                 JsonSerializer.Serialize(writer, value.Chunking, options);
+            }
+
+            if (value.Cache is not null)
+            {
+                writer.WritePropertyName("cache");
+                JsonSerializer.Serialize(writer, value.Cache, options);
             }
 
             writer.WriteEndObject();

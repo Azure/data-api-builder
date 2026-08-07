@@ -38,6 +38,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// </summary>
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
+        public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.UpdateRecord ?? true;
+
         /// <summary>
         /// Gets the metadata for the update_record tool, including its name, description, and input schema.
         /// </summary>
@@ -162,6 +164,26 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     out string authError))
                 {
                     return McpErrorHelpers.PermissionDenied(toolName, entityName, "update", authError, logger);
+                }
+
+                // Column-level authorization: ensure the caller's effective role is permitted to write
+                // every column present in the request payload (fields.include/fields.exclude enforcement).
+                try
+                {
+                    if (!McpAuthorizationHelper.AreColumnsAuthorizedForOperation(
+                            authResolver,
+                            entityName,
+                            effectiveRole!,
+                            EntityActionOperation.Update,
+                            fields.Keys,
+                            out string columnAuthError))
+                    {
+                        return McpErrorHelpers.PermissionDenied(toolName, entityName, "update", columnAuthError, logger);
+                    }
+                }
+                catch (Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException dabEx)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "ValidationFailed", $"Request validation failed: {dabEx.Message}", logger);
                 }
 
                 // 6) Build and validate Upsert (UpdateIncremental) context

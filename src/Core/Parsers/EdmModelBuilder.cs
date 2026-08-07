@@ -111,19 +111,29 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     // each column represents a property of the current entity we are adding
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        Type columnSystemType = sourceDefinition.Columns[column].SystemType;
+                        ColumnDefinition columnDef = sourceDefinition.Columns[column];
+                        Type columnSystemType = columnDef.SystemType;
                         // need to convert our column system type to an Edm type
                         EdmPrimitiveTypeKind type = TypeHelper.GetEdmPrimitiveTypeFromSystemType(columnSystemType);
 
                         // The mapped (aliased) field name defined in the runtime config is used to create a representative
                         // OData StructuralProperty. The created property is then added to the EdmEntityType.
                         // StructuralProperty objects representing database primary keys are added as a 'keyProperties' to the EdmEntityType.
+                        // Array columns are represented as collection-typed StructuralProperties (e.g., Collection(Edm.Int32) for int[]).
                         // Otherwise, the StructuralProperty object is added as a generic StructuralProperty of the EdmEntityType.
                         string exposedColumnName;
                         if (sourceDefinition.PrimaryKey.Contains(column))
                         {
                             sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
                             newEntity.AddKeys(newEntity.AddStructuralProperty(name: exposedColumnName, type, isNullable: false));
+                        }
+                        else if (columnDef.IsArrayType)
+                        {
+                            // Array columns are represented as EDM collection types (e.g., Collection(Edm.Int32) for int[]).
+                            sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
+                            EdmPrimitiveTypeReference elementTypeRef = new(EdmCoreModel.Instance.GetPrimitiveType(type), isNullable: true);
+                            EdmCollectionTypeReference collectionTypeRef = new(new EdmCollectionType(elementTypeRef));
+                            newEntity.AddStructuralProperty(name: exposedColumnName, collectionTypeRef);
                         }
                         else
                         {

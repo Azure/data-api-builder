@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageOutputPath>./nupkg</PackageOutputPath>
@@ -20,6 +20,9 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <NoWarn>NU1603</NoWarn>
+
+    <!-- Run custom target during pack to add dependency files into the package. -->
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeInternalDependenciesInPackage</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 
   <ItemGroup>
@@ -53,16 +56,33 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
-    <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
-    <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
+    <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj">
+      <PrivateAssets Condition="'$(PrivatizeAssets)' == 'true'">all</PrivateAssets>
+    </ProjectReference>
+    <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj">
+      <PrivateAssets Condition="'$(PrivatizeAssets)' == 'true'">all</PrivateAssets>
+    </ProjectReference>
+    <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj">
+      <PrivateAssets Condition="'$(PrivatizeAssets)' == 'true'">all</PrivateAssets>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
     <None Include="..\..\nuget\nuget_core\README.md" Pack="true" PackagePath="\" />
     <None Include="..\..\nuget\nuget_icon.png" Pack="true" PackagePath="\" />
     <None Include="..\..\LICENSE.txt" Pack="true" PackagePath="\" />
-    <None Include="..\..\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\..\NOTICE.txt')" />
+    <None Include="..\..\nuget_core\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\nuget_core\NOTICE.txt')" />
   </ItemGroup>
+
+  <Target Name="IncludeInternalDependenciesInPackage">
+    <ItemGroup>
+      <_InternalAssembly Include="$(OutputPath)Azure.DataApiBuilder.Auth.dll" />
+      <_InternalAssembly Include="$(OutputPath)Azure.DataApiBuilder.Config.dll" />
+      <_InternalAssembly Include="$(OutputPath)Azure.DataApiBuilder.Service.GraphQLBuilder.dll" />
+      <_InternalAssembly Include="$(OutputPath)Azure.DataApiBuilder.Product.dll" />
+
+      <TfmSpecificPackageFile Include="@(_InternalAssembly)" PackagePath="lib/$(TargetFramework)" />
+    </ItemGroup>
+  </Target>
 
 </Project>

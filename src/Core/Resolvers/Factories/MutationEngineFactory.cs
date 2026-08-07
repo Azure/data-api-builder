@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                     $"{nameof(databaseType)}:{databaseType} could not be found within the config",
                     HttpStatusCode.BadRequest,
                     DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
-            };
+            }
 
             return mutationEngine;
         }

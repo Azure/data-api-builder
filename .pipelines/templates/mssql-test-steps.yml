@@ -31,10 +31,10 @@ steps:
 # Per Microsoft Learn Docs, "Selecting the .NET SDK version is independent from
 # specifying the runtime version a project targets."
 - task: UseDotNet@2
-  displayName: Setup .NET SDK v8.0.x
+  displayName: Setup .NET SDK v10.0.x
   inputs:
     packageType: sdk
-    version: 8.0.x
+    version: 10.0.x
 
 - task: NuGetToolInstaller@1
 
@@ -141,6 +141,11 @@ steps:
   inputs:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+
+# Publish this job's raw cobertura as a uniquely-named artifact (suffixed per job).
+- template: publish-coverage-artifact.yml
+  parameters:
+    artifactName: 'coverage-mssql${{ parameters.artifactSuffix }}'
 
 - task: CopyFiles@2
   condition: eq(variables['publishverify'], 'Yes')

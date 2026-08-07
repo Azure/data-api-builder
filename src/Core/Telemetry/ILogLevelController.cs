@@ -11,27 +11,36 @@ namespace Azure.DataApiBuilder.Core.Telemetry
     public interface ILogLevelController
     {
         /// <summary>
-        /// Gets a value indicating whether the log level was overridden by CLI arguments.
-        /// When true, MCP and config-based log level changes are ignored.
+        /// Gets a value indicating whether the CLI is the source overriding the log level
+        /// (i.e., <c>--log-level</c> was supplied). When true, runtime-config (hot-reload)
+        /// updates are ignored.
         /// </summary>
-        bool IsCliOverridden { get; }
+        bool IsCliOverriding { get; }
 
         /// <summary>
-        /// Gets a value indicating whether the log level was explicitly set in the config file.
-        /// When true along with IsCliOverridden being false, MCP log level changes are ignored.
+        /// Gets a value indicating whether the runtime config is the source overriding the log
+        /// level (i.e., <c>runtime.telemetry.log-level</c> was explicitly set).
         /// </summary>
-        bool IsConfigOverridden { get; }
+        bool IsConfigOverriding { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the agent is the source overriding the log level via
+        /// an MCP <c>logging/setLevel</c> request. When true, runtime-config (hot-reload) updates
+        /// are ignored so the agent's choice remains in effect.
+        /// </summary>
+        bool IsAgentOverriding { get; }
 
         /// <summary>
         /// Updates the log level from an MCP logging/setLevel request.
         /// The MCP level string is mapped to the appropriate LogLevel.
-        /// Log level precedence (highest to lowest):
-        /// 1. CLI --LogLevel flag (IsCliOverridden = true)
-        /// 2. Config runtime.telemetry.log-level (IsConfigOverridden = true)
-        /// 3. MCP logging/setLevel (only works if neither CLI nor Config set a level)
+        /// Log-level precedence (highest to lowest):
+        /// 1. Agent (MCP <c>logging/setLevel</c>) — always wins.
+        /// 2. CLI <c>--log-level</c> flag.
+        /// 3. Config <c>runtime.telemetry.log-level</c>.
+        /// 4. Defaults.
         /// </summary>
         /// <param name="mcpLevel">The MCP log level string (e.g., "debug", "info", "warning", "error").</param>
-        /// <returns>True if the level was changed; false if CLI or Config override prevented the change.</returns>
+        /// <returns>True if the level was changed; false if the input was an unrecognized level.</returns>
         bool UpdateFromMcp(string mcpLevel);
     }
 }

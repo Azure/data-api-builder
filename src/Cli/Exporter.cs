@@ -116,7 +116,8 @@ namespace Cli
                     isHttpsRedirectionDisabled: false,
                     config: options.Config!,
                     mcpStdio: false,
-                    mcpRole: null);
+                    mcpRole: null,
+                    logLevelLegacy: null);
 
                 Task dabService = Task.Run(() =>
                 {

@@ -339,7 +339,10 @@
               }
             },
             {
-              "action": "create"
+              "action": "create",
+              "policy": {
+                "database": "@item.pieceid ne 6 and @item.piecesAvailable gt 0"
+              }
             },
             {
               "action": "read"
@@ -1346,6 +1349,40 @@
         }
       ]
     },
+    "ArrayType": {
+      "source": {
+        "object": "array_type_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "ArrayType",
+          "plural": "ArrayTypes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        }
+      ]
+    },
     "stocks_price": {
       "source": {
         "object": "stocks_price",
@@ -2292,6 +2329,35 @@
         },
         {
           "role": "authenticated",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "DateOnlyTable": {
+      "source": {
+        "object": "date_only_table",
+        "type": "table",
+        "key-fields": [
+          "event_date"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "DateOnlyTable",
+          "plural": "DateOnlyTables"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
           "actions": [
             {
               "action": "*"

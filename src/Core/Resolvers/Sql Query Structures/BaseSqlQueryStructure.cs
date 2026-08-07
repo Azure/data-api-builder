@@ -4,6 +4,7 @@
 using System.Data;
 using System.Globalization;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -82,6 +83,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 metadataProvider
                 );
             }
+        }
+
+        /// <inheritdoc />
+        public override string MakeDbConnectionParam(object? value, string? paramName = null, bool lengthOverride = false)
+        {
+            if (MetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL &&
+                !string.IsNullOrEmpty(paramName) &&
+                value is string stringValue &&
+                GetUnderlyingSourceDefinition().Columns.TryGetValue(paramName, out ColumnDefinition? columnDefinition))
+            {
+                Type columnSystemType = columnDefinition.SystemType;
+                if (columnSystemType != typeof(string))
+                {
+                    value = GetParamAsSystemType(stringValue, paramName, columnSystemType);
+                }
+
+                // Npgsql requires DateTime with Kind=Unspecified for 'timestamp without time zone' columns.
+                // ParseParamAsSystemType returns Kind=Utc (via .UtcDateTime), which causes PostgreSQL to
+                // apply a UTC-to-local offset during comparison, producing incorrect filter results.
+                if (value is DateTime dtValue && dtValue.Kind == DateTimeKind.Utc && columnSystemType == typeof(DateTime))
+                {
+                    value = DateTime.SpecifyKind(dtValue, DateTimeKind.Unspecified);
+                }
+            }
+
+            return base.MakeDbConnectionParam(value, paramName, lengthOverride);
         }
 
         /// <summary>
@@ -421,9 +448,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Tries to parse the string parameter to the given system type
         /// Useful for inferring parameter types for columns or procedure parameters
         /// </summary>
-        /// <param name="param"></param>
-        /// <param name="systemType"></param>
-        /// <returns></returns>
+        /// <param name="param">The string value to parse.</param>
+        /// <param name="systemType">The target system type for the parsed value.</param>
+        /// <returns>The parameter parsed as the requested system type.</returns>
         /// <exception cref="NotSupportedException"></exception>
         protected static object ParseParamAsSystemType(string param, Type systemType)
         {
@@ -452,8 +479,47 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "Guid" => Guid.Parse(param),
                 "TimeOnly" => TimeOnly.Parse(param),
                 "TimeSpan" => TimeOnly.Parse(param),
+                "Single[]" => ParseArrayIntoSystemType(param, systemType),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };
+        }
+
+        /// <summary>
+        /// Takes the array of the parameter we are going to parse and converts each element to the specified system type.
+        /// </summary>
+        /// <param name="param"></param>
+        /// <param name="systemType"></param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="FormatException"></exception>
+        private static object ParseArrayIntoSystemType(string param, Type systemType)
+        {
+            Type typeOfArray;
+            switch (systemType.Name)
+            {
+                case "Single[]":
+                    typeOfArray = typeof(Single);
+                    break;
+
+                default:
+                    throw new NotSupportedException($"{systemType.Name} is not supported");
+            }
+
+            try
+            {
+                object[] values = JsonSerializer.Deserialize<object[]>(param) ?? Array.Empty<object>();
+                for (int i = 0; i < values.Length; i++)
+                {
+                    string stringValue = values[i]?.ToString() ?? string.Empty;
+                    values[i] = ParseParamAsSystemType(stringValue, typeOfArray);
+                }
+
+                return values;
+            }
+            catch
+            {
+                throw new FormatException($"Expected an array for {systemType.Name} but got an unexpected value");
+            }
         }
 
         /// <summary>
@@ -657,6 +723,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     innerException: e);
 
             }
+        }
+
+        /// <summary>
+        /// Transforms the value of an object as a string.
+        /// Array/vector columns (e.g. SQL Server 'vector') arrive as a List<IValueNode>.
+        /// Calling ToString() on a list/array only yields the CLR type name, so instead extract
+        /// the underlying element values and serialize them into a JSON array string (e.g. "[1.5,2.5,3.5]").
+        /// </summary>
+        /// <param name="value">The value to be transformed into a string.</param>
+        /// <returns>A string representation of the value.</returns>
+        protected static string GetStringifiedValue(object value)
+        {
+            return value switch
+            {
+                IEnumerable<IValueNode> valueNodes => JsonSerializer.Serialize(valueNodes.Select(TypeHelper.GetValue)),
+                _ => value.ToString()!
+            };
         }
     }
 }

@@ -331,16 +331,19 @@
             Role: database_policy_tester,
             Actions: [
               {
+                Action: Read
+              },
+              {
+                Action: Create,
+                Policy: {
+                  Database: @item.pieceid ne 6 and @item.piecesAvailable gt 0
+                }
+              },
+              {
                 Action: Update,
                 Policy: {
                   Database: @item.pieceid ne 1
                 }
-              },
-              {
-                Action: Create
-              },
-              {
-                Action: Read
               }
             ]
           },
@@ -2666,6 +2669,40 @@
       }
     },
     {
+      ArrayType: {
+        Source: {
+          Object: array_type_table,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: arrayType,
+          Plural: arrayTypes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       dbo_DimAccount: {
         Source: {
           Object: dimaccount,
@@ -2722,6 +2759,35 @@
             ]
           }
         }
+      }
+    },
+    {
+      DateOnlyTable: {
+        Source: {
+          Object: date_only_table,
+          Type: Table,
+          KeyFields: [
+            event_date
+          ]
+        },
+        GraphQL: {
+          Singular: DateOnlyTable,
+          Plural: DateOnlyTables,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
       }
     }
   ]

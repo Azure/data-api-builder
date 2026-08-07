@@ -22,16 +22,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
 
         /// <summary>
-        /// Format the results from a Find operation. Check if there is a requirement
-        /// for a nextLink/after, and if so, add this value to the array of JsonElements to
-        /// be used as part of the response.
+        /// Format the results from a Find operation. If a nextLink/after token is required for
+        /// pagination, the envelope is built directly via an anonymous response object so that
+        /// pagination metadata is carried out-of-band rather than encoded into the row collection.
         /// </summary>
-        /// <param name="jsonDoc">The JsonDocument from the query.</param>
+        /// <param name="findOperationResponse">The JsonElement from the query (object for single-row, array for collections).</param>
         /// <param name="context">The RequestContext.</param>
         /// <param name="sqlMetadataProvider">The metadataprovider.</param>
         /// <param name="runtimeConfig">Runtimeconfig object</param>
         /// <param name="httpContext">HTTP context associated with the API request</param>
-        /// <param name="isMcpRequest">True if request is done through MCP endpoint</param>
+        /// <param name="isMcpRequest"><c>true</c> if invoked from the MCP endpoint (emit <c>after</c>); <c>false</c> or <c>null</c> for REST (emit <c>nextLink</c>).</param>
         /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
         public static OkObjectResult FormatFindResult(
             JsonElement findOperationResponse,
@@ -41,49 +41,48 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             HttpContext httpContext,
             bool? isMcpRequest = null)
         {
-
-            // When there are no rows returned from the database, the jsonElement will be an empty array.
-            // In that case, the response is returned as is.
+            // Empty result set: return the standard envelope { "value": [] } and skip extra-field/cursor work.
             if (findOperationResponse.ValueKind is JsonValueKind.Array && findOperationResponse.GetArrayLength() == 0)
             {
                 return OkResponse(findOperationResponse);
             }
 
-            HashSet<string> extraFieldsInResponse = (findOperationResponse.ValueKind is not JsonValueKind.Array)
-                                                  ? DetermineExtraFieldsInResponse(findOperationResponse, context.FieldsToBeReturned)
-                                                  : DetermineExtraFieldsInResponse(findOperationResponse.EnumerateArray().First(), context.FieldsToBeReturned);
+            bool isCollection = findOperationResponse.ValueKind is JsonValueKind.Array;
+
+            // Compute additional fields that were fetched for cursor/$orderby computation but
+            // are not part of $select and so should be stripped from the response payload.
+            JsonElement firstRowProbe = isCollection ? findOperationResponse.EnumerateArray().First() : findOperationResponse;
+            HashSet<string> extraFieldsInResponse = DetermineExtraFieldsInResponse(firstRowProbe, context.FieldsToBeReturned);
 
             uint defaultPageSize = runtimeConfig.DefaultPageSize();
             uint maxPageSize = runtimeConfig.MaxPageSize();
+            bool hasNext = isCollection && SqlPaginationUtil.HasNext(findOperationResponse, context.First, defaultPageSize, maxPageSize);
 
-            // If the results are not a collection or if the query does not have a next page
-            // no nextLink/after is needed. So, the response is returned after removing the extra fields.
-            if (findOperationResponse.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(findOperationResponse, context.First, defaultPageSize, maxPageSize))
+            // No-pagination path: single object, or a collection without a next page.
+            if (!hasNext)
             {
-                // If there are no additional fields present, the response is returned directly. When there
-                // are extra fields, they are removed before returning the response.
                 if (extraFieldsInResponse.Count == 0)
                 {
                     return OkResponse(findOperationResponse);
                 }
-                else
-                {
-                    return findOperationResponse.ValueKind is JsonValueKind.Array ? OkResponse(JsonSerializer.SerializeToElement(RemoveExtraFieldsInResponseWithMultipleItems(findOperationResponse.EnumerateArray().ToList(), extraFieldsInResponse)))
-                                                                                  : OkResponse(RemoveExtraFieldsInResponseWithSingleItem(findOperationResponse, extraFieldsInResponse));
-                }
+
+                return isCollection
+                    ? OkResponse(JsonSerializer.SerializeToElement(RemoveExtraFieldsInResponseWithMultipleItems(findOperationResponse.EnumerateArray().ToList(), extraFieldsInResponse)))
+                    : OkResponse(RemoveExtraFieldsInResponseWithSingleItem(findOperationResponse, extraFieldsInResponse));
             }
 
-            List<JsonElement> rootEnumerated = findOperationResponse.EnumerateArray().ToList();
+            // Paginated path.
+            List<JsonElement> rows = findOperationResponse.EnumerateArray().ToList();
 
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
-            rootEnumerated.RemoveAt(rootEnumerated.Count - 1);
+            rows.RemoveAt(rows.Count - 1);
 
             // The fields such as primary keys, fields in $orderby clause that are retrieved in addition to the
             // fields requested in the $select clause are required for calculating the $after element which is part of nextLink.
             // So, the extra fields are removed post the calculation of $after element.
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
-                               element: rootEnumerated[rootEnumerated.Count - 1],
+                               element: rows[rows.Count - 1],
                                orderByColumns: context.OrderByClauseOfBackingColumns,
                                primaryKey: sqlMetadataProvider.GetSourceDefinition(context.EntityName).PrimaryKey,
                                entityName: context.EntityName,
@@ -94,40 +93,38 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // When there are extra fields present, they are removed before returning the response.
             if (extraFieldsInResponse.Count > 0)
             {
-                rootEnumerated = RemoveExtraFieldsInResponseWithMultipleItems(rootEnumerated, extraFieldsInResponse);
+                rows = RemoveExtraFieldsInResponseWithMultipleItems(rows, extraFieldsInResponse);
             }
 
-            // Create an 'after' object if the request comes from MCP endpoint.
+            // MCP endpoint: { value: [...], after: "<cursor>" }
             if (isMcpRequest is true)
             {
-                string jsonString = JsonSerializer.Serialize(new[]
+                return new OkObjectResult(new
                 {
-                    new { after = after }
+                    value = rows,
+                    after = after
                 });
-                JsonElement afterElement = JsonSerializer.Deserialize<JsonElement>(jsonString);
-
-                rootEnumerated.Add(afterElement);
             }
-            // Create a 'nextLink' object if the request comes from REST endpoint.
-            else
+
+            // REST endpoint: { value: [...], nextLink: "<absolute-or-relative-uri>" }
+            string basePaginationUri = SqlPaginationUtil.ConstructBaseUriForPagination(httpContext, runtimeConfig.Runtime?.BaseRoute);
+            string queryString = SqlPaginationUtil.BuildQueryStringWithAfterToken(
+                                     queryStringParameters: context.ParsedQueryString,
+                                     newAfterPayload: after);
+            UriBuilder uriBuilder = new(basePaginationUri)
             {
-                string basePaginationUri = SqlPaginationUtil.ConstructBaseUriForPagination(httpContext, runtimeConfig.Runtime?.BaseRoute);
+                // Form final link by appending the query string
+                Query = queryString
+            };
+            string nextLink = runtimeConfig.NextLinkRelative()
+                ? uriBuilder.Uri.PathAndQuery // returns just "/api/<Entity>?$after...", no host
+                : uriBuilder.Uri.AbsoluteUri; // returns full URL
 
-                // Build the query string with the $after token.
-                string queryString = SqlPaginationUtil.BuildQueryStringWithAfterToken(
-                          queryStringParameters: context!.ParsedQueryString,
-                          newAfterPayload: after);
-
-                // Get the final consolidated nextLink for the pagination.
-                JsonElement nextLink = SqlPaginationUtil.GetConsolidatedNextLinkForPagination(
-                    baseUri: basePaginationUri,
-                    queryString: queryString,
-                    isNextLinkRelative: runtimeConfig.NextLinkRelative());
-
-                rootEnumerated.Add(nextLink);
-            }
-
-            return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated), isMcpRequest);
+            return new OkObjectResult(new
+            {
+                value = rows,
+                nextLink = nextLink
+            });
         }
 
         /// <summary>
@@ -139,9 +136,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="response">Response json retrieved from the database</param>
         /// <param name="fieldsToBeReturned">List of fields to be returned in the response.</param>
-        /// <returns>Additional fields that are present in the response</returns>
+        /// <returns>Additional fields that are present in the response. Returns an empty set when <paramref name="response"/> is not a JSON object (e.g. a scalar or array-typed row value), since there are no named properties to filter.</returns>
         private static HashSet<string> DetermineExtraFieldsInResponse(JsonElement response, List<string> fieldsToBeReturned)
         {
+            // Guard: a result row is normally a JSON object, but with database engines that can return
+            // array/scalar/collection-typed shapes at the row level there is nothing to enumerate. In that
+            // case there are no extra-field columns to strip, so return an empty set rather than throwing.
+            if (response.ValueKind is not JsonValueKind.Object)
+            {
+                return new HashSet<string>();
+            }
+
             HashSet<string> fieldsPresentInResponse = new();
 
             foreach (JsonProperty property in response.EnumerateObject())
@@ -200,60 +205,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper function returns an OkObjectResult with provided arguments in a
-        /// form that complies with vNext Api guidelines.
+        /// Helper function returns an OkObjectResult that wraps a single JsonElement (object or array)
+        /// into the standard <c>{ "value": [ ... ] }</c> envelope used by REST/MCP responses.
+        ///
+        /// Pagination metadata (<c>nextLink</c>/<c>after</c>) is intentionally NOT inferred from the
+        /// shape of <paramref name="jsonResult"/>. <see cref="FormatFindResult"/> attaches those fields
+        /// out-of-band when needed. This avoids confusing array-typed column values (e.g. SQL Server
+        /// JSON arrays, vector/collection types) with a pagination sentinel.
         /// </summary>
         /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
-        /// <param name="isMcpRequest">True if request is done through MCP endpoint.</param>
         /// <returns>Correctly formatted OkObjectResult.</returns>
-        public static OkObjectResult OkResponse(JsonElement jsonResult, bool? isMcpRequest = null)
+        public static OkObjectResult OkResponse(JsonElement jsonResult)
         {
-            // For consistency we return all values as type Array
-            if (jsonResult.ValueKind != JsonValueKind.Array)
-            {
-                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
-                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
-            }
+            // For consistency we always return the payload as an array under "value".
+            List<JsonElement> rows = jsonResult.ValueKind is JsonValueKind.Array
+                ? jsonResult.EnumerateArray().ToList()
+                : new List<JsonElement> { jsonResult };
 
-            List<JsonElement> resultEnumerated = jsonResult.EnumerateArray().ToList();
-            // More than 0 records, and the last element is of type array, then we have pagination
-            if (resultEnumerated.Count > 0 && resultEnumerated[resultEnumerated.Count - 1].ValueKind == JsonValueKind.Array)
-            {
-                // Get the 'nextLink' or 'after'
-                // resultEnumerated will be an array of the form
-                // [{object1}, {object2},...{objectlimit}, [{nextLinkObject/afterObject}]]
-                // if the last element is of type array, we know it is 'nextLink'
-                // if the request is done through the REST endpoint and it is
-                // 'after' if the request is done through the MCP endpoint,
-                // we strip the "[" and "]" and then save the element
-                // into a dictionary with a key of "nextLinkAfter" and a value that
-                // represents the nextLink/after data we require.
-                string nextLinkAfterJsonString = JsonSerializer.Serialize(resultEnumerated[resultEnumerated.Count - 1]);
-                Dictionary<string, object> nextLinkAfter = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkAfterJsonString[1..^1])!;
-                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count - 1);
-
-                // Check 'after' object if request is done through MCP endpoint.
-                if (isMcpRequest is true)
-                {
-                    return new OkObjectResult(new
-                    {
-                        value = value,
-                        after = nextLinkAfter["after"]
-                    });
-                }
-
-                // Check 'nextLink' object if request is done through REST endpoint.
-                return new OkObjectResult(new
-                {
-                    value = value,
-                    @nextLink = nextLinkAfter["nextLink"]
-                });
-            }
-
-            // no pagination, do not need nextLink
             return new OkObjectResult(new
             {
-                value = resultEnumerated
+                value = rows
             });
         }
 

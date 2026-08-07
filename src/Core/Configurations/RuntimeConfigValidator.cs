@@ -47,7 +47,8 @@ public class RuntimeConfigValidator : IConfigValidator
     private static readonly HashSet<DatabaseType> _databaseTypesSupportingCreatePolicy =
     [
         DatabaseType.MSSQL,
-        DatabaseType.DWSQL
+        DatabaseType.DWSQL,
+        DatabaseType.PostgreSQL
     ];
 
     // Error messages for user-delegated authentication configuration.
@@ -422,6 +423,33 @@ public class RuntimeConfigValidator : IConfigValidator
             }
         }
 
+        // Validate cache configuration. JSON schema enforces value ranges at parse time, but
+        // configurations constructed programmatically (e.g. via the CLI or via hot-reload) can
+        // bypass schema validation, so the runtime must also guard against invalid values.
+        if (embeddingsOptions.Cache is not null && embeddingsOptions.IsCachingEnabled)
+        {
+            EmbeddingsCacheOptions cacheOptions = embeddingsOptions.Cache;
+
+            // ttl-hours, when explicitly provided, must be a positive integer.
+            if (cacheOptions.UserProvidedTtlHours && cacheOptions.TtlHours <= 0)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Embeddings cache 'ttl-hours' must be a positive integer. Got: {cacheOptions.TtlHours}",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            // Level-2 cache, when enabled, requires a non-empty connection string.
+            if (cacheOptions.IsLevel2Enabled
+                && string.IsNullOrWhiteSpace(cacheOptions.Level2?.ConnectionString))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Embeddings cache 'level-2.connection-string' cannot be null or empty when level-2 cache is enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+
     }
 
     /// <summary>
@@ -448,7 +476,6 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateConfigProperties();
         ValidatePermissionsInConfig(runtimeConfig);
 
-        _logger.LogInformation("Validating entity relationships.");
         ValidateRelationshipConfigCorrectness(runtimeConfig);
 
         // This function initializes the metadata providers which in turn validates the connectivity to the
@@ -983,6 +1010,41 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 ValidateNameRequirements(entity.GraphQL.Singular);
                 ValidateNameRequirements(entity.GraphQL.Plural);
+            }
+
+        }
+    }
+
+    /// <summary>
+    /// Validates that no stored-procedure entity in the config declares duplicate parameter names.
+    /// Duplicate names produce inconsistent behavior across GraphQL, OpenAPI, and MCP because each
+    /// consumer resolves duplicates differently (first-wins vs. last-wins). This check runs in both
+    /// development and production mode so that ambiguous configs are rejected at startup regardless
+    /// of the host mode.
+    /// </summary>
+    /// <param name="runtimeConfig">The runtime configuration.</param>
+    public void ValidateStoredProcedureDuplicateParameters(RuntimeConfig runtimeConfig)
+    {
+        foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+        {
+            if (entity.Source.Type is not EntitySourceType.StoredProcedure
+                || entity.Source.Parameters is null)
+            {
+                continue;
+            }
+
+            HashSet<string> seenParamNames = new(StringComparer.Ordinal);
+            foreach (ParameterMetadata param in entity.Source.Parameters)
+            {
+                if (!seenParamNames.Add(param.Name))
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}' has duplicate parameter name '{param.Name}' in its stored procedure parameters configuration. " +
+                            "Parameter names must be unique.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    break;
+                }
             }
         }
     }
@@ -1888,6 +1950,9 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="runtimeConfig">The runtime configuration.</param>
     public void ValidateEntityAndAutoentityConfigurations(RuntimeConfig runtimeConfig)
     {
+        // Runs in both modes: duplicate SP parameter names cause silent inconsistency at runtime.
+        ValidateStoredProcedureDuplicateParameters(runtimeConfig);
+
         if (runtimeConfig.IsDevelopmentMode())
         {
             ValidateEntityConfiguration(runtimeConfig);

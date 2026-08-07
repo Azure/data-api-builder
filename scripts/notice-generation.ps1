@@ -2,27 +2,24 @@
 # Licensed under the MIT License.
 
 param (
+    [Parameter (Mandatory=$true)][string] $noticeFilePath,
     [Parameter (Mandatory=$true)][string] $BuildArtifactStagingDir,
     [Parameter (Mandatory=$true)][string] $BuildSourcesDir
 )
 
 # Download and save the ChilliCream License 1.0 from ChilliCream/graphql-platform GitHub repo
 $chiliCreamLicenseSavePath = "$BuildArtifactStagingDir/chillicreamlicense.txt"
-$chiliCreamLicenseMetadataURL = "https://raw.githubusercontent.com/ChilliCream/graphql-platform/main/website/src/basic/licensing/chillicream-license.md"
+$chiliCreamLicenseMetadataURL = "https://raw.githubusercontent.com/ChilliCream/graphql-platform/main/website/content/licensing/chillicream-license.md"
 Invoke-WebRequest $chiliCreamLicenseMetadataURL -UseBasicParsing |
  Select-Object -ExpandProperty Content |
  Out-File $chiliCreamLicenseSavePath
 
 # Define the path to the license file in your repository and Read the content of the license file
-$sqlClientSNILicenseFilePath = "$BuildSourcesDir/external_licenses/Microsoft.Data.SqlClient.SNI.5.2.0.License.txt"
+$sqlClientSNILicenseFilePath = "$BuildSourcesDir/external_licenses/Microsoft.Data.SqlClient.SNI.6.0.2.License.txt"
 $sqlClientSNILicense = Get-Content -Path $sqlClientSNILicenseFilePath -Raw
 
-# Path of notice file generated in CI/CD pipeline.
-$noticeFilePath = "$BuildSourcesDir/NOTICE.txt"
-
 # Replace erroneous copyright, using [System.IO.File] for better performance than Get-Content and Set-Content
-$content = [System.IO.File]::ReadAllText($noticeFilePath).Replace("(c) Microsoft 2023`r`n", "")
-$content = [System.IO.File]::ReadAllText($noticeFilePath).Replace("(c) Microsoft 2024`r`n", "")
+$content = [System.IO.File]::ReadAllText($noticeFilePath) -replace "\(c\) Microsoft (2023|2024)`r`n", ""
 
 # Prepare license content for writing to file.
 $sqlClientSNIComponentName = "`r`nMICROSOFT.DATA.SQLCLIENT.SNI`r`n`r`n"

@@ -110,6 +110,10 @@ namespace Cli.Commands
             CliBool? runtimeEmbeddingsChunkingEnabled = null,
             int? runtimeEmbeddingsChunkingSizeChars = null,
             int? runtimeEmbeddingsChunkingOverlapChars = null,
+            CliBool? runtimeEmbeddingsCacheEnabled = null,
+            int? runtimeEmbeddingsCacheTtlHours = null,
+            CliBool? runtimeEmbeddingsCacheLevel2Enabled = null,
+            string? runtimeEmbeddingsCacheLevel2ConnectionString = null,
             string? config = null)
             : base(config)
         {
@@ -217,6 +221,11 @@ namespace Cli.Commands
             RuntimeEmbeddingsChunkingEnabled = runtimeEmbeddingsChunkingEnabled;
             RuntimeEmbeddingsChunkingSizeChars = runtimeEmbeddingsChunkingSizeChars;
             RuntimeEmbeddingsChunkingOverlapChars = runtimeEmbeddingsChunkingOverlapChars;
+            // Embeddings Cache
+            RuntimeEmbeddingsCacheEnabled = runtimeEmbeddingsCacheEnabled;
+            RuntimeEmbeddingsCacheTtlHours = runtimeEmbeddingsCacheTtlHours;
+            RuntimeEmbeddingsCacheLevel2Enabled = runtimeEmbeddingsCacheLevel2Enabled;
+            RuntimeEmbeddingsCacheLevel2ConnectionString = runtimeEmbeddingsCacheLevel2ConnectionString;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: mssql, postgresql, cosmosdb_nosql, mysql, dwsql.")]
@@ -479,6 +488,18 @@ namespace Cli.Commands
 
         [Option("runtime.embeddings.chunking.overlap-chars", Required = false, HelpText = "Configure the overlap size in characters between consecutive chunks. Default: 100")]
         public int? RuntimeEmbeddingsChunkingOverlapChars { get; }
+
+        [Option("runtime.embeddings.cache.enabled", Required = false, HelpText = "Enable/disable caching for embeddings. Default: true")]
+        public CliBool? RuntimeEmbeddingsCacheEnabled { get; }
+
+        [Option("runtime.embeddings.cache.ttl-hours", Required = false, HelpText = "Configure the time-to-live for cached embeddings in hours. Default: 24")]
+        public int? RuntimeEmbeddingsCacheTtlHours { get; }
+
+        [Option("runtime.embeddings.cache.level-2.enabled", Required = false, HelpText = "Enable/disable the L2 (distributed Azure Managed Redis) cache for embeddings. Default: false")]
+        public CliBool? RuntimeEmbeddingsCacheLevel2Enabled { get; }
+
+        [Option("runtime.embeddings.cache.level-2.connection-string", Required = false, HelpText = "Connection string for the L2 (Azure Managed Redis) cache used by embeddings.")]
+        public string? RuntimeEmbeddingsCacheLevel2ConnectionString { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

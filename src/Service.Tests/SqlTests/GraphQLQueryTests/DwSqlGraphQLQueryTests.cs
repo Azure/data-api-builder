@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                         [table0].[title] AS [title],
                         ([table1_subq].[data]) AS [websiteplacement]
                     FROM [dbo].[books] AS [table0]
-    
+
                     OUTER APPLY (
                         SELECT STRING_AGG(
                             '{' +
@@ -177,7 +177,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                             ORDER BY [table1].[id] ASC
                         ) AS [table1]
                     ) AS [table1_subq]([data])
-    
+
                     WHERE (
                         [table0].[title] IN ('Awesome book', 'Also Awesome book')
                         AND EXISTS (
@@ -202,9 +202,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task OneToOneJoinQuery()
         {
             string dwSqlQuery = @"
-                SELECT COALESCE('[' + STRING_AGG('{' + N'""id"":' + ISNULL(STRING_ESCAPE(CAST([id] AS NVARCHAR(MAX)), 'json'), 
-                                'null') + ',' + N'""title"":' + ISNULL('""' + STRING_ESCAPE([title], 'json') + '""', 'null') + ',' + 
-                            N'""websiteplacement"":' + ISNULL([websiteplacement], 'null') + 
+                SELECT COALESCE('[' + STRING_AGG('{' + N'""id"":' + ISNULL(STRING_ESCAPE(CAST([id] AS NVARCHAR(MAX)), 'json'),
+                                'null') + ',' + N'""title"":' + ISNULL('""' + STRING_ESCAPE([title], 'json') + '""', 'null') + ',' +
+                            N'""websiteplacement"":' + ISNULL([websiteplacement], 'null') +
                             '}', ', ') + ']', '[]')
                 FROM (
                     SELECT TOP 100 [table0].[id] AS [id],
@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                         ([table1_subq].[data]) AS [websiteplacement]
                     FROM [dbo].[books] AS [table0]
                     OUTER APPLY (
-                        SELECT STRING_AGG('{' + N'""price"":' + ISNULL(STRING_ESCAPE(CAST([price] AS NVARCHAR(MAX)), 'json'), 
+                        SELECT STRING_AGG('{' + N'""price"":' + ISNULL(STRING_ESCAPE(CAST([price] AS NVARCHAR(MAX)), 'json'),
                                     'null') + '}', ', ')
                         FROM (
                             SELECT TOP 1 [table1].[price] AS [price]
@@ -241,76 +241,76 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             SELECT COALESCE(
                 '[' + STRING_AGG(
                     '{' + N'""title"":' + ISNULL('""' + STRING_ESCAPE([title], 'json') + '""', 'null') + ',' +
-                    N'""publishers"":' + ISNULL('""' + STRING_ESCAPE([publishers], 'json') + '""', 'null') + '}', 
+                    N'""publishers"":' + ISNULL('""' + STRING_ESCAPE([publishers], 'json') + '""', 'null') + '}',
                     ', '
-                ) + ']', 
+                ) + ']',
                 '[]'
             )
             FROM (
-                SELECT TOP 5 
-                    [table0].[title] AS [title], 
+                SELECT TOP 5
+                    [table0].[title] AS [title],
                     ([table1_subq].[data]) AS [publishers]
                 FROM [dbo].[books] AS [table0]
                 OUTER APPLY (
                     SELECT STRING_AGG(
                         '{' + N'""name"":' + ISNULL('""' + STRING_ESCAPE([name], 'json') + '""', 'null') + ',' +
-                        N'""books"":' + ISNULL('""' + STRING_ESCAPE([books], 'json') + '""', 'null') + '}', 
+                        N'""books"":' + ISNULL('""' + STRING_ESCAPE([books], 'json') + '""', 'null') + '}',
                         ', '
                     )
                     FROM (
-                        SELECT TOP 1 
-                            [table1].[name] AS [name], 
+                        SELECT TOP 1
+                            [table1].[name] AS [name],
                             (COALESCE([table2_subq].[data], '[]')) AS [books]
                         FROM [dbo].[publishers] AS [table1]
                         OUTER APPLY (
                             SELECT COALESCE(
                                 '[' + STRING_AGG(
                                     '{' + N'""title"":' + ISNULL('""' + STRING_ESCAPE([title], 'json') + '""', 'null') + ',' +
-                                    N'""publishers"":' + ISNULL('""' + STRING_ESCAPE([publishers], 'json') + '""', 'null') + '}', 
+                                    N'""publishers"":' + ISNULL('""' + STRING_ESCAPE([publishers], 'json') + '""', 'null') + '}',
                                     ', '
-                                ) + ']', 
+                                ) + ']',
                                 '[]'
                             )
                             FROM (
-                                SELECT TOP 4 
-                                    [table2].[title] AS [title], 
+                                SELECT TOP 4
+                                    [table2].[title] AS [title],
                                     ([table3_subq].[data]) AS [publishers]
                                 FROM [dbo].[books] AS [table2]
                                 OUTER APPLY (
                                     SELECT STRING_AGG(
                                         '{' + N'""name"":' + ISNULL('""' + STRING_ESCAPE([name], 'json') + '""', 'null') + ',' +
-                                        N'""books"":' + ISNULL('""' + STRING_ESCAPE([books], 'json') + '""', 'null') + '}', 
+                                        N'""books"":' + ISNULL('""' + STRING_ESCAPE([books], 'json') + '""', 'null') + '}',
                                         ', '
                                     )
                                     FROM (
-                                        SELECT TOP 1 
-                                            [table3].[name] AS [name], 
+                                        SELECT TOP 1
+                                            [table3].[name] AS [name],
                                             (COALESCE([table4_subq].[data], '[]')) AS [books]
                                         FROM [dbo].[publishers] AS [table3]
                                         OUTER APPLY (
                                             SELECT COALESCE(
                                                 '[' + STRING_AGG(
                                                     '{' + N'""title"":' + ISNULL('""' + STRING_ESCAPE([title], 'json') + '""', 'null') + ',' +
-                                                    N'""publishers"":' + ISNULL('""' + STRING_ESCAPE([publishers], 'json') + '""', 'null') + '}', 
+                                                    N'""publishers"":' + ISNULL('""' + STRING_ESCAPE([publishers], 'json') + '""', 'null') + '}',
                                                     ', '
-                                                ) + ']', 
+                                                ) + ']',
                                                 '[]'
                                             )
                                             FROM (
-                                                SELECT TOP 3 
-                                                    [table4].[title] AS [title], 
+                                                SELECT TOP 3
+                                                    [table4].[title] AS [title],
                                                     ([table5_subq].[data]) AS [publishers]
                                                 FROM [dbo].[books] AS [table4]
                                                 OUTER APPLY (
                                                     SELECT STRING_AGG(
-                                                        '{' + N'""name"":' + ISNULL('""' + STRING_ESCAPE([name], 'json') + '""', 'null') + '}', 
+                                                        '{' + N'""name"":' + ISNULL('""' + STRING_ESCAPE([name], 'json') + '""', 'null') + '}',
                                                         ', '
                                                     )
                                                     FROM (
-                                                        SELECT TOP 1 
+                                                        SELECT TOP 1
                                                             [table5].[name] AS [name]
                                                         FROM [dbo].[publishers] AS [table5]
-                                                        WHERE [table4].[publisher_id] = [table5].[id] 
+                                                        WHERE [table4].[publisher_id] = [table5].[id]
                                                           AND [table5].[id] = [table4].[publisher_id]
                                                         ORDER BY [table5].[id] ASC
                                                     ) AS [table5]
@@ -319,7 +319,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                                                 ORDER BY [table4].[id] ASC
                                             ) AS [table4]
                                         ) AS [table4_subq]([data])
-                                        WHERE [table2].[publisher_id] = [table3].[id] 
+                                        WHERE [table2].[publisher_id] = [table3].[id]
                                           AND [table3].[id] = [table2].[publisher_id]
                                         ORDER BY [table3].[id] ASC
                                     ) AS [table3]
@@ -328,7 +328,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                                 ORDER BY [table2].[id] ASC
                             ) AS [table2]
                         ) AS [table2_subq]([data])
-                        WHERE [table0].[publisher_id] = [table1].[id] 
+                        WHERE [table0].[publisher_id] = [table1].[id]
                           AND [table1].[id] = [table0].[publisher_id]
                         ORDER BY [table1].[id] ASC
                     ) AS [table1]
@@ -384,52 +384,52 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task OneToManyJoinQuery()
         {
             string dwSqlQuery = @"
-                SELECT 
+                SELECT
                     COALESCE(
                         '[' + STRING_AGG(
-                            '{' + 
+                            '{' +
                             N'""id"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [id]), 'json'), 'null') + ',' +
-                            N'""reviews"":' + ISNULL('""' + STRING_ESCAPE([reviews], 'json') + '""', 'null') + 
-                            '}', 
+                            N'""reviews"":' + ISNULL('""' + STRING_ESCAPE([reviews], 'json') + '""', 'null') +
+                            '}',
                             ', '
-                        ) + ']', 
+                        ) + ']',
                         '[]'
-                    ) 
-                FROM 
+                    )
+                FROM
                     (
-                        SELECT TOP 2 
-                            [table0].[id] AS [id], 
+                        SELECT TOP 2
+                            [table0].[id] AS [id],
                             COALESCE([table1_subq].[data], '[]') AS [reviews]
-                        FROM 
+                        FROM
                             [dbo].[books] AS [table0]
-                        OUTER APPLY 
+                        OUTER APPLY
                             (
-                                SELECT 
+                                SELECT
                                     COALESCE(
                                         '[' + STRING_AGG(
-                                            '{' + 
-                                            N'""content"":' + ISNULL('""' + STRING_ESCAPE([content], 'json') + '""', 'null') + 
-                                            '}', 
+                                            '{' +
+                                            N'""content"":' + ISNULL('""' + STRING_ESCAPE([content], 'json') + '""', 'null') +
+                                            '}',
                                             ', '
-                                        ) + ']', 
+                                        ) + ']',
                                         '[]'
-                                    ) 
-                                FROM 
+                                    )
+                                FROM
                                     (
-                                        SELECT TOP 100 
+                                        SELECT TOP 100
                                             [table1].[content] AS [content]
-                                        FROM 
+                                        FROM
                                             [dbo].[reviews] AS [table1]
-                                        WHERE 
+                                        WHERE
                                             [table1].[book_id] = [table0].[id]
-                                        ORDER BY 
-                                            [table1].[book_id] ASC, 
+                                        ORDER BY
+                                            [table1].[book_id] ASC,
                                             [table1].[id] ASC
                                     ) AS [table1]
                             ) AS [table1_subq]([data])
-                        WHERE 
+                        WHERE
                             1 = 1
-                        ORDER BY 
+                        ORDER BY
                             [table0].[id] ASC
                     ) AS [table0]";
 
@@ -457,7 +457,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Added more complicated cases when queries are deeply nested and compare the results. 
+        /// Added more complicated cases when queries are deeply nested and compare the results.
         /// </summary>
         /// <returns></returns>
         [TestMethod]
@@ -471,8 +471,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             ) + ']', '[]'
         )
         FROM (
-            SELECT TOP 5 
-                [table0].[title] AS [title], 
+            SELECT TOP 5
+                [table0].[title] AS [title],
                 COALESCE([table1_subq].[data], '[]') AS [authors]
             FROM [dbo].[books] AS [table0]
             OUTER APPLY (
@@ -483,11 +483,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     ) + ']', '[]'
                 )
                 FROM (
-                    SELECT TOP 4 
-                        [table1].[name] AS [name], 
+                    SELECT TOP 4
+                        [table1].[name] AS [name],
                         COALESCE([table2_subq].[data], '[]') AS [books]
                     FROM [dbo].[authors] AS [table1]
-                    INNER JOIN [dbo].[book_author_link] AS [table11] 
+                    INNER JOIN [dbo].[book_author_link] AS [table11]
                         ON [table11].[author_id] = [table1].[id]
                     OUTER APPLY (
                         SELECT COALESCE(
@@ -497,11 +497,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                             ) + ']', '[]'
                         )
                         FROM (
-                            SELECT TOP 3 
-                                [table2].[title] AS [title], 
+                            SELECT TOP 3
+                                [table2].[title] AS [title],
                                 COALESCE([table3_subq].[data], '[]') AS [authors]
                             FROM [dbo].[books] AS [table2]
-                            INNER JOIN [dbo].[book_author_link] AS [table8] 
+                            INNER JOIN [dbo].[book_author_link] AS [table8]
                                 ON [table8].[book_id] = [table2].[id]
                             OUTER APPLY (
                                 SELECT COALESCE(
@@ -510,10 +510,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                                     ) + ']', '[]'
                                 )
                                 FROM (
-                                    SELECT TOP 2 
+                                    SELECT TOP 2
                                         [table3].[name] AS [name]
                                     FROM [dbo].[authors] AS [table3]
-                                    INNER JOIN [dbo].[book_author_link] AS [table5] 
+                                    INNER JOIN [dbo].[book_author_link] AS [table5]
                                         ON [table5].[author_id] = [table3].[id]
                                     WHERE [table5].[book_id] = [table2].[id]
                                     ORDER BY [table3].[id] ASC
@@ -576,7 +576,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string dwSqlQuery = @"
                 SELECT COALESCE('['+STRING_AGG('{'+N'""fancyName"":' + ISNULL('""' + STRING_ESCAPE([fancyName],'json') + '""','null')+','+N'""fungus"":' + ISNULL([fungus],'null')+'}',', ')+']','[]')
                 FROM (
-                    SELECT TOP 100 [table0].[species] AS [fancyName], 
+                    SELECT TOP 100 [table0].[species] AS [fancyName],
                         (SELECT TOP 1 '{""habitat"":""' + STRING_ESCAPE([table1].[habitat], 'json') + '""}'
                          FROM [dbo].[fungi] AS [table1]
                          WHERE [table0].[species] = [table1].[habitat] AND [table1].[habitat] = [table0].[species]
@@ -866,9 +866,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <summary>
         /// Checks failure on providing arguments with no default in runtimeconfig.
         /// In this test, there is no default value for the argument 'id' in runtimeconfig, nor is it specified in the query.
-        /// Stored procedure expects id argument to be provided.
-        /// This test validates the "Development Mode" error message which denotes the
-        /// specific missing parameter and stored procedure name.
+        /// GraphQL validation should reject the request because required argument 'id' is missing.
         /// </summary>
         [TestMethod]
         public async Task TestStoredProcedureQueryWithNoDefaultInConfig()
@@ -883,7 +881,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 response: result.ToString(),
-                message: "Procedure or function 'get_publisher_by_id' expects parameter '@id', which was not supplied.");
+                message: "The argument `id` is required.");
         }
 
         /// <summary>
@@ -902,15 +900,15 @@ SELECT COALESCE(
         N'""avg_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [avg_price]), 'json'), 'null') + ',' +
         N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]), 'json'), 'null') + '}', ', '
     ) + ']', '[]'
-) 
+)
 FROM (
-    SELECT TOP 100  
-        max([table0].[categoryid]) AS [max], 
-        max([table0].[price]) AS [max_price], 
-        min([table0].[price]) AS [min_price], 
-        avg([table0].[price]) AS [avg_price], 
-        sum([table0].[price]) AS [sum_price] 
-    FROM [dbo].[stocks_price] AS [table0] 
+    SELECT TOP 100
+        max([table0].[categoryid]) AS [max],
+        max([table0].[price]) AS [max_price],
+        min([table0].[price]) AS [min_price],
+        avg([table0].[price]) AS [avg_price],
+        sum([table0].[price]) AS [sum_price]
+    FROM [dbo].[stocks_price] AS [table0]
     WHERE 1 = 1
 ) AS [table0];";
 
@@ -935,17 +933,17 @@ SELECT COALESCE(
         N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]), 'json'), 'null') + ',' +
         N'""count"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [count]), 'json'), 'null') + '}', ', '
     ) + ']', '[]'
-) 
+)
 FROM (
     SELECT TOP 100
-        max([table0].[categoryid]) AS [max], 
-        max([table0].[price]) AS [max_price], 
-        min([table0].[price]) AS [min_price], 
-        avg([table0].[price]) AS [avg_price], 
-        sum([table0].[price]) AS [sum_price], 
-        count([table0].[categoryid]) AS [count] 
-    FROM [dbo].[stocks_price] AS [table0] 
-    WHERE 1 = 1 
+        max([table0].[categoryid]) AS [max],
+        max([table0].[price]) AS [max_price],
+        min([table0].[price]) AS [min_price],
+        avg([table0].[price]) AS [avg_price],
+        sum([table0].[price]) AS [sum_price],
+        count([table0].[categoryid]) AS [count]
+    FROM [dbo].[stocks_price] AS [table0]
+    WHERE 1 = 1
     GROUP BY [table0].[categoryid]
 ) AS [table0];";
 
@@ -965,10 +963,10 @@ SELECT COALESCE(
     '[' + STRING_AGG(
         '{' + N'""min_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [min_price]), 'json'), 'null') + '}', ', '
     ) + ']', '[]'
-) 
+)
 FROM (
-    SELECT TOP 100 min([table0].[price]) AS [min_price] 
-    FROM [dbo].[stocks_price] AS [table0] 
+    SELECT TOP 100 min([table0].[price]) AS [min_price]
+    FROM [dbo].[stocks_price] AS [table0]
     WHERE 1 = 1
 ) AS [table0];";
 
@@ -983,10 +981,10 @@ FROM (
         public async Task TestSupportForMaxAggregation()
         {
             string msSqlQuery = @"
-SELECT COALESCE('['+STRING_AGG('{'+N'""max_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [max_price]),'json'),'null')+'}',', ')+']','[]') 
+SELECT COALESCE('['+STRING_AGG('{'+N'""max_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [max_price]),'json'),'null')+'}',', ')+']','[]')
 FROM (
-    SELECT TOP 100 max([table0].[price]) AS [max_price] 
-    FROM [dbo].[stocks_price] AS [table0] 
+    SELECT TOP 100 max([table0].[price]) AS [max_price]
+    FROM [dbo].[stocks_price] AS [table0]
     WHERE 1 = 1
 ) AS [table0];";
 
@@ -1002,10 +1000,10 @@ FROM (
         public async Task TestSupportForAvgAggregation()
         {
             string msSqlQuery = @"
-SELECT COALESCE('['+STRING_AGG('{'+N'""avg_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [avg_price]),'json'),'null')+'}',', ')+']','[]') 
+SELECT COALESCE('['+STRING_AGG('{'+N'""avg_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [avg_price]),'json'),'null')+'}',', ')+']','[]')
 FROM (
-    SELECT TOP 100 avg([table0].[price]) AS [avg_price] 
-    FROM [dbo].[stocks_price] AS [table0] 
+    SELECT TOP 100 avg([table0].[price]) AS [avg_price]
+    FROM [dbo].[stocks_price] AS [table0]
     WHERE 1 = 1
 ) AS [table0];";
 
@@ -1021,10 +1019,10 @@ FROM (
         public async Task TestSupportForSumAggregation()
         {
             string msSqlQuery = @"
-SELECT COALESCE('['+STRING_AGG('{'+N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]),'json'),'null')+'}',', ')+']','[]') 
+SELECT COALESCE('['+STRING_AGG('{'+N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]),'json'),'null')+'}',', ')+']','[]')
 FROM (
-    SELECT TOP 100 sum([table0].[price]) AS [sum_price] 
-    FROM [dbo].[stocks_price] AS [table0] 
+    SELECT TOP 100 sum([table0].[price]) AS [sum_price]
+    FROM [dbo].[stocks_price] AS [table0]
     WHERE 1 = 1
 ) AS [table0];";
 
@@ -1059,11 +1057,11 @@ FROM (
         public async Task TestSupportForHavingAggregation()
         {
             string msSqlQuery = @"
-SELECT COALESCE('[' + STRING_AGG('{' + N'""max"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [max]), 'json'), 'null') + '}', ', ') + ']', '[]') 
+SELECT COALESCE('[' + STRING_AGG('{' + N'""max"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [max]), 'json'), 'null') + '}', ', ') + ']', '[]')
 FROM (
-    SELECT TOP 100 max([table0].[id]) AS [max] 
-    FROM [dbo].[publishers] AS [table0] 
-    WHERE 1 = 1 
+    SELECT TOP 100 max([table0].[id]) AS [max]
+    FROM [dbo].[publishers] AS [table0]
+    WHERE 1 = 1
     HAVING max([table0].[id]) > 2346
 ) AS [table0];";
 
@@ -1083,13 +1081,13 @@ SELECT COALESCE(
     '[' + STRING_AGG(
         '{' + N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]), 'json'), 'null') + '}', ', '
     ) + ']', '[]'
-) 
+)
 FROM (
-    SELECT TOP 100 
-        SUM([table0].[price]) AS [sum_price] 
-    FROM [dbo].[stocks_price] AS [table0] 
-    WHERE 1 = 1 
-    GROUP BY [table0].[categoryid], [table0].[pieceid] 
+    SELECT TOP 100
+        SUM([table0].[price]) AS [sum_price]
+    FROM [dbo].[stocks_price] AS [table0]
+    WHERE 1 = 1
+    GROUP BY [table0].[categoryid], [table0].[pieceid]
     HAVING SUM([table0].[price]) > 50
 ) AS [table0];";
 
@@ -1112,16 +1110,16 @@ SELECT COALESCE(
         N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]), 'json'), 'null') + ',' +
         N'""count_piece"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [count_piece]), 'json'), 'null') + '}', ', '
     ) + ']', '[]'
-) 
+)
 FROM (
-    SELECT TOP 100 
-        [table0].[categoryid] AS [categoryid], 
-        [table0].[pieceid] AS [pieceid], 
-        SUM([table0].[price]) AS [sum_price], 
-        COUNT([table0].[pieceid]) AS [count_piece] 
-    FROM [dbo].[stocks_price] AS [table0] 
-    WHERE 1 = 1 
-    GROUP BY [table0].[categoryid], [table0].[pieceid] 
+    SELECT TOP 100
+        [table0].[categoryid] AS [categoryid],
+        [table0].[pieceid] AS [pieceid],
+        SUM([table0].[price]) AS [sum_price],
+        COUNT([table0].[pieceid]) AS [count_piece]
+    FROM [dbo].[stocks_price] AS [table0]
+    WHERE 1 = 1
+    GROUP BY [table0].[categoryid], [table0].[pieceid]
     HAVING SUM([table0].[price]) > 50 AND COUNT([table0].[pieceid]) <= 100
 ) AS [table0];";
 
@@ -1142,18 +1140,115 @@ SELECT COALESCE(
         '{' + N'""categoryid"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [categoryid]), 'json'), 'null') + ',' +
         N'""pieceid"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [pieceid]), 'json'), 'null') + '}', ', '
     ) + ']', '[]'
-) 
+)
 FROM (
-    SELECT TOP 100  
-        [table0].[categoryid] AS [categoryid], 
-        [table0].[pieceid] AS [pieceid]  
-    FROM [dbo].[stocks_price] AS [table0] 
-    WHERE 1 = 1 
+    SELECT TOP 100
+        [table0].[categoryid] AS [categoryid],
+        [table0].[pieceid] AS [pieceid]
+    FROM [dbo].[stocks_price] AS [table0]
+    WHERE 1 = 1
     GROUP BY [table0].[categoryid], [table0].[pieceid]
 ) AS [table0]";
 
             // Execute the test for the SQL query
             await TestSupportForGroupByNoAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Regression test for groupBy that selects only a mapped (aliased) field on DWSQL.
+        /// The 'GQLmappings' entity exposes backing column '__column1' as 'column1'. This verifies the
+        /// GROUP BY references the backing column while the projected 'fields' object uses the exposed
+        /// alias. An explicit orderBy makes the returned row order deterministic. Seeded values {1, 3, 4, 5}.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByFieldsOnlyWithMappedColumnReturnsExpectedValues()
+        {
+            string dwSqlQuery = @"
+SELECT COALESCE(
+    '[' + STRING_AGG(
+        '{' + N'""column1"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [column1]), 'json'), 'null') + '}', ', '
+    ) WITHIN GROUP (ORDER BY [column1] ASC) + ']', '[]'
+)
+FROM (
+    SELECT
+        [table0].[__column1] AS [column1]
+    FROM [dbo].[GQLmappings] AS [table0]
+    WHERE 1 = 1
+    GROUP BY [table0].[__column1]
+) AS [table0]";
+
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings(orderBy: { column1: ASC }) {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+            }
+        }
+    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dwSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStringsForAggreagtionQueries(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// End-to-end regression test on DWSQL exercising every groupBy dimension together on a mapped
+        /// (aliased) column: grouping by the mapped field, selecting the mapped field, multiple
+        /// aggregations on the mapped field, a field-level HAVING filter on one aggregation, and an
+        /// orderBy on the mapped field. The 'GQLmappings' entity exposes backing '__column1' as 'column1'
+        /// (values {1, 3, 4, 5}), each forming its own group. HAVING max(column1) &gt; 3 keeps groups 4
+        /// and 5, and orderBy DESC returns them as 5 then 4. Proves the backing column is used
+        /// consistently in GROUP BY, HAVING and ORDER BY while the response projects the mapped names.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByWithFieldsAggregationsHavingAndOrderByOnMappedColumn()
+        {
+            string dwSqlQuery = @"
+SELECT COALESCE(
+    '[' + STRING_AGG(
+        '{' +
+        N'""column1"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [column1]), 'json'), 'null') + ', ' +
+        N'""max_column1"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [max_column1]), 'json'), 'null') + ', ' +
+        N'""min_column1"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [min_column1]), 'json'), 'null') + ', ' +
+        N'""count_column1"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [count_column1]), 'json'), 'null') + '}', ', '
+    ) WITHIN GROUP (ORDER BY [column1] DESC) + ']', '[]'
+)
+FROM (
+    SELECT
+        [table0].[__column1] AS [column1],
+        MAX([table0].[__column1]) AS [max_column1],
+        MIN([table0].[__column1]) AS [min_column1],
+        COUNT([table0].[__column1]) AS [count_column1]
+    FROM [dbo].[GQLmappings] AS [table0]
+    GROUP BY [table0].[__column1]
+    HAVING MAX([table0].[__column1]) > 3
+) AS [table0]";
+
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings(orderBy: { column1: DESC }) {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+                aggregations {
+                    max_column1: max(field: column1, having: { gt: 3 })
+                    min_column1: min(field: column1)
+                    count_column1: count(field: column1)
+                }
+            }
+        }
+    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dwSqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStringsForAggreagtionQueries(expected, actual.ToString());
         }
 
         /// <summary>

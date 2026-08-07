@@ -1026,6 +1026,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     additionalClaims: [roleClaim, userIdClaim]),
                 clientRoleHeader: clientRole);
 
+            Assert.AreEqual(JsonValueKind.Object, response.ValueKind,
+                $"The GraphQL policy request failed: {response}");
             return response.GetProperty("items");
         }
 

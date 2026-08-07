@@ -111,7 +111,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 }
                                 else
                                 {
-                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor($"{pathConfig.Path}.{pathConfig.ColumnName}"));
+                                    string prefix = pathConfig.ColumnName is not null
+                                        ? $"{pathConfig.Path}.{pathConfig.ColumnName}"
+                                        : pathConfig.Path;
+                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(prefix));
                                 }
 
                                 if (pathConfig.EntityName == entity.Key)

@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Azure.Cosmos;
@@ -975,6 +976,57 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
             // Validate the result contains the GraphQL authorization error code.
             ValidateResults(actual.GetProperty("items"), expected.RootElement, false);
+        }
+
+        /// <summary>
+        /// Sends real authenticated GraphQL requests through the Cosmos DB policy pipeline and
+        /// verifies that percent-encoded quote syntax in a claim remains a bound query value.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringClaimWithEncodedQuotes_RemainsPolicyData()
+        {
+            JsonElement matchingRows = await ExecuteStringClaimPolicyQueryAsync("Mars");
+            Assert.AreEqual(1, matchingRows.GetArrayLength());
+            Assert.AreEqual("Mars", matchingRows[0].GetProperty("name").GetString());
+
+            JsonElement injectionAttemptRows = await ExecuteStringClaimPolicyQueryAsync(
+                "Mars%27 or 1 eq 1 or %27");
+            Assert.AreEqual(0, injectionAttemptRows.GetArrayLength(),
+                "The encoded claim value must remain a bound value and must not become OData policy syntax.");
+        }
+
+        /// <summary>
+        /// Executes a Planet query as a role whose read policy compares the name to the userId claim.
+        /// </summary>
+        private async Task<JsonElement> ExecuteStringClaimPolicyQueryAsync(string userId)
+        {
+            const string clientRole = "claim_policy_tester";
+            AppServiceClaim roleClaim = new()
+            {
+                Typ = ClaimTypes.Role,
+                Val = clientRole
+            };
+            AppServiceClaim userIdClaim = new()
+            {
+                Typ = StaticWebAppsAuthentication.USER_ID_CLAIM,
+                Val = userId
+            };
+            string gqlQuery = @"{
+                planets(first: 10) {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: _graphQLQueryName,
+                query: gqlQuery,
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(
+                    additionalClaims: [roleClaim, userIdClaim]),
+                clientRoleHeader: clientRole);
+
+            return response.GetProperty("items");
         }
 
         #region Field Level Auth

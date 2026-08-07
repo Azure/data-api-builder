@@ -1453,11 +1453,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// policy parsing and must never be interpreted as OData syntax.
         /// </summary>
         [DataTestMethod]
-        [DataRow(ClaimValueTypes.Integer, "1 or 1 eq 1", DisplayName = "Malformed integer")]
-        [DataRow(ClaimValueTypes.Double, "NaN", DisplayName = "NaN")]
-        [DataRow(ClaimValueTypes.Double, "Infinity", DisplayName = "Positive infinity")]
-        [DataRow(ClaimValueTypes.Double, "-Infinity", DisplayName = "Negative infinity")]
-        [DataRow(ClaimValueTypes.Double, "1e9999", DisplayName = "Exponent overflow")]
+        [DataRow(ClaimValueTypes.Integer, "1 or 1 eq 1", DisplayName = "Invalid primitive claim fails: malformed integer")]
+        [DataRow(ClaimValueTypes.Double, "NaN", DisplayName = "Invalid primitive claim fails: NaN")]
+        [DataRow(ClaimValueTypes.Double, "Infinity", DisplayName = "Invalid primitive claim fails: positive infinity")]
+        [DataRow(ClaimValueTypes.Double, "-Infinity", DisplayName = "Invalid primitive claim fails: negative infinity")]
+        [DataRow(ClaimValueTypes.Double, "1e9999", DisplayName = "Invalid primitive claim fails: exponent overflow")]
         public void DbPolicy_InvalidPrimitiveClaim_FailsClosed(string claimValueType, string claimValue)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(

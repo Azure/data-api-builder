@@ -16,6 +16,10 @@ internal sealed class ParameterAliasRewriter
 {
     private readonly IReadOnlyDictionary<string, SingleValueNode> _parameterAliasNodes;
 
+    /// <summary>
+    /// Initializes a rewriter with the typed values available for policy parameter aliases.
+    /// </summary>
+    /// <param name="parameterAliasNodes">Typed AST values keyed by parameter alias.</param>
     public ParameterAliasRewriter(IReadOnlyDictionary<string, SingleValueNode> parameterAliasNodes)
     {
         _parameterAliasNodes = parameterAliasNodes;
@@ -31,6 +35,13 @@ internal sealed class ParameterAliasRewriter
         return new FilterClause(expression, filterClause.RangeVariable);
     }
 
+    /// <summary>
+    /// Recursively replaces aliases and normalizes Boolean values according to whether the
+    /// current node is used as a predicate or as an operand value.
+    /// </summary>
+    /// <param name="node">The AST node to rewrite.</param>
+    /// <param name="isPredicate">Whether the node occupies a Boolean predicate position.</param>
+    /// <returns>The rewritten AST node.</returns>
     private SingleValueNode RewriteNode(SingleValueNode node, bool isPredicate)
     {
         return node switch
@@ -52,6 +63,12 @@ internal sealed class ParameterAliasRewriter
         };
     }
 
+    /// <summary>
+    /// Rewrites both operands of a binary operator, treating operands of logical operators
+    /// as predicates and operands of comparison operators as values.
+    /// </summary>
+    /// <param name="node">The binary operator node to rewrite.</param>
+    /// <returns>A binary operator node containing the rewritten operands.</returns>
     private SingleValueNode RewriteBinaryOperator(BinaryOperatorNode node)
     {
         bool operandsArePredicates = node.OperatorKind is BinaryOperatorKind.And or BinaryOperatorKind.Or;
@@ -61,6 +78,14 @@ internal sealed class ParameterAliasRewriter
             RewriteNode(node.Right, operandsArePredicates));
     }
 
+    /// <summary>
+    /// Replaces a parameter alias with its supplied typed value and applies any
+    /// context-specific Boolean normalization to that value.
+    /// </summary>
+    /// <param name="aliasNode">The parameter alias to resolve.</param>
+    /// <param name="isPredicate">Whether the alias occupies a Boolean predicate position.</param>
+    /// <returns>The rewritten typed value for the alias.</returns>
+    /// <exception cref="ODataException">Thrown when no value was supplied for the alias.</exception>
     private SingleValueNode RewriteAlias(ParameterAliasNode aliasNode, bool isPredicate)
     {
         if (!_parameterAliasNodes.TryGetValue(aliasNode.Alias, out SingleValueNode? valueNode))
@@ -71,6 +96,13 @@ internal sealed class ParameterAliasRewriter
         return RewriteNode(valueNode, isPredicate);
     }
 
+    /// <summary>
+    /// Converts a bare Boolean value used as a predicate into an explicit equality with
+    /// <see langword="true"/>, while preserving expressions that are already predicates.
+    /// </summary>
+    /// <param name="node">The node to normalize.</param>
+    /// <param name="isPredicate">Whether the node occupies a Boolean predicate position.</param>
+    /// <returns>The original node or an explicit Boolean equality predicate.</returns>
     private static SingleValueNode NormalizeBooleanPredicate(SingleValueNode node, bool isPredicate)
     {
         if (!isPredicate ||

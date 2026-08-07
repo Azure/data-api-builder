@@ -775,6 +775,23 @@
           ]
         },
         {
+          "role": "claim_policy_tester",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [],
+                "include": [
+                  "*"
+                ]
+              },
+              "policy": {
+                "database": "@item.title eq @claims.userId"
+              }
+            }
+          ]
+        },
+        {
           "role": "test_role_with_noread",
           "actions": [
             {

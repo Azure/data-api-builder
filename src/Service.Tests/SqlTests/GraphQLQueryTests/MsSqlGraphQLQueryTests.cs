@@ -944,12 +944,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task TestSupportForGroupByNoAggregation()
         {
+            // ORDER BY makes explicit the row order that groupBy defaults to (declared groupBy field order) absent an orderBy argument.
             string msSqlQuery = @"
                 SELECT
                     categoryid,
                     pieceid
                 FROM stocks_price
                 GROUP BY categoryid, pieceid
+                ORDER BY categoryid, pieceid
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             // Execute the test for the SQL query
@@ -1058,7 +1060,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQueryName = "gQLmappings";
             string graphQLQuery = @"
     {
-        gQLmappings {
+        gQLmappings(orderBy: { column1: ASC }) {
             groupBy(fields: [column1]) {
                 fields {
                     column1
@@ -1094,7 +1096,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQueryName = "gQLmappings";
             string graphQLQuery = @"
     {
-        gQLmappings {
+        gQLmappings(orderBy: { column1: ASC }) {
             groupBy(fields: [column1]) {
                 fields {
                     column1
@@ -1170,7 +1172,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQueryName = "gQLmappings";
             string graphQLQuery = @"
     {
-        gQLmappings {
+        gQLmappings(orderBy: { column1: ASC }) {
             groupBy(fields: [column1]) {
                 aggregations {
                     max_column1: max(field: column1, having: { gt: 3 })
@@ -1204,7 +1206,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQueryName = "gQLmappings";
             string graphQLQuery = @"
     {
-        gQLmappings {
+        gQLmappings(orderBy: { column1: ASC }) {
             groupBy(fields: [column1]) {
                 fields {
                     column1

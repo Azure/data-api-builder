@@ -161,6 +161,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     (CosmosSqlMetadataProvider)MetadataProvider);
             }
 
+            // Ensure source fields from relationships are included in the query
+            // even if not explicitly requested, so they're available for relationship resolution
+            RuntimeConfigProvider.TryGetConfig(out RuntimeConfig? config);
+            if (config != null && config.Entities.TryGetValue(EntityName, out Entity? entity) && entity.Relationships != null)
+            {
+                foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships)
+                {
+                    if (relationship.SourceFields != null)
+                    {
+                        foreach (string sourceField in relationship.SourceFields)
+                        {
+                            // Check if this field is already in columns
+                            if (!Columns.Any(c => c.Label == sourceField))
+                            {
+                                Columns.Add(new LabelledColumn(
+                                    tableSchema: string.Empty,
+                                    tableName: SourceAlias,
+                                    columnName: sourceField,
+                                    label: sourceField));
+                            }
+                        }
+                    }
+                }
+            }
+
             RuntimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
             // first and after will not be part of query parameters. They will be going into headers instead.
             // TODO: Revisit 'first' while adding support for TOP queries

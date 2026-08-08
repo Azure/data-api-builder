@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 else
                                 {
                                     predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(
-                                        $"{pathConfig.Path}.{pathConfig.ColumnName}",
+                                        GetCosmosPolicyPathPrefix(pathConfig),
                                         cosmosQueryStructure));
                                 }
 
@@ -135,6 +135,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         });
                 }
             }
+        }
+
+        /// <summary>
+        /// Builds the Cosmos document path used to qualify fields in a database policy.
+        /// Root model paths do not have a column segment and must not end with a dot.
+        /// </summary>
+        /// <param name="pathConfig">The configured entity path.</param>
+        /// <returns>The path prefix used by the Cosmos OData visitor.</returns>
+        internal static string GetCosmosPolicyPathPrefix(EntityDbPolicyCosmosModel pathConfig)
+        {
+            return string.IsNullOrEmpty(pathConfig.ColumnName)
+                ? pathConfig.Path
+                : $"{pathConfig.Path}.{pathConfig.ColumnName}";
         }
 
         /// <summary>

@@ -73,6 +73,38 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Verifies a policy on the root Cosmos model uses the container alias directly instead
+        /// of producing an invalid path with an empty column segment, such as <c>c..textCol</c>.
+        /// </summary>
+        [TestMethod]
+        public void CosmosRootPolicyPath_DoesNotAppendEmptyColumnSegment()
+        {
+            const string claimValue = "Mars";
+            (AuthorizationResolver resolver, DefaultHttpContext context) = CreateAuthorizationContext(
+                "@item.textCol eq @claims.value",
+                new Claim("value", claimValue, ClaimValueTypes.String));
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
+            FilterClause filterClause = ResolveFilterClause(resolver, context, metadataProvider.Object);
+            TestQueryStructure cosmosStructure = new(metadataProvider.Object, resolver);
+            EntityDbPolicyCosmosModel rootPath = new(
+                Path: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS,
+                EntityName: "PlanetAlias");
+            EntityDbPolicyCosmosModel nestedPath = new(
+                Path: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS,
+                EntityName: "Character",
+                ColumnName: "character");
+
+            string rootPrefix = AuthorizationPolicyHelpers.GetCosmosPolicyPathPrefix(rootPath);
+            string predicate = filterClause.Expression.Accept(
+                new ODataASTCosmosVisitor(rootPrefix, cosmosStructure));
+
+            Assert.AreEqual("c", rootPrefix);
+            Assert.AreEqual("c.character", AuthorizationPolicyHelpers.GetCosmosPolicyPathPrefix(nestedPath));
+            Assert.AreEqual("(c.textCol = @param0)", predicate);
+            AssertParameterValues(cosmosStructure, claimValue);
+        }
+
+        /// <summary>
         /// Verifies aliases in root and unary Boolean positions are replaced throughout the AST
         /// and generate executable, parameterized predicates for both SQL and Cosmos DB.
         /// </summary>

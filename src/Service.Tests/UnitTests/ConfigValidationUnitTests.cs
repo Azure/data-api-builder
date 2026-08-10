@@ -2511,6 +2511,56 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Regression test for validate-only mode losing operation ownership after an earlier conflict.
+        /// When an entity successfully registers some of its generated operation names but then fails on
+        /// a later name, the previously added names must still be attributed to that entity so that a
+        /// subsequent entity colliding on one of them reports the correct conflicting entity.
+        ///
+        /// Sequence:
+        /// - First:  singular "Alpha", plural "Shared" -> registers alpha_by_pk, shared, ...
+        /// - Second: singular "Beta",  plural "Shared" -> registers beta_by_pk, then collides on shared (owned by First).
+        /// - Third:  singular "Beta",  plural "Thirds" -> collides on beta_by_pk, which must be owned by Second.
+        ///
+        /// Because validate-only mode records exceptions instead of throwing, both conflicts are collected.
+        /// The conflict recorded for Third must identify Second (not just Third).
+        /// </summary>
+        [TestMethod]
+        public void ValidateOnlyMode_ConflictAfterPartialAdd_ReportsActualConflictingEntity()
+        {
+            Entity first = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Alpha", "Shared");
+            Entity second = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Beta", "Shared");
+            Entity third = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Beta", "Thirds");
+
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "First", first },
+                { "Second", second },
+                { "Third", third }
+            };
+
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(
+                provider,
+                fileSystem,
+                new Mock<ILogger<RuntimeConfigValidator>>().Object,
+                isValidateOnly: true);
+
+            configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(DatabaseType.MySQL, new(entityCollection));
+
+            List<Exception> exceptions = configValidator.ConfigValidationExceptions;
+
+            // Two conflicts are expected: Second (vs First) and Third (vs Second).
+            Assert.AreEqual(expected: 2, actual: exceptions.Count);
+
+            // Regression assertion: the conflict recorded for Third must identify Second as the entity
+            // that first registered beta_by_pk, even though Second failed on a later operation (shared).
+            Exception thirdConflict = exceptions.Single(e => e.Message.Contains("Third"));
+            StringAssert.Contains(thirdConflict.Message, "Second");
+        }
+
+        /// <summary>
         /// Test to validate that user-delegated-auth with missing DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID,
         /// or DAB_OBO_CLIENT_SECRET throws an error.
         /// </summary>

@@ -89,52 +89,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
 
-                // Get current user's role for permission filtering
-                // For discovery tools like describe_entities, we use the first valid role from the header
-                // This differs from operation-specific tools that check permissions per entity per operation
+                // Get the caller's role for authorization filtering. DAB uses a single-role request
+                // model: the value validated by IsValidRoleContext (via User.IsInRole) is the role
+                // used to gate visibility here, matching REST, GraphQL, and the other MCP tools.
                 string? currentUserRole = null;
                 if (httpContext != null && authResolver.IsValidRoleContext(httpContext))
                 {
                     string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
                     if (!string.IsNullOrWhiteSpace(roleHeader))
                     {
-                        string[] roles = roleHeader
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-                        if (roles.Length > 1)
-                        {
-                            logger?.LogWarning("Multiple roles detected in request header: [{Roles}]. Using first role '{FirstRole}' for entity discovery. " +
-                                "Consider using a single role for consistent permission reporting.",
-                                string.Join(", ", roles), roles[0]);
-                        }
-
-                        // For discovery operations, take the first role from comma-separated list
-                        // This provides a consistent view of available entities for the primary role
-                        currentUserRole = roles.FirstOrDefault();
-                    }
-                }
-
-                // Get current user's role for permission filtering
-                // For discovery tools like describe_entities, we use the first valid role from the header
-                // This differs from operation-specific tools that check permissions per entity per operation
-                if (httpContext != null && authResolver.IsValidRoleContext(httpContext))
-                {
-                    string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
-                    if (!string.IsNullOrWhiteSpace(roleHeader))
-                    {
-                        string[] roles = roleHeader
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-                        if (roles.Length > 1)
-                        {
-                            logger?.LogWarning("Multiple roles detected in request header: [{Roles}]. Using first role '{FirstRole}' for entity discovery. " +
-                                "Consider using a single role for consistent permission reporting.",
-                                string.Join(", ", roles), roles[0]);
-                        }
-
-                        // For discovery operations, take the first role from comma-separated list
-                        // This provides a consistent view of available entities for the primary role
-                        currentUserRole = roles.FirstOrDefault();
+                        currentUserRole = roleHeader;
                     }
                 }
 
@@ -178,6 +142,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             continue;
                         }
 
+                        // Authorization filtering: skip entities the caller's role has no permission on.
+                        // This prevents information disclosure of schema metadata (entity/field/parameter names and descriptions)
+                        // for entities the caller is not authorized to access, matching REST/GraphQL/OpenAPI behavior.
+                        // If currentUserRole is null, no entities are visible (empty result).
+                        if (!HasAnyPermissionForEntity(entityName, entity, currentUserRole, authResolver))
+                        {
+                            continue;
+                        }
+
                         try
                         {
                             DatabaseObject? databaseObject = null;
@@ -204,7 +177,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                             Dictionary<string, object?> entityInfo = nameOnly
                                 ? BuildBasicEntityInfo(entityName, entity)
-                                : BuildFullEntityInfo(entityName, entity, currentUserRole, databaseObject);
+                                : BuildFullEntityInfo(entityName, entity, currentUserRole, databaseObject, authResolver);
 
                             entityList.Add(entityInfo);
                         }
@@ -402,6 +375,39 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
+        /// Determines whether the specified entity is accessible to the given role, using the
+        /// authorization resolver as the source of truth. This respects role inheritance
+        /// (anonymous -> authenticated -> named role) and wildcard operation expansion, matching
+        /// REST/GraphQL/OpenAPI authorization behavior.
+        /// </summary>
+        /// <param name="entityName">The name of the entity being checked.</param>
+        /// <param name="entity">The entity object (used only to select the valid operation set for its source type).</param>
+        /// <param name="role">The role to check permissions for. If null or whitespace, the entity is not accessible.</param>
+        /// <param name="authResolver">The authorization resolver.</param>
+        /// <returns><see langword="true"/> if any valid operation is authorized on the entity for the role; otherwise, <see langword="false"/>.</returns>
+        private static bool HasAnyPermissionForEntity(string entityName, Entity entity, string? role, IAuthorizationResolver authResolver)
+        {
+            if (string.IsNullOrWhiteSpace(role))
+            {
+                return false;
+            }
+
+            HashSet<EntityActionOperation> validOperations = entity.Source.Type == EntitySourceType.StoredProcedure
+                ? EntityAction.ValidStoredProcedurePermissionOperations
+                : EntityAction.ValidPermissionOperations;
+
+            foreach (EntityActionOperation operation in validOperations)
+            {
+                if (authResolver.AreRoleAndOperationDefinedForEntity(entityName, role, operation))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Creates a dictionary containing basic information about an entity.
         /// </summary>
         /// <param name="entityName">The name of the entity to include in the dictionary.</param>
@@ -427,23 +433,32 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// </summary>
         /// <param name="entityName">The name of the entity to include in the dictionary.</param>
         /// <param name="entity">The entity object from which to extract additional information.</param>
-        /// <param name="currentUserRole">The role of the current user, used to determine permissions.</param>
+        /// <param name="currentUserRole">The role of the current user, used to determine permissions and visible fields.</param>
         /// <param name="databaseObject">The resolved database object metadata if available.</param>
+        /// <param name="authResolver">The authorization resolver used to compute allowed exposed columns.</param>
         /// <returns>
         /// A dictionary containing the entity's name, description, fields, parameters (if applicable), and permissions.
         /// </returns>
-        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string? currentUserRole, DatabaseObject? databaseObject)
+        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string? currentUserRole, DatabaseObject? databaseObject, IAuthorizationResolver authResolver)
         {
             // Use GraphQL singular name as alias if available, otherwise use entity name
             string displayName = !string.IsNullOrWhiteSpace(entity.GraphQL?.Singular)
                 ? entity.GraphQL.Singular
                 : entityName;
 
+            // Column-level authorization: filter fields by the columns the caller's role is allowed
+            // to see across every valid operation on this entity. Without this filter, describe_entities
+            // would leak the names and descriptions of columns restricted by fields.include /
+            // fields.exclude, extending the MSRC info-disclosure (CWE-285 -> CWE-200) from the entity
+            // level down to the column level.
+            HashSet<string>? allowedFieldNames = ComputeAllowedFieldNames(
+                entityName, entity, currentUserRole, authResolver);
+
             Dictionary<string, object?> info = new()
             {
                 ["name"] = displayName,
                 ["description"] = entity.Description ?? string.Empty,
-                ["fields"] = BuildFieldMetadataInfo(entity.Fields),
+                ["fields"] = BuildFieldMetadataInfo(entity.Fields, allowedFieldNames),
             };
 
             if (entity.Source.Type == EntitySourceType.StoredProcedure)
@@ -451,34 +466,100 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 info["parameters"] = BuildParameterMetadataInfo(databaseObject);
             }
 
-            info["permissions"] = BuildPermissionsInfo(entity, currentUserRole);
+            info["permissions"] = BuildPermissionsInfo(entityName, entity, currentUserRole, authResolver);
 
             return info;
         }
 
         /// <summary>
-        /// Builds a list of metadata information objects from the provided collection of fields.
+        /// Builds a list of metadata information objects from the provided collection of fields,
+        /// filtered by the set of exposed column names the caller is allowed to see.
         /// </summary>
         /// <param name="fields">A list of <see cref="FieldMetadata"/> objects representing the fields to process. Can be null.</param>
+        /// <param name="allowedFieldNames">Exposed field names visible to the caller. When null the list is not filtered
+        /// (used for stored procedures, whose result-set columns are not governed by fields.include/exclude).
+        /// When empty, all fields are dropped.</param>
         /// <returns>A list of objects, each containing the name and description of a field. If <paramref name="fields"/> is
         /// null, an empty list is returned.</returns>
-        private static List<object> BuildFieldMetadataInfo(List<FieldMetadata>? fields)
+        private static List<object> BuildFieldMetadataInfo(List<FieldMetadata>? fields, HashSet<string>? allowedFieldNames)
         {
             List<object> result = new();
 
-            if (fields != null)
+            if (fields == null)
             {
-                foreach (FieldMetadata field in fields)
+                return result;
+            }
+
+            foreach (FieldMetadata field in fields)
+            {
+                string exposedName = field.Alias ?? field.Name;
+
+                // A null allowedFieldNames set means "do not filter" (SP case). A non-null set
+                // that omits this name means the caller is not authorized to see it under any
+                // operation, so its name and description are withheld.
+                if (allowedFieldNames != null && !allowedFieldNames.Contains(exposedName))
                 {
-                    result.Add(new
-                    {
-                        name = field.Alias ?? field.Name,
-                        description = field.Description ?? string.Empty
-                    });
+                    continue;
                 }
+
+                result.Add(new
+                {
+                    name = exposedName,
+                    description = field.Description ?? string.Empty
+                });
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Returns the set of exposed field names (aliased where applicable) the caller is
+        /// allowed to see on the given entity, computed across every valid operation the caller's
+        /// role is authorized for.
+        /// </summary>
+        /// <remarks>
+        /// Uses <see cref="IAuthorizationResolver.GetAllowedExposedColumns"/>, the same source
+        /// of truth REST uses when materializing a response's column projection. Stored procedures
+        /// return null because SP result-set columns are not governed by fields.include/exclude
+        /// (SP permissions are Execute-only); returning null signals "no filter" to the projection.
+        /// </remarks>
+        /// <returns>
+        /// Null for stored procedures (do not filter). An empty set when the caller has no role,
+        /// which produces an empty fields[] projection while leaving the entity entry intact
+        /// (entity-level authorization has already passed by the time this runs).
+        /// </returns>
+        private static HashSet<string>? ComputeAllowedFieldNames(
+            string entityName,
+            Entity entity,
+            string? currentUserRole,
+            IAuthorizationResolver authResolver)
+        {
+            if (entity.Source.Type == EntitySourceType.StoredProcedure)
+            {
+                return null;
+            }
+
+            HashSet<string> allowed = new(StringComparer.OrdinalIgnoreCase);
+
+            if (string.IsNullOrWhiteSpace(currentUserRole))
+            {
+                return allowed;
+            }
+
+            foreach (EntityActionOperation operation in EntityAction.ValidPermissionOperations)
+            {
+                if (!authResolver.AreRoleAndOperationDefinedForEntity(entityName, currentUserRole, operation))
+                {
+                    continue;
+                }
+
+                foreach (string column in authResolver.GetAllowedExposedColumns(entityName, currentUserRole, operation))
+                {
+                    allowed.Add(column);
+                }
+            }
+
+            return allowed;
         }
 
         /// <summary>
@@ -539,51 +620,38 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             };
 
         /// <summary>
-        /// Build a list of permission metadata info for the current user's role
+        /// Builds the sorted list of operation permissions the caller has on the given entity,
+        /// using the authorization resolver as the source of truth so role inheritance
+        /// (anonymous -> authenticated -> named role) and wildcard operation expansion are applied
+        /// consistently with REST/GraphQL/OpenAPI.
         /// </summary>
-        /// <param name="entity">The entity object</param>
-        /// <param name="currentUserRole">The current user's role - if null, returns empty permissions</param>
-        /// <returns>A list of permissions available to the current user's role for this entity</returns>
-        private static string[] BuildPermissionsInfo(Entity entity, string? currentUserRole)
+        /// <param name="entityName">The name of the entity being described.</param>
+        /// <param name="entity">The entity object (used only to select the valid operation set for its source type).</param>
+        /// <param name="currentUserRole">The current user's role - if null or whitespace, returns empty permissions.</param>
+        /// <param name="authResolver">The authorization resolver.</param>
+        /// <returns>A sorted list of operation names (uppercased) authorized on the entity for the caller's role.</returns>
+        private static string[] BuildPermissionsInfo(string entityName, Entity entity, string? currentUserRole, IAuthorizationResolver authResolver)
         {
-            if (entity.Permissions == null || string.IsNullOrWhiteSpace(currentUserRole))
+            if (string.IsNullOrWhiteSpace(currentUserRole))
             {
                 return Array.Empty<string>();
             }
 
-            bool isStoredProcedure = entity.Source.Type == EntitySourceType.StoredProcedure;
-            HashSet<EntityActionOperation> validOperations = isStoredProcedure
+            HashSet<EntityActionOperation> validOperations = entity.Source.Type == EntitySourceType.StoredProcedure
                 ? EntityAction.ValidStoredProcedurePermissionOperations
                 : EntityAction.ValidPermissionOperations;
 
             HashSet<string> permissions = new(StringComparer.OrdinalIgnoreCase);
 
-            // Only include permissions for the current user's role
-            foreach (EntityPermission permission in entity.Permissions)
+            foreach (EntityActionOperation operation in validOperations)
             {
-                // Check if this permission applies to the current user's role
-                if (!string.Equals(permission.Role, currentUserRole, StringComparison.OrdinalIgnoreCase))
+                if (authResolver.AreRoleAndOperationDefinedForEntity(entityName, currentUserRole, operation))
                 {
-                    continue;
-                }
-
-                foreach (EntityAction action in permission.Actions)
-                {
-                    if (action.Action == EntityActionOperation.All)
-                    {
-                        foreach (EntityActionOperation op in validOperations)
-                        {
-                            permissions.Add(op.ToString().ToUpperInvariant());
-                        }
-                    }
-                    else
-                    {
-                        permissions.Add(action.Action.ToString().ToUpperInvariant());
-                    }
+                    permissions.Add(operation.ToString().ToUpperInvariant());
                 }
             }
 
-            return permissions.OrderBy(p => p).ToArray();
+            return permissions.OrderBy(p => p, StringComparer.Ordinal).ToArray();
         }
     }
 }

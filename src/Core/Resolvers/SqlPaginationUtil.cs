@@ -54,6 +54,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private static string GenerateGroupByObjectFromResult(GroupByMetadata groupByMetadata, IEnumerable<JsonElement> rootEnumerated)
         {
+            HashSet<string> aggregationAliases = groupByMetadata.Aggregations
+                .Select(aggregation => aggregation.Column.OperationAlias)
+                .ToHashSet(StringComparer.Ordinal);
+
             JsonArray groupByArray = new();
             foreach (JsonElement element in rootEnumerated)
             {
@@ -62,16 +66,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 JsonObject combinedObject = new();
                 foreach (JsonProperty property in element.EnumerateObject())
                 {
-                    if (groupByMetadata.Fields.ContainsKey(property.Name))
-                    {
-                        if (groupByMetadata.RequestedFields)
-                        {
-                            fieldObject.Add(property.Name, JsonNode.Parse(property.Value.GetRawText()));
-                        }
-                    }
-                    else
+                    if (aggregationAliases.Contains(property.Name))
                     {
                         aggregationObject.Add(property.Name, JsonNode.Parse(property.Value.GetRawText()));
+                    }
+                    else if (groupByMetadata.RequestedFields)
+                    {
+                        fieldObject.Add(property.Name, JsonNode.Parse(property.Value.GetRawText()));
                     }
                 }
 

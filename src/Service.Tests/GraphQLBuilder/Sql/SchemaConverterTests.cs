@@ -364,9 +364,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         // A NOT NULL foreign-key column yields a non-nullable relationship field for MSSQL, but a
         // nullable one for DWSQL since DWSQL does not enforce foreign key constraints.
         [DataRow(DatabaseType.DWSQL, Cardinality.One, true, DisplayName = "Many-to-one relationship field is nullable for DWSQL despite NOT NULL FK.")]
-        [DataRow(DatabaseType.DWSQL, Cardinality.Many, true, DisplayName = "One-to-many relationship field is nullable for DWSQL despite NOT NULL FK.")]
+        [DataRow(DatabaseType.DWSQL, Cardinality.Many, true, DisplayName = "Cardinality.Many relationship field is nullable for DWSQL despite NOT NULL FK metadata.")]
         [DataRow(DatabaseType.MSSQL, Cardinality.One, false, DisplayName = "Many-to-one relationship field is non-nullable for MSSQL with NOT NULL FK.")]
-        [DataRow(DatabaseType.MSSQL, Cardinality.Many, false, DisplayName = "One-to-many relationship field is non-nullable for MSSQL with NOT NULL FK.")]
+        [DataRow(DatabaseType.MSSQL, Cardinality.Many, false, DisplayName = "Cardinality.Many relationship field is non-nullable for MSSQL with NOT NULL FK metadata.")]
         [TestMethod]
         public void RelationshipFieldIsNullableForDwSqlDespiteNonNullableForeignKey(DatabaseType databaseType, Cardinality cardinality, bool expectedNullable)
         {

@@ -1,6 +1,8 @@
 -- Copyright (c) Microsoft Corporation.
 -- Licensed under the MIT License.
 
+SET QUOTED_IDENTIFIER ON;
+
 BEGIN TRANSACTION
 DROP SECURITY POLICY IF EXISTS revenuesSecPolicy;
 DROP FUNCTION IF EXISTS revenuesPredicate;
@@ -518,8 +520,8 @@ WITH cteN(Number) AS
   CROSS JOIN sys.all_columns AS s2
 )
 INSERT INTO bookmarks ([id], [bkname])
-SELECT 
-[Number], 
+SELECT
+[Number],
 'Test Item #' + format([Number], '00000')
 FROM cteN WHERE [Number] <= @UpperBound;
 SET IDENTITY_INSERT bookmarks OFF
@@ -532,8 +534,8 @@ WITH cteN(Number) AS
   CROSS JOIN sys.all_columns AS s2
 )
 INSERT INTO mappedbookmarks ([id], [bkname])
-SELECT 
-[Number], 
+SELECT
+[Number],
 'Test Item #' + format([Number], '00000')
 FROM cteN WHERE [Number] <= @UpperBound;
 
@@ -878,9 +880,9 @@ CREATE TABLE date_only_table (
     event_timestamp datetime NOT NULL
 );
 
-INSERT INTO date_only_table( event_date, event_time, event_timestamp) 
-VALUES ('2023-01-01', '08:30:00', '2023-01-01 08:30:00'), 
-       ('2023-02-15', '12:45:00', '2023-02-15 12:45:00'), 
+INSERT INTO date_only_table( event_date, event_time, event_timestamp)
+VALUES ('2023-01-01', '08:30:00', '2023-01-01 08:30:00'),
+       ('2023-02-15', '12:45:00', '2023-02-15 12:45:00'),
        ('2023-03-30', '17:15:00', '2023-03-30 17:15:00');
 
 INSERT INTO [order items](id, productname)

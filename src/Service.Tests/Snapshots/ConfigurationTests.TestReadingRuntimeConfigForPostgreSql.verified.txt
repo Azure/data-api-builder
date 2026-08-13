@@ -750,6 +750,22 @@
             ]
           },
           {
+            Role: claim_policy_tester,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
+                Policy: {
+                  Database: @item.title eq @claims.userId
+                }
+              }
+            ]
+          },
+          {
             Role: test_role_with_noread,
             Actions: [
               {
@@ -2759,6 +2775,35 @@
             ]
           }
         }
+      }
+    },
+    {
+      DateOnlyTable: {
+        Source: {
+          Object: date_only_table,
+          Type: Table,
+          KeyFields: [
+            event_date
+          ]
+        },
+        GraphQL: {
+          Singular: DateOnlyTable,
+          Plural: DateOnlyTables,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
       }
     }
   ]

@@ -4,6 +4,7 @@ update PlanetAlias --config "dab-config.CosmosDb_NoSql.json" --permissions "anon
 update PlanetAlias --config "dab-config.CosmosDb_NoSql.json" --permissions "authenticated:create,read,update,delete"
 update PlanetAlias --config "dab-config.CosmosDb_NoSql.json" --permissions "limited-read-role:read"
 update PlanetAlias --config "dab-config.CosmosDb_NoSql.json" --permissions "item-level-permission-role:read"
+update PlanetAlias --config "dab-config.CosmosDb_NoSql.json" --permissions "claim_policy_tester:read" --policy-database "@item.name eq @claims.userId"
 add Character --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.planet" --permissions "anonymous:create,read,update,delete" --graphql "Character:Characters"
 update Character --config "dab-config.CosmosDb_NoSql.json" --permissions "item-level-permission-role:read"
 add Star --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.planet" --permissions "anonymous:create,read,update,delete" --graphql "Star:Stars"

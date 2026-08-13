@@ -4,6 +4,7 @@
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using HotChocolate.Language;
 using Microsoft.OData.Edm;
 
@@ -54,7 +55,8 @@ namespace Azure.DataApiBuilder.Core.Parsers
 
             foreach (ObjectTypeDefinitionNode typeDefinition in graphQLSchemaRoot.Definitions)
             {
-                EdmEntityType edmEntity = new(DEFAULT_NAMESPACE, typeDefinition.Name.Value);
+                string graphQLTypeName = typeDefinition.Name.Value;
+                EdmEntityType edmEntity = new(DEFAULT_NAMESPACE, graphQLTypeName);
                 foreach (FieldDefinitionNode field in typeDefinition.Fields)
                 {
                     edmEntity.AddStructuralProperty(
@@ -64,8 +66,19 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 }
 
                 container.AddEntitySet(
-                    name: typeDefinition.Name.Value,
+                    name: graphQLTypeName,
                     elementType: edmEntity);
+
+                // Cosmos database policies are resolved by the configured entity name, which can
+                // differ from the GraphQL type name through @model(name: "..."). Make both paths
+                // available to OData so policies on aliased root models can be parsed.
+                string entityName = GraphQLNaming.ObjectTypeToEntityName(typeDefinition);
+                if (!string.Equals(entityName, graphQLTypeName, StringComparison.Ordinal))
+                {
+                    container.AddEntitySet(
+                        name: entityName,
+                        elementType: edmEntity);
+                }
             }
 
             _model.AddElement(container);

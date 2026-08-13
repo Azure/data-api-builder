@@ -775,6 +775,23 @@
           ]
         },
         {
+          "role": "claim_policy_tester",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [],
+                "include": [
+                  "*"
+                ]
+              },
+              "policy": {
+                "database": "@item.title eq @claims.userId"
+              }
+            }
+          ]
+        },
+        {
           "role": "test_role_with_noread",
           "actions": [
             {
@@ -2329,6 +2346,35 @@
         },
         {
           "role": "authenticated",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "DateOnlyTable": {
+      "source": {
+        "object": "date_only_table",
+        "type": "table",
+        "key-fields": [
+          "event_date"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "DateOnlyTable",
+          "plural": "DateOnlyTables"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
           "actions": [
             {
               "action": "*"

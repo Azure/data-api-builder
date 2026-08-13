@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
@@ -206,13 +207,13 @@ public class AuthorizationResolver : IAuthorizationResolver
     }
 
     /// <inheritdoc />
-    public string ProcessDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext)
+    public ResolvedDatabasePolicy ResolveDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext)
     {
         string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, operation);
 
         if (string.IsNullOrWhiteSpace(dBpolicyWithClaimTypes))
         {
-            return string.Empty;
+            return ResolvedDatabasePolicy.Empty;
         }
 
         return GetPolicyWithClaimValues(dBpolicyWithClaimTypes, GetAllAuthenticatedUserClaims(httpContext));
@@ -760,26 +761,37 @@ public class AuthorizationResolver : IAuthorizationResolver
     }
 
     /// <summary>
-    /// Helper method to substitute all the claimTypes(denoted with @claims.claimType) in
-    /// the policy string with their corresponding claimValues.
+    /// Replaces all claim references (denoted with @claims.claimType) in the policy
+    /// with OData parameter aliases and returns their typed values separately.
+    /// Claim values must never be inserted into URI text because URI parsing can decode
+    /// percent-encoded syntax after string escaping has already occurred.
     /// </summary>
     /// <param name="policy">The policy to be processed.</param>
     /// <param name="claimsInRequestContext">Dictionary holding all the claims available in the request.</param>
-    /// <returns>Processed policy with claim values substituted for claim types.</returns>
+    /// <returns>Policy text containing aliases and the typed values bound to those aliases.</returns>
     /// <exception cref="DataApiBuilderException"></exception>
-    private static string GetPolicyWithClaimValues(string policy, Dictionary<string, List<Claim>> claimsInRequestContext)
+    private static ResolvedDatabasePolicy GetPolicyWithClaimValues(string policy, Dictionary<string, List<Claim>> claimsInRequestContext)
     {
         // Regex used to extract all claimTypes in policy. It finds all the substrings which are
         // of the form @claims.*** where *** contains characters from a-zA-Z0-9._ .
         string claimCharsRgx = @"@claims\.[a-zA-Z0-9_\.]*";
 
-        // Find all the claimTypes from the policy
+        Dictionary<string, object?> claimValues = new();
+        int claimIndex = 0;
+
+        // Replace claim references with inert OData aliases. The raw values remain out of
+        // the policy URI and are later injected directly into the parsed AST.
         string processedPolicy = Regex.Replace(policy, claimCharsRgx,
-            (claimTypeMatch) => GetClaimValueFromClaim(claimTypeMatch, claimsInRequestContext));
+            (claimTypeMatch) =>
+            {
+                string claimAlias = $"@dabClaim{claimIndex++}";
+                claimValues.Add(claimAlias, GetClaimValueFromClaim(claimTypeMatch, claimsInRequestContext));
+                return claimAlias;
+            });
 
         // Remove occurrences of @item. directives
         processedPolicy = processedPolicy.Replace(FIELD_PREFIX, "");
-        return processedPolicy;
+        return new ResolvedDatabasePolicy(processedPolicy, claimValues);
     }
 
     /// <summary>
@@ -787,9 +799,9 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// </summary>
     /// <param name="claimTypeMatch">The claimType present in policy with a prefix of @claims..</param>
     /// <param name="claimsInRequestContext">Dictionary populated with all the user claims.</param>
-    /// <returns>The claim value of the first claim whose claimType matches 'claimTypeMatch'.</returns>
+    /// <returns>The typed value of the first claim whose claimType matches 'claimTypeMatch'.</returns>
     /// <exception cref="DataApiBuilderException"> Throws exception when the user does not possess the given claim.</exception>
-    private static string GetClaimValueFromClaim(Match claimTypeMatch, Dictionary<string, List<Claim>> claimsInRequestContext)
+    private static object? GetClaimValueFromClaim(Match claimTypeMatch, Dictionary<string, List<Claim>> claimsInRequestContext)
     {
         // Gets <claimType> from @claims.<claimType>
         string claimType = claimTypeMatch.Value.ToString().Substring(CLAIM_PREFIX.Length);
@@ -816,13 +828,12 @@ public class AuthorizationResolver : IAuthorizationResolver
     }
 
     /// <summary>
-    /// Using the input parameter claim, returns the primitive literal from claim.Value:
-    /// e.g. @claims.idp (string) resolves as 'azuread'
+    /// Using the input parameter claim, returns the typed primitive value from claim.Value:
+    /// e.g. @claims.idp (string) resolves as azuread
     /// e.g. @claims.iat (int) resolves as 1537231048
     /// e.g. @claims.email_verified (boolean) resolves as true
-    /// To adhere with OData 4.01 ABNF construction rules (Section 7: Literal Data Values)
-    /// - Primitive string literals in URLS must be enclosed within single quotes.
-    /// - Other primitive types are represented as plain values and do not require single quotes.
+    /// Values are returned as CLR primitives so the policy parser can bind them as typed
+    /// OData AST constants without serializing them into URI text.
     /// Note: With many access token issuers, token claims are strings or string representations
     /// of other data types such as dates and GUIDs.
     /// Note: System.Security.Claim.ValueType defaults to ClaimValueTypes.String if the code calling
@@ -835,7 +846,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <seealso cref="https://www.iana.org/assignments/jwt/jwt.xhtml#claims"/>
     /// <seealso cref="https://www.rfc-editor.org/rfc/rfc7519.html#section-4"/>
     /// <seealso cref="https://github.com/microsoft/referencesource/blob/dae14279dd0672adead5de00ac8f117dcf74c184/mscorlib/system/security/claims/Claim.cs#L107"/>
-    private static string GetClaimValue(Claim claim)
+    private static object? GetClaimValue(Claim claim)
     {
         /* An example Claim object:
          * claim.Type: "user_email"
@@ -843,33 +854,83 @@ public class AuthorizationResolver : IAuthorizationResolver
          * claim.ValueType: "http://www.w3.org/2001/XMLSchema#string"
          */
 
-        switch (claim.ValueType)
+        try
         {
-            case ClaimValueTypes.String:
-                // Escape embedded single quotes per OData 4.01 ABNF (Section 7: Literal Data Values)
-                // by doubling them. This prevents an attacker-influenced claim value from breaking
-                // out of the string literal and injecting additional OData predicates into the
-                // database authorization policy expression.
-                // See: http://docs.oasis-open.org/odata/odata/v4.01/cs01/abnf/odata-abnf-construction-rules.txt
-                return $"'{claim.Value.Replace("'", "''")}'";
-            case ClaimValueTypes.Boolean:
-            case ClaimValueTypes.Integer:
-            case ClaimValueTypes.Integer32:
-            case ClaimValueTypes.Integer64:
-            case ClaimValueTypes.UInteger32:
-            case ClaimValueTypes.UInteger64:
-            case ClaimValueTypes.Double:
-                return $"{claim.Value}";
-            case JsonClaimValueTypes.JsonNull:
-                return $"null";
-            default:
-                // One of the claims in the request had unsupported data type.
-                throw new DataApiBuilderException(
-                    message: $"The claim value for claim: {claim.Type} belonging to the user has an unsupported data type.",
-                    statusCode: HttpStatusCode.Forbidden,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnsupportedClaimValueType
-                );
+            switch (claim.ValueType)
+            {
+                case ClaimValueTypes.String:
+                    return claim.Value;
+                case ClaimValueTypes.Boolean:
+                    return bool.Parse(claim.Value);
+                case ClaimValueTypes.Integer:
+                    return ParseIntegerClaimValue(claim.Value);
+                case ClaimValueTypes.Integer32:
+                    return int.Parse(claim.Value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                case ClaimValueTypes.Integer64:
+                    return long.Parse(claim.Value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                case ClaimValueTypes.UInteger32:
+                    return (long)uint.Parse(claim.Value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                case ClaimValueTypes.UInteger64:
+                    return (decimal)ulong.Parse(claim.Value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                case ClaimValueTypes.Double:
+                    return ParseFiniteDoubleClaimValue(claim.Value);
+                case JsonClaimValueTypes.JsonNull:
+                    return null;
+                default:
+                    // One of the claims in the request had unsupported data type.
+                    throw CreateUnsupportedClaimValueException(claim);
+            }
         }
+        catch (Exception ex) when (ex is FormatException || ex is OverflowException)
+        {
+            throw CreateUnsupportedClaimValueException(claim, ex);
+        }
+    }
+
+    /// <summary>
+    /// Parses a floating-point claim and rejects values that database providers cannot
+    /// represent consistently, including NaN and positive or negative infinity.
+    /// </summary>
+    private static double ParseFiniteDoubleClaimValue(string value)
+    {
+        double parsedValue = double.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture);
+        if (!double.IsFinite(parsedValue))
+        {
+            throw new FormatException("The floating-point claim value must be finite.");
+        }
+
+        return parsedValue;
+    }
+
+    private static DataApiBuilderException CreateUnsupportedClaimValueException(Claim claim, Exception? innerException = null)
+    {
+        string message = innerException is null
+            ? $"The claim value for claim: {claim.Type} belonging to the user has an unsupported data type."
+            : $"The claim value for claim: {claim.Type} belonging to the user is invalid for its declared data type.";
+
+        return new DataApiBuilderException(
+            message: message,
+            statusCode: HttpStatusCode.Forbidden,
+            subStatusCode: DataApiBuilderException.SubStatusCodes.UnsupportedClaimValueType,
+            innerException: innerException);
+    }
+
+    /// <summary>
+    /// Parses an XML Schema integer claim into the narrowest OData-supported CLR integer type.
+    /// </summary>
+    private static object ParseIntegerClaimValue(string value)
+    {
+        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int intValue))
+        {
+            return intValue;
+        }
+
+        if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long longValue))
+        {
+            return longValue;
+        }
+
+        return decimal.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
     }
 
     /// <inheritdoc />

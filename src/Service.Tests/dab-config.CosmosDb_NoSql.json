@@ -118,6 +118,17 @@
               "action": "read"
             }
           ]
+        },
+        {
+          "role": "claim_policy_tester",
+          "actions": [
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.name eq @claims.userId"
+              }
+            }
+          ]
         }
       ]
     },

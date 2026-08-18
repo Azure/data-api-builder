@@ -48,7 +48,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            DatabaseType databaseType = DatabaseType.MSSQL)
         {
             ObjectTypeDefinitionNode objectDefinitionNode;
             switch (databaseObject.SourceType)
@@ -69,7 +70,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         configEntity: configEntity,
                         entities: entities,
                         rolesAllowedForEntity: rolesAllowedForEntity,
-                        rolesAllowedForFields: rolesAllowedForFields);
+                        rolesAllowedForFields: rolesAllowedForFields,
+                        databaseType: databaseType);
                     break;
                 default:
                     throw new DataApiBuilderException(
@@ -170,7 +172,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            DatabaseType databaseType = DatabaseType.MSSQL)
         {
             Dictionary<string, FieldDefinitionNode> fieldDefinitionNodes = new();
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
@@ -225,7 +228,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             databaseObject,
                             entities,
                             relationshipName,
-                            relationship);
+                            relationship,
+                            databaseType);
                         fieldDefinitionNodes.Add(relationshipField.Name.Value, relationshipField);
                     }
                 }
@@ -468,13 +472,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             DatabaseObject databaseObject,
             RuntimeEntities entities,
             string relationshipName,
-            EntityRelationship relationship)
+            EntityRelationship relationship,
+            DatabaseType databaseType = DatabaseType.MSSQL)
         {
             // Generate the field that represents the relationship to ObjectType, so you can navigate through it
             // and walk the graph.
             string targetEntityName = relationship.TargetEntity.Split('.').Last();
             Entity referencedEntity = entities[targetEntityName];
-            bool isNullableRelationship = FindNullabilityOfRelationship(entityName, databaseObject, targetEntityName);
+            bool isNullableRelationship = FindNullabilityOfRelationship(entityName, databaseObject, targetEntityName, databaseType);
 
             INullableTypeNode targetField = relationship.Cardinality switch
             {
@@ -612,8 +617,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         private static bool FindNullabilityOfRelationship(
             string entityName,
             DatabaseObject databaseObject,
-            string targetEntityName)
+            string targetEntityName,
+            DatabaseType databaseType = DatabaseType.MSSQL)
         {
+            // DWSQL does not enforce foreign key constraints, so relationship fields are always nullable.
+            if (databaseType == DatabaseType.DWSQL)
+            {
+                return true;
+            }
+
             bool isNullableRelationship = false;
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             if (// Retrieve all the relationship information for the source entity which is backed by this table definition

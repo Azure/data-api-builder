@@ -39,6 +39,40 @@ public class GQLFilterParser
         _metadataProviderFactory = metadataProviderFactory;
     }
 
+    // Absolute ceiling on relationship-nesting depth within a single GraphQL filter argument.
+    // Applied when no stricter runtime.graphql.depth-limit is configured, to prevent nested-filter depth-bomb DoS
+    // (deeply nested filters amplify into correlated EXISTS subqueries that HotChocolate's execution-depth rule does not bound).
+    internal const int MAX_NESTED_FILTER_DEPTH = 20;
+
+    /// <summary>
+    /// Returns the maximum allowed relationship-nesting depth for GraphQL filters:
+    /// the configured runtime.graphql.depth-limit when set and stricter, otherwise the hardcoded safety ceiling.
+    /// </summary>
+    internal int GetMaxNestedFilterDepth()
+    {
+        int? configuredDepthLimit = _configProvider.GetConfig().Runtime?.GraphQL?.DepthLimit;
+        if (configuredDepthLimit is > 0 && configuredDepthLimit.Value < MAX_NESTED_FILTER_DEPTH)
+        {
+            return configuredDepthLimit.Value;
+        }
+
+        return MAX_NESTED_FILTER_DEPTH;
+    }
+
+    /// <summary>
+    /// Enforces the relationship-nesting depth limit for GraphQL filters, throwing a BadRequest when exceeded.
+    /// </summary>
+    internal static void EnsureWithinNestedFilterDepth(int nestingLevel, int maxNestedFilterDepth)
+    {
+        if (nestingLevel > maxNestedFilterDepth)
+        {
+            throw new DataApiBuilderException(
+                message: $"The provided GraphQL filter exceeds the maximum allowed nesting depth of {maxNestedFilterDepth}.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+        }
+    }
+
     /// <summary>
     /// Parse a predicate for a *FilterInput input type
     /// </summary>
@@ -53,8 +87,11 @@ public class GQLFilterParser
         IMiddlewareContext ctx,
         IInputValueDefinition filterArgumentSchema,
         List<ObjectFieldNode> fields,
-        BaseQueryStructure queryStructure)
+        BaseQueryStructure queryStructure,
+        int nestingLevel = 0)
     {
+        EnsureWithinNestedFilterDepth(nestingLevel, GetMaxNestedFilterDepth());
+
         string schemaName = queryStructure.DatabaseObject.SchemaName;
         string sourceName = queryStructure.DatabaseObject.Name;
         string sourceAlias = queryStructure.SourceAlias;
@@ -113,7 +150,8 @@ public class GQLFilterParser
                     filterArgumentSchema: filterArgumentSchema,
                     otherPredicates,
                     queryStructure,
-                    op)));
+                    op,
+                    nestingLevel)));
             }
             else
             {
@@ -185,7 +223,8 @@ public class GQLFilterParser
                             subfields,
                             predicates,
                             queryStructure,
-                            metadataProvider);
+                            metadataProvider,
+                            nestingLevel);
                     }
                     else if (queryStructure is CosmosQueryStructure cosmosQueryStructure)
                     {
@@ -212,7 +251,8 @@ public class GQLFilterParser
                                 nestedFieldTypeName,
                                 predicates,
                                 cosmosQueryStructure,
-                                metadataProvider);
+                                metadataProvider,
+                                nestingLevel);
                         }
                         else
                         {
@@ -223,7 +263,8 @@ public class GQLFilterParser
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
-                                cosmosQueryStructure)));
+                                cosmosQueryStructure,
+                                nestingLevel + 1)));
 
                             cosmosQueryStructure.DatabaseObject.Name = sourceName;
                             cosmosQueryStructure.SourceAlias = sourceAlias;
@@ -292,7 +333,8 @@ public class GQLFilterParser
         string entityType,
         List<PredicateOperand> predicates,
         CosmosQueryStructure queryStructure,
-        ISqlMetadataProvider metadataProvider)
+        ISqlMetadataProvider metadataProvider,
+        int nestingLevel)
     {
         // Validate that the field referenced in the nested input filter can be accessed.
         bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
@@ -327,7 +369,8 @@ public class GQLFilterParser
         Predicate existsQueryFilterPredicate = Parse(ctx,
                 filterField,
                 subfields,
-                existsQuery);
+                existsQuery,
+                nestingLevel + 1);
 
         predicatesForExistsQuery.Push(existsQueryFilterPredicate);
 
@@ -369,7 +412,8 @@ public class GQLFilterParser
         List<ObjectFieldNode> subfields,
         List<PredicateOperand> predicates,
         BaseQueryStructure queryStructure,
-        ISqlMetadataProvider metadataProvider)
+        ISqlMetadataProvider metadataProvider,
+        int nestingLevel)
     {
         string? targetGraphQLTypeNameForFilter = RelationshipDirectiveType.GetTarget(filterField);
 
@@ -416,7 +460,8 @@ public class GQLFilterParser
         Predicate existsQueryFilterPredicate = Parse(ctx,
                 filterField,
                 subfields,
-                existsQuery);
+                existsQuery,
+                nestingLevel + 1);
         predicatesForExistsQuery.Push(existsQueryFilterPredicate);
 
         // Add JoinPredicates to the subquery query structure so a predicate connecting
@@ -531,7 +576,8 @@ public class GQLFilterParser
         IInputValueDefinition filterArgumentSchema,
         List<IValueNode> fields,
         BaseQueryStructure baseQuery,
-        PredicateOperation op)
+        PredicateOperation op,
+        int nestingLevel)
     {
         if (fields.Count == 0)
         {
@@ -573,7 +619,8 @@ public class GQLFilterParser
                 Parse(ctx,
                     filterArgumentSchema,
                     subfields,
-                    baseQuery)));
+                    baseQuery,
+                    nestingLevel)));
         }
 
         return MakeChainPredicate(operands, op);

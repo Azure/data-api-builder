@@ -357,6 +357,21 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual(expected: isNullable, actual: field.Type is INullableTypeNode);
         }
 
+        // A NOT NULL foreign-key column yields a non-nullable relationship field for MSSQL, but a
+        // nullable one for DWSQL since DWSQL does not enforce foreign key constraints.
+        [DataRow(DatabaseType.DWSQL, Cardinality.One, true, DisplayName = "Many-to-one relationship field is nullable for DWSQL despite NOT NULL FK.")]
+        [DataRow(DatabaseType.DWSQL, Cardinality.Many, true, DisplayName = "Cardinality.Many relationship field is nullable for DWSQL despite NOT NULL FK metadata.")]
+        [DataRow(DatabaseType.MSSQL, Cardinality.One, false, DisplayName = "Many-to-one relationship field is non-nullable for MSSQL with NOT NULL FK.")]
+        [DataRow(DatabaseType.MSSQL, Cardinality.Many, false, DisplayName = "Cardinality.Many relationship field is non-nullable for MSSQL with NOT NULL FK metadata.")]
+        [TestMethod]
+        public void RelationshipFieldIsNullableForDwSqlDespiteNonNullableForeignKey(DatabaseType databaseType, Cardinality cardinality, bool expectedNullable)
+        {
+            ObjectTypeDefinitionNode od =
+                GenerateObjectWithRelationship(cardinality, isNullableRelationship: false, databaseType: databaseType);
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == FIELD_NAME_FOR_TARGET);
+            Assert.AreEqual(expectedNullable, field.Type is INullableTypeNode);
+        }
+
         [TestMethod]
         public void WhenForeignKeyDefinedButNoRelationship_GraphQLWontModelIt()
         {
@@ -752,7 +767,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             );
         }
 
-        private static ObjectTypeDefinitionNode GenerateObjectWithRelationship(Cardinality cardinality, bool isNullableRelationship = false)
+        private static ObjectTypeDefinitionNode GenerateObjectWithRelationship(Cardinality cardinality, bool isNullableRelationship = false, DatabaseType databaseType = DatabaseType.MSSQL)
         {
             SourceDefinition table = GenerateTableWithForeignKeyDefinition(isNullableRelationship);
 
@@ -782,7 +797,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 dbObject,
                 configEntity, new(new Dictionary<string, Entity>() { { TARGET_ENTITY, relationshipEntity } }),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                databaseType: databaseType
                 );
         }
 

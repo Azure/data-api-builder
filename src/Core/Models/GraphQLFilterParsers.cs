@@ -87,8 +87,20 @@ public class GQLFilterParser
         IMiddlewareContext ctx,
         IInputValueDefinition filterArgumentSchema,
         List<ObjectFieldNode> fields,
+        BaseQueryStructure queryStructure)
+    {
+        return Parse(ctx, filterArgumentSchema, fields, queryStructure, nestingLevel: 0);
+    }
+
+    /// <summary>
+    /// Recursive overload that tracks and bounds the relationship-nesting depth of the filter being parsed.
+    /// </summary>
+    private Predicate Parse(
+        IMiddlewareContext ctx,
+        IInputValueDefinition filterArgumentSchema,
+        List<ObjectFieldNode> fields,
         BaseQueryStructure queryStructure,
-        int nestingLevel = 0)
+        int nestingLevel)
     {
         EnsureWithinNestedFilterDepth(nestingLevel, GetMaxNestedFilterDepth());
 

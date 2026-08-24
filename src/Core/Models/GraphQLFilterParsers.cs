@@ -66,10 +66,11 @@ public class GQLFilterParser
     {
         if (nestingLevel > maxNestedFilterDepth)
         {
+            // DatabaseInputError is the substatus the GraphQL status-code middleware maps to HTTP 400.
             throw new DataApiBuilderException(
                 message: $"The provided GraphQL filter exceeds the maximum allowed nesting depth of {maxNestedFilterDepth}.",
                 statusCode: HttpStatusCode.BadRequest,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseInputError);
         }
     }
 

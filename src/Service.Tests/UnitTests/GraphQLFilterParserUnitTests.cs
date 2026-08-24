@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 () => GQLFilterParser.EnsureWithinNestedFilterDepth(nestingLevel: 21, maxNestedFilterDepth: 20));
 
             Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.BadRequest, ex.SubStatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.DatabaseInputError, ex.SubStatusCode);
         }
 
         /// <summary>

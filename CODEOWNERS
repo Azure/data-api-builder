@@ -1,7 +1,7 @@
 # These owners will be the default owners for everything in
 # the repo. Unless a later match takes precedence,
 # review when someone opens a pull request.
-*       @Aniruddh25 @aaronburtle @jerrynixon @RubenCerna2079 @souvikghosh04 @sourabh1007 @vadeveka @Alekhya-Polavarapu @rusamant @stuartpa @gmohit
+*       @Aniruddh25 @aaronburtle @jerrynixon @RubenCerna2079 @souvikghosh04 @sourabh1007 @vadeveka @Alekhya-Polavarapu @rusamant @stuartpa @gmohit21
 
 CODE_OF_CONDUCT.md @jerrynixon @croblesm
 CONTRIBUTING.md @jerrynixon @croblesm

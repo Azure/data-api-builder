@@ -78,6 +78,16 @@ namespace Azure.DataApiBuilder.Service.Utilities
         {
             try
             {
+                // Stdio mode never calls host.Run(), so Startup.Configure -- and with it
+                // PerformOnConfigChangeAsync, the only caller of IMetadataProviderFactory
+                // .InitializeAsync() -- never executes. Without this, entities are known to
+                // the tool registry (their names come from config) while no entity ever gets
+                // a database object, and every tool call fails with
+                // "Database object for entity '<name>' has not been inferred."
+                Core.Services.MetadataProviders.IMetadataProviderFactory metadataProviderFactory =
+                    host.Services.GetRequiredService<Core.Services.MetadataProviders.IMetadataProviderFactory>();
+                metadataProviderFactory.InitializeAsync().GetAwaiter().GetResult();
+
                 Mcp.Core.McpToolRegistry registry =
                     host.Services.GetRequiredService<Mcp.Core.McpToolRegistry>();
                 IEnumerable<Mcp.Model.IMcpTool> tools =

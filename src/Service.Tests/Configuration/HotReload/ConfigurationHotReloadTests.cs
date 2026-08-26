@@ -913,8 +913,8 @@ public class ConfigurationHotReloadTests
         Assert.IsNotNull(lkgRuntimeConfig);
 
         // Capture properties to verify config hasn't changed
-        bool originalRestEnabled = lkgRuntimeConfig.Runtime.Rest.Enabled;
-        bool originalGraphQLEnabled = lkgRuntimeConfig.Runtime.GraphQL.Enabled;
+        bool originalRestEnabled = lkgRuntimeConfig.IsRestEnabled;
+        bool originalGraphQLEnabled = lkgRuntimeConfig.IsGraphQLEnabled;
         bool originalMcpEnabled = lkgRuntimeConfig.Runtime.Mcp.Enabled;
 
         // Act
@@ -935,9 +935,9 @@ public class ConfigurationHotReloadTests
 
         // Assert - Verify the configuration hasn't changed by comparing properties
         Assert.IsNotNull(newRuntimeConfig, "RuntimeConfig should not be null after failed hot-reload.");
-        Assert.AreEqual(originalRestEnabled, newRuntimeConfig.Runtime.Rest.Enabled,
+        Assert.AreEqual(originalRestEnabled, newRuntimeConfig.IsRestEnabled,
             "REST enabled setting should remain unchanged after hot-reload failure.");
-        Assert.AreEqual(originalGraphQLEnabled, newRuntimeConfig.Runtime.GraphQL.Enabled,
+        Assert.AreEqual(originalGraphQLEnabled, newRuntimeConfig.IsGraphQLEnabled,
             "GraphQL enabled setting should remain unchanged after hot-reload failure.");
         Assert.AreEqual(originalMcpEnabled, newRuntimeConfig.Runtime.Mcp.Enabled,
             "MCP enabled setting should remain unchanged after hot-reload failure.");
@@ -963,8 +963,8 @@ public class ConfigurationHotReloadTests
         Assert.IsNotNull(lkgRuntimeConfig);
 
         // Capture properties to verify config hasn't changed
-        bool originalRestEnabled = lkgRuntimeConfig.Runtime.Rest.Enabled;
-        bool originalGraphQLEnabled = lkgRuntimeConfig.Runtime.GraphQL.Enabled;
+        bool originalRestEnabled = lkgRuntimeConfig.IsRestEnabled;
+        bool originalGraphQLEnabled = lkgRuntimeConfig.IsGraphQLEnabled;
 
         // Act
         GenerateConfigFile(
@@ -982,9 +982,9 @@ public class ConfigurationHotReloadTests
 
         // Assert - Verify the configuration hasn't changed by comparing properties
         Assert.IsNotNull(newRuntimeConfig, "RuntimeConfig should not be null after failed hot-reload.");
-        Assert.AreEqual(originalRestEnabled, newRuntimeConfig.Runtime.Rest.Enabled,
+        Assert.AreEqual(originalRestEnabled, newRuntimeConfig.IsRestEnabled,
             "REST enabled setting should remain unchanged after hot-reload failure.");
-        Assert.AreEqual(originalGraphQLEnabled, newRuntimeConfig.Runtime.GraphQL.Enabled,
+        Assert.AreEqual(originalGraphQLEnabled, newRuntimeConfig.IsGraphQLEnabled,
             "GraphQL enabled setting should remain unchanged after hot-reload failure.");
     }
 

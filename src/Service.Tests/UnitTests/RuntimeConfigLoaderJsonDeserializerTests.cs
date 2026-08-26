@@ -408,6 +408,108 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TryParseAndAssertOnDefaults("{" + emptyTelemetrySubProps, out _);
         }
 
+        /// <summary>
+        /// Verifies that optional scalar runtime properties which are omitted from
+        /// the input configuration remain omitted after serialization, while their
+        /// effective runtime behavior still uses the documented defaults.
+        /// </summary>
+        [TestMethod]
+        public void TestOptionalScalarPropsRemainOmittedAfterSerialization()
+        {
+            string json = @"{
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""@env('test-connection-string')""
+                },
+                ""runtime"": {
+                    ""rest"": { },
+                    ""graphql"": { }
+                },
+                ""entities"": { }
+            }";
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig runtimeConfig));
+
+            string serialized = runtimeConfig.ToJson();
+            using JsonDocument document = JsonDocument.Parse(serialized);
+
+            JsonElement runtime = document.RootElement.GetProperty("runtime");
+
+            JsonElement rest = runtime.GetProperty("rest");
+            Assert.IsFalse(rest.TryGetProperty("enabled", out _));
+            Assert.IsFalse(rest.TryGetProperty("path", out _));
+            Assert.IsFalse(rest.TryGetProperty("request-body-strict", out _));
+
+            JsonElement graphql = runtime.GetProperty("graphql");
+            Assert.IsFalse(graphql.TryGetProperty("enabled", out _));
+            Assert.IsFalse(graphql.TryGetProperty("path", out _));
+            Assert.IsFalse(graphql.TryGetProperty("allow-introspection", out _));
+
+            Assert.IsTrue(runtimeConfig.IsRestEnabled);
+            Assert.AreEqual(RestRuntimeOptions.DEFAULT_PATH, runtimeConfig.RestPath);
+            Assert.IsTrue(runtimeConfig.IsRequestBodyStrict);
+
+            Assert.IsTrue(runtimeConfig.IsGraphQLEnabled);
+            Assert.AreEqual(GraphQLRuntimeOptions.DEFAULT_PATH, runtimeConfig.GraphQLPath);
+            Assert.IsTrue(runtimeConfig.AllowIntrospection);
+        }
+
+        /// <summary>
+        /// Verifies that omitted optional scalar properties do not materialize
+        /// defaults during serialization and overwrite values from a base config.
+        /// </summary>
+        [TestMethod]
+        public void TestOptionalScalarPropsDoNotOverrideBaseValuesAfterSerialization()
+        {
+            string baseJson = @"{
+                ""runtime"": {
+                    ""rest"": {
+                        ""enabled"": false,
+                        ""path"": ""/base-rest"",
+                        ""request-body-strict"": false
+                    },
+                    ""graphql"": {
+                        ""enabled"": false,
+                        ""path"": ""/base-graphql"",
+                        ""allow-introspection"": false
+                    }
+                }
+            }";
+
+            string overrideJson = @"{
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""@env('test-connection-string')""
+                },
+                ""runtime"": {
+                    ""rest"": { },
+                    ""graphql"": { }
+                },
+                ""entities"": { }
+            }";
+
+            Assert.IsTrue(
+                RuntimeConfigLoader.TryParseConfig(
+                    overrideJson,
+                    out RuntimeConfig overrideConfig));
+
+            string serializedOverride = overrideConfig.ToJson();
+            string mergedJson = MergeJsonProvider.Merge(baseJson, serializedOverride);
+
+            using JsonDocument document = JsonDocument.Parse(mergedJson);
+            JsonElement runtime = document.RootElement.GetProperty("runtime");
+
+            JsonElement rest = runtime.GetProperty("rest");
+            Assert.IsFalse(rest.GetProperty("enabled").GetBoolean());
+            Assert.AreEqual("/base-rest", rest.GetProperty("path").GetString());
+            Assert.IsFalse(rest.GetProperty("request-body-strict").GetBoolean());
+
+            JsonElement graphql = runtime.GetProperty("graphql");
+            Assert.IsFalse(graphql.GetProperty("enabled").GetBoolean());
+            Assert.AreEqual("/base-graphql", graphql.GetProperty("path").GetString());
+            Assert.IsFalse(graphql.GetProperty("allow-introspection").GetBoolean());
+        }
+
         #endregion Positive Tests
 
         #region Negative Tests

@@ -19,6 +19,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private const string UPDATE_UPSERT = "updated";
         public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
         public const string IS_FALLBACK_TO_UPDATE = "is_fallback_to_update";
+        public const string UPSERT_LOCK_ACQUIRED = "___upsert_lock_acquired___";
 
         private static DbCommandBuilder _builder = new NpgsqlCommandBuilder();
 
@@ -133,6 +134,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string pkPredicates = Build(structure.Predicates);
             string isFallbackToUpdateSqlLiteral = structure.IsFallbackToUpdate ? "TRUE" : "FALSE";
 
+            string lockQuery = string.Empty;
+            if (!structure.IsFallbackToUpdate)
+            {
+                // PostgreSQL row locks cannot protect a key that does not exist. Serialize insert-capable
+                // upserts with a transaction-level advisory lock derived from the source and complete PK.
+                // Use metadata PK order so equivalent requests always acquire the same lock even when
+                // request fields arrive in a different order. jsonb preserves value boundaries and types.
+                Dictionary<string, string> primaryKeyParameters = structure.Predicates.ToDictionary(
+                    predicate => predicate.Left!.AsColumn()!.ColumnName,
+                    predicate => predicate.Right.AsString()!);
+                List<string> lockComponents = new()
+                {
+                    $"'{EscapeSqlLiteral(structure.DatabaseObject.SchemaName)}'",
+                    $"'{EscapeSqlLiteral(structure.DatabaseObject.Name)}'"
+                };
+
+                foreach (string primaryKey in structure.PrimaryKey())
+                {
+                    lockComponents.Add($"'{EscapeSqlLiteral(primaryKey)}'");
+                    lockComponents.Add(primaryKeyParameters[primaryKey]);
+                }
+
+                // Keep lock acquisition in its own statement. Under READ COMMITTED, the following count
+                // statement must obtain its snapshot only after a competing lock holder has committed.
+                lockQuery = $"SELECT pg_advisory_xact_lock(hashtextextended(jsonb_build_array({string.Join(", ", lockComponents)})::text, 0)) AS {UPSERT_LOCK_ACQUIRED}; ";
+            }
+
             // RS1: COUNT of rows matching PK (no policy) — used to distinguish
             // "row doesn't exist" from "row exists but policy blocked" in the executor.
             string countQuery = $"SELECT COUNT(*) AS {COUNT_ROWS_WITH_GIVEN_PK}, " +
@@ -175,8 +203,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     $"SELECT {BuildListOfLabels(structure.OutputColumns)}, {UPSERT_IDENTIFIER_COLUMN_NAME} FROM update_cte UNION ALL " +
                     $"SELECT {BuildListOfLabels(structure.OutputColumns)}, {UPSERT_IDENTIFIER_COLUMN_NAME} FROM insert_cte;";
 
-                return $"{countQuery}; {cteQuery}";
+                return $"{lockQuery}{countQuery}; {cteQuery}";
             }
+        }
+
+        private static string EscapeSqlLiteral(string value)
+        {
+            return value.Replace("'", "''", StringComparison.Ordinal);
         }
 
         /// <summary>

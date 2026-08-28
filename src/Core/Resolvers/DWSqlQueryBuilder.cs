@@ -442,7 +442,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string pkPredicates = JoinPredicateStrings(Build(structure.Predicates));
 
             string updateOperations = Build(structure.UpdateOperations, ", ");
-            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
+            // Data Warehouse logical keys are not necessarily enforced by a unique constraint. For an
+            // insert-capable upsert, take and hold an exclusive source-table lock before checking whether
+            // the key exists so concurrent requests cannot both choose INSERT. Update-only fallback queries
+            // cannot insert and therefore do not need this additional serialization.
+            string existenceCheckTable = structure.IsFallbackToUpdate
+                ? tableName
+                : $"{tableName} WITH (TABLOCKX, HOLDLOCK)";
+            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {existenceCheckTable} WHERE {pkPredicates}";
 
             // Query to get the number of records with a given PK.
             string prefixQuery = $"DECLARE @ROWS_TO_UPDATE int;" +

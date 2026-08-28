@@ -62,6 +62,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Reads records with whitespace after a comma in the select clause.
+        /// </summary>
+        [TestMethod]
+        public async Task ReadRecords_WithWhitespaceAfterSelectComma_ReturnsSelectedFields()
+        {
+            CallToolResult result = await ExecuteReadAsync("Book", select: "id, title");
+
+            AssertSuccess(result, "ReadRecords with whitespace after a select comma should succeed.");
+
+            JsonElement root = ParseResultRoot(result);
+            JsonElement records = GetRecordsArray(root);
+            JsonElement firstRecord = records[0];
+            Assert.IsTrue(firstRecord.TryGetProperty("id", out _), "Expected 'id' field in result.");
+            Assert.IsTrue(firstRecord.TryGetProperty("title", out _), "Expected 'title' field in result.");
+        }
+
+        /// <summary>
         /// Reads records with an OData filter expression and verifies filtered results are returned.
         /// </summary>
         [TestMethod]

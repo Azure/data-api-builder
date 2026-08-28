@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 if (!string.IsNullOrWhiteSpace(select))
                 {
                     // Update the context to specify which fields will be returned from the entity.
-                    IEnumerable<string> fieldsReturnedForFind = select.Split(",").ToList();
+                    IEnumerable<string> fieldsReturnedForFind = select.Split(',').Select(field => field.Trim()).ToList();
                     context.UpdateReturnFields(fieldsReturnedForFind);
                 }
 

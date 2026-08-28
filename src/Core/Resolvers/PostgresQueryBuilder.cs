@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Data.Common;
 using System.Text;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Npgsql;
@@ -138,26 +140,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (!structure.IsFallbackToUpdate)
             {
                 // PostgreSQL row locks cannot protect a key that does not exist. Serialize insert-capable
-                // upserts with a transaction-level advisory lock derived from the source and complete PK.
-                // Use metadata PK order so equivalent requests always acquire the same lock even when
-                // request fields arrive in a different order. jsonb preserves value boundaries and types.
-                Dictionary<string, string> primaryKeyParameters = structure.Predicates.ToDictionary(
-                    predicate => predicate.Left!.AsColumn()!.ColumnName,
-                    predicate => predicate.Right.AsString()!);
+                // upserts with a transaction-level advisory lock. Use a key-scoped resource only when every
+                // key value is converted to a representation-stable, non-collatable CLR type. Otherwise use
+                // a source-scoped resource because distinct request representations can compare equal under
+                // the backing key's type or collation (for example character(n) padding or nondeterministic
+                // collations).
+                // Keep acquisition in its own statement so the following READ COMMITTED statement obtains
+                // its snapshot only after a competing lock holder has committed.
                 List<string> lockComponents = new()
                 {
                     $"'{EscapeSqlLiteral(structure.DatabaseObject.SchemaName)}'",
                     $"'{EscapeSqlLiteral(structure.DatabaseObject.Name)}'"
                 };
+                List<string> primaryKeys = structure.PrimaryKey();
 
-                foreach (string primaryKey in structure.PrimaryKey())
+                if (primaryKeys.All(primaryKey => IsRepresentationStableKey(structure.GetColumnDefinition(primaryKey))))
                 {
-                    lockComponents.Add($"'{EscapeSqlLiteral(primaryKey)}'");
-                    lockComponents.Add(primaryKeyParameters[primaryKey]);
+                    Dictionary<string, string> primaryKeyParameters = structure.Predicates.ToDictionary(
+                        predicate => predicate.Left!.AsColumn()!.ColumnName,
+                        predicate => predicate.Right.AsString()!);
+
+                    foreach (string primaryKey in primaryKeys)
+                    {
+                        lockComponents.Add($"'{EscapeSqlLiteral(primaryKey)}'");
+                        lockComponents.Add(primaryKeyParameters[primaryKey]);
+                    }
                 }
 
-                // Keep lock acquisition in its own statement. Under READ COMMITTED, the following count
-                // statement must obtain its snapshot only after a competing lock holder has committed.
                 lockQuery = $"SELECT pg_advisory_xact_lock(hashtextextended(jsonb_build_array({string.Join(", ", lockComponents)})::text, 0)) AS {UPSERT_LOCK_ACQUIRED}; ";
             }
 
@@ -205,6 +214,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 return $"{lockQuery}{countQuery}; {cteQuery}";
             }
+        }
+
+        /// <summary>
+        /// Returns whether DAB converts the key to a canonical, non-collatable value before binding it.
+        /// Keep this allowlist conservative; unknown types use the correctness-first source lock.
+        /// </summary>
+        private static bool IsRepresentationStableKey(ColumnDefinition columnDefinition)
+        {
+            if (columnDefinition.IsNullable || columnDefinition.IsArrayType)
+            {
+                return false;
+            }
+
+            return (columnDefinition.SystemType == typeof(short) && columnDefinition.DbType == DbType.Int16) ||
+                (columnDefinition.SystemType == typeof(int) && columnDefinition.DbType == DbType.Int32) ||
+                (columnDefinition.SystemType == typeof(long) && columnDefinition.DbType == DbType.Int64) ||
+                (columnDefinition.SystemType == typeof(Guid) && columnDefinition.DbType == DbType.Guid);
         }
 
         private static string EscapeSqlLiteral(string value)

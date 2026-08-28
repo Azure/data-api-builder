@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
@@ -209,6 +210,37 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 doReplaceAkvVar: true);
 
             Assert.AreEqual(1, settings.ReplacementStrategies.Count);
+        }
+
+        [DataTestMethod]
+        [DataRow("", false, "null or empty")]
+        [DataRow("-leading", false, "start and end")]
+        [DataRow("trailing-", false, "start and end")]
+        [DataRow("bad_name", false, "Invalid character")]
+        [DataRow("valid-name-123", true, "")]
+        public void IsValidAkvSecretName_ValidatesShape(string name, bool expected, string errorFragment)
+        {
+            MethodInfo method = typeof(DeserializationVariableReplacementSettings).GetMethod(
+                "IsValidAkvSecretName",
+                BindingFlags.Static | BindingFlags.NonPublic)!;
+            object?[] arguments = { name, null };
+
+            bool result = (bool)method.Invoke(null, arguments)!;
+
+            Assert.AreEqual(expected, result);
+            StringAssert.Contains((string)arguments[1]!, errorFragment);
+        }
+
+        [TestMethod]
+        public void IsValidAkvSecretName_RejectsNamesLongerThanLimit()
+        {
+            MethodInfo method = typeof(DeserializationVariableReplacementSettings).GetMethod(
+                "IsValidAkvSecretName",
+                BindingFlags.Static | BindingFlags.NonPublic)!;
+            object?[] arguments = { new string('a', 128), null };
+
+            Assert.IsFalse((bool)method.Invoke(null, arguments)!);
+            StringAssert.Contains((string)arguments[1]!, "outside allowed range");
         }
 
         private static string WriteAkvFile(params string[] lines)

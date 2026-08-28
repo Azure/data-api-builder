@@ -684,7 +684,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private static (MsSqlQueryExecutor QueryExecutor, RuntimeConfigProvider Provider) CreateQueryExecutorForPoolingTest(
             string connectionString,
             bool enableObo,
-            Mock<IHttpContextAccessor> httpContextAccessor)
+            Mock<IHttpContextAccessor> httpContextAccessor,
+            IOboTokenProvider? oboTokenProvider = null)
         {
             DataSource dataSource = new(
                 DatabaseType: DatabaseType.MSSQL,
@@ -719,7 +720,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
 
-            MsSqlQueryExecutor queryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+            MsSqlQueryExecutor queryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, oboTokenProvider: oboTokenProvider);
             return (queryExecutor, provider);
         }
 
@@ -1011,6 +1012,107 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
 
             return httpContextAccessor;
+        }
+
+        [TestMethod]
+        public void AddStatementId_NoHttpContextReturns()
+        {
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(value: null);
+            (MsSqlQueryExecutor executor, _) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", false, accessor);
+
+            InvokeAddStatementId(executor, "id-1");
+        }
+
+        [TestMethod]
+        public void AddStatementId_AddsThenAppendsValues()
+        {
+            DefaultHttpContext context = new();
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(context);
+            (MsSqlQueryExecutor executor, _) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", false, accessor);
+
+            InvokeAddStatementId(executor, "id-1");
+            InvokeAddStatementId(executor, "id-2");
+
+            Assert.AreEqual("id-1;id-2", context.Items["QueryIdentifyingIds"]);
+        }
+
+        [TestMethod]
+        public void AddStatementId_NonStringExistingValueIsPreserved()
+        {
+            DefaultHttpContext context = new();
+            context.Items["QueryIdentifyingIds"] = 42;
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(context);
+            (MsSqlQueryExecutor executor, _) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", false, accessor);
+
+            InvokeAddStatementId(executor, "id-2");
+
+            Assert.AreEqual(42, context.Items["QueryIdentifyingIds"]);
+        }
+
+        private static void InvokeAddStatementId(MsSqlQueryExecutor executor, string statementId) =>
+            typeof(MsSqlQueryExecutor).GetMethod(
+                "AddStatementIDToMiddlewareContext",
+                BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(executor, new object[] { statementId });
+
+        [TestMethod]
+        public void CreateConnection_MissingDataSourceThrows()
+        {
+            Mock<IHttpContextAccessor> accessor = new();
+            (MsSqlQueryExecutor executor, _) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", false, accessor);
+
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                executor.CreateConnection("missing"));
+
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.DataSourceNotFound, exception.SubStatusCode);
+        }
+
+        [TestMethod]
+        public async Task SetManagedIdentityAccessToken_OboBearerTokenSetsConnectionToken()
+        {
+            DefaultHttpContext context = new();
+            context.Request.Headers.Authorization = "Bearer incoming-token";
+            context.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity("test"));
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(context);
+            Mock<IOboTokenProvider> tokenProvider = new();
+            tokenProvider.Setup(x => x.GetAccessTokenOnBehalfOfAsync(
+                    context.User, "incoming-token", "https://database.windows.net"))
+                .ReturnsAsync("database-token");
+            (MsSqlQueryExecutor executor, RuntimeConfigProvider configProvider) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", true, accessor, tokenProvider.Object);
+            using SqlConnection connection = new();
+
+            await executor.SetManagedIdentityAccessTokenIfAnyAsync(
+                connection, configProvider.GetConfig().DefaultDataSourceName);
+
+            Assert.AreEqual("database-token", connection.AccessToken);
+        }
+
+        [DataTestMethod]
+        [DataRow("")]
+        [DataRow("Basic credentials")]
+        public async Task SetManagedIdentityAccessToken_OboMissingBearerTokenThrows(string authorization)
+        {
+            DefaultHttpContext context = new();
+            context.Request.Headers.Authorization = authorization;
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(context);
+            (MsSqlQueryExecutor executor, RuntimeConfigProvider configProvider) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", true, accessor, Mock.Of<IOboTokenProvider>());
+            using SqlConnection connection = new();
+
+            DataApiBuilderException exception = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() =>
+                executor.SetManagedIdentityAccessTokenIfAnyAsync(
+                    connection, configProvider.GetConfig().DefaultDataSourceName));
+
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure, exception.SubStatusCode);
         }
 
         #endregion

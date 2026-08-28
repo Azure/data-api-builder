@@ -3,12 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Utils;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -133,6 +135,27 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             Assert.IsNull(dbObject);
             StringAssert.Contains(error, "is not defined in the configuration");
+        }
+
+        [DataTestMethod]
+        [DataRow(DataApiBuilderException.SubStatusCodes.DataSourceNotFound, "is not defined in the configuration")]
+        [DataRow(DataApiBuilderException.SubStatusCodes.UnexpectedError, "factory failure")]
+        public void TryResolveMetadata_FactoryExceptionReturnsError(
+            DataApiBuilderException.SubStatusCodes subStatusCode,
+            string expectedError)
+        {
+            RuntimeConfig config = CreateConfig(includeBookEntity: true);
+            Mock<IMetadataProviderFactory> factory = new();
+            factory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Throws(
+                new DataApiBuilderException("factory failure", HttpStatusCode.InternalServerError, subStatusCode));
+            ServiceCollection services = new();
+            services.AddSingleton(factory.Object);
+
+            bool result = McpMetadataHelper.TryResolveMetadata(
+                ENTITY_NAME, config, services.BuildServiceProvider(), out _, out _, out _, out string error);
+
+            Assert.IsFalse(result);
+            StringAssert.Contains(error, expectedError);
         }
 
         #region Helpers

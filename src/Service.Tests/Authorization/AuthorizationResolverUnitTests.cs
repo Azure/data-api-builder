@@ -34,6 +34,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         private const string TEST_AUTHENTICATION_TYPE = "TestAuth";
         private const string TEST_CLAIMTYPE_NAME = "TestName";
 
+        [TestMethod]
+        public void GetRolesForOperation_NullEntityNameThrows()
+        {
+            Assert.ThrowsException<ArgumentNullException>(() =>
+                IAuthorizationResolver.GetRolesForOperation(null!, EntityActionOperation.Read, null));
+        }
+
         #region Role Context Tests
         /// <summary>
         /// When the client role header is present, validates result when

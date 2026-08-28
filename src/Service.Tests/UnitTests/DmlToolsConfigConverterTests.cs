@@ -75,6 +75,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
+        public void Deserialize_NullBypassesConverter_AndUnexpectedTokenReturnsDefaultConfiguration()
+        {
+            DmlToolsConfig fromNull = JsonSerializer.Deserialize<DmlToolsConfig>("null", GetOptions());
+            DmlToolsConfig fromNumber = JsonSerializer.Deserialize<DmlToolsConfig>("42", GetOptions());
+
+            Assert.IsNull(fromNull);
+            Assert.IsNotNull(fromNumber);
+            Assert.IsTrue(fromNumber.DescribeEntities);
+        }
+
+        [TestMethod]
         public void Deserialize_ObjectWithIndividualSettings_AppliesOverrides()
         {
             string json = @"{
@@ -239,5 +250,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.IsFalse(jObject.ContainsKey("dml-tools"), "Default config should not be written.");
         }
+
     }
 }

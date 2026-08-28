@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
+using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -115,6 +117,33 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsFalse(ok);
             Assert.IsNull(effectiveRole);
             StringAssert.Contains(error, "permission");
+        }
+
+        [TestMethod]
+        public void AreColumnsAuthorizedForOperation_EmptyColumnsRequireNoAuthorization()
+        {
+            Mock<IAuthorizationResolver> resolver = new();
+
+            Assert.IsTrue(McpAuthorizationHelper.AreColumnsAuthorizedForOperation(
+                resolver.Object, "Book", "writer", EntityActionOperation.Create, Array.Empty<string>(), out string error));
+            Assert.AreEqual(string.Empty, error);
+            resolver.VerifyNoOtherCalls();
+        }
+
+        [DataTestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        public void AreColumnsAuthorizedForOperation_ReturnsResolverDecision(bool allowed)
+        {
+            Mock<IAuthorizationResolver> resolver = new();
+            resolver.Setup(r => r.AreColumnsAllowedForOperation(
+                "Book", "writer", EntityActionOperation.Create, It.IsAny<IEnumerable<string>>())).Returns(allowed);
+
+            bool result = McpAuthorizationHelper.AreColumnsAuthorizedForOperation(
+                resolver.Object, "Book", "writer", EntityActionOperation.Create, new[] { "title" }, out string error);
+
+            Assert.AreEqual(allowed, result);
+            Assert.AreEqual(allowed, string.IsNullOrEmpty(error));
         }
     }
 }

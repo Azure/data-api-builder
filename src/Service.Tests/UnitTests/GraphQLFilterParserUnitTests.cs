@@ -2,11 +2,15 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Reflection;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
+using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -62,6 +66,88 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expected, parser.GetMaxNestedFilterDepth());
         }
 
+        [TestMethod]
+        public void GetHttpContextFromMiddlewareContext_ReturnsStoredContext()
+        {
+            GQLFilterParser parser = CreateParserWithDepthLimit(null);
+            DefaultHttpContext httpContext = new();
+            Mock<HotChocolate.Resolvers.IMiddlewareContext> middleware = new();
+            middleware.SetupGet(x => x.ContextData).Returns(new Dictionary<string, object?>
+            {
+                [nameof(HttpContext)] = httpContext
+            });
+
+            Assert.AreSame(httpContext, parser.GetHttpContextFromMiddlewareContext(middleware.Object));
+        }
+
+        [TestMethod]
+        public void GetHttpContextFromMiddlewareContext_MissingContextThrows()
+        {
+            GQLFilterParser parser = CreateParserWithDepthLimit(null);
+            Mock<HotChocolate.Resolvers.IMiddlewareContext> middleware = new();
+            middleware.SetupGet(x => x.ContextData).Returns(new Dictionary<string, object?>());
+
+            Assert.ThrowsException<DataApiBuilderException>(() =>
+                parser.GetHttpContextFromMiddlewareContext(middleware.Object));
+        }
+
+        [TestMethod]
+        public void MakeChainPredicate_EmptyOperandsReturnsFalsePredicate()
+        {
+            Predicate predicate = GQLFilterParser.MakeChainPredicate(new(), PredicateOperation.AND);
+
+            Assert.IsNotNull(predicate);
+        }
+
+        [TestMethod]
+        public void MakeChainPredicate_MultipleOperandsBuildsRecursiveChain()
+        {
+            Predicate first = Predicate.MakeFalsePredicate();
+            Predicate second = Predicate.MakeFalsePredicate();
+            List<PredicateOperand> operands = new() { new(first), new(second) };
+
+            Predicate result = GQLFilterParser.MakeChainPredicate(operands, PredicateOperation.OR);
+
+            Assert.AreEqual(PredicateOperation.OR, result.Op);
+        }
+
+        [TestMethod]
+        public void PreprocessInOperatorValues_RejectsNonListValue()
+        {
+            TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(() =>
+                InvokePreprocessInOperatorValues("not-a-list"));
+
+            Assert.IsInstanceOfType<DataApiBuilderException>(exception.InnerException);
+        }
+
+        [TestMethod]
+        public void PreprocessInOperatorValues_RejectsMoreThanOneHundredValues()
+        {
+            List<IValueNode> values = new();
+            for (int index = 0; index < 101; index++)
+            {
+                values.Add(new IntValueNode(index));
+            }
+
+            TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(() =>
+                InvokePreprocessInOperatorValues(values));
+
+            Assert.IsInstanceOfType<DataApiBuilderException>(exception.InnerException);
+        }
+
+        [TestMethod]
+        public void PreprocessInOperatorValues_FiltersNullsAndReturnsNullForEmptyValues()
+        {
+            List<IValueNode> mixed = new() { NullValueNode.Default, new IntValueNode(7) };
+
+            List<IValueNode> filtered = (List<IValueNode>)InvokePreprocessInOperatorValues(mixed)!;
+
+            Assert.AreEqual(1, filtered.Count);
+            Assert.AreEqual("7", filtered[0].Value);
+            Assert.IsNull(InvokePreprocessInOperatorValues(new List<IValueNode> { NullValueNode.Default }));
+            Assert.IsNull(InvokePreprocessInOperatorValues(new List<IValueNode>()));
+        }
+
         private static GQLFilterParser CreateParserWithDepthLimit(int? depthLimit)
         {
             RuntimeConfig config = new(
@@ -77,6 +163,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigProvider provider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
             Mock<IMetadataProviderFactory> metadataProviderFactory = new();
             return new GQLFilterParser(provider, metadataProviderFactory.Object);
+        }
+
+        private static object? InvokePreprocessInOperatorValues(object value)
+        {
+            return typeof(FieldFilterParser).GetMethod(
+                "PreprocessInOperatorValues",
+                BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, new[] { value });
         }
     }
 }

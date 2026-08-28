@@ -1,10 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -147,6 +149,87 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             Assert.AreEqual(GraphQLUtils.AUTHORIZE_DIRECTIVE, directive!.Name.Value);
             Assert.AreEqual(1, directive.Arguments.Count);
             Assert.AreEqual(GraphQLUtils.AUTHORIZE_DIRECTIVE_ARGUMENT_ROLES, directive.Arguments[0].Name.Value);
+        }
+
+        [DataTestMethod]
+        [DataRow(SyntaxKind.IntValue, true)]
+        [DataRow(SyntaxKind.EnumValue, true)]
+        [DataRow(SyntaxKind.ObjectValue, false)]
+        public void IsScalarField_ReturnsExpected(SyntaxKind kind, bool expected)
+        {
+            Assert.AreEqual(expected, GraphQLUtils.IsScalarField(kind));
+        }
+
+        [TestMethod]
+        public void LinkingEntityName_RoundTripsSourceAndTarget()
+        {
+            string name = GraphQLUtils.GenerateLinkingEntityName("Book", "Author");
+            Tuple<string, string> decoded = GraphQLUtils.GetSourceAndTargetEntityNameFromLinkingEntityName(name);
+
+            Assert.AreEqual("Book", decoded.Item1);
+            Assert.AreEqual("Author", decoded.Item2);
+            Assert.ThrowsException<ArgumentException>(
+                () => GraphQLUtils.GetSourceAndTargetEntityNameFromLinkingEntityName("Book$Author"));
+            Assert.ThrowsException<ArgumentException>(
+                () => GraphQLUtils.GetSourceAndTargetEntityNameFromLinkingEntityName("LinkingEntity$Book"));
+        }
+
+        [TestMethod]
+        public void GetFieldNodeForGivenFieldName_ReturnsValueOrThrows()
+        {
+            List<ObjectFieldNode> fields = new() { new("id", new IntValueNode(7)) };
+
+            Assert.AreEqual(7, ((IntValueNode)GraphQLUtils.GetFieldNodeForGivenFieldName(fields, "id")).ToInt32());
+            Assert.ThrowsException<ArgumentException>(() => GraphQLUtils.GetFieldNodeForGivenFieldName(fields, "missing"));
+        }
+
+        [TestMethod]
+        public void RelationshipHelpers_HandleConfiguredMissingAndAbsentRelationships()
+        {
+            EntityRelationship relationship = new(
+                Cardinality.Many,
+                "Author",
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                "book_author",
+                Array.Empty<string>(),
+                Array.Empty<string>());
+            Entity entity = CreateEntity(new Dictionary<string, EntityRelationship> { ["authors"] = relationship });
+
+            Assert.IsTrue(GraphQLUtils.IsMToNRelationship(entity, "authors"));
+            Assert.IsFalse(GraphQLUtils.IsMToNRelationship(entity, "missing"));
+            Assert.AreEqual("Author", GraphQLUtils.GetRelationshipTargetEntityName(entity, "Book", "authors"));
+            Assert.ThrowsException<DataApiBuilderException>(
+                () => GraphQLUtils.GetRelationshipTargetEntityName(entity, "Book", "missing"));
+            Assert.ThrowsException<DataApiBuilderException>(
+                () => GraphQLUtils.GetRelationshipTargetEntityName(CreateEntity(null), "Book", "authors"));
+        }
+
+        [TestMethod]
+        public void RelationshipDirective_ExtractsTargetCardinalityAndDirective()
+        {
+            FieldDefinitionNode field = ParseObjectType(
+                "type Book { author: Author @relationship(target: \"Author\", cardinality: \"many\") }").Fields[0];
+
+            Assert.AreEqual("Author", RelationshipDirectiveType.Target(field));
+            Assert.AreEqual(Cardinality.Many, RelationshipDirectiveType.Cardinality(field));
+            Assert.IsNotNull(RelationshipDirectiveType.GetDirective(field));
+
+            FieldDefinitionNode plainField = ParseObjectType("type Book { author: Author }").Fields[0];
+            Assert.AreEqual("Author", RelationshipDirectiveType.Target(plainField));
+            Assert.ThrowsException<ArgumentException>(() => RelationshipDirectiveType.Cardinality(plainField));
+        }
+
+        private static Entity CreateEntity(Dictionary<string, EntityRelationship>? relationships)
+        {
+            return new Entity(
+                Source: new EntitySource("books", EntitySourceType.Table, null, null),
+                GraphQL: new EntityGraphQLOptions("Book", "Books"),
+                Fields: null,
+                Rest: new EntityRestOptions(),
+                Permissions: Array.Empty<EntityPermission>(),
+                Mappings: null,
+                Relationships: relationships);
         }
 
         private static ObjectTypeDefinitionNode ParseObjectType(string sdl)

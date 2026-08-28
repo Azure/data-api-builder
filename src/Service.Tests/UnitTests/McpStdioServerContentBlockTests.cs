@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -170,6 +171,138 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "isError must be absent from the wire for successful tool results.");
         }
 
+        [TestMethod]
+        public void CoerceToMcpContentBlocks_Null_ReturnsEmptyArray()
+        {
+            Assert.AreEqual(0, InvokeCoerceToMcpContentBlocks(null).Length);
+        }
+
+        [TestMethod]
+        public void CoerceToMcpContentBlocks_MixedEnumerable_NormalizesStringsAndJson()
+        {
+            using JsonDocument json = JsonDocument.Parse("{\"answer\":42}");
+            TextContentBlock existingBlock = new() { Text = "already normalized" };
+            object input = new
+            {
+                Content = new object[] { "plain text", json.RootElement.Clone(), existingBlock }
+            };
+
+            object[] result = InvokeCoerceToMcpContentBlocks(input);
+
+            Assert.AreEqual(3, result.Length);
+            JsonElement textBlock = SerializeToElement(result[0]);
+            Assert.AreEqual("text", textBlock.GetProperty("type").GetString());
+            Assert.AreEqual("plain text", textBlock.GetProperty("text").GetString());
+
+            JsonElement jsonBlock = SerializeToElement(result[1]);
+            Assert.AreEqual("application/json", jsonBlock.GetProperty("type").GetString());
+            Assert.AreEqual(42, jsonBlock.GetProperty("data").GetProperty("answer").GetInt32());
+            Assert.AreSame(existingBlock, result[2]);
+        }
+
+        [TestMethod]
+        public void CoerceToMcpContentBlocks_StringContent_ReturnsTextBlock()
+        {
+            object[] result = InvokeCoerceToMcpContentBlocks(new { Content = "hello" });
+
+            JsonElement block = SerializeToElement(result.Single());
+            Assert.AreEqual("text", block.GetProperty("type").GetString());
+            Assert.AreEqual("hello", block.GetProperty("text").GetString());
+        }
+
+        [TestMethod]
+        public void CoerceToMcpContentBlocks_JsonContent_ReturnsApplicationJsonBlock()
+        {
+            using JsonDocument json = JsonDocument.Parse("[1,2,3]");
+
+            object[] result = InvokeCoerceToMcpContentBlocks(new { Content = json.RootElement.Clone() });
+
+            JsonElement block = SerializeToElement(result.Single());
+            Assert.AreEqual("application/json", block.GetProperty("type").GetString());
+            Assert.AreEqual(3, block.GetProperty("data").GetArrayLength());
+        }
+
+        [TestMethod]
+        public void CoerceToMcpContentBlocks_RawJsonElement_ReturnsApplicationJsonBlock()
+        {
+            using JsonDocument json = JsonDocument.Parse("true");
+
+            object[] result = InvokeCoerceToMcpContentBlocks(json.RootElement.Clone());
+
+            JsonElement block = SerializeToElement(result.Single());
+            Assert.AreEqual("application/json", block.GetProperty("type").GetString());
+            Assert.IsTrue(block.GetProperty("data").GetBoolean());
+        }
+
+        [TestMethod]
+        public void CoerceToMcpContentBlocks_ObjectWithoutContent_SerializesAsText()
+        {
+            object[] result = InvokeCoerceToMcpContentBlocks(new { Status = "ok", Count = 2 });
+
+            JsonElement block = SerializeToElement(result.Single());
+            Assert.AreEqual("text", block.GetProperty("type").GetString());
+            StringAssert.Contains(block.GetProperty("text").GetString(), "\"Status\":\"ok\"");
+        }
+
+        [TestMethod]
+        public void SafeToString_LargeJson_TruncatesPreview()
+        {
+            string result = InvokeSafeToString(new { Value = new string('x', (32 * 1024) + 500) });
+
+            Assert.IsTrue(result.StartsWith("{\"Value\":\"", StringComparison.Ordinal));
+            StringAssert.Contains(result, "... [truncated, total length=");
+            Assert.IsTrue(result.Length < (33 * 1024));
+        }
+
+        [TestMethod]
+        public void SafeToString_SerializationFailure_UsesToStringFallback()
+        {
+            Assert.AreEqual("fallback", InvokeSafeToString(new SelfReferencingObject("fallback")));
+        }
+
+        [TestMethod]
+        public void SafeToString_NullToStringFallback_ReturnsEmptyString()
+        {
+            Assert.AreEqual(string.Empty, InvokeSafeToString(new SelfReferencingObject(null)));
+        }
+
+        [DataTestMethod]
+        [DataRow("\"abc\"", "abc", DisplayName = "String id")]
+        [DataRow("9223372036854775807", long.MaxValue, DisplayName = "Int64 id")]
+        [DataRow("true", null, DisplayName = "Boolean id")]
+        [DataRow("[]", null, DisplayName = "Array id")]
+        [DataRow("{}", null, DisplayName = "Object id")]
+        public void GetIdValue_ConvertsSupportedPrimitiveTypes(string json, object? expected)
+        {
+            using JsonDocument document = JsonDocument.Parse(json);
+
+            object? actual = InvokeGetIdValue(document.RootElement);
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        public void GetIdValue_FloatingPointId_ReturnsDouble()
+        {
+            using JsonDocument document = JsonDocument.Parse("3.25");
+
+            object? actual = InvokeGetIdValue(document.RootElement);
+
+            Assert.IsInstanceOfType<double>(actual);
+            Assert.AreEqual(3.25, (double)actual, 0.0001);
+        }
+
+        [TestMethod]
+        public void GetIdValue_NumberOutsideFiniteRange_ReturnsPositiveInfinity()
+        {
+            using JsonDocument document = JsonDocument.Parse("1e400");
+
+            object? actual = InvokeGetIdValue(document.RootElement);
+
+            Assert.IsInstanceOfType<double>(actual);
+            Assert.IsTrue(double.IsPositiveInfinity((double)actual));
+        }
+
         private static (McpStdioServer server, MemoryStream memoryStream, McpStdoutWriter stdoutWriter) CreateServerWithCapturedOutput()
         {
             MemoryStream memoryStream = new();
@@ -203,7 +336,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             return reader.ReadToEnd().TrimEnd();
         }
 
-        private static object[] InvokeCoerceToMcpContentBlocks(object callResult)
+        private static object[] InvokeCoerceToMcpContentBlocks(object? callResult)
         {
             MethodInfo? coerceMethod = typeof(McpStdioServer).GetMethod(
                 "CoerceToMcpContentBlocks",
@@ -211,8 +344,34 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.IsNotNull(coerceMethod, "Failed to resolve CoerceToMcpContentBlocks via reflection.");
 
-            object? result = coerceMethod!.Invoke(obj: null, parameters: new object[] { callResult });
+            object? result = coerceMethod!.Invoke(obj: null, parameters: new object?[] { callResult });
             return (object[])result!;
+        }
+
+        private static string InvokeSafeToString(object value)
+        {
+            MethodInfo? safeToStringMethod = typeof(McpStdioServer).GetMethod(
+                "SafeToString",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.IsNotNull(safeToStringMethod, "Failed to resolve SafeToString via reflection.");
+            return (string)safeToStringMethod.Invoke(obj: null, parameters: new[] { value })!;
+        }
+
+        private static object? InvokeGetIdValue(JsonElement id)
+        {
+            MethodInfo? getIdValueMethod = typeof(McpStdioServer).GetMethod(
+                "GetIdValue",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.IsNotNull(getIdValueMethod, "Failed to resolve GetIdValue via reflection.");
+            return getIdValueMethod.Invoke(obj: null, parameters: new object[] { id });
+        }
+
+        private static JsonElement SerializeToElement(object value)
+        {
+            using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize(value));
+            return document.RootElement.Clone();
         }
 
         private static void InvokeWriteResult(McpStdioServer server, JsonElement id, object resultObject)
@@ -226,6 +385,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // WriteResult signature: void WriteResult(JsonElement? id, object resultObject)
             // We pass a non-nullable JsonElement, so wrap it as JsonElement?
             writeResultMethod!.Invoke(server, new object?[] { (JsonElement?)id, resultObject });
+        }
+
+        private sealed class SelfReferencingObject
+        {
+            private readonly string? _text;
+
+            public SelfReferencingObject(string? text)
+            {
+                _text = text;
+            }
+
+            public SelfReferencingObject Self => this;
+
+            public override string? ToString() => _text;
         }
     }
 }

@@ -81,6 +81,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [TestMethod]
+        public void TryParseEntityAndData_InvalidEntityReturnsEarly()
+        {
+            Assert.IsFalse(McpArgumentParser.TryParseEntityAndData(Parse("{}"), out _, out _, out string error));
+            StringAssert.Contains(error, "entity");
+        }
+
+        [TestMethod]
         public void TryParseEntityAndKeys_Valid_ReturnsTrue()
         {
             bool ok = McpArgumentParser.TryParseEntityAndKeys(
@@ -170,6 +177,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [TestMethod]
+        public void TryParseEntityKeysAndFields_InvalidKeysReturnsEarly()
+        {
+            Assert.IsFalse(McpArgumentParser.TryParseEntityKeysAndFields(
+                Parse(@"{ ""entity"": ""Book"" }"), out _, out _, out _, out string error));
+            StringAssert.Contains(error, "keys");
+        }
+
+        [TestMethod]
+        public void TryParseEntityKeysAndFields_FieldsNotObjectReturnsFalse()
+        {
+            Assert.IsFalse(McpArgumentParser.TryParseEntityKeysAndFields(
+                Parse(@"{ ""entity"": ""Book"", ""keys"": { ""id"": 1 }, ""fields"": [] }"),
+                out _, out _, out _, out string error));
+            StringAssert.Contains(error, "JSON object");
+        }
+
+        [TestMethod]
         public void TryParseExecuteArguments_NonObjectRoot_ReturnsFalse()
         {
             bool ok = McpArgumentParser.TryParseExecuteArguments(
@@ -216,6 +240,32 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(ok);
             Assert.AreEqual("GetBooks", entity);
             Assert.AreEqual(0, parameters.Count);
+        }
+
+        [TestMethod]
+        public void TryParseExecuteArguments_InvalidEntityReturnsEarly()
+        {
+            Assert.IsFalse(McpArgumentParser.TryParseExecuteArguments(Parse("{}"), out _, out _, out string error));
+            StringAssert.Contains(error, "entity");
+        }
+
+        [TestMethod]
+        public void TryParseExecuteArguments_NonObjectParametersAreIgnored()
+        {
+            Assert.IsTrue(McpArgumentParser.TryParseExecuteArguments(
+                Parse(@"{ ""entity"": ""GetBooks"", ""parameters"": [] }"), out _, out Dictionary<string, object?> parameters, out _));
+            Assert.AreEqual(0, parameters.Count);
+        }
+
+        [TestMethod]
+        public void TryParseExecuteArguments_FalseAndCompositeParametersAreConverted()
+        {
+            Assert.IsTrue(McpArgumentParser.TryParseExecuteArguments(
+                Parse(@"{ ""entity"": ""GetBooks"", ""parameters"": { ""disabled"": false, ""items"": [1] } }"),
+                out _, out Dictionary<string, object?> parameters, out _));
+
+            Assert.AreEqual(false, parameters["disabled"]);
+            Assert.AreEqual("[1]", parameters["items"]);
         }
     }
 }

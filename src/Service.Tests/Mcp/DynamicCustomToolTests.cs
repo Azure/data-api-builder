@@ -3,7 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +20,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -350,6 +353,225 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(0, capturedContext!.ResolvedParameters.Count);
         }
 
+        [TestMethod]
+        public void IsEnabled_AlwaysReturnsTrue()
+        {
+            DynamicCustomTool tool = new(TEST_ENTITY, CreateTestStoredProcedureEntity());
+
+            Assert.IsTrue(tool.IsEnabled(CreateRuntimeConfig()));
+        }
+
+        [TestMethod]
+        public async Task ExecuteAsync_CanceledToken_ReturnsOperationCanceled()
+        {
+            DynamicCustomTool tool = new(TEST_ENTITY, CreateTestStoredProcedureEntity());
+            IServiceProvider serviceProvider = BuildExecutionServiceProvider(new());
+            using CancellationTokenSource cancellationTokenSource = new();
+            cancellationTokenSource.Cancel();
+
+            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, cancellationTokenSource.Token);
+
+            AssertError(result, "OperationCanceled");
+        }
+
+        [TestMethod]
+        public async Task ExecuteAsync_EntityRemovedAfterRegistration_ReturnsEntityNotFound()
+        {
+            CallToolResult result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: null,
+                runtimeConfig: CreateRuntimeConfig(includeEntity: false));
+
+            AssertError(result, "EntityNotFound");
+        }
+
+        [TestMethod]
+        public async Task ExecuteAsync_EntityChangedToTable_ReturnsInvalidEntity()
+        {
+            CallToolResult result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: null,
+                runtimeConfig: CreateRuntimeConfig(sourceType: EntitySourceType.Table));
+
+            AssertError(result, "InvalidEntity");
+        }
+
+        [TestMethod]
+        public async Task ExecuteAsync_UnresolvableMetadata_ReturnsEntityNotFound()
+        {
+            CallToolResult result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: null,
+                registerMetadataFactory: false);
+
+            AssertError(result, "EntityNotFound");
+        }
+
+        [TestMethod]
+        public async Task ExecuteAsync_InvalidRoleContext_ReturnsPermissionDenied()
+        {
+            CallToolResult result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: null,
+                validRoleContext: false);
+
+            AssertError(result, "PermissionDenied");
+        }
+
+        [TestMethod]
+        public async Task ExecuteAsync_UnauthorizedOperation_ReturnsPermissionDenied()
+        {
+            CallToolResult result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: null,
+                authorizeOperation: false);
+
+            AssertError(result, "PermissionDenied");
+        }
+
+        [TestMethod]
+        public async Task ExecuteAsync_MetadataObjectChangedToTable_ReturnsInvalidEntity()
+        {
+            CallToolResult result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: null,
+                metadataObject: new DatabaseTable("dbo", "books") { SourceType = EntitySourceType.Table });
+
+            AssertError(result, "InvalidEntity");
+        }
+
+        [TestMethod]
+        public async Task ExecuteAsync_ConvertsAllJsonParameterKinds()
+        {
+            Dictionary<string, ParameterDefinition> dbParameters = new()
+            {
+                ["truth"] = new(),
+                ["falsehood"] = new(),
+                ["nothing"] = new(),
+                ["complex"] = new()
+            };
+            StoredProcedureRequestContext? capturedContext = null;
+            IServiceProvider serviceProvider = BuildExecutionServiceProvider(
+                dbParameters,
+                context => capturedContext = context);
+            DynamicCustomTool tool = new(TEST_ENTITY, CreateTestStoredProcedureEntity());
+            using JsonDocument arguments = JsonDocument.Parse(
+                "{\"truth\":true,\"falsehood\":false,\"nothing\":null,\"complex\":{\"x\":1}}");
+
+            CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
+
+            AssertSuccess(result, "All JSON parameter kinds should be converted.");
+            Assert.IsNotNull(capturedContext);
+            Assert.AreEqual(true, capturedContext.ResolvedParameters["truth"]);
+            Assert.AreEqual(false, capturedContext.ResolvedParameters["falsehood"]);
+            Assert.IsNull(capturedContext.ResolvedParameters["nothing"]);
+            Assert.AreEqual("{\"x\":1}", capturedContext.ResolvedParameters["complex"]);
+        }
+
+        [DataTestMethod]
+        [DataRow("dab", "ExecutionError")]
+        [DataRow("database", "DatabaseError")]
+        [DataRow("unexpected", "UnexpectedError")]
+        public async Task ExecuteAsync_ExecutionException_MapsError(string exceptionType, string expectedError)
+        {
+            Exception exception = exceptionType switch
+            {
+                "dab" => new DataApiBuilderException(
+                    "DAB execution failed",
+                    HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.BadRequest),
+                "database" => new FakeDbException("provider failed"),
+                _ => new InvalidOperationException("unexpected failure")
+            };
+
+            CallToolResult result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: null,
+                queryOutcome: exception);
+
+            AssertError(result, expectedError);
+        }
+
+        [DataTestMethod]
+        [DataRow("bad", "BadRequest")]
+        [DataRow("unauthorized", "PermissionDenied")]
+        [DataRow("unknown", "Stored procedure executed successfully")]
+        public async Task ExecuteAsync_NonSuccessResult_MapsResponse(string resultType, string expectedText)
+        {
+            IActionResult queryResult = resultType switch
+            {
+                "bad" => new BadRequestObjectResult((object?)null),
+                "unauthorized" => new UnauthorizedObjectResult("denied"),
+                _ => new NoContentResult()
+            };
+
+            CallToolResult result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: null,
+                queryOutcome: queryResult);
+
+            StringAssert.Contains(GetFirstText(result), expectedText);
+        }
+
+        [TestMethod]
+        public async Task ExecuteAsync_JsonDocumentObjectResult_WrapsValueInArray()
+        {
+            using JsonDocument queryDocument = JsonDocument.Parse("{\"id\":1}");
+            CallToolResult result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: new() { ["ignored"] = null },
+                queryOutcome: new OkObjectResult(queryDocument));
+
+            AssertError(result, "InvalidArguments");
+
+            result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: null,
+                queryOutcome: new OkObjectResult(queryDocument));
+
+            AssertSuccess(result, "JsonDocument results should be returned.");
+            using JsonDocument response = JsonDocument.Parse(GetFirstText(result));
+            Assert.AreEqual(JsonValueKind.Array, response.RootElement.GetProperty("value").ValueKind);
+        }
+
+        [TestMethod]
+        public async Task ExecuteAsync_PocoResult_IsSerialized()
+        {
+            CallToolResult result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: null,
+                queryOutcome: new OkObjectResult(new { count = 2 }));
+
+            AssertSuccess(result, "POCO results should be serialized.");
+            StringAssert.Contains(GetFirstText(result), "count");
+        }
+
+        [TestMethod]
+        public void InitializeMetadata_UnresolvableOrNonStoredProcedureMetadata_FallsBackToConfig()
+        {
+            Entity entity = CreateTestStoredProcedureEntity(parameters: new[] { new ParameterMetadata { Name = "id" } });
+            DynamicCustomTool missingMetadataTool = new("MissingMetadata", entity);
+            missingMetadataTool.InitializeMetadata(BuildMetadataServiceProvider("MissingMetadata", metadataObject: null));
+            Assert.AreEqual(JsonValueKind.Array, ParseSchemaProperties(missingMetadataTool.GetToolMetadata()).GetProperty("id").GetProperty("type").ValueKind);
+
+            DynamicCustomTool tableMetadataTool = new("TableMetadata", entity);
+            tableMetadataTool.InitializeMetadata(BuildMetadataServiceProvider(
+                "TableMetadata",
+                new DatabaseTable("dbo", "books") { SourceType = EntitySourceType.Table }));
+            Assert.AreEqual(JsonValueKind.Array, ParseSchemaProperties(tableMetadataTool.GetToolMetadata()).GetProperty("id").GetProperty("type").ValueKind);
+        }
+
+        [TestMethod]
+        public void InitializeMetadata_UnknownSystemType_UsesPermissiveSchema()
+        {
+            JsonElement properties = InitializeAndGetSchemaProperties(new Dictionary<string, ParameterDefinition>
+            {
+                ["payload"] = new() { SystemType = typeof(object) }
+            });
+
+            Assert.AreEqual(JsonValueKind.Array, properties.GetProperty("payload").GetProperty("type").ValueKind);
+        }
+
         #endregion
 
         #region Execution Helpers
@@ -363,11 +585,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         private static async Task<CallToolResult> ExecuteCustomToolAsync(
             Dictionary<string, ParameterDefinition> dbParameters,
             Dictionary<string, object>? userParameters,
-            Action<StoredProcedureRequestContext>? captureContext = null)
+            Action<StoredProcedureRequestContext>? captureContext = null,
+            object? queryOutcome = null,
+            RuntimeConfig? runtimeConfig = null,
+            DatabaseObject? metadataObject = null,
+            bool registerMetadataFactory = true,
+            bool validRoleContext = true,
+            bool authorizeOperation = true)
         {
             IServiceProvider sp = BuildExecutionServiceProvider(
                 dbParameters: dbParameters,
-                captureContext: captureContext);
+                captureContext: captureContext,
+                queryOutcome: queryOutcome,
+                runtimeConfig: runtimeConfig,
+                metadataObject: metadataObject,
+                registerMetadataFactory: registerMetadataFactory,
+                validRoleContext: validRoleContext,
+                authorizeOperation: authorizeOperation);
 
             Entity entity = CreateTestStoredProcedureEntity();
             DynamicCustomTool tool = new(TEST_ENTITY, entity);
@@ -385,38 +619,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// </summary>
         private static IServiceProvider BuildExecutionServiceProvider(
             Dictionary<string, ParameterDefinition> dbParameters,
-            Action<StoredProcedureRequestContext>? captureContext = null)
+            Action<StoredProcedureRequestContext>? captureContext = null,
+            object? queryOutcome = null,
+            RuntimeConfig? runtimeConfig = null,
+            DatabaseObject? metadataObject = null,
+            bool registerMetadataFactory = true,
+            bool validRoleContext = true,
+            bool authorizeOperation = true)
         {
-            Entity entity = new(
-                Source: new(SP_SOURCE_OBJECT, EntitySourceType.StoredProcedure, Parameters: null, KeyFields: null),
-                GraphQL: new(TEST_ENTITY, TEST_ENTITY),
-                Rest: new(Enabled: true),
-                Fields: null,
-                Permissions: new[]
-                {
-                    new EntityPermission(
-                        Role: "anonymous",
-                        Actions: new[]
-                        {
-                            new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
-                        })
-                },
-                Relationships: null,
-                Mappings: null,
-                Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: null));
-
-            Dictionary<string, Entity> entities = new() { [TEST_ENTITY] = entity };
-
-            RuntimeConfig config = new(
-                Schema: "test-schema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(Enabled: true, Path: "/mcp", DmlTools: null),
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
-                ),
-                Entities: new(entities));
+            RuntimeConfig config = runtimeConfig ?? CreateRuntimeConfig();
 
             ServiceCollection services = new();
 
@@ -425,11 +636,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Mock authorization resolver
             Mock<IAuthorizationResolver> mockAuthResolver = new();
-            mockAuthResolver.Setup(x => x.IsValidRoleContext(It.IsAny<HttpContext>())).Returns(true);
+            mockAuthResolver.Setup(x => x.IsValidRoleContext(It.IsAny<HttpContext>())).Returns(validRoleContext);
             mockAuthResolver
                 .Setup(x => x.AreRoleAndOperationDefinedForEntity(
                     It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EntityActionOperation>()))
-                .Returns(true);
+                .Returns(authorizeOperation);
             services.AddSingleton(mockAuthResolver.Object);
 
             // Mock HttpContext
@@ -439,7 +650,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             services.AddSingleton(httpContextAccessor);
 
             // Mock metadata provider with DatabaseStoredProcedure
-            DatabaseObject dbObject = new DatabaseStoredProcedure("dbo", SP_SOURCE_OBJECT)
+            DatabaseObject dbObject = metadataObject ?? new DatabaseStoredProcedure("dbo", SP_SOURCE_OBJECT)
             {
                 SourceType = EntitySourceType.StoredProcedure,
                 StoredProcedureDefinition = new StoredProcedureDefinition
@@ -458,18 +669,35 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             mockMetadataProviderFactory
                 .Setup(x => x.GetMetadataProvider(It.IsAny<string>()))
                 .Returns(mockSqlMetadataProvider.Object);
-            services.AddSingleton(mockMetadataProviderFactory.Object);
+            if (registerMetadataFactory)
+            {
+                services.AddSingleton(mockMetadataProviderFactory.Object);
+            }
 
             // Mock query engine
             Mock<IQueryEngine> mockQueryEngine = new();
-            mockQueryEngine
-                .Setup(x => x.ExecuteAsync(It.IsAny<StoredProcedureRequestContext>(), It.IsAny<string>()))
-                .Returns((StoredProcedureRequestContext ctx, string ds) =>
+            if (queryOutcome is Exception exception)
+            {
+                mockQueryEngine
+                    .Setup(x => x.ExecuteAsync(It.IsAny<StoredProcedureRequestContext>(), It.IsAny<string>()))
+                    .ThrowsAsync(exception);
+            }
+            else
+            {
+                mockQueryEngine
+                    .Setup(x => x.ExecuteAsync(It.IsAny<StoredProcedureRequestContext>(), It.IsAny<string>()))
+                    .Returns((StoredProcedureRequestContext ctx, string ds) =>
                 {
                     captureContext?.Invoke(ctx);
+                    if (queryOutcome is IActionResult configuredResult)
+                    {
+                        return Task.FromResult(configuredResult);
+                    }
+
                     using JsonDocument doc = JsonDocument.Parse("[]");
                     return Task.FromResult<IActionResult>(new OkObjectResult(doc.RootElement.Clone()));
                 });
+            }
 
             Mock<IQueryEngineFactory> mockQueryEngineFactory = new();
             mockQueryEngineFactory
@@ -479,6 +707,69 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             services.AddLogging();
 
+            return services.BuildServiceProvider();
+        }
+
+        private static RuntimeConfig CreateRuntimeConfig(
+            bool includeEntity = true,
+            EntitySourceType sourceType = EntitySourceType.StoredProcedure)
+        {
+            Dictionary<string, Entity> entities = new();
+            if (includeEntity)
+            {
+                entities[TEST_ENTITY] = new Entity(
+                    Source: new(SP_SOURCE_OBJECT, sourceType, Parameters: null, KeyFields: null),
+                    GraphQL: new(TEST_ENTITY, TEST_ENTITY),
+                    Rest: new(Enabled: true),
+                    Fields: null,
+                    Permissions: new[]
+                    {
+                        new EntityPermission(
+                            Role: "anonymous",
+                            Actions: new[]
+                            {
+                                new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
+                            })
+                    },
+                    Relationships: null,
+                    Mappings: null,
+                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: null));
+            }
+
+            return new RuntimeConfig(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(Enabled: true, Path: "/mcp", DmlTools: null),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)),
+                Entities: new(entities));
+        }
+
+        private static IServiceProvider BuildMetadataServiceProvider(string entityName, DatabaseObject? metadataObject)
+        {
+            RuntimeConfig config = new(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType.MSSQL, "", null),
+                Entities: new(new Dictionary<string, Entity>
+                {
+                    [entityName] = CreateTestStoredProcedureEntity()
+                }));
+            ServiceCollection services = new();
+            services.AddSingleton(TestHelper.GenerateInMemoryRuntimeConfigProvider(config));
+
+            Mock<ISqlMetadataProvider> metadataProvider = new();
+            Dictionary<string, DatabaseObject> objects = new();
+            if (metadataObject is not null)
+            {
+                objects[entityName] = metadataObject;
+            }
+
+            metadataProvider.Setup(x => x.EntityToDatabaseObject).Returns(objects);
+            Mock<IMetadataProviderFactory> factory = new();
+            factory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(metadataProvider.Object);
+            services.AddSingleton(factory.Object);
             return services.BuildServiceProvider();
         }
 
@@ -498,6 +789,27 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             return result.Content[0] is TextContentBlock textBlock
                 ? textBlock.Text ?? string.Empty
                 : string.Empty;
+        }
+
+        private static void AssertError(CallToolResult result, string expectedError)
+        {
+            Assert.IsTrue(result.IsError == true, GetFirstText(result));
+            StringAssert.Contains(GetFirstText(result), expectedError);
+        }
+
+        private sealed class FakeDbException : DbException
+        {
+            public FakeDbException()
+            {
+            }
+
+            public FakeDbException(string message) : base(message)
+            {
+            }
+
+            public FakeDbException(string message, Exception innerException) : base(message, innerException)
+            {
+            }
         }
 
         #endregion

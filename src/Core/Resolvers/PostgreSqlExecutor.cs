@@ -13,6 +13,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -146,6 +147,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private static bool ShouldManagedIdentityAccessBeAttempted(NpgsqlConnectionStringBuilder builder)
         {
             return string.IsNullOrEmpty(builder.Password);
+        }
+
+        /// <inheritdoc />
+        public override void PopulateDbTypeForParameter(
+            KeyValuePair<string, DbConnectionParam> parameterEntry,
+            DbParameter parameter)
+        {
+            if (parameterEntry.Value.UseDatabaseTypeInference && parameter is NpgsqlParameter npgsqlParameter)
+            {
+                npgsqlParameter.NpgsqlDbType = NpgsqlDbType.Unknown;
+            }
         }
 
         /// <inheritdoc/>

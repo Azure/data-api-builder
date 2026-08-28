@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -69,6 +71,39 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(1, result.Rows.Count);
             Assert.AreEqual(42, result.Rows[0].Columns["id"]);
+        }
+
+        /// <summary>
+        /// PostgreSQL upsert key parameters marked for database type inference must be sent without
+        /// Npgsql's CLR string-to-text type declaration.
+        /// </summary>
+        [TestMethod]
+        public void UpsertKeyParameterUsesDatabaseTypeInference()
+        {
+            RuntimeConfigProvider provider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            Mock<DbExceptionParser> dbExceptionParser = new(provider);
+            Mock<ILogger<PostgreSqlQueryExecutor>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            PostgreSqlQueryExecutor executor = new(
+                provider,
+                dbExceptionParser.Object,
+                queryExecutorLogger.Object,
+                httpContextAccessor.Object);
+
+            DbConnectionParam connectionParam = new("K000 ")
+            {
+                UseDatabaseTypeInference = true
+            };
+            KeyValuePair<string, DbConnectionParam> parameterEntry = new("@param0", connectionParam);
+            NpgsqlParameter parameter = new()
+            {
+                ParameterName = parameterEntry.Key,
+                Value = connectionParam.Value!
+            };
+
+            executor.PopulateDbTypeForParameter(parameterEntry, parameter);
+
+            Assert.AreEqual(NpgsqlDbType.Unknown, parameter.NpgsqlDbType);
         }
 
         /// <summary>

@@ -113,6 +113,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(
                 query[..query.IndexOf(';')].Contains("@param", StringComparison.Ordinal),
                 $"PostgreSQL source lock identity must not depend on string key representations. Query: {query}");
+            Assert.IsTrue(
+                structure.Parameters["@param0"].UseDatabaseTypeInference,
+                "PostgreSQL string upsert keys must use the backing column's native comparison semantics.");
+            Assert.IsFalse(
+                structure.Parameters["@param1"].UseDatabaseTypeInference,
+                "Non-key string values must retain normal Npgsql parameter typing.");
             AssertAppearsBefore(query, advisoryLock, "SELECT COUNT(*) AS cnt_rows_to_update");
         }
 

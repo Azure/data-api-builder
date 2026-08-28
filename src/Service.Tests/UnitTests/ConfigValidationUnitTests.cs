@@ -180,12 +180,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test that permission configuration validation fails when a database policy
-        /// is defined for the Create operation for mysql/postgresql and passes for mssql.
+        /// is defined for the Create operation for mysql and passes for mssql/postgresql.
         /// </summary>
         /// <param name="dbPolicy">Database policy.</param>
         /// <param name="errorExpected">Whether an error is expected.</param>
         [DataTestMethod]
-        [DataRow(DatabaseType.PostgreSQL, "1 eq @item.col1", true, DisplayName = "Database Policy defined for Create fails for PostgreSQL")]
+        [DataRow(DatabaseType.PostgreSQL, "1 eq @item.col1", false, DisplayName = "Database Policy defined for Create passes for PostgreSQL")]
         [DataRow(DatabaseType.PostgreSQL, null, false, DisplayName = "Database Policy set as null for Create passes on PostgreSQL.")]
         [DataRow(DatabaseType.PostgreSQL, "", false, DisplayName = "Database Policy left empty for Create passes for PostgreSQL.")]
         [DataRow(DatabaseType.PostgreSQL, " ", false, DisplayName = "Database Policy only whitespace for Create passes for PostgreSQL.")]
@@ -1259,7 +1259,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "Book", bookWithUpperCase }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType, "book");
         }
 
         /// <summary>
@@ -1302,7 +1302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "executeBook", bookTable },
                 { "Book_by_pk", bookByPkStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType, "Book_by_pk");
         }
 
         /// <summary>
@@ -1346,7 +1346,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "ExecuteBooks", bookTable },
                 { "AddBook", addBookStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType, "AddBook");
         }
 
         /// <summary>
@@ -1384,7 +1384,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
         }
 
         /// <summary>
@@ -1427,7 +1427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
         }
 
         /// <summary>
@@ -1465,7 +1465,45 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             entityCollection.Add("book_alt", book_alt);
             entityCollection.Add("book", book);
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
+        }
+
+        /// <summary>
+        /// Validates that a detailed error is thrown when autoentities includes objects whose names
+        /// differ only by singular/plural form (e.g. dbo.Category and dbo.Categories), causing
+        /// DAB to generate conflicting GraphQL type and operation names.
+        ///
+        /// "dbo_Category" entity → singular: Category, plural: Categories
+        /// "dbo_Categories" entity → singular: Category, plural: Categories (after pluralization)
+        ///
+        /// Both entities generate the same pk query, list query, and mutation names.
+        /// </summary>
+        [TestMethod]
+        [DataRow(DatabaseType.MSSQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateAutoEntitiesWithSingularPluralNameCollisionGenerateDuplicateQueries(DatabaseType databaseType)
+        {
+            // Entity Name: dbo_Category
+            // Singular: Category (from entity name processed by autoentities)
+            // Plural: Categories (pluralized from singular)
+            Entity categoryEntity = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Category", "Categories");
+
+            // Entity Name: dbo_Categories
+            // Singular: Category (after singularization by autoentities)
+            // Plural: Categories
+            Entity categoriesEntity = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Category", "Categories");
+
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "dbo_Categories", categoriesEntity },
+                { "dbo_Category", categoryEntity }
+            };
+
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(
+                entityCollection,
+                "dbo_Category",
+                databaseType,
+                conflictingEntityName: "dbo_Categories");
         }
 
         /// <summary>
@@ -1612,14 +1650,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// queries with the same name.
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
-        /// <param name="entityName">Entity name to construct the expected exception message</param>
-        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName, DatabaseType databaseType)
+        /// <param name="entityName">The entity name expected to appear in the conflict message as the conflicting entity.</param>
+        /// <param name="databaseType">Database type used during validation.</param>
+        /// <param name="conflictingEntityName">The other entity name expected to appear in the conflict message.</param>
+        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(
+            SortedDictionary<string, Entity> entityCollection,
+            string entityName,
+            DatabaseType databaseType,
+            string conflictingEntityName)
         {
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
                action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(databaseType, new(entityCollection)));
 
-            Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
+            StringAssert.Contains(dabException.Message, "GraphQL naming conflict detected.");
+            StringAssert.Contains(dabException.Message, entityName);
+            StringAssert.Contains(dabException.Message, conflictingEntityName);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
             Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
         }
@@ -2465,6 +2511,56 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Regression test for validate-only mode losing operation ownership after an earlier conflict.
+        /// When an entity successfully registers some of its generated operation names but then fails on
+        /// a later name, the previously added names must still be attributed to that entity so that a
+        /// subsequent entity colliding on one of them reports the correct conflicting entity.
+        ///
+        /// Sequence:
+        /// - First:  singular "Alpha", plural "Shared" -> registers alpha_by_pk, shared, ...
+        /// - Second: singular "Beta",  plural "Shared" -> registers beta_by_pk, then collides on shared (owned by First).
+        /// - Third:  singular "Beta",  plural "Thirds" -> collides on beta_by_pk, which must be owned by Second.
+        ///
+        /// Because validate-only mode records exceptions instead of throwing, both conflicts are collected.
+        /// The conflict recorded for Third must identify Second (not just Third).
+        /// </summary>
+        [TestMethod]
+        public void ValidateOnlyMode_ConflictAfterPartialAdd_ReportsActualConflictingEntity()
+        {
+            Entity first = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Alpha", "Shared");
+            Entity second = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Beta", "Shared");
+            Entity third = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Beta", "Thirds");
+
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "First", first },
+                { "Second", second },
+                { "Third", third }
+            };
+
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(
+                provider,
+                fileSystem,
+                new Mock<ILogger<RuntimeConfigValidator>>().Object,
+                isValidateOnly: true);
+
+            configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(DatabaseType.MySQL, new(entityCollection));
+
+            List<Exception> exceptions = configValidator.ConfigValidationExceptions;
+
+            // Two conflicts are expected: Second (vs First) and Third (vs Second).
+            Assert.AreEqual(expected: 2, actual: exceptions.Count);
+
+            // Regression assertion: the conflict recorded for Third must identify Second as the entity
+            // that first registered beta_by_pk, even though Second failed on a later operation (shared).
+            Exception thirdConflict = exceptions.Single(e => e.Message.Contains("Third"));
+            StringAssert.Contains(thirdConflict.Message, "Second");
+        }
+
+        /// <summary>
         /// Test to validate that user-delegated-auth with missing DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID,
         /// or DAB_OBO_CLIENT_SECRET throws an error.
         /// </summary>
@@ -2693,7 +2789,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// This test checks that the final config used by runtime engine doesn't lose the directory information
         /// if provided by the user.
         /// It also validates that if config file is provided by the user, it will be used directly irrespective of
-        /// environment variable being set or not. 
+        /// environment variable being set or not.
         /// When user doesn't provide a config file, we check if environment variable is set and if it is, we use
         /// the config file specified by the environment variable, else we use the default config file.
         /// <param name="userProvidedConfigFilePath"></param>

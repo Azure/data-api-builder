@@ -1,5 +1,4 @@
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Models;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -43,90 +42,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                           Build(structure.PaginationMetadata.PaginationPredicate));
         }
 
-        /// <summary>
-        /// Build the Group By Clause needed to append to the main query
-        /// </summary>
-        /// <param name="structure">Sql query structure to build query on</param>
-        /// <returns>SQL query with group-by clause</returns>
-        protected virtual string BuildGroupBy(SqlQueryStructure structure)
-        {
-            // Add GROUP BY clause if there are any group by columns
-            if (structure.GroupByMetadata.Fields.Any())
-            {
-                return $" GROUP BY {string.Join(", ", structure.GroupByMetadata.Fields.Values.Select(c => Build(c)))}";
-            }
-
-            return string.Empty;
-        }
-
-        /// <summary>
-        /// Build the Having clause needed to append to the main query
-        /// </summary>
-        /// <param name="structure">Sql query structure to build query on</param>
-        /// <returns>SQL query with having clause</returns>
-        protected virtual string BuildHaving(SqlQueryStructure structure)
-        {
-            if (structure.GroupByMetadata.Aggregations.Count > 0)
-            {
-                List<Predicate>? havingPredicates = structure.GroupByMetadata.Aggregations
-                      .SelectMany(aggregation => aggregation.HavingPredicates ?? new List<Predicate>())
-                      .ToList();
-
-                if (havingPredicates.Any())
-                {
-                    return $" HAVING {Build(havingPredicates)}";
-                }
-            }
-
-            return string.Empty;
-        }
-
-        /// <summary>
-        /// Build the Order By clause needed to append to the main query
-        /// </summary>
-        /// <param name="structure">Sql query structure to build query on</param>
-        /// <returns>SQL query with order-by clause</returns>
-        protected virtual string BuildOrderBy(SqlQueryStructure structure)
-        {
-            if (structure.OrderByColumns.Any())
-            {
-                return $" ORDER BY {Build(structure.OrderByColumns)}";
-            }
-
-            return string.Empty;
-        }
-
-        /// <summary>
-        /// Build the aggregation columns needed to append to the main query
-        /// </summary>
-        /// <param name="structure">Sql query structure to build query on</param>
-        /// <returns>SQL query with aggregation columns</returns>
-        protected virtual string BuildAggregationColumns(SqlQueryStructure structure)
-        {
-            string aggregations = string.Empty;
-            if (structure.GroupByMetadata.Aggregations.Count > 0)
-            {
-                if (structure.Columns.Any())
-                {
-                    aggregations = $",{BuildAggregationColumns(structure.GroupByMetadata)}";
-                }
-                else
-                {
-                    aggregations = $"{BuildAggregationColumns(structure.GroupByMetadata)}";
-                }
-            }
-
-            return aggregations;
-        }
-
-        /// <summary>
-        /// Build the aggregation columns needed to append to the main query
-        /// </summary>
-        /// <param name="metadata">GroupByMetadata</param>
-        /// <returns>SQL query with aggregation columns</returns>
-        protected virtual string BuildAggregationColumns(GroupByMetadata metadata)
-        {
-            return string.Join(", ", metadata.Aggregations.Select(aggregation => Build(aggregation.Column, useAlias: true)));
-        }
     }
 }

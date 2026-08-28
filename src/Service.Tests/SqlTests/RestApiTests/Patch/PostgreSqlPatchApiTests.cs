@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -163,6 +162,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 100 AND pieceid = 99 AND ""categoryName"" = 'Historical'
                             AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 0 AND pieceid != 1
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneInsertWithDatabasePolicy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 0 AND pieceid = 7 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 0
+                            AND (pieceid != 6 AND ""piecesAvailable"" > 0)
                     ) AS subq
                 "
             },
@@ -335,27 +347,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         #region overridden tests
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneUpdateWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneInsertWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneInsertWithDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
         #endregion
 
         #region Test Fixture Setup

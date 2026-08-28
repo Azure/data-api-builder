@@ -47,7 +47,8 @@ public class RuntimeConfigValidator : IConfigValidator
     private static readonly HashSet<DatabaseType> _databaseTypesSupportingCreatePolicy =
     [
         DatabaseType.MSSQL,
-        DatabaseType.DWSQL
+        DatabaseType.DWSQL,
+        DatabaseType.PostgreSQL
     ];
 
     // Error messages for user-delegated authentication configuration.
@@ -909,6 +910,9 @@ public class RuntimeConfigValidator : IConfigValidator
     {
         HashSet<string> graphQLOperationNames = new();
 
+        // Tracks which entity registered each operation name, used only for building conflict error messages.
+        Dictionary<string, string> operationOwner = new();
+
         foreach ((string entityName, Entity entity) in entityCollection)
         {
             if (!entity.GraphQL.Enabled)
@@ -916,7 +920,9 @@ public class RuntimeConfigValidator : IConfigValidator
                 continue;
             }
 
+            List<string> conflictingOperationNames = new();
             bool containsDuplicateOperationNames = false;
+            string conflictingEntityName = string.Empty;
             if (entity.Source.Type is EntitySourceType.StoredProcedure)
             {
                 // For Stored Procedures a single query/mutation is generated.
@@ -925,6 +931,12 @@ public class RuntimeConfigValidator : IConfigValidator
                 if (!graphQLOperationNames.Add(storedProcedureQueryName))
                 {
                     containsDuplicateOperationNames = true;
+                    conflictingEntityName = operationOwner.GetValueOrDefault(storedProcedureQueryName, string.Empty);
+                    conflictingOperationNames.Add(storedProcedureQueryName);
+                }
+                else
+                {
+                    operationOwner[storedProcedureQueryName] = entityName;
                 }
             }
             else
@@ -943,21 +955,52 @@ public class RuntimeConfigValidator : IConfigValidator
                 string deleteMutationName = $"delete{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
                 string patchMutationName = $"patch{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
 
-                if (!graphQLOperationNames.Add(pkQueryName)
-                    || !graphQLOperationNames.Add(listQueryName)
-                    || !graphQLOperationNames.Add(createMutationName)
-                    || !graphQLOperationNames.Add(updateMutationName)
-                    || !graphQLOperationNames.Add(deleteMutationName)
-                    || ((databaseType is DatabaseType.CosmosDB_NoSQL) && !graphQLOperationNames.Add(patchMutationName)))
+                List<string> generatedOperationNames = new()
                 {
-                    containsDuplicateOperationNames = true;
+                    pkQueryName,
+                    listQueryName,
+                    createMutationName,
+                    updateMutationName,
+                    deleteMutationName,
+                };
+
+                if (databaseType is DatabaseType.CosmosDB_NoSQL)
+                {
+                    generatedOperationNames.Add(patchMutationName);
+                }
+
+                foreach (string operationName in generatedOperationNames)
+                {
+                    if (!graphQLOperationNames.Add(operationName))
+                    {
+                        containsDuplicateOperationNames = true;
+                        conflictingOperationNames.Add(operationName);
+                        conflictingEntityName = operationOwner.GetValueOrDefault(operationName, conflictingEntityName);
+                    }
+                    else
+                    {
+                        operationOwner[operationName] = entityName;
+                    }
                 }
             }
 
             if (containsDuplicateOperationNames)
             {
+                string entitiesStr = string.IsNullOrEmpty(conflictingEntityName)
+                    ? $"  {entityName}"
+                    : $"  {conflictingEntityName}{Environment.NewLine}  {entityName}";
+
+                string entityNamesStr = string.Join(
+                    Environment.NewLine,
+                    conflictingOperationNames.Select(name => $"  {name}"));
+
+                string message = $"{Environment.NewLine}GraphQL naming conflict detected."
+                    + $"{Environment.NewLine}{Environment.NewLine}Entities:{Environment.NewLine}{entitiesStr}"
+                    + $"{Environment.NewLine}{Environment.NewLine}Both entities generate the following GraphQL names:{Environment.NewLine}{entityNamesStr}"
+                    + $"{Environment.NewLine}{Environment.NewLine}Configure distinct GraphQL singular and plural names for one of the entities to resolve this conflict.";
+
                 HandleOrRecordException(new DataApiBuilderException(
-                    message: $"Entity {entityName} generates queries/mutation that already exist",
+                    message: message,
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
@@ -1009,6 +1052,41 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 ValidateNameRequirements(entity.GraphQL.Singular);
                 ValidateNameRequirements(entity.GraphQL.Plural);
+            }
+
+        }
+    }
+
+    /// <summary>
+    /// Validates that no stored-procedure entity in the config declares duplicate parameter names.
+    /// Duplicate names produce inconsistent behavior across GraphQL, OpenAPI, and MCP because each
+    /// consumer resolves duplicates differently (first-wins vs. last-wins). This check runs in both
+    /// development and production mode so that ambiguous configs are rejected at startup regardless
+    /// of the host mode.
+    /// </summary>
+    /// <param name="runtimeConfig">The runtime configuration.</param>
+    public void ValidateStoredProcedureDuplicateParameters(RuntimeConfig runtimeConfig)
+    {
+        foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+        {
+            if (entity.Source.Type is not EntitySourceType.StoredProcedure
+                || entity.Source.Parameters is null)
+            {
+                continue;
+            }
+
+            HashSet<string> seenParamNames = new(StringComparer.Ordinal);
+            foreach (ParameterMetadata param in entity.Source.Parameters)
+            {
+                if (!seenParamNames.Add(param.Name))
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity '{entityName}' has duplicate parameter name '{param.Name}' in its stored procedure parameters configuration. " +
+                            "Parameter names must be unique.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    break;
+                }
             }
         }
     }
@@ -1914,6 +1992,9 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="runtimeConfig">The runtime configuration.</param>
     public void ValidateEntityAndAutoentityConfigurations(RuntimeConfig runtimeConfig)
     {
+        // Runs in both modes: duplicate SP parameter names cause silent inconsistency at runtime.
+        ValidateStoredProcedureDuplicateParameters(runtimeConfig);
+
         if (runtimeConfig.IsDevelopmentMode())
         {
             ValidateEntityConfiguration(runtimeConfig);

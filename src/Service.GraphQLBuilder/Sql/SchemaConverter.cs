@@ -39,8 +39,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// <param name="configEntity">Runtime config information for the table.</param>
         /// <param name="entities">Key/Value Collection mapping entity name to the entity object,
         /// currently used to lookup relationship metadata.</param>
-        /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
-        /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
+        /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level.</param>
+        /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level.</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
         public static ObjectTypeDefinitionNode GenerateObjectTypeDefinitionForDatabaseObject(
             string entityName,
@@ -48,7 +48,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            DatabaseType databaseType = DatabaseType.MSSQL)
         {
             ObjectTypeDefinitionNode objectDefinitionNode;
             switch (databaseObject.SourceType)
@@ -69,7 +70,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         configEntity: configEntity,
                         entities: entities,
                         rolesAllowedForEntity: rolesAllowedForEntity,
-                        rolesAllowedForFields: rolesAllowedForFields);
+                        rolesAllowedForFields: rolesAllowedForFields,
+                        databaseType: databaseType);
                     break;
                 default:
                     throw new DataApiBuilderException(
@@ -170,7 +172,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            DatabaseType databaseType = DatabaseType.MSSQL)
         {
             Dictionary<string, FieldDefinitionNode> fieldDefinitionNodes = new();
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
@@ -225,7 +228,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             databaseObject,
                             entities,
                             relationshipName,
-                            relationship);
+                            relationship,
+                            databaseType);
                         fieldDefinitionNodes.Add(relationshipField.Name.Value, relationshipField);
                     }
                 }
@@ -474,13 +478,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             DatabaseObject databaseObject,
             RuntimeEntities entities,
             string relationshipName,
-            EntityRelationship relationship)
+            EntityRelationship relationship,
+            DatabaseType databaseType = DatabaseType.MSSQL)
         {
             // Generate the field that represents the relationship to ObjectType, so you can navigate through it
             // and walk the graph.
             string targetEntityName = relationship.TargetEntity.Split('.').Last();
             Entity referencedEntity = entities[targetEntityName];
-            bool isNullableRelationship = FindNullabilityOfRelationship(entityName, databaseObject, targetEntityName);
+            bool isNullableRelationship = FindNullabilityOfRelationship(entityName, databaseObject, targetEntityName, databaseType);
 
             INullableTypeNode targetField = relationship.Cardinality switch
             {
@@ -631,8 +636,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         private static bool FindNullabilityOfRelationship(
             string entityName,
             DatabaseObject databaseObject,
-            string targetEntityName)
+            string targetEntityName,
+            DatabaseType databaseType = DatabaseType.MSSQL)
         {
+            // DWSQL does not enforce foreign key constraints, so relationship fields are always nullable.
+            if (databaseType == DatabaseType.DWSQL)
+            {
+                return true;
+            }
+
             bool isNullableRelationship = false;
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             if (// Retrieve all the relationship information for the source entity which is backed by this table definition

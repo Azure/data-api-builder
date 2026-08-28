@@ -83,13 +83,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                         parameterTypeNode = new NonNullTypeNode((INullableTypeNode)parameterTypeNode);
                     }
 
+                    string parameterDescription = !string.IsNullOrWhiteSpace(paramMetadata?.Description)
+                        ? paramMetadata.Description
+                        : !string.IsNullOrWhiteSpace(definition.Description)
+                            ? definition.Description
+                            : $"parameters for {name.Value} stored-procedure";
+
                     inputValues.Add(
                         new(
                             location: null,
                             name: new(param),
-                            description: definition.Description != null
-                                        ? new StringValueNode(definition.Description)
-                                        : new StringValueNode($"parameters for {name.Value} stored-procedure"),
+                            description: new StringValueNode(parameterDescription),
                             type: parameterTypeNode,
                             defaultValue: defaultValueNode,
                             directives: new List<DirectiveNode>())
@@ -104,10 +108,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
+            string description = !string.IsNullOrWhiteSpace(entity.Description)
+                ? entity.Description
+                : $"Execute Stored-Procedure {name.Value} and get results from the database";
+
             return new(
                 location: null,
                 new NameNode(GenerateStoredProcedureGraphQLFieldName(name.Value, entity)),
-                new StringValueNode($"Execute Stored-Procedure {name.Value} and get results from the database"),
+                new StringValueNode(description),
                 inputValues,
                 new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
                 fieldDefinitionNodeDirectives

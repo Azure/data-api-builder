@@ -339,7 +339,10 @@
               }
             },
             {
-              "action": "create"
+              "action": "create",
+              "policy": {
+                "database": "@item.pieceid ne 6 and @item.piecesAvailable gt 0"
+              }
             },
             {
               "action": "read"
@@ -768,6 +771,23 @@
             },
             {
               "action": "create"
+            }
+          ]
+        },
+        {
+          "role": "claim_policy_tester",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [],
+                "include": [
+                  "*"
+                ]
+              },
+              "policy": {
+                "database": "@item.title eq @claims.userId"
+              }
             }
           ]
         },
@@ -2326,6 +2346,35 @@
         },
         {
           "role": "authenticated",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "DateOnlyTable": {
+      "source": {
+        "object": "date_only_table",
+        "type": "table",
+        "key-fields": [
+          "event_date"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "DateOnlyTable",
+          "plural": "DateOnlyTables"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
           "actions": [
             {
               "action": "*"

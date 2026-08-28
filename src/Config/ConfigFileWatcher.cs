@@ -3,6 +3,7 @@
 
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config.Utilities;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config;
 
@@ -109,17 +110,17 @@ public class ConfigFileWatcher : IDisposable
         catch (AggregateException ex)
         {
             // Need to remove the dependencies in startup on the RuntimeConfigProvider
-            // before we can have an ILogger here.
+            // before we can have an injected ILogger here.
             foreach (Exception exception in ex.InnerExceptions)
             {
-                Console.WriteLine("Unable to hot reload configuration file due to " + exception.Message);
+                BootstrapLogger.Instance.LogWarning("Unable to hot reload configuration file due to " + exception.Message);
             }
         }
         catch (Exception ex)
         {
             // Need to remove the dependencies in startup on the RuntimeConfigProvider
-            // before we can have an ILogger here.
-            Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
+            // before we can have an injected ILogger here.
+            BootstrapLogger.Instance.LogWarning("Unable to hot reload configuration file due to " + ex.Message);
         }
     }
 

@@ -6,6 +6,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
@@ -15,6 +16,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
 using QueryBuilder = Azure.DataApiBuilder.Service.GraphQLBuilder.Queries.QueryBuilder;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -764,7 +766,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (isExplicit && !isValid)
             {
                 // Log a warning and ignore the invalid value, fallback to request's scheme
-                Console.WriteLine($"Warning: Invalid scheme '{rawScheme}' in X-Forwarded-Proto header. Falling back to request scheme: '{req.Scheme}'.");
+                // This static helper has no injected ILogger, so the shared bootstrap logger is used.
+                BootstrapLogger.Instance.LogWarning($"Invalid scheme '{rawScheme}' in X-Forwarded-Proto header. Falling back to request scheme: '{req.Scheme}'.");
                 return req.Scheme;
             }
 
@@ -788,7 +791,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (isExplicit && !isValid)
             {
                 // Log a warning and ignore the invalid value, fallback to request's host
-                Console.WriteLine($"Warning: Invalid host '{rawHost}' in X-Forwarded-Host header. Falling back to request host: '{req.Host}'.");
+                // This static helper has no injected ILogger, so the shared bootstrap logger is used.
+                BootstrapLogger.Instance.LogWarning($"Invalid host '{rawHost}' in X-Forwarded-Host header. Falling back to request host: '{req.Host}'.");
                 return req.Host.ToString();
             }
 

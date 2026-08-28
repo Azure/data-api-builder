@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Globalization;
+using Azure.DataApiBuilder.Config.Utilities;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -26,7 +27,7 @@ public class CustomLoggerProvider : ILoggerProvider
 
     public class CustomConsoleLogger : ILogger
     {
-        private const string UTC_TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.fff'Z'";
+        private const string UTC_TIMESTAMP_FORMAT = BootstrapLogger.UTC_TIMESTAMP_FORMAT;
 
         private readonly LogLevel _minimumLogLevel;
 

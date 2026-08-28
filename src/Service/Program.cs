@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Telemetry;
@@ -38,6 +39,12 @@ namespace Azure.DataApiBuilder.Service
 {
     public class Program
     {
+        /// <summary>
+        /// ISO 8601 UTC timestamp with millisecond precision, followed by the separator
+        /// the console formatter places between the timestamp and the log entry.
+        /// </summary>
+        private const string CONSOLE_TIMESTAMP_FORMAT = BootstrapLogger.UTC_TIMESTAMP_FORMAT + " ";
+
         public static bool IsHttpsRedirectionDisabled { get; private set; }
         public static DynamicLogLevelProvider LogLevelProvider = new();
 
@@ -81,7 +88,7 @@ namespace Azure.DataApiBuilder.Service
 
             if (!ValidateAspNetCoreUrls())
             {
-                Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
+                BootstrapLogger.Instance.LogError("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
                 Environment.ExitCode = -1;
                 return;
             }
@@ -107,6 +114,9 @@ namespace Azure.DataApiBuilder.Service
                 // MCP SDK uses Console.OpenStandardOutput() which gets the real stdout, unaffected by this redirect.
                 if (runMcpStdio)
                 {
+                    // stdout is reserved for the JSON-RPC protocol stream.
+                    BootstrapLogger.WriteAllOutputToStandardError = true;
+
                     // When LogLevel.None, redirect to null stream for ZERO output.
                     // Otherwise redirect to stderr so logs don't pollute JSON-RPC.
                     if (initialLogLevel == LogLevel.None)
@@ -136,13 +146,13 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Do not log the exception here because exceptions raised during startup
                 // are already automatically written to the console.
-                Console.Error.WriteLine("Unable to launch the Data API builder engine.");
+                BootstrapLogger.Instance.LogError("Unable to launch the Data API builder engine.");
                 return false;
             }
             // Catch all remaining unhandled exceptions which may be due to server host operation.
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
+                BootstrapLogger.Instance.LogError($"Unable to launch the runtime due to: {ex}");
                 return false;
             }
         }
@@ -197,7 +207,7 @@ namespace Azure.DataApiBuilder.Service
                         logging.SetMinimumLevel(LogLevelProvider.CurrentLogLevel);
                         logging.Services.Configure<SimpleConsoleFormatterOptions>(options =>
                         {
-                            options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
+                            options.TimestampFormat = CONSOLE_TIMESTAMP_FORMAT;
                             options.UseUtcTimestamp = true;
                         });
                     }
@@ -472,7 +482,7 @@ namespace Azure.DataApiBuilder.Service
                         {
                             builder.AddSimpleConsole(options =>
                             {
-                                options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
+                                options.TimestampFormat = CONSOLE_TIMESTAMP_FORMAT;
                                 options.UseUtcTimestamp = true;
                             });
                             // Route all levels to stderr to keep stdout clean for MCP JSON-RPC.
@@ -487,7 +497,7 @@ namespace Azure.DataApiBuilder.Service
                     {
                         builder.AddSimpleConsole(options =>
                         {
-                            options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
+                            options.TimestampFormat = CONSOLE_TIMESTAMP_FORMAT;
                             options.UseUtcTimestamp = true;
                         });
                     }
@@ -508,7 +518,7 @@ namespace Azure.DataApiBuilder.Service
             ParseResult result = GetParseResult(cmd, args);
             if (result.Tokens.Count - result.UnmatchedTokens.Count - result.UnparsedTokens.Count > 0)
             {
-                Console.WriteLine("Redirecting to https is disabled.");
+                BootstrapLogger.Instance.LogInformation("Redirecting to https is disabled.");
                 IsHttpsRedirectionDisabled = true;
                 return;
             }

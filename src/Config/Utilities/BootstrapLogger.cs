@@ -19,9 +19,10 @@ namespace Azure.DataApiBuilder.Config.Utilities;
 public static class BootstrapLogger
 {
     /// <summary>
-    /// ISO 8601 UTC timestamp with millisecond precision.
+    /// ISO 8601 UTC timestamp with millisecond precision. Shared by every console
+    /// logging path (engine, CLI and bootstrap) so all entries look identical.
     /// </summary>
-    private const string UTC_TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.fff'Z'";
+    public const string UTC_TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.fff'Z'";
 
     /// <summary>
     /// Maps LogLevel to abbreviated labels matching ASP.NET Core's default console formatter.

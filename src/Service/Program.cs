@@ -39,12 +39,6 @@ namespace Azure.DataApiBuilder.Service
 {
     public class Program
     {
-        /// <summary>
-        /// ISO 8601 UTC timestamp with millisecond precision, followed by the separator
-        /// the console formatter places between the timestamp and the log entry.
-        /// </summary>
-        private const string CONSOLE_TIMESTAMP_FORMAT = BootstrapLogger.UTC_TIMESTAMP_FORMAT + " ";
-
         public static bool IsHttpsRedirectionDisabled { get; private set; }
         public static DynamicLogLevelProvider LogLevelProvider = new();
 
@@ -232,20 +226,12 @@ namespace Azure.DataApiBuilder.Service
                 logging.SetMinimumLevel(LogLevelProvider.CurrentLogLevel);
 
                 // The console provider registered by Host.CreateDefaultBuilder() is reused as-is;
-                // only its options are configured so no second provider is registered (which would
-                // emit every entry twice). ConsoleLoggerOptions.FormatterName must be set explicitly:
-                // when it is left unset the provider ignores SimpleConsoleFormatterOptions and derives
-                // the formatter options from ConsoleLoggerOptions' own (obsolete) properties instead,
-                // which would silently drop the timestamp.
-                logging.Services.Configure<ConsoleLoggerOptions>(options =>
-                {
-                    options.FormatterName = ConsoleFormatterNames.Simple;
-                });
-                logging.Services.Configure<SimpleConsoleFormatterOptions>(options =>
-                {
-                    options.TimestampFormat = CONSOLE_TIMESTAMP_FORMAT;
-                    options.UseUtcTimestamp = true;
-                });
+                // only its formatter is configured so no second provider is registered (which would
+                // emit every entry twice). ConsoleLoggerOptions.FormatterName must be set explicitly
+                // (AddUtcTimestampConsoleFormatter does so): when it is left unset the provider ignores
+                // the registered formatters and derives its behavior from ConsoleLoggerOptions' own
+                // (obsolete) properties instead, which would silently drop the timestamp.
+                logging.AddUtcTimestampConsoleFormatter();
             }
 
             // Add filter for dynamic log level changes (e.g., via MCP logging/setLevel)
@@ -504,13 +490,10 @@ namespace Azure.DataApiBuilder.Service
                         // When LogLevel.None, skip the console logger entirely for true silence.
                         if (LogLevelProvider.CurrentLogLevel != LogLevel.None)
                         {
-                            builder.AddSimpleConsole(options =>
-                            {
-                                options.TimestampFormat = CONSOLE_TIMESTAMP_FORMAT;
-                                options.UseUtcTimestamp = true;
-                            });
+                            builder.AddConsole();
+                            builder.AddUtcTimestampConsoleFormatter();
                             // Route all levels to stderr to keep stdout clean for MCP JSON-RPC.
-                            // Uses Services.Configure (not AddConsole) so no second provider is registered.
+                            // Uses Services.Configure (not a second AddConsole) so no second provider is registered.
                             builder.Services.Configure<ConsoleLoggerOptions>(options =>
                             {
                                 options.LogToStandardErrorThreshold = LogLevel.Trace;
@@ -519,11 +502,8 @@ namespace Azure.DataApiBuilder.Service
                     }
                     else
                     {
-                        builder.AddSimpleConsole(options =>
-                        {
-                            options.TimestampFormat = CONSOLE_TIMESTAMP_FORMAT;
-                            options.UseUtcTimestamp = true;
-                        });
+                        builder.AddConsole();
+                        builder.AddUtcTimestampConsoleFormatter();
                     }
                 });
         }

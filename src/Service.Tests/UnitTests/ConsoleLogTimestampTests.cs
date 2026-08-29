@@ -259,6 +259,124 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Runs <paramref name="action"/> with the ambient culture set to
+        /// <paramref name="cultureName"/> and restores the previous culture afterwards.
+        /// The culture is only ambient state for the calling thread's execution context,
+        /// so the process-wide default is never modified.
+        /// </summary>
+        private static void RunUnderCulture(string cultureName, Action action)
+        {
+            CultureInfo originalCulture = CultureInfo.CurrentCulture;
+            CultureInfo originalUICulture = CultureInfo.CurrentUICulture;
+            try
+            {
+                CultureInfo culture = new(cultureName);
+                CultureInfo.CurrentCulture = culture;
+                CultureInfo.CurrentUICulture = culture;
+                action();
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = originalCulture;
+                CultureInfo.CurrentUICulture = originalUICulture;
+            }
+        }
+
+        /// <summary>
+        /// Guards against the regression tests below silently passing on a runtime built with
+        /// globalization-invariant mode, where every culture behaves like the invariant culture.
+        /// </summary>
+        private static void AssertCultureIsNonGregorian(string cultureName)
+        {
+            DateTime probe = DateTime.UtcNow;
+            string cultureRendering = string.Empty;
+            RunUnderCulture(cultureName, () =>
+                cultureRendering = probe.ToString(BootstrapLogger.UTC_TIMESTAMP_FORMAT, CultureInfo.CurrentCulture));
+
+            Assert.AreNotEqual(
+                probe.ToString(BootstrapLogger.UTC_TIMESTAMP_FORMAT, CultureInfo.InvariantCulture),
+                cultureRendering,
+                $"Culture '{cultureName}' is expected to use a non-Gregorian calendar; without that this test cannot " +
+                "detect culture-sensitive timestamp formatting.");
+        }
+
+        /// <summary>
+        /// The startup logger factory must emit the Gregorian, invariant-culture UTC prefix even
+        /// when the ambient culture uses a different calendar. The built-in "simple" console
+        /// formatter renders its timestamp with CultureInfo.CurrentCulture, so relying on its
+        /// TimestampFormat option would produce e.g. '2569-08-29T...' under th-TH.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("ar-SA", false, DisplayName = "ar-SA, normal mode")]
+        [DataRow("ar-SA", true, DisplayName = "ar-SA, stdio mode")]
+        [DataRow("th-TH", false, DisplayName = "th-TH, normal mode")]
+        [DataRow("th-TH", true, DisplayName = "th-TH, stdio mode")]
+        public void GetLoggerFactoryForLogLevel_NonGregorianCulture_EmitsInvariantUtcTimestamp(string cultureName, bool stdio)
+        {
+            AssertCultureIsNonGregorian(cultureName);
+
+            (string stdout, string stderr, DateTime before, DateTime after) = CaptureConsole(() =>
+                RunUnderCulture(cultureName, () =>
+                {
+                    using ILoggerFactory factory = Program.GetLoggerFactoryForLogLevel(LogLevel.Information, stdio: stdio);
+                    factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
+                }));
+
+            string output = stdio ? stderr : stdout;
+            Assert.AreEqual(string.Empty, stdio ? stdout : stderr,
+                "Log entries must only be written to the stream the mode designates.");
+            AssertEveryEntryTimestamped(output, before, after);
+            StringAssert.Contains(output, LOG_MESSAGE);
+        }
+
+        /// <summary>
+        /// The web host's logging pipeline must likewise emit the Gregorian, invariant-culture
+        /// UTC prefix under a non-Gregorian ambient culture, still exactly once per event.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("ar-SA")]
+        [DataRow("th-TH")]
+        public void ConfigureHostLogging_NonGregorianCulture_EmitsInvariantUtcTimestamp(string cultureName)
+        {
+            AssertCultureIsNonGregorian(cultureName);
+
+            (string stdout, string stderr, DateTime before, DateTime after) = CaptureConsole(() =>
+                RunUnderCulture(cultureName, () =>
+                {
+                    using ILoggerFactory factory = LoggerFactory.Create(builder =>
+                    {
+                        builder.AddConsole();
+                        Program.ConfigureHostLogging(builder, runMcpStdio: false);
+                    });
+
+                    factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
+                }));
+
+            Assert.AreEqual(1, Regex.Matches(stdout, Regex.Escape(LOG_MESSAGE)).Count,
+                $"Expected the entry exactly once (no duplicate console provider) but got: '{stdout}'");
+            AssertEveryEntryTimestamped(stdout, before, after);
+            Assert.AreEqual(string.Empty, stderr, $"Information must not be written to stderr but got: '{stderr}'");
+        }
+
+        /// <summary>
+        /// The bootstrap logger used for pre-dependency-injection diagnostics is subject to the
+        /// same requirement.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("ar-SA")]
+        [DataRow("th-TH")]
+        public void BootstrapLogger_NonGregorianCulture_EmitsInvariantUtcTimestamp(string cultureName)
+        {
+            AssertCultureIsNonGregorian(cultureName);
+
+            (string stdout, _, DateTime before, DateTime after) = CaptureConsole(() =>
+                RunUnderCulture(cultureName, () => BootstrapLogger.Instance.LogInformation(LOG_MESSAGE)));
+
+            AssertEveryEntryTimestamped(stdout, before, after);
+            StringAssert.Contains(stdout, LOG_MESSAGE);
+        }
+
+        /// <summary>
         /// Migrated diagnostic: invalid X-Forwarded-* headers produce a timestamped warning
         /// instead of a bare Console.WriteLine.
         /// </summary>

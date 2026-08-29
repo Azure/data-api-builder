@@ -38,6 +38,13 @@ public static class BootstrapLogger
     };
 
     /// <summary>
+    /// Returns the abbreviated label used by the console logging paths for the given level,
+    /// or null when the level has no label (<see cref="LogLevel.None"/>).
+    /// </summary>
+    public static string? GetAbbreviatedLogLevel(LogLevel logLevel)
+        => _logLevelToAbbreviation.TryGetValue(logLevel, out string? abbreviation) ? abbreviation : null;
+
+    /// <summary>
     /// When true, all entries are written to stderr. Set by hosts which reserve
     /// stdout for a protocol stream, e.g. MCP stdio mode's JSON-RPC messages.
     /// </summary>

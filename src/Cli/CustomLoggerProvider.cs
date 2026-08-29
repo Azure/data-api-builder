@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Globalization;
-using Azure.DataApiBuilder.Config.Utilities;
+using Azure.DataApiBuilder.Product;
 using Microsoft.Extensions.Logging;
 
 /// <summary>

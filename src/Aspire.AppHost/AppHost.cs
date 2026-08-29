@@ -1,4 +1,4 @@
-using Azure.DataApiBuilder.Config.Utilities;
+using Azure.DataApiBuilder.Product;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

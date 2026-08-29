@@ -3,6 +3,7 @@
 
 using System.IO.Abstractions;
 using System.Security.Cryptography;
+using Azure.DataApiBuilder.Product;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config.Utilities;

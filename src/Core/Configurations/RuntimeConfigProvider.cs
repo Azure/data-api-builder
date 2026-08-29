@@ -8,7 +8,7 @@ using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Config.Utilities;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;

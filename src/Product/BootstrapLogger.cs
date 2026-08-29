@@ -4,7 +4,7 @@
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 
-namespace Azure.DataApiBuilder.Config.Utilities;
+namespace Azure.DataApiBuilder.Product;
 
 /// <summary>
 /// Centralized console logger used for diagnostics which can't be routed through

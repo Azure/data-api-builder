@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -595,19 +596,30 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ProductionSources_DoNotWriteDiagnosticsDirectlyToConsole()
         {
             DirectoryInfo sourceRoot = FindSourceRoot();
-            string[] productionProjects =
-            {
-                "Aspire.AppHost", "Auth", "Azure.DataApiBuilder.Mcp", "Cli",
-                "Config", "Core", "Service", "Service.GraphQLBuilder"
-            };
+
+            // Discovered rather than hard coded so a newly added production project is covered
+            // automatically instead of silently escaping the guard.
+            List<DirectoryInfo> productionProjects = sourceRoot.EnumerateDirectories()
+                .Where(directory => directory.EnumerateFiles("*.csproj").Any()
+                    && !directory.Name.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(directory => directory.Name, StringComparer.Ordinal)
+                .ToList();
+
+            // Sanity check the discovery itself, so the guard cannot pass by scanning nothing.
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "Aspire.AppHost", "Auth", "Azure.DataApiBuilder.Mcp", "Cli",
+                    "Config", "Core", "Product", "Service", "Service.GraphQLBuilder"
+                },
+                productionProjects.Select(directory => directory.Name).ToArray(),
+                "The set of scanned production projects changed. Update this list once the new "
+                + "project's console writes have been reviewed.");
 
             List<string> violations = new();
-            foreach (string project in productionProjects)
+            foreach (DirectoryInfo project in productionProjects)
             {
-                string projectPath = Path.Combine(sourceRoot.FullName, project);
-                Assert.IsTrue(Directory.Exists(projectPath), $"Expected production project directory '{projectPath}' to exist.");
-
-                foreach (string file in Directory.EnumerateFiles(projectPath, "*.cs", SearchOption.AllDirectories))
+                foreach (string file in Directory.EnumerateFiles(project.FullName, "*.cs", SearchOption.AllDirectories))
                 {
                     string relativePath = Path.GetRelativePath(sourceRoot.FullName, file).Replace('\\', '/');
 
@@ -642,6 +654,58 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "Log-like diagnostics must be emitted through a logger so they carry the invariant UTC timestamp prefix. "
                 + "If a write is intentional command output, add it to _allowedDirectConsoleWriters with a justification. "
                 + $"Found:{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
+        }
+
+        /// <summary>
+        /// The AppHost starts a local database container only when no connection string was
+        /// supplied, and says so. A previous inversion of the PostgreSQL guard made the
+        /// diagnostic state the opposite of its own condition (starting a container only when a
+        /// connection string *was* provided, then ignoring it). AppHost is top level statements
+        /// in an executable which builds and runs a distributed application, so the pairing is
+        /// asserted at the source level: every "no connection string" diagnostic must sit
+        /// directly inside an <c>if (string.IsNullOrEmpty(databaseConnectionString))</c> guard.
+        /// </summary>
+        [TestMethod]
+        public void AppHost_StartsLocalDatabaseContainerOnlyWhenNoConnectionStringProvided()
+        {
+            DirectoryInfo sourceRoot = FindSourceRoot();
+            string appHostPath = Path.Combine(sourceRoot.FullName, "Aspire.AppHost", "AppHost.cs");
+            Assert.IsTrue(File.Exists(appHostPath), $"Expected '{appHostPath}' to exist.");
+
+            string[] lines = File.ReadAllLines(appHostPath);
+            List<string> diagnosticGuards = new();
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (!lines[i].Contains("No connection string provided", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                // Walk back to the nearest preceding line of code, which must be the guard.
+                string guard = string.Empty;
+                for (int j = i - 1; j >= 0; j--)
+                {
+                    string candidate = lines[j].Trim();
+                    if (candidate.Length > 0 && candidate != "{")
+                    {
+                        guard = candidate;
+                        break;
+                    }
+                }
+
+                diagnosticGuards.Add($"{Path.GetFileName(appHostPath)}({i + 1}) guarded by: {guard}");
+                Assert.AreEqual(
+                    "if (string.IsNullOrEmpty(databaseConnectionString))",
+                    guard,
+                    $"The container start diagnostic on line {i + 1} must be reached only when no "
+                    + "connection string was provided, otherwise the message contradicts its own condition.");
+            }
+
+            // Both the mssql and postgresql branches must carry the diagnostic, so neither can
+            // drop out of coverage by simply deleting its message.
+            Assert.AreEqual(2, diagnosticGuards.Count,
+                "Expected exactly one 'no connection string' diagnostic for each of the mssql and "
+                + $"postgresql branches. Found:{Environment.NewLine}{string.Join(Environment.NewLine, diagnosticGuards)}");
         }
 
         /// <summary>

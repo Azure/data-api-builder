@@ -5,7 +5,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Text;
-using Azure.DataApiBuilder.Config.Utilities;
+using Azure.DataApiBuilder.Product;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;

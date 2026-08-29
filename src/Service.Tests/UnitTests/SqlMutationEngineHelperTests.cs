@@ -610,7 +610,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     It.IsAny<Func<System.Data.Common.DbDataReader, List<string>?, Task<JsonArray>>>(),
                     dataSourceName,
                     It.IsAny<HttpContext>(),
-                    It.IsAny<List<string>? >()))
+                    It.IsAny<List<string>?>()))
                 .ReturnsAsync(result);
             Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
             queryManagerFactory.Setup(x => x.GetQueryBuilder(DatabaseType.MSSQL)).Returns(queryBuilder.Object);

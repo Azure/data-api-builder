@@ -392,49 +392,49 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 $"Error message must contain '{expectedInMessage}'. Actual: '{message}'");
         }
 
-                [DataTestMethod]
-                [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"field\":\"\"}", "EntityNotFound")]
-                [DataRow("{\"entity\":\"Book\",\"function\":\"sum\",\"field\":\"\"}", "InvalidArguments")]
-                [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"field\":\"id\",\"distinct\":\"yes\"}", "InvalidArguments")]
-                [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":0}", "InvalidArguments")]
-                [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":1}", "InvalidArguments")]
-                [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"after\":\"MA==\"}", "InvalidArguments")]
-                [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"after\":\"MA==\"}", "InvalidArguments")]
-                [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"having\":{\"in\":[]}}", "InvalidArguments")]
-                public async Task AggregateRecords_AdditionalArgumentEdges_ReturnExpectedError(string json, string expectedError)
+        [DataTestMethod]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"field\":\"\"}", "EntityNotFound")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"sum\",\"field\":\"\"}", "InvalidArguments")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"field\":\"id\",\"distinct\":\"yes\"}", "InvalidArguments")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":0}", "InvalidArguments")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":1}", "InvalidArguments")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"after\":\"MA==\"}", "InvalidArguments")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"after\":\"MA==\"}", "InvalidArguments")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"having\":{\"in\":[]}}", "InvalidArguments")]
+        public async Task AggregateRecords_AdditionalArgumentEdges_ReturnExpectedError(string json, string expectedError)
+        {
+            CallToolResult result = await ExecuteToolAsync(CreateDefaultServiceProvider(), json);
+
+            AssertErrorResult(result, expectedError);
+        }
+
+        [TestMethod]
+        public async Task AggregateRecords_ValidHavingOperators_PassArgumentValidation()
+        {
+            const string json = """
                 {
-                        CallToolResult result = await ExecuteToolAsync(CreateDefaultServiceProvider(), json);
-
-                        AssertErrorResult(result, expectedError);
+                    "entity": "Book",
+                    "function": "count",
+                    "groupby": ["title", "TITLE", ""],
+                    "having": {
+                        "eq": 1,
+                        "neq": 2,
+                        "gt": 3,
+                        "gte": 4,
+                        "lt": 5,
+                        "lte": 6,
+                        "in": [7, 8]
+                    }
                 }
+                """;
 
-                [TestMethod]
-                public async Task AggregateRecords_ValidHavingOperators_PassArgumentValidation()
-                {
-                        const string json = """
-                                {
-                                    "entity": "Book",
-                                    "function": "count",
-                                    "groupby": ["title", "TITLE", ""],
-                                    "having": {
-                                        "eq": 1,
-                                        "neq": 2,
-                                        "gt": 3,
-                                        "gte": 4,
-                                        "lt": 5,
-                                        "lte": 6,
-                                        "in": [7, 8]
-                                    }
-                                }
-                                """;
+            CallToolResult result = await ExecuteToolAsync(CreateDefaultServiceProvider(), json);
 
-                        CallToolResult result = await ExecuteToolAsync(CreateDefaultServiceProvider(), json);
-
-                        JsonElement content = ParseContent(result);
-                        Assert.AreNotEqual(
-                                "InvalidArguments",
-                                content.GetProperty("error").GetProperty("type").GetString());
-                }
+            JsonElement content = ParseContent(result);
+            Assert.AreNotEqual(
+                "InvalidArguments",
+                content.GetProperty("error").GetProperty("type").GetString());
+        }
 
         #endregion
 

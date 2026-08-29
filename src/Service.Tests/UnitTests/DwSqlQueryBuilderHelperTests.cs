@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -14,7 +15,7 @@ using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.DWSQL)]
     public class DwSqlQueryBuilderHelperTests
     {
         [TestMethod]
@@ -95,6 +96,32 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(query.Contains("FOR JSON PATH"));
         }
 
+        [TestMethod]
+        public void BuildWithJsonFunc_SubqueryWrapsColumnsAsJsonObject()
+        {
+            SqlQueryStructure structure = CreateBuildableStructure(isList: false);
+
+            string query = InvokeInstance<string>(
+                new DwSqlQueryBuilder(enableNto1JoinOpt: true),
+                "BuildWithJsonFunc",
+                structure,
+                true);
+
+            StringAssert.StartsWith(query, "SELECT JSON_OBJECT('id': [id])");
+            StringAssert.Contains(query, "FROM (SELECT TOP 1");
+            StringAssert.Contains(query, "AS [table0]");
+        }
+
+        [TestMethod]
+        public void BuildFetchEnabledTriggersQuery_ReturnsTriggerMetadataQuery()
+        {
+            string query = new DwSqlQueryBuilder(enableNto1JoinOpt: true).BuildFetchEnabledTriggersQuery();
+
+            StringAssert.Contains(query, "FROM sys.triggers");
+            StringAssert.Contains(query, "ST.parent_id = object_id(@param0 + '.' + @param1)");
+            StringAssert.Contains(query, "ST.is_disabled = 0");
+        }
+
         private static bool InvokeHasToOneOrNoRelation(SqlQueryStructure? structure, bool isSubQuery) =>
             InvokeStatic<bool>("HasToOneOrNoRelation", structure, isSubQuery);
 
@@ -102,6 +129,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             MethodInfo method = typeof(DwSqlQueryBuilder).GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic)!;
             return (T)method.Invoke(null, arguments)!;
+        }
+
+        private static T InvokeInstance<T>(DwSqlQueryBuilder builder, string methodName, params object?[] arguments)
+        {
+            MethodInfo method = typeof(DwSqlQueryBuilder)
+                .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
+                .Single(candidate => candidate.Name == methodName && candidate.GetParameters().Length == arguments.Length);
+            return (T)method.Invoke(builder, arguments)!;
         }
 
         private static SqlQueryStructure CreateStructure(bool isList, params (string Alias, SqlQueryStructure Query)[] joins)

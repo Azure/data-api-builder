@@ -187,42 +187,7 @@ namespace Azure.DataApiBuilder.Service
                         services.AddSingleton<IMcpLogNotificationWriter>(_mcpNotificationWriter);
                     }
                 })
-                .ConfigureLogging(logging =>
-                {
-                    // For MCP stdio mode, we need dynamic log level control via logging/setLevel.
-                    // Set framework minimum to Trace so all logs pass through to the dynamic filter.
-                    // The dynamic AddFilter() will do the actual filtering based on current level.
-                    // For non-MCP mode, use the configured level directly.
-                    if (runMcpStdio)
-                    {
-                        // Clear all default providers (Console, Debug, EventSource, EventLog)
-                        // to ensure stdout remains pure JSON-RPC for MCP protocol compliance.
-                        logging.ClearProviders();
-
-                        // Allow all logs through framework, filter dynamically
-                        logging.SetMinimumLevel(LogLevel.Trace);
-                    }
-                    else
-                    {
-                        logging.SetMinimumLevel(LogLevelProvider.CurrentLogLevel);
-                        logging.Services.Configure<SimpleConsoleFormatterOptions>(options =>
-                        {
-                            options.TimestampFormat = CONSOLE_TIMESTAMP_FORMAT;
-                            options.UseUtcTimestamp = true;
-                        });
-                    }
-
-                    // Add filter for dynamic log level changes (e.g., via MCP logging/setLevel)
-                    logging.AddFilter(logLevel => LogLevelProvider.ShouldLog(logLevel));
-                    logging.AddFilter("Microsoft", logLevel => LogLevelProvider.ShouldLog(logLevel));
-                    logging.AddFilter("Microsoft.Hosting.Lifetime", logLevel => LogLevelProvider.ShouldLog(logLevel));
-
-                    // For MCP stdio mode, add the MCP logger provider to send logs as notifications
-                    if (runMcpStdio)
-                    {
-                        logging.AddProvider(new McpLoggerProvider(_mcpNotificationWriter));
-                    }
-                })
+                .ConfigureLogging(logging => ConfigureHostLogging(logging, runMcpStdio))
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     // LogLevelProvider was already initialized in StartEngine before CreateHostBuilder.
@@ -234,6 +199,65 @@ namespace Azure.DataApiBuilder.Service
                     DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
                 });
+        }
+
+        /// <summary>
+        /// Configures the web host's logging pipeline.
+        /// For MCP stdio mode all default providers are cleared (stdout is reserved for
+        /// JSON-RPC) and the framework minimum is lowered to Trace so the dynamic filter
+        /// alone decides what is emitted. Otherwise the console provider already registered
+        /// by <see cref="Host.CreateDefaultBuilder(string[])"/> is reused - no second provider
+        /// is added - and only its formatter options are adjusted so every entry is prefixed
+        /// with an ISO 8601 UTC timestamp.
+        /// </summary>
+        /// <param name="logging">Logging builder supplied by the host.</param>
+        /// <param name="runMcpStdio">True when running as an MCP stdio server.</param>
+        public static void ConfigureHostLogging(ILoggingBuilder logging, bool runMcpStdio)
+        {
+            // For MCP stdio mode, we need dynamic log level control via logging/setLevel.
+            // Set framework minimum to Trace so all logs pass through to the dynamic filter.
+            // The dynamic AddFilter() will do the actual filtering based on current level.
+            // For non-MCP mode, use the configured level directly.
+            if (runMcpStdio)
+            {
+                // Clear all default providers (Console, Debug, EventSource, EventLog)
+                // to ensure stdout remains pure JSON-RPC for MCP protocol compliance.
+                logging.ClearProviders();
+
+                // Allow all logs through framework, filter dynamically
+                logging.SetMinimumLevel(LogLevel.Trace);
+            }
+            else
+            {
+                logging.SetMinimumLevel(LogLevelProvider.CurrentLogLevel);
+
+                // The console provider registered by Host.CreateDefaultBuilder() is reused as-is;
+                // only its options are configured so no second provider is registered (which would
+                // emit every entry twice). ConsoleLoggerOptions.FormatterName must be set explicitly:
+                // when it is left unset the provider ignores SimpleConsoleFormatterOptions and derives
+                // the formatter options from ConsoleLoggerOptions' own (obsolete) properties instead,
+                // which would silently drop the timestamp.
+                logging.Services.Configure<ConsoleLoggerOptions>(options =>
+                {
+                    options.FormatterName = ConsoleFormatterNames.Simple;
+                });
+                logging.Services.Configure<SimpleConsoleFormatterOptions>(options =>
+                {
+                    options.TimestampFormat = CONSOLE_TIMESTAMP_FORMAT;
+                    options.UseUtcTimestamp = true;
+                });
+            }
+
+            // Add filter for dynamic log level changes (e.g., via MCP logging/setLevel)
+            logging.AddFilter(logLevel => LogLevelProvider.ShouldLog(logLevel));
+            logging.AddFilter("Microsoft", logLevel => LogLevelProvider.ShouldLog(logLevel));
+            logging.AddFilter("Microsoft.Hosting.Lifetime", logLevel => LogLevelProvider.ShouldLog(logLevel));
+
+            // For MCP stdio mode, add the MCP logger provider to send logs as notifications
+            if (runMcpStdio)
+            {
+                logging.AddProvider(new McpLoggerProvider(_mcpNotificationWriter));
+            }
         }
 
         /// <summary>

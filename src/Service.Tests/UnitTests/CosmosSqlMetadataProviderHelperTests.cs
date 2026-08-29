@@ -8,18 +8,21 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System.IO.Abstractions;
+using System.IO.Abstractions.TestingHelpers;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class CosmosSqlMetadataProviderHelperTests
     {
         [TestMethod]
@@ -139,6 +142,56 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
+        public void GetDatabaseObjectName_NullSourceAndMissingContainerThrows()
+        {
+            CosmosSqlMetadataProvider provider = CreateProvider(
+                entities: new() { ["Book"] = CreateEntity(null!) },
+                options: new("db", null, null, null));
+
+            Assert.ThrowsException<DataApiBuilderException>(() => provider.GetDatabaseObjectName("Book"));
+        }
+
+        [TestMethod]
+        public void GetDatabaseObjectName_EmptySourceAndMissingContainerReturnsEmptyName()
+        {
+            CosmosSqlMetadataProvider provider = CreateProvider(
+                entities: new() { ["Book"] = CreateEntity(string.Empty) },
+                options: new("db", string.Empty, null, null));
+
+            Assert.AreEqual(string.Empty, provider.GetDatabaseObjectName("Book"));
+        }
+
+        [TestMethod]
+        public void GetSchemaName_OnePartSourceAndMissingConfiguredDatabaseThrows()
+        {
+            CosmosSqlMetadataProvider provider = CreateProvider(
+                entities: new() { ["Book"] = CreateEntity("books") },
+                options: new(null, "container", null, null));
+
+            Assert.ThrowsException<DataApiBuilderException>(() => provider.GetSchemaName("Book"));
+        }
+
+        [TestMethod]
+        public void Constructor_MissingCosmosOptionsThrowsInitializationError()
+        {
+            RuntimeConfig runtimeConfig = new(
+                Schema: string.Empty,
+                DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, string.Empty, Options: null),
+                Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
+            RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigValidator validator = new(
+                configProvider,
+                fileSystem,
+                NullLogger<RuntimeConfigValidator>.Instance);
+
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                new CosmosSqlMetadataProvider(configProvider, validator, fileSystem));
+
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
+        }
+
+        [TestMethod]
         public void GetEntityName_ResolvesDirectModelDirectiveAndSingularNames()
         {
             Dictionary<string, Entity> entities = new()
@@ -185,6 +238,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
+        public void ParseSchemaGraphQLFieldsForJoins_AddsRepeatedModelPaths()
+        {
+            DocumentNode schema = Utf8GraphQLParser.Parse(@"
+                type FirstBook @model(name: ""Book"") { id: ID }
+                type SecondBook @model(name: ""Book"") { id: ID }");
+            CosmosSqlMetadataProvider provider = CreateProvider(
+                entities: new() { ["Book"] = CreateEntity("db.books") },
+                schema: schema);
+
+            InvokePrivate(provider, "ParseSchemaGraphQLFieldsForJoins");
+
+            Assert.AreEqual(2, provider.EntityWithJoins["Book"].Count);
+        }
+
+        [TestMethod]
         public void AssertIfEntityIsAvailableInConfig_MissingEntityThrows()
         {
             CosmosSqlMetadataProvider provider = CreateProvider();
@@ -210,6 +278,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SetField(provider, "_partitionKeyPaths", new ConcurrentDictionary<string, string>());
             SetField(provider, "_oDataParser", new ODataParser());
             SetField(provider, "_graphQLTypeToFieldsMap", new Dictionary<string, List<FieldDefinitionNode>>());
+            provider.EntityWithJoins = new Dictionary<string, List<EntityDbPolicyCosmosModel>>();
             provider.GraphQLSchemaRoot = schema ?? new DocumentNode(Array.Empty<IDefinitionNode>());
             return provider;
         }

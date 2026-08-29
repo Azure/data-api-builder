@@ -1,4 +1,6 @@
+using Azure.DataApiBuilder.Config.Utilities;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -15,7 +17,7 @@ switch (aspireDB)
 
         if (string.IsNullOrEmpty(databaseConnectionString))
         {
-            Console.WriteLine("No connection string provided, starting a local SQL Server container.");
+            BootstrapLogger.Instance.LogInformation("No connection string provided, starting a local SQL Server container.");
 
             sqlDbContainer = builder.AddSqlServer("sqlserver")
                 .WithDataVolume()
@@ -53,9 +55,9 @@ switch (aspireDB)
 
         IResourceBuilder<PostgresDatabaseResource>? postgresDB = null;
 
-        if (!string.IsNullOrEmpty(databaseConnectionString))
+        if (string.IsNullOrEmpty(databaseConnectionString))
         {
-            Console.WriteLine("No connection string provided, starting a local PostgreSQL container.");
+            BootstrapLogger.Instance.LogInformation("No connection string provided, starting a local PostgreSQL container.");
 
             postgresDB = builder.AddPostgres("postgres")
                 .WithPgAdmin()

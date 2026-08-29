@@ -4,6 +4,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Abstractions;
@@ -441,6 +442,107 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(string.Empty, stdout, $"stdout must stay clean but got: '{stdout}'");
             AssertEveryEntryTimestamped(stderr, before, after);
             StringAssert.Contains(stderr, LOG_MESSAGE);
+        }
+
+        /// <summary>
+        /// Matches a direct write to the console, e.g. <c>Console.WriteLine(</c>,
+        /// <c>Console.Error.Write(</c> or <c>Console.Out.WriteLine(</c>.
+        /// </summary>
+        private static readonly Regex _directConsoleWrite =
+            new(@"\bConsole\s*\.\s*(?:(?:Error|Out)\s*\.\s*)?Write(?:Line)?\s*\(", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Production source files permitted to write to the console directly, with the reason.
+        /// Everything else must log through <see cref="BootstrapLogger"/> or an injected
+        /// <see cref="ILogger"/> so the entry carries the invariant UTC millisecond prefix.
+        /// </summary>
+        private static readonly Dictionary<string, string> _allowedDirectConsoleWriters = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Cli/CustomLoggerProvider.cs"] = "Is the CLI console logger implementation; it writes the timestamp itself.",
+            ["Cli/Commands/AppNameOptions.cs"] = "Intentional command result (encoded/decoded app name), not a diagnostic.",
+            ["Cli/ConfigGenerator.cs"] = "Intentional command result (auto-entities simulation table), not a diagnostic."
+        };
+
+        /// <summary>
+        /// Guards the completeness of the direct-console inventory: every production source file
+        /// must route log-like diagnostics through a logger rather than <c>Console.Write*</c>.
+        /// This is what ties the Aspire AppHost (and any future call site) to the invariant UTC
+        /// prefix - the prefix itself is asserted by the BootstrapLogger tests above, so proving a
+        /// file has no bare console writes proves its diagnostics carry that prefix.
+        /// Intentional command output is allow-listed with a justification.
+        /// </summary>
+        [TestMethod]
+        public void ProductionSources_DoNotWriteDiagnosticsDirectlyToConsole()
+        {
+            DirectoryInfo sourceRoot = FindSourceRoot();
+            string[] productionProjects =
+            {
+                "Aspire.AppHost", "Auth", "Azure.DataApiBuilder.Mcp", "Cli",
+                "Config", "Core", "Service", "Service.GraphQLBuilder"
+            };
+
+            List<string> violations = new();
+            foreach (string project in productionProjects)
+            {
+                string projectPath = Path.Combine(sourceRoot.FullName, project);
+                Assert.IsTrue(Directory.Exists(projectPath), $"Expected production project directory '{projectPath}' to exist.");
+
+                foreach (string file in Directory.EnumerateFiles(projectPath, "*.cs", SearchOption.AllDirectories))
+                {
+                    string relativePath = Path.GetRelativePath(sourceRoot.FullName, file).Replace('\\', '/');
+
+                    // Generated and intermediate build output is not hand-written source.
+                    if (relativePath.Contains("/obj/", StringComparison.Ordinal)
+                        || relativePath.Contains("/bin/", StringComparison.Ordinal)
+                        || _allowedDirectConsoleWriters.ContainsKey(relativePath))
+                    {
+                        continue;
+                    }
+
+                    string[] lines = File.ReadAllLines(file);
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        // Skip comments, which legitimately mention Console.WriteLine in prose.
+                        string trimmed = lines[i].TrimStart();
+                        if (trimmed.StartsWith("//", StringComparison.Ordinal)
+                            || trimmed.StartsWith("*", StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        if (_directConsoleWrite.IsMatch(lines[i]))
+                        {
+                            violations.Add($"{relativePath}({i + 1}): {trimmed}");
+                        }
+                    }
+                }
+            }
+
+            Assert.AreEqual(0, violations.Count,
+                "Log-like diagnostics must be emitted through a logger so they carry the invariant UTC timestamp prefix. "
+                + "If a write is intentional command output, add it to _allowedDirectConsoleWriters with a justification. "
+                + $"Found:{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
+        }
+
+        /// <summary>
+        /// Walks up from the test assembly location to the repository's 'src' directory,
+        /// identified by the solution file it contains.
+        /// </summary>
+        private static DirectoryInfo FindSourceRoot()
+        {
+            DirectoryInfo? directory = new(AppContext.BaseDirectory);
+            while (directory is not null)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "Azure.DataApiBuilder.sln")))
+                {
+                    return directory;
+                }
+
+                directory = directory.Parent;
+            }
+
+            throw new AssertFailedException(
+                $"Could not locate the 'src' directory (containing Azure.DataApiBuilder.sln) from '{AppContext.BaseDirectory}'.");
         }
     }
 }

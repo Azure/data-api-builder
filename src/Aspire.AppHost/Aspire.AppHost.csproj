@@ -22,6 +22,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Service\Azure.DataApiBuilder.Service.csproj" />
+    <!-- Referenced as a plain library (not an Aspire resource) so AppHost diagnostics can use
+         the shared BootstrapLogger and emit the same timestamped console format as the engine. -->
+    <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" IsAspireProjectResource="false" />
   </ItemGroup>
 
 </Project>

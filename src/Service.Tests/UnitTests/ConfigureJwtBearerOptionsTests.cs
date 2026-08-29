@@ -6,7 +6,6 @@ using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

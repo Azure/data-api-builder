@@ -6,10 +6,10 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
-using MetadataTypeConverter = Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters.TypeConverter;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MetadataTypeConverter = Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters.TypeConverter;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {

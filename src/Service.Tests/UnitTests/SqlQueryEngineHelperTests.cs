@@ -16,7 +16,6 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
-using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Microsoft.AspNetCore.Http;
@@ -29,8 +28,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass]
     public class SqlQueryEngineHelperTests
     {
-        private const string DataSourceName = "default";
-        private const string EntityName = "Book";
+        private const string DATA_SOURCE_NAME = "default";
+        private const string ENTITY_NAME = "Book";
 
         [DataTestMethod]
         [DataRow("{\"value\":1}", true)]
@@ -59,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     It.IsAny<string>(),
                     It.IsAny<IDictionary<string, DbConnectionParam>>(),
                     It.IsAny<Func<DbDataReader, List<string>?, Task<JsonArray>>>(),
-                    DataSourceName,
+                    DATA_SOURCE_NAME,
                     It.IsAny<HttpContext?>(),
                     It.IsAny<List<string>?>()))
                 .ReturnsAsync(resultArray!);
@@ -73,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             using JsonDocument? result = await (Task<JsonDocument?>)method.Invoke(
                 engine,
-                new object[] { structure, DataSourceName })!;
+                new object[] { structure, DATA_SOURCE_NAME })!;
 
             Assert.AreEqual(expectsDocument, result is not null);
         }
@@ -91,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     It.IsAny<string>(),
                     It.IsAny<IDictionary<string, DbConnectionParam>>(),
                     It.IsAny<Func<DbDataReader, List<string>?, Task<List<JsonDocument>>>>(),
-                    DataSourceName,
+                    DATA_SOURCE_NAME,
                     It.IsAny<HttpContext?>(),
                     It.IsAny<List<string>?>()))
                 .ReturnsAsync(expected!);
@@ -105,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             List<JsonDocument>? result = await (Task<List<JsonDocument>?>)method.Invoke(
                 engine,
-                new object[] { structure, DataSourceName })!;
+                new object[] { structure, DATA_SOURCE_NAME })!;
 
             Assert.AreSame(expected, result);
             if (expected is not null)
@@ -123,7 +122,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Schema: string.Empty,
                 DataSource: new DataSource(DatabaseType.MSSQL, string.Empty),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
-            runtimeConfig.UpdateDefaultDataSourceName(DataSourceName);
+            runtimeConfig.UpdateDefaultDataSourceName(DATA_SOURCE_NAME);
             Mock<RuntimeConfigLoader> loader = new(null, null);
             Mock<RuntimeConfigProvider> configProviderMock = new(loader.Object);
             configProviderMock.Setup(x => x.GetConfig()).Returns(runtimeConfig);
@@ -154,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private static T CreateUninitializedStructure<T>()
         {
             T structure = (T)RuntimeHelpers.GetUninitializedObject(typeof(T));
-            SetProperty(structure!, "EntityName", EntityName);
+            SetProperty(structure!, "EntityName", ENTITY_NAME);
             SetProperty(structure!, "Parameters", new Dictionary<string, DbConnectionParam>());
             return structure;
         }

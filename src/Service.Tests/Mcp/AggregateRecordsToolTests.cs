@@ -666,8 +666,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             foreach (JsonArray? input in new JsonArray?[]
             {
                 null,
-                new JsonArray(),
-                new JsonArray(new JsonObject { ["count"] = 3 })
+                new(),
+                new(new JsonObject { ["count"] = 3 })
             })
             {
                 CallToolResult result = InvokePrivateResponseBuilder(

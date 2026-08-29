@@ -21,12 +21,12 @@ using Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
+using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using HotChocolate.Language;
-using HotChocolate.Resolvers;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {

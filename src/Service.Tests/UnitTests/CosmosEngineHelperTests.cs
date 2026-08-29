@@ -14,16 +14,15 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
-using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
-using HotChocolate.Language;
-using HotChocolate.Resolvers;
-using Microsoft.Extensions.Primitives;
-using Microsoft.Azure.Cosmos;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using HotChocolate.Language;
+using HotChocolate.Resolvers;
+using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Primitives;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests

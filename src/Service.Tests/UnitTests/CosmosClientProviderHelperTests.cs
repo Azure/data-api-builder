@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -12,7 +13,6 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.IO.Abstractions.TestingHelpers;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {

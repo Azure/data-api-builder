@@ -4,12 +4,13 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO.Abstractions;
+using System.IO.Abstractions.TestingHelpers;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -17,8 +18,6 @@ using HotChocolate.Language;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using System.IO.Abstractions;
-using System.IO.Abstractions.TestingHelpers;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {

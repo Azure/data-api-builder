@@ -4,6 +4,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using Azure.DataApiBuilder.Config.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -64,29 +65,74 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// <inheritdoc/>
         public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider? scopeProvider, TextWriter textWriter)
         {
+            // Buffered entries are replayed later (ConsoleLogger.LogRecords passes a
+            // LogEntry<BufferedLogRecord> whose Formatter and Exception are null), so the original
+            // event's timestamp, message and exception must be read off the record itself rather
+            // than recomputed at flush time.
+            if (logEntry.State is BufferedLogRecord bufferedRecord)
+            {
+                WriteInternal(
+                    scopeProvider: null,
+                    textWriter,
+                    bufferedRecord.FormattedMessage ?? string.Empty,
+                    bufferedRecord.LogLevel,
+                    bufferedRecord.EventId.Id,
+                    bufferedRecord.Exception,
+                    logEntry.Category,
+                    bufferedRecord.Timestamp);
+                return;
+            }
+
             string? message = logEntry.Formatter?.Invoke(logEntry.State, logEntry.Exception);
             if (message is null && logEntry.Exception is null)
             {
                 return;
             }
 
-            string? logLevelString = BootstrapLogger.GetAbbreviatedLogLevel(logEntry.LogLevel);
+            WriteInternal(
+                scopeProvider,
+                textWriter,
+                message ?? string.Empty,
+                logEntry.LogLevel,
+                logEntry.EventId.Id,
+                logEntry.Exception?.ToString(),
+                logEntry.Category,
+                DateTimeOffset.UtcNow);
+        }
+
+        private void WriteInternal(
+            IExternalScopeProvider? scopeProvider,
+            TextWriter textWriter,
+            string message,
+            LogLevel logLevel,
+            int eventId,
+            string? exception,
+            string category,
+            DateTimeOffset stamp)
+        {
+            string? logLevelString = BootstrapLogger.GetAbbreviatedLogLevel(logLevel);
             if (logLevelString is null)
             {
                 return;
             }
 
+            // Untrusted values can reach the console through log messages, so neutralize the
+            // control characters which would otherwise drive terminal escape sequences.
+            message = SanitizeControlCharacters(message)!;
+            exception = SanitizeControlCharacters(exception);
+            category = SanitizeControlCharacters(category)!;
+
             SimpleConsoleFormatterOptions formatterOptions = _formatterOptions;
             bool singleLine = formatterOptions.SingleLine;
 
-            // The timestamp is generated here (rather than through the formatter's TimestampFormat
+            // The timestamp is rendered here (rather than through the formatter's TimestampFormat
             // option) so that it is always UTC and always culture invariant.
-            textWriter.Write(DateTime.UtcNow.ToString(BootstrapLogger.UTC_TIMESTAMP_FORMAT, CultureInfo.InvariantCulture));
+            textWriter.Write(stamp.UtcDateTime.ToString(BootstrapLogger.UTC_TIMESTAMP_FORMAT, CultureInfo.InvariantCulture));
             textWriter.Write(' ');
 
             if (EmitAnsiColorCodes(formatterOptions.ColorBehavior))
             {
-                WriteColoredLogLevel(textWriter, logEntry.LogLevel, logLevelString);
+                WriteColoredLogLevel(textWriter, logLevel, logLevelString);
             }
             else
             {
@@ -95,9 +141,9 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
             // Category and event id, e.g. ": Microsoft.AspNetCore.Hosting.Diagnostics[1]".
             textWriter.Write(LOG_LEVEL_PADDING);
-            textWriter.Write(logEntry.Category);
+            textWriter.Write(category);
             textWriter.Write('[');
-            textWriter.Write(logEntry.EventId.Id.ToString(CultureInfo.InvariantCulture));
+            textWriter.Write(eventId.ToString(CultureInfo.InvariantCulture));
             textWriter.Write(']');
 
             if (!singleLine)
@@ -108,15 +154,65 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             WriteScopeInformation(textWriter, scopeProvider, formatterOptions.IncludeScopes, singleLine);
             WriteMessage(textWriter, message, singleLine);
 
-            if (logEntry.Exception is not null)
+            if (exception is not null)
             {
-                WriteMessage(textWriter, logEntry.Exception.ToString(), singleLine);
+                WriteMessage(textWriter, exception, singleLine);
             }
 
             if (singleLine)
             {
                 textWriter.Write(Environment.NewLine);
             }
+        }
+
+        /// <summary>
+        /// Escapes the control characters which can drive terminal escape sequences when written to
+        /// a console - the C0 range (U+0000-U+001F), DEL (U+007F) and the C1 range (U+0080-U+009F) -
+        /// as \uXXXX. Tab, carriage return and line feed are preserved for log formatting.
+        /// Mirrors the sanitization the built-in console formatter applies.
+        /// </summary>
+        private static string? SanitizeControlCharacters(string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return value;
+            }
+
+            int firstIndex = -1;
+            for (int i = 0; i < value.Length; i++)
+            {
+                if (ShouldEscape(value[i]))
+                {
+                    firstIndex = i;
+                    break;
+                }
+            }
+
+            if (firstIndex < 0)
+            {
+                return value;
+            }
+
+            StringBuilder sanitized = new(value.Length + 8);
+            sanitized.Append(value, 0, firstIndex);
+            for (int i = firstIndex; i < value.Length; i++)
+            {
+                char c = value[i];
+                if (ShouldEscape(c))
+                {
+                    sanitized.Append("\\u").Append(((int)c).ToString("X4", CultureInfo.InvariantCulture));
+                }
+                else
+                {
+                    sanitized.Append(c);
+                }
+            }
+
+            return sanitized.ToString();
+
+            static bool ShouldEscape(char c)
+                => c is not '\t' and not '\n' and not '\r'
+                    && (c <= '\u001F' || (c >= '\u007F' && c <= '\u009F'));
         }
 
         private static void WriteMessage(TextWriter textWriter, string? message, bool singleLine)

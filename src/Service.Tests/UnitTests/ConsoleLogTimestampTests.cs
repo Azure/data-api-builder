@@ -16,6 +16,7 @@ using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -442,6 +443,125 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(string.Empty, stdout, $"stdout must stay clean but got: '{stdout}'");
             AssertEveryEntryTimestamped(stderr, before, after);
             StringAssert.Contains(stderr, LOG_MESSAGE);
+        }
+
+        /// <summary>
+        /// Minimal <see cref="BufferedLogRecord"/> stand-in matching the shape
+        /// <c>ConsoleLogger.LogRecords()</c> hands to the formatter when replaying buffered entries.
+        /// </summary>
+        private sealed class TestBufferedLogRecord : BufferedLogRecord
+        {
+            public override DateTimeOffset Timestamp { get; }
+
+            public override LogLevel LogLevel { get; }
+
+            public override EventId EventId { get; }
+
+            public override string? Exception { get; }
+
+            public override string? FormattedMessage { get; }
+
+            public TestBufferedLogRecord(DateTimeOffset timestamp, LogLevel logLevel, EventId eventId, string? message, string? exception)
+            {
+                Timestamp = timestamp;
+                LogLevel = logLevel;
+                EventId = eventId;
+                FormattedMessage = message;
+                Exception = exception;
+            }
+        }
+
+        /// <summary>
+        /// Invokes the formatter exactly as <c>ConsoleLogger.LogRecords()</c> does for a buffered
+        /// entry: the state is the <see cref="BufferedLogRecord"/> and both the formatter delegate
+        /// and <c>LogEntry.Exception</c> are null.
+        /// </summary>
+        private static string FormatBufferedRecord(BufferedLogRecord record, string category)
+        {
+            ServiceCollection services = new();
+            services.AddLogging(builder => builder.AddUtcTimestampConsoleFormatter());
+            using ServiceProvider provider = services.BuildServiceProvider();
+
+            ConsoleFormatter formatter = provider.GetRequiredService<IEnumerable<ConsoleFormatter>>()
+                .Single(f => f.Name == UtcTimestampConsoleFormatter.FORMATTER_NAME);
+
+            LogEntry<BufferedLogRecord> entry = new(
+                record.LogLevel,
+                category,
+                record.EventId,
+                record,
+                exception: null,
+                formatter: null!);
+
+            StringWriter writer = new();
+            formatter.Write(in entry, scopeProvider: null, writer);
+            return writer.ToString();
+        }
+
+        /// <summary>
+        /// A buffered entry must be stamped with the time the event originally occurred, not the
+        /// time it was flushed, and must still carry the invariant Gregorian UTC prefix.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("en-US")]
+        [DataRow("th-TH")]
+        public void Formatter_BufferedLogRecord_UsesOriginalTimestamp(string cultureName)
+        {
+            // A fixed instant well in the past, so a flush-time timestamp cannot coincide with it.
+            DateTimeOffset recorded = new(2021, 3, 4, 5, 6, 7, 89, TimeSpan.Zero);
+            TestBufferedLogRecord record = new(recorded, LogLevel.Warning, new EventId(42), LOG_MESSAGE, exception: null);
+
+            string output = string.Empty;
+            RunUnderCulture(cultureName, () => output = FormatBufferedRecord(record, "TestCategory"));
+
+            StringAssert.StartsWith(output, "2021-03-04T05:06:07.089Z ",
+                $"Buffered entry must be stamped with the record's own UTC timestamp but got: '{output}'");
+            StringAssert.Contains(output, "warn:");
+            StringAssert.Contains(output, "TestCategory[42]");
+            StringAssert.Contains(output, LOG_MESSAGE);
+        }
+
+        /// <summary>
+        /// A buffered entry stores its exception as a preformatted string on the record while
+        /// LogEntry.Exception is null, so reading only the latter would silently drop it.
+        /// </summary>
+        [TestMethod]
+        public void Formatter_BufferedLogRecord_WritesBufferedException()
+        {
+            const string EXCEPTION_TEXT = "System.InvalidOperationException: buffered boom";
+            TestBufferedLogRecord record = new(
+                DateTimeOffset.UtcNow, LogLevel.Error, new EventId(7), LOG_MESSAGE, EXCEPTION_TEXT);
+
+            string output = FormatBufferedRecord(record, "TestCategory");
+
+            StringAssert.Contains(output, EXCEPTION_TEXT,
+                $"Buffered exception must not be dropped but got: '{output}'");
+            StringAssert.Contains(output, LOG_MESSAGE);
+            StringAssert.Contains(output, "fail:");
+        }
+
+        /// <summary>
+        /// Log messages can carry untrusted values, so terminal control characters must be escaped
+        /// rather than written through to the console (as the built-in formatter also does).
+        /// Tab, carriage return and line feed remain intact for log formatting.
+        /// </summary>
+        [TestMethod]
+        public void Formatter_ControlCharactersInMessage_AreEscaped()
+        {
+            TestBufferedLogRecord record = new(
+                DateTimeOffset.UtcNow,
+                LogLevel.Information,
+                new EventId(0),
+                "injected\u001b[31mred\u0007bell\tkept",
+                exception: null);
+
+            string output = FormatBufferedRecord(record, "TestCategory");
+
+            Assert.IsFalse(output.Contains('\u001b'), $"ESC must be escaped but got: '{output}'");
+            Assert.IsFalse(output.Contains('\u0007'), $"BEL must be escaped but got: '{output}'");
+            StringAssert.Contains(output, "\\u001B");
+            StringAssert.Contains(output, "\\u0007");
+            StringAssert.Contains(output, "bell\tkept", "Tab must be preserved for log formatting.");
         }
 
         /// <summary>

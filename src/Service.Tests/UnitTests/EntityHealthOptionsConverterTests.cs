@@ -80,8 +80,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataTestMethod]
         [DataRow("{\"first\":0}", "first")]
         [DataRow("{\"first\":-1}", "first")]
-        [DataRow("{\"threshold-ms\":0}", "ttl-seconds")]
-        [DataRow("{\"threshold-ms\":-1}", "ttl-seconds")]
+        [DataRow("{\"threshold-ms\":0}", "threshold-ms")]
+        [DataRow("{\"threshold-ms\":-1}", "threshold-ms")]
         [DataRow("{\"unexpected\":1}", "Unexpected property")]
         public void Deserialize_InvalidValue_ThrowsJsonException(string json, string expectedMessage)
         {

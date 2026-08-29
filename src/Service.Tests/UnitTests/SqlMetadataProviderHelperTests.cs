@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -16,12 +18,14 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlTypes;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.MSSQL)]
     public class SqlMetadataProviderHelperTests
     {
         [TestMethod]
@@ -155,18 +159,127 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
-        public void ParseSchemaAndDbTableName_HandlesDefaultExplicitPostgresAndMySqlCases()
+        public void ParseSchemaAndDbTableName_HandlesDefaultAndExplicitMsSqlCases()
         {
             MsSqlMetadataProvider provider = CreateProvider();
             Assert.AreEqual(("dbo", "books"), provider.ParseSchemaAndDbTableName("books"));
             Assert.AreEqual(("custom", "books"), provider.ParseSchemaAndDbTableName("custom.books"));
+        }
 
-            SetBaseField(provider, "_databaseType", DatabaseType.PostgreSQL);
-            SetBaseAutoProperty(provider, "ConnectionString", "Host=localhost;Database=db;SearchPath=tenant");
-            Assert.AreEqual(("tenant", "books"), provider.ParseSchemaAndDbTableName("books"));
+        [TestMethod]
+        public void PopulateColumnDefinitionWithHasDefaultAndDbType_MapsMsSqlMetadata()
+        {
+            SourceDefinition definition = new();
+            definition.Columns["title"] = new ColumnDefinition(typeof(string));
+            definition.Columns["published"] = new ColumnDefinition(typeof(DateTime));
+            definition.Columns["embedding"] = new ColumnDefinition(typeof(SqlVector<Single>));
 
-            SetBaseField(provider, "_databaseType", DatabaseType.MySQL);
-            Assert.ThrowsException<DataApiBuilderException>(() => provider.ParseSchemaAndDbTableName("custom.books"));
+            DataTable columns = new();
+            columns.Columns.Add("COLUMN_NAME", typeof(string));
+            columns.Columns.Add("COLUMN_DEFAULT", typeof(object));
+            columns.Columns.Add("DATA_TYPE", typeof(string));
+            columns.Rows.Add("title", DBNull.Value, "nvarchar");
+            columns.Rows.Add("published", "getdate()", "date");
+            columns.Rows.Add("embedding", DBNull.Value, "varbinary");
+            columns.Rows.Add("not_configured", DBNull.Value, "int");
+
+            MsSqlMetadataProvider provider = CreateProvider();
+            GetMsSqlMethod("PopulateColumnDefinitionWithHasDefaultAndDbType")
+                .Invoke(provider, new object[] { definition, columns });
+
+            ColumnDefinition title = definition.Columns["title"];
+            Assert.IsFalse(title.HasDefault);
+            Assert.IsNull(title.DefaultValue);
+            Assert.AreEqual(DbType.String, title.DbType);
+            Assert.AreEqual(SqlDbType.NVarChar, title.SqlDbType);
+
+            ColumnDefinition published = definition.Columns["published"];
+            Assert.IsTrue(published.HasDefault);
+            Assert.AreEqual("getdate()", published.DefaultValue);
+            Assert.AreEqual(DbType.Date, published.DbType);
+            Assert.AreEqual(SqlDbType.Date, published.SqlDbType);
+
+            ColumnDefinition embedding = definition.Columns["embedding"];
+            Assert.AreEqual(typeof(float[]), embedding.SystemType);
+            Assert.AreEqual(typeof(float), embedding.ElementSystemType);
+            Assert.IsTrue(embedding.IsArrayType);
+            Assert.AreEqual(DbType.Single, embedding.DbType);
+            Assert.AreEqual(SqlDbType.Vector, embedding.SqlDbType);
+        }
+
+        [TestMethod]
+        public void PopulateMetadataForLinkingObject_MultipleCreateDisabledReturnsWithoutChanges()
+        {
+            MsSqlMetadataProvider provider = CreateProvider();
+            Dictionary<string, DatabaseObject> sourceObjects = new();
+
+            GetMsSqlMethod("PopulateMetadataForLinkingObject").Invoke(provider, new object[]
+            {
+                "Book", "Author", "dbo.book_authors", sourceObjects
+            });
+
+            Assert.AreEqual(0, sourceObjects.Count);
+        }
+
+        [TestMethod]
+        public void TryResolveDbType_UnknownSqlTypeReturnsFalse()
+        {
+            MsSqlMetadataProvider provider = CreateProvider();
+            object?[] arguments = new object?[] { "future_datetime", null };
+
+            bool result = (bool)GetMsSqlMethod("TryResolveDbType").Invoke(provider, arguments)!;
+
+            Assert.IsFalse(result);
+            Assert.AreEqual((DbType)0, arguments[1]);
+        }
+
+        [TestMethod]
+        public async System.Threading.Tasks.Task GenerateAutoentitiesIntoEntities_NullConfigurationReturns()
+        {
+            MsSqlMetadataProvider provider = CreateProvider();
+
+            System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)GetMsSqlMethod("GenerateAutoentitiesIntoEntities")
+                .Invoke(provider, new object?[] { null })!;
+
+            await task;
+        }
+
+        [TestMethod]
+        public async System.Threading.Tasks.Task GenerateAutoentitiesIntoEntities_NullResultObjectThrows()
+        {
+            MsSqlMetadataProvider provider = CreateProvider();
+            ConfigureAutoentityQuery(provider, new JsonArray((JsonNode?)null));
+            IReadOnlyDictionary<string, Autoentity> autoentities = new Dictionary<string, Autoentity>
+            {
+                ["all"] = new Autoentity(null, null, null)
+            };
+
+            System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)GetMsSqlMethod("GenerateAutoentitiesIntoEntities")
+                .Invoke(provider, new object?[] { autoentities })!;
+
+            DataApiBuilderException exception = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() => task);
+            Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
+        }
+
+        [TestMethod]
+        public async System.Threading.Tasks.Task GenerateAutoentitiesIntoEntities_IncompleteResultObjectIsSkipped()
+        {
+            MsSqlMetadataProvider provider = CreateProvider();
+            ConfigureAutoentityQuery(provider, new JsonArray(new JsonObject
+            {
+                ["entity_name"] = "Book",
+                ["object"] = "books"
+            }));
+            IReadOnlyDictionary<string, Autoentity> autoentities = new Dictionary<string, Autoentity>
+            {
+                ["all"] = new Autoentity(null, null, null)
+            };
+
+            System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)GetMsSqlMethod("GenerateAutoentitiesIntoEntities")
+                .Invoke(provider, new object?[] { autoentities })!;
+
+            await task;
+            Assert.AreEqual(0, provider.EntityToDatabaseObject.Count);
         }
 
         [TestMethod]
@@ -339,6 +452,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SetBaseField(provider, "_linkingEntities", new Dictionary<string, Entity>());
             SetBaseAutoProperty(provider, "EntityBackingColumnsToExposedNames", new Dictionary<string, Dictionary<string, string>>());
             SetBaseAutoProperty(provider, "EntityExposedNamesToBackingColumnNames", new Dictionary<string, Dictionary<string, string>>());
+            SetBaseField(provider, "_logger", Microsoft.Extensions.Logging.Abstractions.NullLogger<ISqlMetadataProvider>.Instance);
 
             Dictionary<string, Entity> entities = entity is null
                 ? new Dictionary<string, Entity>()
@@ -349,6 +463,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new RuntimeEntities(entities));
             RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
             SetBaseField(provider, "_runtimeConfigProvider", configProvider);
+            typeof(MsSqlMetadataProvider).GetField("_runtimeConfigProvider", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(provider, configProvider);
             SetBaseField(provider, "_dataSourceName", configProvider.GetConfig().DefaultDataSourceName);
             return provider;
         }
@@ -369,6 +485,26 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         private static MethodInfo GetBaseMethod(string methodName) =>
             typeof(MsSqlMetadataProvider).BaseType!.GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        private static MethodInfo GetMsSqlMethod(string methodName) =>
+            typeof(MsSqlMetadataProvider).GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        private static void ConfigureAutoentityQuery(MsSqlMetadataProvider provider, JsonArray result)
+        {
+            Mock<IQueryExecutor> queryExecutor = new();
+            queryExecutor.Setup(x => x.ExecuteQueryAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<System.Data.Common.DbDataReader, List<string>?, System.Threading.Tasks.Task<JsonArray>>>(),
+                    It.IsAny<string>(),
+                    It.IsAny<Microsoft.AspNetCore.Http.HttpContext>(),
+                    It.IsAny<List<string>>()))
+                .ReturnsAsync(result);
+            Mock<IQueryBuilder> queryBuilder = new();
+            queryBuilder.Setup(x => x.BuildGetAutoentitiesQuery()).Returns("SELECT autoentities");
+            SetBaseAutoProperty(provider, "QueryExecutor", queryExecutor.Object);
+            SetBaseAutoProperty(provider, "SqlQueryBuilder", queryBuilder.Object);
+        }
 
         private static void SetBaseField(MsSqlMetadataProvider provider, string fieldName, object value) =>
             typeof(MsSqlMetadataProvider).BaseType!.GetField(

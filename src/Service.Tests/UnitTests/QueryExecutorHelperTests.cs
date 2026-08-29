@@ -27,7 +27,7 @@ using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.MSSQL)]
     public class QueryExecutorHelperTests
     {
         [DataTestMethod]
@@ -317,6 +317,34 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 executor.GetMultipleResultSetsIfAnyAsync(reader.Object, new List<string> { "<id: 1>", "Book" }));
 
             Assert.AreEqual(System.Net.HttpStatusCode.NotFound, exception.StatusCode);
+        }
+
+        [TestMethod]
+        public async Task MsSqlGetMultipleResultSets_NoMutationResultWithoutArgumentsThrowsInternalServerError()
+        {
+            MsSqlQueryExecutor executor = CreateExecutor(maxResponseSizeEnabled: false);
+            DataTable schema = new();
+            schema.Columns.Add("ColumnName", typeof(string));
+            schema.Columns.Add("ColumnSize", typeof(int));
+            schema.Rows.Add(MsSqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, 4);
+            Mock<DbDataReader> reader = new();
+            reader.SetupGet(x => x.RecordsAffected).Returns(1);
+            reader.SetupGet(x => x.HasRows).Returns(true);
+            reader.SetupSequence(x => x.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
+                .ReturnsAsync(true)
+                .ReturnsAsync(false);
+            reader.Setup(x => x.GetSchemaTable()).Returns(schema);
+            reader.Setup(x => x.GetOrdinal(MsSqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK)).Returns(0);
+            reader.Setup(x => x.IsDBNull(0)).Returns(false);
+            reader.Setup(x => x[MsSqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK]).Returns(0);
+            reader.Setup(x => x.GetFieldType(0)).Returns(typeof(int));
+            reader.Setup(x => x.NextResultAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(false);
+
+            DataApiBuilderException exception = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() =>
+                executor.GetMultipleResultSetsIfAnyAsync(reader.Object));
+
+            Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.UnexpectedError, exception.SubStatusCode);
         }
 
         [TestMethod]

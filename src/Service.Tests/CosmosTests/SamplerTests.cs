@@ -39,6 +39,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         private const string CONTAINER_NAME_ID_PK = "containerWithIdPk";
         private const string CONTAINER_NAME_NAME_PK = "containerWithNamePk";
+        private const int DEFAULT_TIME_GROUP_COUNT = 10;
+        private const int DEFAULT_RECORDS_PER_TIME_GROUP = 10;
 
         /// <summary>
         /// Initializes the test environment by creating Cosmos DB containers and populating them with sample data.
@@ -61,9 +63,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Retrieve timestamps from the container to use in validation.
             CosmosExecutor executor = new(_containerWithIdPk, new Mock<ILogger>().Object);
-            await executor
-                    .ExecuteQueryAsync<JsonDocument>("SELECT DISTINCT c._ts FROM c ORDER BY c._ts desc",
-                        callback: (item) => _sortedTimespansIdPk.Add(item.RootElement.GetProperty("_ts").GetInt32()));
+            await executor.ExecuteQueryAsync<JsonDocument>(
+                "SELECT c._ts FROM c ORDER BY c._ts desc",
+                callback: (item) => _sortedTimespansIdPk.Add(item.RootElement.GetProperty("_ts").GetInt32()));
 
             // Insert additional items into the second container with a delay for unique timestamps and partitioned over name i.e planets name.
             // Number of partitions would be 9 as we have 9 unique names.
@@ -71,9 +73,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Retrieve timestamps for the second container to use in validation.
             executor = new(_containerWithNamePk, new Mock<ILogger>().Object);
-            await executor
-                    .ExecuteQueryAsync<JsonDocument>("SELECT DISTINCT c._ts FROM c ORDER BY c._ts desc",
-                        callback: (item) => _sortedTimespansNamePk.Add(item.RootElement.GetProperty("_ts").GetInt32()));
+            await executor.ExecuteQueryAsync<JsonDocument>(
+                "SELECT c._ts FROM c ORDER BY c._ts desc",
+                callback: (item) => _sortedTimespansNamePk.Add(item.RootElement.GetProperty("_ts").GetInt32()));
         }
 
         /// <summary>
@@ -118,7 +120,6 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <param name="partitionKeyPath">The path of the partition key to use for sampling. If null, partition key path is not considered.</param>
         /// <param name="numberOfRecordsPerPartition">The number of records to retrieve per partition. Defaults to 5 if not specified.</param>
         /// <param name="maxDaysPerPartition">The maximum number of days to filter records within each partition. If null, no date-based filtering is applied.</param>
-        /// <param name="expectedResultCount">The expected number of records returned by the sampler.</param>
         /// <remarks>
         /// This test case ensures that the <c>EligibleDataSampler</c> handles partition-based sampling correctly with various configurations.
         /// It verifies that the sampler correctly applies partition key paths, record limits per partition, and date-based filters as specified.
@@ -198,31 +199,68 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// The test cases also include scenarios where records are not evenly distributed across time-based groups.
         /// </remarks>
         [TestMethod(displayName: "TimePartitionedSampler Scenarios")]
-        [DataRow(5, 1, 0, 5, DisplayName = "Retrieve 1 record, if it is allowed to fetch 1 item from a group and there are 5 groups (or time range)")]
-        [DataRow(1, 10, 0, 10, DisplayName = "Retrieve 10 records, if it is allowed to fetch 10 item from a group and there is only 1 group.")]
-        [DataRow(null, 1, 0, 10, DisplayName = "Retrieve 10 records, if 1 item is allowed to fetch from each group and number of groups is 10 (i.e default)")]
-        [DataRow(null, null, null, 10, DisplayName = "Retrieve 10 records i.e last 10 days data, based on default values when no specific limits are set.")]
-        [DataRow(5, 1, 4, 1, DisplayName = "Retrieve 1 record from a single group when records cannot be evenly divided into time-based groups.")]
-        public async Task TestTimePartitionedSampler(int? groupCount, int? numberOfRecordsPerGroup, int? maxDays, int expectedResultCount)
+        [DataRow(5, 1, 0, DisplayName = "Retrieve at most 1 record from each of 5 groups.")]
+        [DataRow(1, 10, 0, DisplayName = "Retrieve at most 10 records from a single group.")]
+        [DataRow(null, 1, 0, DisplayName = "Use the default group count and retrieve at most 1 record from each group.")]
+        [DataRow(null, null, null, DisplayName = "Use the default group, record, and day limits.")]
+        [DataRow(5, 1, 4, DisplayName = "Sample a short time range that cannot be evenly divided into 5 groups.")]
+        public async Task TestTimePartitionedSampler(int? groupCount, int? numberOfRecordsPerGroup, int? maxDays)
         {
             Mock<TimePartitionedSampler> timePartitionedSampler
                 = new(_containerWithNamePk, groupCount, numberOfRecordsPerGroup, maxDays, _mockLogger.Object);
 
-            if (maxDays is null || maxDays == 0)
+            // Compress day-sized windows to seconds so this integration test does not take days to arrange its data.
+            // Cosmos writes can take longer than one second on hosted agents, so the observed timestamps may contain gaps.
+            int timeWindowInSeconds = maxDays ?? TimePartitionedSampler.MAX_DAYS;
+            if (timeWindowInSeconds > 0)
             {
-                maxDays = TimePartitionedSampler.MAX_DAYS;
+                timePartitionedSampler
+                    .Setup<long>(x => x.GetTimeStampThreshold())
+                    .Returns(_sortedTimespansNamePk[0] - timeWindowInSeconds);
             }
 
-            timePartitionedSampler
-                .Setup<long>(x => x.GetTimeStampThreshold())
-                .Returns((long)(_sortedTimespansNamePk[0] - maxDays));
-
             List<JsonDocument> result = await timePartitionedSampler.Object.GetSampleAsync();
+            int expectedResultCount = CalculateExpectedTimePartitionedResultCount(
+                _sortedTimespansNamePk,
+                groupCount ?? DEFAULT_TIME_GROUP_COUNT,
+                numberOfRecordsPerGroup ?? DEFAULT_RECORDS_PER_TIME_GROUP,
+                timeWindowInSeconds);
 
-            // We're relying on a delay to create records with different timestamps.
-            // However, this can cause the actual result to intermittently vary by one record in some cases, particularly in pipelines.
-            // To prevent these tests from becoming flaky, the assertion has been adjusted.
-            Assert.IsTrue(expectedResultCount == result.Count || (expectedResultCount + 1) == result.Count || (expectedResultCount - 1) == result.Count, $"Expected result count is {expectedResultCount} and Actual result count is {result.Count}");
+            Assert.AreEqual(
+                expectedResultCount,
+                result.Count,
+                $"The sampled result count should match the populated time groups. Timestamps: {string.Join(", ", _sortedTimespansNamePk)}");
+        }
+
+        private static int CalculateExpectedTimePartitionedResultCount(
+            IReadOnlyList<int> timestamps,
+            int groupCount,
+            int numberOfRecordsPerGroup,
+            int timeWindowInSeconds)
+        {
+            long maxTimestamp = timestamps[0];
+            long minTimestamp = timeWindowInSeconds > 0 ? maxTimestamp - timeWindowInSeconds : timestamps[^1];
+            long rangeSize = (maxTimestamp - minTimestamp) / groupCount;
+            int expectedResultCount = 0;
+
+            for (int group = 0; group < groupCount; group++)
+            {
+                long rangeStart = minTimestamp + (group * rangeSize);
+                long rangeEnd = group == groupCount - 1 ? maxTimestamp : rangeStart + rangeSize - 1;
+                int recordsInRange = 0;
+
+                foreach (int timestamp in timestamps)
+                {
+                    if (timestamp >= rangeStart && timestamp <= rangeEnd)
+                    {
+                        recordsInRange++;
+                    }
+                }
+
+                expectedResultCount += System.Math.Min(numberOfRecordsPerGroup, recordsInRange);
+            }
+
+            return expectedResultCount;
         }
 
         /// <summary>

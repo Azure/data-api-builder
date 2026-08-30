@@ -6,8 +6,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
-using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

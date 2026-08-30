@@ -4,6 +4,7 @@
 #nullable disable
 
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
@@ -181,9 +182,44 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
-        public void Deserialize_NonBooleanForKnownProperty_ThrowsJsonException()
+        public void Deserialize_UnknownNonBooleanProperty_IsSkipped()
         {
-            string json = @"{ ""create-record"": ""yes"" }";
+            DmlToolsConfig config = JsonSerializer.Deserialize<DmlToolsConfig>(
+                "{\"unknown-tool\":{\"nested\":true},\"read-records\":false}",
+                GetOptions());
+
+            Assert.IsNotNull(config);
+            Assert.IsFalse(config.ReadRecords);
+        }
+
+        [DataTestMethod]
+        [DataRow("describe-entities")]
+        [DataRow("create-record")]
+        [DataRow("read-records")]
+        [DataRow("update-record")]
+        [DataRow("delete-record")]
+        [DataRow("execute-entity")]
+        public void Deserialize_EachBooleanToolProperty_AppliesOverride(string propertyName)
+        {
+            string json = $"{{\"{propertyName}\":false}}";
+
+            DmlToolsConfig config = JsonSerializer.Deserialize<DmlToolsConfig>(json, GetOptions());
+            JObject serialized = JObject.Parse(SerializeWithinObject(config));
+
+            Assert.IsNotNull(config);
+            Assert.IsFalse(serialized["dml-tools"][propertyName].Value<bool>());
+        }
+
+        [DataTestMethod]
+        [DataRow("describe-entities")]
+        [DataRow("create-record")]
+        [DataRow("read-records")]
+        [DataRow("update-record")]
+        [DataRow("delete-record")]
+        [DataRow("execute-entity")]
+        public void Deserialize_NonBooleanForEachKnownProperty_ThrowsJsonException(string propertyName)
+        {
+            string json = $"{{\"{propertyName}\":\"yes\"}}";
 
             Assert.ThrowsException<JsonException>(
                 () => JsonSerializer.Deserialize<DmlToolsConfig>(json, GetOptions()));
@@ -196,6 +232,41 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.ThrowsException<JsonException>(
                 () => JsonSerializer.Deserialize<DmlToolsConfig>(json, GetOptions()));
+        }
+
+        [TestMethod]
+        public void Serialize_AllIndividualSettings_WritesEveryProperty()
+        {
+            DmlToolsConfig config = new(
+                describeEntities: false,
+                createRecord: true,
+                readRecords: false,
+                updateRecord: true,
+                deleteRecord: false,
+                executeEntity: true,
+                aggregateRecords: false);
+
+            JObject dmlTools = JObject.Parse(SerializeWithinObject(config))["dml-tools"].Value<JObject>();
+
+            Assert.AreEqual(7, dmlTools.Properties().Count());
+            Assert.IsFalse(dmlTools["describe-entities"].Value<bool>());
+            Assert.IsTrue(dmlTools["create-record"].Value<bool>());
+            Assert.IsFalse(dmlTools["read-records"].Value<bool>());
+            Assert.IsTrue(dmlTools["update-record"].Value<bool>());
+            Assert.IsFalse(dmlTools["delete-record"].Value<bool>());
+            Assert.IsTrue(dmlTools["execute-entity"].Value<bool>());
+            Assert.IsFalse(dmlTools["aggregate-records"].Value<bool>());
+        }
+
+        [TestMethod]
+        public void Serialize_TimeoutWithoutAggregateSetting_OmitsEnabled()
+        {
+            DmlToolsConfig config = new(aggregateRecordsQueryTimeout: 90) { AggregateRecords = null };
+
+            JObject aggregate = JObject.Parse(SerializeWithinObject(config))["dml-tools"]["aggregate-records"].Value<JObject>();
+
+            Assert.IsFalse(aggregate.ContainsKey("enabled"));
+            Assert.AreEqual(90, aggregate["query-timeout"].Value<int>());
         }
 
         [TestMethod]

@@ -20,6 +20,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -170,6 +171,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 new TimeoutException());
 
             AssertErrorType(result, "TimeoutError");
+        }
+
+        [DataTestMethod]
+        [DataRow(547, "foreign key constraint")]
+        [DataRow(2627, "unique constraint")]
+        [DataRow(2601, "unique constraint")]
+        [DataRow(229, "Permission denied")]
+        [DataRow(262, "Permission denied")]
+        [DataRow(208, "not found")]
+        [DataRow(50000, "Database error")]
+        public async Task ExecuteAsync_SqlException_MapsErrorNumber(int errorNumber, string expectedMessage)
+        {
+            CallToolResult result = await ExecuteAsync(
+                "{\"entity\":\"Book\",\"keys\":{\"id\":1}}",
+                SqlTestHelper.CreateSqlException(errorNumber, "provider error"));
+
+            AssertErrorType(result, "DatabaseError");
+            StringAssert.Contains(GetText(result), expectedMessage);
         }
 
         [TestMethod]

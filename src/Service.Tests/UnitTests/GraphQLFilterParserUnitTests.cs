@@ -3,12 +3,17 @@
 
 using System.Collections.Generic;
 using System.Reflection;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate;
+using HotChocolate.Execution;
 using HotChocolate.Language;
+using HotChocolate.Resolvers;
+using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -147,6 +152,75 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsNull(InvokePreprocessInOperatorValues(new List<IValueNode>()));
         }
 
+        [DataTestMethod]
+        [DataRow("eq", PredicateOperation.Equal, false, false)]
+        [DataRow("neq", PredicateOperation.NotEqual, false, false)]
+        [DataRow("lt", PredicateOperation.LessThan, false, false)]
+        [DataRow("gt", PredicateOperation.GreaterThan, false, false)]
+        [DataRow("lte", PredicateOperation.LessThanOrEqual, false, false)]
+        [DataRow("gte", PredicateOperation.GreaterThanOrEqual, false, false)]
+        [DataRow("in", PredicateOperation.IN, false, false)]
+        [DataRow("contains", PredicateOperation.LIKE, false, false)]
+        [DataRow("contains", PredicateOperation.ARRAY_CONTAINS, true, false)]
+        [DataRow("notContains", PredicateOperation.NOT_LIKE, false, false)]
+        [DataRow("notContains", PredicateOperation.NOT_ARRAY_CONTAINS, true, false)]
+        [DataRow("startsWith", PredicateOperation.LIKE, false, false)]
+        [DataRow("endsWith", PredicateOperation.LIKE, false, false)]
+        [DataRow("isNull", PredicateOperation.IS, false, true)]
+        [DataRow("isNull", PredicateOperation.IS_NOT, false, false)]
+        public void FieldFilterParser_Parse_MapsEverySupportedOperator(
+            string operation,
+            PredicateOperation expectedOperation,
+            bool isListType,
+            bool booleanValue)
+        {
+            IValueNode value = operation switch
+            {
+                "in" => new ListValueNode(new List<IValueNode>
+                {
+                    new StringValueNode("first"),
+                    NullValueNode.Default,
+                    new StringValueNode("second")
+                }),
+                "isNull" => new BooleanValueNode(booleanValue),
+                _ => new StringValueNode(@"value%_[]\")
+            };
+
+            Predicate result = FieldFilterParser.Parse(
+                CreateMiddlewareContext(),
+                CreateFilterArgumentSchema(),
+                new Column("dbo", "books", "title"),
+                new List<ObjectFieldNode> { new(operation, value) },
+                (literal, columnName, lengthOverride) => $"{columnName}:{literal}:{lengthOverride}",
+                isListType);
+
+            Assert.AreEqual(expectedOperation, result.Op);
+        }
+
+        [TestMethod]
+        public void FieldFilterParser_Parse_NullValueIsIgnored()
+        {
+            Predicate result = FieldFilterParser.Parse(
+                CreateMiddlewareContext(),
+                CreateFilterArgumentSchema(),
+                new Column("dbo", "books", "title"),
+                new List<ObjectFieldNode> { new("eq", NullValueNode.Default) },
+                (literal, columnName, lengthOverride) => literal.ToString()!);
+
+            Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
+        public void FieldFilterParser_Parse_UnsupportedOperatorThrows()
+        {
+            Assert.ThrowsException<System.NotSupportedException>(() => FieldFilterParser.Parse(
+                CreateMiddlewareContext(),
+                CreateFilterArgumentSchema(),
+                new Column("dbo", "books", "title"),
+                new List<ObjectFieldNode> { new("unsupported", new StringValueNode("value")) },
+                (literal, columnName, lengthOverride) => literal.ToString()!));
+        }
+
         private static GQLFilterParser CreateParserWithDepthLimit(int? depthLimit)
         {
             RuntimeConfig config = new(
@@ -169,6 +243,43 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             return typeof(FieldFilterParser).GetMethod(
                 "PreprocessInOperatorValues",
                 BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, new[] { value });
+        }
+
+        private static IMiddlewareContext CreateMiddlewareContext()
+        {
+            Mock<IVariableValueCollection> variables = new();
+            Mock<IMiddlewareContext> context = new();
+            context.SetupGet(x => x.Variables).Returns(variables.Object);
+            return context.Object;
+        }
+
+        private static IInputValueDefinition CreateFilterArgumentSchema()
+        {
+            return SchemaBuilder.New()
+                .AddDocumentFromString("""
+                    type Query {
+                      test(filter: TestFilterInput): String
+                    }
+
+                    input TestFilterInput {
+                      eq: String
+                      neq: String
+                      lt: String
+                      gt: String
+                      lte: String
+                      gte: String
+                      in: [String]
+                      contains: String
+                      notContains: String
+                      startsWith: String
+                      endsWith: String
+                      isNull: Boolean
+                      unsupported: String
+                    }
+                    """)
+                .AddResolver("Query", "test", _ => string.Empty)
+                .Create()
+                .QueryType.Fields["test"].Arguments["filter"];
         }
     }
 }

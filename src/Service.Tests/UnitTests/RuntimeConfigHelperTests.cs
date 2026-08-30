@@ -74,6 +74,49 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
+        public void RuntimeProperties_EvaluateConfiguredSectionsAndHealthValues()
+        {
+            HashSet<string> roles = new() { "reader" };
+            RuntimeOptions runtime = new(
+                Rest: null,
+                GraphQL: null,
+                Mcp: null,
+                Host: new HostOptions(null, null),
+                Health: new RuntimeHealthCheckConfig(enabled: true, roles, cacheTtlSeconds: 17));
+            RuntimeConfig config = CreateConfig(runtime);
+
+            Assert.IsTrue(config.IsRestEnabled);
+            Assert.IsTrue(config.IsGraphQLEnabled);
+            Assert.IsTrue(config.IsMcpEnabled);
+            Assert.IsTrue(config.IsHealthEnabled);
+            Assert.IsTrue(config.AllowedRolesForHealth.SetEquals(roles));
+            Assert.AreEqual(17, config.CacheTtlSecondsForHealthReport);
+        }
+
+        [TestMethod]
+        public void EnableDwNto1JoinOpt_EvaluatesEachNestedConfigurationState()
+        {
+            RuntimeConfig missingGraphQL = CreateConfig(new RuntimeOptions(null, null, null, null));
+            RuntimeConfig missingFlags = CreateConfig(new RuntimeOptions(
+                null,
+                new GraphQLRuntimeOptions { FeatureFlags = null! },
+                null,
+                null));
+            RuntimeConfig enabled = CreateConfig(new RuntimeOptions(
+                null,
+                new GraphQLRuntimeOptions
+                {
+                    FeatureFlags = new FeatureFlags { EnableDwNto1JoinQueryOptimization = true }
+                },
+                null,
+                null));
+
+            Assert.IsFalse(missingGraphQL.EnableDwNto1JoinOpt);
+            Assert.IsFalse(missingFlags.EnableDwNto1JoinOpt);
+            Assert.IsTrue(enabled.EnableDwNto1JoinOpt);
+        }
+
+        [TestMethod]
         public void DataSourceAndEntityMaps_SupportLookupUpdateAndPathOperations()
         {
             Dictionary<string, Entity> entities = new() { ["Book"] = CreateEntity("books") };

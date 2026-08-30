@@ -163,6 +163,30 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         }
 
+        [DataTestMethod]
+        [DataRow(0, null, null)]
+        [DataRow(null, 0, null)]
+        [DataRow(null, null, 0)]
+        [DataRow(1, 0, 0)]
+        [DataRow(1, 1, 0)]
+        public async Task Create_InvalidSamplingCountsThrow(int? days, int? groupCount, int? sampleCount)
+        {
+            RuntimeConfig runtimeConfig = new(
+                Schema: "schema",
+                DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, "noop", new Dictionary<string, object>()),
+                Entities: new(new Dictionary<string, Entity>()));
+
+            await Assert.ThrowsExceptionAsync<System.ArgumentException>(() => SchemaGeneratorFactory.Create(
+                runtimeConfig,
+                SamplingModes.TopNExtractor.ToString(),
+                sampleCount,
+                partitionKeyPath: null,
+                days,
+                groupCount,
+                Mock.Of<ILogger>(),
+                Mock.Of<Container>()));
+        }
+
         /// <summary>
         /// Creates a mock response message containing JSON documents.
         /// </summary>

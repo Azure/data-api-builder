@@ -61,6 +61,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DateTimeOffset offset = (DateTimeOffset)InvokeParse("2025-01-02T12:00:00+03:00", typeof(DateTimeOffset));
             Assert.AreEqual(TimeSpan.FromHours(3), offset.Offset);
 
+            Assert.AreEqual(new TimeOnly(12, 34, 56), InvokeParse("12:34:56", typeof(TimeSpan)));
+
             object[] values = (object[])InvokeParse("[1.5,2.25]", typeof(float[]));
             CollectionAssert.AreEqual(new object[] { 1.5f, 2.25f }, values);
         }

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -75,6 +76,45 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
+        [DataRow(null, true, DisplayName = "Missing sections default to enabled")]
+        [DataRow(true, true, DisplayName = "Explicitly enabled sections are enabled")]
+        [DataRow(false, false, DisplayName = "Explicitly disabled sections are disabled")]
+        public void RuntimeOptions_EnablementProperties_DefaultUnlessExplicitlyDisabled(bool? enabled, bool expected)
+        {
+            RuntimeOptions options = new(
+                Rest: enabled.HasValue ? new RestRuntimeOptions(Enabled: enabled.Value) : null,
+                GraphQL: enabled.HasValue ? new GraphQLRuntimeOptions(Enabled: enabled.Value) : null,
+                Mcp: enabled.HasValue ? new McpRuntimeOptions(Enabled: enabled.Value) : null,
+                Host: null,
+                Health: enabled.HasValue ? new RuntimeHealthCheckConfig(enabled.Value) : null);
+
+            Assert.AreEqual(expected, options.IsRestEnabled);
+            Assert.AreEqual(expected, options.IsGraphQLEnabled);
+            Assert.AreEqual(expected, options.IsMcpEnabled);
+            Assert.AreEqual(expected, options.IsHealthCheckEnabled);
+        }
+
+        [DataTestMethod]
+        [DataRow("rest")]
+        [DataRow("graphql")]
+        [DataRow("mcp")]
+        [DataRow("health")]
+        public void RuntimeOptions_EnablementProperties_EvaluateEachSectionIndependently(string disabledSection)
+        {
+            RuntimeOptions options = new(
+                Rest: new RestRuntimeOptions(Enabled: disabledSection != "rest"),
+                GraphQL: new GraphQLRuntimeOptions(Enabled: disabledSection != "graphql"),
+                Mcp: new McpRuntimeOptions(Enabled: disabledSection != "mcp"),
+                Host: null,
+                Health: new RuntimeHealthCheckConfig(enabled: disabledSection != "health"));
+
+            Assert.AreEqual(disabledSection != "rest", options.IsRestEnabled);
+            Assert.AreEqual(disabledSection != "graphql", options.IsGraphQLEnabled);
+            Assert.AreEqual(disabledSection != "mcp", options.IsMcpEnabled);
+            Assert.AreEqual(disabledSection != "health", options.IsHealthCheckEnabled);
+        }
+
+        [DataTestMethod]
         [DataRow("{\"multiple-mutations\":{\"unknown\":true}}")]
         [DataRow("{\"multiple-mutations\":42}")]
         [DataRow("{\"multiple-mutations\":{\"create\":{\"unknown\":true}}}")]
@@ -132,6 +172,37 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void FileSinkOptions_InvalidValuesThrow(string json)
         {
             Assert.ThrowsException<JsonException>(() => JsonSerializer.Deserialize<FileSinkOptions>(json, Options));
+        }
+
+        [TestMethod]
+        public void RuntimeHealthOptions_WriteConfiguredAndDefaultForms()
+        {
+            RuntimeHealthCheckConfig configured = new(
+                enabled: true,
+                roles: new HashSet<string> { "reader" },
+                cacheTtlSeconds: 12,
+                maxQueryParallelism: 3);
+
+            string configuredJson = JsonSerializer.Serialize(configured, Options);
+            string defaultJson = JsonSerializer.Serialize(new RuntimeHealthCheckConfig(), Options);
+
+            StringAssert.Contains(configuredJson, "\"enabled\": true");
+            StringAssert.Contains(configuredJson, "\"cache-ttl-seconds\": 12");
+            StringAssert.Contains(configuredJson, "\"roles\"");
+            StringAssert.Contains(configuredJson, "\"max-query-parallelism\": 3");
+            Assert.AreEqual("null", defaultJson);
+        }
+
+        [TestMethod]
+        public void DatasourceHealthOptions_WriteEachUserProvidedTrigger()
+        {
+            string enabled = JsonSerializer.Serialize(new DatasourceHealthCheckConfig(enabled: true), Options);
+            string named = JsonSerializer.Serialize(new DatasourceHealthCheckConfig(enabled: null, name: "primary"), Options);
+            string threshold = JsonSerializer.Serialize(new DatasourceHealthCheckConfig(enabled: null, thresholdMs: 42), Options);
+
+            StringAssert.Contains(enabled, "\"enabled\": true");
+            StringAssert.Contains(named, "\"name\": \"primary\"");
+            StringAssert.Contains(threshold, "\"threshold-ms\": 42");
         }
     }
 }

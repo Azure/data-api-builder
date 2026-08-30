@@ -1744,6 +1744,53 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.AreEqual(expected: "", actual: claimsInRequestContext["nullValuedClaim"]);
         }
 
+        [TestMethod]
+        public void GetProcessedUserClaims_MultipleClaimsPreserveArrayValueTypes()
+        {
+            List<Claim> claims = new()
+            {
+                new("booleans", "true", ClaimValueTypes.Boolean),
+                new("booleans", "false", ClaimValueTypes.Boolean),
+                new("integers", "-1", ClaimValueTypes.Integer),
+                new("integers", "2", ClaimValueTypes.Integer),
+                new("integer32s", "-3", ClaimValueTypes.Integer32),
+                new("integer32s", "4", ClaimValueTypes.Integer32),
+                new("uinteger32s", "5", ClaimValueTypes.UInteger32),
+                new("uinteger32s", "6", ClaimValueTypes.UInteger32),
+                new("integer64s", "-7", ClaimValueTypes.Integer64),
+                new("integer64s", "8", ClaimValueTypes.Integer64),
+                new("uinteger64s", "9", ClaimValueTypes.UInteger64),
+                new("uinteger64s", "10", ClaimValueTypes.UInteger64),
+                new("doubles", "11", ClaimValueTypes.Double),
+                new("doubles", "12", ClaimValueTypes.Double),
+                new("strings", "first", ClaimValueTypes.String),
+                new("strings", "second", ClaimValueTypes.String),
+                new("jsonNulls", "null", JsonClaimValueTypes.JsonNull),
+                new("jsonNulls", "null", JsonClaimValueTypes.JsonNull),
+                new("jsonObjects", "{\"id\":1}", JsonClaimValueTypes.Json),
+                new("jsonObjects", "{\"id\":2}", JsonClaimValueTypes.Json),
+                new("customs", "alpha", ClaimValueTypes.DateTime),
+                new("customs", "beta", ClaimValueTypes.DateTime)
+            };
+            ClaimsIdentity identity = new(claims, TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            DefaultHttpContext context = new() { User = new ClaimsPrincipal(identity) };
+
+            Dictionary<string, string> processedClaims = AuthorizationResolver.GetProcessedUserClaims(context);
+
+            Assert.AreEqual("[true,false]", processedClaims["booleans"]);
+            Assert.AreEqual("[-1,2]", processedClaims["integers"]);
+            Assert.AreEqual("[-3,4]", processedClaims["integer32s"]);
+            Assert.AreEqual("[5,6]", processedClaims["uinteger32s"]);
+            Assert.AreEqual("[-7,8]", processedClaims["integer64s"]);
+            Assert.AreEqual("[9,10]", processedClaims["uinteger64s"]);
+            Assert.AreEqual("[11,12]", processedClaims["doubles"]);
+            Assert.AreEqual("[\"first\",\"second\"]", processedClaims["strings"]);
+            Assert.AreEqual("[\"null\",\"null\"]", processedClaims["jsonNulls"]);
+            Assert.AreEqual("[\"{\\u0022id\\u0022:1}\",\"{\\u0022id\\u0022:2}\"]", processedClaims["jsonObjects"]);
+            Assert.AreEqual("[\"alpha\",\"beta\"]", processedClaims["customs"]);
+            Assert.AreEqual(0, AuthorizationResolver.GetProcessedUserClaims(null).Count);
+        }
+
         /// <summary>
         /// JWT token JSON payloads may not be flat and may contain nested JSON objects or arrays.
         /// This test validates that when dotnet's JWT processing code flattens the JWT token payload

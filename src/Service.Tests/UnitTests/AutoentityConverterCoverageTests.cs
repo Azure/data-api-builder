@@ -60,5 +60,41 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.ThrowsException<JsonException>(() =>
                 JsonSerializer.Deserialize<AutoentityPatterns>(json, Options));
         }
+
+        [TestMethod]
+        public void Autoentity_Write_EvaluatesEveryUserProvidedPatternFlag()
+        {
+            AutoentityPatterns[] patterns =
+            {
+                new(Include: new[] { "dbo.*" }),
+                new(Exclude: new[] { "dbo.internal_*" }),
+                new(Name: "generated_{object}")
+            };
+
+            foreach (AutoentityPatterns pattern in patterns)
+            {
+                string json = JsonSerializer.Serialize(new Autoentity(pattern, Template: null, Permissions: null), Options);
+                StringAssert.Contains(json, "\"patterns\"");
+            }
+        }
+
+        [TestMethod]
+        public void Autoentity_Write_EvaluatesEveryUserProvidedTemplateFlag()
+        {
+            AutoentityTemplate[] templates =
+            {
+                new(Rest: new EntityRestOptions()),
+                new(GraphQL: new EntityGraphQLOptions("Book", "Books")),
+                new(Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: null)),
+                new(Health: new EntityHealthCheckConfig(enabled: true)),
+                new(Cache: new EntityCacheOptions(Enabled: true))
+            };
+
+            foreach (AutoentityTemplate template in templates)
+            {
+                string json = JsonSerializer.Serialize(new Autoentity(Patterns: null, template, Permissions: null), Options);
+                StringAssert.Contains(json, "\"template\"");
+            }
+        }
     }
 }

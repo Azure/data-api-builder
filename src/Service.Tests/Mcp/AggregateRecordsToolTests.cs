@@ -235,7 +235,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 distinct: true,
                 first: 2,
                 groupby: new() { "category" },
-                havingOperators: new() { ["gt"] = 10, ["lte"] = 100 },
+                havingOperators: new()
+                {
+                    ["eq"] = 10,
+                    ["neq"] = 20,
+                    ["gt"] = 30,
+                    ["gte"] = 40,
+                    ["lt"] = 50,
+                    ["lte"] = 60
+                },
                 havingInValues: new() { 20, 40 });
 
             InvokePrivate<object?>(
@@ -253,9 +261,29 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(1, structure.GroupByMetadata.Aggregations.Count);
             Assert.IsTrue(structure.GroupByMetadata.RequestedAggregations);
             Assert.IsNotNull(structure.GroupByMetadata.Aggregations[0].HavingPredicates);
-            Assert.AreEqual(4, structure.Parameters.Count);
+            Assert.AreEqual(8, structure.Parameters.Count);
             Assert.IsTrue(structure.IsListQuery);
             Assert.AreEqual(0, structure.OrderByColumns.Count);
+        }
+
+        [TestMethod]
+        public void BuildAggregationStructure_InvalidHavingOperator_ThrowsArgumentException()
+        {
+            SqlQueryStructure structure = CreateUninitializedQueryStructure();
+            AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(
+                havingOperators: new() { ["invalid"] = 10 });
+
+            TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(() => InvokePrivate<object?>(
+                "BuildAggregationStructure",
+                args,
+                structure,
+                new DatabaseTable("dbo", "books"),
+                "book_price",
+                "sum_price",
+                "Book",
+                Mock.Of<ISqlMetadataProvider>()));
+
+            Assert.IsInstanceOfType<ArgumentException>(exception.InnerException);
         }
 
         [TestMethod]

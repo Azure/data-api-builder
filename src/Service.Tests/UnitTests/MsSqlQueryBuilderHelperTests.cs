@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Reflection;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -16,6 +17,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.Sql.SchemaConverter;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -86,6 +88,44 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string query = new MsSqlQueryBuilder().Build(structure);
 
             StringAssert.Contains(query, expectedInsertBranch);
+        }
+
+        [DataTestMethod]
+        [DataRow("alias", "dbo", "[alias].[price]")]
+        [DataRow(null, "dbo", "[dbo].[books].[price]")]
+        [DataRow(null, "", "[books].[price]")]
+        public void BuildColumn_UsesAliasSchemaOrTableQualification(string? tableAlias, string tableSchema, string expected)
+        {
+            Column column = new(tableSchema, TABLE_NAME, "price", tableAlias);
+
+            string sql = InvokeBuild(column);
+
+            Assert.AreEqual(expected, sql);
+        }
+
+        [DataTestMethod]
+        [DataRow("alias", "dbo", false, false, "sum([alias].[price])")]
+        [DataRow(null, "dbo", true, false, "sum(DISTINCT ([dbo].[books].[price]))")]
+        [DataRow(null, "", false, true, "AS [sum_price]")]
+        public void BuildAggregationColumn_UsesQualificationDistinctAndAlias(
+            string? tableAlias,
+            string tableSchema,
+            bool distinct,
+            bool useAlias,
+            string expectedFragment)
+        {
+            AggregationColumn column = new(
+                tableSchema,
+                TABLE_NAME,
+                "price",
+                AggregationType.sum,
+                "sum_price",
+                distinct,
+                tableAlias);
+
+            string sql = InvokeBuild(column, useAlias);
+
+            StringAssert.Contains(sql, expectedFragment);
         }
 
         private static SourceDefinition CreateSourceDefinition(
@@ -166,6 +206,28 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DefaultHttpContext httpContext = new();
             httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "authenticated";
             return httpContext;
+        }
+
+        private static string InvokeBuild(Column column)
+        {
+            MethodInfo method = typeof(BaseSqlQueryBuilder).GetMethod(
+                "Build",
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                binder: null,
+                new[] { typeof(Column) },
+                modifiers: null)!;
+            return (string)method.Invoke(new MsSqlQueryBuilder(), new object[] { column })!;
+        }
+
+        private static string InvokeBuild(AggregationColumn column, bool useAlias)
+        {
+            MethodInfo method = typeof(BaseSqlQueryBuilder).GetMethod(
+                "Build",
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                binder: null,
+                new[] { typeof(AggregationColumn), typeof(bool) },
+                modifiers: null)!;
+            return (string)method.Invoke(new MsSqlQueryBuilder(), new object[] { column, useAlias })!;
         }
     }
 }

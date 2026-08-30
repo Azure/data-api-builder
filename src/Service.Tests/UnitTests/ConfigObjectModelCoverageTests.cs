@@ -92,6 +92,27 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
+        public void EmbeddingsOptions_Level2CacheRequiresBothCacheLevels()
+        {
+            EmbeddingsOptions disabled = new(EmbeddingProviderType.OpenAI, "https://example.com", "key")
+            {
+                Cache = new EmbeddingsCacheOptions(Enabled: false, Level2: new EmbeddingsCacheLevel2Options(Enabled: true))
+            };
+            EmbeddingsOptions level2Disabled = new(EmbeddingProviderType.OpenAI, "https://example.com", "key")
+            {
+                Cache = new EmbeddingsCacheOptions(Enabled: true, Level2: new EmbeddingsCacheLevel2Options(Enabled: false))
+            };
+            EmbeddingsOptions enabled = new(EmbeddingProviderType.OpenAI, "https://example.com", "key")
+            {
+                Cache = new EmbeddingsCacheOptions(Enabled: true, Level2: new EmbeddingsCacheLevel2Options(Enabled: true))
+            };
+
+            Assert.IsFalse(disabled.IsLevel2CacheEnabled);
+            Assert.IsFalse(level2Disabled.IsLevel2CacheEnabled);
+            Assert.IsTrue(enabled.IsLevel2CacheEnabled);
+        }
+
+        [TestMethod]
         public void EmbeddingsEndpointOptions_DefaultConstructorDisablesEndpoint()
         {
             EmbeddingsEndpointOptions options = new();

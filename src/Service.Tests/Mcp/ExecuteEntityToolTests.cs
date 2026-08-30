@@ -20,6 +20,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -449,6 +450,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 queryOutcome: new TimeoutException());
 
             AssertError(result, "TimeoutError");
+        }
+
+        [DataTestMethod]
+        [DataRow(2812, "not found")]
+        [DataRow(8144, "too many parameters")]
+        [DataRow(201, "were not supplied")]
+        [DataRow(245, "Type conversion failed")]
+        [DataRow(229, "Permission denied")]
+        [DataRow(262, "Permission denied")]
+        [DataRow(50000, "Database error")]
+        public async Task ExecuteEntity_SqlException_MapsErrorNumber(int errorNumber, string expectedMessage)
+        {
+            CallToolResult result = await ExecuteWithMockedEngineAsync(
+                TEST_ENTITY,
+                new(),
+                null,
+                queryOutcome: SqlTestHelper.CreateSqlException(errorNumber, "provider error"));
+
+            AssertError(result, "DatabaseError");
+            StringAssert.Contains(GetFirstText(result), expectedMessage);
         }
 
         [TestMethod]

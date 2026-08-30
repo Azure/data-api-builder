@@ -445,6 +445,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             Dictionary<string, ParameterDefinition> dbParameters = new()
             {
+                ["text"] = new(),
+                ["integer"] = new(),
+                ["decimal"] = new(),
+                ["floatingPoint"] = new(),
                 ["truth"] = new(),
                 ["falsehood"] = new(),
                 ["nothing"] = new(),
@@ -456,12 +460,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 context => capturedContext = context);
             DynamicCustomTool tool = new(TEST_ENTITY, CreateTestStoredProcedureEntity());
             using JsonDocument arguments = JsonDocument.Parse(
-                "{\"truth\":true,\"falsehood\":false,\"nothing\":null,\"complex\":{\"x\":1}}");
+                "{\"text\":\"value\",\"integer\":42,\"decimal\":1.5,\"floatingPoint\":1e40," +
+                "\"truth\":true,\"falsehood\":false,\"nothing\":null,\"complex\":{\"x\":1}}");
 
             CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
 
             AssertSuccess(result, "All JSON parameter kinds should be converted.");
             Assert.IsNotNull(capturedContext);
+            Assert.AreEqual("value", capturedContext.ResolvedParameters["text"]);
+            Assert.AreEqual(42L, capturedContext.ResolvedParameters["integer"]);
+            Assert.AreEqual(1.5m, capturedContext.ResolvedParameters["decimal"]);
+            Assert.AreEqual(1e40, capturedContext.ResolvedParameters["floatingPoint"]);
             Assert.AreEqual(true, capturedContext.ResolvedParameters["truth"]);
             Assert.AreEqual(false, capturedContext.ResolvedParameters["falsehood"]);
             Assert.IsNull(capturedContext.ResolvedParameters["nothing"]);

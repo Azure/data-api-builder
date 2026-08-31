@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         private const string ARGUMENTS = "{\"entity\":\"Book\",\"data\":{\"title\":\"Dune\"}}";
 
         [TestMethod]
-        public async Task ExecuteAsync_CanceledToken_ReturnsError()
+        public async Task ExecuteAsync_CanceledToken_ReturnsOperationCanceled()
         {
             using CancellationTokenSource cancellationTokenSource = new();
             cancellationTokenSource.Cancel();
@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 CreateServiceProvider(new CreatedResult("", new { id = 1 })),
                 cancellationTokenSource.Token);
 
-            AssertErrorType(result, "Error");
+            AssertErrorType(result, "OperationCanceled");
         }
 
         [TestMethod]

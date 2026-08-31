@@ -37,11 +37,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             JObject first = JObject.Parse(@"{ ""id"": ""1"" }");
             JObject second = JObject.Parse(@"{ ""id"": ""2"" }");
-            Mock<FeedResponse<JObject>> page = new();
-            page.Setup(x => x.GetEnumerator()).Returns(() => new[] { first, second }.AsEnumerable().GetEnumerator());
+            JObject third = JObject.Parse(@"{ ""id"": ""3"" }");
+            Mock<FeedResponse<JObject>> firstPage = new();
+            firstPage.Setup(x => x.GetEnumerator()).Returns(() => new[] { first, second }.AsEnumerable().GetEnumerator());
+            Mock<FeedResponse<JObject>> secondPage = new();
+            secondPage.Setup(x => x.GetEnumerator()).Returns(() => new[] { third }.AsEnumerable().GetEnumerator());
             Mock<FeedIterator<JObject>> iterator = new();
-            iterator.SetupSequence(x => x.HasMoreResults).Returns(true).Returns(false);
-            iterator.Setup(x => x.ReadNextAsync(It.IsAny<CancellationToken>())).ReturnsAsync(page.Object);
+            iterator.SetupSequence(x => x.HasMoreResults).Returns(true).Returns(true).Returns(false);
+            iterator.SetupSequence(x => x.ReadNextAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(firstPage.Object)
+                .ReturnsAsync(secondPage.Object);
             Mock<Container> container = CreateQueryContainer(iterator.Object);
             Mock<Database> database = new();
             database.Setup(x => x.GetContainer("books")).Returns(container.Object);
@@ -68,6 +73,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 runtimeConfigProvider,
                 null!);
 
+            List<string?> returnedIds = new();
             ISchemaBuilder schemaBuilder = SchemaBuilder.New()
                 .AddDocumentFromString("type Query { books: [Book!]! } type Book { id: String }")
                 .AddResolver("Book", "id", _ => "id")
@@ -78,9 +84,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                             (IMiddlewareContext)context,
                             new Dictionary<string, object> { ["id"] = "1" },
                             "cosmos");
-                    return result.Item1.Select(document => new
+                    returnedIds = result.Item1.Select(document =>
+                        document.RootElement.GetProperty("id").GetString()).ToList();
+                    return returnedIds.Select(id => new
                     {
-                        id = document.RootElement.GetProperty("id").GetString()
+                        id
                     });
                 });
 
@@ -92,6 +100,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             OperationResult operationResult = executionResult.ExpectOperationResult();
             Assert.AreEqual(0, operationResult.Errors.Count, string.Join(" | ", operationResult.Errors.Select(error => error.ToString())));
+            CollectionAssert.AreEqual(new[] { "1", "2", "3" }, returnedIds);
+            iterator.Verify(x => x.ReadNextAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
             container.Verify(x => x.GetItemQueryIterator<JObject>(
                 It.IsAny<QueryDefinition>(),
                 It.IsAny<string>(),

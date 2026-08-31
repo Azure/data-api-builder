@@ -15,15 +15,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void LabelledColumn_EqualityHandlesNullIdentityAndValues()
         {
             LabelledColumn column = new("dbo", "books", "id", "book_id");
+            LabelledColumn equal = new("dbo", "books", "id", "book_id");
 
             Assert.IsFalse(column.Equals((LabelledColumn?)null));
             Assert.IsFalse(column.Equals((object?)null));
             Assert.IsTrue(column.Equals(column));
             Assert.IsTrue(column.Equals((object)column));
-            Assert.IsTrue(column.Equals(new LabelledColumn("dbo", "books", "id", "book_id")));
+            Assert.IsTrue(column.Equals(equal));
             Assert.IsFalse(column.Equals(new LabelledColumn("dbo", "books", "id", "other")));
             Assert.IsFalse(column.Equals(new object()));
             Assert.AreNotEqual(0, column.GetHashCode());
+            Assert.AreEqual(column.GetHashCode(), equal.GetHashCode(), "Equal columns must have equal hash codes.");
         }
 
         [TestMethod]

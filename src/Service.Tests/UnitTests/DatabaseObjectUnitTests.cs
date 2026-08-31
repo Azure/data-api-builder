@@ -127,8 +127,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(first.Equals(equal));
             Assert.IsFalse(first.Equals((ForeignKeyDefinition?)null));
             Assert.IsFalse(first.Equals(different));
-            _ = first.GetHashCode();
-            _ = equal.GetHashCode();
+            Assert.AreEqual(first.GetHashCode(), equal.GetHashCode(), "Equal foreign keys must have equal hash codes.");
         }
 
         [TestMethod]

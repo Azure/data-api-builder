@@ -268,7 +268,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         [DataTestMethod]
         [DataRow("\"abc\"", "abc", DisplayName = "String id")]
-        [DataRow("9223372036854775807", long.MaxValue, DisplayName = "Int64 id")]
         [DataRow("true", null, DisplayName = "Boolean id")]
         [DataRow("[]", null, DisplayName = "Array id")]
         [DataRow("{}", null, DisplayName = "Object id")]
@@ -281,26 +280,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expected, actual);
         }
 
-        [TestMethod]
-        public void GetIdValue_FloatingPointId_ReturnsDouble()
+        [DataTestMethod]
+        [DataRow("9223372036854775807")]
+        [DataRow("3.25")]
+        [DataRow("1e400")]
+        public void GetIdValue_NumericIdPreservesRawJson(string json)
         {
-            using JsonDocument document = JsonDocument.Parse("3.25");
+            using JsonDocument document = JsonDocument.Parse(json);
 
             object? actual = InvokeGetIdValue(document.RootElement);
 
-            Assert.IsInstanceOfType<double>(actual);
-            Assert.AreEqual(3.25, (double)actual, 0.0001);
-        }
-
-        [TestMethod]
-        public void GetIdValue_NumberOutsideFiniteRange_ReturnsPositiveInfinity()
-        {
-            using JsonDocument document = JsonDocument.Parse("1e400");
-
-            object? actual = InvokeGetIdValue(document.RootElement);
-
-            Assert.IsInstanceOfType<double>(actual);
-            Assert.IsTrue(double.IsPositiveInfinity((double)actual));
+            Assert.IsInstanceOfType<JsonElement>(actual);
+            Assert.AreEqual(JsonValueKind.Number, ((JsonElement)actual).ValueKind);
+            Assert.AreEqual(json, ((JsonElement)actual).GetRawText());
         }
 
         private static (McpStdioServer server, MemoryStream memoryStream, McpStdoutWriter stdoutWriter) CreateServerWithCapturedOutput()

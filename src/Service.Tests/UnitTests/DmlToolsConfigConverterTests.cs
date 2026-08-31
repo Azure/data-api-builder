@@ -76,14 +76,40 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
-        public void Deserialize_NullBypassesConverter_AndUnexpectedTokenReturnsDefaultConfiguration()
+        public void Deserialize_NullBypassesConverter()
         {
             DmlToolsConfig fromNull = JsonSerializer.Deserialize<DmlToolsConfig>("null", GetOptions());
-            DmlToolsConfig fromNumber = JsonSerializer.Deserialize<DmlToolsConfig>("42", GetOptions());
 
             Assert.IsNull(fromNull);
-            Assert.IsNotNull(fromNumber);
-            Assert.IsTrue(fromNumber.DescribeEntities);
+        }
+
+        [TestMethod]
+        public void Deserialize_NullMcpDmlTools_UsesDefaultConfiguration()
+        {
+            McpRuntimeOptions options = JsonSerializer.Deserialize<McpRuntimeOptions>(
+                "{\"dml-tools\":null}",
+                GetOptions());
+
+            Assert.IsNotNull(options?.DmlTools);
+            Assert.IsTrue(options.DmlTools.DescribeEntities);
+            Assert.IsTrue(options.DmlTools.CreateRecord);
+        }
+
+        [DataTestMethod]
+        [DataRow("42")]
+        [DataRow("\"enabled\"")]
+        [DataRow("[]")]
+        public void Deserialize_UnexpectedTokenThrowsJsonException(string json)
+        {
+            Assert.ThrowsException<JsonException>(() =>
+                JsonSerializer.Deserialize<DmlToolsConfig>(json, GetOptions()));
+        }
+
+        [TestMethod]
+        public void Deserialize_McpWithUnexpectedDmlToolsTokenThrowsJsonException()
+        {
+            Assert.ThrowsException<JsonException>(() =>
+                JsonSerializer.Deserialize<McpRuntimeOptions>("{\"dml-tools\":42}", GetOptions()));
         }
 
         [TestMethod]

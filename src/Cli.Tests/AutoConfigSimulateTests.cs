@@ -162,6 +162,32 @@ public class AutoConfigSimulateTests
     }
 
     /// <summary>
+    /// A user-provided config path is not checked for existence before the load (see
+    /// TryGetConfigFileBasedOnCliPrecedence), so a missing file reaches TryLoadConfig, which logs
+    /// "Unable to find config file". Draining the loader's buffer now delivers that error, so the
+    /// generic fallback must stay silent rather than reporting the same failure a second time.
+    /// </summary>
+    [TestMethod]
+    public void TestSimulateAutoentities_MissingConfigFile_DoesNotLogGenericError()
+    {
+        // Arrange: a config path that was never written to the mock file system.
+        const string MISSING_CONFIG_FILE = "dab-config.missing.json";
+        Assert.IsFalse(_fileSystem!.File.Exists(MISSING_CONFIG_FILE), "The test config file must not exist.");
+
+        Mock<ILogger<ConfigGenerator>> loggerMock = new();
+        SetLoggerForCliConfigGenerator(loggerMock.Object);
+
+        AutoConfigSimulateOptions options = new(config: MISSING_CONFIG_FILE);
+
+        // Act
+        bool success = TrySimulateAutoentities(options, _runtimeConfigLoader!, _fileSystem!);
+
+        // Assert: the loader already reported the missing file, so no duplicate generic error.
+        Assert.IsFalse(success);
+        AssertErrorNotLogged(loggerMock, "Failed to read the config file");
+    }
+
+    /// <summary>
     /// Tests that an @env() reference which could not be resolved is rejected with an actionable
     /// message instead of being sent to the database as a literal. Unresolved references survive the
     /// config load because it runs in Ignore mode, so this check is what catches them.

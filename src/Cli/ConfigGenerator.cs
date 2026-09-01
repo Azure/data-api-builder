@@ -3834,10 +3834,13 @@ namespace Cli
                 loader.SetLogger(LoggerFactoryForCli.CreateLogger<FileSystemRuntimeConfigLoader>());
                 loader.FlushLogBuffer();
 
-                // When IsParseErrorEmitted is true, TryLoadConfig already emitted the
-                // detailed error to Console.Error. Only log a generic message to avoid
-                // duplicate output (stderr + stdout).
-                if (!loader.IsParseErrorEmitted)
+                // The loader explains the two failures it can attribute: a parse error (flagged by
+                // IsParseErrorEmitted) and a missing file (TryGetConfigFileBasedOnCliPrecedence does not
+                // check that a user-provided path exists, so it reaches the loader). The flush above has
+                // now delivered whichever it logged, so emit the generic fallback only for the case the
+                // loader stays silent on - a config file that exists but is empty - rather than reporting
+                // the same failure twice.
+                if (!loader.IsParseErrorEmitted && fileSystem.File.Exists(runtimeConfigFile))
                 {
                     _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 }

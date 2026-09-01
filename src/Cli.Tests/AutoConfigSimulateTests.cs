@@ -50,12 +50,31 @@ public class AutoConfigSimulateTests
         "OTEL_SERVICE_NAME"
     };
 
+    /// <summary>
+    /// Every environment variable these tests unset. The OpenTelemetry names are the real ones an
+    /// init-generated config references, so they may legitimately be set in the host environment.
+    /// </summary>
+    private static readonly string[] _mutatedEnvVarNames =
+        _openTelemetryEnvVarNames.Append(UNSET_ENV_VAR_NAME).ToArray();
+
     private IFileSystem? _fileSystem;
     private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
+
+    /// <summary>
+    /// Host values of <see cref="_mutatedEnvVarNames"/>, captured before each test clears them and
+    /// restored in cleanup. Without this, a cleared variable leaks into every test that runs later in
+    /// the same process, making unrelated tests fail depending on ordering and host environment.
+    /// </summary>
+    private readonly Dictionary<string, string?> _originalEnvVarValues = new();
 
     [TestInitialize]
     public void TestInitialize()
     {
+        foreach (string name in _mutatedEnvVarNames)
+        {
+            _originalEnvVarValues[name] = Environment.GetEnvironmentVariable(name);
+        }
+
         _fileSystem = FileSystemUtils.ProvisionMockFileSystem();
         // isCliLoader mirrors how the CLI builds its loader. Without it a successful load starts a
         // hot-reload file watcher against the mock file system, whose retries add seconds per test.
@@ -69,6 +88,12 @@ public class AutoConfigSimulateTests
     [TestCleanup]
     public void TestCleanup()
     {
+        foreach (KeyValuePair<string, string?> original in _originalEnvVarValues)
+        {
+            Environment.SetEnvironmentVariable(original.Key, original.Value);
+        }
+
+        _originalEnvVarValues.Clear();
         _fileSystem = null;
         _runtimeConfigLoader = null;
     }

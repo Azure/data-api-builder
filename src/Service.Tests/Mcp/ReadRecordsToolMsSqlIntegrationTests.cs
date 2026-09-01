@@ -79,6 +79,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Rejects empty field names in the select clause with a clear error.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("id,title,")]
+        [DataRow("id,,title")]
+        public async Task ReadRecords_WithEmptySelectField_ReturnsInvalidArguments(string select)
+        {
+            CallToolResult result = await ExecuteReadAsync("Book", select: select);
+
+            AssertError(result, "The 'select' argument cannot contain empty field names.");
+            Assert.AreEqual("InvalidArguments", ParseResultRoot(result).GetProperty("error").GetProperty("type").GetString());
+        }
+
+        /// <summary>
         /// Reads records with an OData filter expression and verifies filtered results are returned.
         /// </summary>
         [TestMethod]

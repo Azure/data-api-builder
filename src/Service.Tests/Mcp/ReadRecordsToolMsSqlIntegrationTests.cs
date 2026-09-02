@@ -88,8 +88,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             CallToolResult result = await ExecuteReadAsync("Book", select: select);
 
-            AssertError(result, "The 'select' argument cannot contain empty field names.");
-            Assert.AreEqual("InvalidArguments", ParseResultRoot(result).GetProperty("error").GetProperty("type").GetString());
+            AssertError(result);
+            JsonElement error = ParseResultRoot(result).GetProperty("error");
+            Assert.AreEqual("InvalidArguments", error.GetProperty("type").GetString());
+            Assert.AreEqual("The 'select' argument cannot contain empty field names.", error.GetProperty("message").GetString());
         }
 
         /// <summary>

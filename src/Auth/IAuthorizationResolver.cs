@@ -72,16 +72,15 @@ public interface IAuthorizationResolver
     public string GetDBPolicyForRequest(string entityName, string roleName, EntityActionOperation operation);
 
     /// <summary>
-    /// Retrieves the policy of an operation within an entity's role entry
-    /// within the permissions section of the runtime config, and tries to process
-    /// the policy.
+    /// Resolves claim references in a database policy to parameter aliases and
+    /// returns their typed values separately from the policy text.
     /// </summary>
     /// <param name="entityName">Entity from request.</param>
     /// <param name="roleName">Role defined in client role header.</param>
     /// <param name="operation">Operation type: Create, Read, Update, Delete.</param>
     /// <param name="httpContext">Contains token claims of the authenticated user used in policy evaluation.</param>
-    /// <returns>Returns the parsed policy, if successfully processed, or an exception otherwise.</returns>
-    public string ProcessDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext);
+    /// <returns>The policy text and typed claim values to bind to it.</returns>
+    public ResolvedDatabasePolicy ResolveDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext);
 
     /// <summary>
     /// Get list of roles defined for entity within runtime configuration.. This is applicable for GraphQL when creating authorization

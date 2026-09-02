@@ -750,6 +750,22 @@
             ]
           },
           {
+            Role: claim_policy_tester,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
+                Policy: {
+                  Database: @item.title eq @claims.userId
+                }
+              }
+            ]
+          },
+          {
             Role: test_role_with_noread,
             Actions: [
               {

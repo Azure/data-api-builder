@@ -18,10 +18,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass]
     public class SqlQueryStructureHelperTests
     {
+        /// <summary>
+        /// Verifies point queries are limited to one row while list or paginated shapes retain the configured limit.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(false, false, 25u, 1u)]
-        [DataRow(true, false, 25u, 25u)]
-        [DataRow(false, true, 25u, 25u)]
+        [DataRow(false, false, 25u, 1u, DisplayName = "Point query forces a one-row limit")]
+        [DataRow(true, false, 25u, 25u, DisplayName = "List query retains the configured limit")]
+        [DataRow(false, true, 25u, 25u, DisplayName = "Paginated query retains the configured limit")]
         public void Limit_ReflectsQueryAndPaginationShape(bool isList, bool isPaginated, uint configured, uint expected)
         {
             SqlQueryStructure structure = CreateStructure();
@@ -67,6 +70,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual("no-store", structure.CacheControlOption);
         }
 
+        /// <summary>
+        /// Verifies each pagination selection sets only its corresponding requested-output flag.
+        /// </summary>
         [TestMethod]
         public void ProcessPaginationFields_SetsEveryRequestedFlag()
         {

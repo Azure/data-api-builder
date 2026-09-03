@@ -131,8 +131,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [DataTestMethod]
-        [DataRow(true)]
-        [DataRow(false)]
+        [DataRow(true, DisplayName = "Resolver authorizes requested columns")]
+        [DataRow(false, DisplayName = "Resolver denies requested columns")]
         public void AreColumnsAuthorizedForOperation_ReturnsResolverDecision(bool allowed)
         {
             Mock<IAuthorizationResolver> resolver = new();

@@ -46,10 +46,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(hasObject ? JsonValueKind.Object : JsonValueKind.Null, result.RootElement.ValueKind);
         }
 
+        /// <summary>
+        /// Verifies stored-procedure execution returns the first result object and maps empty or absent result arrays to null.
+        /// </summary>
         [DataTestMethod]
-        [DataRow("[{\"id\":1}]", true)]
-        [DataRow("[]", false)]
-        [DataRow(null, false)]
+        [DataRow("[{\"id\":1}]", true, DisplayName = "Populated result returns a document")]
+        [DataRow("[]", false, DisplayName = "Empty result returns null")]
+        [DataRow(null, false, DisplayName = "Absent result returns null")]
         public async Task ExecuteStoredProcedureCore_HandlesResultShapes(string? json, bool expectsDocument)
         {
             JsonArray? resultArray = json is null ? null : JsonNode.Parse(json)!.AsArray();
@@ -77,9 +80,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expectsDocument, result is not null);
         }
 
+        /// <summary>
+        /// Verifies list execution passes through either the executor's document list or its null result unchanged.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(true)]
-        [DataRow(false)]
+        [DataRow(true, DisplayName = "Executor returns a document list")]
+        [DataRow(false, DisplayName = "Executor returns null")]
         public async Task ExecuteListCore_ReturnsExecutorResult(bool returnList)
         {
             (SqlQueryEngine engine, Mock<IQueryExecutor> executor) = CreateEngine();

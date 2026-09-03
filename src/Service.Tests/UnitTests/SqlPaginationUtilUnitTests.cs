@@ -139,6 +139,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(nextLink.Contains("localhost"), "Relative link should not contain the host.");
         }
 
+        /// <summary>
+        /// Verifies string, number, null, and Boolean cursor values resolve while object and array values are rejected.
+        /// </summary>
         [TestMethod]
         public void TryResolveJsonElementToScalarVariable_HandlesEveryJsonKind()
         {

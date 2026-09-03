@@ -23,6 +23,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class CosmosSqlMetadataProviderHelperTests
     {
+        /// <summary>
+        /// Verifies relational metadata, mapping collections, query builders, and stored-procedure members remain unsupported for Cosmos.
+        /// </summary>
         [TestMethod]
         public void InterfaceMembers_ThatCosmosDoesNotSupport_Throw()
         {
@@ -42,6 +45,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.ThrowsException<NotSupportedException>(() => provider.GetStoredProcedureDefinition("Book"));
         }
 
+        /// <summary>
+        /// Verifies Cosmos metadata exposes its database type, schema and source defaults, development mode, parser reuse, and no-op initialization.
+        /// </summary>
         [TestMethod]
         public void TrivialMetadataMembers_ReturnCosmosDefaults()
         {
@@ -81,9 +87,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(null, "container", "/id")]
-        [DataRow("db", null, "/id")]
-        [DataRow("db", "container", null)]
+        [DataRow(null, "container", "/id", DisplayName = "Null database is rejected")]
+        [DataRow("db", null, "/id", DisplayName = "Null container is rejected")]
+        [DataRow("db", "container", null, DisplayName = "Null partition-key path is rejected")]
         public void SetPartitionKeyPath_NullArgumentsThrow(string? database, string? container, string? path)
         {
             CosmosSqlMetadataProvider provider = CreateProvider();
@@ -91,8 +97,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(null, "container")]
-        [DataRow("db", null)]
+        [DataRow(null, "container", DisplayName = "Null database is rejected")]
+        [DataRow("db", null, DisplayName = "Null container is rejected")]
         public void GetPartitionKeyPath_NullArgumentsThrow(string? database, string? container)
         {
             CosmosSqlMetadataProvider provider = CreateProvider();
@@ -100,9 +106,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow("db.books", "configuredDb", "configuredContainer", "books")]
-        [DataRow("books", "configuredDb", "configuredContainer", "books")]
-        [DataRow("", "configuredDb", "configuredContainer", "configuredContainer")]
+        [DataRow("db.books", "configuredDb", "configuredContainer", "books", DisplayName = "Two-part source supplies the container")]
+        [DataRow("books", "configuredDb", "configuredContainer", "books", DisplayName = "One-part source supplies the container")]
+        [DataRow("", "configuredDb", "configuredContainer", "configuredContainer", DisplayName = "Empty source falls back to the configured container")]
         public void GetDatabaseObjectName_ResolvesSourceOrConfiguredContainer(
             string source,
             string configuredDatabase,
@@ -117,9 +123,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow("db.books", "configuredDb", "db")]
-        [DataRow("books", "configuredDb", "configuredDb")]
-        [DataRow("", "configuredDb", "configuredDb")]
+        [DataRow("db.books", "configuredDb", "db", DisplayName = "Two-part source supplies the database")]
+        [DataRow("books", "configuredDb", "configuredDb", DisplayName = "One-part source falls back to the configured database")]
+        [DataRow("", "configuredDb", "configuredDb", DisplayName = "Empty source falls back to the configured database")]
         public void GetSchemaName_ResolvesSourceOrConfiguredDatabase(string source, string configuredDatabase, string expected)
         {
             CosmosSqlMetadataProvider provider = CreateProvider(
@@ -189,6 +195,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
         }
 
+        /// <summary>
+        /// Verifies entity lookup accepts config names, model-directive aliases, and singular names while rejecting unknown names.
+        /// </summary>
         [TestMethod]
         public void GetEntityName_ResolvesDirectModelDirectiveAndSingularNames()
         {
@@ -235,6 +244,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsNull(provider.GetSchemaGraphQLFieldFromFieldName("Missing", "id"));
         }
 
+        /// <summary>
+        /// Verifies multiple GraphQL types targeting one entity each contribute a join-policy path for that entity.
+        /// </summary>
         [TestMethod]
         public void ParseSchemaGraphQLFieldsForJoins_AddsRepeatedModelPaths()
         {

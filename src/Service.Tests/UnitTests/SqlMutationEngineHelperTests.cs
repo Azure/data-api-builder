@@ -49,8 +49,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(false, false)]
-        [DataRow(true, true)]
+        [DataRow(false, false, DisplayName = "Missing primary-key field mapping")]
+        [DataRow(true, true, DisplayName = "Mapped primary-key field has a null value")]
         public void FetchPrimaryKeyFieldValues_MissingMappingOrNullValue_Throws(bool mappingExists, bool nullValue)
         {
             SourceDefinition definition = new() { PrimaryKey = new() { "book_id" } };
@@ -83,6 +83,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(0, structure.LinkingTableParams.Count);
         }
 
+        /// <summary>
+        /// Verifies linking-table foreign keys use referenced backing names to retrieve computed values.
+        /// </summary>
         [TestMethod]
         public void PopulateReferencingFields_LinkingTable_UsesBackingReferencedNames()
         {
@@ -102,8 +105,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(true)]
-        [DataRow(false)]
+        [DataRow(true, DisplayName = "Uses the exposed referenced-field name when mapped")]
+        [DataRow(false, DisplayName = "Falls back to the referenced backing-field name")]
         public void PopulateReferencingFields_CurrentEntity_ResolvesExposedNameWhenAvailable(bool mappingExists)
         {
             MultipleCreateStructure structure = new("Book", "Publisher");
@@ -180,9 +183,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsNotNull(result.Item2);
         }
 
+        /// <summary>
+        /// Verifies GraphQL update authorization is delegated as update while other column-aware operations retain their operation.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(EntityActionOperation.UpdateGraphQL, EntityActionOperation.Update, true)]
-        [DataRow(EntityActionOperation.Create, EntityActionOperation.Create, false)]
+        [DataRow(EntityActionOperation.UpdateGraphQL, EntityActionOperation.Update, true, DisplayName = "UpdateGraphQL delegates as Update and is authorized")]
+        [DataRow(EntityActionOperation.Create, EntityActionOperation.Create, false, DisplayName = "Create delegates unchanged and is denied")]
         public void AreFieldsAuthorizedForEntity_DelegatesColumnOperations(
             EntityActionOperation requested,
             EntityActionOperation delegated,
@@ -225,6 +231,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsInstanceOfType<DataApiBuilderException>(exception.InnerException);
         }
 
+        /// <summary>
+        /// Verifies each supported stored-procedure operation produces its operation-specific HTTP result shape.
+        /// </summary>
         [DataTestMethod]
         [DataRow(EntityActionOperation.Delete, false, typeof(NoContentResult))]
         [DataRow(EntityActionOperation.Insert, true, typeof(CreatedResult))]
@@ -329,6 +338,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsInstanceOfType<DataApiBuilderException>(exception.InnerException);
         }
 
+        /// <summary>
+        /// Verifies many-to-many input is classified as referencing data while fields without relationships are ignored.
+        /// </summary>
         [TestMethod]
         public void DetermineRelationships_ManyToManyIsReferencingAndUnknownFieldIsIgnored()
         {
@@ -437,9 +449,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsInstanceOfType<DataApiBuilderException>(exception.InnerException);
         }
 
+        /// <summary>
+        /// Verifies invalid private mutation invocations distinguish missing GraphQL context from an unsupported operation.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(EntityActionOperation.UpdateGraphQL)]
-        [DataRow(EntityActionOperation.Delete)]
+        [DataRow(EntityActionOperation.UpdateGraphQL, DisplayName = "UpdateGraphQL without middleware context throws ArgumentNullException")]
+        [DataRow(EntityActionOperation.Delete, DisplayName = "Delete is unsupported by this mutation path")]
         public async Task PerformMutationOperation_RejectsInvalidInvocation(EntityActionOperation operation)
         {
             (SqlMutationEngine engine, ISqlMetadataProvider metadata) = CreateMutationOperationFixture();
@@ -464,9 +479,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
+        /// <summary>
+        /// Verifies empty linking-table and current-entity insert results produce their distinct failure statuses.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(true, false)]
-        [DataRow(false, true)]
+        [DataRow(true, false, DisplayName = "Empty linking-table result is an internal server error")]
+        [DataRow(false, true, DisplayName = "Null current-entity result is forbidden")]
         public void BuildAndExecuteInsertDbQueries_ReportsEmptyResults(bool linkingEntity, bool returnNull)
         {
             (SqlMutationEngine engine, ISqlMetadataProvider metadata) =

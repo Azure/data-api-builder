@@ -163,12 +163,15 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         }
 
+        /// <summary>
+        /// Verifies every supplied sampling dimension must be positive, both alone and in combination with other dimensions.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(0, null, null)]
-        [DataRow(null, 0, null)]
-        [DataRow(null, null, 0)]
-        [DataRow(1, 0, 0)]
-        [DataRow(1, 1, 0)]
+        [DataRow(0, null, null, DisplayName = "Days cannot be zero")]
+        [DataRow(null, 0, null, DisplayName = "Group count cannot be zero")]
+        [DataRow(null, null, 0, DisplayName = "Sample count cannot be zero")]
+        [DataRow(1, 0, 0, DisplayName = "Valid days do not permit zero group and sample counts")]
+        [DataRow(1, 1, 0, DisplayName = "Valid days and groups do not permit zero sample count")]
         public async Task Create_InvalidSamplingCountsThrow(int? days, int? groupCount, int? sampleCount)
         {
             RuntimeConfig runtimeConfig = new(

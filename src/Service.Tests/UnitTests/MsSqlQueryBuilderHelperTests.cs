@@ -60,8 +60,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(true, false, "OUTPUT Inserted.[id] AS [id]")]
-        [DataRow(false, true, "SELECT [id] AS [id], [title] AS [title] from [dbo].[books]")]
+        [DataRow(true, false, "OUTPUT Inserted.[id] AS [id]", DisplayName = "Update trigger only uses Inserted output for the insert branch")]
+        [DataRow(false, true, "SELECT [id] AS [id], [title] AS [title] from [dbo].[books]", DisplayName = "Insert trigger only reads the inserted row after the insert branch")]
         public void BuildUpsert_AsymmetricTriggerConfigurationUsesCorrectOutputQualifier(
             bool isUpdateTriggerEnabled,
             bool isInsertTriggerEnabled,
@@ -91,9 +91,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow("alias", "dbo", "[alias].[price]")]
-        [DataRow(null, "dbo", "[dbo].[books].[price]")]
-        [DataRow(null, "", "[books].[price]")]
+        [DataRow("alias", "dbo", "[alias].[price]", DisplayName = "Table alias takes precedence")]
+        [DataRow(null, "dbo", "[dbo].[books].[price]", DisplayName = "Schema and table qualify an unaliased column")]
+        [DataRow(null, "", "[books].[price]", DisplayName = "Table qualifies a column when schema is empty")]
         public void BuildColumn_UsesAliasSchemaOrTableQualification(string? tableAlias, string tableSchema, string expected)
         {
             Column column = new(tableSchema, TABLE_NAME, "price", tableAlias);
@@ -104,9 +104,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow("alias", "dbo", false, false, "sum([alias].[price])")]
-        [DataRow(null, "dbo", true, false, "sum(DISTINCT ([dbo].[books].[price]))")]
-        [DataRow(null, "", false, true, "AS [sum_price]")]
+        [DataRow("alias", "dbo", false, false, "sum([alias].[price])", DisplayName = "Aggregation uses table alias qualification")]
+        [DataRow(null, "dbo", true, false, "sum(DISTINCT ([dbo].[books].[price]))", DisplayName = "Distinct aggregation uses schema and table qualification")]
+        [DataRow(null, "", false, true, "AS [sum_price]", DisplayName = "Aggregation result includes its requested alias")]
         public void BuildAggregationColumn_UsesQualificationDistinctAndAlias(
             string? tableAlias,
             string tableSchema,

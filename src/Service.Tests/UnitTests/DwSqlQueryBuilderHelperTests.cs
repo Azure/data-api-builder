@@ -18,12 +18,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.DWSQL)]
     public class DwSqlQueryBuilderHelperTests
     {
+        /// <summary>
+        /// Verifies an absent relation tree is safe for the to-one join optimization.
+        /// </summary>
         [TestMethod]
         public void HasToOneOrNoRelation_NullStructureReturnsTrue()
         {
             Assert.IsTrue(InvokeHasToOneOrNoRelation(null, false));
         }
 
+        /// <summary>
+        /// Verifies nested point queries remain safe for the to-one join optimization.
+        /// </summary>
         [TestMethod]
         public void HasToOneOrNoRelation_EmptyAndNestedPointQueriesReturnTrue()
         {
@@ -33,6 +39,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(InvokeHasToOneOrNoRelation(parent, false));
         }
 
+        /// <summary>
+        /// Verifies a nested list introduces to-many cardinality and disables the to-one join optimization.
+        /// </summary>
         [TestMethod]
         public void HasToOneOrNoRelation_NestedListQueryReturnsFalse()
         {
@@ -96,6 +105,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(query.Contains("FOR JSON PATH"));
         }
 
+        /// <summary>
+        /// Verifies a point-query subquery is limited to one row before its projected columns are wrapped as JSON.
+        /// </summary>
         [TestMethod]
         public void BuildWithJsonFunc_SubqueryWrapsColumnsAsJsonObject()
         {

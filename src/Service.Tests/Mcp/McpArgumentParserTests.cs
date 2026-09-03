@@ -203,6 +203,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             StringAssert.Contains(error, "Arguments must be an object");
         }
 
+        /// <summary>
+        /// Verifies that scalar JSON parameter kinds are converted to the CLR values passed to stored procedures.
+        /// </summary>
         [TestMethod]
         public void TryParseExecuteArguments_WithTypedParameters_AreConverted()
         {
@@ -257,6 +260,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(0, parameters.Count);
         }
 
+        /// <summary>
+        /// Verifies that false remains a Boolean value while composite parameters are preserved as JSON text.
+        /// </summary>
         [TestMethod]
         public void TryParseExecuteArguments_FalseAndCompositeParametersAreConverted()
         {

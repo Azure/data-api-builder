@@ -54,9 +54,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(100L, 101L, true)]
-        [DataRow(100L, 100L, false)]
-        [DataRow(100L, 0L, false)]
+        [DataRow(100L, 101L, true, DisplayName = "Requested size over the available limit throws")]
+        [DataRow(100L, 100L, false, DisplayName = "Requested size equal to the limit is accepted")]
+        [DataRow(100L, 0L, false, DisplayName = "Empty request is accepted")]
         public void ValidateSize_EnforcesOnlyValuesOverLimit(long available, long requested, bool throws)
         {
             MsSqlQueryExecutor executor = (MsSqlQueryExecutor)RuntimeHelpers.GetUninitializedObject(typeof(MsSqlQueryExecutor));
@@ -173,8 +173,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(false)]
-        [DataRow(true)]
+        [DataRow(false, DisplayName = "Reader without rows returns null")]
+        [DataRow(true, DisplayName = "Reader with a row returns parsed JSON")]
         public async Task GetJsonResultAsync_HandlesRowsAndNoRows(bool hasRows)
         {
             MsSqlQueryExecutor executor = CreateExecutor();
@@ -212,10 +212,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(false, false)]
-        [DataRow(false, true)]
-        [DataRow(true, false)]
-        public async Task ExtractResultSet_HandlesColumnsNullsAndFiltering(bool useAsync, bool filterOutColumn)
+        [DataRow(false, false, DisplayName = "Synchronous extraction without a column filter")]
+        [DataRow(false, true, DisplayName = "Synchronous extraction filters the column")]
+        [DataRow(true, false, DisplayName = "Asynchronous extraction without a column filter")]
+        public async Task ExtractResultSet_SyncAndAsyncApplyOptionalColumnFiltering(bool useAsync, bool filterOutColumn)
         {
             MsSqlQueryExecutor executor = CreateExecutor(maxResponseSizeEnabled: false);
             Mock<DbDataReader> reader = CreateSingleRowReader(valueIsNull: false);
@@ -291,6 +291,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 executor.GetMultipleResultSetsIfAnyAsync(reader.Object));
         }
 
+        /// <summary>
+        /// Verifies an empty mutation result is reported as not found when key values identify the target row.
+        /// </summary>
         [TestMethod]
         public async Task MsSqlGetMultipleResultSets_NoMutationResultWithArgumentsThrowsNotFound()
         {
@@ -318,6 +321,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(System.Net.HttpStatusCode.NotFound, exception.StatusCode);
         }
 
+        /// <summary>
+        /// Verifies an empty mutation result without identifying keys is treated as an unexpected server failure.
+        /// </summary>
         [TestMethod]
         public async Task MsSqlGetMultipleResultSets_NoMutationResultWithoutArgumentsThrowsInternalServerError()
         {

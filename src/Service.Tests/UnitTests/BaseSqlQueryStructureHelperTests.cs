@@ -96,9 +96,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             CollectionAssert.AreEqual(new[] { "id", "title" }, names);
         }
 
+        /// <summary>
+        /// Verifies malformed and missing GraphQL mutation arguments produce their distinct contextual errors.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(true)]
-        [DataRow(false)]
+        [DataRow(true, DisplayName = "Argument exists with an unexpected shape")]
+        [DataRow(false, DisplayName = "Expected argument is missing")]
         public void GetSubArgumentNamesFromGQLMutArguments_InvalidArguments_Throw(bool includeWrongFormat)
         {
             Dictionary<string, object?> parameters = new();
@@ -159,11 +162,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsNull(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
         }
 
+        /// <summary>
+        /// Verifies conversion errors expose source-kind context in development and safe field names in production.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(EntitySourceType.StoredProcedure, true, "stored procedure parameter")]
-        [DataRow(EntitySourceType.Table, true, "column")]
-        [DataRow(EntitySourceType.Table, false, "publicId")]
-        [DataRow(EntitySourceType.StoredProcedure, false, "id")]
+        [DataRow(EntitySourceType.StoredProcedure, true, "stored procedure parameter", DisplayName = "Development stored-procedure error describes the parameter kind")]
+        [DataRow(EntitySourceType.Table, true, "column", DisplayName = "Development table error describes the column kind")]
+        [DataRow(EntitySourceType.Table, false, "publicId", DisplayName = "Production table error uses the exposed field name")]
+        [DataRow(EntitySourceType.StoredProcedure, false, "id", DisplayName = "Production stored-procedure error uses the parameter name")]
         public void GetParamAsSystemType_InvalidValueUsesSafeContextualMessage(
             EntitySourceType sourceType,
             bool isDevelopment,

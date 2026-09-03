@@ -141,6 +141,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             }
         }
 
+        /// <summary>
+        /// Verifies that aggregate and group-by fields are resolved independently and that either kind of missing field produces a field error.
+        /// </summary>
         [TestMethod]
         public void ValidateFieldsExist_ValidatesAggregateAndGroupByFields()
         {
@@ -175,6 +178,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertErrorResult(groupError, "FieldNotFound");
         }
 
+        /// <summary>
+        /// Verifies mapped fields resolve to backing columns, missing fields return an error, and count(*) uses the first primary key.
+        /// </summary>
         [TestMethod]
         public void ResolveBackingField_HandlesMappedFieldsAndCountStarPrimaryKeys()
         {
@@ -218,6 +224,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual("book_id", InvokePrivateWithMutableArguments<string>("ResolveBackingField", primaryKeyArgs));
         }
 
+        /// <summary>
+        /// Verifies group-by, distinct aggregation, having predicates, and paging inputs populate their corresponding query-structure state.
+        /// </summary>
         [TestMethod]
         public void BuildAggregationStructure_AddsGroupsAggregationHavingAndPaginationState()
         {
@@ -310,9 +319,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [DataTestMethod]
-        [DataRow("SELECT TOP 10 value FOR JSON PATH", true, "desc", false, "SELECT value ORDER BY SUM([table0].[price]) DESC OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY FOR JSON PATH")]
-        [DataRow("SELECT value FOR JSON PATH", false, "asc", true, "SELECT value ORDER BY SUM(DISTINCT [table0].[price]) ASC FOR JSON PATH")]
-        [DataRow("SELECT value", false, "desc", false, "SELECT value ORDER BY SUM([table0].[price]) DESC")]
+        [DataRow("SELECT TOP 10 value FOR JSON PATH", true, "desc", false, "SELECT value ORDER BY SUM([table0].[price]) DESC OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY FOR JSON PATH", DisplayName = "Paging removes TOP and inserts descending OFFSET/FETCH before FOR JSON")]
+        [DataRow("SELECT value FOR JSON PATH", false, "asc", true, "SELECT value ORDER BY SUM(DISTINCT [table0].[price]) ASC FOR JSON PATH", DisplayName = "Distinct ascending order is inserted before FOR JSON")]
+        [DataRow("SELECT value", false, "desc", false, "SELECT value ORDER BY SUM([table0].[price]) DESC", DisplayName = "Descending order is appended when no JSON suffix exists")]
         public void ApplyOrderByAndPagination_RewritesSql(
             string sql,
             bool paginate,
@@ -421,14 +430,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [DataTestMethod]
-        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"field\":\"\"}", "EntityNotFound")]
-        [DataRow("{\"entity\":\"Book\",\"function\":\"sum\",\"field\":\"\"}", "InvalidArguments")]
-        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"field\":\"id\",\"distinct\":\"yes\"}", "InvalidArguments")]
-        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":0}", "InvalidArguments")]
-        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":1}", "InvalidArguments")]
-        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"after\":\"MA==\"}", "InvalidArguments")]
-        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"after\":\"MA==\"}", "InvalidArguments")]
-        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"having\":{\"in\":[]}}", "InvalidArguments")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"field\":\"\"}", "EntityNotFound", DisplayName = "Empty count field reaches metadata resolution")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"sum\",\"field\":\"\"}", "InvalidArguments", DisplayName = "Empty non-count field is invalid")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"field\":\"id\",\"distinct\":\"yes\"}", "InvalidArguments", DisplayName = "Distinct must be Boolean")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":0}", "InvalidArguments", DisplayName = "Page size must be positive")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":1}", "InvalidArguments", DisplayName = "Page size requires group-by")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"after\":\"MA==\"}", "InvalidArguments", DisplayName = "Cursor requires page size")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"after\":\"MA==\"}", "InvalidArguments", DisplayName = "Grouped cursor still requires page size")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"having\":{\"in\":[]}}", "InvalidArguments", DisplayName = "Having in-list cannot be empty")]
         public async Task AggregateRecords_AdditionalArgumentEdges_ReturnExpectedError(string json, string expectedError)
         {
             CallToolResult result = await ExecuteToolAsync(CreateDefaultServiceProvider(), json);
@@ -655,11 +664,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(expectedOffset, AggregateRecordsTool.DecodeCursorOffset(cursor));
         }
 
+        /// <summary>
+        /// Verifies paging requires group-by and first, while order-by without group-by is ignored rather than rejected.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(0, true, 1, null, false, "first")]
-        [DataRow(0, true, null, "MA==", false, "after")]
-        [DataRow(1, true, null, "MA==", false, "first")]
-        [DataRow(0, true, null, null, true, null)]
+        [DataRow(0, true, 1, null, false, "first", DisplayName = "Page size without group-by is rejected")]
+        [DataRow(0, true, null, "MA==", false, "after", DisplayName = "Cursor without group-by is rejected")]
+        [DataRow(1, true, null, "MA==", false, "first", DisplayName = "Cursor without page size is rejected")]
+        [DataRow(0, true, null, null, true, null, DisplayName = "Order-by without group-by is ignored")]
         public void ValidateGroupByDependencies_HandlesEveryDependency(
             int groupbyCount,
             bool userProvidedOrderby,
@@ -720,6 +732,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             }
         }
 
+        /// <summary>
+        /// Verifies a page-size-plus-one lookahead is removed and the next cursor advances from the incoming offset by returned item count.
+        /// </summary>
         [TestMethod]
         public void BuildPaginatedResponse_TrimsLookaheadAndAdvancesCursor()
         {

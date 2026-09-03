@@ -166,6 +166,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(("custom", "books"), provider.ParseSchemaAndDbTableName("custom.books"));
         }
 
+        /// <summary>
+        /// Verifies SQL Server metadata maps defaults, scalar database types, and vector element and array types.
+        /// </summary>
         [TestMethod]
         public void PopulateColumnDefinitionWithHasDefaultAndDbType_MapsMsSqlMetadata()
         {
@@ -338,6 +341,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual("title", exposed);
         }
 
+        /// <summary>
+        /// Verifies the base metadata provider's unsupported members throw while its linking-object hook remains a no-op.
+        /// </summary>
         [TestMethod]
         public void BaseVirtualMetadataOperations_UseDefaultBehavior()
         {

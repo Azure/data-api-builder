@@ -30,10 +30,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class CosmosEngineHelperTests
     {
+        /// <summary>
+        /// Verifies GraphQL update and patch authorize as update while create retains its operation.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(EntityActionOperation.UpdateGraphQL, EntityActionOperation.Update)]
-        [DataRow(EntityActionOperation.Patch, EntityActionOperation.Update)]
-        [DataRow(EntityActionOperation.Create, EntityActionOperation.Create)]
+        [DataRow(EntityActionOperation.UpdateGraphQL, EntityActionOperation.Update, DisplayName = "UpdateGraphQL delegates as Update")]
+        [DataRow(EntityActionOperation.Patch, EntityActionOperation.Update, DisplayName = "Patch delegates as Update")]
+        [DataRow(EntityActionOperation.Create, EntityActionOperation.Create, DisplayName = "Create delegates unchanged")]
         public void AuthorizeMutation_DelegatesColumnAuthorization(
             EntityActionOperation operation,
             EntityActionOperation delegatedOperation)
@@ -94,6 +97,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 EntityActionOperation.Read));
         }
 
+        /// <summary>
+        /// Verifies variable objects omit null properties, recursively preserve nested values, and pass primitive input through unchanged.
+        /// </summary>
         [TestMethod]
         public void ParseVariableInputItem_MapsNonNullProperties()
         {
@@ -111,6 +117,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual("value", InvokeMutation("ParseVariableInputItem", "value"));
         }
 
+        /// <summary>
+        /// Verifies inline GraphQL fields, field lists, value arrays, nested objects, and primitives convert to their corresponding JSON tokens.
+        /// </summary>
         [TestMethod]
         public void ParseInlineInputItem_HandlesObjectListArrayAndPrimitiveValues()
         {
@@ -176,6 +185,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(plain, InvokeQuery("Base64Decode", encoded));
         }
 
+        /// <summary>
+        /// Verifies REST and stored-procedure execution entry points remain unsupported by the Cosmos mutation and query engines.
+        /// </summary>
         [TestMethod]
         public async Task UnsupportedCosmosEngineEntryPointsThrow()
         {
@@ -205,6 +217,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed, exception.SubStatusCode);
         }
 
+        /// <summary>
+        /// Verifies delete, update, and patch handlers each require identifiers and their operation-specific input.
+        /// </summary>
         [TestMethod]
         public async Task MutationHandlers_ValidateRequiredArguments()
         {
@@ -237,9 +252,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow("HandleCreateAsync", false)]
-        [DataRow("HandleUpdateAsync", true)]
-        [DataRow("HandlePatchAsync", true)]
+        [DataRow("HandleCreateAsync", false, DisplayName = "Create rejects null item input")]
+        [DataRow("HandleUpdateAsync", true, DisplayName = "Update rejects null item input after accepting keys")]
+        [DataRow("HandlePatchAsync", true, DisplayName = "Patch rejects null item input after accepting keys")]
         public async Task MutationHandlers_InvalidInputThrows(string methodName, bool requiresKeys)
         {
             Dictionary<string, object?> arguments = new()
@@ -255,9 +270,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             await AssertPrivateThrowsAsync<InvalidDataException>(methodName, arguments, Mock.Of<Container>());
         }
 
+        /// <summary>
+        /// Verifies create and update handlers accept variable-object input and route it to the corresponding Cosmos operation.
+        /// </summary>
         [DataTestMethod]
-        [DataRow("HandleCreateAsync", false)]
-        [DataRow("HandleUpdateAsync", true)]
+        [DataRow("HandleCreateAsync", false, DisplayName = "Create accepts variable-object input")]
+        [DataRow("HandleUpdateAsync", true, DisplayName = "Update accepts variable-object input with keys")]
         public async Task MutationHandlers_AcceptVariableInput(string methodName, bool requiresKeys)
         {
             Dictionary<string, object?> arguments = new()
@@ -328,6 +346,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 await InvokePrivateMutationAsync("HandlePatchAsync", arguments, container.Object));
         }
 
+        /// <summary>
+        /// Verifies absent partition-key input and a non-equality ID filter both resolve to no query key value.
+        /// </summary>
         [TestMethod]
         public void QueryValueHelpers_HandleMissingInputs()
         {

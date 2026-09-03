@@ -359,6 +359,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertError(result, "InvalidEntity");
         }
 
+        /// <summary>
+        /// Verifies scalar JSON parameters become CLR values while null is preserved and composite input remains JSON text.
+        /// </summary>
         [TestMethod]
         public async Task ExecuteEntity_ConvertsJsonParameterKinds()
         {
@@ -397,6 +400,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual("{\"x\":1}", capturedContext.ResolvedParameters["complex"]);
         }
 
+        /// <summary>
+        /// Verifies recognizable DAB failure messages map to specific MCP errors and unmatched messages use the DAB fallback.
+        /// </summary>
         [DataTestMethod]
         [DataRow("permission denied", "PermissionDenied")]
         [DataRow("invalid parameter type", "InvalidArguments")]
@@ -417,6 +423,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertError(result, expectedError);
         }
 
+        /// <summary>
+        /// Verifies provider, connection, and unexpected execution failures map to their MCP error classifications.
+        /// </summary>
         [DataTestMethod]
         [DataRow("provider failure", "DatabaseError")]
         [DataRow("connection unavailable", "ConnectionError")]
@@ -451,6 +460,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertError(result, "TimeoutError");
         }
 
+        /// <summary>
+        /// Verifies known SQL Server error numbers produce their user-facing messages and unknown numbers use the database fallback.
+        /// </summary>
         [DataTestMethod]
         [DataRow(2812, "not found")]
         [DataRow(8144, "too many parameters")]

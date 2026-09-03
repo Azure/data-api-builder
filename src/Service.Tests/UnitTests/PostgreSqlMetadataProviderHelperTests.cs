@@ -44,6 +44,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.ThrowsException<NotImplementedException>(() => provider.SqlToCLRType("integer"));
         }
 
+        /// <summary>
+        /// Verifies PostgreSQL array UDT metadata supplies the scalar element type and corresponding CLR array type.
+        /// </summary>
         [TestMethod]
         public void PopulateColumnDefinitionWithHasDefaultAndDbType_MapsArrayUdtMetadata()
         {

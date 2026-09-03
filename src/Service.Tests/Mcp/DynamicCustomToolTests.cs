@@ -439,6 +439,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertError(result, "InvalidEntity");
         }
 
+        /// <summary>
+        /// Verifies scalar JSON values become CLR values while null is preserved and composite input remains JSON text.
+        /// </summary>
         [TestMethod]
         public async Task ExecuteAsync_ConvertsAllJsonParameterKinds()
         {
@@ -476,10 +479,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual("{\"x\":1}", capturedContext.ResolvedParameters["complex"]);
         }
 
+        /// <summary>
+        /// Verifies DAB, provider, and unexpected execution exceptions retain distinct MCP error classifications.
+        /// </summary>
         [DataTestMethod]
-        [DataRow("dab", "ExecutionError")]
-        [DataRow("database", "DatabaseError")]
-        [DataRow("unexpected", "UnexpectedError")]
+        [DataRow("dab", "ExecutionError", DisplayName = "DAB exception maps to ExecutionError")]
+        [DataRow("database", "DatabaseError", DisplayName = "Provider exception maps to DatabaseError")]
+        [DataRow("unexpected", "UnexpectedError", DisplayName = "Unexpected exception maps to UnexpectedError")]
         public async Task ExecuteAsync_ExecutionException_MapsError(string exceptionType, string expectedError)
         {
             Exception exception = exceptionType switch
@@ -500,10 +506,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertError(result, expectedError);
         }
 
+        /// <summary>
+        /// Verifies non-success action results map to MCP errors while an unrecognized no-content result uses the success fallback.
+        /// </summary>
         [DataTestMethod]
-        [DataRow("bad", "BadRequest")]
-        [DataRow("unauthorized", "PermissionDenied")]
-        [DataRow("unknown", "Stored procedure executed successfully")]
+        [DataRow("bad", "BadRequest", DisplayName = "Bad request result maps to BadRequest")]
+        [DataRow("unauthorized", "PermissionDenied", DisplayName = "Unauthorized result maps to PermissionDenied")]
+        [DataRow("unknown", "Stored procedure executed successfully", DisplayName = "No-content result uses the success fallback")]
         public async Task ExecuteAsync_NonSuccessResult_MapsResponse(string resultType, string expectedText)
         {
             IActionResult queryResult = resultType switch
@@ -521,6 +530,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             StringAssert.Contains(GetFirstText(result), expectedText);
         }
 
+        /// <summary>
+        /// Verifies unexpected parameters are rejected before a JSON object result is normalized into the MCP value array.
+        /// </summary>
         [TestMethod]
         public async Task ExecuteAsync_JsonDocumentObjectResult_WrapsValueInArray()
         {

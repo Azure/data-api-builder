@@ -19,6 +19,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass]
     public class GraphQLAuthorizationHandlerCoverageTests
     {
+        /// <summary>
+        /// Verifies the single-directive overload distinguishes authentication, HTTP context, role, and unsupported-policy failures.
+        /// </summary>
         [TestMethod]
         public void AuthorizeAsync_EvaluatesAuthenticationHeaderRoleAndPolicyBranches()
         {
@@ -52,6 +55,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 handler.AuthorizeAsync(CreateContext(authenticated: true, includeHttpContext: true, role: "denied"), roleDirective).Result);
         }
 
+        /// <summary>
+        /// Verifies an empty directive list succeeds and every supplied directive must authorize the request.
+        /// </summary>
         [TestMethod]
         public void AuthorizeAsync_DirectiveListEvaluatesEveryBranch()
         {

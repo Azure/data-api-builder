@@ -60,6 +60,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual("String", ((NamedTypeNode)field.Type).Name.Value);
         }
 
+        /// <summary>
+        /// Verifies configured parameter text is converted into the GraphQL scalar name and value node for every supported CLR type.
+        /// </summary>
         [DataTestMethod]
         [DataRow(typeof(Guid), "d2719f98-e062-4ae8-a786-4ea9c3524d7c", "UUID")]
         [DataRow(typeof(byte), "255", "UnsignedByte")]

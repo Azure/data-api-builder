@@ -174,6 +174,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.ThrowsException<JsonException>(() => JsonSerializer.Deserialize<FileSinkOptions>(json, Options));
         }
 
+        /// <summary>
+        /// Verifies explicitly configured health options serialize as an object while an untouched default configuration serializes as null.
+        /// </summary>
         [TestMethod]
         public void RuntimeHealthOptions_WriteConfiguredAndDefaultForms()
         {
@@ -193,6 +196,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual("null", defaultJson);
         }
 
+        /// <summary>
+        /// Verifies any independently supplied data-source health property causes that property to be serialized.
+        /// </summary>
         [TestMethod]
         public void DatasourceHealthOptions_WriteEachUserProvidedTrigger()
         {

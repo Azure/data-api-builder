@@ -76,6 +76,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsInstanceOfType<NotSupportedException>(exception.InnerException);
         }
 
+        /// <summary>
+        /// Verifies null comparisons, unary negation, conversions, and typed constants emit predicates while capturing parameter values in order.
+        /// </summary>
         [TestMethod]
         public void Visitor_HandlesNullBinaryUnaryConvertAndTypedConstants()
         {

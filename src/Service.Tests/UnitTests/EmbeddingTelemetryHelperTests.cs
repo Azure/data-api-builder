@@ -14,6 +14,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass]
     public class EmbeddingTelemetryHelperTests
     {
+        /// <summary>
+        /// Verifies request, API, cache, error, duration, token, text-count, and dimension helpers publish their expected instruments.
+        /// </summary>
         [TestMethod]
         public void MetricHelpers_RecordAllEmbeddingMeasurements()
         {
@@ -53,6 +56,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             CollectionAssert.Contains(measurements, "embedding_dimensions");
         }
 
+        /// <summary>
+        /// Verifies embedding, cache, duration, and dimension helpers compose their tags and mark the activity successful.
+        /// </summary>
         [TestMethod]
         public void ActivityHelpers_SetSuccessAndCacheTags()
         {

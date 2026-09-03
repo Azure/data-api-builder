@@ -1150,8 +1150,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow("")]
-        [DataRow("Basic credentials")]
+        [DataRow("", DisplayName = "Missing Authorization header")]
+        [DataRow("Basic credentials", DisplayName = "Non-Bearer Authorization header")]
         public async Task SetManagedIdentityAccessToken_OboMissingBearerTokenThrows(string authorization)
         {
             DefaultHttpContext context = new();

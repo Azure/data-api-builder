@@ -137,9 +137,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             StringAssert.Contains(error, "is not defined in the configuration");
         }
 
+        /// <summary>
+        /// Verifies missing data sources receive the configuration-safe error while unexpected factory failures retain their message.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(DataApiBuilderException.SubStatusCodes.DataSourceNotFound, "is not defined in the configuration")]
-        [DataRow(DataApiBuilderException.SubStatusCodes.UnexpectedError, "factory failure")]
+        [DataRow(DataApiBuilderException.SubStatusCodes.DataSourceNotFound, "is not defined in the configuration", DisplayName = "Missing data source uses configuration error")]
+        [DataRow(DataApiBuilderException.SubStatusCodes.UnexpectedError, "factory failure", DisplayName = "Unexpected factory failure retains its message")]
         public void TryResolveMetadata_FactoryExceptionReturnsError(
             DataApiBuilderException.SubStatusCodes subStatusCode,
             string expectedError)

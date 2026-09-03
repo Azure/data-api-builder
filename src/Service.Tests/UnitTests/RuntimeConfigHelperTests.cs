@@ -73,6 +73,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(config.IsRestEnabled);
         }
 
+        /// <summary>
+        /// Verifies omitted API sections remain enabled while configured health roles and cache lifetime flow through runtime accessors.
+        /// </summary>
         [TestMethod]
         public void RuntimeProperties_EvaluateConfiguredSectionsAndHealthValues()
         {
@@ -93,6 +96,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(17, config.CacheTtlSecondsForHealthReport);
         }
 
+        /// <summary>
+        /// Verifies the DW to-one join optimization remains disabled until both GraphQL options and their feature flags are present and enabled.
+        /// </summary>
         [TestMethod]
         public void EnableDwNto1JoinOpt_EvaluatesEachNestedConfigurationState()
         {
@@ -116,6 +122,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(enabled.EnableDwNto1JoinOpt);
         }
 
+        /// <summary>
+        /// Verifies data-source and entity indexes stay coherent across lookup, replacement, path registration, and generated-entity removal.
+        /// </summary>
         [TestMethod]
         public void DataSourceAndEntityMaps_SupportLookupUpdateAndPathOperations()
         {
@@ -198,6 +207,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.ThrowsException<DataApiBuilderException>(() => config.UpdateDefaultDataSourceName("duplicate"));
         }
 
+        /// <summary>
+        /// Verifies paging, response-size, logging, hot-reload, multiple-create, and JSON fallbacks remain stable when runtime options are omitted.
+        /// </summary>
         [TestMethod]
         public void RuntimeUtilityDefaults_AreStable()
         {

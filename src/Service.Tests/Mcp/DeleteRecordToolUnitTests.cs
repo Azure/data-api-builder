@@ -117,6 +117,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             StringAssert.Contains(GetText(result), "deleted");
         }
 
+        /// <summary>
+        /// Verifies the MCP error type inferred from recognizable messages in DAB request failures, including the generic fallback.
+        /// </summary>
         [DataTestMethod]
         [DataRow("Could not find item with id", "RecordNotFound")]
         [DataRow("violates foreign key constraint", "ConstraintViolation")]
@@ -136,6 +139,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertErrorType(result, expectedError);
         }
 
+        /// <summary>
+        /// Verifies the MCP error type inferred from provider exception messages, including the generic database fallback.
+        /// </summary>
         [DataTestMethod]
         [DataRow("foreign key failure", "ConstraintViolation")]
         [DataRow("record does not exist", "RecordNotFound")]
@@ -149,6 +155,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertErrorType(result, expectedError);
         }
 
+        /// <summary>
+        /// Verifies the MCP error type inferred from non-provider exception messages, including the unexpected-error fallback.
+        /// </summary>
         [DataTestMethod]
         [DataRow("connection unavailable", "ConnectionError")]
         [DataRow("Could not find record", "RecordNotFound")]
@@ -172,6 +181,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertErrorType(result, "TimeoutError");
         }
 
+        /// <summary>
+        /// Verifies the user-facing message selected for known SQL Server error numbers and the unknown-number fallback.
+        /// </summary>
         [DataTestMethod]
         [DataRow(547, "foreign key constraint")]
         [DataRow(2627, "unique constraint")]

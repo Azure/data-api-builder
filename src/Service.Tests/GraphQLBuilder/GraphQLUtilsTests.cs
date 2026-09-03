@@ -160,6 +160,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             Assert.AreEqual(expected, GraphQLUtils.IsScalarField(kind));
         }
 
+        /// <summary>
+        /// Verifies linking names round-trip only in the generated format and malformed or incomplete names are rejected.
+        /// </summary>
         [TestMethod]
         public void LinkingEntityName_RoundTripsSourceAndTarget()
         {
@@ -183,6 +186,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             Assert.ThrowsException<ArgumentException>(() => GraphQLUtils.GetFieldNodeForGivenFieldName(fields, "missing"));
         }
 
+        /// <summary>
+        /// Verifies many-to-many detection and target lookup distinguish configured, missing, and absent relationship collections.
+        /// </summary>
         [TestMethod]
         public void RelationshipHelpers_HandleConfiguredMissingAndAbsentRelationships()
         {
@@ -205,6 +211,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 () => GraphQLUtils.GetRelationshipTargetEntityName(CreateEntity(null), "Book", "authors"));
         }
 
+        /// <summary>
+        /// Verifies relationship directives supply target and cardinality while plain fields fall back only for target type.
+        /// </summary>
         [TestMethod]
         public void RelationshipDirective_ExtractsTargetCardinalityAndDirective()
         {

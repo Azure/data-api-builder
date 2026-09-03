@@ -264,8 +264,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow("logs/")]
-        [DataRow("logs/bad\0name.txt")]
+        [DataRow("logs/", DisplayName = "Path ending in a directory has no file name")]
+        [DataRow("logs/bad\0name.txt", DisplayName = "File name contains a null character")]
         public void ValidateFileSinkPath_InvalidFileName_Throws(string path)
         {
             RuntimeConfigValidator validator = CreateValidator();
@@ -345,8 +345,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(0, null)]
-        [DataRow(null, 0)]
+        [DataRow(0, null, DisplayName = "Timeout must be positive")]
+        [DataRow(null, 0, DisplayName = "Dimensions must be positive")]
         public void ValidateEmbeddings_NonPositiveNumericOptions_Throw(int? timeoutMs, int? dimensions)
         {
             RuntimeConfigValidator validator = CreateValidator();
@@ -362,9 +362,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(true, 0, "health check", null)]
-        [DataRow(true, 1000, "", null)]
-        [DataRow(true, 1000, "health check", 0)]
+        [DataRow(true, 0, "health check", null, DisplayName = "Enabled health threshold must be positive")]
+        [DataRow(true, 1000, "", null, DisplayName = "Enabled health test text cannot be empty")]
+        [DataRow(true, 1000, "health check", 0, DisplayName = "Expected dimensions must be positive")]
         public void ValidateEmbeddings_InvalidEnabledHealthOptions_Throw(
             bool enabled,
             int thresholdMs,
@@ -413,8 +413,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(true, 0, false, null)]
-        [DataRow(true, 24, true, "")]
+        [DataRow(true, 0, false, null, DisplayName = "Enabled cache lifetime must be positive")]
+        [DataRow(true, 24, true, "", DisplayName = "Enabled level-two cache requires a connection string")]
         public void ValidateEmbeddings_InvalidCacheOptions_Throw(
             bool enabled,
             int ttlHours,
@@ -491,8 +491,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(0)]
-        [DataRow(601)]
+        [DataRow(0, DisplayName = "Aggregate timeout cannot be zero")]
+        [DataRow(601, DisplayName = "Aggregate timeout cannot exceed ten minutes")]
         public void ValidateMcpUri_OutOfRangeAggregateTimeout_Throws(int timeout)
         {
             RuntimeConfigValidator validator = CreateValidator();

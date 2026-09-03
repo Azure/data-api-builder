@@ -631,14 +631,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object);
         }
 
+        /// <summary>
+        /// Verifies relationship validation can log explicit columns, infer either foreign-key direction, or fall back to database verification for direct and linking relationships.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(false, "explicit")]
-        [DataRow(false, "forward")]
-        [DataRow(false, "reverse")]
-        [DataRow(false, "none")]
-        [DataRow(true, "explicit")]
-        [DataRow(true, "forward")]
-        [DataRow(true, "none")]
+        [DataRow(false, "explicit", DisplayName = "Direct relationship uses explicitly configured columns")]
+        [DataRow(false, "forward", DisplayName = "Direct relationship infers a forward foreign key")]
+        [DataRow(false, "reverse", DisplayName = "Direct relationship infers a reverse foreign key")]
+        [DataRow(false, "none", DisplayName = "Direct relationship falls back when no foreign key metadata exists")]
+        [DataRow(true, "explicit", DisplayName = "Linking relationship uses explicitly configured columns")]
+        [DataRow(true, "forward", DisplayName = "Linking relationship infers both forward foreign keys")]
+        [DataRow(true, "none", DisplayName = "Linking relationship falls back when no foreign key metadata exists")]
         public void ValidateRelationships_LoggingResolvesConfiguredAndInferredColumns(bool useLinkingObject, string resolution)
         {
             string[] sourceFields = resolution == "explicit" ? new[] { "source_id" } : null;

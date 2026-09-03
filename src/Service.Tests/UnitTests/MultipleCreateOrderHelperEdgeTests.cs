@@ -74,8 +74,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 1));
         }
 
+        /// <summary>
+        /// Verifies many-to-many relationships return no direct referencing entity because insertion is routed through the linking table.
+        /// </summary>
         [TestMethod]
-        public void GetReferencingEntityName_ManyToManyUsesLinkingTable()
+        public void GetReferencingEntityName_ManyToManyReturnsEmptyForLinkingTableHandling()
         {
             Dictionary<string, DatabaseObject> objects = new()
             {

@@ -14,6 +14,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass]
     public class ConfigObjectModelCoverageTests
     {
+        /// <summary>
+        /// Verifies database-policy item prefixes are removed from field references and a missing policy remains invalid.
+        /// </summary>
         [TestMethod]
         public void EntityActionPolicy_ProcessesFieldsAndRejectsNullDatabasePolicy()
         {
@@ -66,6 +69,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(health.UserProvidedExpectedDimensions);
         }
 
+        /// <summary>
+        /// Verifies data-source health constructors distinguish default thresholds from explicitly supplied values.
+        /// </summary>
         [TestMethod]
         public void DatasourceHealthCheck_ConstructorsTrackDefaultsAndUserValues()
         {
@@ -164,6 +170,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, exception.SubStatusCode);
         }
 
+        /// <summary>
+        /// Verifies data-source defaults and typed-option conversion handle absent options, wrong value types, and unsupported option targets.
+        /// </summary>
         [TestMethod]
         public void DataSource_DefaultsAndTypedOptionsCoverFallbacks()
         {

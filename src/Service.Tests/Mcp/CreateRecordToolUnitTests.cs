@@ -119,11 +119,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             StringAssert.Contains(GetText(result), "\"id\": 7");
         }
 
+        /// <summary>
+        /// Verifies client and server failures return MCP errors while other object results report successful creation without read-back.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(400, true, "CreateFailed")]
-        [DataRow(500, true, "CreateFailed")]
-        [DataRow(403, false, "Unable to perform read-back")]
-        [DataRow(200, false, "Unable to perform read-back")]
+        [DataRow(400, true, "CreateFailed", DisplayName = "Bad request returns CreateFailed")]
+        [DataRow(500, true, "CreateFailed", DisplayName = "Server error returns CreateFailed")]
+        [DataRow(403, false, "Unable to perform read-back", DisplayName = "Forbidden read-back still reports successful creation")]
+        [DataRow(200, false, "Unable to perform read-back", DisplayName = "Successful object result reports creation without read-back")]
         public async Task ExecuteAsync_ObjectResult_MapsByStatus(int statusCode, bool isError, string expectedText)
         {
             ObjectResult mutationResult = new(new { detail = "result" }) { StatusCode = statusCode };

@@ -33,6 +33,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS, result.ThresholdMs);
         }
 
+        /// <summary>
+        /// Verifies explicit values are preserved and marked as user-provided rather than converter defaults.
+        /// </summary>
         [TestMethod]
         public void Deserialize_AllProperties_PreservesValuesAndPresence()
         {
@@ -55,6 +58,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(result.UserProvidedThresholdMs);
         }
 
+        /// <summary>
+        /// Verifies explicit nulls select defaults without marking those properties as user-provided.
+        /// </summary>
         [TestMethod]
         public void Deserialize_NullProperties_UsesDefaultsWithoutPresenceFlags()
         {
@@ -116,6 +122,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(250, document.RootElement.GetProperty("threshold-ms").GetInt32());
         }
 
+        /// <summary>
+        /// Verifies serialization writes only properties whose user-provided flags are set.
+        /// </summary>
         [TestMethod]
         public void Serialize_OnlyEnabledProvided_OmitsDefaultOptionalValues()
         {

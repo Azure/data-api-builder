@@ -13,10 +13,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
     [TestClass]
     public class McpServerConfigurationTests
     {
+        /// <summary>
+        /// Verifies server identity and tool capabilities are always configured while blank instructions are omitted.
+        /// </summary>
         [DataTestMethod]
-        [DataRow(null, null)]
-        [DataRow("   ", null)]
-        [DataRow("Use discovered tools only.", "Use discovered tools only.")]
+        [DataRow(null, null, DisplayName = "Null instructions are omitted")]
+        [DataRow("   ", null, DisplayName = "Whitespace instructions are omitted")]
+        [DataRow("Use discovered tools only.", "Use discovered tools only.", DisplayName = "Nonblank instructions are preserved")]
         public void ConfigureMcpServer_ConfiguresServerOptions(string? instructions, string? expectedInstructions)
         {
             ServiceCollection services = new();

@@ -154,8 +154,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(false)]
-        [DataRow(true)]
+        [DataRow(false, DisplayName = "Point query returns the item directly")]
+        [DataRow(true, DisplayName = "Paginated query wraps the item and hasNextPage state")]
         public async Task QueryByIdAndPartitionKey_SuccessReturnsExpectedShape(bool isPaginated)
         {
             JObject item = JObject.Parse(@"{ ""id"": ""1"" }");

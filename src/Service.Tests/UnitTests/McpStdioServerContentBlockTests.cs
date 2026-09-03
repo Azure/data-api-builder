@@ -266,6 +266,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(string.Empty, InvokeSafeToString(new SelfReferencingObject(null)));
         }
 
+        /// <summary>
+        /// Verifies that string IDs are extracted while JSON-RPC token types that cannot be IDs are rejected.
+        /// </summary>
         [DataTestMethod]
         [DataRow("\"abc\"", "abc", DisplayName = "String id")]
         [DataRow("true", null, DisplayName = "Boolean id")]
@@ -280,19 +283,26 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expected, actual);
         }
 
+        /// <summary>
+        /// Verifies that a numeric ID remains an independent JSON number with its original representation and precision.
+        /// </summary>
         [DataTestMethod]
         [DataRow("9223372036854775807")]
         [DataRow("3.25")]
         [DataRow("1e400")]
         public void GetIdValue_NumericIdPreservesRawJson(string json)
         {
-            using JsonDocument document = JsonDocument.Parse(json);
-
-            object? actual = InvokeGetIdValue(document.RootElement);
+            object? actual;
+            using (JsonDocument document = JsonDocument.Parse(json))
+            {
+                actual = InvokeGetIdValue(document.RootElement);
+            }
 
             Assert.IsInstanceOfType<JsonElement>(actual);
-            Assert.AreEqual(JsonValueKind.Number, ((JsonElement)actual).ValueKind);
-            Assert.AreEqual(json, ((JsonElement)actual).GetRawText());
+            JsonElement numericId = (JsonElement)actual;
+            Assert.AreEqual(JsonValueKind.Number, numericId.ValueKind);
+            Assert.AreEqual(json, numericId.GetRawText());
+            Assert.AreEqual(json, JsonSerializer.Serialize(numericId));
         }
 
         private static (McpStdioServer server, MemoryStream memoryStream, McpStdoutWriter stdoutWriter) CreateServerWithCapturedOutput()

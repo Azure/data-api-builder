@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
@@ -158,21 +157,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 }
 
                 return Task.FromResult(_result ?? new CallToolResult());
-            }
-        }
-
-        private sealed class FakeDbException : DbException
-        {
-            public FakeDbException() : base("fake db error")
-            {
-            }
-
-            public FakeDbException(string message) : base(message)
-            {
-            }
-
-            public FakeDbException(string message, Exception innerException) : base(message, innerException)
-            {
             }
         }
     }

@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
@@ -323,21 +322,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(result.IsError == true, GetText(result));
             using JsonDocument document = JsonDocument.Parse(GetText(result));
             Assert.AreEqual(expectedType, document.RootElement.GetProperty("error").GetProperty("type").GetString());
-        }
-
-        private sealed class FakeDbException : DbException
-        {
-            public FakeDbException()
-            {
-            }
-
-            public FakeDbException(string message) : base(message)
-            {
-            }
-
-            public FakeDbException(string message, Exception innerException) : base(message, innerException)
-            {
-            }
         }
     }
 }

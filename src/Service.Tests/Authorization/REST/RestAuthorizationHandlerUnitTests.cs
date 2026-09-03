@@ -290,6 +290,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             CollectionAssert.AreEquivalent(expected: (ICollection)allowedColumns, actual: stubRestRequestContext.FieldsToBeReturned, message: "FieldsToBeReturned not subset of allowed columns.");
         }
 
+        /// <summary>
+        /// Verifies that a context with more than one pending requirement is rejected because the handler evaluates requirements sequentially.
+        /// </summary>
         [TestMethod]
         public async Task MultipleRequirementsAreRejected()
         {
@@ -302,6 +305,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() => handler.HandleAsync(context));
         }
 
+        /// <summary>
+        /// Verifies that authorization is rejected when the HTTP context accessor has no current context.
+        /// </summary>
         [TestMethod]
         public async Task MissingHttpContextIsRejected()
         {
@@ -314,6 +320,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() => handler.HandleAsync(context));
         }
 
+        /// <summary>
+        /// Verifies that an entity-operation requirement rejects an HTTP verb that cannot be mapped to a supported operation.
+        /// </summary>
         [TestMethod]
         public async Task UnsupportedHttpVerbIsRejected()
         {
@@ -324,6 +333,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
                 CreateHttpContext("OPTIONS")));
         }
 
+        /// <summary>
+        /// Verifies that DELETE requests satisfy the column requirement without evaluating projected or writable columns.
+        /// </summary>
         [TestMethod]
         public async Task DeleteColumnRequirementSucceedsWithoutColumnChecks()
         {
@@ -336,6 +348,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             Assert.IsTrue(result);
         }
 
+        /// <summary>
+        /// Verifies that an insert with no supplied columns is authorized only when the role exposes at least one field.
+        /// </summary>
         [DataTestMethod]
         [DataRow(true, true)]
         [DataRow(false, false)]
@@ -363,6 +378,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             Assert.AreEqual(expected, result);
         }
 
+        /// <summary>
+        /// Verifies that a column requirement rejects a resource that is not a REST request context.
+        /// </summary>
         [TestMethod]
         public async Task InvalidColumnsRequirementResourceIsRejected()
         {
@@ -373,6 +391,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
                 CreateHttpContext()));
         }
 
+        /// <summary>
+        /// Verifies that stored-procedure authorization uses the resolver's execution-permission decision.
+        /// </summary>
         [DataTestMethod]
         [DataRow(true, true)]
         [DataRow(false, false)]
@@ -394,6 +415,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             Assert.AreEqual(expected, result);
         }
 
+        /// <summary>
+        /// Verifies that a stored-procedure requirement fails when no entity resource is supplied.
+        /// </summary>
         [TestMethod]
         public async Task StoredProcedureRequirementFailsForNullResource()
         {
@@ -406,6 +430,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             Assert.IsFalse(result);
         }
 
+        /// <summary>
+        /// Verifies that a stored-procedure requirement rejects a resource that is not an entity name.
+        /// </summary>
         [TestMethod]
         public async Task InvalidStoredProcedureResourceIsRejected()
         {

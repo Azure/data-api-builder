@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
@@ -738,21 +737,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             Assert.IsTrue(result.IsError == true, GetFirstText(result));
             StringAssert.Contains(GetFirstText(result), expectedError);
-        }
-
-        private sealed class FakeDbException : DbException
-        {
-            public FakeDbException()
-            {
-            }
-
-            public FakeDbException(string message) : base(message)
-            {
-            }
-
-            public FakeDbException(string message, Exception innerException) : base(message, innerException)
-            {
-            }
         }
 
         #endregion

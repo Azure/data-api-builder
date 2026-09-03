@@ -1015,6 +1015,150 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         #endregion
 
+        [DataTestMethod]
+        [DataRow(true, DisplayName = "RequestAborted cancels an explicitly cancellable query")]
+        [DataRow(false, DisplayName = "The explicit token cancels a query with RequestAborted")]
+        public async Task ExecuteQueryAsync_WithExplicitAndRequestTokens_ObservesEitherCancellation(
+            bool cancelRequest)
+        {
+            RuntimeConfig mockConfig = new(
+                Schema: string.Empty,
+                DataSource: new(DatabaseType.MSSQL, string.Empty, new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null)),
+                Entities: new(new Dictionary<string, Entity>()));
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(
+                FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
+                new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            Mock<ILogger<IQueryExecutor>> logger = new();
+            DefaultHttpContext context = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            httpContextAccessor.Setup(accessor => accessor.HttpContext).Returns(context);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+            Mock<MsSqlQueryExecutor> queryExecutor = new(
+                provider,
+                dbExceptionParser,
+                logger.Object,
+                httpContextAccessor.Object,
+                null,
+                null)
+            {
+                CallBase = true
+            };
+            queryExecutor
+                .Setup(executor => executor.CreateConnection(It.IsAny<string>()))
+                .Returns(new SqlConnection());
+            queryExecutor
+                .Setup(executor => executor.SetManagedIdentityAccessTokenIfAnyAsync(
+                    It.IsAny<DbConnection>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            CancellationToken observedToken = default;
+            TaskCompletionSource executionEntered = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            queryExecutor
+                .Setup(executor => executor.ExecuteQueryAgainstDbAsync<object>(
+                    It.IsAny<SqlConnection>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                    It.IsAny<HttpContext>(),
+                    It.IsAny<string>(),
+                    It.IsAny<List<string>>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(
+                    (SqlConnection connection,
+                     string sql,
+                     IDictionary<string, DbConnectionParam> parameters,
+                     Func<DbDataReader, List<string>, Task<object>> handler,
+                     HttpContext requestContext,
+                     string dataSourceName,
+                     List<string> arguments,
+                     CancellationToken token) =>
+                    {
+                        observedToken = token;
+                        executionEntered.TrySetResult();
+                        return WaitUntilCanceledAsync(token);
+                    });
+
+            using CancellationTokenSource explicitCancellation = new();
+            using CancellationTokenSource requestCancellation = new();
+            context.RequestAborted = requestCancellation.Token;
+            Task<object?> queryTask = queryExecutor.Object.ExecuteQueryAsync<object>(
+                sqltext: string.Empty,
+                parameters: new Dictionary<string, DbConnectionParam>(),
+                dataReaderHandler: null,
+                dataSourceName: provider.GetConfig().DefaultDataSourceName,
+                cancellationToken: explicitCancellation.Token,
+                httpContext: context,
+                args: null);
+
+            try
+            {
+                await executionEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                if (cancelRequest)
+                {
+                    requestCancellation.Cancel();
+                }
+                else
+                {
+                    explicitCancellation.Cancel();
+                }
+
+                try
+                {
+                    await queryTask.WaitAsync(TimeSpan.FromSeconds(5));
+                    Assert.Fail("Expected linked query cancellation.");
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected from either linked source.
+                }
+
+                Assert.IsTrue(observedToken.IsCancellationRequested);
+                Assert.AreEqual(cancelRequest, requestCancellation.IsCancellationRequested);
+                Assert.AreEqual(!cancelRequest, explicitCancellation.IsCancellationRequested);
+                queryExecutor.Verify(executor => executor.ExecuteQueryAgainstDbAsync<object>(
+                    It.IsAny<SqlConnection>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                    It.IsAny<HttpContext>(),
+                    It.IsAny<string>(),
+                    It.IsAny<List<string>>()),
+                    Times.Never);
+            }
+            finally
+            {
+                explicitCancellation.Cancel();
+                requestCancellation.Cancel();
+                try
+                {
+                    await queryTask.WaitAsync(TimeSpan.FromSeconds(5));
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during cleanup.
+                }
+
+                await loader.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+            }
+
+            static async Task<object> WaitUntilCanceledAsync(CancellationToken token)
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                return null;
+            }
+        }
+
         /// <summary>
         /// Validates that when the CancellationToken from httpContext.RequestAborted times out
         /// during a long-running query execution (simulating ExecuteReaderAsync being interrupted

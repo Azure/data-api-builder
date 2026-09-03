@@ -35,6 +35,29 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string>? args = null);
 
         /// <summary>
+        /// Executes SQL text with cooperative cancellation. Implementations that do not override
+        /// this member retain their existing query execution behavior.
+        /// </summary>
+        public Task<TResult?> ExecuteQueryAsync<TResult>(
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
+            string dataSourceName,
+            CancellationToken cancellationToken,
+            HttpContext? httpContext = null,
+            List<string>? args = null)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ExecuteQueryAsync(
+                sqltext,
+                parameters,
+                dataReaderHandler,
+                dataSourceName,
+                httpContext,
+                args);
+        }
+
+        /// <summary>
         /// Executes sql text with the given parameters and
         /// uses the function dataReaderHandler to process
         /// the results from the DbDataReader and return into an object of type TResult.
@@ -152,7 +175,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Modified the properties of the supplied connection to support managed identity access.
         /// </summary>
-        public Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName);
+        public Task SetManagedIdentityAccessTokenIfAnyAsync(
+            DbConnection conn,
+            string dataSourceName);
+
+        /// <summary>
+        /// Modifies the supplied connection for managed identity access with cooperative
+        /// cancellation. Implementations that do not override this member retain their existing
+        /// access-token behavior.
+        /// </summary>
+        public Task SetManagedIdentityAccessTokenIfAnyAsync(
+            DbConnection conn,
+            string dataSourceName,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
+        }
 
         /// <summary>
         /// Method to generate the query to send user data to the underlying database which might be used

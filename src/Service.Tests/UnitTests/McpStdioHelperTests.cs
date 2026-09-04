@@ -3,8 +3,13 @@
 
 #nullable enable
 
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Service.Utilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,9 +28,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TestApplicationLifetime lifetime = new();
             TestMcpStdioServer stdioServer = new();
 
+            TestMetadataProviderFactory metadataProviderFactory = new();
+
             services.AddSingleton<McpToolRegistry>();
             services.AddSingleton<IHostApplicationLifetime>(lifetime);
             services.AddSingleton<IMcpStdioServer>(stdioServer);
+            services.AddSingleton<IMetadataProviderFactory>(metadataProviderFactory);
 
             using ServiceProvider serviceProvider = services.BuildServiceProvider();
             TestHost host = new(serviceProvider);
@@ -43,6 +51,36 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "The stdio loop should keep using the host lifetime cancellation token.");
             Assert.AreEqual(1, host.DisposeCallCount,
                 "MCP stdio mode should dispose the host after the stdio loop exits.");
+            Assert.AreEqual(1, metadataProviderFactory.InitializeAsyncCallCount,
+                "MCP stdio mode must initialize the metadata providers itself: it never calls " +
+                "host.Run(), so Startup.Configure -- the only caller of PerformOnConfigChangeAsync " +
+                "-- never runs, and without this every tool call fails with " +
+                "\"Database object for entity '<name>' has not been inferred.\"");
+        }
+
+        private sealed class TestMetadataProviderFactory : IMetadataProviderFactory
+        {
+            public int InitializeAsyncCallCount { get; private set; }
+
+            public Task InitializeAsync()
+            {
+                InitializeAsyncCallCount++;
+                return Task.CompletedTask;
+            }
+
+            public void InitializeAsync(
+                Dictionary<string, Dictionary<string, DatabaseObject>> entityToDatabaseObjectMap,
+                Dictionary<string, Dictionary<string, string>> graphQLStoredProcedureExposedNameToEntityNameMap)
+                => InitializeAsyncCallCount++;
+
+            public ISqlMetadataProvider GetMetadataProvider(string dataSourceName)
+                => throw new NotImplementedException();
+
+            public IEnumerable<ISqlMetadataProvider> ListMetadataProviders()
+                => Array.Empty<ISqlMetadataProvider>();
+
+            public List<Exception> GetAllMetadataExceptions()
+                => new();
         }
 
         private sealed class TestHost : IHost

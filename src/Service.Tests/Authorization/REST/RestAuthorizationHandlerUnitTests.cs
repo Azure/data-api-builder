@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -288,6 +290,159 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             CollectionAssert.AreEquivalent(expected: (ICollection)allowedColumns, actual: stubRestRequestContext.FieldsToBeReturned, message: "FieldsToBeReturned not subset of allowed columns.");
         }
 
+        /// <summary>
+        /// Verifies that a context with more than one pending requirement is rejected because the handler evaluates requirements sequentially.
+        /// </summary>
+        [TestMethod]
+        public async Task MultipleRequirementsAreRejected()
+        {
+            AuthorizationHandlerContext context = new(
+                new IAuthorizationRequirement[] { new RoleContextPermissionsRequirement(), new ColumnsPermissionsRequirement() },
+                new ClaimsPrincipal(),
+                AuthorizationHelpers.TEST_ENTITY);
+            RestAuthorizationHandler handler = CreateHandler(new Mock<IAuthorizationResolver>().Object, CreateHttpContext());
+
+            await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() => handler.HandleAsync(context));
+        }
+
+        /// <summary>
+        /// Verifies that authorization is rejected when the HTTP context accessor has no current context.
+        /// </summary>
+        [TestMethod]
+        public async Task MissingHttpContextIsRejected()
+        {
+            AuthorizationHandlerContext context = new(
+                new IAuthorizationRequirement[] { new RoleContextPermissionsRequirement() },
+                new ClaimsPrincipal(),
+                AuthorizationHelpers.TEST_ENTITY);
+            RestAuthorizationHandler handler = CreateHandler(new Mock<IAuthorizationResolver>().Object, null);
+
+            await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() => handler.HandleAsync(context));
+        }
+
+        /// <summary>
+        /// Verifies that an entity-operation requirement rejects an HTTP verb that cannot be mapped to a supported operation.
+        /// </summary>
+        [TestMethod]
+        public async Task UnsupportedHttpVerbIsRejected()
+        {
+            await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() => IsAuthorizationSuccessfulAsync(
+                new EntityRoleOperationPermissionsRequirement(),
+                AuthorizationHelpers.TEST_ENTITY,
+                new Mock<IAuthorizationResolver>().Object,
+                CreateHttpContext("OPTIONS")));
+        }
+
+        /// <summary>
+        /// Verifies that DELETE requests satisfy the column requirement without evaluating projected or writable columns.
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteColumnRequirementSucceedsWithoutColumnChecks()
+        {
+            bool result = await IsAuthorizationSuccessfulAsync(
+                new ColumnsPermissionsRequirement(),
+                CreateRestRequestContext(Array.Empty<string>()),
+                new Mock<IAuthorizationResolver>().Object,
+                CreateHttpContext(HttpConstants.DELETE));
+
+            Assert.IsTrue(result);
+        }
+
+        /// <summary>
+        /// Verifies that an insert with no supplied columns is authorized only when the role exposes at least one field.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, true)]
+        [DataRow(false, false)]
+        public async Task EmptyInsertColumnsDependOnAccessibleFields(bool hasAccessibleFields, bool expected)
+        {
+            Mock<IAuthorizationResolver> resolver = new();
+            resolver.Setup(x => x.GetAllowedExposedColumns(
+                    AuthorizationHelpers.TEST_ENTITY,
+                    AuthorizationHelpers.TEST_ROLE,
+                    EntityActionOperation.Create))
+                .Returns(hasAccessibleFields ? new[] { "id" } : Array.Empty<string>());
+            using JsonDocument payload = JsonDocument.Parse("{}");
+            RestRequestContext context = new InsertRequestContext(
+                AuthorizationHelpers.TEST_ENTITY,
+                new DatabaseTable { TableDefinition = new SourceDefinition() },
+                payload.RootElement,
+                EntityActionOperation.Insert);
+
+            bool result = await IsAuthorizationSuccessfulAsync(
+                new ColumnsPermissionsRequirement(),
+                context,
+                resolver.Object,
+                CreateHttpContext(HttpConstants.POST));
+
+            Assert.AreEqual(expected, result);
+        }
+
+        /// <summary>
+        /// Verifies that a column requirement rejects a resource that is not a REST request context.
+        /// </summary>
+        [TestMethod]
+        public async Task InvalidColumnsRequirementResourceIsRejected()
+        {
+            await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() => IsAuthorizationSuccessfulAsync(
+                new ColumnsPermissionsRequirement(),
+                new object(),
+                new Mock<IAuthorizationResolver>().Object,
+                CreateHttpContext()));
+        }
+
+        /// <summary>
+        /// Verifies that stored-procedure authorization uses the resolver's execution-permission decision.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, true)]
+        [DataRow(false, false)]
+        public async Task StoredProcedureRequirementUsesResolverDecision(bool permitted, bool expected)
+        {
+            Mock<IAuthorizationResolver> resolver = new();
+            resolver.Setup(x => x.IsStoredProcedureExecutionPermitted(
+                    AuthorizationHelpers.TEST_ENTITY,
+                    AuthorizationHelpers.TEST_ROLE,
+                    SupportedHttpVerb.Post))
+                .Returns(permitted);
+
+            bool result = await IsAuthorizationSuccessfulAsync(
+                new StoredProcedurePermissionsRequirement(),
+                AuthorizationHelpers.TEST_ENTITY,
+                resolver.Object,
+                CreateHttpContext(HttpConstants.POST));
+
+            Assert.AreEqual(expected, result);
+        }
+
+        /// <summary>
+        /// Verifies that a stored-procedure requirement fails when no entity resource is supplied.
+        /// </summary>
+        [TestMethod]
+        public async Task StoredProcedureRequirementFailsForNullResource()
+        {
+            bool result = await IsAuthorizationSuccessfulAsync(
+                new StoredProcedurePermissionsRequirement(),
+                null,
+                new Mock<IAuthorizationResolver>().Object,
+                CreateHttpContext(HttpConstants.POST));
+
+            Assert.IsFalse(result);
+        }
+
+        /// <summary>
+        /// Verifies that a stored-procedure requirement rejects a resource that is not an entity name.
+        /// </summary>
+        [TestMethod]
+        public async Task InvalidStoredProcedureResourceIsRejected()
+        {
+            await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() => IsAuthorizationSuccessfulAsync(
+                new StoredProcedurePermissionsRequirement(),
+                new object(),
+                new Mock<IAuthorizationResolver>().Object,
+                CreateHttpContext(HttpConstants.POST)));
+        }
+
         #region Helper Methods
         /// <summary>
         /// Setup request and authorization context and get Authorization result
@@ -313,6 +468,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             await handler.HandleAsync(context);
 
             return context.HasSucceeded;
+        }
+
+        private static RestAuthorizationHandler CreateHandler(IAuthorizationResolver resolver, HttpContext? httpContext)
+        {
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(httpContext);
+            return new RestAuthorizationHandler(resolver, accessor.Object, new Mock<ILogger<RestAuthorizationHandler>>().Object);
         }
 
         /// <summary>

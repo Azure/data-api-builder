@@ -2,11 +2,18 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Reflection;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate;
+using HotChocolate.Execution;
+using HotChocolate.Language;
+using HotChocolate.Resolvers;
+using HotChocolate.Types;
+using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -62,6 +69,157 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expected, parser.GetMaxNestedFilterDepth());
         }
 
+        [TestMethod]
+        public void GetHttpContextFromMiddlewareContext_ReturnsStoredContext()
+        {
+            GQLFilterParser parser = CreateParserWithDepthLimit(null);
+            DefaultHttpContext httpContext = new();
+            Mock<HotChocolate.Resolvers.IMiddlewareContext> middleware = new();
+            middleware.SetupGet(x => x.ContextData).Returns(new Dictionary<string, object?>
+            {
+                [nameof(HttpContext)] = httpContext
+            });
+
+            Assert.AreSame(httpContext, parser.GetHttpContextFromMiddlewareContext(middleware.Object));
+        }
+
+        [TestMethod]
+        public void GetHttpContextFromMiddlewareContext_MissingContextThrows()
+        {
+            GQLFilterParser parser = CreateParserWithDepthLimit(null);
+            Mock<HotChocolate.Resolvers.IMiddlewareContext> middleware = new();
+            middleware.SetupGet(x => x.ContextData).Returns(new Dictionary<string, object?>());
+
+            Assert.ThrowsException<DataApiBuilderException>(() =>
+                parser.GetHttpContextFromMiddlewareContext(middleware.Object));
+        }
+
+        [TestMethod]
+        public void MakeChainPredicate_EmptyOperandsReturnsFalsePredicate()
+        {
+            Predicate predicate = GQLFilterParser.MakeChainPredicate(new(), PredicateOperation.AND);
+
+            Assert.IsNotNull(predicate);
+        }
+
+        [TestMethod]
+        public void MakeChainPredicate_MultipleOperandsBuildsRecursiveChain()
+        {
+            Predicate first = Predicate.MakeFalsePredicate();
+            Predicate second = Predicate.MakeFalsePredicate();
+            List<PredicateOperand> operands = new() { new(first), new(second) };
+
+            Predicate result = GQLFilterParser.MakeChainPredicate(operands, PredicateOperation.OR);
+
+            Assert.AreEqual(PredicateOperation.OR, result.Op);
+        }
+
+        [TestMethod]
+        public void PreprocessInOperatorValues_RejectsNonListValue()
+        {
+            TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(() =>
+                InvokePreprocessInOperatorValues("not-a-list"));
+
+            Assert.IsInstanceOfType<DataApiBuilderException>(exception.InnerException);
+        }
+
+        [TestMethod]
+        public void PreprocessInOperatorValues_RejectsMoreThanOneHundredValues()
+        {
+            List<IValueNode> values = new();
+            for (int index = 0; index < 101; index++)
+            {
+                values.Add(new IntValueNode(index));
+            }
+
+            TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(() =>
+                InvokePreprocessInOperatorValues(values));
+
+            Assert.IsInstanceOfType<DataApiBuilderException>(exception.InnerException);
+        }
+
+        [TestMethod]
+        public void PreprocessInOperatorValues_FiltersNullsAndReturnsNullForEmptyValues()
+        {
+            List<IValueNode> mixed = new() { NullValueNode.Default, new IntValueNode(7) };
+
+            List<IValueNode> filtered = (List<IValueNode>)InvokePreprocessInOperatorValues(mixed)!;
+
+            Assert.AreEqual(1, filtered.Count);
+            Assert.AreEqual("7", filtered[0].Value);
+            Assert.IsNull(InvokePreprocessInOperatorValues(new List<IValueNode> { NullValueNode.Default }));
+            Assert.IsNull(InvokePreprocessInOperatorValues(new List<IValueNode>()));
+        }
+
+        [DataTestMethod]
+        [DataRow("eq", PredicateOperation.Equal, false, false, DisplayName = "eq maps to scalar equality")]
+        [DataRow("neq", PredicateOperation.NotEqual, false, false, DisplayName = "neq maps to scalar inequality")]
+        [DataRow("lt", PredicateOperation.LessThan, false, false, DisplayName = "lt maps to less-than")]
+        [DataRow("gt", PredicateOperation.GreaterThan, false, false, DisplayName = "gt maps to greater-than")]
+        [DataRow("lte", PredicateOperation.LessThanOrEqual, false, false, DisplayName = "lte maps to less-than-or-equal")]
+        [DataRow("gte", PredicateOperation.GreaterThanOrEqual, false, false, DisplayName = "gte maps to greater-than-or-equal")]
+        [DataRow("in", PredicateOperation.IN, false, false, DisplayName = "in maps to membership")]
+        [DataRow("contains", PredicateOperation.LIKE, false, false, DisplayName = "contains maps to LIKE for scalar fields")]
+        [DataRow("contains", PredicateOperation.ARRAY_CONTAINS, true, false, DisplayName = "contains maps to ARRAY_CONTAINS for list fields")]
+        [DataRow("notContains", PredicateOperation.NOT_LIKE, false, false, DisplayName = "notContains maps to NOT_LIKE for scalar fields")]
+        [DataRow("notContains", PredicateOperation.NOT_ARRAY_CONTAINS, true, false, DisplayName = "notContains maps to NOT_ARRAY_CONTAINS for list fields")]
+        [DataRow("startsWith", PredicateOperation.LIKE, false, false, DisplayName = "startsWith maps to LIKE")]
+        [DataRow("endsWith", PredicateOperation.LIKE, false, false, DisplayName = "endsWith maps to LIKE")]
+        [DataRow("isNull", PredicateOperation.IS, false, true, DisplayName = "isNull true maps to IS")]
+        [DataRow("isNull", PredicateOperation.IS_NOT, false, false, DisplayName = "isNull false maps to IS_NOT")]
+        public void FieldFilterParser_Parse_MapsEverySupportedOperator(
+            string operation,
+            PredicateOperation expectedOperation,
+            bool isListType,
+            bool booleanValue)
+        {
+            IValueNode value = operation switch
+            {
+                "in" => new ListValueNode(new List<IValueNode>
+                {
+                    new StringValueNode("first"),
+                    NullValueNode.Default,
+                    new StringValueNode("second")
+                }),
+                "isNull" => new BooleanValueNode(booleanValue),
+                _ => new StringValueNode(@"value%_[]\")
+            };
+
+            Predicate result = FieldFilterParser.Parse(
+                CreateMiddlewareContext(),
+                CreateFilterArgumentSchema(),
+                new Column("dbo", "books", "title"),
+                new List<ObjectFieldNode> { new(operation, value) },
+                (literal, columnName, lengthOverride) => $"{columnName}:{literal}:{lengthOverride}",
+                isListType);
+
+            Assert.AreEqual(expectedOperation, result.Op);
+        }
+
+        [TestMethod]
+        public void FieldFilterParser_Parse_NullValueIsIgnored()
+        {
+            Predicate result = FieldFilterParser.Parse(
+                CreateMiddlewareContext(),
+                CreateFilterArgumentSchema(),
+                new Column("dbo", "books", "title"),
+                new List<ObjectFieldNode> { new("eq", NullValueNode.Default) },
+                (literal, columnName, lengthOverride) => literal.ToString()!);
+
+            Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
+        public void FieldFilterParser_Parse_UnsupportedOperatorThrows()
+        {
+            Assert.ThrowsException<System.NotSupportedException>(() => FieldFilterParser.Parse(
+                CreateMiddlewareContext(),
+                CreateFilterArgumentSchema(),
+                new Column("dbo", "books", "title"),
+                new List<ObjectFieldNode> { new("unsupported", new StringValueNode("value")) },
+                (literal, columnName, lengthOverride) => literal.ToString()!));
+        }
+
         private static GQLFilterParser CreateParserWithDepthLimit(int? depthLimit)
         {
             RuntimeConfig config = new(
@@ -77,6 +235,50 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigProvider provider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
             Mock<IMetadataProviderFactory> metadataProviderFactory = new();
             return new GQLFilterParser(provider, metadataProviderFactory.Object);
+        }
+
+        private static object? InvokePreprocessInOperatorValues(object value)
+        {
+            return typeof(FieldFilterParser).GetMethod(
+                "PreprocessInOperatorValues",
+                BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, new[] { value });
+        }
+
+        private static IMiddlewareContext CreateMiddlewareContext()
+        {
+            Mock<IVariableValueCollection> variables = new();
+            Mock<IMiddlewareContext> context = new();
+            context.SetupGet(x => x.Variables).Returns(variables.Object);
+            return context.Object;
+        }
+
+        private static IInputValueDefinition CreateFilterArgumentSchema()
+        {
+            return SchemaBuilder.New()
+                .AddDocumentFromString("""
+                    type Query {
+                      test(filter: TestFilterInput): String
+                    }
+
+                    input TestFilterInput {
+                      eq: String
+                      neq: String
+                      lt: String
+                      gt: String
+                      lte: String
+                      gte: String
+                      in: [String]
+                      contains: String
+                      notContains: String
+                      startsWith: String
+                      endsWith: String
+                      isNull: Boolean
+                      unsupported: String
+                    }
+                    """)
+                .AddResolver("Query", "test", _ => string.Empty)
+                .Create()
+                .QueryType.Fields["test"].Arguments["filter"];
         }
     }
 }

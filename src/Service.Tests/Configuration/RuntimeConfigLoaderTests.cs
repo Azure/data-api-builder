@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration;
@@ -492,37 +493,23 @@ public class RuntimeConfigLoaderTests
             });
 
             FileSystemRuntimeConfigLoader loader = new(fs);
+            Mock<ILogger<FileSystemRuntimeConfigLoader>> logger = new();
+            loader.SetLogger(logger.Object);
 
-            TextWriter originalError = Console.Error;
-            StringWriter sw = new();
+            bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
 
-            try
-            {
-                Console.SetError(sw);
-
-                ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-                {
-                    builder.SetMinimumLevel(LogLevel.Trace);
-                    builder.AddConsole(options =>
-                    {
-                        options.LogToStandardErrorThreshold = LogLevel.Error;
-                    });
-                });
-                ILogger<FileSystemRuntimeConfigLoader> logger = loggerFactory.CreateLogger<FileSystemRuntimeConfigLoader>();
-
-                loader.SetLogger(logger);
-                bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
-                await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
-                string error = sw.ToString();
-
-                Assert.IsFalse(loaded, "Config loading should fail when a child config file exists but cannot be parsed.");
-                Assert.IsTrue(error.Contains("Failed to load datasource file"), "Error message should indicate the child config file that failed to load.");
-            }
-            finally
-            {
-                Console.SetError(originalError);
-                sw.Dispose();
-            }
+            Assert.IsFalse(loaded, "Config loading should fail when a child config file exists but cannot be parsed.");
+            logger.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((state, _) =>
+                        state.ToString()!.Contains("Failed to load datasource file") &&
+                        state.ToString()!.Contains(invalidChildPath)),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+                Times.Once,
+                "Error message should identify the child config file that failed to load.");
         }
         finally
         {

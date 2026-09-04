@@ -4,12 +4,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -31,6 +37,58 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         #region Tests
+        /// <summary>
+        /// Endpoint-level boundary test for the GraphQL nested-filter depth guard.
+        /// A filter nesting the maximum allowed number of relationship levels (20) executes and returns HTTP 200,
+        /// while one additional level (21) is rejected with HTTP 400 and a DatabaseInputError code.
+        /// </summary>
+        [TestMethod]
+        public async Task NestedFilterDepthLimit_BoundaryTest()
+        {
+            // 20 relationship levels: at the maximum, allowed.
+            HttpResponseMessage okResponse = await PostNestedRelationshipFilterQueryAsync(relationshipDepth: 20);
+            string okBody = await okResponse.Content.ReadAsStringAsync();
+            Assert.AreEqual(HttpStatusCode.OK, okResponse.StatusCode,
+                $"A nested filter at the maximum allowed depth (20) should succeed. Body: {okBody}");
+            Assert.IsFalse(okBody.Contains("maximum allowed nesting depth"),
+                $"A depth-20 nested filter should not trigger the depth guard. Body: {okBody}");
+
+            // 21 relationship levels: over the maximum, rejected with HTTP 400.
+            HttpResponseMessage badResponse = await PostNestedRelationshipFilterQueryAsync(relationshipDepth: 21);
+            string badBody = await badResponse.Content.ReadAsStringAsync();
+            Assert.AreEqual(HttpStatusCode.BadRequest, badResponse.StatusCode,
+                $"A nested filter exceeding the maximum depth (21) should return HTTP 400. Body: {badBody}");
+            StringAssert.Contains(badBody, "maximum allowed nesting depth");
+            StringAssert.Contains(badBody, nameof(DataApiBuilderException.SubStatusCodes.DatabaseInputError));
+        }
+
+        /// <summary>
+        /// Posts a books query whose filter nests the books/authors relationship to the requested depth.
+        /// </summary>
+        private static async Task<HttpResponseMessage> PostNestedRelationshipFilterQueryAsync(int relationshipDepth)
+        {
+            // Build an alternating books/authors relationship filter of the requested depth around a scalar leaf.
+            // The outermost relationship from the books entity is 'authors', then it alternates each level.
+            string filter = "{ id: { eq: 1 } }";
+            for (int level = relationshipDepth; level >= 1; level--)
+            {
+                string relationshipField = (level % 2 == 1) ? "authors" : "books";
+                filter = $"{{ {relationshipField}: {filter} }}";
+            }
+
+            string query = $"{{ books(filter: {filter}) {{ items {{ id }} }} }}";
+
+            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
+            string graphQLEndpoint = configProvider.GetConfig().GraphQLPath;
+
+            HttpRequestMessage request = new(HttpMethod.Post, graphQLEndpoint)
+            {
+                Content = JsonContent.Create(new { query })
+            };
+
+            return await HttpClient.SendAsync(request);
+        }
+
         /// <summary>
         /// Gets array of results for querying more than one item.
         /// </summary>

@@ -1959,9 +1959,17 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Resolves the readable columns of a single entity from the "fields.include" /
         /// "fields.exclude" sections of its permissions. Exposed names (mappings and field
-        /// aliases) are translated back to their database column names, and configured primary
-        /// key fields are always kept, since the runtime cannot operate on the entity without them.
+        /// aliases) are translated back to their database column names, and the configured
+        /// primary key is always kept, since the runtime cannot operate on the entity without it.
         /// </summary>
+        /// <remarks>
+        /// The projection is only narrowed for entities whose primary key is known from the
+        /// configuration ("fields[].primary-key" or "source.key-fields"). When the primary key is
+        /// instead inferred from the schema read itself - see the fallback to
+        /// <c>DataTable.PrimaryKey</c> in <c>PopulateObjectDefinitionForEntity</c> - narrowing
+        /// could drop the key column and leave the entity with no primary key, so every column is
+        /// read as before.
+        /// </remarks>
         private static PermittedColumns ResolvePermittedColumnsForEntity(Entity entity)
         {
             HashSet<string> included = new(StringComparer.OrdinalIgnoreCase);
@@ -1993,9 +2001,28 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            if (entity.Permissions is null || entity.Permissions.Length == 0)
+            HashSet<string> configuredPrimaryKey = new(StringComparer.OrdinalIgnoreCase);
+
+            if (entity.Fields is not null)
             {
-                // Nothing configured: the whole object is read, as before.
+                foreach (FieldMetadata field in entity.Fields.Where(f => f.PrimaryKey))
+                {
+                    configuredPrimaryKey.Add(ResolveBackingName(field.Name, exposedToBackingName));
+                }
+            }
+
+            if (configuredPrimaryKey.Count == 0 && entity.Source is not null && entity.Source.KeyFields is not null)
+            {
+                foreach (string keyField in entity.Source.KeyFields)
+                {
+                    configuredPrimaryKey.Add(ResolveBackingName(keyField, exposedToBackingName));
+                }
+            }
+
+            // Without a configured primary key, the key itself is inferred from this schema read,
+            // so a narrowed projection could drop it and leave the entity unusable. Read it all.
+            if (entity.Permissions is null || entity.Permissions.Length == 0 || configuredPrimaryKey.Count == 0)
+            {
                 return new(AllColumns: true, included, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             }
 
@@ -2060,22 +2087,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            // Primary keys are structural: never drop them from the projection.
-            if (entity.Source is not null && entity.Source.KeyFields is not null)
-            {
-                foreach (string keyField in entity.Source.KeyFields)
-                {
-                    included.Add(ResolveBackingName(keyField, exposedToBackingName));
-                }
-            }
-
-            if (entity.Fields is not null)
-            {
-                foreach (FieldMetadata field in entity.Fields.Where(f => f.PrimaryKey))
-                {
-                    included.Add(ResolveBackingName(field.Name, exposedToBackingName));
-                }
-            }
+            // The primary key is structural: never drop it from the projection.
+            included.UnionWith(configuredPrimaryKey);
 
             excluded ??= new(StringComparer.OrdinalIgnoreCase);
             excluded.ExceptWith(included);

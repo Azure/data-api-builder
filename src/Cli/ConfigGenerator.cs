@@ -3819,11 +3819,32 @@ namespace Cli
                 return false;
             }
 
-            // Load config with env var replacement so the connection string is fully resolved.
-            DeserializationVariableReplacementSettings replacementSettings = new(doReplaceEnvVar: true);
+            // Load config with env var replacement so the connection string is resolved where possible.
+            // Unresolved @env() references must NOT abort the load: this is deliberately Ignore, matching
+            // the engine, which only ever loads through TryLoadKnownConfig (also Ignore). A config produced
+            // by `dab init` always carries OpenTelemetry @env() placeholders that are typically unset, so
+            // Throw here would reject configs that `dab start` accepts and runs. Placeholders that survive
+            // into the connection string are caught by the explicit check below.
+            DeserializationVariableReplacementSettings replacementSettings = new(doReplaceEnvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
             if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
             {
-                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                // The loader buffers its logs until a logger is attached, and only the `start` verb attaches
+                // one. Attach and drain here so the underlying parse failure reaches the user instead of
+                // being dropped along with the generic message below.
+                loader.SetLogger(LoggerFactoryForCli.CreateLogger<FileSystemRuntimeConfigLoader>());
+                loader.FlushLogBuffer();
+
+                // The loader explains the two failures it can attribute: a parse error (flagged by
+                // IsParseErrorEmitted) and a missing file (TryGetConfigFileBasedOnCliPrecedence does not
+                // check that a user-provided path exists, so it reaches the loader). The flush above has
+                // now delivered whichever it logged, so emit the generic fallback only for the case the
+                // loader stays silent on - a config file that exists but is empty - rather than reporting
+                // the same failure twice.
+                if (!loader.IsParseErrorEmitted && fileSystem.File.Exists(runtimeConfigFile))
+                {
+                    _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                }
+
                 return false;
             }
 
@@ -3843,6 +3864,17 @@ namespace Cli
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 _logger.LogError("Connection string is missing or empty in config file.");
+                return false;
+            }
+
+            // The config is loaded in Ignore mode, so an @env()/@akv() reference that was not resolved is
+            // left in place verbatim rather than failing the load. Such a placeholder would be sent to the
+            // database as a literal, producing a confusing connection error, so reject it here instead.
+            if (connectionString.Contains("@env('", StringComparison.Ordinal) || connectionString.Contains("@akv('", StringComparison.Ordinal))
+            {
+                _logger.LogError(
+                    "The connection string in the config file contains an unresolved @env() or @akv() reference. " +
+                    "Set the referenced environment variable (or provide it in a .env file) before running the simulation.");
                 return false;
             }
 

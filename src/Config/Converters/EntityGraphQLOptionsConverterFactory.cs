@@ -52,12 +52,13 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
                 string plural = string.Empty;
                 bool enabled = true;
                 GraphQLOperation? operation = null;
+                EntityGraphQLSubscriptionOptions? subscription = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new EntityGraphQLOptions(singular, plural, enabled, operation);
+                        return new EntityGraphQLOptions(singular, plural, enabled, operation, subscription);
                     }
 
                     string? property = reader.GetString();
@@ -118,6 +119,9 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
                             }
 
                             break;
+                        case "subscription":
+                            subscription = JsonSerializer.Deserialize<EntityGraphQLSubscriptionOptions>(ref reader, options);
+                            break;
                     }
                 }
             }
@@ -155,6 +159,12 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
             else if (value.Operation is null && options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
             {
                 writer.WriteNull("operation");
+            }
+
+            if (value.Subscription is not null)
+            {
+                writer.WritePropertyName("subscription");
+                JsonSerializer.Serialize(writer, value.Subscription, options);
             }
 
             writer.WriteStartObject("type");

@@ -32,6 +32,7 @@
     <PackageReference Include="HotChocolate" />
     <PackageReference Include="HotChocolate.AspNetCore" />
     <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
+    <PackageReference Include="HotChocolate.Subscriptions.InMemory" />
     <PackageReference Include="HotChocolate.Types.NodaTime" />
     <PackageReference Include="Humanizer" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />

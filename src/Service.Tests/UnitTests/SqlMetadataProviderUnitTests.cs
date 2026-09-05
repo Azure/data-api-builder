@@ -397,14 +397,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test to validate that a table holding a column whose CLR type the data provider cannot
-        /// resolve - here a geometry column - is still usable when the entity permissions enumerate
-        /// the readable fields and that column is not among them.
-        /// Metadata inference must succeed and the unreadable column must be absent from the
-        /// inferred source definition, so it never reaches the OData or GraphQL type maps.
+        /// Test to validate that a table holding a column whose data type the data provider cannot
+        /// map to a CLR type - here a geometry column - is still usable: metadata inference must
+        /// succeed and the unsupported column must be absent from the inferred source definition,
+        /// so it never reaches the OData or GraphQL type maps.
+        /// The entity places no field restriction, so this covers the column being skipped on the
+        /// strength of its type alone.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]
-        public async Task ValidateColumnExcludedByFieldPermissionsIsNotInferred()
+        public async Task ValidateUnsupportedColumnTypeIsNotInferred()
         {
             DatabaseEngine = TestCategory.MSSQL;
             await SetupTestFixtureAndInferMetadata();
@@ -420,10 +421,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 message: "The primary key column is expected in the source definition.");
             Assert.IsTrue(
                 sourceDefinition.Columns.ContainsKey("name"),
-                message: "A column listed in fields.include is expected in the source definition.");
+                message: "A column with a supported data type is expected in the source definition.");
             Assert.IsFalse(
                 sourceDefinition.Columns.ContainsKey("geom"),
-                message: "A column absent from fields.include is not expected in the source definition.");
+                message: "A column whose data type cannot be mapped is not expected in the source definition.");
 
             TestHelper.UnsetAllDABEnvironmentVariables();
         }

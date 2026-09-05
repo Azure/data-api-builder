@@ -2010,14 +2010,7 @@
           "role": "anonymous",
           "actions": [
             {
-              "action": "read",
-              "fields": {
-                "exclude": [],
-                "include": [
-                  "id",
-                  "name"
-                ]
-              }
+              "action": "read"
             }
           ]
         }

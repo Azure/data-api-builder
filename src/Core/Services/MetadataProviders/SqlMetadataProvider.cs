@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
@@ -70,9 +71,15 @@ namespace Azure.DataApiBuilder.Core.Services
         protected const int NUMBER_OF_RESTRICTIONS = 4;
 
         /// <summary>
-        /// Wildcard used in the permissions "fields" section to denote every field.
+        /// Column data types, as reported by the "Columns" schema collection, that the data
+        /// provider cannot map to a CLR type. Reading such a column makes
+        /// <see cref="DbDataAdapter.FillSchema(DataSet, SchemaType)"/> fail with
+        /// "DataReader.GetFieldType(N) returned null", which takes down the whole database object
+        /// even when the column itself is never exposed. They are therefore left out of the
+        /// projection used for schema discovery.
+        /// Empty by default: a provider only lists a type here when it genuinely cannot resolve it.
         /// </summary>
-        private const string FIELD_WILDCARD = "*";
+        protected virtual ImmutableHashSet<string> UnsupportedColumnDataTypes => ImmutableHashSet<string>.Empty;
 
         protected string ConnectionString { get; init; }
 
@@ -1534,24 +1541,9 @@ namespace Azure.DataApiBuilder.Core.Services
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
-            // Columns the entity's permissions allow to be read. The schema DataTable is cached
-            // per schema.table and may therefore carry columns permitted only for a sibling
-            // entity, so the restriction is re-applied per entity here.
-            PermittedColumns? permittedColumns = entity is null
-                ? null
-                : ResolvePermittedColumnsForEntity(entity);
-
             foreach (DataRow columnInfoFromAdapter in schemaTable.Rows)
             {
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;
-
-                if (permittedColumns is not null
-                    && !permittedColumns.IsUnrestricted
-                    && !permittedColumns.IsColumnPermitted(columnName)
-                    && !sourceDefinition.PrimaryKey.Contains(columnName, StringComparer.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
 
                 if (runtimeConfig.IsGraphQLEnabled
                     && entity is not null
@@ -1706,7 +1698,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 try
                 {
-                    dataTable = await FillSchemaForTableAsync(schemaName, tableName, entityName);
+                    dataTable = await FillSchemaForTableAsync(schemaName, tableName);
                 }
                 catch (Exception ex) when (ex is not DataApiBuilderException)
                 {
@@ -1774,16 +1766,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Using a data adapter, obtains the schema of the given table name
         /// and adds the corresponding DataTable to the entities data set.
-        /// When the entities backed by this database object restrict the readable
-        /// fields through permissions ("fields.include"/"fields.exclude"), the projection
-        /// is narrowed to those columns instead of "SELECT *". This avoids the provider
-        /// having to materialize CLR types it cannot handle (e.g. geometry/geography/hierarchyid),
-        /// which otherwise fails during schema discovery even though the column is not exposed.
+        /// Columns whose data type the data provider cannot map to a CLR type are left out of the
+        /// projection, because the data adapter refuses to build a schema mapping for them and the
+        /// whole object would otherwise be unreachable. See <see cref="UnsupportedColumnDataTypes"/>.
         /// </summary>
         private async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,
-            string tableName,
-            string? entityName = null)
+            string tableName)
         {
             using ConnectionT conn = new();
             // If connection string is set to empty string
@@ -1830,14 +1819,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(schemaName, tableName);
 
-            // Resolve the columns the configuration actually allows to be read for this
-            // database object. When nothing is restricted, the original SELECT * is preserved.
-            PermittedColumns permittedColumns = ResolvePermittedColumnsForDatabaseObject(
-                schemaName: schemaName,
-                tableName: tableName,
-                entityName: entityName);
-
-            string projection = await BuildSchemaProjectionAsync(schemaName, tableName, permittedColumns);
+            string projection = await BuildSchemaProjectionAsync(schemaName, tableName);
 
             selectCommand.CommandText
                 = $"SELECT {projection} FROM {tableNameWithSchemaPrefix}";
@@ -1848,325 +1830,70 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Describes which backing (database) columns of a database object the runtime
-        /// configuration allows to be read.
-        /// Column names are matched case-insensitively, consistent with the comparer used by
-        /// SourceDefinition.Columns and with the field name lookups in this class, so a
-        /// configuration whose casing differs from the database schema still resolves.
+        /// Builds the projection used to read the schema of a database object. Returns "*" unless
+        /// the object holds columns whose data type this provider cannot map to a CLR type, in
+        /// which case those columns are named out of the projection so the rest stays reachable.
+        /// The column list comes from the "Columns" schema collection, which reads catalog metadata
+        /// only and therefore never has to materialize the offending type.
         /// </summary>
-        /// <param name="AllColumns">
-        /// True when at least one permission reads every field ("fields" absent, "include" absent,
-        /// or "include": ["*"]).
-        /// </param>
-        /// <param name="Included">Backing columns explicitly listed in an "include" section.</param>
-        /// <param name="Excluded">
-        /// Backing columns excluded from every wildcard permission and never explicitly included.
-        /// </param>
-        private sealed record PermittedColumns(bool AllColumns, HashSet<string> Included, HashSet<string> Excluded)
+        private async Task<string> BuildSchemaProjectionAsync(string schemaName, string tableName)
         {
-            /// <summary>
-            /// No column restriction could be derived from the configuration.
-            /// </summary>
-            public bool IsUnrestricted => AllColumns && Excluded.Count == 0;
-
-            /// <summary>
-            /// Whether the given backing column is readable per the configuration.
-            /// </summary>
-            public bool IsColumnPermitted(string columnName)
+            if (UnsupportedColumnDataTypes.Count == 0)
             {
-                if (Included.Contains(columnName))
-                {
-                    return true;
-                }
-
-                if (Excluded.Contains(columnName))
-                {
-                    return false;
-                }
-
-                return AllColumns;
+                return "*";
             }
-        }
 
-        /// <summary>
-        /// Resolves the readable columns for a database object.
-        /// Because the schema DataTable is cached per schema.table, the result combines the
-        /// permissions of every entity in this data source backed by that same object: a column
-        /// has to be read if any of those entities can read it.
-        /// </summary>
-        /// <param name="schemaName">Schema of the database object.</param>
-        /// <param name="tableName">Name of the database object.</param>
-        /// <param name="entityName">Entity that triggered the schema discovery, when known.</param>
-        private PermittedColumns ResolvePermittedColumnsForDatabaseObject(
-            string schemaName,
-            string tableName,
-            string? entityName)
-        {
-            HashSet<string> included = new(StringComparer.OrdinalIgnoreCase);
-            HashSet<string>? excluded = null;
-            bool allColumns = false;
-            bool matchedAnyEntity = false;
+            List<string> readableColumns = new();
+            List<string> skippedColumns = new();
 
-            foreach ((string candidateEntityName, Entity candidateEntity) in Entities)
+            try
             {
-                // Only consider entities backed by the same database object.
-                if (EntityToDatabaseObject.TryGetValue(candidateEntityName, out DatabaseObject? databaseObject))
+                DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
+
+                foreach (DataRow columnInfo in columnsInTable.Rows)
                 {
-                    if (!string.Equals(databaseObject.SchemaName, schemaName, StringComparison.OrdinalIgnoreCase)
-                        || !string.Equals(databaseObject.Name, tableName, StringComparison.OrdinalIgnoreCase))
+                    if (columnInfo["COLUMN_NAME"] is not string columnName)
                     {
                         continue;
                     }
-                }
-                else if (!string.Equals(candidateEntityName, entityName, StringComparison.Ordinal))
-                {
-                    // Database object not inferred yet: only the entity that triggered the read applies.
-                    continue;
-                }
 
-                matchedAnyEntity = true;
-                PermittedColumns entityPermittedColumns = ResolvePermittedColumnsForEntity(candidateEntity);
+                    string? dataType = columnInfo["DATA_TYPE"] as string;
 
-                included.UnionWith(entityPermittedColumns.Included);
-
-                if (entityPermittedColumns.AllColumns)
-                {
-                    allColumns = true;
-
-                    // A column is only droppable when every wildcard permission excludes it.
-                    if (excluded is null)
+                    if (dataType is not null && UnsupportedColumnDataTypes.Contains(dataType))
                     {
-                        excluded = new(entityPermittedColumns.Excluded, StringComparer.OrdinalIgnoreCase);
+                        skippedColumns.Add($"{columnName} ({dataType})");
                     }
                     else
                     {
-                        excluded.IntersectWith(entityPermittedColumns.Excluded);
+                        readableColumns.Add(columnName);
                     }
                 }
             }
-
-            if (!matchedAnyEntity)
+            catch (Exception ex) when (ex is not DataApiBuilderException)
             {
-                return new(AllColumns: true, Included: new(StringComparer.OrdinalIgnoreCase), Excluded: new(StringComparer.OrdinalIgnoreCase));
+                // The column list is a best-effort optimization: without it the read below behaves
+                // exactly as it did before, failing loudly if an unsupported type is present.
+                _logger.LogDebug(
+                    "Unable to enumerate the columns of {schemaName}.{tableName}: {message}",
+                    schemaName,
+                    tableName,
+                    ex.Message);
+                return "*";
             }
 
-            excluded ??= new(StringComparer.OrdinalIgnoreCase);
-            excluded.ExceptWith(included);
-
-            return new(allColumns, included, excluded);
-        }
-
-        /// <summary>
-        /// Resolves the readable columns of a single entity from the "fields.include" /
-        /// "fields.exclude" sections of its permissions. Exposed names (mappings and field
-        /// aliases) are translated back to their database column names, and the configured
-        /// primary key is always kept, since the runtime cannot operate on the entity without it.
-        /// </summary>
-        /// <remarks>
-        /// The projection is only narrowed for entities whose primary key is known from the
-        /// configuration ("fields[].primary-key" or "source.key-fields"). When the primary key is
-        /// instead inferred from the schema read itself - see the fallback to
-        /// <c>DataTable.PrimaryKey</c> in <c>PopulateObjectDefinitionForEntity</c> - narrowing
-        /// could drop the key column and leave the entity with no primary key, so every column is
-        /// read as before.
-        /// </remarks>
-        private static PermittedColumns ResolvePermittedColumnsForEntity(Entity entity)
-        {
-            HashSet<string> included = new(StringComparer.OrdinalIgnoreCase);
-            HashSet<string>? excluded = null;
-            bool allColumns = false;
-
-            // Exposed name -> backing column name.
-            Dictionary<string, string> exposedToBackingName = new(StringComparer.OrdinalIgnoreCase);
-
-            if (entity.Mappings is not null)
-            {
-                foreach ((string backingName, string exposedName) in entity.Mappings)
-                {
-                    if (!string.IsNullOrWhiteSpace(exposedName))
-                    {
-                        exposedToBackingName[exposedName] = backingName;
-                    }
-                }
-            }
-
-            if (entity.Fields is not null)
-            {
-                foreach (FieldMetadata field in entity.Fields)
-                {
-                    if (!string.IsNullOrWhiteSpace(field.Alias))
-                    {
-                        exposedToBackingName[field.Alias!] = field.Name;
-                    }
-                }
-            }
-
-            HashSet<string> configuredPrimaryKey = new(StringComparer.OrdinalIgnoreCase);
-
-            if (entity.Fields is not null)
-            {
-                foreach (FieldMetadata field in entity.Fields.Where(f => f.PrimaryKey))
-                {
-                    configuredPrimaryKey.Add(ResolveBackingName(field.Name, exposedToBackingName));
-                }
-            }
-
-            if (configuredPrimaryKey.Count == 0 && entity.Source is not null && entity.Source.KeyFields is not null)
-            {
-                foreach (string keyField in entity.Source.KeyFields)
-                {
-                    configuredPrimaryKey.Add(ResolveBackingName(keyField, exposedToBackingName));
-                }
-            }
-
-            // Without a configured primary key, the key itself is inferred from this schema read,
-            // so a narrowed projection could drop it and leave the entity unusable. Read it all.
-            if (entity.Permissions is null || entity.Permissions.Length == 0 || configuredPrimaryKey.Count == 0)
-            {
-                return new(AllColumns: true, included, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-            }
-
-            foreach (EntityPermission permission in entity.Permissions)
-            {
-                if (permission.Actions is null)
-                {
-                    allColumns = true;
-                    excluded = new(StringComparer.OrdinalIgnoreCase);
-                    continue;
-                }
-
-                foreach (EntityAction action in permission.Actions)
-                {
-                    EntityActionFields? fields = action.Fields;
-
-                    HashSet<string> actionExcluded = new(StringComparer.OrdinalIgnoreCase);
-                    if (fields?.Exclude is not null)
-                    {
-                        if (fields.Exclude.Contains(FIELD_WILDCARD))
-                        {
-                            // This permission reads no field at all, so it contributes no column.
-                            continue;
-                        }
-
-                        foreach (string field in fields.Exclude)
-                        {
-                            actionExcluded.Add(ResolveBackingName(field, exposedToBackingName));
-                        }
-                    }
-
-                    // No "fields" section, no "include" section, or an explicit wildcard,
-                    // means every column not listed in "exclude" is readable.
-                    bool includesEveryField = fields is null
-                        || fields.Include is null
-                        || fields.Include.Contains(FIELD_WILDCARD);
-
-                    if (includesEveryField)
-                    {
-                        allColumns = true;
-
-                        if (excluded is null)
-                        {
-                            excluded = actionExcluded;
-                        }
-                        else
-                        {
-                            excluded.IntersectWith(actionExcluded);
-                        }
-
-                        continue;
-                    }
-
-                    foreach (string field in fields!.Include!)
-                    {
-                        string backingName = ResolveBackingName(field, exposedToBackingName);
-                        if (!actionExcluded.Contains(backingName))
-                        {
-                            included.Add(backingName);
-                        }
-                    }
-                }
-            }
-
-            // The primary key is structural: never drop it from the projection.
-            included.UnionWith(configuredPrimaryKey);
-
-            excluded ??= new(StringComparer.OrdinalIgnoreCase);
-            excluded.ExceptWith(included);
-
-            return new(allColumns, included, excluded);
-        }
-
-        /// <summary>
-        /// Translates a configured (exposed) field name into its backing column name.
-        /// </summary>
-        private static string ResolveBackingName(string fieldName, Dictionary<string, string> exposedToBackingName)
-        {
-            return exposedToBackingName.TryGetValue(fieldName, out string? backingName) ? backingName : fieldName;
-        }
-
-        /// <summary>
-        /// Builds the projection used to read the schema of a database object, narrowed to the
-        /// columns the configuration allows to be read. Returns "*" when no restriction applies
-        /// or when the column list cannot be determined.
-        /// </summary>
-        private async Task<string> BuildSchemaProjectionAsync(
-            string schemaName,
-            string tableName,
-            PermittedColumns permittedColumns)
-        {
-            if (permittedColumns.IsUnrestricted)
+            if (skippedColumns.Count == 0 || readableColumns.Count == 0)
             {
                 return "*";
             }
 
-            List<string> columnsToRead;
+            _logger.LogWarning(
+                "Skipping column(s) of {schemaName}.{tableName} whose data type is not supported: {skippedColumns}. "
+                + "They are not exposed through REST, GraphQL or MCP.",
+                schemaName,
+                tableName,
+                string.Join(", ", skippedColumns));
 
-            if (permittedColumns.AllColumns)
-            {
-                // "include": ["*"] with an "exclude" list: enumerate the columns from the catalog
-                // (metadata only, so unsupported CLR types are never materialized) and drop the
-                // excluded ones.
-                List<string> allColumnNames = new();
-                try
-                {
-                    DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
-
-                    foreach (DataRow columnInfo in columnsInTable.Rows)
-                    {
-                        if (columnInfo["COLUMN_NAME"] is string columnName)
-                        {
-                            allColumnNames.Add(columnName);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogDebug(
-                        "Unable to enumerate the columns of {schemaName}.{tableName} to honor the configured field exclusions: {message}",
-                        schemaName,
-                        tableName,
-                        ex.Message);
-                    return "*";
-                }
-
-                if (allColumnNames.Count == 0)
-                {
-                    return "*";
-                }
-
-                columnsToRead = allColumnNames.Where(permittedColumns.IsColumnPermitted).ToList();
-            }
-            else
-            {
-                columnsToRead = permittedColumns.Included.ToList();
-            }
-
-            if (columnsToRead.Count == 0)
-            {
-                return "*";
-            }
-
-            return string.Join(", ", columnsToRead.Select(column => SqlQueryBuilder.QuoteIdentifier(column)));
+            return string.Join(", ", readableColumns.Select(column => SqlQueryBuilder.QuoteIdentifier(column)));
         }
 
         /// <summary>

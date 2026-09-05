@@ -1929,13 +1929,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read,
-                Fields: {
-                  Include: [
-                    id,
-                    name
-                  ]
-                }
+                Action: Read
               }
             ]
           }

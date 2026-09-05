@@ -40,7 +40,7 @@ The following types of validations are run on the config file (in the order spec
         - To proceed with this validation, we ensure that connection-string provided is valid.
         - Then we call the `ValidateEntitiesMetadata` method which first validates our connection to database using `ValidateDatabaseConnection` method.
         - If we are able to connect to Database, then we fetch the metadata and validate the entity and store the exceptions in the `SqlMetadataExceptions` present in SqlMetadataProvider class.
-        - Once all the validation is done, we return all the metadata exception to the configValidationException which contains all the exceptions occured so far.
+        - Once all the validation is done, we return all the metadata exception to the configValidationException which contains all the exceptions occurred so far.
 6. Finally, when all the validation errors are collected, we log it in the console.
 7. If there are any kinds of validation errors `TryValidateConfig()` would return false, else true.
 

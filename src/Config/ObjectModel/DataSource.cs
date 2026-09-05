@@ -83,6 +83,12 @@ public record DataSource(
                 SetSessionContext: ReadBoolOption(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext))));
         }
 
+        if (typeof(TOptionType).IsAssignableFrom(typeof(PostgreSqlOptions)))
+        {
+            return (TOptionType)(object)new PostgreSqlOptions(
+                SetSessionContext: ReadBoolOption(namingPolicy.ConvertName(nameof(PostgreSqlOptions.SetSessionContext))));
+        }
+
         throw new NotSupportedException($"The type {typeof(TOptionType).FullName} is not a supported strongly typed options object");
     }
 
@@ -125,6 +131,11 @@ public record CosmosDbNoSQLDataSourceOptions(string? Database, string? Container
 /// Options for MsSql database.
 /// </summary>
 public record MsSqlOptions(bool SetSessionContext = true) : IDataSourceOptions;
+
+/// <summary>
+/// Options for PostgreSql database.
+/// </summary>
+public record PostgreSqlOptions(bool SetSessionContext = true) : IDataSourceOptions;
 
 /// <summary>
 /// Options for user-delegated authentication (OBO) for a data source.

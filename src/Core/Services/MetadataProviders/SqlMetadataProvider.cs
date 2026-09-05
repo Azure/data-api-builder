@@ -1548,7 +1548,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (permittedColumns is not null
                     && !permittedColumns.IsUnrestricted
                     && !permittedColumns.IsColumnPermitted(columnName)
-                    && !sourceDefinition.PrimaryKey.Contains(columnName))
+                    && !sourceDefinition.PrimaryKey.Contains(columnName, StringComparer.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -1850,6 +1850,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Describes which backing (database) columns of a database object the runtime
         /// configuration allows to be read.
+        /// Column names are matched case-insensitively, consistent with the comparer used by
+        /// SourceDefinition.Columns and with the field name lookups in this class, so a
+        /// configuration whose casing differs from the database schema still resolves.
         /// </summary>
         /// <param name="AllColumns">
         /// True when at least one permission reads every field ("fields" absent, "include" absent,
@@ -1899,7 +1902,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string tableName,
             string? entityName)
         {
-            HashSet<string> included = new(StringComparer.Ordinal);
+            HashSet<string> included = new(StringComparer.OrdinalIgnoreCase);
             HashSet<string>? excluded = null;
             bool allColumns = false;
             bool matchedAnyEntity = false;
@@ -1933,7 +1936,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // A column is only droppable when every wildcard permission excludes it.
                     if (excluded is null)
                     {
-                        excluded = new(entityPermittedColumns.Excluded, StringComparer.Ordinal);
+                        excluded = new(entityPermittedColumns.Excluded, StringComparer.OrdinalIgnoreCase);
                     }
                     else
                     {
@@ -1944,10 +1947,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (!matchedAnyEntity)
             {
-                return new(AllColumns: true, Included: new(StringComparer.Ordinal), Excluded: new(StringComparer.Ordinal));
+                return new(AllColumns: true, Included: new(StringComparer.OrdinalIgnoreCase), Excluded: new(StringComparer.OrdinalIgnoreCase));
             }
 
-            excluded ??= new(StringComparer.Ordinal);
+            excluded ??= new(StringComparer.OrdinalIgnoreCase);
             excluded.ExceptWith(included);
 
             return new(allColumns, included, excluded);
@@ -1961,12 +1964,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         private static PermittedColumns ResolvePermittedColumnsForEntity(Entity entity)
         {
-            HashSet<string> included = new(StringComparer.Ordinal);
+            HashSet<string> included = new(StringComparer.OrdinalIgnoreCase);
             HashSet<string>? excluded = null;
             bool allColumns = false;
 
             // Exposed name -> backing column name.
-            Dictionary<string, string> exposedToBackingName = new(StringComparer.Ordinal);
+            Dictionary<string, string> exposedToBackingName = new(StringComparer.OrdinalIgnoreCase);
 
             if (entity.Mappings is not null)
             {
@@ -1993,7 +1996,7 @@ namespace Azure.DataApiBuilder.Core.Services
             if (entity.Permissions is null || entity.Permissions.Length == 0)
             {
                 // Nothing configured: the whole object is read, as before.
-                return new(AllColumns: true, included, new HashSet<string>(StringComparer.Ordinal));
+                return new(AllColumns: true, included, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             }
 
             foreach (EntityPermission permission in entity.Permissions)
@@ -2001,7 +2004,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (permission.Actions is null)
                 {
                     allColumns = true;
-                    excluded = new(StringComparer.Ordinal);
+                    excluded = new(StringComparer.OrdinalIgnoreCase);
                     continue;
                 }
 
@@ -2009,7 +2012,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     EntityActionFields? fields = action.Fields;
 
-                    HashSet<string> actionExcluded = new(StringComparer.Ordinal);
+                    HashSet<string> actionExcluded = new(StringComparer.OrdinalIgnoreCase);
                     if (fields?.Exclude is not null)
                     {
                         if (fields.Exclude.Contains(FIELD_WILDCARD))
@@ -2074,7 +2077,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            excluded ??= new(StringComparer.Ordinal);
+            excluded ??= new(StringComparer.OrdinalIgnoreCase);
             excluded.ExceptWith(included);
 
             return new(allColumns, included, excluded);

@@ -1990,6 +1990,39 @@
         }
       }
     },
+    "GeometryType": {
+      "source": {
+        "object": "geometry_type_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "GeometryType",
+          "plural": "GeometryTypes"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [],
+                "include": [
+                  "id",
+                  "name"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
     "Profile": {
       "source": {
         "object": "profiles",

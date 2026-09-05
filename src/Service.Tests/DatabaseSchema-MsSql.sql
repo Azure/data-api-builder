@@ -44,6 +44,7 @@ DROP TABLE IF EXISTS brokers;
 DROP TABLE IF EXISTS type_table;
 DROP TABLE IF EXISTS vector_type_table;
 DROP TABLE IF EXISTS vector_owners;
+DROP TABLE IF EXISTS geometry_type_table;
 DROP TABLE IF EXISTS profiles;
 DROP TABLE IF EXISTS trees;
 DROP TABLE IF EXISTS fungi;
@@ -250,6 +251,12 @@ CREATE TABLE vector_type_table(
     vector_data vector(3),
     vector_data_max vector(1998),
     CONSTRAINT FK_vector_type_table_owner FOREIGN KEY (owner_id) REFERENCES vector_owners(id) ON DELETE CASCADE
+);
+
+CREATE TABLE geometry_type_table(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    geom geometry NULL
 );
 
 CREATE TABLE profiles(
@@ -655,6 +662,13 @@ VALUES (7, CAST('[' + (
     FROM GENERATE_SERIES(1, 1998)
 ) + ']' AS vector(1998)));
 SET IDENTITY_INSERT vector_type_table OFF
+
+SET IDENTITY_INSERT geometry_type_table ON
+INSERT INTO geometry_type_table(id, name, geom)
+VALUES
+    (1, 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    (2, 'null geometry', NULL);
+SET IDENTITY_INSERT geometry_type_table OFF
 
 SET IDENTITY_INSERT profiles ON
 INSERT INTO profiles(id, metadata)

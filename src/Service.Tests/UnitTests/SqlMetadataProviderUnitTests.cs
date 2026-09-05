@@ -397,6 +397,38 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test to validate that a table holding a column whose CLR type the data provider cannot
+        /// resolve - here a geometry column - is still usable when the entity permissions enumerate
+        /// the readable fields and that column is not among them.
+        /// Metadata inference must succeed and the unreadable column must be absent from the
+        /// inferred source definition, so it never reaches the OData or GraphQL type maps.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateColumnExcludedByFieldPermissionsIsNotInferred()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            await SetupTestFixtureAndInferMetadata();
+
+            Assert.IsTrue(
+                _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue("GeometryType", out DatabaseObject databaseObject),
+                message: "Metadata inference failed for the entity backed by a table with a geometry column.");
+
+            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
+
+            Assert.IsTrue(
+                sourceDefinition.Columns.ContainsKey("id"),
+                message: "The primary key column is expected in the source definition.");
+            Assert.IsTrue(
+                sourceDefinition.Columns.ContainsKey("name"),
+                message: "A column listed in fields.include is expected in the source definition.");
+            Assert.IsFalse(
+                sourceDefinition.Columns.ContainsKey("geom"),
+                message: "A column absent from fields.include is not expected in the source definition.");
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
         /// Test to validate successful inference of relationship data based on data provided in the config and the metadata
         /// collected from the MySql database.
         /// </summary>

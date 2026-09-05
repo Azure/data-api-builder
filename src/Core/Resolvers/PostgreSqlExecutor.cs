@@ -13,6 +13,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -148,10 +149,40 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return string.IsNullOrEmpty(builder.Password);
         }
 
+        /// <inheritdoc />
+        public override void PopulateDbTypeForParameter(
+            KeyValuePair<string, DbConnectionParam> parameterEntry,
+            DbParameter parameter)
+        {
+            if (parameterEntry.Value.UseDatabaseTypeInference && parameter is NpgsqlParameter npgsqlParameter)
+            {
+                npgsqlParameter.NpgsqlDbType = NpgsqlDbType.Unknown;
+            }
+        }
+
         /// <inheritdoc/>
         public override async Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
             DbDataReader dbDataReader, List<string>? args = null)
         {
+            // Insert-capable PostgreSQL upserts acquire a transaction-level advisory lock in a separate
+            // first statement. Consume that result before reading the existence count. Keeping the lock
+            // statement separate ensures the count receives a fresh READ COMMITTED snapshot after any
+            // competing same-key transaction has committed.
+            if (Enumerable.Range(0, dbDataReader.FieldCount).Any(
+                ordinal => string.Equals(
+                    dbDataReader.GetName(ordinal),
+                    PostgresQueryBuilder.UPSERT_LOCK_ACQUIRED,
+                    StringComparison.Ordinal)))
+            {
+                if (!await dbDataReader.NextResultAsync())
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Neither insert nor update could be performed.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                }
+            }
+
             // RS1: COUNT of rows matching PK (no policy) — used to distinguish
             // "row doesn't exist" from "row exists but policy blocked".
             DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);

@@ -3,10 +3,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
@@ -14,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -30,6 +33,77 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void TestCleanup()
         {
             TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
+        /// Verifies that the advisory-lock result emitted by insert-capable upserts is skipped before
+        /// the existing count and mutation result sets are interpreted.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertCapableUpsertSkipsAdvisoryLockResultSet()
+        {
+            RuntimeConfigProvider provider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            Mock<DbExceptionParser> dbExceptionParser = new(provider);
+            Mock<ILogger<PostgreSqlQueryExecutor>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            PostgreSqlQueryExecutor executor = new(
+                provider,
+                dbExceptionParser.Object,
+                queryExecutorLogger.Object,
+                httpContextAccessor.Object);
+
+            DataTable lockResult = new();
+            lockResult.Columns.Add(PostgresQueryBuilder.UPSERT_LOCK_ACQUIRED, typeof(object));
+            lockResult.Rows.Add(DBNull.Value);
+
+            DataTable countResult = new();
+            countResult.Columns.Add(PostgresQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, typeof(long));
+            countResult.Columns.Add(PostgresQueryBuilder.IS_FALLBACK_TO_UPDATE, typeof(bool));
+            countResult.Rows.Add(0L, false);
+
+            DataTable mutationResult = new();
+            mutationResult.Columns.Add("id", typeof(int));
+            mutationResult.Rows.Add(42);
+
+            using DataTableReader reader = new(new[] { lockResult, countResult, mutationResult });
+
+            var result = await executor.GetMultipleResultSetsIfAnyAsync(reader);
+
+            Assert.AreEqual(1, result.Rows.Count);
+            Assert.AreEqual(42, result.Rows[0].Columns["id"]);
+        }
+
+        /// <summary>
+        /// PostgreSQL upsert key parameters marked for database type inference must be sent without
+        /// Npgsql's CLR string-to-text type declaration.
+        /// </summary>
+        [TestMethod]
+        public void UpsertKeyParameterUsesDatabaseTypeInference()
+        {
+            RuntimeConfigProvider provider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            Mock<DbExceptionParser> dbExceptionParser = new(provider);
+            Mock<ILogger<PostgreSqlQueryExecutor>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            PostgreSqlQueryExecutor executor = new(
+                provider,
+                dbExceptionParser.Object,
+                queryExecutorLogger.Object,
+                httpContextAccessor.Object);
+
+            DbConnectionParam connectionParam = new("K000 ")
+            {
+                UseDatabaseTypeInference = true
+            };
+            KeyValuePair<string, DbConnectionParam> parameterEntry = new("@param0", connectionParam);
+            NpgsqlParameter parameter = new()
+            {
+                ParameterName = parameterEntry.Key,
+                Value = connectionParam.Value!
+            };
+
+            executor.PopulateDbTypeForParameter(parameterEntry, parameter);
+
+            Assert.AreEqual(NpgsqlDbType.Unknown, parameter.NpgsqlDbType);
         }
 
         /// <summary>

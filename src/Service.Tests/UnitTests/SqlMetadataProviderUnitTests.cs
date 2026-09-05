@@ -397,6 +397,39 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test to validate that a table holding a column whose data type the data provider cannot
+        /// map to a CLR type - here a geometry column - is still usable: metadata inference must
+        /// succeed and the unsupported column must be absent from the inferred source definition,
+        /// so it never reaches the OData or GraphQL type maps.
+        /// The entity places no field restriction, so this covers the column being skipped on the
+        /// strength of its type alone.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateUnsupportedColumnTypeIsNotInferred()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            await SetupTestFixtureAndInferMetadata();
+
+            Assert.IsTrue(
+                _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue("GeometryType", out DatabaseObject databaseObject),
+                message: "Metadata inference failed for the entity backed by a table with a geometry column.");
+
+            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
+
+            Assert.IsTrue(
+                sourceDefinition.Columns.ContainsKey("id"),
+                message: "The primary key column is expected in the source definition.");
+            Assert.IsTrue(
+                sourceDefinition.Columns.ContainsKey("name"),
+                message: "A column with a supported data type is expected in the source definition.");
+            Assert.IsFalse(
+                sourceDefinition.Columns.ContainsKey("geom"),
+                message: "A column whose data type cannot be mapped is not expected in the source definition.");
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
         /// Test to validate successful inference of relationship data based on data provided in the config and the metadata
         /// collected from the MySql database.
         /// </summary>

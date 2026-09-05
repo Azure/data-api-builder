@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
@@ -68,6 +69,17 @@ namespace Azure.DataApiBuilder.Core.Services
         protected IQueryExecutor QueryExecutor { get; }
 
         protected const int NUMBER_OF_RESTRICTIONS = 4;
+
+        /// <summary>
+        /// Column data types, as reported by the "Columns" schema collection, that the data
+        /// provider cannot map to a CLR type. Reading such a column makes
+        /// <see cref="DbDataAdapter.FillSchema(DataSet, SchemaType)"/> fail with
+        /// "DataReader.GetFieldType(N) returned null", which takes down the whole database object
+        /// even when the column itself is never exposed. They are therefore left out of the
+        /// projection used for schema discovery.
+        /// Empty by default: a provider only lists a type here when it genuinely cannot resolve it.
+        /// </summary>
+        protected virtual ImmutableHashSet<string> UnsupportedColumnDataTypes => ImmutableHashSet<string>.Empty;
 
         protected string ConnectionString { get; init; }
 
@@ -1528,6 +1540,7 @@ namespace Azure.DataApiBuilder.Core.Services
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+
             foreach (DataRow columnInfoFromAdapter in schemaTable.Rows)
             {
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;
@@ -1753,6 +1766,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Using a data adapter, obtains the schema of the given table name
         /// and adds the corresponding DataTable to the entities data set.
+        /// Columns whose data type the data provider cannot map to a CLR type are left out of the
+        /// projection, because the data adapter refuses to build a schema mapping for them and the
+        /// whole object would otherwise be unreachable. See <see cref="UnsupportedColumnDataTypes"/>.
         /// </summary>
         private async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,
@@ -1802,12 +1818,82 @@ namespace Azure.DataApiBuilder.Core.Services
             };
 
             string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(schemaName, tableName);
+
+            string projection = await BuildSchemaProjectionAsync(schemaName, tableName);
+
             selectCommand.CommandText
-                = $"SELECT * FROM {tableNameWithSchemaPrefix}";
+                = $"SELECT {projection} FROM {tableNameWithSchemaPrefix}";
             adapterForTable.SelectCommand = selectCommand;
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableNameWithSchemaPrefix);
             return dataTable[0];
+        }
+
+        /// <summary>
+        /// Builds the projection used to read the schema of a database object. Returns "*" unless
+        /// the object holds columns whose data type this provider cannot map to a CLR type, in
+        /// which case those columns are named out of the projection so the rest stays reachable.
+        /// The column list comes from the "Columns" schema collection, which reads catalog metadata
+        /// only and therefore never has to materialize the offending type.
+        /// </summary>
+        private async Task<string> BuildSchemaProjectionAsync(string schemaName, string tableName)
+        {
+            if (UnsupportedColumnDataTypes.Count == 0)
+            {
+                return "*";
+            }
+
+            List<string> readableColumns = new();
+            List<string> skippedColumns = new();
+
+            try
+            {
+                DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
+
+                foreach (DataRow columnInfo in columnsInTable.Rows)
+                {
+                    if (columnInfo["COLUMN_NAME"] is not string columnName)
+                    {
+                        continue;
+                    }
+
+                    string? dataType = columnInfo["DATA_TYPE"] as string;
+
+                    if (dataType is not null && UnsupportedColumnDataTypes.Contains(dataType))
+                    {
+                        skippedColumns.Add($"{columnName} ({dataType})");
+                    }
+                    else
+                    {
+                        readableColumns.Add(columnName);
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is not DataApiBuilderException)
+            {
+                // The column list is a best-effort optimization: without it the read below behaves
+                // exactly as it did before, failing loudly if an unsupported type is present.
+                _logger.LogDebug(
+                    "Unable to enumerate the columns of {schemaName}.{tableName}: {message}",
+                    schemaName,
+                    tableName,
+                    ex.Message);
+                return "*";
+            }
+
+            if (skippedColumns.Count == 0 || readableColumns.Count == 0)
+            {
+                return "*";
+            }
+
+            _logger.LogWarning(
+                "Skipping column(s) of {schemaName}.{tableName} whose data type is not supported: {skippedColumns}. "
+                + "They are not exposed through REST, GraphQL or MCP.",
+                schemaName,
+                tableName,
+                string.Join(", ", skippedColumns));
+
+            return string.Join(", ", readableColumns.Select(column => SqlQueryBuilder.QuoteIdentifier(column)));
         }
 
         /// <summary>

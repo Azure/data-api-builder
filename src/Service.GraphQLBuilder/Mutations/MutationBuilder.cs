@@ -50,6 +50,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 {
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     NameNode name = objectTypeDefinitionNode.Name;
+
+                    // A Cosmos schema file can declare @model types that are not registered as entities
+                    // in the runtime config (e.g. shared schema files). Such types have no mutations to
+                    // generate, so they are intentionally skipped. Genuine type-name conflicts across
+                    // data sources are detected earlier in GraphQLSchemaCreator.
+                    if (!entities.ContainsKey(dbEntityName))
+                    {
+                        continue;
+                    }
+
                     Entity entity = entities[dbEntityName];
                     // For stored procedures, only one mutation is created in the schema
                     // unlike table/views where we create one for each CUD operation.

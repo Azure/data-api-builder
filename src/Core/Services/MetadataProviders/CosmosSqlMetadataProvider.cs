@@ -499,8 +499,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         }
 
         public bool VerifyForeignKeyExistsInDB(
-            DatabaseTable databaseTableA,
-            DatabaseTable databaseTableB)
+            DatabaseObject databaseObjectA,
+            DatabaseObject databaseObjectB)
         {
             throw new NotImplementedException();
         }

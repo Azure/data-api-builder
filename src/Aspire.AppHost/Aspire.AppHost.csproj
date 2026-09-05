@@ -22,6 +22,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Service\Azure.DataApiBuilder.Service.csproj" />
+    <!-- Referenced as a plain library (not an Aspire resource) so AppHost diagnostics can use
+         the shared BootstrapLogger and emit the same timestamped console format as the engine.
+         Product is dependency light (ILogger abstractions only), so this does not pull the
+         engine's Azure dependency graph into AppHost and cause assembly version conflicts. -->
+    <ProjectReference Include="..\Product\Azure.DataApiBuilder.Product.csproj" IsAspireProjectResource="false" />
   </ItemGroup>
 
 </Project>

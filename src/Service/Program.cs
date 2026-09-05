@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Telemetry;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
@@ -26,6 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
+using Microsoft.Extensions.Logging.Console;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
@@ -80,7 +82,7 @@ namespace Azure.DataApiBuilder.Service
 
             if (!ValidateAspNetCoreUrls())
             {
-                Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
+                BootstrapLogger.Instance.LogError("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
                 Environment.ExitCode = -1;
                 return;
             }
@@ -106,6 +108,9 @@ namespace Azure.DataApiBuilder.Service
                 // MCP SDK uses Console.OpenStandardOutput() which gets the real stdout, unaffected by this redirect.
                 if (runMcpStdio)
                 {
+                    // stdout is reserved for the JSON-RPC protocol stream.
+                    BootstrapLogger.WriteAllOutputToStandardError = true;
+
                     // When LogLevel.None, redirect to null stream for ZERO output.
                     // Otherwise redirect to stderr so logs don't pollute JSON-RPC.
                     if (initialLogLevel == LogLevel.None)
@@ -135,13 +140,13 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Do not log the exception here because exceptions raised during startup
                 // are already automatically written to the console.
-                Console.Error.WriteLine("Unable to launch the Data API builder engine.");
+                BootstrapLogger.Instance.LogError("Unable to launch the Data API builder engine.");
                 return false;
             }
             // Catch all remaining unhandled exceptions which may be due to server host operation.
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
+                BootstrapLogger.Instance.LogError($"Unable to launch the runtime due to: {ex}");
                 return false;
             }
         }
@@ -176,37 +181,7 @@ namespace Azure.DataApiBuilder.Service
                         services.AddSingleton<IMcpLogNotificationWriter>(_mcpNotificationWriter);
                     }
                 })
-                .ConfigureLogging(logging =>
-                {
-                    // For MCP stdio mode, we need dynamic log level control via logging/setLevel.
-                    // Set framework minimum to Trace so all logs pass through to the dynamic filter.
-                    // The dynamic AddFilter() will do the actual filtering based on current level.
-                    // For non-MCP mode, use the configured level directly.
-                    if (runMcpStdio)
-                    {
-                        // Clear all default providers (Console, Debug, EventSource, EventLog)
-                        // to ensure stdout remains pure JSON-RPC for MCP protocol compliance.
-                        logging.ClearProviders();
-
-                        // Allow all logs through framework, filter dynamically
-                        logging.SetMinimumLevel(LogLevel.Trace);
-                    }
-                    else
-                    {
-                        logging.SetMinimumLevel(LogLevelProvider.CurrentLogLevel);
-                    }
-
-                    // Add filter for dynamic log level changes (e.g., via MCP logging/setLevel)
-                    logging.AddFilter(logLevel => LogLevelProvider.ShouldLog(logLevel));
-                    logging.AddFilter("Microsoft", logLevel => LogLevelProvider.ShouldLog(logLevel));
-                    logging.AddFilter("Microsoft.Hosting.Lifetime", logLevel => LogLevelProvider.ShouldLog(logLevel));
-
-                    // For MCP stdio mode, add the MCP logger provider to send logs as notifications
-                    if (runMcpStdio)
-                    {
-                        logging.AddProvider(new McpLoggerProvider(_mcpNotificationWriter));
-                    }
-                })
+                .ConfigureLogging(logging => ConfigureHostLogging(logging, runMcpStdio))
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     // LogLevelProvider was already initialized in StartEngine before CreateHostBuilder.
@@ -218,6 +193,57 @@ namespace Azure.DataApiBuilder.Service
                     DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
                 });
+        }
+
+        /// <summary>
+        /// Configures the web host's logging pipeline.
+        /// For MCP stdio mode all default providers are cleared (stdout is reserved for
+        /// JSON-RPC) and the framework minimum is lowered to Trace so the dynamic filter
+        /// alone decides what is emitted. Otherwise the console provider already registered
+        /// by <see cref="Host.CreateDefaultBuilder(string[])"/> is reused - no second provider
+        /// is added - and only its formatter options are adjusted so every entry is prefixed
+        /// with an ISO 8601 UTC timestamp.
+        /// </summary>
+        /// <param name="logging">Logging builder supplied by the host.</param>
+        /// <param name="runMcpStdio">True when running as an MCP stdio server.</param>
+        public static void ConfigureHostLogging(ILoggingBuilder logging, bool runMcpStdio)
+        {
+            // For MCP stdio mode, we need dynamic log level control via logging/setLevel.
+            // Set framework minimum to Trace so all logs pass through to the dynamic filter.
+            // The dynamic AddFilter() will do the actual filtering based on current level.
+            // For non-MCP mode, use the configured level directly.
+            if (runMcpStdio)
+            {
+                // Clear all default providers (Console, Debug, EventSource, EventLog)
+                // to ensure stdout remains pure JSON-RPC for MCP protocol compliance.
+                logging.ClearProviders();
+
+                // Allow all logs through framework, filter dynamically
+                logging.SetMinimumLevel(LogLevel.Trace);
+            }
+            else
+            {
+                logging.SetMinimumLevel(LogLevelProvider.CurrentLogLevel);
+
+                // The console provider registered by Host.CreateDefaultBuilder() is reused as-is;
+                // only its formatter is configured so no second provider is registered (which would
+                // emit every entry twice). ConsoleLoggerOptions.FormatterName must be set explicitly
+                // (AddUtcTimestampConsoleFormatter does so): when it is left unset the provider ignores
+                // the registered formatters and derives its behavior from ConsoleLoggerOptions' own
+                // (obsolete) properties instead, which would silently drop the timestamp.
+                logging.AddUtcTimestampConsoleFormatter();
+            }
+
+            // Add filter for dynamic log level changes (e.g., via MCP logging/setLevel)
+            logging.AddFilter(logLevel => LogLevelProvider.ShouldLog(logLevel));
+            logging.AddFilter("Microsoft", logLevel => LogLevelProvider.ShouldLog(logLevel));
+            logging.AddFilter("Microsoft.Hosting.Lifetime", logLevel => LogLevelProvider.ShouldLog(logLevel));
+
+            // For MCP stdio mode, add the MCP logger provider to send logs as notifications
+            if (runMcpStdio)
+            {
+                logging.AddProvider(new McpLoggerProvider(_mcpNotificationWriter));
+            }
         }
 
         /// <summary>
@@ -464,7 +490,11 @@ namespace Azure.DataApiBuilder.Service
                         // When LogLevel.None, skip the console logger entirely for true silence.
                         if (LogLevelProvider.CurrentLogLevel != LogLevel.None)
                         {
-                            builder.AddConsole(options =>
+                            builder.AddConsole();
+                            builder.AddUtcTimestampConsoleFormatter();
+                            // Route all levels to stderr to keep stdout clean for MCP JSON-RPC.
+                            // Uses Services.Configure (not a second AddConsole) so no second provider is registered.
+                            builder.Services.Configure<ConsoleLoggerOptions>(options =>
                             {
                                 options.LogToStandardErrorThreshold = LogLevel.Trace;
                             });
@@ -473,6 +503,7 @@ namespace Azure.DataApiBuilder.Service
                     else
                     {
                         builder.AddConsole();
+                        builder.AddUtcTimestampConsoleFormatter();
                     }
                 });
         }
@@ -491,7 +522,7 @@ namespace Azure.DataApiBuilder.Service
             ParseResult result = GetParseResult(cmd, args);
             if (result.Tokens.Count - result.UnmatchedTokens.Count - result.UnparsedTokens.Count > 0)
             {
-                Console.WriteLine("Redirecting to https is disabled.");
+                BootstrapLogger.Instance.LogInformation("Redirecting to https is disabled.");
                 IsHttpsRedirectionDisabled = true;
                 return;
             }

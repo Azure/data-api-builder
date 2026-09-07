@@ -3,7 +3,8 @@
 This is a high-level companion to PR #3480. The goal here is to give a reader
 the *why* behind each non-obvious code change without forcing them to diff Hot
 Chocolate v13/v14 against v16 themselves. For the line-level changes, read the
-PR.
+PR. Sections 1-13 describe the original migration to 16.0.0; section 14 covers
+the follow-up to 16.6.4.
 
 ---
 
@@ -230,3 +231,29 @@ notable test changes are:
   `BYTE_TYPE` (`UnsignedByte` → `byte_types`) and `BYTEARRAY_TYPE`
   (`Base64String` → `bytearray_types`) because the GraphQL scalar name no
   longer matches the test database column-name root.
+
+---
+
+## 14. Follow-up to 16.6.4
+
+The follow-up updates all six centrally managed Hot Chocolate packages from
+16.0.0 to 16.6.4. This crosses minor versions, not just patch versions, and
+requires two compatibility changes.
+
+Hot Chocolate validates GraphQL input defaults against their field types.
+SQL default constraints contain database expressions such as `((1))`,
+`(getdate())`, or `('Placeholder')`, not GraphQL literals. Copying those
+expressions into create-input defaults can prevent the entire schema from
+building.
+
+SQL create fields with database defaults therefore remain nullable but no
+longer have a GraphQL input default. Omitting a field lets the database
+evaluate its default; supplying an explicit `null` remains distinct and is
+still subject to database constraints. This applies to nested and linking
+create inputs as well. The source `@defaultValue` metadata is preserved,
+and Cosmos GraphQL literal defaults and stored-procedure parameter defaults
+are unchanged.
+
+The `FragmentSpreadNode` constructor used in one unit test also needs the
+new explicit arguments collection. An empty collection preserves the
+argument-free fragment spread used by that test.

@@ -407,8 +407,21 @@ public class ForeignKeyDefinition
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(
-                Pair, ReferencedColumns, ReferencingColumns);
+        HashCode hashCode = new();
+        hashCode.Add(Pair);
+        hashCode.Add(ReferencedColumns.Count);
+        foreach (string column in ReferencedColumns)
+        {
+            hashCode.Add(column, StringComparer.Ordinal);
+        }
+
+        hashCode.Add(ReferencingColumns.Count);
+        foreach (string column in ReferencingColumns)
+        {
+            hashCode.Add(column, StringComparer.Ordinal);
+        }
+
+        return hashCode.ToHashCode();
     }
 }
 

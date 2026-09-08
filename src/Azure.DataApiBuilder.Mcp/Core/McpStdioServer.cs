@@ -696,14 +696,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// Extracts the value of a JSON-RPC request identifier.
         /// </summary>
         /// <param name="id">The JSON element representing the request identifier.</param>
-        /// <returns>The extracted identifier value as an object, or null if the identifier is not a primitive type.</returns>
+        /// <returns>The string value or a cloned numeric element, or null if the identifier is not a supported primitive type.</returns>
         private static object? GetIdValue(JsonElement id)
         {
             return id.ValueKind switch
             {
                 JsonValueKind.String => id.GetString(),
-                JsonValueKind.Number => id.TryGetInt64(out long l) ? l :
-                                        id.TryGetDouble(out double d) ? d : null,
+                JsonValueKind.Number => id.Clone(),
                 _ => null
             };
         }

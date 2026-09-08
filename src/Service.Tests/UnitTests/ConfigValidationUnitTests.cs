@@ -632,6 +632,95 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Verifies relationship validation can log explicit columns, infer either foreign-key direction, or fall back to database verification for direct and linking relationships.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(false, "explicit", DisplayName = "Direct relationship uses explicitly configured columns")]
+        [DataRow(false, "forward", DisplayName = "Direct relationship infers a forward foreign key")]
+        [DataRow(false, "reverse", DisplayName = "Direct relationship infers a reverse foreign key")]
+        [DataRow(false, "none", DisplayName = "Direct relationship falls back when no foreign key metadata exists")]
+        [DataRow(true, "explicit", DisplayName = "Linking relationship uses explicitly configured columns")]
+        [DataRow(true, "forward", DisplayName = "Linking relationship infers both forward foreign keys")]
+        [DataRow(true, "none", DisplayName = "Linking relationship falls back when no foreign key metadata exists")]
+        public void ValidateRelationships_LoggingResolvesConfiguredAndInferredColumns(bool useLinkingObject, string resolution)
+        {
+            string[] sourceFields = resolution == "explicit" ? new[] { "source_id" } : null;
+            string[] targetFields = resolution == "explicit" ? new[] { "target_id" } : null;
+            string[] linkingSourceFields = useLinkingObject && resolution == "explicit" ? new[] { "link_source_id" } : null;
+            string[] linkingTargetFields = useLinkingObject && resolution == "explicit" ? new[] { "link_target_id" } : null;
+            string linkingObjectName = useLinkingObject ? "dbo.LINKING_TABLE" : null;
+            EntityRelationship relationship = new(
+                Cardinality: Cardinality.One,
+                TargetEntity: "Target",
+                SourceFields: sourceFields,
+                TargetFields: targetFields,
+                LinkingObject: linkingObjectName,
+                LinkingSourceFields: linkingSourceFields,
+                LinkingTargetFields: linkingTargetFields);
+            Dictionary<string, Entity> entities = new()
+            {
+                ["Source"] = GetSampleEntityUsingSourceAndRelationshipMap(
+                    "SOURCE_TABLE",
+                    new Dictionary<string, EntityRelationship> { ["relationship"] = relationship },
+                    new EntityGraphQLOptions("Source", "Sources", true)),
+                ["Target"] = GetSampleEntityUsingSourceAndRelationshipMap(
+                    "TARGET_TABLE",
+                    relationshipMap: null,
+                    new EntityGraphQLOptions("Target", "Targets", true))
+            };
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType.MSSQL, string.Empty),
+                Runtime: new RuntimeOptions(new(), new(), new(), new(null, null)),
+                Entities: new RuntimeEntities(entities));
+
+            DatabaseTable sourceTable = new("dbo", "SOURCE_TABLE");
+            DatabaseTable targetTable = new("dbo", "TARGET_TABLE");
+            DatabaseTable linkingTable = new("dbo", "LINKING_TABLE");
+            RelationShipPair sourceTarget = new(sourceTable, targetTable);
+            RelationShipPair targetSource = new(targetTable, sourceTable);
+            RelationShipPair linkingSource = new(linkingTable, sourceTable);
+            RelationShipPair linkingTarget = new(linkingTable, targetTable);
+            Dictionary<RelationShipPair, ForeignKeyDefinition> foreignKeys = new();
+            if (resolution == "forward")
+            {
+                if (useLinkingObject)
+                {
+                    foreignKeys[linkingSource] = CreateForeignKey(linkingSource);
+                    foreignKeys[linkingTarget] = CreateForeignKey(linkingTarget);
+                }
+                else
+                {
+                    foreignKeys[sourceTarget] = CreateForeignKey(sourceTarget);
+                }
+            }
+            else if (resolution == "reverse")
+            {
+                foreignKeys[targetSource] = CreateForeignKey(targetSource);
+            }
+
+            Mock<ISqlMetadataProvider> metadataProvider = new();
+            metadataProvider.SetupGet(x => x.EntityToDatabaseObject).Returns(new Dictionary<string, DatabaseObject>
+            {
+                ["Source"] = sourceTable,
+                ["Target"] = targetTable
+            });
+            metadataProvider.SetupGet(x => x.PairToFkDefinition).Returns(foreignKeys);
+            metadataProvider.Setup(x => x.ParseSchemaAndDbTableName(linkingObjectName)).Returns(("dbo", "LINKING_TABLE"));
+            metadataProvider.Setup(x => x.VerifyForeignKeyExistsInDB(It.IsAny<DatabaseTable>(), It.IsAny<DatabaseTable>())).Returns(true);
+            string exposedField = string.Empty;
+            metadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), It.IsAny<string>(), out exposedField)).Returns(true);
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(metadataProvider.Object);
+
+            MockFileSystem fileSystem = new();
+            RuntimeConfigProvider provider = new(new FileSystemRuntimeConfigLoader(fileSystem));
+            RuntimeConfigValidator validator = new(provider, fileSystem, Mock.Of<ILogger<RuntimeConfigValidator>>());
+
+            validator.ValidateRelationships(runtimeConfig, metadataProviderFactory.Object);
+        }
+
+        /// <summary>
         /// Test method that ensures our validation code catches the cases where source and target fields do not match in some way
         /// and the linking object is null, indicating we have a one-many or many-one relationship.
         /// Not matching can either be because one is null and the other is not, or because they have a different number of fields.
@@ -3779,6 +3868,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { targetEntity, sampleEntity2 }
             };
             return entityMap;
+        }
+
+        private static ForeignKeyDefinition CreateForeignKey(RelationShipPair pair)
+        {
+            return new ForeignKeyDefinition
+            {
+                Pair = pair,
+                ReferencingColumns = new() { "referencing_id" },
+                ReferencedColumns = new() { "referenced_id" }
+            };
         }
     }
 }

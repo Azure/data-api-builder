@@ -13,8 +13,11 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
@@ -402,6 +405,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             services.AddSingleton(registry);
             services.AddSingleton(runtimeConfigProvider ?? new StubRuntimeConfigProvider(CreateRuntimeConfig()));
             services.AddSingleton<IConfiguration>(configuration ?? new ConfigurationBuilder().Build());
+            services.AddSingleton<IMetadataProviderFactory, NoOpMetadataProviderFactory>();
 
             if (logLevelController is not null)
             {
@@ -539,6 +543,26 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     }
                 });
             }
+        }
+
+        private sealed class NoOpMetadataProviderFactory : IMetadataProviderFactory
+        {
+            public Task InitializeAsync() => Task.CompletedTask;
+
+            public void InitializeAsync(
+                Dictionary<string, Dictionary<string, DatabaseObject>> entityToDatabaseObjectMap,
+                Dictionary<string, Dictionary<string, string>> graphQLStoredProcedureExposedNameToEntityNameMap)
+            {
+            }
+
+            public ISqlMetadataProvider GetMetadataProvider(string dataSourceName)
+                => throw new NotImplementedException();
+
+            public IEnumerable<ISqlMetadataProvider> ListMetadataProviders()
+                => Array.Empty<ISqlMetadataProvider>();
+
+            public List<Exception> GetAllMetadataExceptions()
+                => new();
         }
 
         private sealed class RecordingLogLevelController : ILogLevelController

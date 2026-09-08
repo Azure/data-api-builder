@@ -6,6 +6,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Telemetry;
@@ -30,6 +31,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly McpStdoutWriter _stdoutWriter;
         private readonly TextReader? _inputReader;
         private readonly string _protocolVersion;
+        private readonly object _initializationLock = new();
+        private Task? _initializationTask;
 
         private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
 
@@ -134,7 +137,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 break;
 
                             case "tools/list":
-                                HandleListTools(id);
+                                await HandleListToolsAsync(id);
                                 break;
 
                             case "tools/call":
@@ -284,8 +287,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="id">
         /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
         /// </param>
-        private void HandleListTools(JsonElement? id)
+        private async Task HandleListToolsAsync(JsonElement? id)
         {
+            await EnsureToolsInitializedAsync();
+
             List<object> toolsWire = new();
             int count = 0;
 
@@ -306,6 +311,24 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             WriteResult(id, new { tools = toolsWire });
+        }
+
+        private Task EnsureToolsInitializedAsync()
+        {
+            lock (_initializationLock)
+            {
+                return _initializationTask ??= InitializeToolsAsync();
+            }
+        }
+
+        private async Task InitializeToolsAsync()
+        {
+            IMetadataProviderFactory metadataProviderFactory =
+                _serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+            await metadataProviderFactory.InitializeAsync();
+
+            IEnumerable<IMcpTool> tools = _serviceProvider.GetServices<IMcpTool>();
+            McpToolRegistry.InitializeAndRegisterTools(tools, _toolRegistry, _serviceProvider);
         }
 
         /// <summary>
@@ -454,6 +477,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing tool name");
                 return;
             }
+
+            await EnsureToolsInitializedAsync();
 
             if (!_toolRegistry.TryGetTool(toolName!, out IMcpTool? tool) || tool is null)
             {

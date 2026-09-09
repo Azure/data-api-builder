@@ -159,6 +159,48 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(message.Contains("No entities are configured"));
         }
 
+        [TestMethod]
+        public async Task DescribeEntities_ReturnsToolDisabled_WhenDescribeToolIsDisabled()
+        {
+            RuntimeConfig config = new(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(Enabled: true, Path: "/mcp", DmlTools: DmlToolsConfig.FromBoolean(false)),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)),
+                Entities: new(new Dictionary<string, Entity>()));
+
+            CallToolResult result = await new DescribeEntitiesTool().ExecuteAsync(
+                null, CreateServiceProvider(config), CancellationToken.None);
+
+            AssertErrorResult(result, "ToolDisabled");
+        }
+
+        [TestMethod]
+        public async Task DescribeEntities_ReturnsOperationCanceled_WhenCancellationRequested()
+        {
+            using CancellationTokenSource cancellation = new();
+            cancellation.Cancel();
+
+            CallToolResult result = await new DescribeEntitiesTool().ExecuteAsync(
+                null, CreateServiceProvider(CreateConfigWithNoEntities()), cancellation.Token);
+
+            AssertErrorResult(result, "OperationCanceled");
+        }
+
+        [TestMethod]
+        public async Task DescribeEntities_ReturnsEntitiesNotFound_ForExplicitMissingFilter()
+        {
+            using JsonDocument arguments = JsonDocument.Parse("{\"entities\":[\"Missing\",\"  \",42]}");
+
+            CallToolResult result = await new DescribeEntitiesTool().ExecuteAsync(
+                arguments, CreateServiceProvider(CreateConfigWithNoEntities()), CancellationToken.None);
+
+            AssertErrorResult(result, "EntitiesNotFound");
+        }
+
         /// <summary>
         /// CRITICAL TEST: Verifies that stored procedures with BOTH custom-tool AND dml-tools enabled
         /// appear in describe_entities. This validates the truth table scenario:

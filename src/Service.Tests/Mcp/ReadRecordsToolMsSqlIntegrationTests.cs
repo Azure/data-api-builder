@@ -62,6 +62,39 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// Reads records with whitespace after a comma in the select clause.
+        /// </summary>
+        [TestMethod]
+        public async Task ReadRecords_WithWhitespaceAfterSelectComma_ReturnsSelectedFields()
+        {
+            CallToolResult result = await ExecuteReadAsync("Book", select: "id, title");
+
+            AssertSuccess(result, "ReadRecords with whitespace after a select comma should succeed.");
+
+            JsonElement root = ParseResultRoot(result);
+            JsonElement records = GetRecordsArray(root);
+            JsonElement firstRecord = records[0];
+            Assert.IsTrue(firstRecord.TryGetProperty("id", out _), "Expected 'id' field in result.");
+            Assert.IsTrue(firstRecord.TryGetProperty("title", out _), "Expected 'title' field in result.");
+        }
+
+        /// <summary>
+        /// Rejects empty field names in the select clause with a clear error.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("id,title,")]
+        [DataRow("id,,title")]
+        public async Task ReadRecords_WithEmptySelectField_ReturnsInvalidArguments(string select)
+        {
+            CallToolResult result = await ExecuteReadAsync("Book", select: select);
+
+            AssertError(result);
+            JsonElement error = ParseResultRoot(result).GetProperty("error");
+            Assert.AreEqual("InvalidArguments", error.GetProperty("type").GetString());
+            Assert.AreEqual("The 'select' argument cannot contain empty field names.", error.GetProperty("message").GetString());
+        }
+
+        /// <summary>
         /// Reads records with an OData filter expression and verifies filtered results are returned.
         /// </summary>
         [TestMethod]

@@ -9,6 +9,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Utilities;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -181,8 +182,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             catch (Exception ex)
             {
                 // Need to remove the dependencies in startup on the RuntimeConfigProvider
-                // before we can have an ILogger here.
-                Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
+                // before we can have an injected ILogger here.
+                (_logger as ILogger ?? BootstrapLogger.Instance).LogWarning($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
             }
 
             return _configFileWatcher is not null;
@@ -208,8 +209,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         catch (Exception ex)
         {
             // Need to remove the dependencies in startup on the RuntimeConfigProvider
-            // before we can have an ILogger here.
-            Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
+            // before we can have an injected ILogger here.
+            (_logger as ILogger ?? BootstrapLogger.Instance).LogWarning("Unable to hot reload configuration file due to " + ex.Message);
         }
     }
 

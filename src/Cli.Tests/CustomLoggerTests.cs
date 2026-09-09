@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
+using System.Text.RegularExpressions;
+
 namespace Cli.Tests;
 
 /// <summary>
@@ -30,21 +33,34 @@ public class CustomLoggerTests
     }
 
     /// <summary>
-    /// Redirects Console.Out and Console.Error around <paramref name="action"/>
-    /// and returns whatever was written to each. Restores the original writers
-    /// on exit.
+    /// Matches the timestamp prefix: exactly three fractional-second digits followed by a
+    /// literal 'Z'. The 'Z' immediately after the third digit is what rules out any
+    /// additional (e.g. microsecond) precision.
     /// </summary>
-    private static (string Stdout, string Stderr) CaptureConsole(Action action)
+    private static readonly Regex _timestampPrefix =
+        new(@"^(?<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z) ", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Redirects Console.Out and Console.Error around <paramref name="action"/>
+    /// and returns whatever was written to each, together with the UTC instants
+    /// captured immediately before and after the action. Restores the original
+    /// writers on exit.
+    /// </summary>
+    private static (string Stdout, string Stderr, DateTime Before, DateTime After) CaptureConsole(Action action)
     {
         TextWriter originalOut = Console.Out;
         TextWriter originalError = Console.Error;
         StringWriter stdout = new();
         StringWriter stderr = new();
+        DateTime before;
+        DateTime after;
         try
         {
             Console.SetOut(stdout);
             Console.SetError(stderr);
+            before = DateTime.UtcNow;
             action();
+            after = DateTime.UtcNow;
         }
         finally
         {
@@ -52,7 +68,61 @@ public class CustomLoggerTests
             Console.SetError(originalError);
         }
 
-        return (stdout.ToString(), stderr.ToString());
+        return (stdout.ToString(), stderr.ToString(), before, after);
+    }
+
+    /// <summary>
+    /// Asserts that <paramref name="entry"/> begins with a timestamp that parses as UTC,
+    /// ends in 'Z', carries exactly three fractional-second digits, and falls inside the
+    /// window captured around the logging call. Returns the remainder of the entry so
+    /// callers can keep asserting on the severity label and message.
+    /// </summary>
+    private static string AssertStartsWithUtcTimestamp(string entry, DateTime before, DateTime after)
+    {
+        System.Text.RegularExpressions.Match match = _timestampPrefix.Match(entry);
+        Assert.IsTrue(match.Success,
+            $"Expected entry to start with an ISO 8601 UTC timestamp (yyyy-MM-ddTHH:mm:ss.fffZ) but got: '{entry}'");
+
+        string timestamp = match.Groups["ts"].Value;
+        Assert.IsTrue(timestamp.EndsWith("Z", StringComparison.Ordinal),
+            $"Timestamp '{timestamp}' must end with 'Z' to denote UTC.");
+        Assert.AreEqual(3, timestamp.Split('.')[1].TrimEnd('Z').Length,
+            $"Timestamp '{timestamp}' must carry exactly three fractional-second digits.");
+
+        Assert.IsTrue(
+            DateTime.TryParseExact(
+                timestamp,
+                "yyyy-MM-dd'T'HH:mm:ss.fff'Z'",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out DateTime parsed),
+            $"Timestamp '{timestamp}' could not be parsed as an invariant-culture UTC value.");
+        Assert.AreEqual(DateTimeKind.Utc, parsed.Kind, "Parsed timestamp must be UTC.");
+
+        // The emitted value is truncated to milliseconds, so compare against a
+        // millisecond-truncated lower bound.
+        DateTime lowerBound = before.AddTicks(-(before.Ticks % TimeSpan.TicksPerMillisecond));
+        Assert.IsTrue(parsed >= lowerBound && parsed <= after,
+            $"Timestamp '{timestamp}' is outside the window [{lowerBound:O}, {after:O}] captured around the log call.");
+
+        return entry[match.Length..];
+    }
+
+    /// <summary>
+    /// Asserts that every emitted line is timestamped (the CLI logger writes one line per
+    /// entry) and returns the lines with their timestamps stripped.
+    /// </summary>
+    private static string[] AssertEveryEntryTimestamped(string output, DateTime before, DateTime after)
+    {
+        string[] entries = output
+            .Split('\n')
+            .Select(line => line.TrimEnd('\r'))
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToArray();
+
+        Assert.IsTrue(entries.Length > 0, $"Expected at least one log entry but got: '{output}'");
+
+        return entries.Select(entry => AssertStartsWithUtcTimestamp(entry, before, after)).ToArray();
     }
 
     private static ILogger NewLogger() =>
@@ -72,13 +142,15 @@ public class CustomLoggerTests
     {
         const string Message = "test message";
 
-        (string stdout, string stderr) = CaptureConsole(() => NewLogger().Log(logLevel, Message));
+        (string stdout, string stderr, DateTime before, DateTime after) =
+            CaptureConsole(() => NewLogger().Log(logLevel, Message));
 
         string actual = expectStderr ? stderr : stdout;
         string other = expectStderr ? stdout : stderr;
 
-        Assert.IsTrue(actual.StartsWith(expectedPrefix),
-            $"Expected output to start with '{expectedPrefix}' but got: '{actual}'");
+        string[] withoutTimestamps = AssertEveryEntryTimestamped(actual, before, after);
+        Assert.IsTrue(withoutTimestamps.Single().StartsWith(expectedPrefix),
+            $"Expected the timestamp to be followed immediately by '{expectedPrefix}' but got: '{actual}'");
         StringAssert.Contains(actual, Message);
         Assert.AreEqual(string.Empty, other,
             $"Did not expect output on the other stream but got: '{other}'");
@@ -94,7 +166,7 @@ public class CustomLoggerTests
     {
         Cli.Utils.IsMcpStdioMode = true;
 
-        (string stdout, string stderr) = CaptureConsole(() =>
+        (string stdout, string stderr, _, _) = CaptureConsole(() =>
         {
             ILogger logger = NewLogger();
             logger.Log(LogLevel.Information, "info should not appear");
@@ -117,7 +189,7 @@ public class CustomLoggerTests
         Cli.Utils.IsCliOverriding = true;
         Cli.Utils.CliLogLevel = LogLevel.Warning;
 
-        (string stdout, string stderr) = CaptureConsole(() =>
+        (string stdout, string stderr, DateTime before, DateTime after) = CaptureConsole(() =>
         {
             ILogger logger = NewLogger();
             logger.Log(LogLevel.Information, "filtered info");   // below threshold
@@ -129,6 +201,13 @@ public class CustomLoggerTests
         Assert.IsFalse(stderr.Contains("filtered info"), $"Below-threshold log should be filtered. Got: '{stderr}'");
         StringAssert.Contains(stderr, "warn: visible warn");
         StringAssert.Contains(stderr, "fail: visible error");
+
+        // Every emitted entry - not just the first - must carry a UTC timestamp.
+        string[] withoutTimestamps = AssertEveryEntryTimestamped(stderr, before, after);
+        CollectionAssert.AreEqual(
+            new[] { "warn: visible warn", "fail: visible error" },
+            withoutTimestamps,
+            $"Expected exactly the above-threshold entries, each prefixed by a timestamp. Got: '{stderr}'");
     }
 
     /// <summary>
@@ -143,16 +222,24 @@ public class CustomLoggerTests
         Cli.Utils.IsConfigOverriding = true;
         Cli.Utils.ConfigLogLevel = LogLevel.Information;
 
-        (string stdout, string stderr) = CaptureConsole(() =>
+        (string stdout, string stderr, DateTime before, DateTime after) = CaptureConsole(() =>
         {
             ILogger logger = NewLogger();
-            logger.Log(LogLevel.Debug, "filtered debug");      // below threshold
-            logger.Log(LogLevel.Information, "visible info");  // at threshold
+            logger.Log(LogLevel.Debug, "filtered debug");        // below threshold
+            logger.Log(LogLevel.Information, "visible info");    // at threshold
+            logger.Log(LogLevel.Error, "visible error");         // above threshold
         });
 
         Assert.AreEqual(string.Empty, stdout, "MCP mode must never write to stdout.");
         Assert.IsFalse(stderr.Contains("filtered debug"), $"Below-threshold log should be filtered. Got: '{stderr}'");
         StringAssert.Contains(stderr, "info: visible info");
+
+        // Every emitted entry - not just the first - must carry a UTC timestamp.
+        string[] withoutTimestamps = AssertEveryEntryTimestamped(stderr, before, after);
+        CollectionAssert.AreEqual(
+            new[] { "info: visible info", "fail: visible error" },
+            withoutTimestamps,
+            $"Expected exactly the above-threshold entries, each prefixed by a timestamp. Got: '{stderr}'");
     }
 
     /// <summary>
@@ -168,7 +255,7 @@ public class CustomLoggerTests
         Cli.Utils.IsConfigOverriding = true;
         Cli.Utils.ConfigLogLevel = LogLevel.Information;
 
-        (_, string stderr) = CaptureConsole(() =>
+        (_, string stderr, _, _) = CaptureConsole(() =>
         {
             ILogger logger = NewLogger();
             logger.Log(LogLevel.Information, "filtered by CLI Warning");

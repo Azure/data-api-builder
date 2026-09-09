@@ -3,6 +3,8 @@
 
 using System.IO.Abstractions;
 using System.Security.Cryptography;
+using Azure.DataApiBuilder.Product;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config.Utilities;
 
@@ -61,13 +63,13 @@ internal class FileUtilities
                 }
                 else
                 {
-                    Console.WriteLine($"Path '{filePath}' not found in: " + Directory.GetCurrentDirectory());
+                    BootstrapLogger.Instance.LogWarning($"Path '{filePath}' not found in: " + Directory.GetCurrentDirectory());
                     throw new FileNotFoundException();
                 }
             }
             catch (IOException ex)
             {
-                Console.WriteLine($"IO Exception, retrying due to {ex.Message}");
+                BootstrapLogger.Instance.LogWarning($"IO Exception, retrying due to {ex.Message}");
                 if (runCount == RunLimit)
                 {
                     throw;

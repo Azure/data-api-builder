@@ -397,8 +397,8 @@ public record RuntimeConfig
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _autoentityNameToDataSourceName = _autoentityNameToDataSourceName.Concat(config._autoentityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                        allEntities = allEntities?.Concat(config.Entities.AsEnumerable());
-                        allAutoentities = allAutoentities?.Concat(config.Autoentities.AsEnumerable());
+                        allEntities = allEntities is null ? config.Entities.AsEnumerable() : allEntities.Concat(config.Entities.AsEnumerable());
+                        allAutoentities = allAutoentities is null ? config.Autoentities.AsEnumerable() : allAutoentities.Concat(config.Autoentities.AsEnumerable());
                     }
                     catch (Exception e)
                     {

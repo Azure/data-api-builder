@@ -1834,20 +1834,22 @@ namespace Azure.DataApiBuilder.Core.Services
                     innerException: ex);
             }
 
+            string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(schemaName, tableName);
+
+            // Resolved before the connection below is opened. Reading the catalog uses a connection
+            // of its own, and nesting that inside an already open one exhausts a small pool: with
+            // "Max Pool Size=1" the inner open waits for a connection the outer scope still holds.
+            string projection = await BuildSchemaProjectionAsync(schemaName, tableName);
+
             await conn.OpenAsync();
 
             DataAdapterT adapterForTable = new();
             CommandT selectCommand = new()
             {
-                Connection = conn
+                Connection = conn,
+                CommandText
+                = $"SELECT {projection} FROM {tableNameWithSchemaPrefix}"
             };
-
-            string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(schemaName, tableName);
-
-            string projection = await BuildSchemaProjectionAsync(schemaName, tableName);
-
-            selectCommand.CommandText
-                = $"SELECT {projection} FROM {tableNameWithSchemaPrefix}";
             adapterForTable.SelectCommand = selectCommand;
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableNameWithSchemaPrefix);
@@ -1984,11 +1986,14 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Key used by the per-object metadata caches held during initialization.
+        /// Key used by the per-object metadata caches held during initialization. The schema name is
+        /// length-prefixed rather than joined with a dot, because bracketed identifiers may contain
+        /// dots: <c>[a.b].[c]</c> and <c>[a].[b.c]</c> are different objects that a "schema.table"
+        /// key would collide, letting one reuse the other's catalog rows.
         /// </summary>
         private static string GetObjectCacheKey(string schemaName, string tableName)
         {
-            return $"{schemaName}.{tableName}";
+            return $"{schemaName.Length}:{schemaName}{tableName}";
         }
 
         /// <summary>

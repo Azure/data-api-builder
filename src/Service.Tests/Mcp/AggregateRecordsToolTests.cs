@@ -3,17 +3,25 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -103,6 +111,246 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         #endregion
 
+        #region Metadata and Query Construction Tests
+
+        [DataTestMethod]
+        [DataRow(EntitySourceType.Table, false)]
+        [DataRow(EntitySourceType.View, false)]
+        [DataRow(EntitySourceType.StoredProcedure, true)]
+        public void ValidateEntitySourceType_OnlyRejectsStoredProcedures(EntitySourceType sourceType, bool expectError)
+        {
+            DatabaseObject databaseObject = sourceType switch
+            {
+                EntitySourceType.Table => new DatabaseTable("dbo", "books"),
+                EntitySourceType.View => new DatabaseView("dbo", "books"),
+                _ => new DatabaseStoredProcedure("dbo", "books")
+            };
+            databaseObject.SourceType = sourceType;
+
+            CallToolResult? result = InvokePrivate<CallToolResult?>(
+                "ValidateEntitySourceType",
+                "Book",
+                databaseObject,
+                "aggregate_records",
+                null);
+
+            Assert.AreEqual(expectError, result is not null);
+            if (result is not null)
+            {
+                AssertErrorResult(result, "InvalidEntity");
+            }
+        }
+
+        /// <summary>
+        /// Verifies that aggregate and group-by fields are resolved independently and that either kind of missing field produces a field error.
+        /// </summary>
+        [TestMethod]
+        public void ValidateFieldsExist_ValidatesAggregateAndGroupByFields()
+        {
+            Mock<ISqlMetadataProvider> metadata = new();
+            metadata.Setup(x => x.TryGetBackingColumn("Book", "price", out It.Ref<string?>.IsAny))
+                .Returns((string _, string field, out string? backing) =>
+                {
+                    backing = field == "price" ? "book_price" : null;
+                    return field == "price";
+                });
+            metadata.Setup(x => x.TryGetBackingColumn("Book", "category", out It.Ref<string?>.IsAny))
+                .Returns((string _, string field, out string? backing) =>
+                {
+                    backing = field == "category" ? "book_category" : null;
+                    return field == "category";
+                });
+
+            AggregateRecordsTool.AggregateArguments valid = CreateAggregateArguments(
+                field: "price",
+                groupby: new() { "category" });
+            Assert.IsNull(InvokePrivate<CallToolResult?>(
+                "ValidateFieldsExist", valid, "Book", metadata.Object, "aggregate_records", null));
+
+            AggregateRecordsTool.AggregateArguments badField = valid with { Field = "missing" };
+            CallToolResult fieldError = InvokePrivate<CallToolResult>(
+                "ValidateFieldsExist", badField, "Book", metadata.Object, "aggregate_records", null);
+            AssertErrorResult(fieldError, "FieldNotFound");
+
+            AggregateRecordsTool.AggregateArguments badGroup = valid with { Groupby = new() { "missing" } };
+            CallToolResult groupError = InvokePrivate<CallToolResult>(
+                "ValidateFieldsExist", badGroup, "Book", metadata.Object, "aggregate_records", null);
+            AssertErrorResult(groupError, "FieldNotFound");
+        }
+
+        /// <summary>
+        /// Verifies mapped fields resolve to backing columns, missing fields return an error, and count(*) uses the first primary key.
+        /// </summary>
+        [TestMethod]
+        public void ResolveBackingField_HandlesMappedFieldsAndCountStarPrimaryKeys()
+        {
+            SourceDefinition definition = new();
+            Mock<ISqlMetadataProvider> metadata = new();
+            metadata.Setup(x => x.TryGetBackingColumn("Book", "price", out It.Ref<string?>.IsAny))
+                .Returns((string _, string _, out string? backing) =>
+                {
+                    backing = "book_price";
+                    return true;
+                });
+            metadata.Setup(x => x.TryGetBackingColumn("Book", "missing", out It.Ref<string?>.IsAny))
+                .Returns(false);
+            metadata.Setup(x => x.GetSourceDefinition("Book")).Returns(definition);
+
+            object?[] mappedArgs =
+            {
+                CreateAggregateArguments(field: "price"), "Book", metadata.Object, "aggregate_records", null, null
+            };
+            string mapped = InvokePrivateWithMutableArguments<string>("ResolveBackingField", mappedArgs);
+            Assert.AreEqual("book_price", mapped);
+            Assert.IsNull(mappedArgs[4]);
+
+            object?[] missingArgs =
+            {
+                CreateAggregateArguments(field: "missing"), "Book", metadata.Object, "aggregate_records", null, null
+            };
+            Assert.IsNull(InvokePrivateWithMutableArguments<string?>("ResolveBackingField", missingArgs));
+            AssertErrorResult((CallToolResult)missingArgs[4]!, "FieldNotFound");
+
+            AggregateRecordsTool.AggregateArguments countStar = CreateAggregateArguments(
+                function: "count",
+                field: "*",
+                isCountStar: true);
+            object?[] noPrimaryKeyArgs = { countStar, "Book", metadata.Object, "aggregate_records", null, null };
+            Assert.IsNull(InvokePrivateWithMutableArguments<string?>("ResolveBackingField", noPrimaryKeyArgs));
+            AssertErrorResult((CallToolResult)noPrimaryKeyArgs[4]!, "InvalidEntity");
+
+            definition.PrimaryKey.Add("book_id");
+            object?[] primaryKeyArgs = { countStar, "Book", metadata.Object, "aggregate_records", null, null };
+            Assert.AreEqual("book_id", InvokePrivateWithMutableArguments<string>("ResolveBackingField", primaryKeyArgs));
+        }
+
+        /// <summary>
+        /// Verifies group-by, distinct aggregation, having predicates, and paging inputs populate their corresponding query-structure state.
+        /// </summary>
+        [TestMethod]
+        public void BuildAggregationStructure_AddsGroupsAggregationHavingAndPaginationState()
+        {
+            SqlQueryStructure structure = CreateUninitializedQueryStructure();
+            Mock<ISqlMetadataProvider> metadata = new();
+            metadata.Setup(x => x.TryGetBackingColumn("Book", "category", out It.Ref<string?>.IsAny))
+                .Returns((string _, string _, out string? backing) =>
+                {
+                    backing = "book_category";
+                    return true;
+                });
+            AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(
+                function: "sum",
+                field: "price",
+                distinct: true,
+                first: 2,
+                groupby: new() { "category" },
+                havingOperators: new()
+                {
+                    ["eq"] = 10,
+                    ["neq"] = 20,
+                    ["gt"] = 30,
+                    ["gte"] = 40,
+                    ["lt"] = 50,
+                    ["lte"] = 60
+                },
+                havingInValues: new() { 20, 40 });
+
+            InvokePrivate<object?>(
+                "BuildAggregationStructure",
+                args,
+                structure,
+                new DatabaseTable("dbo", "books"),
+                "book_price",
+                "sum_price",
+                "Book",
+                metadata.Object);
+
+            Assert.AreEqual(1, structure.Columns.Count);
+            Assert.AreEqual(1, structure.GroupByMetadata.Fields.Count);
+            Assert.AreEqual(1, structure.GroupByMetadata.Aggregations.Count);
+            Assert.IsTrue(structure.GroupByMetadata.RequestedAggregations);
+            Assert.IsNotNull(structure.GroupByMetadata.Aggregations[0].HavingPredicates);
+            Assert.AreEqual(8, structure.Parameters.Count);
+            Assert.IsTrue(structure.IsListQuery);
+            Assert.AreEqual(0, structure.OrderByColumns.Count);
+        }
+
+        [TestMethod]
+        public void BuildAggregationStructure_InvalidHavingOperator_ThrowsArgumentException()
+        {
+            SqlQueryStructure structure = CreateUninitializedQueryStructure();
+            AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(
+                havingOperators: new() { ["invalid"] = 10 });
+
+            TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(() => InvokePrivate<object?>(
+                "BuildAggregationStructure",
+                args,
+                structure,
+                new DatabaseTable("dbo", "books"),
+                "book_price",
+                "sum_price",
+                "Book",
+                Mock.Of<ISqlMetadataProvider>()));
+
+            Assert.IsInstanceOfType<ArgumentException>(exception.InnerException);
+        }
+
+        [TestMethod]
+        public void BuildAggregationStructure_InvalidGroupByMapping_ThrowsDataApiBuilderException()
+        {
+            SqlQueryStructure structure = CreateUninitializedQueryStructure();
+            Mock<ISqlMetadataProvider> metadata = new();
+            metadata.Setup(x => x.TryGetBackingColumn("Book", "missing", out It.Ref<string?>.IsAny))
+                .Returns(false);
+            AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(groupby: new() { "missing" });
+
+            TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(() =>
+                InvokePrivate<object?>(
+                    "BuildAggregationStructure",
+                    args,
+                    structure,
+                    new DatabaseTable("dbo", "books"),
+                    "book_price",
+                    "sum_price",
+                    "Book",
+                    metadata.Object));
+
+            Assert.IsInstanceOfType<Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException>(exception.InnerException);
+        }
+
+        [DataTestMethod]
+        [DataRow("SELECT TOP 10 value FOR JSON PATH", true, "desc", false, "SELECT value ORDER BY SUM([table0].[price]) DESC OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY FOR JSON PATH", DisplayName = "Paging removes TOP and inserts descending OFFSET/FETCH before FOR JSON")]
+        [DataRow("SELECT value FOR JSON PATH", false, "asc", true, "SELECT value ORDER BY SUM(DISTINCT [table0].[price]) ASC FOR JSON PATH", DisplayName = "Distinct ascending order is inserted before FOR JSON")]
+        [DataRow("SELECT value", false, "desc", false, "SELECT value ORDER BY SUM([table0].[price]) DESC", DisplayName = "Descending order is appended when no JSON suffix exists")]
+        public void ApplyOrderByAndPagination_RewritesSql(
+            string sql,
+            bool paginate,
+            string orderby,
+            bool distinct,
+            string expected)
+        {
+            SqlQueryStructure structure = CreateUninitializedQueryStructure();
+            Mock<IQueryBuilder> builder = new();
+            builder.Setup(x => x.QuoteIdentifier(It.IsAny<string>()))
+                .Returns((string value) => $"[{value}]");
+            AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(
+                function: "sum",
+                field: "price",
+                distinct: distinct,
+                orderby: orderby,
+                first: paginate ? 9 : null,
+                after: paginate ? Convert.ToBase64String(Encoding.UTF8.GetBytes("4")) : null,
+                groupby: new() { "category" });
+
+            string result = InvokePrivate<string>(
+                "ApplyOrderByAndPagination", sql, args, structure, builder.Object, "price");
+
+            Assert.AreEqual(expected, result);
+            Assert.AreEqual(paginate ? 2 : 0, structure.Parameters.Count);
+        }
+
+        #endregion
+
         #region Configuration Tests
 
         [DataTestMethod]
@@ -179,6 +427,50 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             string message = AssertErrorResult(result, "InvalidArguments");
             Assert.IsTrue(message.Contains(expectedInMessage),
                 $"Error message must contain '{expectedInMessage}'. Actual: '{message}'");
+        }
+
+        [DataTestMethod]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"field\":\"\"}", "EntityNotFound", DisplayName = "Empty count field reaches metadata resolution")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"sum\",\"field\":\"\"}", "InvalidArguments", DisplayName = "Empty non-count field is invalid")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"field\":\"id\",\"distinct\":\"yes\"}", "InvalidArguments", DisplayName = "Distinct must be Boolean")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":0}", "InvalidArguments", DisplayName = "Page size must be positive")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":1}", "InvalidArguments", DisplayName = "Page size requires group-by")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"after\":\"MA==\"}", "InvalidArguments", DisplayName = "Cursor requires page size")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"after\":\"MA==\"}", "InvalidArguments", DisplayName = "Grouped cursor still requires page size")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"having\":{\"in\":[]}}", "InvalidArguments", DisplayName = "Having in-list cannot be empty")]
+        public async Task AggregateRecords_AdditionalArgumentEdges_ReturnExpectedError(string json, string expectedError)
+        {
+            CallToolResult result = await ExecuteToolAsync(CreateDefaultServiceProvider(), json);
+
+            AssertErrorResult(result, expectedError);
+        }
+
+        [TestMethod]
+        public async Task AggregateRecords_ValidHavingOperators_PassArgumentValidation()
+        {
+            const string json = """
+                {
+                    "entity": "Book",
+                    "function": "count",
+                    "groupby": ["title", "TITLE", ""],
+                    "having": {
+                        "eq": 1,
+                        "neq": 2,
+                        "gt": 3,
+                        "gte": 4,
+                        "lt": 5,
+                        "lte": 6,
+                        "in": [7, 8]
+                    }
+                }
+                """;
+
+            CallToolResult result = await ExecuteToolAsync(CreateDefaultServiceProvider(), json);
+
+            JsonElement content = ParseContent(result);
+            Assert.AreNotEqual(
+                "InvalidArguments",
+                content.GetProperty("error").GetProperty("type").GetString());
         }
 
         #endregion
@@ -372,6 +664,118 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(expectedOffset, AggregateRecordsTool.DecodeCursorOffset(cursor));
         }
 
+        /// <summary>
+        /// Verifies paging requires group-by and first, while order-by without group-by is ignored rather than rejected.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(0, true, 1, null, false, "first", DisplayName = "Page size without group-by is rejected")]
+        [DataRow(0, true, null, "MA==", false, "after", DisplayName = "Cursor without group-by is rejected")]
+        [DataRow(1, true, null, "MA==", false, "first", DisplayName = "Cursor without page size is rejected")]
+        [DataRow(0, true, null, null, true, null, DisplayName = "Order-by without group-by is ignored")]
+        public void ValidateGroupByDependencies_HandlesEveryDependency(
+            int groupbyCount,
+            bool userProvidedOrderby,
+            int? first,
+            string? after,
+            bool expectSuccess,
+            string? expectedText)
+        {
+            CallToolResult? result = AggregateRecordsTool.ValidateGroupByDependencies(
+                groupbyCount,
+                ref userProvidedOrderby,
+                first,
+                after,
+                "aggregate_records",
+                logger: null);
+
+            Assert.AreEqual(expectSuccess, result is null);
+            if (groupbyCount == 0)
+            {
+                Assert.IsFalse(userProvidedOrderby);
+            }
+
+            if (result is not null && expectedText is not null)
+            {
+                StringAssert.Contains(GetText(result), expectedText);
+            }
+        }
+
+        [TestMethod]
+        public void BuildSimpleResponse_NullEmptyAndPopulatedResults_ReturnExpectedArrays()
+        {
+            foreach (JsonArray? input in new JsonArray?[]
+            {
+                null,
+                new(),
+                new(new JsonObject { ["count"] = 3 })
+            })
+            {
+                CallToolResult result = InvokePrivateResponseBuilder(
+                    "BuildSimpleResponse",
+                    input,
+                    "Book",
+                    "count",
+                    null);
+                JsonElement response = ParseContent(result);
+                JsonElement values = response.GetProperty("result");
+
+                Assert.AreEqual(JsonValueKind.Array, values.ValueKind);
+                Assert.AreEqual(1, values.GetArrayLength());
+                if (input is null || input.Count == 0)
+                {
+                    Assert.AreEqual(JsonValueKind.Null, values[0].GetProperty("count").ValueKind);
+                }
+                else
+                {
+                    Assert.AreEqual(3, values[0].GetProperty("count").GetInt32());
+                }
+            }
+        }
+
+        /// <summary>
+        /// Verifies a page-size-plus-one lookahead is removed and the next cursor advances from the incoming offset by returned item count.
+        /// </summary>
+        [TestMethod]
+        public void BuildPaginatedResponse_TrimsLookaheadAndAdvancesCursor()
+        {
+            JsonArray input = new(
+                new JsonObject { ["group"] = "a" },
+                new JsonObject { ["group"] = "b" },
+                new JsonObject { ["group"] = "c" });
+            string after = Convert.ToBase64String(Encoding.UTF8.GetBytes("5"));
+
+            CallToolResult result = InvokePrivateResponseBuilder(
+                "BuildPaginatedResponse",
+                input,
+                2,
+                after,
+                "Book",
+                null);
+            JsonElement page = ParseContent(result).GetProperty("result");
+
+            Assert.AreEqual(2, page.GetProperty("items").GetArrayLength());
+            Assert.IsTrue(page.GetProperty("hasNextPage").GetBoolean());
+            string endCursor = page.GetProperty("endCursor").GetString()!;
+            Assert.AreEqual("7", Encoding.UTF8.GetString(Convert.FromBase64String(endCursor)));
+        }
+
+        [TestMethod]
+        public void BuildPaginatedResponse_EmptyResult_HasNoCursorOrNextPage()
+        {
+            CallToolResult result = InvokePrivateResponseBuilder(
+                "BuildPaginatedResponse",
+                null,
+                2,
+                null,
+                "Book",
+                null);
+            JsonElement page = ParseContent(result).GetProperty("result");
+
+            Assert.AreEqual(0, page.GetProperty("items").GetArrayLength());
+            Assert.IsFalse(page.GetProperty("hasNextPage").GetBoolean());
+            Assert.AreEqual(JsonValueKind.Null, page.GetProperty("endCursor").ValueKind);
+        }
+
         #endregion
 
         #region Timeout and Cancellation Tests
@@ -547,6 +951,98 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             TextContentBlock firstContent = (TextContentBlock)result.Content[0];
             return JsonDocument.Parse(firstContent.Text).RootElement;
+        }
+
+        private static string GetText(CallToolResult result)
+        {
+            return ((TextContentBlock)result.Content[0]).Text;
+        }
+
+        private static CallToolResult InvokePrivateResponseBuilder(string methodName, params object?[] arguments)
+        {
+            MethodInfo method = typeof(AggregateRecordsTool).GetMethod(
+                methodName,
+                BindingFlags.NonPublic | BindingFlags.Static)!;
+            return (CallToolResult)method.Invoke(null, arguments)!;
+        }
+
+        private static T InvokePrivate<T>(string methodName, params object?[] arguments)
+        {
+            MethodInfo method = typeof(AggregateRecordsTool).GetMethod(
+                methodName,
+                BindingFlags.NonPublic | BindingFlags.Static)!;
+            return (T)method.Invoke(null, arguments)!;
+        }
+
+        private static T InvokePrivateWithMutableArguments<T>(string methodName, object?[] arguments)
+        {
+            MethodInfo method = typeof(AggregateRecordsTool).GetMethod(
+                methodName,
+                BindingFlags.NonPublic | BindingFlags.Static)!;
+            return (T)method.Invoke(null, arguments)!;
+        }
+
+        private static AggregateRecordsTool.AggregateArguments CreateAggregateArguments(
+            string function = "sum",
+            string field = "price",
+            bool isCountStar = false,
+            bool distinct = false,
+            string orderby = "desc",
+            int? first = null,
+            string? after = null,
+            List<string>? groupby = null,
+            Dictionary<string, double>? havingOperators = null,
+            List<double>? havingInValues = null)
+        {
+            return new AggregateRecordsTool.AggregateArguments(
+                EntityName: "Book",
+                Function: function,
+                Field: field,
+                IsCountStar: isCountStar,
+                Distinct: distinct,
+                Filter: null,
+                UserProvidedOrderby: true,
+                Orderby: orderby,
+                First: first,
+                After: after,
+                Groupby: groupby ?? new(),
+                HavingOperators: havingOperators,
+                HavingInValues: havingInValues);
+        }
+
+        private static SqlQueryStructure CreateUninitializedQueryStructure()
+        {
+            SqlQueryStructure structure = (SqlQueryStructure)RuntimeHelpers.GetUninitializedObject(typeof(SqlQueryStructure));
+            SetBackingField(structure, nameof(BaseQueryStructure.SourceAlias), "table0");
+            SetBackingField(structure, nameof(BaseQueryStructure.Columns), new List<LabelledColumn>());
+            SetBackingField(structure, nameof(BaseQueryStructure.Counter), new IncrementingInteger());
+            structure.Parameters = new();
+            SetBackingField(structure, nameof(SqlQueryStructure.OrderByColumns), new List<OrderByColumn>
+            {
+                new("dbo", "books", "id", "table0", OrderBy.DESC)
+            });
+            SetBackingField(structure, nameof(SqlQueryStructure.GroupByMetadata), new GroupByMetadata());
+            return structure;
+        }
+
+        private static void SetBackingField(object instance, string propertyName, object value)
+        {
+            Type? type = instance.GetType();
+            while (type is not null)
+            {
+                FieldInfo? field = type.GetField(
+                    $"<{propertyName}>k__BackingField",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                if (field is not null)
+                {
+                    field.SetValue(instance, value);
+                    return;
+                }
+
+                type = type.BaseType;
+            }
+
+            Assert.Fail($"Backing field for property '{propertyName}' was not found.");
         }
 
         /// <summary>

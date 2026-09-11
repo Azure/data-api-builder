@@ -29,6 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // McpJsonHelper prefers decimal for maximum precision.
             Assert.AreEqual(42m, McpJsonHelper.GetJsonValue(Value("42")));
             Assert.AreEqual(3.14m, McpJsonHelper.GetJsonValue(Value("3.14")));
+            Assert.AreEqual(1e40, McpJsonHelper.GetJsonValue(Value("1e40")));
         }
 
         [TestMethod]

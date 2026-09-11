@@ -121,5 +121,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             Assert.AreEqual(42m, Convert.ToDecimal(McpResponseBuilder.GetJsonValue(number)));
         }
+
+        [TestMethod]
+        public void GetJsonValue_ReturnsTypedAndRawValues()
+        {
+            Assert.AreEqual("text", McpResponseBuilder.GetJsonValue(JsonDocument.Parse("\"text\"").RootElement));
+            Assert.AreEqual(true, McpResponseBuilder.GetJsonValue(JsonDocument.Parse("true").RootElement));
+            Assert.AreEqual(false, McpResponseBuilder.GetJsonValue(JsonDocument.Parse("false").RootElement));
+            Assert.IsNull(McpResponseBuilder.GetJsonValue(JsonDocument.Parse("null").RootElement));
+            Assert.AreEqual("{\"id\":1}", McpResponseBuilder.GetJsonValue(JsonDocument.Parse("{\"id\":1}").RootElement));
+        }
     }
 }

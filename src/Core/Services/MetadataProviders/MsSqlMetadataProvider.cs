@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
 using System.Net;
@@ -43,6 +44,23 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             _runtimeConfigProvider = runtimeConfigProvider;
         }
+
+        /// <summary>
+        /// SQL Server CLR user-defined types. Microsoft.Data.SqlClient resolves their CLR type
+        /// through the Microsoft.SqlServer.Types assembly, which Data API builder does not
+        /// reference, so the reader reports no type for the column and the data adapter fails.
+        /// Deliberately limited to the types that cannot be read at all: timestamp, xml and vector
+        /// columns do resolve to a CLR type and are left untouched.
+        /// </summary>
+        private static readonly ImmutableHashSet<string> _unsupportedColumnDataTypes =
+            ImmutableHashSet.Create(
+                StringComparer.OrdinalIgnoreCase,
+                "geometry",
+                "geography",
+                "hierarchyid");
+
+        /// <inheritdoc/>
+        protected override ImmutableHashSet<string> UnsupportedColumnDataTypes => _unsupportedColumnDataTypes;
 
         public override string GetDefaultSchemaName()
         {

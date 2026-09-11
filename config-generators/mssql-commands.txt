@@ -22,6 +22,7 @@ add VectorType --config "dab-config.MsSql.json" --source vector_type_table --res
 update VectorType --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update"
 update VectorOwner --config "dab-config.MsSql.json" --relationship vectors --target.entity VectorType --cardinality many --relationship.fields "id:owner_id"
 update VectorType --config "dab-config.MsSql.json" --relationship owner --target.entity VectorOwner --cardinality one --relationship.fields "owner_id:id"
+add GeometryType --config "dab-config.MsSql.json" --source geometry_type_table --rest true --graphql true --permissions "anonymous:read"
 add Profile --config "dab-config.MsSql.json" --source profiles --rest true --graphql true --permissions "anonymous:create,read,delete,update"
 update Profile --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update"
 add stocks_price --config "dab-config.MsSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete"

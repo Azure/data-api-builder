@@ -11,6 +11,7 @@ DROP VIEW IF EXISTS books_view_with_mapping;
 DROP VIEW IF EXISTS stocks_view_selected;
 DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP VIEW IF EXISTS books_publishers_view_composite_insertable;
+DROP VIEW IF EXISTS geometry_only_view;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
@@ -44,6 +45,7 @@ DROP TABLE IF EXISTS brokers;
 DROP TABLE IF EXISTS type_table;
 DROP TABLE IF EXISTS vector_type_table;
 DROP TABLE IF EXISTS vector_owners;
+DROP TABLE IF EXISTS geometry_type_table;
 DROP TABLE IF EXISTS profiles;
 DROP TABLE IF EXISTS trees;
 DROP TABLE IF EXISTS fungi;
@@ -250,6 +252,12 @@ CREATE TABLE vector_type_table(
     vector_data vector(3),
     vector_data_max vector(1998),
     CONSTRAINT FK_vector_type_table_owner FOREIGN KEY (owner_id) REFERENCES vector_owners(id) ON DELETE CASCADE
+);
+
+CREATE TABLE geometry_type_table(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    geom geometry NULL
 );
 
 CREATE TABLE profiles(
@@ -656,6 +664,13 @@ VALUES (7, CAST('[' + (
 ) + ']' AS vector(1998)));
 SET IDENTITY_INSERT vector_type_table OFF
 
+SET IDENTITY_INSERT geometry_type_table ON
+INSERT INTO geometry_type_table(id, name, geom)
+VALUES
+    (1, 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    (2, 'null geometry', NULL);
+SET IDENTITY_INSERT geometry_type_table OFF
+
 SET IDENTITY_INSERT profiles ON
 INSERT INTO profiles(id, metadata)
 VALUES
@@ -754,6 +769,7 @@ EXEC('CREATE VIEW books_publishers_view_composite_insertable as SELECT
       books.id, books.title, publishers.name, books.publisher_id
       FROM dbo.books,dbo.publishers
       where publishers.id = books.publisher_id');
+EXEC('CREATE VIEW geometry_only_view AS SELECT geom FROM dbo.geometry_type_table');
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       SELECT * FROM dbo.books
       WHERE id = @id');

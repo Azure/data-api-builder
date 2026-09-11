@@ -100,15 +100,21 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Caches the "Columns" schema collection per database object for the duration of metadata
         /// initialization, so schema discovery and column definition population share one catalog
         /// round trip instead of querying twice per object. Cleared once initialization completes.
+        /// The key is compared with an ordinal comparer: under a case-sensitive collation
+        /// <c>dbo.Foo</c> and <c>dbo.foo</c> are distinct objects, and aliasing them would serve one
+        /// object's catalog rows for the other. Case-insensitive collations are unaffected, since
+        /// they cannot hold both names at once.
         /// </summary>
-        private readonly ConcurrentDictionary<string, DataTable> _columnsMetadataCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, DataTable> _columnsMetadataCache = new(StringComparer.Ordinal);
 
         /// <summary>
         /// Columns left out of the schema projection per database object, mapped to the data type
         /// that made them unreadable. Used to explain the omission when a configured primary key
-        /// turns out to be one of them.
+        /// turns out to be one of them. Keyed by object with an ordinal comparer for the reason
+        /// above; the inner column names stay case-insensitive, matching how this class resolves
+        /// configured field names against the schema.
         /// </summary>
-        private readonly ConcurrentDictionary<string, Dictionary<string, string>> _skippedColumnsByObject = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, Dictionary<string, string>> _skippedColumnsByObject = new(StringComparer.Ordinal);
 
         protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
 

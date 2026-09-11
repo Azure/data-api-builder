@@ -485,6 +485,59 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test to validate that a configured primary key naming a column of an unsupported data
+        /// type fails initialization instead of producing a source definition whose primary key is
+        /// absent from its columns. The error names both the column and the offending type.
+        /// The entity is declared in an in-memory config for the same reason as the test above.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidatePrimaryKeyOnUnsupportedColumnFailsInitialization()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            Dictionary<string, Entity> entities = new()
+            {
+                {
+                    "GeometryKeyed",
+                    new Entity(
+                        Source: new("dbo.geometry_type_table", EntitySourceType.Table, null, new string[] { "geom" }),
+                        Fields: null,
+                        Rest: new(Enabled: true),
+                        GraphQL: new("GeometryKeyed", "GeometryKeyeds", Enabled: true),
+                        Permissions: new EntityPermission[]
+                        {
+                            new(Role: "anonymous",
+                                Actions: new EntityAction[] { new(Action: EntityActionOperation.Read, Fields: null, Policy: null) })
+                        },
+                        Relationships: null,
+                        Mappings: null)
+                }
+            };
+
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig() with { Entities = new RuntimeEntities(entities) };
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
+            await ResetDbStateAsync();
+
+            try
+            {
+                await _sqlMetadataProvider.InitializeAsync();
+                Assert.Fail("Expected DataApiBuilderException was not thrown for a primary key of an unsupported data type.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.IsTrue(
+                    ex.Message.Contains("geom") && ex.Message.Contains("geometry"),
+                    message: $"The error is expected to name the column and its data type. Actual message: {ex.Message}");
+            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
         /// Test to validate successful inference of relationship data based on data provided in the config and the metadata
         /// collected from the MySql database.
         /// </summary>

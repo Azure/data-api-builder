@@ -23,6 +23,17 @@ namespace Azure.DataApiBuilder.Core.Services
         Task InitializeAsync();
 
         /// <summary>
+        /// Initializes this metadata provider for the runtime with cooperative cancellation.
+        /// Implementations that do not override this member retain their existing initialization
+        /// behavior.
+        /// </summary>
+        Task InitializeAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return InitializeAsync();
+        }
+
+        /// <summary>
         /// Obtains the underlying source object's schema name (SQL) or container name (Cosmos).
         /// </summary>
         string GetSchemaName(string entityName);

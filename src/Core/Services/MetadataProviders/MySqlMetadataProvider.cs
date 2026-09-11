@@ -46,16 +46,22 @@ namespace Azure.DataApiBuilder.Core.Services
         /// support 3 level naming of tables.</remarks>
         protected override async Task<DataTable> GetColumnsAsync(
             string schemaName,
-            string tableName)
+            string tableName,
+            CancellationToken cancellationToken)
         {
             using MySqlConnection conn = new(ConnectionString);
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
-            await conn.OpenAsync();
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(
+                conn,
+                _dataSourceName,
+                cancellationToken);
+            await conn.OpenAsync(cancellationToken);
 
             // Each row in the allColumns table corresponds to a single column.
             // Since column restrictions are ignored, this retrieves all the columns
             // in the engine irrespective of database and table name.
-            DataTable allColumns = await conn.GetSchemaAsync("Columns");
+            DataTable allColumns = await conn.GetSchemaAsync(
+                "Columns",
+                cancellationToken);
 
             // Manually filter here to find out which columns need to be removed
             // by checking the database name and table name.

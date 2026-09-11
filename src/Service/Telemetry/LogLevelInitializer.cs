@@ -42,6 +42,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
         private void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            args.CancellationToken.ThrowIfCancellationRequested();
             SetLogLevel();
         }
     }

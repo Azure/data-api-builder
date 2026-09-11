@@ -3,13 +3,20 @@
 
 #nullable enable
 
+using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Service.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -22,8 +29,30 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ServiceCollection services = new();
             TestApplicationLifetime lifetime = new();
             TestMcpStdioServer stdioServer = new();
+            List<string> initializationOrder = new();
+            MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>
+            {
+                [FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME] =
+                    new MockFileData(TestHelper.INITIAL_CONFIG)
+            });
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, isCliLoader: true);
+            RuntimeConfigProvider runtimeConfigProvider = new(configLoader);
+            RuntimeConfigValidator runtimeConfigValidator = new(
+                runtimeConfigProvider,
+                fileSystem,
+                NullLogger<RuntimeConfigValidator>.Instance);
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            metadataProviderFactory
+                .Setup(factory => factory.InitializeAsync(It.IsAny<CancellationToken>()))
+                .Callback(() => initializationOrder.Add("metadata"))
+                .Returns(Task.CompletedTask);
+            TestMcpToolRegistryRefreshService refreshService = new(initializationOrder);
 
-            services.AddSingleton<McpToolRegistry>();
+            services.AddSingleton(configLoader);
+            services.AddSingleton(runtimeConfigProvider);
+            services.AddSingleton(runtimeConfigValidator);
+            services.AddSingleton(metadataProviderFactory.Object);
+            services.AddSingleton<IMcpToolRegistryRefreshService>(refreshService);
             services.AddSingleton<IHostApplicationLifetime>(lifetime);
             services.AddSingleton<IMcpStdioServer>(stdioServer);
 
@@ -39,10 +68,37 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "MCP stdio mode should not stop a host that was never started.");
             Assert.AreEqual(1, stdioServer.RunAsyncCallCount,
                 "MCP stdio mode should still run the stdio JSON-RPC loop.");
+            Assert.AreEqual(1, refreshService.EnsureInitializedCallCount,
+                "MCP stdio mode should initialize the shared tool registry before running the loop.");
+            metadataProviderFactory.Verify(
+                factory => factory.InitializeAsync(It.IsAny<CancellationToken>()),
+                Times.Once);
+            CollectionAssert.AreEqual(
+                new[] { "metadata", "registry" },
+                initializationOrder,
+                "MCP stdio mode should initialize metadata before publishing the registry.");
             Assert.AreEqual(lifetime.ApplicationStopping, stdioServer.CancellationToken,
                 "The stdio loop should keep using the host lifetime cancellation token.");
             Assert.AreEqual(1, host.DisposeCallCount,
                 "MCP stdio mode should dispose the host after the stdio loop exits.");
+        }
+
+        private sealed class TestMcpToolRegistryRefreshService : IMcpToolRegistryRefreshService
+        {
+            private readonly List<string> _initializationOrder;
+
+            public TestMcpToolRegistryRefreshService(List<string> initializationOrder)
+            {
+                _initializationOrder = initializationOrder;
+            }
+
+            public int EnsureInitializedCallCount { get; private set; }
+
+            public void EnsureInitialized()
+            {
+                EnsureInitializedCallCount++;
+                _initializationOrder.Add("registry");
+            }
         }
 
         private sealed class TestHost : IHost

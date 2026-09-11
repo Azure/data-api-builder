@@ -206,6 +206,29 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 $"Producer task did not complete successfully. Status: {producer.Status}, Exception: {producer.Exception?.Message}");
         }
 
+        [TestMethod]
+        public async Task Dispose_WhileWriteIsBlocked_ReturnsWithoutWaitingForStdout()
+        {
+            BlockingTextWriter inner = new();
+            McpStdoutWriter writer = new(inner);
+            Task blockedWrite = Task.Run(() => writer.WriteLine("blocked"));
+
+            Assert.IsTrue(
+                inner.WriteEntered.Wait(TimeSpan.FromSeconds(5)),
+                "The test writer did not enter its blocking write.");
+
+            Task dispose = Task.Run(writer.Dispose);
+            Assert.AreSame(
+                dispose,
+                await Task.WhenAny(dispose, Task.Delay(TimeSpan.FromSeconds(1))),
+                "Disposal must not wait indefinitely for a blocked stdout write.");
+
+            writer.WriteLine("after-dispose");
+            inner.ReleaseWrite.Set();
+            await blockedWrite.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.AreEqual(1, inner.WriteCount);
+        }
+
         /// <summary>
         /// The default constructor must NOT open the real stdout stream.
         /// This is critical: DI registers the writer eagerly during host build,
@@ -224,6 +247,27 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             writer.Dispose();
 
             // Assert — no exception is the success criterion.
+        }
+
+        private sealed class BlockingTextWriter : StringWriter
+        {
+            internal ManualResetEventSlim WriteEntered { get; } = new(false);
+
+            internal ManualResetEventSlim ReleaseWrite { get; } = new(false);
+
+            internal int WriteCount { get; private set; }
+
+            public override void WriteLine(string? value)
+            {
+                WriteEntered.Set();
+                if (!ReleaseWrite.Wait(TimeSpan.FromSeconds(10)))
+                {
+                    throw new TimeoutException("The blocking test writer was not released.");
+                }
+
+                WriteCount++;
+                base.WriteLine(value);
+            }
         }
     }
 }

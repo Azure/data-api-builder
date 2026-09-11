@@ -2,9 +2,9 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,166 +25,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
     public class McpToolRegistryTests
     {
         /// <summary>
-        /// Test that registering multiple tools with unique names succeeds.
-        /// </summary>
-        [TestMethod]
-        public void RegisterTool_WithMultipleUniqueNames_Succeeds()
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            IMcpTool tool1 = new MockMcpTool("tool_one", ToolType.BuiltIn);
-            IMcpTool tool2 = new MockMcpTool("tool_two", ToolType.Custom);
-            IMcpTool tool3 = new MockMcpTool("tool_three", ToolType.BuiltIn);
-
-            // Act & Assert - should not throw
-            registry.RegisterTool(tool1);
-            registry.RegisterTool(tool2);
-            registry.RegisterTool(tool3);
-
-            // Verify all tools were registered
-            Assert.IsTrue(registry.TryGetTool("tool_one", out _));
-            Assert.IsTrue(registry.TryGetTool("tool_two", out _));
-            Assert.IsTrue(registry.TryGetTool("tool_three", out _));
-        }
-
-        /// <summary>
-        /// Test that registering duplicate tools of the same type throws an exception.
-        /// Validates that both built-in and custom tools enforce name uniqueness within their own type.
-        /// </summary>
-        [DataTestMethod]
-        [DataRow(ToolType.BuiltIn, "duplicate_tool", "built-in", DisplayName = "Duplicate Built-In Tools")]
-        [DataRow(ToolType.Custom, "my_custom_tool", "custom", DisplayName = "Duplicate Custom Tools")]
-        public void RegisterTool_WithDuplicateSameType_ThrowsException(
-            ToolType toolType,
-            string toolName,
-            string expectedToolTypeText)
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            IMcpTool tool1 = new MockMcpTool(toolName, toolType);
-            IMcpTool tool2 = new MockMcpTool(toolName, toolType);
-
-            // Act - Register first tool
-            registry.RegisterTool(tool1);
-
-            // Assert - Second registration should throw
-            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
-                () => registry.RegisterTool(tool2)
-            );
-
-            // Verify exception details
-            Assert.IsTrue(exception.Message.Contains($"Duplicate MCP tool name '{toolName}' detected"));
-            Assert.IsTrue(exception.Message.Contains($"{expectedToolTypeText} tool with this name is already registered"));
-            Assert.IsTrue(exception.Message.Contains($"Cannot register {expectedToolTypeText} tool with the same name"));
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
-        }
-
-        /// <summary>
-        /// Test that registering tools with conflicting names across different types throws an exception.
-        /// Validates that tool names must be unique across all tool types (built-in and custom).
-        /// </summary>
-        [DataTestMethod]
-        [DataRow("create_record", ToolType.BuiltIn, ToolType.Custom, "built-in", "custom", DisplayName = "Built-In then Custom conflict")]
-        [DataRow("read_records", ToolType.BuiltIn, ToolType.Custom, "built-in", "custom", DisplayName = "Built-In then Custom conflict (read_records)")]
-        [DataRow("my_stored_proc", ToolType.Custom, ToolType.BuiltIn, "custom", "built-in", DisplayName = "Custom then Built-In conflict")]
-        public void RegisterTool_WithCrossTypeConflict_ThrowsException(
-            string toolName,
-            ToolType firstToolType,
-            ToolType secondToolType,
-            string expectedExistingType,
-            string expectedNewType)
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            IMcpTool existingTool = new MockMcpTool(toolName, firstToolType);
-            IMcpTool conflictingTool = new MockMcpTool(toolName, secondToolType);
-
-            // Act - Register first tool
-            registry.RegisterTool(existingTool);
-
-            // Assert - Second tool registration should throw
-            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
-                () => registry.RegisterTool(conflictingTool)
-            );
-
-            // Verify exception details
-            Assert.IsTrue(exception.Message.Contains($"Duplicate MCP tool name '{toolName}' detected"));
-            Assert.IsTrue(exception.Message.Contains($"{expectedExistingType} tool with this name is already registered"));
-            Assert.IsTrue(exception.Message.Contains($"Cannot register {expectedNewType} tool with the same name"));
-            Assert.IsTrue(exception.Message.Contains("Tool names must be unique across all tool types"));
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
-        }
-
-        /// <summary>
-        /// Test that tool name comparison is case-sensitive.
-        /// Tools with different casing should not be allowed.
-        /// </summary>
-        [TestMethod]
-        public void RegisterTool_WithDifferentCasing_ThrowsException()
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            IMcpTool tool1 = new MockMcpTool("my_tool", ToolType.BuiltIn);
-            IMcpTool tool2 = new MockMcpTool("My_Tool", ToolType.Custom);
-
-            // Act - Register first tool
-            registry.RegisterTool(tool1);
-
-            // Assert - Case-insensitive duplicate should throw
-            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
-                () => registry.RegisterTool(tool2)
-            );
-
-            Assert.IsTrue(exception.Message.Contains("Duplicate MCP tool name"));
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
-        }
-
-        /// <summary>
-        /// Test that registering the same tool instance twice is silently ignored (idempotent).
-        /// This supports stdio mode where both McpToolRegistryInitializer and McpStdioHelper may register the same tools.
-        /// </summary>
-        [TestMethod]
-        public void RegisterTool_SameInstanceTwice_IsIdempotent()
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            IMcpTool tool = new MockMcpTool("my_tool", ToolType.BuiltIn);
-
-            // Act - Register the same instance twice
-            registry.RegisterTool(tool);
-            registry.RegisterTool(tool);
-
-            // Assert - Tool should be registered only once
-            Assert.IsTrue(registry.TryGetTool("my_tool", out _));
-        }
-
-        /// <summary>
-        /// Test that registering a different instance with the same name throws an exception,
-        /// even though a same-instance re-registration would be allowed.
-        /// </summary>
-        [TestMethod]
-        public void RegisterTool_DifferentInstanceSameName_ThrowsException()
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            IMcpTool tool1 = new MockMcpTool("my_tool", ToolType.BuiltIn);
-            IMcpTool tool2 = new MockMcpTool("my_tool", ToolType.BuiltIn);
-
-            // Act - Register first instance
-            registry.RegisterTool(tool1);
-
-            // Assert - Different instance with same name should throw
-            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
-                () => registry.RegisterTool(tool2)
-            );
-
-            Assert.IsTrue(exception.Message.Contains("Duplicate MCP tool name 'my_tool' detected"));
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
-        }
-
-        /// <summary>
         /// Test that TryGetTool returns false for non-existent tool.
         /// </summary>
         [TestMethod]
@@ -192,7 +32,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             // Arrange
             McpToolRegistry registry = new();
-            registry.RegisterTool(new MockMcpTool("existing_tool", ToolType.BuiltIn));
 
             // Act
             bool found = registry.TryGetTool("non_existent_tool", out IMcpTool? tool);
@@ -206,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// Test edge case: empty tool name should throw exception.
         /// </summary>
         [TestMethod]
-        public void RegisterTool_WithEmptyToolName_ThrowsException()
+        public void ReplaceAll_WithEmptyToolName_ThrowsException()
         {
             // Arrange
             McpToolRegistry registry = new();
@@ -214,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert - Empty tool names should be rejected
             DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
-                () => registry.RegisterTool(tool)
+                () => registry.ReplaceAll(new[] { tool }, CreateRuntimeConfig())
             );
 
             Assert.IsTrue(exception.Message.Contains("cannot be null, empty, or whitespace"));
@@ -222,146 +61,407 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Test realistic scenario with actual built-in tool names.
+        /// Test that leading/trailing whitespace is rejected rather than producing a lookup key
+        /// that differs from the advertised tool name.
         /// </summary>
         [TestMethod]
-        public void RegisterTool_WithRealisticBuiltInToolNames_DetectsDuplicates()
+        public void ReplaceAll_WithLeadingTrailingWhitespace_ThrowsException()
         {
-            // Arrange
             McpToolRegistry registry = new();
+            IMcpTool tool = new MockMcpTool(" my_tool ", ToolType.Custom);
 
-            // Simulate registering built-in tools
-            registry.RegisterTool(new MockMcpTool("create_record", ToolType.BuiltIn));
-            registry.RegisterTool(new MockMcpTool("read_records", ToolType.BuiltIn));
-            registry.RegisterTool(new MockMcpTool("update_record", ToolType.BuiltIn));
-            registry.RegisterTool(new MockMcpTool("delete_record", ToolType.BuiltIn));
-            registry.RegisterTool(new MockMcpTool("describe_entities", ToolType.BuiltIn));
-
-            // Try to register a custom tool with a conflicting name
-            IMcpTool customTool = new MockMcpTool("read_records", ToolType.Custom);
-
-            // Assert - Should throw
             DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
-                () => registry.RegisterTool(customTool)
-            );
+                () => registry.ReplaceAll(new[] { tool }, CreateRuntimeConfig()));
 
-            Assert.IsTrue(exception.Message.Contains("read_records"));
-            Assert.IsTrue(exception.Message.Contains("built-in tool"));
+            StringAssert.Contains(exception.Message, "leading or trailing whitespace");
+            Assert.IsFalse(registry.TryGetTool("my_tool", out _));
         }
 
         /// <summary>
-        /// Test that registering a tool with leading/trailing whitespace in the name is treated as a duplicate of the trimmed name.
-        /// Note: during tool registration, the registry should trim whitespace and detect duplicates accordingly.
+        /// Replacing the registry publishes a complete, deterministically ordered snapshot and
+        /// removes tools that belonged only to the previous generation.
         /// </summary>
         [TestMethod]
-        public void RegisterTool_WithLeadingTrailingWhitespace_DetectsDuplicate()
+        public void ReplaceAll_PublishesCompleteOrderedSnapshot()
         {
-            // Arrange
             McpToolRegistry registry = new();
-            IMcpTool tool1 = new MockMcpTool("my_tool", ToolType.BuiltIn);
-            IMcpTool tool2 = new MockMcpTool(" my_tool ", ToolType.Custom);
-
-            // Act
-            registry.RegisterTool(tool1);
-
-            // Assert - trimmed name should collide
-            Assert.ThrowsException<DataApiBuilderException>(
-                () => registry.RegisterTool(tool2)
-            );
-        }
-
-        /// <summary>
-        /// Parameterized test verifying GetEnabledTools returns only enabled tools.
-        /// </summary>
-        [DataTestMethod]
-        [DataRow(1, 1, DisplayName = "Mixed: 1 enabled, 1 disabled → returns 1")]
-        [DataRow(3, 0, DisplayName = "All enabled → returns all")]
-        [DataRow(0, 2, DisplayName = "All disabled → returns 0")]
-        public void GetEnabledTools_ReturnsCorrectCount(int enabledCount, int disabledCount)
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            for (int i = 0; i < enabledCount; i++)
-            {
-                registry.RegisterTool(new MockMcpTool($"enabled_{i}", ToolType.BuiltIn, isEnabledFunc: _ => true));
-            }
-
-            for (int i = 0; i < disabledCount; i++)
-            {
-                registry.RegisterTool(new MockMcpTool($"disabled_{i}", ToolType.BuiltIn, isEnabledFunc: _ => false));
-            }
-
             RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("old_tool", ToolType.Custom) },
+                config);
 
-            // Act
-            List<Tool> result = registry.GetEnabledTools(config).ToList();
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new IMcpTool[]
+                {
+                    new MockMcpTool("z_tool", ToolType.Custom),
+                    new MockMcpTool("A_tool", ToolType.BuiltIn)
+                },
+                config);
 
-            // Assert
-            Assert.AreEqual(enabledCount, result.Count);
+            Assert.IsFalse(registry.TryGetTool("old_tool", out _));
+            Assert.IsTrue(registry.TryGetTool("a_TOOL", out _));
+            Assert.IsTrue(registry.TryGetTool("z_tool", out _));
+            CollectionAssert.AreEqual(
+                new[] { "A_tool", "z_tool" },
+                registry.GetAdvertisedTools().Select(tool => tool.Name).ToArray());
+            Assert.AreEqual(2, result.Version);
+            Assert.IsTrue(result.DiscoveryChanged);
+            Assert.AreEqual(2, result.RegisteredToolCount);
+            Assert.AreEqual(2, result.AdvertisedToolCount);
         }
 
         /// <summary>
-        /// Test that GetEnabledTools passes the RuntimeConfig to IsEnabled so tools
-        /// can check DmlToolsConfig flags.
+        /// Every name returned by discovery resolves against the exact same registry generation.
         /// </summary>
         [TestMethod]
-        public void GetEnabledTools_PassesConfigToIsEnabled()
+        public void ReplaceAll_EveryAdvertisedNameIsCallable()
         {
-            // Arrange
             McpToolRegistry registry = new();
+            registry.ReplaceAll(
+                new IMcpTool[]
+                {
+                    new MockMcpTool("A_tool", ToolType.BuiltIn),
+                    new MockMcpTool("z_tool", ToolType.Custom)
+                },
+                CreateRuntimeConfig());
 
-            // This tool checks config.McpDmlTools?.CreateRecord
+            foreach (Tool advertisedTool in registry.GetAdvertisedTools())
+            {
+                Assert.IsTrue(
+                    registry.TryGetTool(advertisedTool.Name, out IMcpTool? callableTool),
+                    $"Advertised MCP tool '{advertisedTool.Name}' must be callable by that exact name.");
+                Assert.IsNotNull(callableTool);
+            }
+        }
+
+        /// <summary>
+        /// A candidate containing a duplicate name is rejected before publication, leaving the
+        /// complete previous snapshot active.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithDuplicateName_PreservesPreviousSnapshot()
+        {
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            IMcpTool previousTool = new MockMcpTool("previous_tool", ToolType.BuiltIn);
+            registry.ReplaceAll(new[] { previousTool }, config);
+
+            Assert.ThrowsException<DataApiBuilderException>(() => registry.ReplaceAll(
+                new IMcpTool[]
+                {
+                    new MockMcpTool("duplicate", ToolType.BuiltIn),
+                    new MockMcpTool("DUPLICATE", ToolType.Custom)
+                },
+                config));
+
+            Assert.IsTrue(registry.TryGetTool("previous_tool", out IMcpTool? actualTool));
+            Assert.AreSame(previousTool, actualTool);
+            Assert.IsFalse(registry.TryGetTool("duplicate", out _));
+            CollectionAssert.AreEqual(
+                new[] { "previous_tool" },
+                registry.GetAdvertisedTools().Select(tool => tool.Name).ToArray());
+        }
+
+        /// <summary>
+        /// Replacing tool instances with semantically identical discovery metadata advances the
+        /// registry generation without reporting a client-visible discovery change.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithEquivalentMetadata_DoesNotReportDiscoveryChange()
+        {
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, description: "Same description") },
+                config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, description: "Same description") },
+                config);
+
+            Assert.AreEqual(2, result.Version);
+            Assert.IsFalse(result.DiscoveryChanged);
+        }
+
+        /// <summary>
+        /// Object property order is not semantically meaningful and must not trigger discovery
+        /// invalidation when equivalent metadata is rebuilt in a different insertion order.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithEquivalentSchemaPropertyOrder_DoesNotReportDiscoveryChange()
+        {
+            const string SCHEMA_AB =
+                "{\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"},\"b\":{\"type\":\"integer\"}}}";
+            const string SCHEMA_BA =
+                "{\"properties\":{\"b\":{\"type\":\"integer\"},\"a\":{\"type\":\"string\"}},\"type\":\"object\"}";
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, inputSchemaJson: SCHEMA_AB) },
+                config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, inputSchemaJson: SCHEMA_BA) },
+                config);
+
+            Assert.IsFalse(result.DiscoveryChanged);
+        }
+
+        /// <summary>
+        /// JSON Schema string arrays used as sets do not change schema semantics when rebuilt in a
+        /// different order and therefore must not invalidate client discovery.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithEquivalentSchemaSetArrayOrder_DoesNotReportDiscoveryChange()
+        {
+            const string SCHEMA_AB =
+                "{\"type\":\"object\",\"properties\":{" +
+                "\"a\":{\"type\":[\"string\",\"null\"],\"enum\":[\"alpha\",\"beta\"]}," +
+                "\"b\":{\"type\":\"integer\"}},\"required\":[\"a\",\"b\"]}";
+            const string SCHEMA_BA =
+                "{\"required\":[\"b\",\"a\"],\"properties\":{" +
+                "\"b\":{\"type\":\"integer\"}," +
+                "\"a\":{\"enum\":[\"beta\",\"alpha\"],\"type\":[\"null\",\"string\"]}}," +
+                "\"type\":\"object\"}";
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, inputSchemaJson: SCHEMA_AB) },
+                config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, inputSchemaJson: SCHEMA_BA) },
+                config);
+
+            Assert.IsFalse(result.DiscoveryChanged);
+        }
+
+        /// <summary>
+        /// Primitive arrays are not universally sets. Reordering an array-valued default changes
+        /// the advertised default instance and must remain a discovery change.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithReorderedArrayDefault_ReportsDiscoveryChange()
+        {
+            const string SCHEMA_AB =
+                "{\"type\":\"object\",\"properties\":{\"values\":{" +
+                "\"type\":\"array\",\"items\":{\"type\":\"string\"}," +
+                "\"default\":[\"a\",\"b\"]}}}";
+            const string SCHEMA_BA =
+                "{\"type\":\"object\",\"properties\":{\"values\":{" +
+                "\"type\":\"array\",\"items\":{\"type\":\"string\"}," +
+                "\"default\":[\"b\",\"a\"]}}}";
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, inputSchemaJson: SCHEMA_AB) },
+                config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, inputSchemaJson: SCHEMA_BA) },
+                config);
+
+            Assert.IsTrue(result.DiscoveryChanged);
+        }
+
+        /// <summary>
+        /// Canonical property sorting is used only for change detection. The discovery payload
+        /// preserves schema-property insertion order for clients that render parameters in wire
+        /// order even though JSON Schema does not assign that order semantic meaning.
+        /// </summary>
+        [TestMethod]
+        public void GetAdvertisedTools_PreservesInputSchemaPropertyOrder()
+        {
+            const string SCHEMA =
+                "{\"type\":\"object\",\"properties\":{" +
+                "\"second\":{\"type\":\"string\"}," +
+                "\"first\":{\"type\":\"integer\"}}," +
+                "\"required\":[\"second\",\"first\"]}";
+            McpToolRegistry registry = new();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("ordered_tool", ToolType.Custom, inputSchemaJson: SCHEMA) },
+                CreateRuntimeConfig());
+
+            string[] propertyNames = registry.GetAdvertisedTools()
+                .Single()
+                .InputSchema
+                .GetProperty("properties")
+                .EnumerateObject()
+                .Select(property => property.Name)
+                .ToArray();
+
+            CollectionAssert.AreEqual(new[] { "second", "first" }, propertyNames);
+
+            string[] requiredNames = registry.GetAdvertisedTools()
+                .Single()
+                .InputSchema
+                .GetProperty("required")
+                .EnumerateArray()
+                .Select(item => item.GetString()!)
+                .ToArray();
+
+            CollectionAssert.AreEqual(new[] { "second", "first" }, requiredNames);
+        }
+
+        /// <summary>
+        /// A real input-schema change remains client-visible after canonicalization.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithChangedInputSchema_ReportsDiscoveryChange()
+        {
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[]
+                {
+                    new MockMcpTool(
+                        "same_tool",
+                        ToolType.Custom,
+                        inputSchemaJson: "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"}}}")
+                },
+                config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[]
+                {
+                    new MockMcpTool(
+                        "same_tool",
+                        ToolType.Custom,
+                        inputSchemaJson: "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"integer\"}}}")
+                },
+                config);
+
+            Assert.IsTrue(result.DiscoveryChanged);
+        }
+
+        /// <summary>
+        /// Published metadata is isolated both from the tool-owned source object and from callers
+        /// mutating a value returned by the public snapshot accessor.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_DefensivelyClonesPublishedMetadata()
+        {
+            Tool retainedMetadata = new()
+            {
+                Name = "isolated_tool",
+                Description = "Original description",
+                InputSchema = JsonSerializer.Deserialize<JsonElement>("{\"type\":\"object\"}")
+            };
+            McpToolRegistry registry = new();
+            registry.ReplaceAll(
+                new[] { new RetainedMetadataMcpTool(retainedMetadata) },
+                CreateRuntimeConfig());
+
+            retainedMetadata.Description = "Mutated by tool";
+            Tool returnedMetadata = registry.GetAdvertisedTools().Single();
+            Assert.AreEqual("Original description", returnedMetadata.Description);
+
+            returnedMetadata.Description = "Mutated by caller";
+            Assert.AreEqual(
+                "Original description",
+                registry.GetAdvertisedTools().Single().Description);
+        }
+
+        /// <summary>
+        /// A metadata-only change is reported so connected clients can refresh their cached list.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_WithChangedDescription_ReportsDiscoveryChange()
+        {
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, description: "Old description") },
+                config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { new MockMcpTool("same_tool", ToolType.Custom, description: "New description") },
+                config);
+
+            Assert.IsTrue(result.DiscoveryChanged);
+            Assert.AreEqual("New description", registry.GetAdvertisedTools().Single().Description);
+        }
+
+        /// <summary>
+        /// Advertised metadata and callable lookup state are built from one candidate generation.
+        /// Disabled built-ins remain callable so execution can return the existing structured
+        /// tool-disabled response, but they are absent from discovery.
+        /// </summary>
+        [TestMethod]
+        public void ReplaceAll_CapturesVisibilityFromCandidateConfig()
+        {
+            McpToolRegistry registry = new();
             IMcpTool configAwareTool = new MockMcpTool(
-                "create_record", ToolType.BuiltIn,
+                "create_record",
+                ToolType.BuiltIn,
                 isEnabledFunc: config => config.McpDmlTools?.CreateRecord == true);
 
-            registry.RegisterTool(configAwareTool);
+            RuntimeConfig disabledConfig = CreateRuntimeConfig(new DmlToolsConfig(createRecord: false));
+            registry.ReplaceAll(new[] { configAwareTool }, disabledConfig);
 
-            // Config with create-record disabled
-            DmlToolsConfig disabledConfig = new(createRecord: false);
-            RuntimeConfig configDisabled = CreateRuntimeConfig(disabledConfig);
+            Assert.AreEqual(0, registry.GetAdvertisedTools().Count);
+            Assert.IsTrue(registry.TryGetTool("create_record", out _));
 
-            // Config with create-record enabled
-            DmlToolsConfig enabledConfig = new(createRecord: true);
-            RuntimeConfig configEnabled = CreateRuntimeConfig(enabledConfig);
+            RuntimeConfig enabledConfig = CreateRuntimeConfig(new DmlToolsConfig(createRecord: true));
+            registry.ReplaceAll(new[] { configAwareTool }, enabledConfig);
 
-            // Act & Assert - disabled
-            List<Tool> disabledTools = registry.GetEnabledTools(configDisabled).ToList();
-            Assert.AreEqual(0, disabledTools.Count);
-
-            // Act & Assert - enabled
-            List<Tool> enabledTools = registry.GetEnabledTools(configEnabled).ToList();
-            Assert.AreEqual(1, enabledTools.Count);
-            Assert.AreEqual("create_record", enabledTools[0].Name);
+            Assert.AreEqual(1, registry.GetAdvertisedTools().Count);
         }
 
         /// <summary>
-        /// Test that GetEnabledTools correctly filters a mix of built-in and custom tools.
-        /// Custom tools (always enabled) should remain while disabled built-in tools are excluded.
+        /// Concurrent readers see only a complete old or complete new advertised snapshot while
+        /// registry generations are repeatedly replaced.
         /// </summary>
         [TestMethod]
-        public void GetEnabledTools_MixedBuiltInAndCustomTools()
+        public void ReplaceAll_WithConcurrentReaders_NeverExposesPartialSnapshot()
         {
-            // Arrange
             McpToolRegistry registry = new();
-            registry.RegisterTool(new MockMcpTool("describe_entities", ToolType.BuiltIn, isEnabledFunc: _ => true));
-            registry.RegisterTool(new MockMcpTool("create_record", ToolType.BuiltIn, isEnabledFunc: _ => false));
-            registry.RegisterTool(new MockMcpTool("delete_record", ToolType.BuiltIn, isEnabledFunc: _ => false));
-            registry.RegisterTool(new MockMcpTool("read_records", ToolType.BuiltIn, isEnabledFunc: _ => true));
-            registry.RegisterTool(new MockMcpTool("get_books", ToolType.Custom, isEnabledFunc: _ => true));
-
             RuntimeConfig config = CreateRuntimeConfig();
+            IMcpTool[] generationA =
+            {
+                new MockMcpTool("a_one", ToolType.BuiltIn),
+                new MockMcpTool("a_two", ToolType.Custom)
+            };
+            IMcpTool[] generationB =
+            {
+                new MockMcpTool("b_one", ToolType.BuiltIn),
+                new MockMcpTool("b_two", ToolType.Custom)
+            };
+            registry.ReplaceAll(generationA, config);
 
-            // Act
-            List<Tool> enabledTools = registry.GetEnabledTools(config).ToList();
+            ConcurrentQueue<string> invalidSnapshots = new();
+            Task writer = Task.Run(() =>
+            {
+                for (int i = 0; i < 500; i++)
+                {
+                    registry.ReplaceAll(i % 2 == 0 ? generationB : generationA, config);
+                }
+            });
 
-            // Assert - create_record and delete_record should be filtered out
-            Assert.AreEqual(3, enabledTools.Count);
-            Assert.IsTrue(enabledTools.Any(t => t.Name == "describe_entities"));
-            Assert.IsTrue(enabledTools.Any(t => t.Name == "read_records"));
-            Assert.IsTrue(enabledTools.Any(t => t.Name == "get_books"));
-            Assert.IsFalse(enabledTools.Any(t => t.Name == "create_record"));
-            Assert.IsFalse(enabledTools.Any(t => t.Name == "delete_record"));
+            Task[] readers = Enumerable.Range(0, 4)
+                .Select(_ => Task.Run(() =>
+                {
+                    for (int i = 0; i < 2_000; i++)
+                    {
+                        string[] names = registry.GetAdvertisedTools()
+                            .Select(tool => tool.Name)
+                            .ToArray();
+                        bool isGenerationA = names.SequenceEqual(new[] { "a_one", "a_two" });
+                        bool isGenerationB = names.SequenceEqual(new[] { "b_one", "b_two" });
+                        if (!isGenerationA && !isGenerationB)
+                        {
+                            invalidSnapshots.Enqueue(string.Join(",", names));
+                        }
+                    }
+                }))
+                .ToArray();
+
+            Task.WaitAll(readers.Append(writer).ToArray());
+
+            Assert.AreEqual(
+                0,
+                invalidSnapshots.Count,
+                $"Observed partial snapshots: {string.Join(" | ", invalidSnapshots.Take(5))}");
         }
 
         /// <summary>
@@ -461,12 +561,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             private readonly string _toolName;
             private readonly Func<RuntimeConfig, bool>? _isEnabledFunc;
+            private readonly string _description;
+            private readonly string _inputSchemaJson;
 
-            public MockMcpTool(string toolName, ToolType toolType, Func<RuntimeConfig, bool>? isEnabledFunc = null)
+            public MockMcpTool(
+                string toolName,
+                ToolType toolType,
+                Func<RuntimeConfig, bool>? isEnabledFunc = null,
+                string? description = null,
+                string? inputSchemaJson = null)
             {
                 _toolName = toolName;
                 ToolType = toolType;
                 _isEnabledFunc = isEnabledFunc;
+                _description = description ?? $"Mock {toolType} tool";
+                _inputSchemaJson = inputSchemaJson ?? "{\"type\":\"object\"}";
             }
 
             public ToolType ToolType { get; }
@@ -478,12 +587,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             public Tool GetToolMetadata()
             {
-                // Create a simple JSON object for the input schema
-                using JsonDocument doc = JsonDocument.Parse("{\"type\": \"object\"}");
+                using JsonDocument doc = JsonDocument.Parse(_inputSchemaJson);
                 return new Tool
                 {
                     Name = _toolName,
-                    Description = $"Mock {ToolType} tool",
+                    Description = _description,
                     InputSchema = doc.RootElement.Clone()
                 };
             }
@@ -494,6 +602,30 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 CancellationToken cancellationToken = default)
             {
                 // Not used in these tests
+                throw new NotImplementedException();
+            }
+        }
+
+        private sealed class RetainedMetadataMcpTool : IMcpTool
+        {
+            private readonly Tool _metadata;
+
+            public RetainedMetadataMcpTool(Tool metadata)
+            {
+                _metadata = metadata;
+            }
+
+            public ToolType ToolType => ToolType.Custom;
+
+            public bool IsEnabled(RuntimeConfig config) => true;
+
+            public Tool GetToolMetadata() => _metadata;
+
+            public Task<CallToolResult> ExecuteAsync(
+                JsonDocument? arguments,
+                IServiceProvider serviceProvider,
+                CancellationToken cancellationToken = default)
+            {
                 throw new NotImplementedException();
             }
         }

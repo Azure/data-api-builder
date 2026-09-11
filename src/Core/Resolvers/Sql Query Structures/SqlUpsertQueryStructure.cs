@@ -154,6 +154,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // as Update request uses Where clause to target item by PK.
                     if (primaryKeys.Contains(backingColumn!))
                     {
+                        // A CLR string is normally sent by Npgsql as PostgreSQL text. For upsert key
+                        // predicates, that can change the backing column's equality semantics (for
+                        // example, character(n) trailing-space handling). Let PostgreSQL infer the
+                        // native parameter type from the column comparison instead.
+                        if (MetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL &&
+                            Parameters[paramIdentifier].Value is string)
+                        {
+                            Parameters[paramIdentifier].UseDatabaseTypeInference = true;
+                        }
+
                         PopulateColumnsAndParams(backingColumn!);
 
                         // PK added as predicate for Update Operation

@@ -430,6 +430,61 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test to validate that a database object whose every column has a data type the data
+        /// provider cannot map fails initialization with a specific error, rather than falling back
+        /// to reading every column and surfacing the provider's opaque failure instead of the reason.
+        /// The entity is declared in an in-memory config rather than in dab-config.MsSql.json,
+        /// because this object fails by design and every MSSQL fixture initializes every configured
+        /// entity.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateObjectWithOnlyUnsupportedColumnsFailsInitialization()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            Dictionary<string, Entity> entities = new()
+            {
+                {
+                    "GeometryOnlyView",
+                    new Entity(
+                        Source: new("dbo.geometry_only_view", EntitySourceType.View, null, new string[] { "geom" }),
+                        Fields: null,
+                        Rest: new(Enabled: true),
+                        GraphQL: new("GeometryOnlyView", "GeometryOnlyViews", Enabled: true),
+                        Permissions: new EntityPermission[]
+                        {
+                            new(Role: "anonymous",
+                                Actions: new EntityAction[] { new(Action: EntityActionOperation.Read, Fields: null, Policy: null) })
+                        },
+                        Relationships: null,
+                        Mappings: null)
+                }
+            };
+
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig() with { Entities = new RuntimeEntities(entities) };
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
+            await ResetDbStateAsync();
+
+            try
+            {
+                await _sqlMetadataProvider.InitializeAsync();
+                Assert.Fail("Expected DataApiBuilderException was not thrown for an object whose every column has an unsupported data type.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.IsTrue(
+                    ex.Message.Contains("has a data type that is not supported"),
+                    message: $"Unexpected exception message: {ex.Message}");
+            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
         /// Test to validate successful inference of relationship data based on data provided in the config and the metadata
         /// collected from the MySql database.
         /// </summary>

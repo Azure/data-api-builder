@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Data;
@@ -94,6 +95,20 @@ namespace Azure.DataApiBuilder.Core.Services
         private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
+
+        /// <summary>
+        /// Caches the "Columns" schema collection per database object for the duration of metadata
+        /// initialization, so schema discovery and column definition population share one catalog
+        /// round trip instead of querying twice per object. Cleared once initialization completes.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, DataTable> _columnsMetadataCache = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Columns left out of the schema projection per database object, mapped to the data type
+        /// that made them unreadable. Used to explain the omission when a configured primary key
+        /// turns out to be one of them.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, Dictionary<string, string>> _skippedColumnsByObject = new(StringComparer.OrdinalIgnoreCase);
 
         protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
 
@@ -347,7 +362,16 @@ namespace Azure.DataApiBuilder.Core.Services
             _runtimeConfigValidator.ValidateEntityAndAutoentityConfigurations(runtimeConfig);
 
             GenerateDatabaseObjectForEntities();
-            await PopulateObjectDefinitionForEntities();
+
+            try
+            {
+                await PopulateObjectDefinitionForEntities();
+            }
+            finally
+            {
+                ReleaseCatalogMetadataCaches();
+            }
+
             GenerateExposedToBackingColumnMapsForEntities();
 
             // When IsLateConfigured is true we are in a hosted scenario and do not reveal primary key information.
@@ -1540,7 +1564,6 @@ namespace Azure.DataApiBuilder.Core.Services
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-
             foreach (DataRow columnInfoFromAdapter in schemaTable.Rows)
             {
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;
@@ -1582,7 +1605,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 sourceDefinition.Columns.TryAdd(columnName, column);
             }
 
-            DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
+            RejectPrimaryKeyOnUnsupportedColumn(schemaName, tableName, sourceDefinition);
+
+            DataTable columnsInTable = await GetCachedColumnsAsync(schemaName, tableName);
 
             PopulateColumnDefinitionWithHasDefaultAndDbType(
                 sourceDefinition,
@@ -1836,6 +1861,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// The column list comes from the "Columns" schema collection, which reads catalog metadata
         /// only and therefore never has to materialize the offending type.
         /// </summary>
+        /// <exception cref="DataApiBuilderException">
+        /// Thrown when every column of the object has an unsupported data type. Returning "*" there
+        /// would re-issue the projection that cannot be read, hiding the reason behind the
+        /// provider's own error.
+        /// </exception>
         private async Task<string> BuildSchemaProjectionAsync(string schemaName, string tableName)
         {
             if (UnsupportedColumnDataTypes.Count == 0)
@@ -1844,11 +1874,11 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             List<string> readableColumns = new();
-            List<string> skippedColumns = new();
+            Dictionary<string, string> skippedColumns = new(StringComparer.OrdinalIgnoreCase);
 
             try
             {
-                DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
+                DataTable columnsInTable = await GetCachedColumnsAsync(schemaName, tableName);
 
                 foreach (DataRow columnInfo in columnsInTable.Rows)
                 {
@@ -1857,11 +1887,16 @@ namespace Azure.DataApiBuilder.Core.Services
                         continue;
                     }
 
-                    string? dataType = columnInfo["DATA_TYPE"] as string;
-
-                    if (dataType is not null && UnsupportedColumnDataTypes.Contains(dataType))
+                    if (columnInfo["DATA_TYPE"] is not string dataType)
                     {
-                        skippedColumns.Add($"{columnName} ({dataType})");
+                        // The catalog did not report a usable type name, so this column cannot be
+                        // classified. Leave the projection alone rather than guess.
+                        return "*";
+                    }
+
+                    if (UnsupportedColumnDataTypes.Contains(dataType))
+                    {
+                        skippedColumns[columnName] = dataType;
                     }
                     else
                     {
@@ -1881,19 +1916,114 @@ namespace Azure.DataApiBuilder.Core.Services
                 return "*";
             }
 
-            if (skippedColumns.Count == 0 || readableColumns.Count == 0)
+            if (skippedColumns.Count == 0)
             {
                 return "*";
             }
+
+            if (readableColumns.Count == 0)
+            {
+                // Falling back to "*" here would re-issue the very projection that fails, so the
+                // caller would see the opaque provider error instead of the reason for it.
+                throw new DataApiBuilderException(
+                    message: $"Every column of {schemaName}.{tableName} has a data type that is not supported: "
+                        + $"{FormatSkippedColumns(skippedColumns)}. The object cannot be exposed.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            _skippedColumnsByObject[GetObjectCacheKey(schemaName, tableName)] = skippedColumns;
 
             _logger.LogWarning(
                 "Skipping column(s) of {schemaName}.{tableName} whose data type is not supported: {skippedColumns}. "
                 + "They are not exposed through REST, GraphQL or MCP.",
                 schemaName,
                 tableName,
-                string.Join(", ", skippedColumns));
+                FormatSkippedColumns(skippedColumns));
 
             return string.Join(", ", readableColumns.Select(column => SqlQueryBuilder.QuoteIdentifier(column)));
+        }
+
+        /// <summary>
+        /// Fails initialization when a configured primary key names a column that was left out of
+        /// the projection because its data type is not supported. The key would otherwise stay in
+        /// <see cref="SourceDefinition.PrimaryKey"/> while being absent from
+        /// <see cref="SourceDefinition.Columns"/>, and the inconsistency surfaces much later as a
+        /// lookup failure while building queries, the OpenAPI document or the EDM model.
+        /// </summary>
+        private void RejectPrimaryKeyOnUnsupportedColumn(
+            string schemaName,
+            string tableName,
+            SourceDefinition sourceDefinition)
+        {
+            if (!_skippedColumnsByObject.TryGetValue(GetObjectCacheKey(schemaName, tableName), out Dictionary<string, string>? skippedColumns))
+            {
+                return;
+            }
+
+            foreach (string primaryKey in sourceDefinition.PrimaryKey)
+            {
+                if (skippedColumns.TryGetValue(primaryKey, out string? dataType))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"The primary key column {primaryKey} of {schemaName}.{tableName} has the data type "
+                            + $"{dataType}, which is not supported. A primary key cannot be omitted from the object "
+                            + "metadata, so this object cannot be exposed.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Renders skipped columns as "name (type)" pairs for log and error messages.
+        /// </summary>
+        private static string FormatSkippedColumns(Dictionary<string, string> skippedColumns)
+        {
+            return string.Join(", ", skippedColumns.Select(entry => $"{entry.Key} ({entry.Value})"));
+        }
+
+        /// <summary>
+        /// Key used by the per-object metadata caches held during initialization.
+        /// </summary>
+        private static string GetObjectCacheKey(string schemaName, string tableName)
+        {
+            return $"{schemaName}.{tableName}";
+        }
+
+        /// <summary>
+        /// Releases the catalog metadata gathered during initialization. Nothing reads these caches
+        /// once object definitions are populated, and the cached tables are disposable.
+        /// </summary>
+        private void ReleaseCatalogMetadataCaches()
+        {
+            foreach (DataTable columnsInTable in _columnsMetadataCache.Values)
+            {
+                columnsInTable.Dispose();
+            }
+
+            _columnsMetadataCache.Clear();
+            _skippedColumnsByObject.Clear();
+        }
+
+        /// <summary>
+        /// Returns the "Columns" schema collection for a database object, reading it from the
+        /// catalog once per object. Schema discovery and column definition population both need it,
+        /// and each <see cref="GetColumnsAsync"/> call opens its own connection.
+        /// </summary>
+        private async Task<DataTable> GetCachedColumnsAsync(string schemaName, string tableName)
+        {
+            string cacheKey = GetObjectCacheKey(schemaName, tableName);
+
+            if (_columnsMetadataCache.TryGetValue(cacheKey, out DataTable? cachedColumns))
+            {
+                return cachedColumns;
+            }
+
+            DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
+            _columnsMetadataCache[cacheKey] = columnsInTable;
+
+            return columnsInTable;
         }
 
         /// <summary>

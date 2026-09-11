@@ -1120,19 +1120,18 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Add services necessary for Authentication Middleware and based on the loaded
         /// runtime configuration set the AuthenticationOptions to be either
-        /// EasyAuth based (by default) or JwtBearerOptions.
-        /// When no runtime configuration is set on engine startup, set the
-        /// default authentication scheme to EasyAuth.
+        /// Unauthenticated (by default), EasyAuth based, or JwtBearerOptions.
+        /// When no runtime configuration is available on engine startup, set the
+        /// default authentication scheme to EasyAuth for late configuration.
         /// </summary>
         /// <param name="services">The service collection where authentication services are added.</param>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         private void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
-            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) &&
-                runtimeConfig.Runtime?.Host?.Authentication is not null)
+            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
-                HostMode mode = runtimeConfig.Runtime.Host.Mode;
+                AuthenticationOptions authOptions = runtimeConfig.Runtime?.Host?.Authentication ?? new();
+                HostMode mode = runtimeConfig.Runtime?.Host?.Mode ?? HostMode.Production;
                 if (authOptions.IsJwtConfiguredIdentityProvider())
                 {
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -1151,7 +1150,7 @@ namespace Azure.DataApiBuilder.Service
                 }
                 else if (authOptions.IsEasyAuthAuthenticationProvider())
                 {
-                    EasyAuthType easyAuthType = EnumExtensions.Deserialize<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider);
+                    EasyAuthType easyAuthType = EnumExtensions.Deserialize<EasyAuthType>(authOptions.Provider);
                     bool isProductionMode = mode != HostMode.Development;
                     bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
                     bool swaEnvironmentDetected = StaticWebAppsAuthentication.AreExpectedSWAEnvVarsPresent();

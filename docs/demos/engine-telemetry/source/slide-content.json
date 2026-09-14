@@ -1,0 +1,236 @@
+{
+  "title": "Engine telemetry: a design walkthrough",
+  "date": "2026-09-09",
+  "width": 1920,
+  "height": 1080,
+  "slides": [
+    {
+      "number": 1,
+      "chapter": "THE DESIGN",
+      "layout": "hero",
+      "title": "Engine telemetry\nA design walkthrough",
+      "subtitle": "One common foundation. Two operating models.",
+      "cards": [
+        { "label": "01", "title": "Properties", "points": ["What is worth collecting?"] },
+        { "label": "02", "title": "Names", "points": ["What does each field mean?"] },
+        { "label": "03", "title": "Operating model", "points": ["Where does the data belong?"] }
+      ],
+      "takeaway": "A design proposal, not a live feature or cloud POC.",
+      "sourceSections": ["Decisions this document supports", "Design direction: Application Insights, not a custom telemetry system"]
+    },
+    {
+      "number": 2,
+      "chapter": "COMMON FOUNDATION",
+      "layout": "columns",
+      "title": "Reuse Application Insights.\nDo not build a telemetry service.",
+      "subtitle": "Custom product facts do not require a custom telemetry backend.",
+      "cards": [
+        {
+          "label": "REUSE",
+          "title": "Managed capabilities",
+          "points": ["Supported client + delivery", "Service ingestion + storage", "KQL + dashboards + alerts"],
+          "note": "Avoid a bespoke transport or owned analytics cluster."
+        },
+        {
+          "label": "DAB STILL OWNS",
+          "title": "Product responsibilities",
+          "points": ["Approved event and field definitions", "Consent + filtering + safe identity", "Lifecycle behavior + verification"],
+          "note": "Exact .NET client and OSS publishing path need approval."
+        }
+      ],
+      "takeaway": "Custom instrumentation is not a custom telemetry platform.",
+      "sourceSections": ["Why this choice makes sense", "What the SDK supplies, and what DAB adds"]
+    },
+    {
+      "number": 3,
+      "chapter": "BOUNDARIES",
+      "layout": "three",
+      "title": "Three streams.\nKeep them separate.",
+      "subtitle": "Existing diagnostics and the proposed product stream have different owners.",
+      "cards": [
+        {
+          "label": "CUSTOMER-OWNED",
+          "title": "Observability",
+          "points": ["Customer-selected sinks", "Operational diagnostics", "No automatic team access"],
+          "note": "runtime.telemetry"
+        },
+        {
+          "label": "EXISTING",
+          "title": "Application Name",
+          "points": ["Database-visible fingerprint", "Per connection pool", "Configured capabilities"],
+          "note": "Not request-level telemetry"
+        },
+        {
+          "label": "PROPOSED",
+          "title": "Engine usage",
+          "points": ["Approved product facts", "Governed team destination", "Explicit collection controls"],
+          "note": "Not a copy of customer logs"
+        }
+      ],
+      "takeaway": "Configured does not mean used. Process sessions do not mean customers.",
+      "sourceSections": ["Keep the data paths separate", "Supporting context: events, consent, and reliability"]
+    },
+    {
+      "number": 4,
+      "chapter": "CANDIDATE PROPERTIES",
+      "layout": "three",
+      "title": "What could we collect?",
+      "subtitle": "Each field needs a useful question and a justified cost.",
+      "cards": [
+        {
+          "label": "CONTEXT",
+          "title": "What is running?",
+          "points": ["DAB version + OS family", "Mode + database types"],
+          "note": "Tradeoff: precision can fingerprint deployments."
+        },
+        {
+          "label": "CONFIGURATION",
+          "title": "What is enabled?",
+          "points": ["REST / GraphQL / MCP", "Cache + auth + entity flags"],
+          "note": "Tradeoff: configured is not exercised."
+        },
+        {
+          "label": "OBSERVED USAGE",
+          "title": "What is exercised?",
+          "points": ["Logical operation counts", "Cache activity + outcomes"],
+          "note": "Tradeoff: more work, volume, and privacy review."
+        }
+      ],
+      "takeaway": "The full catalog covers 20 runtime + 14 entity positions, plus new candidates.",
+      "sourceSections": ["Product, platform, and data-source context", "Runtime configuration candidates", "Aggregate entity configuration candidates", "Actual usage, lifecycle, and reliability candidates"]
+    },
+    {
+      "number": 5,
+      "chapter": "NAMING AND MEANING",
+      "layout": "table",
+      "title": "Names must preserve meaning.",
+      "subtitle": "Working convention: flat dab_ names, explicit units, and closed states.",
+      "columnWidths": [600, 510, 618],
+      "headers": ["CANDIDATE FIELD", "MEANING", "NOT THE SAME AS"],
+      "rows": [
+        ["dab_cfg_rest_state", "Configured capability", "Proof of traffic"],
+        ["dab_usage_operation_count", "Logical work in a window", "HTTP request count"],
+        ["dab_process_session_id", "One engine process run", "A user or customer"],
+        ["event_time_utc", "When the event occurred", "Server receipt time"]
+      ],
+      "codeFirstColumn": true,
+      "detail": "Keep missing, disabled, and unsupported distinct. A bucket is not an exact count.",
+      "takeaway": "Preserve field semantics across SDKs, schemas, and destinations.",
+      "sourceSections": ["Property naming and representation", "Envelope and correlation", "Native fields are not interchangeable with DAB fields"]
+    },
+    {
+      "number": 6,
+      "chapter": "THE TWO DATA PATHS",
+      "layout": "lanes",
+      "title": "One foundation.\nTwo operating models.",
+      "subtitle": "Application Insights is common; ownership and downstream services differ.",
+      "lanes": [
+        { "label": "A / DAB-MANAGED AZURE MONITOR", "nodes": ["DAB facts +\napproved client", "DAB-managed\nApp Insights", "Linked\nLog Analytics", "KQL +\nWorkbooks / APIs"] },
+        { "label": "B / DATAX AFTER TESTING AND ONBOARDING", "nodes": ["DAB facts +\napproved client", "Platform-provided\nApp Insights", "DataX export +\nprocessing", "Shared Kusto +\nrequested analytics"] }
+      ],
+      "takeaway": "AdVent is an analysis app, not the ingestion endpoint.",
+      "sourceSections": ["The two operating models", "Two Application Insights operating models: setup and access", "Collection flow described by the guide"]
+    },
+    {
+      "number": 7,
+      "chapter": "MODEL A",
+      "layout": "columns",
+      "title": "Keep it in Azure Monitor.",
+      "subtitle": "An independently useful Application Insights + Log Analytics operation.",
+      "cards": [
+        {
+          "label": "BENEFITS",
+          "title": "Self-contained reporting",
+          "points": ["Approved resources + supported SDK", "Custom events, KQL, and Workbooks", "Direct control of resource policies"],
+          "note": "Query: customEvents / customDimensions or AppEvents / Properties"
+        },
+        {
+          "label": "RESPONSIBILITIES",
+          "title": "DAB owns the data operation",
+          "points": ["Privacy + external publishing approval", "Retention, budget, and reader access", "Sampling, volume, and data quality"],
+          "note": "Publisher permissions are not reader permissions."
+        }
+      ],
+      "takeaway": "Azure runs the service. DAB governs its product telemetry.",
+      "sourceSections": ["A. DAB-managed Application Insights in Azure Monitor", "DAB-managed Azure Monitor advantages", "DAB-managed Azure Monitor disadvantages"]
+    },
+    {
+      "number": 8,
+      "chapter": "MODEL B",
+      "layout": "flow_cards",
+      "title": "Add DataX where it pays off.",
+      "subtitle": "A managed product-data layer, not a new custom collector.",
+      "nodes": ["Privacy review", "Validate in our\nApp Insights", "DataX onboarding\n+ destination handoff", "Shared data\n+ requested metrics"],
+      "cards": [
+        { "label": "GOVERNANCE", "title": "Classification + handling", "points": ["Delinking and applicable DSR workflows"] },
+        { "label": "OPERATIONS", "title": "Pipeline monitoring", "points": ["Latency, completeness, anomalies, PII"] },
+        { "label": "ANALYSIS", "title": "Shared product analytics", "points": ["Kusto, tags, metrics, and AdVent"] }
+      ],
+      "takeaway": "Guide estimate: about 10 days to Kusto. Variable, not a DAB delivery promise.",
+      "sourceSections": ["Collection flow described by the guide", "What DataX provides, and what DAB still owns", "Guide estimates, not a committed DAB schedule"]
+    },
+    {
+      "number": 9,
+      "chapter": "DATAX APPROVAL QUESTIONS",
+      "layout": "four",
+      "title": "Compatibility is not automatic.",
+      "subtitle": "The supplied onboarding guide leaves important DAB-specific decisions.",
+      "cards": [
+        { "label": "IDENTITY", "title": "Device IDs are not process IDs", "points": ["Clarify the 1,000-user / EUPI eligibility rule."] },
+        { "label": "RESIDENCY + FRESHNESS", "title": "US processing; hours to Kusto", "points": ["Longer-term storage: up to 18 months, not guaranteed hot Kusto."] },
+        { "label": "CLIENT + AUTH", "title": "Confirm the exact .NET path", "points": ["1DS compatibility, redistribution, and publishing approval."] },
+        { "label": "PARTNER OBLIGATIONS", "title": "Shared does not mean hands-off", "points": ["Patch, classify, throttle, and agree quotas and chargeback."] }
+      ],
+      "takeaway": "Do not collect personal identifiers merely to qualify for onboarding.",
+      "sourceSections": ["Platform schema expectations versus proposed DAB names", "Eligibility, residency, and retention decisions", "DataX disadvantages"]
+    },
+    {
+      "number": 10,
+      "chapter": "COST AND VOLUME",
+      "layout": "table",
+      "title": "Cost follows volume and ownership.",
+      "subtitle": "Illustrative: 2 KiB per event, 30 days. These are not forecasts or bills.",
+      "columnWidths": [320, 440, 500, 468],
+      "headers": ["SCENARIO", "ACTIVE PROCESSES", "EVENTS / PROCESS / DAY", "PAYLOAD GB / 30 DAYS"],
+      "rows": [
+        ["Low", "1,000", "1", "0.06"],
+        ["Medium", "10,000", "25", "15.36"],
+        ["High", "100,000", "97", "595.97"]
+      ],
+      "codeFirstColumn": false,
+      "detail": "Larger events or more frequent collection multiply volume. Actual billable size differs.",
+      "takeaway": "Compare retention + maintenance + migration. DataX pricing is not confirmed.",
+      "sourceSections": ["Benefits and costs under illustrative workloads"]
+    },
+    {
+      "number": 11,
+      "chapter": "OPTIONAL TWO-STAGE ADOPTION",
+      "layout": "stages",
+      "title": "Start in Azure Monitor.\nMove only when justified.",
+      "subtitle": "A platform-adoption option, not fixed event or feature phases.",
+      "cards": [
+        { "label": "STAGE 1", "title": "Useful on its own", "points": ["Approved Application Insights", "Product queries + cost evidence", "Privacy and consent from day one"] },
+        { "label": "DECISION GATE", "title": "Added value?", "points": ["Compatibility", "Operating benefit", "Total cost"] },
+        { "label": "STAGE 2 / OPTIONAL", "title": "Adopt DataX", "points": ["Managed governance + analysis", "Approved destination handoff", "Validate and reconcile reporting"] }
+      ],
+      "detail": "Plan for old clients, historical data, query changes, overlap, and rollback.",
+      "takeaway": "Remaining at stage 1 is a valid long-term outcome.",
+      "sourceSections": ["Optional two-stage adoption: Azure Monitor first, DataX later", "Transition work that must not be assumed away"]
+    },
+    {
+      "number": 12,
+      "chapter": "REVIEW AND NEXT DECISIONS",
+      "layout": "four",
+      "title": "Decide the fields. Validate the path.",
+      "subtitle": "Use the full design document to review the catalog, tradeoffs, and evidence.",
+      "cards": [
+        { "label": "01 / VALUE", "title": "Choose useful properties", "points": ["Agree names, units, states, and counting boundaries."] },
+        { "label": "02 / PRIVACY", "title": "Choose minimal identity", "points": ["Approve consent, allowlisting, and data handling."] },
+        { "label": "03 / CLIENT", "title": "Confirm the publishing path", "points": ["Verify the supported .NET SDK and external-OSS authentication."] },
+        { "label": "04 / OPERATING MODEL", "title": "Require a reason for DataX", "points": ["Stay in Azure Monitor, or move when the value is demonstrated."] }
+      ],
+      "takeaway": "Next: review, then a separately approved synthetic POC. No live feature shown.",
+      "sourceSections": ["POC plan: learn what Application Insights actually supplies", "Questions to resolve in the design meeting", "References and evidence status"]
+    }
+  ]
+}

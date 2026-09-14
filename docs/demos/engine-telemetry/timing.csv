@@ -1,0 +1,13 @@
+slide_number,title,slide_path,script_path,word_count,assumed_words_per_minute,padding_seconds,estimated_duration_seconds,estimated_start_seconds,estimated_end_seconds
+01,Goal and design status,slides/slide01.png,scripts/text-to-speech-script01.txt,91,145,2,40,0,40
+02,Application Insights foundation,slides/slide02.png,scripts/text-to-speech-script02.txt,96,145,2,42,40,82
+03,Three separate telemetry streams,slides/slide03.png,scripts/text-to-speech-script03.txt,99,145,2,43,82,125
+04,Property choices and tradeoffs,slides/slide04.png,scripts/text-to-speech-script04.txt,103,145,2,45,125,170
+05,Naming and counting semantics,slides/slide05.png,scripts/text-to-speech-script05.txt,100,145,2,44,170,214
+06,The two data paths,slides/slide06.png,scripts/text-to-speech-script06.txt,103,145,2,45,214,259
+07,DAB-managed Azure Monitor,slides/slide07.png,scripts/text-to-speech-script07.txt,97,145,2,43,259,302
+08,DataX value and onboarding,slides/slide08.png,scripts/text-to-speech-script08.txt,100,145,2,44,302,346
+09,DataX compatibility questions,slides/slide09.png,scripts/text-to-speech-script09.txt,99,145,2,43,346,389
+10,Cost and volume,slides/slide10.png,scripts/text-to-speech-script10.txt,98,145,2,43,389,432
+11,Optional two-stage adoption,slides/slide11.png,scripts/text-to-speech-script11.txt,100,145,2,44,432,476
+12,Review decisions and next steps,slides/slide12.png,scripts/text-to-speech-script12.txt,100,145,2,44,476,520

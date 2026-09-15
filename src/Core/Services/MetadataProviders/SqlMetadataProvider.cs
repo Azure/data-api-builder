@@ -125,9 +125,13 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly ConcurrentDictionary<string, ObjectCatalogMetadata> _objectCatalogMetadataCache = new(StringComparer.Ordinal);
 
         /// <summary>
-        /// The two catalog facts an explicit schema projection needs and the "Columns" schema
-        /// collection does not carry: which columns the database hides from "SELECT *", and which
-        /// columns form the object's own primary key.
+        /// The catalog facts an explicit schema projection needs and the "Columns" schema collection
+        /// does not carry: which columns the database hides from "SELECT *", which columns identify
+        /// a row, and which are identity columns. Together they replace what the data adapter
+        /// reports under CommandBehavior.KeyInfo, which cannot be used once the projection is
+        /// narrowed: the adapter appends key columns the projection left out as hidden reader
+        /// columns, and an unsupported type among them reintroduces the very failure the narrowing
+        /// avoids.
         /// </summary>
         protected sealed class ObjectCatalogMetadata
         {
@@ -140,13 +144,30 @@ namespace Azure.DataApiBuilder.Core.Services
             public HashSet<string> HiddenColumns { get; } = new(StringComparer.OrdinalIgnoreCase);
 
             /// <summary>
-            /// The columns of the object's own primary key, in key order. Replaces the key discovery
-            /// the data adapter performs under CommandBehavior.KeyInfo, which cannot be used once
-            /// the projection is narrowed: the adapter appends key columns the projection left out
-            /// as hidden reader columns, and an unsupported type among them reintroduces the very
-            /// failure the narrowing avoids.
+            /// Identity columns. Carried separately rather than through
+            /// <see cref="DataColumn.AutoIncrement"/>, whose setter coerces a DataType it cannot
+            /// increment to Int32: SQL Server allows identity on tinyint, numeric and decimal, and
+            /// the coercion would report the wrong SystemType, which reaches parameter typing and
+            /// the generated API schemas.
+            /// </summary>
+            public HashSet<string> IdentityColumns { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+            /// <summary>
+            /// The columns of the object's own primary key, in key order. Empty when the object has
+            /// none.
             /// </summary>
             public List<string> PrimaryKeyColumns { get; } = new();
+
+            /// <summary>
+            /// Unique indexes eligible to identify a row when the object has no primary key, in
+            /// index order, each holding its key columns in key order. Only indexes whose every key
+            /// column is non-nullable qualify.
+            /// Preserves what the data adapter does on the unnarrowed path: absent a primary key it
+            /// reports such a unique key as <see cref="DataTable.PrimaryKey"/>, and dropping that
+            /// would make the narrowed path demand source.key-fields for an object the other path
+            /// resolves on its own.
+            /// </summary>
+            public List<List<string>> UniqueKeyCandidates { get; } = new();
         }
 
         /// <summary>
@@ -1686,6 +1707,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 sourceDefinition.Columns.TryAdd(columnName, column);
             }
 
+            ApplyIdentityColumnsFromCatalog(schemaName, tableName, sourceDefinition);
+
             RejectPrimaryKeyOnUnsupportedColumn(schemaName, tableName, sourceDefinition);
 
             RejectConfiguredReferencesToSkippedColumns(entityName, entity, schemaName, tableName);
@@ -1924,11 +1947,20 @@ namespace Azure.DataApiBuilder.Core.Services
             // "Max Pool Size=1" the inner open waits for a connection the outer scope still holds.
             string projection = await BuildSchemaProjectionAsync(schemaName, tableName);
 
+            bool isProjectionNarrowed = !string.Equals(projection, "*", StringComparison.Ordinal);
+
+            // Resolved before the connection below is opened, for the same reason as the projection:
+            // reading the catalog uses a connection of its own, and nesting that inside an already
+            // open one exhausts a small pool.
+            ObjectCatalogMetadata? catalogMetadata = isProjectionNarrowed
+                ? await GetCachedObjectCatalogMetadataAsync(schemaName, tableName)
+                : null;
+
             await conn.OpenAsync();
 
             string selectStatement = $"SELECT {projection} FROM {tableNameWithSchemaPrefix}";
 
-            if (!string.Equals(projection, "*", StringComparison.Ordinal))
+            if (isProjectionNarrowed)
             {
                 // The projection left columns out, so the data adapter cannot be used here:
                 // FillSchema runs with CommandBehavior.KeyInfo, under which the provider performs
@@ -1944,7 +1976,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     selectStatement,
                     tableNameWithSchemaPrefix,
                     schemaName,
-                    tableName);
+                    tableName,
+                    catalogMetadata);
             }
 
             DataAdapterT adapterForTable = new();
@@ -1970,7 +2003,8 @@ namespace Azure.DataApiBuilder.Core.Services
             string selectStatement,
             string tableNameWithSchemaPrefix,
             string schemaName,
-            string tableName)
+            string tableName,
+            ObjectCatalogMetadata? catalogMetadata)
         {
             DataTable dataTable = new(tableNameWithSchemaPrefix);
 
@@ -2001,44 +2035,87 @@ namespace Azure.DataApiBuilder.Core.Services
                         continue;
                     }
 
+                    // The provider-reported DataType is carried through unchanged. Auto-increment is
+                    // deliberately not set here — see ApplyIdentityColumnsFromCatalog for why
+                    // DataColumn.AutoIncrement cannot be the transport for it.
                     DataColumn column = new(columnName, (Type)columnInfo["DataType"])
                     {
-                        AllowDBNull = columnInfo["AllowDBNull"] is bool allowDbNull && allowDbNull,
-                        AutoIncrement = columnInfo["IsAutoIncrement"] is bool isAutoIncrement && isAutoIncrement
+                        // Unknown nullability is treated as nullable. A column wrongly marked
+                        // non-nullable is reported as required through REST, GraphQL and OpenAPI and
+                        // rejects writes the database would accept, so the permissive direction is
+                        // the safe one when the provider does not report the flag.
+                        AllowDBNull = columnInfo["AllowDBNull"] is not bool allowDbNull || allowDbNull
                     };
 
                     dataTable.Columns.Add(column);
                 }
             }
 
-            ObjectCatalogMetadata? catalogMetadata =
-                await GetCachedObjectCatalogMetadataAsync(schemaName, tableName);
-
-            if (catalogMetadata is not null && catalogMetadata.PrimaryKeyColumns.Count > 0)
+            if (catalogMetadata is not null)
             {
-                List<DataColumn> keyColumns = new();
+                DataColumn[]? keyColumns = ResolveKeyColumns(dataTable, catalogMetadata);
 
-                foreach (string primaryKeyColumn in catalogMetadata.PrimaryKeyColumns)
+                if (keyColumns is not null)
                 {
-                    if (dataTable.Columns.Contains(primaryKeyColumn))
-                    {
-                        keyColumns.Add(dataTable.Columns[primaryKeyColumn]!);
-                    }
-                }
-
-                // A key column left out of the projection cannot be reported as a key here, and the
-                // key is not silently dropped either: PopulateSourceDefinitionAsync fails through
-                // RejectUnreadablePrimaryKey when that key is the one in effect, while a key
-                // configured through source.key-fields takes precedence over this one anyway.
-                if (keyColumns.Count == catalogMetadata.PrimaryKeyColumns.Count)
-                {
-                    dataTable.PrimaryKey = keyColumns.ToArray();
+                    dataTable.PrimaryKey = keyColumns;
                 }
             }
 
             EntitiesDataSet.Tables.Add(dataTable);
 
             return dataTable;
+        }
+
+        /// <summary>
+        /// Picks the columns to report as <see cref="DataTable.PrimaryKey"/> on the narrowed path.
+        /// The object's own primary key wins. A key column the projection left out is not reported,
+        /// and the key is not silently replaced by another candidate either:
+        /// PopulateSourceDefinitionAsync fails through RejectUnreadablePrimaryKey when that key is
+        /// the one in effect, and a key configured through source.key-fields takes precedence over
+        /// this one anyway.
+        /// Absent a primary key, the first unique index whose every key column is present is used,
+        /// which is what the data adapter reports on the unnarrowed path. Returns null when nothing
+        /// identifies a row, leaving the caller to report a missing primary key as it does today.
+        /// </summary>
+        private static DataColumn[]? ResolveKeyColumns(DataTable dataTable, ObjectCatalogMetadata catalogMetadata)
+        {
+            if (catalogMetadata.PrimaryKeyColumns.Count > 0)
+            {
+                return TryResolveColumns(dataTable, catalogMetadata.PrimaryKeyColumns);
+            }
+
+            foreach (List<string> uniqueKeyCandidate in catalogMetadata.UniqueKeyCandidates)
+            {
+                DataColumn[]? keyColumns = TryResolveColumns(dataTable, uniqueKeyCandidate);
+
+                if (keyColumns is not null)
+                {
+                    return keyColumns;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Resolves every named column against the table, in the order given, or returns null when
+        /// one of them is absent.
+        /// </summary>
+        private static DataColumn[]? TryResolveColumns(DataTable dataTable, List<string> columnNames)
+        {
+            DataColumn[] columns = new DataColumn[columnNames.Count];
+
+            for (int index = 0; index < columnNames.Count; index++)
+            {
+                if (!dataTable.Columns.Contains(columnNames[index]))
+                {
+                    return null;
+                }
+
+                columns[index] = dataTable.Columns[columnNames[index]]!;
+            }
+
+            return columns;
         }
 
         /// <summary>
@@ -2065,18 +2142,13 @@ namespace Azure.DataApiBuilder.Core.Services
 
             try
             {
-                ObjectCatalogMetadata? catalogMetadata =
-                    await GetCachedObjectCatalogMetadataAsync(schemaName, tableName);
-
-                if (catalogMetadata is null)
-                {
-                    // Without the catalog there is no way to tell which columns the database hides
-                    // from "SELECT *". Naming columns anyway would add the hidden period columns of
-                    // a temporal table to the exposed contract, so leave the projection alone.
-                    return "*";
-                }
-
                 DataTable columnsInTable = await GetCachedColumnsAsync(schemaName, tableName);
+
+                // Classify from the "Columns" schema collection first, which is read for every
+                // object anyway. Only an object that actually holds an unsupported type needs the
+                // additional catalog facts below; asking for them up front would add a query per
+                // MSSQL and DWSQL object to every startup.
+                List<string> supportedColumns = new();
 
                 foreach (DataRow columnInfo in columnsInTable.Rows)
                 {
@@ -2095,9 +2167,42 @@ namespace Azure.DataApiBuilder.Core.Services
                     if (UnsupportedColumnDataTypes.Contains(dataType))
                     {
                         skippedColumns[columnName] = dataType;
-                        continue;
                     }
+                    else
+                    {
+                        supportedColumns.Add(columnName);
+                    }
+                }
 
+                if (skippedColumns.Count == 0)
+                {
+                    return "*";
+                }
+
+                if (supportedColumns.Count == 0)
+                {
+                    // Falling back to "*" here would re-issue the very projection that fails, so the
+                    // caller would see the opaque provider error instead of the reason for it.
+                    throw new DataApiBuilderException(
+                        message: $"Every column of {schemaName}.{tableName} has a data type that is not supported: "
+                            + $"{FormatSkippedColumns(skippedColumns)}. The object cannot be exposed.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
+                ObjectCatalogMetadata? catalogMetadata =
+                    await GetCachedObjectCatalogMetadataAsync(schemaName, tableName);
+
+                if (catalogMetadata is null)
+                {
+                    // Without the catalog there is no way to tell which columns the database hides
+                    // from "SELECT *". Naming columns anyway would add the hidden period columns of
+                    // a temporal table to the exposed contract, so leave the projection alone.
+                    return "*";
+                }
+
+                foreach (string columnName in supportedColumns)
+                {
                     if (catalogMetadata.HiddenColumns.Contains(columnName))
                     {
                         // "SELECT *" does not return this column, so naming it would widen the
@@ -2123,18 +2228,16 @@ namespace Azure.DataApiBuilder.Core.Services
                 return "*";
             }
 
-            if (skippedColumns.Count == 0)
-            {
-                return "*";
-            }
-
             if (readableColumns.Count == 0)
             {
-                // Falling back to "*" here would re-issue the very projection that fails, so the
-                // caller would see the opaque provider error instead of the reason for it.
+                // Every column that is not of an unsupported type is one the database hides from
+                // "SELECT *". Naming the hidden ones is not an option, and "*" would re-issue the
+                // projection that fails, so nothing about this object can be read.
                 throw new DataApiBuilderException(
-                    message: $"Every column of {schemaName}.{tableName} has a data type that is not supported: "
-                        + $"{FormatSkippedColumns(skippedColumns)}. The object cannot be exposed.",
+                    message: $"No column of {schemaName}.{tableName} can be read: "
+                        + $"{FormatSkippedColumns(skippedColumns)} have a data type that is not supported, and "
+                        + "every remaining column is one the database does not return from a SELECT *. "
+                        + "The object cannot be exposed.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
@@ -2178,6 +2281,41 @@ namespace Azure.DataApiBuilder.Core.Services
                             + "metadata, so this object cannot be exposed.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Marks identity columns on the narrowed schema discovery path, where the shape is read
+        /// without CommandBehavior.KeyInfo and the reader reports no auto-increment flag.
+        /// The flag is not carried through <see cref="DataColumn.AutoIncrement"/>: its setter
+        /// coerces a DataType it cannot increment to Int32, and SQL Server allows identity on
+        /// tinyint, numeric and decimal, so doing that would report the wrong SystemType and reach
+        /// parameter typing and the generated API schemas. It comes from the catalog instead.
+        /// No-op for every object whose projection was not narrowed, which is where the adapter
+        /// still reports the flag itself.
+        /// </summary>
+        private void ApplyIdentityColumnsFromCatalog(
+            string schemaName,
+            string tableName,
+            SourceDefinition sourceDefinition)
+        {
+            if (!_objectCatalogMetadataCache.TryGetValue(
+                    GetObjectCacheKey(schemaName, tableName),
+                    out ObjectCatalogMetadata? catalogMetadata))
+            {
+                return;
+            }
+
+            foreach (string identityColumn in catalogMetadata.IdentityColumns)
+            {
+                if (sourceDefinition.Columns.TryGetValue(identityColumn, out ColumnDefinition? columnDefinition))
+                {
+                    columnDefinition.IsAutoGenerated = true;
+
+                    // Matches how the adapter-reported flag is treated above: an auto-increment
+                    // column is also read-only.
+                    columnDefinition.IsReadOnly = true;
                 }
             }
         }

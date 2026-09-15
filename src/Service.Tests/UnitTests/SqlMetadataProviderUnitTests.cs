@@ -751,6 +751,49 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test to validate that an object with no database primary key, whose unique index covers a
+        /// supported non-null column, has that key inferred without `source.key-fields`.
+        /// `DbDataAdapter.FillSchema` promotes such a unique key to `DataTable.PrimaryKey` on the
+        /// unnarrowed path, so dropping it once the projection is narrowed would make the two paths
+        /// disagree and demand configuration for an object the other path resolves on its own.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateUniqueKeyIsInferredWhenNoDatabasePrimaryKeyExists()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            await SetUpSingleEntityMetadataProviderAsync(
+                "UniqueKeyGeometry",
+                BuildReadOnlyEntity(
+                    entityName: "UniqueKeyGeometry",
+                    databaseObject: "dbo.unique_key_geometry_table",
+                    sourceType: EntitySourceType.Table,
+                    keyFields: null));
+
+            await _sqlMetadataProvider.InitializeAsync();
+
+            Assert.IsTrue(
+                _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue("UniqueKeyGeometry", out DatabaseObject databaseObject),
+                message: "Metadata inference failed for an object whose only key is a unique index over a supported column.");
+
+            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
+
+            CollectionAssert.AreEqual(
+                new List<string> { "code" },
+                sourceDefinition.PrimaryKey,
+                message: "The non-null unique column is expected to be inferred as the primary key.");
+            Assert.IsTrue(
+                sourceDefinition.Columns.ContainsKey("name"),
+                message: "A column with a supported data type is expected in the source definition.");
+            Assert.IsFalse(
+                sourceDefinition.Columns.ContainsKey("geom"),
+                message: "A column whose data type cannot be mapped is not expected in the source definition.");
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
         /// Builds a metadata provider over a single in-memory entity and resets the database state.
         /// The objects exercised by the unsupported-data-type tests are declared in memory rather
         /// than in dab-config.MsSql.json, because several of them fail by design and every MSSQL

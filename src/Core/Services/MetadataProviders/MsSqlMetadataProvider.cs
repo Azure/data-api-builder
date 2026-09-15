@@ -70,23 +70,36 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
             string tableParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1";
 
-            // The object is resolved through object_id() from the schema and the quoted table name,
-            // the same way PopulateColumnDefinitionsWithReadOnlyFlag resolves it.
+            // The object is resolved through object_id(). Both name parts go through QUOTENAME:
+            // object_id() parses its argument as a multi-part name, so an unquoted schema or table
+            // holding a dot, a space, a reserved word or a closing bracket resolves to the wrong
+            // object or to null — and a null object_id returns no rows, which would leave the
+            // projection at "SELECT *" and bring #3801 back for that object. QUOTENAME also doubles
+            // an embedded "]", so the names are passed raw and quoted by the server.
             // is_hidden marks the period columns of a temporal table declared
             // GENERATED ALWAYS ... HIDDEN, which "SELECT *" does not return. key_ordinal is null for
-            // every column outside the primary key, and 1-based within it.
+            // every column outside the primary key, and 1-based within it; an index's included
+            // columns report 0 and are not part of the key.
+            // Unique indexes are returned alongside the primary key, because absent a primary key
+            // the data adapter reports a non-nullable unique key as DataTable.PrimaryKey on the
+            // unnarrowed path, and the narrowed path has to do the same. Filtered and disabled
+            // indexes do not identify every row, and an index's included columns report key_ordinal
+            // 0 and are not part of its key.
             string query =
-                "select c.name as COLUMN_NAME, c.is_hidden as IS_HIDDEN, ic.key_ordinal as KEY_ORDINAL "
+                "select c.name as COLUMN_NAME, c.is_hidden as IS_HIDDEN, c.is_identity as IS_IDENTITY, "
+                + "c.is_nullable as IS_NULLABLE, i.index_id as INDEX_ID, "
+                + "i.is_primary_key as IS_PRIMARY_KEY, ic.key_ordinal as KEY_ORDINAL "
                 + "from sys.columns as c "
-                + "left join sys.indexes as i on i.object_id = c.object_id and i.is_primary_key = 1 "
                 + "left join sys.index_columns as ic on ic.object_id = c.object_id "
-                + "and ic.index_id = i.index_id and ic.column_id = c.column_id "
-                + $"where c.object_id = object_id({schemaParamName}+'.'+{tableParamName});";
+                + "and ic.column_id = c.column_id and ic.key_ordinal > 0 "
+                + "left join sys.indexes as i on i.object_id = ic.object_id and i.index_id = ic.index_id "
+                + "and i.is_unique = 1 and i.is_disabled = 0 and i.has_filter = 0 "
+                + $"where c.object_id = object_id(quotename({schemaParamName})+'.'+quotename({tableParamName}));";
 
             Dictionary<string, DbConnectionParam> parameters = new()
             {
                 { schemaParamName, new(schemaName, DbType.String) },
-                { tableParamName, new(SqlQueryBuilder.QuoteTableNameAsDBConnectionParam(tableName), DbType.String) }
+                { tableParamName, new(tableName, DbType.String) }
             };
 
             try
@@ -130,7 +143,8 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             ObjectCatalogMetadata catalogMetadata = new();
-            List<(string ColumnName, byte KeyOrdinal)> keyColumns = new();
+            Dictionary<string, bool> nullabilityByColumn = new(StringComparer.OrdinalIgnoreCase);
+            Dictionary<int, CatalogIndexKey> indexKeysByIndexId = new();
 
             foreach (DbResultSetRow catalogRow in catalogRows.Rows)
             {
@@ -146,20 +160,79 @@ namespace Azure.DataApiBuilder.Core.Services
                     catalogMetadata.HiddenColumns.Add(columnName);
                 }
 
-                if (columnInfo["KEY_ORDINAL"] is byte keyOrdinal && keyOrdinal > 0)
+                if (columnInfo["IS_IDENTITY"] is bool isIdentity && isIdentity)
                 {
-                    keyColumns.Add((columnName, keyOrdinal));
+                    catalogMetadata.IdentityColumns.Add(columnName);
+                }
+
+                // A column the catalog does not describe as non-nullable is treated as nullable, so
+                // an unreadable flag can only disqualify a unique key, never promote one.
+                nullabilityByColumn[columnName] = columnInfo["IS_NULLABLE"] is not bool isNullable || isNullable;
+
+                // A column outside every eligible unique index carries nulls for the index members.
+                if (columnInfo["INDEX_ID"] is not int indexId
+                    || columnInfo["KEY_ORDINAL"] is not byte keyOrdinal)
+                {
+                    continue;
+                }
+
+                if (!indexKeysByIndexId.TryGetValue(indexId, out CatalogIndexKey? indexKey))
+                {
+                    indexKey = new CatalogIndexKey
+                    {
+                        IsPrimaryKey = columnInfo["IS_PRIMARY_KEY"] is bool isPrimaryKey && isPrimaryKey
+                    };
+                    indexKeysByIndexId[indexId] = indexKey;
+                }
+
+                indexKey.Columns.Add((columnName, keyOrdinal));
+            }
+
+            // Index order is creation order, which makes the candidate choice deterministic.
+            List<int> indexIds = new(indexKeysByIndexId.Keys);
+            indexIds.Sort();
+
+            foreach (int indexId in indexIds)
+            {
+                CatalogIndexKey indexKey = indexKeysByIndexId[indexId];
+                indexKey.Columns.Sort((left, right) => left.KeyOrdinal.CompareTo(right.KeyOrdinal));
+
+                List<string> keyColumns = new();
+                bool holdsNoNull = true;
+
+                foreach ((string ColumnName, byte KeyOrdinal) keyColumn in indexKey.Columns)
+                {
+                    keyColumns.Add(keyColumn.ColumnName);
+
+                    if (nullabilityByColumn.TryGetValue(keyColumn.ColumnName, out bool isNullable) && isNullable)
+                    {
+                        holdsNoNull = false;
+                    }
+                }
+
+                if (indexKey.IsPrimaryKey)
+                {
+                    catalogMetadata.PrimaryKeyColumns.AddRange(keyColumns);
+                }
+                else if (holdsNoNull)
+                {
+                    // Matches the data adapter, which promotes a unique key to the primary key only
+                    // when none of its columns can hold a null.
+                    catalogMetadata.UniqueKeyCandidates.Add(keyColumns);
                 }
             }
 
-            keyColumns.Sort((left, right) => left.KeyOrdinal.CompareTo(right.KeyOrdinal));
-
-            foreach ((string ColumnName, byte KeyOrdinal) keyColumn in keyColumns)
-            {
-                catalogMetadata.PrimaryKeyColumns.Add(keyColumn.ColumnName);
-            }
-
             return catalogMetadata;
+        }
+
+        /// <summary>
+        /// One unique index of a database object, while its key columns are being collected.
+        /// </summary>
+        private sealed class CatalogIndexKey
+        {
+            public bool IsPrimaryKey { get; init; }
+
+            public List<(string ColumnName, byte KeyOrdinal)> Columns { get; } = new();
         }
 
         public override string GetDefaultSchemaName()

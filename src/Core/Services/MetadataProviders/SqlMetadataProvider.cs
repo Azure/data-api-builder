@@ -2400,6 +2400,15 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 foreach (EntityAction action in permission.Actions)
                 {
+                    // A database policy is parsed per request against the OData model, which is
+                    // built from SourceDefinition.Columns. A policy naming a column that is not
+                    // there fails every request for that role instead of the configuration being
+                    // rejected once, at startup.
+                    foreach (string policyField in EnumeratePolicyFieldReferences(action.Policy?.Database))
+                    {
+                        RejectReference(policyField, $"database policy of role {permission.Role}");
+                    }
+
                     if (action.Fields?.Include is null)
                     {
                         continue;
@@ -2428,6 +2437,47 @@ namespace Azure.DataApiBuilder.Core.Services
                         + "configuration.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+        }
+
+        /// <summary>
+        /// Yields the field names a database policy references through its "@item." prefix.
+        /// Scanned by hand rather than parsed: the OData model the parser needs does not exist yet
+        /// at this point in initialization, and a reference this scan fails to recognize only means
+        /// one fewer configuration rejected at startup — never a wrong rejection.
+        /// A policy can only reach a skipped column by its backing name, because an alias over one
+        /// is rejected through mappings and fields before this runs.
+        /// </summary>
+        private static IEnumerable<string> EnumeratePolicyFieldReferences(string? databasePolicy)
+        {
+            const string POLICY_FIELD_PREFIX = "@item.";
+
+            if (string.IsNullOrWhiteSpace(databasePolicy))
+            {
+                yield break;
+            }
+
+            int prefixIndex = databasePolicy.IndexOf(POLICY_FIELD_PREFIX, StringComparison.OrdinalIgnoreCase);
+
+            while (prefixIndex >= 0)
+            {
+                int fieldStart = prefixIndex + POLICY_FIELD_PREFIX.Length;
+                int fieldEnd = fieldStart;
+
+                while (fieldEnd < databasePolicy.Length
+                    && (char.IsLetterOrDigit(databasePolicy[fieldEnd]) || databasePolicy[fieldEnd] == '_'))
+                {
+                    fieldEnd++;
+                }
+
+                if (fieldEnd > fieldStart)
+                {
+                    yield return databasePolicy[fieldStart..fieldEnd];
+                }
+
+                prefixIndex = fieldEnd >= databasePolicy.Length
+                    ? -1
+                    : databasePolicy.IndexOf(POLICY_FIELD_PREFIX, fieldEnd, StringComparison.OrdinalIgnoreCase);
             }
         }
 

@@ -50,6 +50,7 @@ DROP TABLE IF EXISTS hierarchyid_pk_table;
 DROP TABLE IF EXISTS hierarchyid_composite_pk_table;
 DROP TABLE IF EXISTS hierarchyid_unique_table;
 DROP TABLE IF EXISTS unique_key_geometry_table;
+DROP TABLE IF EXISTS decimal_identity_geometry_table;
 -- System versioning has to be released before the temporal table can be dropped.
 IF OBJECT_ID('dbo.temporal_geometry_type_table', 'U') IS NOT NULL
     AND OBJECTPROPERTY(OBJECT_ID('dbo.temporal_geometry_type_table'), 'TableTemporalType') = 2
@@ -315,6 +316,14 @@ CREATE TABLE unique_key_geometry_table(
     name varchar(100) NOT NULL,
     geom geometry NULL,
     CONSTRAINT UQ_unique_key_geometry_table_code UNIQUE (code)
+);
+
+-- A decimal identity column. DataColumn.AutoIncrement would coerce its CLR type to Int32, which is
+-- why identity is carried from the catalog instead; this fixture is what proves the type survives.
+CREATE TABLE decimal_identity_geometry_table(
+    id decimal(18, 0) IDENTITY(1, 1) NOT NULL PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    geom geometry NULL
 );
 
 CREATE TABLE profiles(
@@ -746,6 +755,11 @@ INSERT INTO unique_key_geometry_table(code, name, geom)
 VALUES
     ('CAR-001', 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
     ('CAR-002', 'null geometry', NULL);
+
+INSERT INTO decimal_identity_geometry_table(name, geom)
+VALUES
+    ('point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    ('null geometry', NULL);
 
 SET IDENTITY_INSERT profiles ON
 INSERT INTO profiles(id, metadata)

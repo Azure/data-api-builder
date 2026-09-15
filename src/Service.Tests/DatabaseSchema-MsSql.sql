@@ -46,6 +46,15 @@ DROP TABLE IF EXISTS type_table;
 DROP TABLE IF EXISTS vector_type_table;
 DROP TABLE IF EXISTS vector_owners;
 DROP TABLE IF EXISTS geometry_type_table;
+DROP TABLE IF EXISTS hierarchyid_pk_table;
+DROP TABLE IF EXISTS hierarchyid_composite_pk_table;
+DROP TABLE IF EXISTS hierarchyid_unique_table;
+-- System versioning has to be released before the temporal table can be dropped.
+IF OBJECT_ID('dbo.temporal_geometry_type_table', 'U') IS NOT NULL
+    AND OBJECTPROPERTY(OBJECT_ID('dbo.temporal_geometry_type_table'), 'TableTemporalType') = 2
+    ALTER TABLE temporal_geometry_type_table SET (SYSTEM_VERSIONING = OFF);
+DROP TABLE IF EXISTS temporal_geometry_type_table;
+DROP TABLE IF EXISTS temporal_geometry_type_table_history;
 DROP TABLE IF EXISTS profiles;
 DROP TABLE IF EXISTS trees;
 DROP TABLE IF EXISTS fungi;
@@ -258,6 +267,43 @@ CREATE TABLE geometry_type_table(
     id int IDENTITY(5001, 1) PRIMARY KEY,
     name varchar(100) NOT NULL,
     geom geometry NULL
+);
+
+-- The period columns are HIDDEN, so SELECT * does not return them. An explicit projection built
+-- from the catalog would, which is what this fixture guards against.
+CREATE TABLE temporal_geometry_type_table(
+    id int NOT NULL PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    geom geometry NULL,
+    valid_from datetime2 GENERATED ALWAYS AS ROW START HIDDEN NOT NULL,
+    valid_to datetime2 GENERATED ALWAYS AS ROW END HIDDEN NOT NULL,
+    PERIOD FOR SYSTEM_TIME (valid_from, valid_to)
+)
+WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo.temporal_geometry_type_table_history));
+
+-- The database primary key is itself of an unsupported type, so no projection can expose the
+-- object: the engine needs the key it cannot read.
+CREATE TABLE hierarchyid_pk_table(
+    node hierarchyid NOT NULL PRIMARY KEY,
+    name varchar(100) NOT NULL
+);
+
+-- Same, with the unsupported column as one member of a composite key.
+CREATE TABLE hierarchyid_composite_pk_table(
+    tenant_id int NOT NULL,
+    node hierarchyid NOT NULL,
+    name varchar(100) NOT NULL,
+    CONSTRAINT PK_hierarchyid_composite_pk_table PRIMARY KEY (tenant_id, node)
+);
+
+-- No database primary key, and the unsupported column carries a unique index. This object is
+-- expected to load, with the key supplied through source.key-fields: the data adapter's own key
+-- discovery would otherwise pull the unique column back in as a hidden reader column.
+CREATE TABLE hierarchyid_unique_table(
+    id int NOT NULL,
+    node hierarchyid NOT NULL,
+    name varchar(100) NOT NULL,
+    CONSTRAINT UQ_hierarchyid_unique_table_node UNIQUE (node)
 );
 
 CREATE TABLE profiles(
@@ -670,6 +716,20 @@ VALUES
     (1, 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
     (2, 'null geometry', NULL);
 SET IDENTITY_INSERT geometry_type_table OFF
+
+INSERT INTO temporal_geometry_type_table(id, name, geom)
+VALUES
+    (1, 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    (2, 'null geometry', NULL);
+
+INSERT INTO hierarchyid_pk_table(node, name)
+VALUES (hierarchyid::Parse('/1/'), 'root');
+
+INSERT INTO hierarchyid_composite_pk_table(tenant_id, node, name)
+VALUES (1, hierarchyid::Parse('/1/'), 'root');
+
+INSERT INTO hierarchyid_unique_table(id, node, name)
+VALUES (1, hierarchyid::Parse('/1/'), 'root');
 
 SET IDENTITY_INSERT profiles ON
 INSERT INTO profiles(id, metadata)

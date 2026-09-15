@@ -538,6 +538,260 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test to validate that the period columns of a temporal table declared
+        /// GENERATED ALWAYS ... HIDDEN stay out of the inferred source definition.
+        /// "SELECT *" does not return them, so an explicit projection built from the catalog must not
+        /// name them either: adding them widens the exposed contract, and the read-only
+        /// classification does not recognize generated-always period columns, so an overwriting PUT
+        /// would try to null them and fail.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateHiddenPeriodColumnsAreNotInferred()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            await SetUpSingleEntityMetadataProviderAsync(
+                "TemporalGeometryType",
+                BuildReadOnlyEntity(
+                    entityName: "TemporalGeometryType",
+                    databaseObject: "dbo.temporal_geometry_type_table",
+                    sourceType: EntitySourceType.Table,
+                    keyFields: new string[] { "id" }));
+
+            await _sqlMetadataProvider.InitializeAsync();
+
+            Assert.IsTrue(
+                _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue("TemporalGeometryType", out DatabaseObject databaseObject),
+                message: "Metadata inference failed for the entity backed by a temporal table.");
+
+            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
+
+            Assert.IsTrue(
+                sourceDefinition.Columns.ContainsKey("id"),
+                message: "The configured key column is expected in the source definition.");
+            Assert.IsTrue(
+                sourceDefinition.Columns.ContainsKey("name"),
+                message: "A column with a supported data type is expected in the source definition.");
+            Assert.IsFalse(
+                sourceDefinition.Columns.ContainsKey("geom"),
+                message: "A column whose data type cannot be mapped is not expected in the source definition.");
+            Assert.IsFalse(
+                sourceDefinition.Columns.ContainsKey("valid_from"),
+                message: "A HIDDEN period column is not returned by SELECT * and is not expected in the source definition.");
+            Assert.IsFalse(
+                sourceDefinition.Columns.ContainsKey("valid_to"),
+                message: "A HIDDEN period column is not returned by SELECT * and is not expected in the source definition.");
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
+        /// Test to validate that an object whose own database primary key is a column of an
+        /// unsupported data type fails initialization with the reason.
+        /// The projection cannot carry that column, and the engine cannot operate on the object
+        /// without its key, so the object is unreachable either way. What this asserts is that the
+        /// failure names the column and its type instead of reporting a missing primary key, which
+        /// reads as something the user forgot to configure.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateUnsupportedDatabasePrimaryKeyFailsInitialization()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            await SetUpSingleEntityMetadataProviderAsync(
+                "HierarchyIdKeyed",
+                BuildReadOnlyEntity(
+                    entityName: "HierarchyIdKeyed",
+                    databaseObject: "dbo.hierarchyid_pk_table",
+                    sourceType: EntitySourceType.Table,
+                    keyFields: null));
+
+            try
+            {
+                await _sqlMetadataProvider.InitializeAsync();
+                Assert.Fail("Expected DataApiBuilderException was not thrown for a database primary key of an unsupported data type.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.IsTrue(
+                    ex.Message.Contains("node") && ex.Message.Contains("hierarchyid"),
+                    message: $"The error is expected to name the key column and its data type. Actual message: {ex.Message}");
+            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
+        /// Test to validate the same rejection when the unsupported column is one member of a
+        /// composite database primary key. The supported member alone does not identify a row, so
+        /// the object cannot be exposed through a partial key.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateUnsupportedColumnInCompositeDatabasePrimaryKeyFailsInitialization()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            await SetUpSingleEntityMetadataProviderAsync(
+                "HierarchyIdCompositeKeyed",
+                BuildReadOnlyEntity(
+                    entityName: "HierarchyIdCompositeKeyed",
+                    databaseObject: "dbo.hierarchyid_composite_pk_table",
+                    sourceType: EntitySourceType.Table,
+                    keyFields: null));
+
+            try
+            {
+                await _sqlMetadataProvider.InitializeAsync();
+                Assert.Fail("Expected DataApiBuilderException was not thrown for a composite database primary key holding an unsupported data type.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.IsTrue(
+                    ex.Message.Contains("node") && ex.Message.Contains("hierarchyid"),
+                    message: $"The error is expected to name the key column and its data type. Actual message: {ex.Message}");
+            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
+        /// Test to validate that an object carrying a unique index over a column of an unsupported
+        /// data type loads when a supported key is configured through source.key-fields.
+        /// This is the case the data adapter cannot serve: FillSchema runs with
+        /// CommandBehavior.KeyInfo, under which the provider performs its own key discovery and
+        /// appends key columns missing from the SELECT list as hidden reader columns - so the
+        /// unsupported unique column comes back regardless of the projection, and configuring a
+        /// supported key does not change that. Schema discovery therefore reads the shape without
+        /// KeyInfo once the projection is narrowed, and takes the primary key from the catalog.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateConfiguredKeyIsUsedWhenUniqueIndexColumnIsUnsupported()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            await SetUpSingleEntityMetadataProviderAsync(
+                "HierarchyIdUnique",
+                BuildReadOnlyEntity(
+                    entityName: "HierarchyIdUnique",
+                    databaseObject: "dbo.hierarchyid_unique_table",
+                    sourceType: EntitySourceType.Table,
+                    keyFields: new string[] { "id" }));
+
+            await _sqlMetadataProvider.InitializeAsync();
+
+            Assert.IsTrue(
+                _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue("HierarchyIdUnique", out DatabaseObject databaseObject),
+                message: "Metadata inference failed for an object whose unique index covers an unsupported column.");
+
+            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
+
+            Assert.IsTrue(
+                sourceDefinition.Columns.ContainsKey("id"),
+                message: "The configured key column is expected in the source definition.");
+            Assert.IsTrue(
+                sourceDefinition.Columns.ContainsKey("name"),
+                message: "A column with a supported data type is expected in the source definition.");
+            Assert.IsFalse(
+                sourceDefinition.Columns.ContainsKey("node"),
+                message: "The unsupported unique column is not expected in the source definition.");
+            CollectionAssert.AreEqual(
+                new List<string> { "id" },
+                sourceDefinition.PrimaryKey,
+                message: "The configured key is expected to be the primary key in effect.");
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
+        /// Test to validate that configuration naming a column left out of the projection fails
+        /// initialization.
+        /// Such a name keeps resolving after the column is gone, because the exposed and backing
+        /// column maps are built from entity fields and mappings without requiring the column to
+        /// exist in the source definition. The reference then reaches code that indexes the source
+        /// definition columns and fails per request rather than at startup.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateConfiguredReferenceToUnsupportedColumnFailsInitialization()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            await SetUpSingleEntityMetadataProviderAsync(
+                "GeometryAliased",
+                BuildReadOnlyEntity(
+                    entityName: "GeometryAliased",
+                    databaseObject: "dbo.geometry_type_table",
+                    sourceType: EntitySourceType.Table,
+                    keyFields: new string[] { "id" },
+                    mappings: new Dictionary<string, string> { { "geom", "Position" } }));
+
+            try
+            {
+                await _sqlMetadataProvider.InitializeAsync();
+                Assert.Fail("Expected DataApiBuilderException was not thrown for a mapping over a column of an unsupported data type.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.IsTrue(
+                    ex.Message.Contains("geom") && ex.Message.Contains("mappings"),
+                    message: $"The error is expected to name the column and the configuration section referencing it. Actual message: {ex.Message}");
+            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
+        /// Builds a metadata provider over a single in-memory entity and resets the database state.
+        /// The objects exercised by the unsupported-data-type tests are declared in memory rather
+        /// than in dab-config.MsSql.json, because several of them fail by design and every MSSQL
+        /// fixture initializes every configured entity.
+        /// </summary>
+        private static async Task SetUpSingleEntityMetadataProviderAsync(string entityName, Entity entity)
+        {
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig()
+                with
+            { Entities = new RuntimeEntities(new Dictionary<string, Entity> { { entityName, entity } }) };
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
+            await ResetDbStateAsync();
+        }
+
+        /// <summary>
+        /// Builds a read-only entity over a database object, with optional configured key fields and
+        /// mappings.
+        /// </summary>
+        private static Entity BuildReadOnlyEntity(
+            string entityName,
+            string databaseObject,
+            EntitySourceType sourceType,
+            string[] keyFields,
+            Dictionary<string, string> mappings = null)
+        {
+            return new Entity(
+                Source: new(databaseObject, sourceType, null, keyFields),
+                Fields: null,
+                Rest: new(Enabled: true),
+                GraphQL: new(entityName, $"{entityName}s", Enabled: true),
+                Permissions: new EntityPermission[]
+                {
+                    new(Role: "anonymous",
+                        Actions: new EntityAction[] { new(Action: EntityActionOperation.Read, Fields: null, Policy: null) })
+                },
+                Relationships: null,
+                Mappings: mappings);
+        }
+
+        /// <summary>
         /// Test to validate successful inference of relationship data based on data provided in the config and the metadata
         /// collected from the MySql database.
         /// </summary>

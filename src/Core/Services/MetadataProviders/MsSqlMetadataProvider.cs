@@ -62,6 +62,106 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc/>
         protected override ImmutableHashSet<string> UnsupportedColumnDataTypes => _unsupportedColumnDataTypes;
 
+        /// <inheritdoc/>
+        protected override async Task<ObjectCatalogMetadata?> GetObjectCatalogMetadataAsync(
+            string schemaName,
+            string tableName)
+        {
+            string schemaParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
+            string tableParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1";
+
+            // The object is resolved through object_id() from the schema and the quoted table name,
+            // the same way PopulateColumnDefinitionsWithReadOnlyFlag resolves it.
+            // is_hidden marks the period columns of a temporal table declared
+            // GENERATED ALWAYS ... HIDDEN, which "SELECT *" does not return. key_ordinal is null for
+            // every column outside the primary key, and 1-based within it.
+            string query =
+                "select c.name as COLUMN_NAME, c.is_hidden as IS_HIDDEN, ic.key_ordinal as KEY_ORDINAL "
+                + "from sys.columns as c "
+                + "left join sys.indexes as i on i.object_id = c.object_id and i.is_primary_key = 1 "
+                + "left join sys.index_columns as ic on ic.object_id = c.object_id "
+                + "and ic.index_id = i.index_id and ic.column_id = c.column_id "
+                + $"where c.object_id = object_id({schemaParamName}+'.'+{tableParamName});";
+
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                { schemaParamName, new(schemaName, DbType.String) },
+                { tableParamName, new(SqlQueryBuilder.QuoteTableNameAsDBConnectionParam(tableName), DbType.String) }
+            };
+
+            try
+            {
+                return await QueryExecutor.ExecuteQueryAsync(
+                    sqltext: query,
+                    parameters: parameters,
+                    dataReaderHandler: SummarizeObjectCatalogMetadataAsync,
+                    dataSourceName: _dataSourceName);
+            }
+            catch (Exception ex)
+            {
+                // sys.columns.is_hidden exists from SQL Server 2016 on. Where the catalog cannot
+                // answer — a dedicated SQL pool, or a login without VIEW DEFINITION — returning null
+                // leaves the projection at "*", which is exactly the behavior before this change.
+                _logger.LogDebug(
+                    "Unable to read catalog metadata for {schemaName}.{tableName}: {message}",
+                    schemaName,
+                    tableName,
+                    ex.Message);
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Turns the catalog rows read by <see cref="GetObjectCatalogMetadataAsync"/> into
+        /// <see cref="SqlMetadataProvider{ConnectionT, DataAdapterT, CommandT}.ObjectCatalogMetadata"/>.
+        /// Returns null when the object has no rows: that means it was not found in the catalog, and
+        /// claiming it has no hidden columns would be a guess.
+        /// </summary>
+        private async Task<ObjectCatalogMetadata?> SummarizeObjectCatalogMetadataAsync(
+            DbDataReader reader,
+            List<string>? args = null)
+        {
+            DbResultSet catalogRows = await QueryExecutor.ExtractResultSetFromDbDataReaderAsync(reader);
+
+            if (catalogRows.Rows.Count == 0)
+            {
+                return null;
+            }
+
+            ObjectCatalogMetadata catalogMetadata = new();
+            List<(string ColumnName, byte KeyOrdinal)> keyColumns = new();
+
+            foreach (DbResultSetRow catalogRow in catalogRows.Rows)
+            {
+                Dictionary<string, object?> columnInfo = catalogRow.Columns;
+
+                if (columnInfo["COLUMN_NAME"] is not string columnName)
+                {
+                    continue;
+                }
+
+                if (columnInfo["IS_HIDDEN"] is bool isHidden && isHidden)
+                {
+                    catalogMetadata.HiddenColumns.Add(columnName);
+                }
+
+                if (columnInfo["KEY_ORDINAL"] is byte keyOrdinal && keyOrdinal > 0)
+                {
+                    keyColumns.Add((columnName, keyOrdinal));
+                }
+            }
+
+            keyColumns.Sort((left, right) => left.KeyOrdinal.CompareTo(right.KeyOrdinal));
+
+            foreach ((string ColumnName, byte KeyOrdinal) keyColumn in keyColumns)
+            {
+                catalogMetadata.PrimaryKeyColumns.Add(keyColumn.ColumnName);
+            }
+
+            return catalogMetadata;
+        }
+
         public override string GetDefaultSchemaName()
         {
             return "dbo";

@@ -116,6 +116,77 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         private readonly ConcurrentDictionary<string, Dictionary<string, string>> _skippedColumnsByObject = new(StringComparer.Ordinal);
 
+        /// <summary>
+        /// Catalog facts per database object that the "Columns" schema collection does not report.
+        /// Only populated for providers that declare <see cref="UnsupportedColumnDataTypes"/>, since
+        /// only those replace "*" with an explicit projection and therefore need them. Keyed by
+        /// object with an ordinal comparer, for the reason given on <see cref="_columnsMetadataCache"/>.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, ObjectCatalogMetadata> _objectCatalogMetadataCache = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// The two catalog facts an explicit schema projection needs and the "Columns" schema
+        /// collection does not carry: which columns the database hides from "SELECT *", and which
+        /// columns form the object's own primary key.
+        /// </summary>
+        protected sealed class ObjectCatalogMetadata
+        {
+            /// <summary>
+            /// Columns the database omits from "SELECT *" — for SQL Server, the period columns of a
+            /// temporal table declared GENERATED ALWAYS ... HIDDEN. Naming them in a projection
+            /// would expose columns that are invisible today, so they are subtracted before the
+            /// unsupported data types are.
+            /// </summary>
+            public HashSet<string> HiddenColumns { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+            /// <summary>
+            /// The columns of the object's own primary key, in key order. Replaces the key discovery
+            /// the data adapter performs under CommandBehavior.KeyInfo, which cannot be used once
+            /// the projection is narrowed: the adapter appends key columns the projection left out
+            /// as hidden reader columns, and an unsupported type among them reintroduces the very
+            /// failure the narrowing avoids.
+            /// </summary>
+            public List<string> PrimaryKeyColumns { get; } = new();
+        }
+
+        /// <summary>
+        /// Reads <see cref="ObjectCatalogMetadata"/> for a database object. Returns null by default:
+        /// a provider only implements this when it declares <see cref="UnsupportedColumnDataTypes"/>.
+        /// When it returns null the projection stays "*" and schema discovery behaves exactly as it
+        /// did before.
+        /// </summary>
+        protected virtual Task<ObjectCatalogMetadata?> GetObjectCatalogMetadataAsync(
+            string schemaName,
+            string tableName)
+        {
+            return Task.FromResult<ObjectCatalogMetadata?>(null);
+        }
+
+        /// <summary>
+        /// Returns <see cref="ObjectCatalogMetadata"/> for a database object, reading the catalog
+        /// once per object for the duration of metadata initialization.
+        /// </summary>
+        private async Task<ObjectCatalogMetadata?> GetCachedObjectCatalogMetadataAsync(
+            string schemaName,
+            string tableName)
+        {
+            string cacheKey = GetObjectCacheKey(schemaName, tableName);
+
+            if (_objectCatalogMetadataCache.TryGetValue(cacheKey, out ObjectCatalogMetadata? cachedMetadata))
+            {
+                return cachedMetadata;
+            }
+
+            ObjectCatalogMetadata? catalogMetadata = await GetObjectCatalogMetadataAsync(schemaName, tableName);
+
+            if (catalogMetadata is not null)
+            {
+                _objectCatalogMetadataCache[cacheKey] = catalogMetadata;
+            }
+
+            return catalogMetadata;
+        }
+
         protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
 
         /// <summary>
@@ -1554,6 +1625,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (sourceDefinition.PrimaryKey.Count == 0)
             {
+                // When the object's own primary key is unreadable, say so. The message below reads
+                // as a configuration mistake, and no configuration can express that key.
+                RejectUnreadablePrimaryKey(schemaName, tableName);
+
                 throw new DataApiBuilderException(
                        message: $"Primary key not configured on the given database object {tableName}",
                        statusCode: HttpStatusCode.ServiceUnavailable,
@@ -1612,6 +1687,8 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             RejectPrimaryKeyOnUnsupportedColumn(schemaName, tableName, sourceDefinition);
+
+            RejectConfiguredReferencesToSkippedColumns(entityName, entity, schemaName, tableName);
 
             DataTable columnsInTable = await GetCachedColumnsAsync(schemaName, tableName);
 
@@ -1849,17 +1926,119 @@ namespace Azure.DataApiBuilder.Core.Services
 
             await conn.OpenAsync();
 
+            string selectStatement = $"SELECT {projection} FROM {tableNameWithSchemaPrefix}";
+
+            if (!string.Equals(projection, "*", StringComparison.Ordinal))
+            {
+                // The projection left columns out, so the data adapter cannot be used here:
+                // FillSchema runs with CommandBehavior.KeyInfo, under which the provider performs
+                // its own key discovery and appends key columns missing from the SELECT list as
+                // hidden reader columns. A column whose CLR type the provider cannot resolve
+                // reintroduces "DataReader.GetFieldType(N) returned null" that way even though the
+                // projection excluded it — reachable through the object's own primary key, and
+                // through any unique index, including when a supported key is configured through
+                // source.key-fields. Reading the shape without KeyInfo keeps the projection
+                // authoritative; the primary key comes from the catalog instead.
+                return await ReadSchemaWithoutKeyInfoAsync(
+                    conn,
+                    selectStatement,
+                    tableNameWithSchemaPrefix,
+                    schemaName,
+                    tableName);
+            }
+
             DataAdapterT adapterForTable = new();
             CommandT selectCommand = new()
             {
                 Connection = conn,
-                CommandText
-                = $"SELECT {projection} FROM {tableNameWithSchemaPrefix}"
+                CommandText = selectStatement
             };
             adapterForTable.SelectCommand = selectCommand;
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableNameWithSchemaPrefix);
             return dataTable[0];
+        }
+
+        /// <summary>
+        /// Reads the shape of a narrowed projection without CommandBehavior.KeyInfo and registers
+        /// the result in <see cref="EntitiesDataSet"/> under the name the data adapter would have
+        /// used, so callers find it there on subsequent lookups. The primary key is taken from the
+        /// catalog, because the adapter's own key discovery is precisely what has to be avoided.
+        /// </summary>
+        private async Task<DataTable> ReadSchemaWithoutKeyInfoAsync(
+            ConnectionT conn,
+            string selectStatement,
+            string tableNameWithSchemaPrefix,
+            string schemaName,
+            string tableName)
+        {
+            DataTable dataTable = new(tableNameWithSchemaPrefix);
+
+            using (CommandT selectCommand = new())
+            {
+                selectCommand.Connection = conn;
+                selectCommand.CommandText = selectStatement;
+
+                // SchemaOnly describes the statement without returning rows. Without KeyInfo the
+                // reader carries exactly the projected columns and nothing else.
+                using DbDataReader reader =
+                    await selectCommand.ExecuteReaderAsync(CommandBehavior.SchemaOnly);
+
+                using DataTable? schemaTable = reader.GetSchemaTable();
+
+                if (schemaTable is null)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"The data provider reported no schema for {schemaName}.{tableName}.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
+                foreach (DataRow columnInfo in schemaTable.Rows)
+                {
+                    if (columnInfo["ColumnName"] is not string columnName)
+                    {
+                        continue;
+                    }
+
+                    DataColumn column = new(columnName, (Type)columnInfo["DataType"])
+                    {
+                        AllowDBNull = columnInfo["AllowDBNull"] is bool allowDbNull && allowDbNull,
+                        AutoIncrement = columnInfo["IsAutoIncrement"] is bool isAutoIncrement && isAutoIncrement
+                    };
+
+                    dataTable.Columns.Add(column);
+                }
+            }
+
+            ObjectCatalogMetadata? catalogMetadata =
+                await GetCachedObjectCatalogMetadataAsync(schemaName, tableName);
+
+            if (catalogMetadata is not null && catalogMetadata.PrimaryKeyColumns.Count > 0)
+            {
+                List<DataColumn> keyColumns = new();
+
+                foreach (string primaryKeyColumn in catalogMetadata.PrimaryKeyColumns)
+                {
+                    if (dataTable.Columns.Contains(primaryKeyColumn))
+                    {
+                        keyColumns.Add(dataTable.Columns[primaryKeyColumn]!);
+                    }
+                }
+
+                // A key column left out of the projection cannot be reported as a key here, and the
+                // key is not silently dropped either: PopulateSourceDefinitionAsync fails through
+                // RejectUnreadablePrimaryKey when that key is the one in effect, while a key
+                // configured through source.key-fields takes precedence over this one anyway.
+                if (keyColumns.Count == catalogMetadata.PrimaryKeyColumns.Count)
+                {
+                    dataTable.PrimaryKey = keyColumns.ToArray();
+                }
+            }
+
+            EntitiesDataSet.Tables.Add(dataTable);
+
+            return dataTable;
         }
 
         /// <summary>
@@ -1886,6 +2065,17 @@ namespace Azure.DataApiBuilder.Core.Services
 
             try
             {
+                ObjectCatalogMetadata? catalogMetadata =
+                    await GetCachedObjectCatalogMetadataAsync(schemaName, tableName);
+
+                if (catalogMetadata is null)
+                {
+                    // Without the catalog there is no way to tell which columns the database hides
+                    // from "SELECT *". Naming columns anyway would add the hidden period columns of
+                    // a temporal table to the exposed contract, so leave the projection alone.
+                    return "*";
+                }
+
                 DataTable columnsInTable = await GetCachedColumnsAsync(schemaName, tableName);
 
                 foreach (DataRow columnInfo in columnsInTable.Rows)
@@ -1905,11 +2095,20 @@ namespace Azure.DataApiBuilder.Core.Services
                     if (UnsupportedColumnDataTypes.Contains(dataType))
                     {
                         skippedColumns[columnName] = dataType;
+                        continue;
                     }
-                    else
+
+                    if (catalogMetadata.HiddenColumns.Contains(columnName))
                     {
-                        readableColumns.Add(columnName);
+                        // "SELECT *" does not return this column, so naming it would widen the
+                        // exposed contract instead of preserving it. It is not "skipped": it was
+                        // never part of the object's shape as the engine sees it, and the read-only
+                        // classification does not recognize generated-always period columns, so a
+                        // PUT would try to null them.
+                        continue;
                     }
+
+                    readableColumns.Add(columnName);
                 }
             }
             catch (Exception ex) when (ex is not DataApiBuilderException)
@@ -1984,6 +2183,117 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
+        /// Fails initialization with the reason when the object's own primary key includes a column
+        /// left out of the projection because its data type is not supported. Without this the
+        /// caller reports a missing primary key, which reads as something the user forgot to
+        /// configure even though no configuration can express that key.
+        /// </summary>
+        private void RejectUnreadablePrimaryKey(string schemaName, string tableName)
+        {
+            string cacheKey = GetObjectCacheKey(schemaName, tableName);
+
+            if (!_skippedColumnsByObject.TryGetValue(cacheKey, out Dictionary<string, string>? skippedColumns)
+                || !_objectCatalogMetadataCache.TryGetValue(cacheKey, out ObjectCatalogMetadata? catalogMetadata))
+            {
+                return;
+            }
+
+            foreach (string primaryKeyColumn in catalogMetadata.PrimaryKeyColumns)
+            {
+                if (skippedColumns.TryGetValue(primaryKeyColumn, out string? dataType))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"The primary key of {schemaName}.{tableName} includes the column {primaryKeyColumn}, "
+                            + $"whose data type {dataType} is not supported. The object cannot be exposed through that "
+                            + "key. Configure source.key-fields with a supported column that identifies a row uniquely, "
+                            + "if the object has one.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fails initialization when the configuration names a column that was left out of the
+        /// projection because its data type is not supported.
+        /// Such a name keeps resolving after the column is gone: the exposed and backing column maps
+        /// are built from entity fields and mappings without requiring the column to exist in
+        /// <see cref="SourceDefinition.Columns"/>, and the authorization resolver accepts explicitly
+        /// included field names. The reference then reaches code that indexes
+        /// <see cref="SourceDefinition.Columns"/> and fails per request instead of at startup — a
+        /// permission-derived default projection selects the column and the read fails serializing
+        /// it, a mutation throws while resolving the backing column, and MCP metadata advertises a
+        /// field no other surface has. Rejecting here keeps the configuration and the exposed
+        /// contract in agreement. Nothing that worked before stops working: an object with such a
+        /// column failed discovery outright, so the entity never loaded.
+        /// </summary>
+        private void RejectConfiguredReferencesToSkippedColumns(
+            string entityName,
+            Entity? entity,
+            string schemaName,
+            string tableName)
+        {
+            if (entity is null
+                || !_skippedColumnsByObject.TryGetValue(
+                    GetObjectCacheKey(schemaName, tableName),
+                    out Dictionary<string, string>? skippedColumns))
+            {
+                return;
+            }
+
+            // "mappings" and "fields" both key on the backing column name.
+            if (entity.Mappings is not null)
+            {
+                foreach (string backingColumn in entity.Mappings.Keys)
+                {
+                    RejectReference(backingColumn, "mappings");
+                }
+            }
+
+            if (entity.Fields is not null)
+            {
+                foreach (FieldMetadata field in entity.Fields)
+                {
+                    RejectReference(field.Name, "fields");
+                }
+            }
+
+            foreach (EntityPermission permission in entity.Permissions)
+            {
+                foreach (EntityAction action in permission.Actions)
+                {
+                    if (action.Fields?.Include is null)
+                    {
+                        continue;
+                    }
+
+                    // An include list names columns that have to be readable. An exclude list naming
+                    // one of these columns asks for what already happened, so it is left alone.
+                    foreach (string includedField in action.Fields.Include)
+                    {
+                        RejectReference(includedField, $"permissions of role {permission.Role}");
+                    }
+                }
+            }
+
+            void RejectReference(string configuredName, string configurationSection)
+            {
+                if (!skippedColumns.TryGetValue(configuredName, out string? dataType))
+                {
+                    return;
+                }
+
+                throw new DataApiBuilderException(
+                    message: $"The {configurationSection} of entity {entityName} reference the column {configuredName} "
+                        + $"of {schemaName}.{tableName}, whose data type {dataType} is not supported. That column is not "
+                        + "part of the exposed contract, so the reference cannot be honored. Remove it from the "
+                        + "configuration.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+        }
+
+        /// <summary>
         /// Renders skipped columns as "name (type)" pairs for log and error messages.
         /// </summary>
         private static string FormatSkippedColumns(Dictionary<string, string> skippedColumns)
@@ -2015,6 +2325,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             _columnsMetadataCache.Clear();
             _skippedColumnsByObject.Clear();
+            _objectCatalogMetadataCache.Clear();
         }
 
         /// <summary>

@@ -1911,6 +1911,32 @@
       }
     },
     {
+      GeometryType: {
+        Source: {
+          Object: geometry_type_table,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: GeometryType,
+          Plural: GeometryTypes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       Profile: {
         Source: {
           Object: profiles,

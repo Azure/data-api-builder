@@ -11,6 +11,7 @@ DROP VIEW IF EXISTS books_view_with_mapping;
 DROP VIEW IF EXISTS stocks_view_selected;
 DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP VIEW IF EXISTS books_publishers_view_composite_insertable;
+DROP VIEW IF EXISTS geometry_only_view;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
@@ -44,6 +45,18 @@ DROP TABLE IF EXISTS brokers;
 DROP TABLE IF EXISTS type_table;
 DROP TABLE IF EXISTS vector_type_table;
 DROP TABLE IF EXISTS vector_owners;
+DROP TABLE IF EXISTS geometry_type_table;
+DROP TABLE IF EXISTS hierarchyid_pk_table;
+DROP TABLE IF EXISTS hierarchyid_composite_pk_table;
+DROP TABLE IF EXISTS hierarchyid_unique_table;
+DROP TABLE IF EXISTS unique_key_geometry_table;
+DROP TABLE IF EXISTS decimal_identity_geometry_table;
+-- System versioning has to be released before the temporal table can be dropped.
+IF OBJECT_ID('dbo.temporal_geometry_type_table', 'U') IS NOT NULL
+    AND OBJECTPROPERTY(OBJECT_ID('dbo.temporal_geometry_type_table'), 'TableTemporalType') = 2
+    ALTER TABLE temporal_geometry_type_table SET (SYSTEM_VERSIONING = OFF);
+DROP TABLE IF EXISTS temporal_geometry_type_table;
+DROP TABLE IF EXISTS temporal_geometry_type_table_history;
 DROP TABLE IF EXISTS profiles;
 DROP TABLE IF EXISTS trees;
 DROP TABLE IF EXISTS fungi;
@@ -250,6 +263,67 @@ CREATE TABLE vector_type_table(
     vector_data vector(3),
     vector_data_max vector(1998),
     CONSTRAINT FK_vector_type_table_owner FOREIGN KEY (owner_id) REFERENCES vector_owners(id) ON DELETE CASCADE
+);
+
+CREATE TABLE geometry_type_table(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    geom geometry NULL
+);
+
+-- The period columns are HIDDEN, so SELECT * does not return them. An explicit projection built
+-- from the catalog would, which is what this fixture guards against.
+CREATE TABLE temporal_geometry_type_table(
+    id int NOT NULL PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    geom geometry NULL,
+    valid_from datetime2 GENERATED ALWAYS AS ROW START HIDDEN NOT NULL,
+    valid_to datetime2 GENERATED ALWAYS AS ROW END HIDDEN NOT NULL,
+    PERIOD FOR SYSTEM_TIME (valid_from, valid_to)
+)
+WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo.temporal_geometry_type_table_history));
+
+-- The database primary key is itself of an unsupported type, so no projection can expose the
+-- object: the engine needs the key it cannot read.
+CREATE TABLE hierarchyid_pk_table(
+    node hierarchyid NOT NULL PRIMARY KEY,
+    name varchar(100) NOT NULL
+);
+
+-- Same, with the unsupported column as one member of a composite key.
+CREATE TABLE hierarchyid_composite_pk_table(
+    tenant_id int NOT NULL,
+    node hierarchyid NOT NULL,
+    name varchar(100) NOT NULL,
+    CONSTRAINT PK_hierarchyid_composite_pk_table PRIMARY KEY (tenant_id, node)
+);
+
+-- No database primary key, and the unsupported column carries a unique index. This object is
+-- expected to load, with the key supplied through source.key-fields: the data adapter's own key
+-- discovery would otherwise pull the unique column back in as a hidden reader column.
+CREATE TABLE hierarchyid_unique_table(
+    id int NOT NULL,
+    node hierarchyid NOT NULL,
+    name varchar(100) NOT NULL,
+    CONSTRAINT UQ_hierarchyid_unique_table_node UNIQUE (node)
+);
+
+-- No database primary key, and the unique index covers a supported non-null column. The data
+-- adapter promotes such a key to DataTable.PrimaryKey on the unnarrowed path, so the narrowed path
+-- has to infer it too instead of demanding source.key-fields.
+CREATE TABLE unique_key_geometry_table(
+    code varchar(20) NOT NULL,
+    name varchar(100) NOT NULL,
+    geom geometry NULL,
+    CONSTRAINT UQ_unique_key_geometry_table_code UNIQUE (code)
+);
+
+-- A decimal identity column. DataColumn.AutoIncrement would coerce its CLR type to Int32, which is
+-- why identity is carried from the catalog instead; this fixture is what proves the type survives.
+CREATE TABLE decimal_identity_geometry_table(
+    id decimal(18, 0) IDENTITY(1, 1) NOT NULL PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    geom geometry NULL
 );
 
 CREATE TABLE profiles(
@@ -656,6 +730,37 @@ VALUES (7, CAST('[' + (
 ) + ']' AS vector(1998)));
 SET IDENTITY_INSERT vector_type_table OFF
 
+SET IDENTITY_INSERT geometry_type_table ON
+INSERT INTO geometry_type_table(id, name, geom)
+VALUES
+    (1, 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    (2, 'null geometry', NULL);
+SET IDENTITY_INSERT geometry_type_table OFF
+
+INSERT INTO temporal_geometry_type_table(id, name, geom)
+VALUES
+    (1, 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    (2, 'null geometry', NULL);
+
+INSERT INTO hierarchyid_pk_table(node, name)
+VALUES (hierarchyid::Parse('/1/'), 'root');
+
+INSERT INTO hierarchyid_composite_pk_table(tenant_id, node, name)
+VALUES (1, hierarchyid::Parse('/1/'), 'root');
+
+INSERT INTO hierarchyid_unique_table(id, node, name)
+VALUES (1, hierarchyid::Parse('/1/'), 'root');
+
+INSERT INTO unique_key_geometry_table(code, name, geom)
+VALUES
+    ('CAR-001', 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    ('CAR-002', 'null geometry', NULL);
+
+INSERT INTO decimal_identity_geometry_table(name, geom)
+VALUES
+    ('point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    ('null geometry', NULL);
+
 SET IDENTITY_INSERT profiles ON
 INSERT INTO profiles(id, metadata)
 VALUES
@@ -754,6 +859,7 @@ EXEC('CREATE VIEW books_publishers_view_composite_insertable as SELECT
       books.id, books.title, publishers.name, books.publisher_id
       FROM dbo.books,dbo.publishers
       where publishers.id = books.publisher_id');
+EXEC('CREATE VIEW geometry_only_view AS SELECT geom FROM dbo.geometry_type_table');
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       SELECT * FROM dbo.books
       WHERE id = @id');

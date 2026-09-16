@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
 using System.Net;
@@ -42,6 +43,196 @@ namespace Azure.DataApiBuilder.Core.Services
             : base(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
+        }
+
+        /// <summary>
+        /// SQL Server CLR user-defined types. Microsoft.Data.SqlClient resolves their CLR type
+        /// through the Microsoft.SqlServer.Types assembly, which Data API builder does not
+        /// reference, so the reader reports no type for the column and the data adapter fails.
+        /// Deliberately limited to the types that cannot be read at all: timestamp, xml and vector
+        /// columns do resolve to a CLR type and are left untouched.
+        /// </summary>
+        private static readonly ImmutableHashSet<string> _unsupportedColumnDataTypes =
+            ImmutableHashSet.Create(
+                StringComparer.OrdinalIgnoreCase,
+                "geometry",
+                "geography",
+                "hierarchyid");
+
+        /// <inheritdoc/>
+        protected override ImmutableHashSet<string> UnsupportedColumnDataTypes => _unsupportedColumnDataTypes;
+
+        /// <inheritdoc/>
+        protected override async Task<ObjectCatalogMetadata?> GetObjectCatalogMetadataAsync(
+            string schemaName,
+            string tableName)
+        {
+            string schemaParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
+            string tableParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1";
+
+            // The object is resolved through object_id(). Both name parts go through QUOTENAME:
+            // object_id() parses its argument as a multi-part name, so an unquoted schema or table
+            // holding a dot, a space, a reserved word or a closing bracket resolves to the wrong
+            // object or to null — and a null object_id returns no rows, which would leave the
+            // projection at "SELECT *" and bring #3801 back for that object. QUOTENAME also doubles
+            // an embedded "]", so the names are passed raw and quoted by the server.
+            // is_hidden marks the period columns of a temporal table declared
+            // GENERATED ALWAYS ... HIDDEN, which "SELECT *" does not return. key_ordinal is null for
+            // every column outside the primary key, and 1-based within it; an index's included
+            // columns report 0 and are not part of the key.
+            // Unique indexes are returned alongside the primary key, because absent a primary key
+            // the data adapter reports a non-nullable unique key as DataTable.PrimaryKey on the
+            // unnarrowed path, and the narrowed path has to do the same. Filtered and disabled
+            // indexes do not identify every row, and an index's included columns report key_ordinal
+            // 0 and are not part of its key.
+            string query =
+                "select c.name as COLUMN_NAME, c.is_hidden as IS_HIDDEN, c.is_identity as IS_IDENTITY, "
+                + "c.is_nullable as IS_NULLABLE, i.index_id as INDEX_ID, "
+                + "i.is_primary_key as IS_PRIMARY_KEY, ic.key_ordinal as KEY_ORDINAL "
+                + "from sys.columns as c "
+                + "left join sys.index_columns as ic on ic.object_id = c.object_id "
+                + "and ic.column_id = c.column_id and ic.key_ordinal > 0 "
+                + "left join sys.indexes as i on i.object_id = ic.object_id and i.index_id = ic.index_id "
+                + "and i.is_unique = 1 and i.is_disabled = 0 and i.has_filter = 0 "
+                + $"where c.object_id = object_id(quotename({schemaParamName})+'.'+quotename({tableParamName}));";
+
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                { schemaParamName, new(schemaName, DbType.String) },
+                { tableParamName, new(tableName, DbType.String) }
+            };
+
+            try
+            {
+                return await QueryExecutor.ExecuteQueryAsync(
+                    sqltext: query,
+                    parameters: parameters,
+                    dataReaderHandler: SummarizeObjectCatalogMetadataAsync,
+                    dataSourceName: _dataSourceName);
+            }
+            catch (Exception ex)
+            {
+                // sys.columns.is_hidden exists from SQL Server 2016 on. Where the catalog cannot
+                // answer — a dedicated SQL pool, or a login without VIEW DEFINITION — returning null
+                // leaves the projection at "*", which is exactly the behavior before this change.
+                _logger.LogDebug(
+                    "Unable to read catalog metadata for {schemaName}.{tableName}: {message}",
+                    schemaName,
+                    tableName,
+                    ex.Message);
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Turns the catalog rows read by <see cref="GetObjectCatalogMetadataAsync"/> into
+        /// <see cref="SqlMetadataProvider{ConnectionT, DataAdapterT, CommandT}.ObjectCatalogMetadata"/>.
+        /// Returns null when the object has no rows: that means it was not found in the catalog, and
+        /// claiming it has no hidden columns would be a guess.
+        /// </summary>
+        private async Task<ObjectCatalogMetadata?> SummarizeObjectCatalogMetadataAsync(
+            DbDataReader reader,
+            List<string>? args = null)
+        {
+            DbResultSet catalogRows = await QueryExecutor.ExtractResultSetFromDbDataReaderAsync(reader);
+
+            if (catalogRows.Rows.Count == 0)
+            {
+                return null;
+            }
+
+            ObjectCatalogMetadata catalogMetadata = new();
+            Dictionary<string, bool> nullabilityByColumn = new(StringComparer.OrdinalIgnoreCase);
+            Dictionary<int, CatalogIndexKey> indexKeysByIndexId = new();
+
+            foreach (DbResultSetRow catalogRow in catalogRows.Rows)
+            {
+                Dictionary<string, object?> columnInfo = catalogRow.Columns;
+
+                if (columnInfo["COLUMN_NAME"] is not string columnName)
+                {
+                    continue;
+                }
+
+                if (columnInfo["IS_HIDDEN"] is bool isHidden && isHidden)
+                {
+                    catalogMetadata.HiddenColumns.Add(columnName);
+                }
+
+                if (columnInfo["IS_IDENTITY"] is bool isIdentity && isIdentity)
+                {
+                    catalogMetadata.IdentityColumns.Add(columnName);
+                }
+
+                // A column the catalog does not describe as non-nullable is treated as nullable, so
+                // an unreadable flag can only disqualify a unique key, never promote one.
+                nullabilityByColumn[columnName] = columnInfo["IS_NULLABLE"] is not bool isNullable || isNullable;
+
+                // A column outside every eligible unique index carries nulls for the index members.
+                if (columnInfo["INDEX_ID"] is not int indexId
+                    || columnInfo["KEY_ORDINAL"] is not byte keyOrdinal)
+                {
+                    continue;
+                }
+
+                if (!indexKeysByIndexId.TryGetValue(indexId, out CatalogIndexKey? indexKey))
+                {
+                    indexKey = new CatalogIndexKey
+                    {
+                        IsPrimaryKey = columnInfo["IS_PRIMARY_KEY"] is bool isPrimaryKey && isPrimaryKey
+                    };
+                    indexKeysByIndexId[indexId] = indexKey;
+                }
+
+                indexKey.Columns.Add((columnName, keyOrdinal));
+            }
+
+            // Index order is creation order, which makes the candidate choice deterministic.
+            List<int> indexIds = new(indexKeysByIndexId.Keys);
+            indexIds.Sort();
+
+            foreach (int indexId in indexIds)
+            {
+                CatalogIndexKey indexKey = indexKeysByIndexId[indexId];
+                indexKey.Columns.Sort((left, right) => left.KeyOrdinal.CompareTo(right.KeyOrdinal));
+
+                List<string> keyColumns = new();
+                bool holdsNoNull = true;
+
+                foreach ((string ColumnName, byte KeyOrdinal) keyColumn in indexKey.Columns)
+                {
+                    keyColumns.Add(keyColumn.ColumnName);
+
+                    if (nullabilityByColumn.TryGetValue(keyColumn.ColumnName, out bool isNullable) && isNullable)
+                    {
+                        holdsNoNull = false;
+                    }
+                }
+
+                if (indexKey.IsPrimaryKey)
+                {
+                    catalogMetadata.PrimaryKeyColumns.AddRange(keyColumns);
+                }
+                else if (holdsNoNull)
+                {
+                    // Matches the data adapter, which promotes a unique key to the primary key only
+                    // when none of its columns can hold a null.
+                    catalogMetadata.UniqueKeyCandidates.Add(keyColumns);
+                }
+            }
+
+            return catalogMetadata;
+        }
+
+        /// <summary>
+        /// One unique index of a database object, while its key columns are being collected.
+        /// </summary>
+        private sealed class CatalogIndexKey
+        {
+            public bool IsPrimaryKey { get; init; }
+
+            public List<(string ColumnName, byte KeyOrdinal)> Columns { get; } = new();
         }
 
         public override string GetDefaultSchemaName()

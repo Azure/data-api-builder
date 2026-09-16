@@ -99,7 +99,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SqlQueryStructure structure = CreateStructure();
             ISelectionNode[] selections =
             {
-                new FragmentSpreadNode(null, new NameNode("BookFields"), System.Array.Empty<DirectiveNode>())
+                new FragmentSpreadNode(
+                    location: null,
+                    name: new NameNode("BookFields"),
+                    arguments: System.Array.Empty<ArgumentNode>(),
+                    directives: System.Array.Empty<DirectiveNode>())
             };
 
             TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(() =>

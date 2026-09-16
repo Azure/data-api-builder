@@ -5,13 +5,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
+using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
+using HotChocolate;
+using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using Humanizer;
@@ -989,12 +996,13 @@ type Baz @model(name:""Baz""){
         [DataRow(true, "boolean", "Boolean")]
         [DataRow(1.2f, "float", "Float")]
         [TestCategory("Mutation Builder - Create")]
-        public void CreateMutationWillHonorDefaultValue(object defaultValue, string fieldName, string fieldType)
+        public async Task CreateMutationWillHonorDefaultValue(object defaultValue, string fieldName, string fieldType)
         {
+            string defaultLiteral = JsonSerializer.Serialize(defaultValue);
             string gql =
                 @$"
 type Foo @model(name:""Foo"") {{
-    id: {fieldType}! @defaultValue(value: {{ {fieldName}: {(defaultValue is string ? $"\"{defaultValue}\"" : defaultValue)} }})
+    id: {fieldType}! @defaultValue(value: {{ {fieldName}: {defaultLiteral} }})
 }}
                 ";
 
@@ -1012,8 +1020,220 @@ type Foo @model(name:""Foo"") {{
 
             InputObjectTypeDefinitionNode createFooInput = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name.Value == "CreateFooInput");
 
-            // Serialization has them as strings, so we'll just do string compares
-            Assert.AreEqual(defaultValue.ToString(), createFooInput.Fields[0].DefaultValue.Value);
+            Assert.AreEqual(defaultLiteral, createFooInput.Fields[0].DefaultValue.ToString());
+
+            Dictionary<string, object?> capturedInput = null;
+            IRequestExecutor executor = CreateSchemaBuilderForCreateInputs(mutationRoot)
+                .AddResolver("Query", "inspect", context =>
+                {
+                    capturedInput = context.ArgumentValue<Dictionary<string, object?>>("item");
+                    return true;
+                })
+                .Create()
+                .MakeExecutable();
+
+            OperationResult result = (await executor.ExecuteAsync("{ inspect(item: {}) }")).ExpectOperationResult();
+            Assert.AreEqual(0, result.Errors.Count, string.Join(" | ", result.Errors.Select(error => error.ToString())));
+            Assert.IsNotNull(capturedInput);
+            Assert.AreEqual(defaultLiteral, JsonSerializer.Serialize(capturedInput["id"]),
+                "A typed Cosmos default must still be supplied when the input field is omitted.");
+        }
+
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL, typeof(int), "((1))", "7", false)]
+        [DataRow(DatabaseType.MSSQL, typeof(int), "(rand())", "7", false)]
+        [DataRow(DatabaseType.MSSQL, typeof(double), "((0))", "1.25", false)]
+        [DataRow(DatabaseType.MSSQL, typeof(decimal), "((1.5))", "1.25", false)]
+        [DataRow(DatabaseType.MSSQL, typeof(string), "('Placeholder')", "\"provided\"", false)]
+        [DataRow(DatabaseType.MSSQL, typeof(string), "(suser_sname())", "\"provided\"", true)]
+        [DataRow(DatabaseType.MSSQL, typeof(bool), "((1))", "false", false)]
+        [DataRow(DatabaseType.MSSQL, typeof(DateTime), "(getdate())", "\"2026-01-01T00:00:00Z\"", false)]
+        [DataRow(DatabaseType.MSSQL, typeof(DateTime), "(dateadd(day,(1),getdate()))", "\"2026-01-01T00:00:00Z\"", false)]
+        [DataRow(DatabaseType.MSSQL, typeof(DateTimeOffset), "(sysdatetimeoffset())", "\"2026-01-01T00:00:00Z\"", false)]
+        [DataRow(DatabaseType.MSSQL, typeof(Guid), "(newid())", "\"de305d54-75b4-431b-adb2-eb6b9e546014\"", false)]
+        [DataRow(DatabaseType.MySQL, typeof(int), "42", "7", false)]
+        [DataRow(DatabaseType.PostgreSQL, typeof(int), "nextval('counter_seq'::regclass)", "7", false)]
+        [DataRow(DatabaseType.DWSQL, typeof(int), "((42))", "7", false)]
+        [TestCategory("Mutation Builder - Create")]
+        [TestCategory("GraphQL Schema Builder")]
+        public async Task SqlDefaultExpressionsCreateValidInputSchema(
+            DatabaseType databaseType,
+            Type systemType,
+            string defaultExpression,
+            string suppliedLiteral,
+            bool isNullable)
+        {
+            ObjectTypeDefinitionNode objectType = GenerateSqlObjectTypeWithDefault(
+                systemType, defaultExpression, isNullable, databaseType);
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                new DocumentNode(new[] { objectType }),
+                new() { { "Foo", databaseType } },
+                new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
+                entityPermissionsMap: _entityPermissions);
+
+            Dictionary<string, object?> capturedInput = null;
+            IRequestExecutor executor = CreateSchemaBuilderForCreateInputs(mutationRoot)
+                .AddResolver("Query", "inspect", context =>
+                {
+                    // Use DAB's extraction path; HC's dictionary coercion fills omitted nullable fields with null.
+                    IDictionary<string, object?> parameters = ExecutionHelper.GetParametersFromSchemaAndQueryFields(
+                        context.Selection.Field, context.Selection.RequireFieldNode(), context.Variables);
+                    Assert.IsInstanceOfType<IEnumerable<ObjectFieldNode>>(parameters["item"]);
+                    IEnumerable<ObjectFieldNode> fields = (IEnumerable<ObjectFieldNode>)parameters["item"];
+                    InputObjectType inputType = ExecutionHelper.InputObjectTypeFromIInputField(context.Selection.Field.Arguments["item"]);
+                    capturedInput = fields.ToDictionary(
+                        field => field.Name.Value,
+                        field => ExecutionHelper.ExtractValueFromIValueNode(
+                            field.Value, inputType.Fields[field.Name.Value], context.Variables));
+                    return true;
+                })
+                .Create()
+                .MakeExecutable();
+
+            OperationResult omitted = (await executor.ExecuteAsync("{ inspect(item: { id: 1 }) }")).ExpectOperationResult();
+            Assert.AreEqual(0, omitted.Errors.Count, string.Join(" | ", omitted.Errors.Select(error => error.ToString())));
+            Assert.IsNotNull(capturedInput);
+            Assert.IsFalse(capturedInput.ContainsKey("defaulted"),
+                "An omitted SQL column must remain absent so the database, not GraphQL, evaluates its default.");
+
+            OperationResult explicitNull = (await executor.ExecuteAsync("{ inspect(item: { id: 1, defaulted: null }) }")).ExpectOperationResult();
+            Assert.AreEqual(0, explicitNull.Errors.Count, string.Join(" | ", explicitNull.Errors.Select(error => error.ToString())));
+            Assert.IsTrue(capturedInput.ContainsKey("defaulted"), "Explicit null must remain distinct from omission.");
+            Assert.IsNull(capturedInput["defaulted"], "A SQL default must not replace an explicitly supplied null.");
+
+            OperationResult supplied = (await executor.ExecuteAsync(
+                $"{{ inspect(item: {{ id: 1, defaulted: {suppliedLiteral} }}) }}")).ExpectOperationResult();
+            Assert.AreEqual(0, supplied.Errors.Count, string.Join(" | ", supplied.Errors.Select(error => error.ToString())));
+            Assert.IsTrue(capturedInput.ContainsKey("defaulted"));
+            Assert.IsNotNull(capturedInput["defaulted"], "An explicit value must survive input coercion.");
+
+            capturedInput = null;
+            OperationResult missingRequired = (await executor.ExecuteAsync("{ inspect(item: {}) }")).ExpectOperationResult();
+            Assert.IsTrue(missingRequired.Errors.Count > 0, "A non-null column without a default must still be required.");
+            Assert.IsNull(capturedInput, "Invalid input must be rejected before invoking a resolver.");
+
+            InputObjectTypeDefinitionNode input = mutationRoot.Definitions.OfType<InputObjectTypeDefinitionNode>()
+                .Single(node => node.Name.Value == "CreateFooInput");
+            Assert.IsNull(input.Fields.Single(field => field.Name.Value == "defaulted").DefaultValue);
+            Assert.IsFalse(input.Fields.Single(field => field.Name.Value == "defaulted").Type.IsNonNullType());
+            Assert.IsTrue(input.Fields.Single(field => field.Name.Value == "id").Type.IsNonNullType());
+        }
+
+        [DataTestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        [TestCategory("Mutation Builder - Create")]
+        [TestCategory("GraphQL Schema Builder")]
+        public async Task SqlDefaultsRemainOptionalForMultipleAndLinkingCreate(bool createMultiple)
+        {
+            DocumentNode relationshipTypes = Utf8GraphQLParser.Parse("""
+                type Foo @model(name: "Foo") {
+                    bars: [Bar!]! @relationship(target: "Bar", cardinality: "many")
+                }
+                type Bar @model(name: "Bar") {
+                    id: Int! @primaryKey
+                }
+                """);
+            ObjectTypeDefinitionNode source = GenerateSqlObjectTypeWithDefault(typeof(int), "((42))", false, DatabaseType.MSSQL);
+            source = source.WithFields(source.Fields.Concat(relationshipTypes.Definitions.OfType<ObjectTypeDefinitionNode>().First().Fields).ToArray());
+            ObjectTypeDefinitionNode target = relationshipTypes.Definitions.OfType<ObjectTypeDefinitionNode>().Last();
+            string linkingTypeName = GraphQLNaming.GenerateLinkingNodeName("Foo", "Bar");
+            ObjectTypeDefinitionNode linking = GenerateSqlObjectTypeWithDefault(
+                typeof(double), "((0.5))", false, DatabaseType.MSSQL, linkingTypeName, "royalty_percentage")
+                .WithDirectives(Array.Empty<DirectiveNode>());
+
+            Entity sourceEntity = GenerateEmptyEntity() with
+            {
+                Relationships = new()
+                {
+                    { "bars", new EntityRelationship(Cardinality.Many, "Bar", new[] { "id" }, new[] { "id" },
+                        "dbo.foo_bar", new[] { "foo_id" }, new[] { "bar_id" }) }
+                }
+            };
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                new DocumentNode(new[] { source, target, linking }),
+                new() { { "Foo", DatabaseType.MSSQL }, { "Bar", DatabaseType.MSSQL } },
+                new(new Dictionary<string, Entity>
+                {
+                    { "Foo", sourceEntity },
+                    { "Bar", GraphQLTestHelpers.GenerateEntityWithSingularPlural("Bar", "Bars") }
+                }),
+                entityPermissionsMap: _entityPermissions,
+                IsMultipleCreateOperationEnabled: true);
+
+            string mutationName = createMultiple ? "createFoos" : "createFoo";
+            string argumentName = createMultiple ? MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME : MutationBuilder.ITEM_INPUT_ARGUMENT_NAME;
+            IRequestExecutor executor = CreateSchemaBuilderForCreateInputs(mutationRoot, mutationName)
+                .AddResolver("Query", "inspect", _ => true)
+                .Create()
+                .MakeExecutable();
+
+            string item = "{ id: 1, bars: [{ id: 2 }] }";
+            string input = createMultiple ? $"[{item}]" : item;
+            OperationResult omitted = (await executor.ExecuteAsync($"{{ inspect({argumentName}: {input}) }}")).ExpectOperationResult();
+            Assert.AreEqual(0, omitted.Errors.Count, string.Join(" | ", omitted.Errors.Select(error => error.ToString())));
+
+            item = "{ id: 1, bars: [{ id: 2, royalty_percentage: null }] }";
+            input = createMultiple ? $"[{item}]" : item;
+            OperationResult explicitNull = (await executor.ExecuteAsync($"{{ inspect({argumentName}: {input}) }}")).ExpectOperationResult();
+            Assert.AreEqual(0, explicitNull.Errors.Count, string.Join(" | ", explicitNull.Errors.Select(error => error.ToString())));
+
+            item = "{ id: 1, bars: [{}] }";
+            input = createMultiple ? $"[{item}]" : item;
+            OperationResult missingRequired = (await executor.ExecuteAsync($"{{ inspect({argumentName}: {input}) }}")).ExpectOperationResult();
+            Assert.IsTrue(missingRequired.Errors.Count > 0, "Non-defaulted fields on the linking input must remain required.");
+
+            InputObjectTypeDefinitionNode linkingInput = mutationRoot.Definitions.OfType<InputObjectTypeDefinitionNode>()
+                .Single(node => node.Name.Value == CreateMutationBuilder.GenerateInputTypeName(linkingTypeName).Value);
+            InputValueDefinitionNode defaultedField = linkingInput.Fields.Single(field => field.Name.Value == "royalty_percentage");
+            Assert.IsNull(defaultedField.DefaultValue);
+            Assert.IsFalse(defaultedField.Type.IsNonNullType());
+            Assert.AreEqual("Float", defaultedField.Type.NamedType().Name.Value);
+        }
+
+        private static ObjectTypeDefinitionNode GenerateSqlObjectTypeWithDefault(
+            Type systemType,
+            string defaultExpression,
+            bool isNullable,
+            DatabaseType databaseType,
+            string entityName = "Foo",
+            string defaultFieldName = "defaulted")
+        {
+            SourceDefinition table = new();
+            table.Columns.Add("id", new ColumnDefinition { SystemType = typeof(int), IsNullable = false });
+            table.Columns.Add(defaultFieldName, new ColumnDefinition
+            {
+                SystemType = systemType,
+                IsNullable = isNullable,
+                DefaultValue = defaultExpression
+            });
+            table.PrimaryKey.Add("id");
+
+            Entity entity = GraphQLTestHelpers.GenerateEntityWithSingularPlural(entityName, entityName.Pluralize());
+            IEnumerable<string> roles = new[] { "anonymous" };
+            return SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
+                entityName,
+                new DatabaseTable { TableDefinition = table },
+                entity,
+                new(new Dictionary<string, Entity> { { entityName, entity } }),
+                rolesAllowedForEntity: roles,
+                rolesAllowedForFields: table.Columns.Keys.ToDictionary(column => column, _ => roles),
+                databaseType: databaseType);
+        }
+
+        private static ISchemaBuilder CreateSchemaBuilderForCreateInputs(DocumentNode mutationRoot, string mutationName = "createFoo")
+        {
+            FieldDefinitionNode mutation = GetMutationNode(mutationRoot).Fields.Single(field => field.Name.Value == mutationName);
+            DocumentNode inputs = new(mutationRoot.Definitions.OfType<InputObjectTypeDefinitionNode>().ToArray());
+
+            // Use the generated input types and argument shape while keeping database resolvers out of this schema.
+            return SchemaBuilder.New()
+                .AddDocumentFromString(inputs.ToString())
+                .AddDocumentFromString($"type Query {{ inspect({string.Join(", ", mutation.Arguments.Select(argument => $"{argument.Name}: {argument.Type}"))}): Boolean }}")
+                .AddDirectiveType<RelationshipDirectiveType>()
+                .AddType<DecimalType>()
+                .AddType<DateTimeType>()
+                .AddType<UuidType>();
         }
 
         public static ObjectTypeDefinitionNode GetMutationNode(DocumentNode mutationRoot)

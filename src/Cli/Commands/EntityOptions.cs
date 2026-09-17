@@ -38,6 +38,8 @@ namespace Cli.Commands
             IEnumerable<bool>? fieldsPrimaryKeyCollection,
             string? mcpDmlTools = null,
             string? mcpCustomTool = null,
+            string? graphQLSubscriptionEnabled = null,
+            string? graphQLSubscriptionEvents = null,
             string? config = null
         )
             : base(config)
@@ -69,6 +71,8 @@ namespace Cli.Commands
             FieldsPrimaryKeyCollection = fieldsPrimaryKeyCollection;
             McpDmlTools = mcpDmlTools;
             McpCustomTool = mcpCustomTool;
+            GraphQLSubscriptionEnabled = graphQLSubscriptionEnabled;
+            GraphQLSubscriptionEvents = graphQLSubscriptionEvents;
         }
 
         // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
@@ -95,6 +99,12 @@ namespace Cli.Commands
 
         [Option("graphql.operation", Required = false, HelpText = "GraphQL operation to be supported for stored procedure. Valid operations are: [query, mutation]")]
         public string? GraphQLOperationForStoredProcedure { get; }
+
+        [Option("graphql.subscription.enabled", Required = false, HelpText = "Enable or disable GraphQL subscriptions for the entity.")]
+        public string? GraphQLSubscriptionEnabled { get; }
+
+        [Option("graphql.subscription.events", Required = false, HelpText = "GraphQL subscription events for the entity as a comma separated list. Valid events are: [created, updated, deleted]")]
+        public string? GraphQLSubscriptionEvents { get; }
 
         [Option("fields.include", Required = false, Separator = ',', HelpText = "Fields that are allowed access to permission.")]
         public IEnumerable<string>? FieldsToInclude { get; }

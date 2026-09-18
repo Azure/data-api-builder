@@ -222,9 +222,15 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
     {
         List<string> values = [];
 
+        HashSet<string> roleClaimTypes = principal.Identities
+            .Select(identity => string.IsNullOrWhiteSpace(identity.RoleClaimType)
+                ? AuthenticationOptions.ROLE_CLAIM_TYPE
+                : identity.RoleClaimType)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         foreach (Claim claim in principal.Claims)
         {
-            if (claim.Type.Equals(AuthenticationOptions.ROLE_CLAIM_TYPE, StringComparison.OrdinalIgnoreCase) ||
+            if (roleClaimTypes.Contains(claim.Type) ||
                 claim.Type.Equals("scp", StringComparison.OrdinalIgnoreCase))
             {
                 string[] parts = claim.Value.Split(

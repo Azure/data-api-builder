@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Types.Pagination;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlTypes;
 using Microsoft.Extensions.Logging;
@@ -317,6 +318,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         correlationId,
                         e.Message);
                     throw DbExceptionParser.Parse(e);
+                }
+                finally
+                {
+                    // Explicitly RESET the custom settings before returning the connection to the pool
+                    // to not leak one request's claims into the next request that reuses the connection
+                    using (var resetCmd = conn.CreateCommand())
+                    {
+                        resetCmd.CommandText = "RESET ALL;"; // or granular RESET <setting> calls
+                        await resetCmd.ExecuteNonQueryAsync();
+                    }
                 }
 
                 return result;

@@ -9,16 +9,19 @@ using System.Globalization;
 using System.IO;
 using System.IO.Abstractions;
 using System.Linq;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
@@ -81,7 +84,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(match.Success,
                 $"Expected output to start with an ISO 8601 UTC timestamp (yyyy-MM-ddTHH:mm:ss.fffZ) but got: '{output}'");
 
-            string timestamp = match.Groups["ts"].Value;
+            AssertIsUtcTimestamp(match.Groups["ts"].Value, before, after);
+        }
+
+        /// <summary>
+        /// Asserts that <paramref name="timestamp"/> is an ISO 8601 UTC value with exactly
+        /// three fractional-second digits, falling within the window captured around the
+        /// logging call.
+        /// </summary>
+        private static void AssertIsUtcTimestamp(string timestamp, DateTime before, DateTime after)
+        {
             Assert.IsTrue(timestamp.EndsWith("Z", StringComparison.Ordinal),
                 $"Timestamp '{timestamp}' must end with 'Z' to denote UTC.");
             Assert.AreEqual(3, timestamp.Split('.')[1].TrimEnd('Z').Length,
@@ -237,6 +249,177 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(1, consoleProviderCount,
                 "Exactly one ConsoleLoggerProvider must be registered; a second one would duplicate every log entry.");
+        }
+
+        /// <summary>
+        /// Builds a logging pipeline shaped like the web host's: the "Logging" configuration
+        /// section is bound (as Host.CreateDefaultBuilder does), the console provider is
+        /// registered once, and then DAB's logging configuration is applied on top.
+        /// </summary>
+        private static ILoggerFactory CreateHostLoggerFactory(Dictionary<string, string?> settings)
+        {
+            IConfigurationRoot configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(settings)
+                .Build();
+
+            return LoggerFactory.Create(builder =>
+            {
+                builder.AddConfiguration(configuration.GetSection("Logging"));
+                builder.AddConsole();
+                Program.ConfigureHostLogging(builder, runMcpStdio: false);
+            });
+        }
+
+        /// <summary>
+        /// Resolves the console logger options produced by the web host's logging pipeline
+        /// for the supplied configuration.
+        /// </summary>
+        private static ConsoleLoggerOptions GetConsoleLoggerOptions(Dictionary<string, string?> settings)
+        {
+            IConfigurationRoot configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(settings)
+                .Build();
+
+            ServiceCollection services = new();
+            services.AddLogging(builder =>
+            {
+                builder.AddConfiguration(configuration.GetSection("Logging"));
+                builder.AddConsole();
+                Program.ConfigureHostLogging(builder, runMcpStdio: false);
+            });
+
+            using ServiceProvider provider = services.BuildServiceProvider();
+            return provider.GetRequiredService<IOptionsMonitor<ConsoleLoggerOptions>>().CurrentValue;
+        }
+
+        /// <summary>
+        /// When no console format is configured - or the default "simple" format is selected -
+        /// DAB's UTC timestamp formatter is used.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, DisplayName = "FormatterName unset")]
+        [DataRow("simple", DisplayName = "FormatterName=simple")]
+        [DataRow("Simple", DisplayName = "FormatterName=Simple (case-insensitive)")]
+        public void ConfigureHostLogging_DefaultFormatter_SelectsUtcTimestampFormatter(string? formatterName)
+        {
+            Dictionary<string, string?> settings = new();
+            if (formatterName is not null)
+            {
+                settings["Logging:Console:FormatterName"] = formatterName;
+            }
+
+            Assert.AreEqual(
+                UtcTimestampConsoleFormatter.FORMATTER_NAME,
+                GetConsoleLoggerOptions(settings).FormatterName,
+                "The DAB formatter must be selected when no explicit console format is configured.");
+        }
+
+        /// <summary>
+        /// A deployment which explicitly selects the "json" console format keeps machine
+        /// readable JSON records - structured log collectors depend on that contract - and
+        /// those records carry the UTC timestamp required by the logging contract.
+        /// </summary>
+        [TestMethod]
+        public void ConfigureHostLogging_ExplicitJsonFormatter_EmitsTimestampedJsonRecord()
+        {
+            Dictionary<string, string?> settings = new() { ["Logging:Console:FormatterName"] = "json" };
+
+            Assert.AreEqual("json", GetConsoleLoggerOptions(settings).FormatterName,
+                "An explicitly configured console format must not be overridden.");
+
+            (string stdout, _, DateTime before, DateTime after) = CaptureConsole(() =>
+            {
+                using ILoggerFactory factory = CreateHostLoggerFactory(settings);
+                factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
+            });
+
+            string record = stdout.Split('\n').First(line => !string.IsNullOrWhiteSpace(line));
+
+            JsonDocument document;
+            try
+            {
+                document = JsonDocument.Parse(record);
+            }
+            catch (JsonException exception)
+            {
+                throw new AssertFailedException(
+                    $"The 'json' console format must emit a JSON record but got: '{record}'", exception);
+            }
+
+            using (document)
+            {
+                JsonElement root = document.RootElement;
+                Assert.AreEqual("Information", root.GetProperty("LogLevel").GetString());
+                Assert.AreEqual("TestCategory", root.GetProperty("Category").GetString());
+                Assert.AreEqual(LOG_MESSAGE, root.GetProperty("Message").GetString());
+
+                Assert.IsTrue(root.TryGetProperty("Timestamp", out JsonElement timestamp),
+                    $"The JSON record must carry a Timestamp property but got: '{record}'");
+                AssertIsUtcTimestamp(timestamp.GetString()!, before, after);
+            }
+        }
+
+        /// <summary>
+        /// A deployment which explicitly selects the "systemd" console format keeps the
+        /// syslog priority prefix - journald severity extraction depends on it - and the
+        /// records carry the UTC timestamp required by the logging contract.
+        /// </summary>
+        [TestMethod]
+        public void ConfigureHostLogging_ExplicitSystemdFormatter_EmitsTimestampedSystemdRecord()
+        {
+            Dictionary<string, string?> settings = new() { ["Logging:Console:FormatterName"] = "systemd" };
+
+            Assert.AreEqual("systemd", GetConsoleLoggerOptions(settings).FormatterName,
+                "An explicitly configured console format must not be overridden.");
+
+            (string stdout, _, DateTime before, DateTime after) = CaptureConsole(() =>
+            {
+                using ILoggerFactory factory = CreateHostLoggerFactory(settings);
+                factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
+            });
+
+            string record = stdout.Split('\n').First(line => !string.IsNullOrWhiteSpace(line));
+
+            // "<6>" is the syslog priority for Information.
+            Match match = Regex.Match(record, @"^<(?<priority>\d)>(?<ts>\S+?Z)");
+            Assert.IsTrue(match.Success,
+                $"The 'systemd' console format must emit '<priority>timestamp...' but got: '{record}'");
+            Assert.AreEqual("6", match.Groups["priority"].Value,
+                $"Information must map to syslog priority 6 but got: '{record}'");
+            AssertIsUtcTimestamp(match.Groups["ts"].Value, before, after);
+            StringAssert.Contains(record, LOG_MESSAGE);
+        }
+
+        /// <summary>
+        /// A timestamp format configured by the deployment takes precedence over the
+        /// default DAB format.
+        /// </summary>
+        [TestMethod]
+        public void ConfigureHostLogging_ExplicitTimestampFormat_IsPreserved()
+        {
+            Dictionary<string, string?> settings = new()
+            {
+                ["Logging:Console:FormatterName"] = "json",
+                ["Logging:Console:FormatterOptions:TimestampFormat"] = "HH:mm:ss",
+            };
+
+            IConfigurationRoot configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(settings)
+                .Build();
+
+            ServiceCollection services = new();
+            services.AddLogging(builder =>
+            {
+                builder.AddConfiguration(configuration.GetSection("Logging"));
+                builder.AddConsole();
+                Program.ConfigureHostLogging(builder, runMcpStdio: false);
+            });
+
+            using ServiceProvider provider = services.BuildServiceProvider();
+            Assert.AreEqual(
+                "HH:mm:ss",
+                provider.GetRequiredService<IOptionsMonitor<JsonConsoleFormatterOptions>>().CurrentValue.TimestampFormat,
+                "An explicitly configured timestamp format must not be overridden.");
         }
 
         /// <summary>

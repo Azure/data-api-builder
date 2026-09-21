@@ -228,9 +228,11 @@ namespace Azure.DataApiBuilder.Service
                 // The console provider registered by Host.CreateDefaultBuilder() is reused as-is;
                 // only its formatter is configured so no second provider is registered (which would
                 // emit every entry twice). ConsoleLoggerOptions.FormatterName must be set explicitly
-                // (AddUtcTimestampConsoleFormatter does so): when it is left unset the provider ignores
-                // the registered formatters and derives its behavior from ConsoleLoggerOptions' own
-                // (obsolete) properties instead, which would silently drop the timestamp.
+                // when no console format was configured (AddUtcTimestampConsoleFormatter does so):
+                // when it is left unset the provider ignores the registered formatters and derives its
+                // behavior from ConsoleLoggerOptions' own (obsolete) properties instead, which would
+                // silently drop the timestamp. An explicitly configured "json"/"systemd" format is
+                // preserved and timestamped through that format's own options.
                 logging.AddUtcTimestampConsoleFormatter();
             }
 

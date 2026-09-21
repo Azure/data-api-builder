@@ -331,15 +331,59 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// provider added by <see cref="Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder(string[])"/>)
         /// without emitting duplicate entries.
         /// </summary>
+        /// <remarks>
+        /// The formatter is only selected when no console format was explicitly requested, or when the
+        /// default "simple" format was requested. A deployment which opts into "json" or "systemd" (via
+        /// <c>Logging:Console:FormatterName</c>) keeps that output contract, because structured log
+        /// collectors and systemd severity extraction depend on it. Those formats render their own
+        /// timestamp, which the built-in formatters omit entirely unless
+        /// <see cref="ConsoleFormatterOptions.TimestampFormat"/> is set, so the shared UTC format is
+        /// applied to them as well.
+        /// </remarks>
         public static ILoggingBuilder AddUtcTimestampConsoleFormatter(this ILoggingBuilder builder)
         {
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ConsoleFormatter, UtcTimestampConsoleFormatter>());
-            builder.Services.Configure<ConsoleLoggerOptions>(options =>
+
+            // PostConfigure runs after the "Logging:Console" configuration binding, so an explicitly
+            // configured FormatterName is visible here and is left untouched.
+            builder.Services.PostConfigure<ConsoleLoggerOptions>(options =>
             {
-                options.FormatterName = UtcTimestampConsoleFormatter.FORMATTER_NAME;
+                if (string.IsNullOrEmpty(options.FormatterName) ||
+                    string.Equals(options.FormatterName, ConsoleFormatterNames.Simple, StringComparison.OrdinalIgnoreCase))
+                {
+                    options.FormatterName = UtcTimestampConsoleFormatter.FORMATTER_NAME;
+                }
             });
 
+            // "json" uses JsonConsoleFormatterOptions, "systemd" uses ConsoleFormatterOptions. Neither
+            // shares an options type with the "simple" formatter (SimpleConsoleFormatterOptions), so
+            // configuring them here cannot affect the DAB formatter above.
+            builder.Services.PostConfigure<JsonConsoleFormatterOptions>(ApplyUtcTimestampFormat);
+            builder.Services.PostConfigure<ConsoleFormatterOptions>(ApplyUtcTimestampFormat);
+
             return builder;
+        }
+
+        /// <summary>
+        /// Applies the shared UTC timestamp format to a built-in console formatter, unless the
+        /// deployment already configured a timestamp format of its own.
+        /// </summary>
+        /// <remarks>
+        /// The built-in "json" and "systemd" formatters render this format through
+        /// <c>DateTimeOffset.ToString(TimestampFormat)</c>, which resolves against
+        /// <see cref="CultureInfo.CurrentCulture"/>. On a host whose culture uses a non-Gregorian
+        /// calendar they therefore emit that calendar's year. Making those formats culture invariant
+        /// would require reimplementing them, so it is deliberately not done here: they are opt-in
+        /// formats whose output contract belongs to the log collector consuming them. The default
+        /// console format, which <see cref="UtcTimestampConsoleFormatter"/> owns, is invariant.
+        /// </remarks>
+        private static void ApplyUtcTimestampFormat(ConsoleFormatterOptions options)
+        {
+            if (string.IsNullOrEmpty(options.TimestampFormat))
+            {
+                options.TimestampFormat = BootstrapLogger.UTC_TIMESTAMP_FORMAT;
+                options.UseUtcTimestamp = true;
+            }
         }
     }
 }

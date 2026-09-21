@@ -19,6 +19,7 @@
     <PackageVersion Include="HotChocolate.Types.NodaTime" Version="16.0.0" />
     <PackageVersion Include="HotChocolate.Utilities.Introspection" Version="16.0.0" />
     <PackageVersion Include="HotChocolate.Diagnostics" Version="16.0.0" />
+    <PackageVersion Include="HotChocolate.Subscriptions.InMemory" Version="16.0.0" />
     <PackageVersion Include="Humanizer" Version="2.14.1" />
     <PackageVersion Include="Humanizer.Core" Version="2.14.1" />
     <PackageVersion Include="DotNetEnv" Version="3.0.0" />

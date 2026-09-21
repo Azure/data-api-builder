@@ -115,7 +115,10 @@ namespace Azure.DataApiBuilder.Core.Services
                 // sys.columns.is_hidden exists from SQL Server 2016 on. Where the catalog cannot
                 // answer — a dedicated SQL pool, or a login without VIEW DEFINITION — returning null
                 // leaves the projection at "*", which is exactly the behavior before this change.
-                _logger.LogDebug(
+                // Logged at Warning, not Debug: the fallback changes what the object exposes — the
+                // projection stays "SELECT *" and an unsupported column takes the entity down with
+                // the provider's own opaque error — so the reason has to be visible by default.
+                _logger.LogWarning(
                     "Unable to read catalog metadata for {schemaName}.{tableName}: {message}",
                     schemaName,
                     tableName,
@@ -223,6 +226,212 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return catalogMetadata;
+        }
+
+        /// <inheritdoc/>
+        protected override async Task<List<string>> GetProjectionKeyFromResultSetAsync(string selectStatement)
+        {
+            List<ProjectionSourceColumn> projectionColumns = await DescribeProjectionAsync(selectStatement);
+
+            if (projectionColumns.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            // The key is taken from the underlying object's own catalog entry rather than from
+            // is_part_of_unique_key, which is reported per column as the union of every unique key
+            // of the result. That union cannot be split back into one key: a view over a table with
+            // both a primary key and a unique index would yield the two fused into an
+            // over-specified key, and a key member the projection left out comes back flagged
+            // hidden, which would yield a partial key that does not identify a row at all.
+            string? sourceSchema = null;
+            string? sourceTable = null;
+            Dictionary<string, string> projectionBySourceColumn = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (ProjectionSourceColumn projectionColumn in projectionColumns)
+            {
+                if (projectionColumn.IsHidden
+                    || projectionColumn.SourceSchema is null
+                    || projectionColumn.SourceTable is null
+                    || projectionColumn.SourceColumn is null)
+                {
+                    continue;
+                }
+
+                if (sourceSchema is null)
+                {
+                    sourceSchema = projectionColumn.SourceSchema;
+                    sourceTable = projectionColumn.SourceTable;
+                }
+                else if (!string.Equals(sourceSchema, projectionColumn.SourceSchema, StringComparison.Ordinal)
+                    || !string.Equals(sourceTable, projectionColumn.SourceTable, StringComparison.Ordinal))
+                {
+                    // More than one underlying object. Inferring a key across a join is out of
+                    // scope; such an entity needs source.key-fields, as it did before this change.
+                    return new List<string>();
+                }
+
+                projectionBySourceColumn[projectionColumn.SourceColumn] = projectionColumn.Name;
+            }
+
+            if (sourceSchema is null || sourceTable is null)
+            {
+                return new List<string>();
+            }
+
+            ObjectCatalogMetadata? sourceCatalogMetadata =
+                await GetCachedObjectCatalogMetadataAsync(sourceSchema, sourceTable);
+
+            if (sourceCatalogMetadata is null)
+            {
+                return new List<string>();
+            }
+
+            // The underlying object's primary key comes first, then its unique keys, in index order
+            // — the preference the table path applies. Unlike a table, though, a view can simply
+            // not select the primary key, which is ordinary design rather than a key it cannot
+            // express, so a primary key that is out of reach does not end the search: a unique key
+            // the projection does carry whole identifies a row just as well.
+            List<List<string>> sourceKeys = new();
+
+            if (sourceCatalogMetadata.PrimaryKeyColumns.Count > 0)
+            {
+                sourceKeys.Add(sourceCatalogMetadata.PrimaryKeyColumns);
+            }
+
+            sourceKeys.AddRange(sourceCatalogMetadata.UniqueKeyCandidates);
+
+            string? unreachableKeyColumn = null;
+
+            foreach (List<string> sourceKey in sourceKeys)
+            {
+                List<string> projectionKey = new();
+                string? missingKeyColumn = null;
+
+                foreach (string sourceKeyColumn in sourceKey)
+                {
+                    if (!projectionBySourceColumn.TryGetValue(sourceKeyColumn, out string? projectionColumnName))
+                    {
+                        missingKeyColumn = sourceKeyColumn;
+                        break;
+                    }
+
+                    projectionKey.Add(projectionColumnName);
+                }
+
+                if (missingKeyColumn is null && projectionKey.Count > 0)
+                {
+                    return projectionKey;
+                }
+
+                // Remembered from the first key that came closest, to name something concrete if no
+                // key resolves at all. A partial key is never returned: it silently matches more
+                // than one row on an update or a delete.
+                unreachableKeyColumn ??= missingKeyColumn;
+            }
+
+            if (unreachableKeyColumn is not null)
+            {
+                throw new DataApiBuilderException(
+                    message: $"No key of {sourceSchema}.{sourceTable}, which this object is built on, is fully exposed "
+                        + $"by it: the nearest one includes the column {unreachableKeyColumn}, which this object does "
+                        + "not expose. It therefore cannot be reached by key. Configure source.key-fields with columns "
+                        + "it does expose that identify a row uniquely, if there are any.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            return new List<string>();
+        }
+
+        /// <summary>
+        /// Describes a projection and returns what each of its columns resolves to in the catalog.
+        /// Browse information is what populates the source_* columns, and it is also what resolves a
+        /// view's columns to the object underneath. Metadata only: no row is read and no CLR type is
+        /// requested, so an unsupported column elsewhere in the object cannot fail this.
+        /// </summary>
+        private async Task<List<ProjectionSourceColumn>> DescribeProjectionAsync(string selectStatement)
+        {
+            string statementParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
+
+            string query =
+                "select r.name as COLUMN_NAME, r.source_schema as SOURCE_SCHEMA, "
+                + "r.source_table as SOURCE_TABLE, r.source_column as SOURCE_COLUMN, "
+                + "r.is_hidden as IS_HIDDEN "
+                + $"from sys.dm_exec_describe_first_result_set({statementParamName}, null, 1) as r "
+                + "order by r.column_ordinal;";
+
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                { statementParamName, new(selectStatement, DbType.String) }
+            };
+
+            try
+            {
+                List<ProjectionSourceColumn>? projectionColumns = await QueryExecutor.ExecuteQueryAsync(
+                    sqltext: query,
+                    parameters: parameters,
+                    dataReaderHandler: SummarizeProjectionSourceColumnsAsync,
+                    dataSourceName: _dataSourceName);
+
+                return projectionColumns ?? new List<ProjectionSourceColumn>();
+            }
+            catch (Exception ex)
+            {
+                // The statement may not be describable, or the dynamic management function may be
+                // unavailable, as on a dedicated SQL pool. Reporting nothing leaves the behavior to
+                // the missing-primary-key path, which is where it was before this change.
+                _logger.LogWarning(
+                    "Unable to describe the projection of {selectStatement} to infer a key: {message}",
+                    selectStatement,
+                    ex.Message);
+
+                return new List<ProjectionSourceColumn>();
+            }
+        }
+
+        private async Task<List<ProjectionSourceColumn>> SummarizeProjectionSourceColumnsAsync(
+            DbDataReader reader,
+            List<string>? args = null)
+        {
+            DbResultSet resultSet = await QueryExecutor.ExtractResultSetFromDbDataReaderAsync(reader);
+
+            List<ProjectionSourceColumn> projectionColumns = new();
+
+            foreach (DbResultSetRow row in resultSet.Rows)
+            {
+                if (row.Columns["COLUMN_NAME"] is not string columnName)
+                {
+                    continue;
+                }
+
+                projectionColumns.Add(new ProjectionSourceColumn
+                {
+                    Name = columnName,
+                    SourceSchema = row.Columns["SOURCE_SCHEMA"] as string,
+                    SourceTable = row.Columns["SOURCE_TABLE"] as string,
+                    SourceColumn = row.Columns["SOURCE_COLUMN"] as string,
+                    IsHidden = row.Columns["IS_HIDDEN"] is bool isHidden && isHidden
+                });
+            }
+
+            return projectionColumns;
+        }
+
+        /// <summary>
+        /// One column of a described projection, with the catalog object it resolves to.
+        /// </summary>
+        private sealed class ProjectionSourceColumn
+        {
+            public string Name { get; init; } = string.Empty;
+
+            public string? SourceSchema { get; init; }
+
+            public string? SourceTable { get; init; }
+
+            public string? SourceColumn { get; init; }
+
+            public bool IsHidden { get; init; }
         }
 
         /// <summary>

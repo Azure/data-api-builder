@@ -184,10 +184,29 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
+        /// Returns the columns of a unique key the given projection exposes, in key order, for an
+        /// object the catalog holds no index for — a view, whose key the data adapter resolved
+        /// through the underlying table. Empty by default, and empty whenever the provider cannot
+        /// answer, which leaves the missing-primary-key error to be reported as before.
+        /// A key column the projection left out must never be reported as part of a key: a partial
+        /// key silently matches more than one row on an update or a delete.
+        /// </summary>
+        /// <exception cref="DataApiBuilderException">
+        /// An implementation may fail here instead of returning empty, when it can tell that no key
+        /// of the underlying object is fully exposed and can name what is missing. That is a better
+        /// error than the generic missing-primary-key one, which reads as something the user forgot
+        /// to configure.
+        /// </exception>
+        protected virtual Task<List<string>> GetProjectionKeyFromResultSetAsync(string selectStatement)
+        {
+            return Task.FromResult(new List<string>());
+        }
+
+        /// <summary>
         /// Returns <see cref="ObjectCatalogMetadata"/> for a database object, reading the catalog
         /// once per object for the duration of metadata initialization.
         /// </summary>
-        private async Task<ObjectCatalogMetadata?> GetCachedObjectCatalogMetadataAsync(
+        protected async Task<ObjectCatalogMetadata?> GetCachedObjectCatalogMetadataAsync(
             string schemaName,
             string tableName)
         {
@@ -1956,9 +1975,21 @@ namespace Azure.DataApiBuilder.Core.Services
                 ? await GetCachedObjectCatalogMetadataAsync(schemaName, tableName)
                 : null;
 
-            await conn.OpenAsync();
-
             string selectStatement = $"SELECT {projection} FROM {tableNameWithSchemaPrefix}";
+
+            // An ordinary view has no indexes of its own, so the catalog lookup above finds no key
+            // for it. FillSchema resolved one through the view's underlying table under KeyInfo, and
+            // describing the projection recovers the same route — without a reader, and without
+            // asking for a CLR type. Only reached for an object the catalog could not key, and
+            // resolved before the connection is opened for the same pooling reason as above.
+            // Kept out of the cached metadata: it depends on this projection, not on the object.
+            List<string> describedKey = catalogMetadata is not null
+                && catalogMetadata.PrimaryKeyColumns.Count == 0
+                && catalogMetadata.UniqueKeyCandidates.Count == 0
+                    ? await GetProjectionKeyFromResultSetAsync(selectStatement)
+                    : new List<string>();
+
+            await conn.OpenAsync();
 
             if (isProjectionNarrowed)
             {
@@ -1977,7 +2008,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     tableNameWithSchemaPrefix,
                     schemaName,
                     tableName,
-                    catalogMetadata);
+                    catalogMetadata,
+                    describedKey);
             }
 
             DataAdapterT adapterForTable = new();
@@ -2004,7 +2036,8 @@ namespace Azure.DataApiBuilder.Core.Services
             string tableNameWithSchemaPrefix,
             string schemaName,
             string tableName,
-            ObjectCatalogMetadata? catalogMetadata)
+            ObjectCatalogMetadata? catalogMetadata,
+            List<string> describedKey)
         {
             DataTable dataTable = new(tableNameWithSchemaPrefix);
 
@@ -2053,7 +2086,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (catalogMetadata is not null)
             {
-                DataColumn[]? keyColumns = ResolveKeyColumns(dataTable, catalogMetadata);
+                DataColumn[]? keyColumns = ResolveKeyColumns(dataTable, catalogMetadata)
+                    ?? (describedKey.Count > 0 ? TryResolveColumns(dataTable, describedKey) : null);
 
                 if (keyColumns is not null)
                 {
@@ -2286,8 +2320,8 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Marks identity columns on the narrowed schema discovery path, where the shape is read
-        /// without CommandBehavior.KeyInfo and the reader reports no auto-increment flag.
+        /// Marks identity columns on the narrowed schema discovery path, which builds its columns
+        /// itself instead of letting the data adapter populate them.
         /// The flag is not carried through <see cref="DataColumn.AutoIncrement"/>: its setter
         /// coerces a DataType it cannot increment to Int32, and SQL Server allows identity on
         /// tinyint, numeric and decimal, so doing that would report the wrong SystemType and reach
@@ -2374,10 +2408,14 @@ namespace Azure.DataApiBuilder.Core.Services
             if (entity is null
                 || !_skippedColumnsByObject.TryGetValue(
                     GetObjectCacheKey(schemaName, tableName),
-                    out Dictionary<string, string>? skippedColumns))
+                    out Dictionary<string, string>? skippedColumnsForObject))
             {
                 return;
             }
+
+            // Held in a non-nullable local because the local function below captures it, and the
+            // guard above is not something the compiler can carry into that capture.
+            Dictionary<string, string> skippedColumns = skippedColumnsForObject;
 
             // "mappings" and "fields" both key on the backing column name.
             if (entity.Mappings is not null)
@@ -2406,7 +2444,16 @@ namespace Azure.DataApiBuilder.Core.Services
                     // rejected once, at startup.
                     foreach (string policyField in EnumeratePolicyFieldReferences(action.Policy?.Database))
                     {
-                        RejectReference(policyField, $"database policy of role {permission.Role}");
+                        // Policy identifiers are exposed names, the way the OData model's properties
+                        // are, so they are resolved through the configured aliases before being
+                        // compared against backing column names. Without that, an alias over a
+                        // supported column that happens to carry the name of a skipped one — a
+                        // "Location" alias of a text column beside a skipped "Location" spatial
+                        // column — would be rejected even though the policy references the
+                        // supported field.
+                        RejectReference(
+                            ResolveBackingColumnName(entity, policyField),
+                            $"database policy of role {permission.Role}");
                     }
 
                     if (action.Fields?.Include is null)
@@ -2442,11 +2489,11 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Yields the field names a database policy references through its "@item." prefix.
+        /// Single-quoted literals are skipped, with a doubled quote read as an escaped quote inside
+        /// one, so a literal that merely contains the prefix is not mistaken for a reference.
         /// Scanned by hand rather than parsed: the OData model the parser needs does not exist yet
-        /// at this point in initialization, and a reference this scan fails to recognize only means
-        /// one fewer configuration rejected at startup — never a wrong rejection.
-        /// A policy can only reach a skipped column by its backing name, because an alias over one
-        /// is rejected through mappings and fields before this runs.
+        /// at this point in initialization. The names yielded are exposed names, which the caller
+        /// resolves through the configured aliases.
         /// </summary>
         private static IEnumerable<string> EnumeratePolicyFieldReferences(string? databasePolicy)
         {
@@ -2457,11 +2504,49 @@ namespace Azure.DataApiBuilder.Core.Services
                 yield break;
             }
 
-            int prefixIndex = databasePolicy.IndexOf(POLICY_FIELD_PREFIX, StringComparison.OrdinalIgnoreCase);
+            int index = 0;
 
-            while (prefixIndex >= 0)
+            while (index < databasePolicy.Length)
             {
-                int fieldStart = prefixIndex + POLICY_FIELD_PREFIX.Length;
+                if (databasePolicy[index] == '\'')
+                {
+                    index++;
+
+                    while (index < databasePolicy.Length)
+                    {
+                        if (databasePolicy[index] != '\'')
+                        {
+                            index++;
+                            continue;
+                        }
+
+                        // A doubled quote is an escaped quote within the literal, not its end.
+                        if (index + 1 < databasePolicy.Length && databasePolicy[index + 1] == '\'')
+                        {
+                            index += 2;
+                            continue;
+                        }
+
+                        index++;
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (string.Compare(
+                        databasePolicy,
+                        index,
+                        POLICY_FIELD_PREFIX,
+                        0,
+                        POLICY_FIELD_PREFIX.Length,
+                        StringComparison.OrdinalIgnoreCase) != 0)
+                {
+                    index++;
+                    continue;
+                }
+
+                int fieldStart = index + POLICY_FIELD_PREFIX.Length;
                 int fieldEnd = fieldStart;
 
                 while (fieldEnd < databasePolicy.Length
@@ -2475,10 +2560,45 @@ namespace Azure.DataApiBuilder.Core.Services
                     yield return databasePolicy[fieldStart..fieldEnd];
                 }
 
-                prefixIndex = fieldEnd >= databasePolicy.Length
-                    ? -1
-                    : databasePolicy.IndexOf(POLICY_FIELD_PREFIX, fieldEnd, StringComparison.OrdinalIgnoreCase);
+                index = fieldEnd > fieldStart ? fieldEnd : fieldStart;
             }
+        }
+
+        /// <summary>
+        /// Resolves an exposed field name to the column it is backed by, using the aliases the
+        /// configuration declares through "mappings" and through a field's "alias". An unaliased
+        /// name is already the backing name.
+        /// </summary>
+        private static string ResolveBackingColumnName(Entity entity, string exposedName)
+        {
+            // "fields" is consulted before "mappings", mirroring the precedence
+            // GenerateExposedToBackingColumnMapUtil applies when it builds the map the runtime
+            // resolves names through. Reversing it here would reject a configuration the runtime
+            // resolves the other way.
+            if (entity.Fields is not null)
+            {
+                foreach (FieldMetadata field in entity.Fields)
+                {
+                    if (!string.IsNullOrWhiteSpace(field.Alias)
+                        && string.Equals(field.Alias, exposedName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return field.Name;
+                    }
+                }
+            }
+
+            if (entity.Mappings is not null)
+            {
+                foreach (KeyValuePair<string, string> mapping in entity.Mappings)
+                {
+                    if (string.Equals(mapping.Value, exposedName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return mapping.Key;
+                    }
+                }
+            }
+
+            return exposedName;
         }
 
         /// <summary>

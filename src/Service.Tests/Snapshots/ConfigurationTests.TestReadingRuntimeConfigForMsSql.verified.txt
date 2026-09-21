@@ -1937,6 +1937,38 @@
       }
     },
     {
+      TemporalGeometryType: {
+        Source: {
+          Object: temporal_geometry_type_table,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: TemporalGeometryType,
+          Plural: TemporalGeometryTypes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       Profile: {
         Source: {
           Object: profiles,

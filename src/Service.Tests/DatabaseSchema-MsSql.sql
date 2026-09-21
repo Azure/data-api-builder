@@ -12,6 +12,9 @@ DROP VIEW IF EXISTS stocks_view_selected;
 DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP VIEW IF EXISTS books_publishers_view_composite_insertable;
 DROP VIEW IF EXISTS geometry_only_view;
+DROP VIEW IF EXISTS geometry_all_view;
+DROP VIEW IF EXISTS hierarchyid_composite_view;
+DROP VIEW IF EXISTS unique_without_pk_view;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
@@ -51,6 +54,7 @@ DROP TABLE IF EXISTS hierarchyid_composite_pk_table;
 DROP TABLE IF EXISTS hierarchyid_unique_table;
 DROP TABLE IF EXISTS unique_key_geometry_table;
 DROP TABLE IF EXISTS decimal_identity_geometry_table;
+DROP TABLE IF EXISTS pk_and_unique_geometry_table;
 -- System versioning has to be released before the temporal table can be dropped.
 IF OBJECT_ID('dbo.temporal_geometry_type_table', 'U') IS NOT NULL
     AND OBJECTPROPERTY(OBJECT_ID('dbo.temporal_geometry_type_table'), 'TableTemporalType') = 2
@@ -316,6 +320,17 @@ CREATE TABLE unique_key_geometry_table(
     name varchar(100) NOT NULL,
     geom geometry NULL,
     CONSTRAINT UQ_unique_key_geometry_table_code UNIQUE (code)
+);
+
+-- A primary key and a separate non-null unique key. A view over this table that does not select the
+-- primary key is still keyable through the unique one, which is ordinary design rather than a key
+-- the object cannot express.
+CREATE TABLE pk_and_unique_geometry_table(
+    id int IDENTITY(1, 1) NOT NULL PRIMARY KEY,
+    code varchar(20) NOT NULL,
+    name varchar(100) NOT NULL,
+    geom geometry NULL,
+    CONSTRAINT UQ_pk_and_unique_geometry_table_code UNIQUE (code)
 );
 
 -- A decimal identity column. DataColumn.AutoIncrement would coerce its CLR type to Int32, which is
@@ -756,6 +771,11 @@ VALUES
     ('CAR-001', 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
     ('CAR-002', 'null geometry', NULL);
 
+INSERT INTO pk_and_unique_geometry_table(code, name, geom)
+VALUES
+    ('CAR-101', 'point', geometry::STGeomFromText('POINT(1 2)', 0)),
+    ('CAR-102', 'null geometry', NULL);
+
 INSERT INTO decimal_identity_geometry_table(name, geom)
 VALUES
     ('point', geometry::STGeomFromText('POINT(1 2)', 0)),
@@ -860,6 +880,14 @@ EXEC('CREATE VIEW books_publishers_view_composite_insertable as SELECT
       FROM dbo.books,dbo.publishers
       where publishers.id = books.publisher_id');
 EXEC('CREATE VIEW geometry_only_view AS SELECT geom FROM dbo.geometry_type_table');
+-- A view has no index of its own, so its key can only be resolved through the underlying table.
+EXEC('CREATE VIEW geometry_all_view AS SELECT id, name, geom FROM dbo.geometry_type_table');
+-- The underlying key is composite and one of its members is of an unsupported type, so no key the
+-- projection can express identifies a row. Reporting the readable member alone would be a partial
+-- key, which silently matches more than one row on an update or a delete.
+EXEC('CREATE VIEW hierarchyid_composite_view AS SELECT tenant_id, name, node FROM dbo.hierarchyid_composite_pk_table');
+-- Omits the primary key of the underlying table and carries its unique key whole.
+EXEC('CREATE VIEW unique_without_pk_view AS SELECT code, name, geom FROM dbo.pk_and_unique_geometry_table');
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       SELECT * FROM dbo.books
       WHERE id = @id');

@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -25,7 +26,8 @@ public class ConfigurationHotReloadTests
     private static TestServer _testServer;
     private static HttpClient _testClient;
     private static RuntimeConfigProvider _configProvider;
-    private static StringWriter _writer;
+    private static CapturingTextWriter _writer;
+    private static TextWriter _originalConsoleOut;
     private static readonly object _writerLock = new();
     private const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
     private const string GQL_QUERY_NAME = "books";
@@ -219,6 +221,11 @@ public class ConfigurationHotReloadTests
         // Arrange
         GenerateConfigFile(connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
 
+        // Capture the console before the test server is created. The engine resolves its
+        // hot-reload diagnostics through a console logger provider which binds to Console.Out
+        // at construction time, so capturing afterwards would miss every entry it emits.
+        StartCapturingConsole();
+
         int maxRetries = 3;
         int retryDelayMs = 2000;
         Exception lastException = null;
@@ -281,7 +288,9 @@ public class ConfigurationHotReloadTests
             }
         }
 
-        // If we got here, all retries failed
+        // If we got here, all retries failed. Restore the console so a failed class
+        // initialization cannot leave the redirect in place for the rest of the run.
+        StopCapturingConsole();
         throw new Exception($"Failed to initialize test server after {maxRetries} attempts. Last error: {lastException?.Message}", lastException);
     }
 
@@ -303,16 +312,135 @@ public class ConfigurationHotReloadTests
         {
             Console.WriteLine($"Error during test cleanup: {ex.Message}");
         }
+        finally
+        {
+            StopCapturingConsole();
+        }
     }
 
     /// <summary>
-    /// Thread-safe helper to check if the writer contains a specific message
+    /// Redirects the console to the capture writer. Must be called before the test server
+    /// (and therefore the console logger provider) is constructed: the provider resolves
+    /// <see cref="Console.Out"/> once at construction and holds that writer for its lifetime,
+    /// so a later redirect is never observed by it. For the same reason the writer instance is
+    /// created once and only its buffer is cleared between tests - replacing the instance would
+    /// orphan the provider on the previous writer.
     /// </summary>
-    private static bool WriterContains(string message)
+    private static void StartCapturingConsole()
     {
         lock (_writerLock)
         {
-            return _writer.ToString().Contains(message);
+            _originalConsoleOut = Console.Out;
+            _writer = new CapturingTextWriter(_originalConsoleOut);
+            Console.SetOut(_writer);
+        }
+    }
+
+    /// <summary>
+    /// Restores the console stream captured by <see cref="StartCapturingConsole"/>.
+    /// </summary>
+    private static void StopCapturingConsole()
+    {
+        lock (_writerLock)
+        {
+            if (_originalConsoleOut is not null)
+            {
+                Console.SetOut(_originalConsoleOut);
+                _originalConsoleOut = null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Thread-safe snapshot of the diagnostics captured so far.
+    /// </summary>
+    private static string GetCapturedLogs()
+    {
+        return _writer.GetCapturedText();
+    }
+
+    /// <summary>
+    /// Thread-safe reset of the captured diagnostics, used to separate the output of two
+    /// consecutive hot reloads within a single test. Clears the existing writer's buffer
+    /// rather than replacing the writer, so the console logger provider keeps writing
+    /// into the writer this class observes.
+    /// </summary>
+    private static void ClearCapturedLogs()
+    {
+        _writer.ClearCapturedText();
+    }
+
+    /// <summary>
+    /// Thread-safe helper to check if the captured diagnostics contain a specific message.
+    /// </summary>
+    private static bool CapturedLogsContain(string message)
+    {
+        return GetCapturedLogs().Contains(message);
+    }
+
+    /// <summary>
+    /// Buffers everything written to the console while still forwarding it to the original
+    /// stream, so redirecting the console for assertions does not hide test output from CI.
+    /// </summary>
+    private sealed class CapturingTextWriter : TextWriter
+    {
+        private readonly TextWriter _inner;
+        private readonly StringBuilder _buffer = new();
+        private readonly object _bufferLock = new();
+
+        public CapturingTextWriter(TextWriter inner)
+        {
+            _inner = inner;
+        }
+
+        public override Encoding Encoding => _inner.Encoding;
+
+        public override void Write(char value)
+        {
+            lock (_bufferLock)
+            {
+                _buffer.Append(value);
+            }
+
+            _inner.Write(value);
+        }
+
+        public override void Write(string value)
+        {
+            lock (_bufferLock)
+            {
+                _buffer.Append(value);
+            }
+
+            _inner.Write(value);
+        }
+
+        public override void WriteLine(string value)
+        {
+            lock (_bufferLock)
+            {
+                _buffer.AppendLine(value);
+            }
+
+            _inner.WriteLine(value);
+        }
+
+        public override void Flush() => _inner.Flush();
+
+        public string GetCapturedText()
+        {
+            lock (_bufferLock)
+            {
+                return _buffer.ToString();
+            }
+        }
+
+        public void ClearCapturedText()
+        {
+            lock (_bufferLock)
+            {
+                _buffer.Clear();
+            }
         }
     }
 
@@ -325,8 +453,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadConfigRuntimePathsEndToEndTest()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         string restBookContents = $"{{\"value\":{_bookDBOContents}}}";
         string restPath = "restApi";
@@ -347,7 +474,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => CapturedLogsContain(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -383,8 +510,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadConfigRuntimeRestEnabledEndToEndTest()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         string restEnabled = "false";
 
@@ -394,7 +520,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => CapturedLogsContain(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -415,8 +541,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadConfigRuntimeGQLEnabledEndToEndTest()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         string gQLEnabled = "false";
         string query = GQL_QUERY;
@@ -434,7 +559,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => CapturedLogsContain(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -456,8 +581,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadEntityGQLEnabledFlag()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         string gQLEntityEnabled = "false";
         string query = @"{
@@ -480,7 +604,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => CapturedLogsContain(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -503,8 +627,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadConfigAddEntity()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         string newEntityName = "Author";
         string newEntitySource = "authors";
@@ -520,7 +643,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => CapturedLogsContain(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -589,8 +712,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadConfigUpdateMappings()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         string newMappingFieldName = "bookTitle";
         // Update the configuration with new mappings
@@ -601,7 +723,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => CapturedLogsContain(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -669,8 +791,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadConfigDataSource()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
         MsSqlOptions previousSessionContext = previousRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
@@ -685,7 +806,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => CapturedLogsContain(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -712,8 +833,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadLogLevel()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         LogLevel expectedLogLevel = LogLevel.Trace;
         string expectedFilter = "trace";
@@ -727,7 +847,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => CapturedLogsContain(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -749,40 +869,31 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadConfigConnectionString()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         // Act
         // Hot Reload should fail here
         GenerateConfigFile(
             connectionString: $"WrongConnectionString");
         await WaitForConditionAsync(
-          () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
+          () => CapturedLogsContain(HOT_RELOAD_FAILURE_MESSAGE),
           TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
-        string failedConfigLog;
-        lock (_writerLock)
-        {
-            failedConfigLog = _writer.ToString();
-            _writer.GetStringBuilder().Clear();
-        }
+        string failedConfigLog = GetCapturedLogs();
+        ClearCapturedLogs();
 
         // Hot Reload should succeed here
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         await WaitForConditionAsync(
-          () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+          () => CapturedLogsContain(HOT_RELOAD_SUCCESS_MESSAGE),
           TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly
-        string succeedConfigLog;
-        lock (_writerLock)
-        {
-            succeedConfigLog = _writer.ToString();
-        }
+        string succeedConfigLog = GetCapturedLogs();
 
         // After hot-reload, the engine may still be re-initializing metadata providers.
         // Poll the REST endpoint to allow time for the engine to become fully ready.
@@ -803,8 +914,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadAutoentities()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         // Act
         HttpResponseMessage restResult = await _testClient.GetAsync($"rest/autoentity_books");
@@ -813,7 +923,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             autoentityName: "HotReload_{object}");
         await WaitForConditionAsync(
-          () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+          () => CapturedLogsContain(HOT_RELOAD_SUCCESS_MESSAGE),
           TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
@@ -846,8 +956,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadConfigDatabaseType()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         // Act
         // Hot Reload should fail here
@@ -855,33 +964,25 @@ public class ConfigurationHotReloadTests
             databaseType: DatabaseType.PostgreSQL,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.POSTGRESQL).Replace("\\", "\\\\")}");
         await WaitForConditionAsync(
-          () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
+          () => CapturedLogsContain(HOT_RELOAD_FAILURE_MESSAGE),
           TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
-        string failedConfigLog;
-        lock (_writerLock)
-        {
-            failedConfigLog = _writer.ToString();
-            _writer.GetStringBuilder().Clear();
-        }
+        string failedConfigLog = GetCapturedLogs();
+        ClearCapturedLogs();
 
         // Hot Reload should succeed here
         GenerateConfigFile(
             databaseType: DatabaseType.MSSQL,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         await WaitForConditionAsync(
-          () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
+          () => CapturedLogsContain(HOT_RELOAD_SUCCESS_MESSAGE),
           TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly
-        string succeedConfigLog;
-        lock (_writerLock)
-        {
-            succeedConfigLog = _writer.ToString();
-        }
+        string succeedConfigLog = GetCapturedLogs();
 
         // After hot-reload, the engine may still be re-initializing metadata providers.
         // Poll the REST endpoint to allow time for the engine to become fully ready.
@@ -906,8 +1007,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadValidationFail()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         RuntimeConfig lkgRuntimeConfig = _configProvider.GetConfig();
         Assert.IsNotNull(lkgRuntimeConfig);
@@ -927,7 +1027,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to fail
         await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
+            () => CapturedLogsContain(HOT_RELOAD_FAILURE_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -956,8 +1056,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadParsingFail()
     {
         // Arrange
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        ClearCapturedLogs();
 
         RuntimeConfig lkgRuntimeConfig = _configProvider.GetConfig();
         Assert.IsNotNull(lkgRuntimeConfig);
@@ -974,7 +1073,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to fail (parsing error should trigger failure message)
         await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
+            () => CapturedLogsContain(HOT_RELOAD_FAILURE_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -1014,10 +1113,7 @@ public class ConfigurationHotReloadTests
         }
 
         Console.WriteLine($"Hot-reload timeout after {stopwatch.Elapsed.TotalSeconds:F2} seconds ({attemptCount} attempts)");
-        lock (_writerLock)
-        {
-            Console.WriteLine($"Console output captured:\n{_writer.ToString()}");
-        }
+        Console.WriteLine($"Hot-reload diagnostics captured:\n{GetCapturedLogs()}");
 
         throw new TimeoutException("The condition was not met within the timeout period.");
     }

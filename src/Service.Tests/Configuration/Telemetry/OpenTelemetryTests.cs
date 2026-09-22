@@ -2,7 +2,10 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +27,7 @@ public class OpenTelemetryTests
 
     private const string CONFIG_WITH_TELEMETRY = "dab-open-telemetry-test-config.json";
     private const string CONFIG_WITHOUT_TELEMETRY = "dab-no-open-telemetry-test-config.json";
+    private const string ASPNETCORE_ACTIVITY_SOURCE_NAME = "Microsoft.AspNetCore";
     private static RuntimeConfig _configuration;
 
     /// <summary>
@@ -86,6 +90,50 @@ public class OpenTelemetryTests
         // If tracerProvider and meterProvider are not null, OTEL is enabled
         Assert.IsNotNull(tracerProvider, "TracerProvider should be registered.");
         Assert.IsNotNull(meterProvider, "MeterProvider should be registered.");
+    }
+
+    /// <summary>
+    /// Tests that an inbound HTTP request produces a recorded server span when Open Telemetry is enabled.
+    /// The listener below never samples by itself, so the span can only be recorded because
+    /// the OpenTelemetry TracerProvider subscribes to the ASP.NET Core activity source.
+    /// </summary>
+    [TestMethod]
+    public async Task TestOpenTelemetryRecordsInboundHttpRequestSpan()
+    {
+        // Arrange
+        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, "http://localhost:4317", "key=key", OtlpExportProtocol.Grpc);
+
+        string requestPath = $"/otel-inbound-span-test-{Guid.NewGuid():N}";
+        TaskCompletionSource<Activity> recordedServerActivity = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using ActivityListener listener = new()
+        {
+            ShouldListenTo = source => source.Name == ASPNETCORE_ACTIVITY_SOURCE_NAME,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.None,
+            ActivityStopped = activity =>
+            {
+                if (activity.Recorded && activity.Kind == ActivityKind.Server && activity.GetTagItem("url.path") as string == requestPath)
+                {
+                    recordedServerActivity.TrySetResult(activity);
+                }
+            }
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        string[] args = new[]
+        {
+            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
+        };
+        using TestServer server = new(Program.CreateWebHostBuilder(args));
+        Assert.IsNotNull(server.Services.GetService<TracerProvider>(), "TracerProvider should be registered.");
+        using HttpClient client = server.CreateClient();
+
+        // Act
+        await client.GetAsync(requestPath);
+
+        // Assert
+        // The server activity is stopped once the request pipeline completes, which can happen after the response is returned.
+        Task completedTask = await Task.WhenAny(recordedServerActivity.Task, Task.Delay(TimeSpan.FromSeconds(10)));
+        Assert.AreSame(recordedServerActivity.Task, completedTask, "An inbound HTTP request should produce a recorded server span.");
     }
 
     /// <summary>

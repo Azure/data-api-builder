@@ -5,7 +5,9 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.IdentityModel.Validators;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 
 namespace Azure.DataApiBuilder.Service;
 
@@ -49,14 +51,46 @@ public class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearerOptions
         options.MapInboundClaims = false;
         options.Audience = newAuthOptions.Jwt.Audience;
         options.Authority = newAuthOptions.Jwt.Issuer;
+
+        string? jwksUri = newAuthOptions.Jwt.ResolvedJwksUrl;
+        if (string.IsNullOrWhiteSpace(jwksUri))
+        {
+            return;
+        }
+
+        JsonWebKeySet jwks;
+
+        using (HttpClient client = JwtHttpClientFactory.Create())
+        {
+            string jwksJson = client.GetStringAsync(jwksUri).GetAwaiter().GetResult();
+            jwks = new JsonWebKeySet(jwksJson);
+        }
+
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
         {
             ValidAudience = newAuthOptions.Jwt.Audience,
             ValidIssuer = newAuthOptions.Jwt.Issuer,
-            // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInRole()
-            // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole#remarks
-            // This should eventually be configurable to address #2395
-            RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKeys = jwks.Keys,
+            // Instructs the asp.net core middleware which JWT claim to use for User.IsInRole()
+            // Defaults to "roles" when not explicitly configured.
+            RoleClaimType = newAuthOptions.Jwt.ResolvedRoleClaimType
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                JwtRoleClaimsTransformer.NormalizeRoleClaims(
+                    principal: context.Principal!,
+                    sourceRoleClaimType: newAuthOptions.Jwt.ResolvedRoleClaimType,
+                    separator: newAuthOptions.Jwt.ResolvedRolesSeparator);
+
+                return Task.CompletedTask;
+            }
         };
 
         if (newAuthOptions.Provider.Equals("AzureAD") || newAuthOptions.Provider.Equals("EntraID"))

@@ -370,6 +370,10 @@ public record RuntimeConfig
         {
             IEnumerable<KeyValuePair<string, Entity>>? allEntities = Entities?.AsEnumerable();
             IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = Autoentities?.AsEnumerable();
+
+            HashSet<string> alreadyReviewedEntityNames = new(this.Entities.Entities.Keys);
+            HashSet<string> alreadyReviewedAutoentityNames = new(this.Autoentities.Autoentities.Keys);
+
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
             // This loader is not used as a part of hot reload and therefore does not need a handler.
@@ -394,11 +398,24 @@ public record RuntimeConfig
                         // Store the child config reference for per-child validation.
                         ChildConfigs.Add((dataSourceFile, config));
 
+                        // Skip datasource files that were already reviewed: if the child has content
+                        // and every one of its entities and autoentities is already present, it was
+                        // merged in a previous construction and must not be added again.
+                        bool childHasContent = config.Entities.Entities.Count > 0 || config.Autoentities.Autoentities.Count > 0;
+                        bool alreadyReviewed = childHasContent
+                            && config.Entities.Entities.Keys.All(alreadyReviewedEntityNames.Contains)
+                            && config.Autoentities.Autoentities.Keys.All(alreadyReviewedAutoentityNames.Contains);
+
+                        /*if (alreadyReviewed)
+                        {
+                            continue;
+                        }*/
+
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _autoentityNameToDataSourceName = _autoentityNameToDataSourceName.Concat(config._autoentityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                        allEntities = allEntities is null ? config.Entities.AsEnumerable() : allEntities.Concat(config.Entities.AsEnumerable());
-                        allAutoentities = allAutoentities is null ? config.Autoentities.AsEnumerable() : allAutoentities.Concat(config.Autoentities.AsEnumerable());
+                        allEntities = allEntities?.Concat(config.Entities.AsEnumerable());
+                        allAutoentities = allAutoentities?.Concat(config.Autoentities.AsEnumerable());
                     }
                     catch (Exception e)
                     {

@@ -84,7 +84,10 @@ namespace Azure.DataApiBuilder.Core.Services
             // the data adapter reports a non-nullable unique key as DataTable.PrimaryKey on the
             // unnarrowed path, and the narrowed path has to do the same. Filtered and disabled
             // indexes do not identify every row, and an index's included columns report key_ordinal
-            // 0 and are not part of its key.
+            // 0 and are not part of its key. A hypothetical index is excluded for the same reason:
+            // it exists only to hold column-level statistics, cannot be used as a data access path,
+            // and therefore enforces no uniqueness at all, so keying an object on one would let an
+            // update or a delete by key match more than one row.
             string query =
                 "select c.name as COLUMN_NAME, c.is_hidden as IS_HIDDEN, c.is_identity as IS_IDENTITY, "
                 + "c.is_nullable as IS_NULLABLE, i.index_id as INDEX_ID, "
@@ -93,7 +96,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 + "left join sys.index_columns as ic on ic.object_id = c.object_id "
                 + "and ic.column_id = c.column_id and ic.key_ordinal > 0 "
                 + "left join sys.indexes as i on i.object_id = ic.object_id and i.index_id = ic.index_id "
-                + "and i.is_unique = 1 and i.is_disabled = 0 and i.has_filter = 0 "
+                + "and i.is_unique = 1 and i.is_disabled = 0 and i.is_hypothetical = 0 "
+                + "and i.has_filter = 0 "
                 + $"where c.object_id = object_id(quotename({schemaParamName})+'.'+quotename({tableParamName}));";
 
             Dictionary<string, DbConnectionParam> parameters = new()

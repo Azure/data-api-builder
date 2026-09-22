@@ -1041,6 +1041,7 @@ type Foo @model(name:""Foo"") {{
 
         [DataTestMethod]
         [DataRow(DatabaseType.MSSQL, typeof(int), "((1))", "7", false)]
+        [DataRow(DatabaseType.MSSQL, typeof(int), "((42))", "7", false)]
         [DataRow(DatabaseType.MSSQL, typeof(int), "(rand())", "7", false)]
         [DataRow(DatabaseType.MSSQL, typeof(double), "((0))", "1.25", false)]
         [DataRow(DatabaseType.MSSQL, typeof(decimal), "((1.5))", "1.25", false)]
@@ -1081,36 +1082,45 @@ type Foo @model(name:""Foo"") {{
                     Assert.IsInstanceOfType<IEnumerable<ObjectFieldNode>>(parameters["item"]);
                     IEnumerable<ObjectFieldNode> fields = (IEnumerable<ObjectFieldNode>)parameters["item"];
                     InputObjectType inputType = ExecutionHelper.InputObjectTypeFromIInputField(context.Selection.Field.Arguments["item"]);
-                    capturedInput = fields.ToDictionary(
-                        field => field.Name.Value,
-                        field => ExecutionHelper.ExtractValueFromIValueNode(
-                            field.Value, inputType.Fields[field.Name.Value], context.Variables));
+                    capturedInput = ExtractInputFields(fields, inputType, context.Variables);
                     return true;
                 })
                 .Create()
                 .MakeExecutable();
 
-            OperationResult omitted = (await executor.ExecuteAsync("{ inspect(item: { id: 1 }) }")).ExpectOperationResult();
-            Assert.AreEqual(0, omitted.Errors.Count, string.Join(" | ", omitted.Errors.Select(error => error.ToString())));
-            Assert.IsNotNull(capturedInput);
-            Assert.IsFalse(capturedInput.ContainsKey("defaulted"),
-                "An omitted SQL column must remain absent so the database, not GraphQL, evaluates its default.");
+            foreach (bool useVariables in new[] { false, true })
+            {
+                capturedInput = null;
+                OperationResult omitted = await ExecuteCreateInputAsync(
+                    executor, "item", "{ id: 1 }", """{ "id": 1 }""", useVariables);
+                Assert.AreEqual(0, omitted.Errors.Count, string.Join(" | ", omitted.Errors.Select(error => error.ToString())));
+                Assert.IsNotNull(capturedInput);
+                Assert.IsFalse(capturedInput.ContainsKey("defaulted"),
+                    "An omitted SQL column must remain absent so the database, not GraphQL, evaluates its default.");
 
-            OperationResult explicitNull = (await executor.ExecuteAsync("{ inspect(item: { id: 1, defaulted: null }) }")).ExpectOperationResult();
-            Assert.AreEqual(0, explicitNull.Errors.Count, string.Join(" | ", explicitNull.Errors.Select(error => error.ToString())));
-            Assert.IsTrue(capturedInput.ContainsKey("defaulted"), "Explicit null must remain distinct from omission.");
-            Assert.IsNull(capturedInput["defaulted"], "A SQL default must not replace an explicitly supplied null.");
+                capturedInput = null;
+                OperationResult explicitNull = await ExecuteCreateInputAsync(
+                    executor, "item", "{ id: 1, defaulted: null }", """{ "id": 1, "defaulted": null }""", useVariables);
+                Assert.AreEqual(0, explicitNull.Errors.Count, string.Join(" | ", explicitNull.Errors.Select(error => error.ToString())));
+                Assert.IsNotNull(capturedInput);
+                Assert.IsTrue(capturedInput.ContainsKey("defaulted"), "Explicit null must remain distinct from omission.");
+                Assert.IsNull(capturedInput["defaulted"], "A SQL default must not replace an explicitly supplied null.");
 
-            OperationResult supplied = (await executor.ExecuteAsync(
-                $"{{ inspect(item: {{ id: 1, defaulted: {suppliedLiteral} }}) }}")).ExpectOperationResult();
-            Assert.AreEqual(0, supplied.Errors.Count, string.Join(" | ", supplied.Errors.Select(error => error.ToString())));
-            Assert.IsTrue(capturedInput.ContainsKey("defaulted"));
-            Assert.IsNotNull(capturedInput["defaulted"], "An explicit value must survive input coercion.");
+                capturedInput = null;
+                OperationResult supplied = await ExecuteCreateInputAsync(
+                    executor, "item", $"{{ id: 1, defaulted: {suppliedLiteral} }}",
+                    $$"""{ "id": 1, "defaulted": {{suppliedLiteral}} }""", useVariables);
+                Assert.AreEqual(0, supplied.Errors.Count, string.Join(" | ", supplied.Errors.Select(error => error.ToString())));
+                Assert.IsNotNull(capturedInput);
+                Assert.IsTrue(capturedInput.ContainsKey("defaulted"));
+                Assert.AreEqual(suppliedLiteral, JsonSerializer.Serialize(capturedInput["defaulted"]),
+                    "An explicitly supplied value must survive input coercion unchanged.");
 
-            capturedInput = null;
-            OperationResult missingRequired = (await executor.ExecuteAsync("{ inspect(item: {}) }")).ExpectOperationResult();
-            Assert.IsTrue(missingRequired.Errors.Count > 0, "A non-null column without a default must still be required.");
-            Assert.IsNull(capturedInput, "Invalid input must be rejected before invoking a resolver.");
+                capturedInput = null;
+                OperationResult missingRequired = await ExecuteCreateInputAsync(executor, "item", "{}", "{}", useVariables);
+                Assert.IsTrue(missingRequired.Errors.Count > 0, "A non-null column without a default must still be required.");
+                Assert.IsNull(capturedInput, "Invalid input must be rejected before invoking a resolver.");
+            }
 
             InputObjectTypeDefinitionNode input = mutationRoot.Definitions.OfType<InputObjectTypeDefinitionNode>()
                 .Single(node => node.Name.Value == "CreateFooInput");
@@ -1120,11 +1130,13 @@ type Foo @model(name:""Foo"") {{
         }
 
         [DataTestMethod]
-        [DataRow(false)]
-        [DataRow(true)]
+        [DataRow(false, false)]
+        [DataRow(false, true)]
+        [DataRow(true, false)]
+        [DataRow(true, true)]
         [TestCategory("Mutation Builder - Create")]
         [TestCategory("GraphQL Schema Builder")]
-        public async Task SqlDefaultsRemainOptionalForMultipleAndLinkingCreate(bool createMultiple)
+        public async Task SqlDefaultsRemainOptionalForMultipleAndLinkingCreate(bool createMultiple, bool useVariables)
         {
             DocumentNode relationshipTypes = Utf8GraphQLParser.Parse("""
                 type Foo @model(name: "Foo") {
@@ -1163,25 +1175,89 @@ type Foo @model(name:""Foo"") {{
 
             string mutationName = createMultiple ? "createFoos" : "createFoo";
             string argumentName = createMultiple ? MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME : MutationBuilder.ITEM_INPUT_ARGUMENT_NAME;
+            Dictionary<string, object?> capturedInput = null;
+            Dictionary<string, object?> capturedLinkingInput = null;
             IRequestExecutor executor = CreateSchemaBuilderForCreateInputs(mutationRoot, mutationName)
-                .AddResolver("Query", "inspect", _ => true)
+                .AddResolver("Query", "inspect", context =>
+                {
+                    IDictionary<string, object?> parameters = ExecutionHelper.GetParametersFromSchemaAndQueryFields(
+                        context.Selection.Field, context.Selection.RequireFieldNode(), context.Variables);
+                    IEnumerable<ObjectFieldNode> fields;
+                    if (createMultiple)
+                    {
+                        Assert.IsInstanceOfType<IEnumerable<IValueNode>>(parameters[argumentName]);
+                        IValueNode inputItem = ((IEnumerable<IValueNode>)parameters[argumentName]).Single();
+                        Assert.IsInstanceOfType<ObjectValueNode>(inputItem);
+                        fields = ((ObjectValueNode)inputItem).Fields;
+                    }
+                    else
+                    {
+                        Assert.IsInstanceOfType<IEnumerable<ObjectFieldNode>>(parameters[argumentName]);
+                        fields = (IEnumerable<ObjectFieldNode>)parameters[argumentName];
+                    }
+
+                    InputObjectType inputType = ExecutionHelper.InputObjectTypeFromIInputField(context.Selection.Field.Arguments[argumentName]);
+                    capturedInput = ExtractInputFields(fields, inputType, context.Variables);
+
+                    Assert.IsInstanceOfType<IEnumerable<IValueNode>>(capturedInput["bars"]);
+                    IValueNode linkingItem = ((IEnumerable<IValueNode>)capturedInput["bars"]).Single();
+                    Assert.IsInstanceOfType<ObjectValueNode>(linkingItem);
+                    InputObjectType linkingInputType = ExecutionHelper.InputObjectTypeFromIInputField(inputType.Fields["bars"]);
+                    capturedLinkingInput = ExtractInputFields(((ObjectValueNode)linkingItem).Fields, linkingInputType, context.Variables);
+                    return true;
+                })
                 .Create()
                 .MakeExecutable();
 
             string item = "{ id: 1, bars: [{ id: 2 }] }";
-            string input = createMultiple ? $"[{item}]" : item;
-            OperationResult omitted = (await executor.ExecuteAsync($"{{ inspect({argumentName}: {input}) }}")).ExpectOperationResult();
+            string variableItem = """{ "id": 1, "bars": [{ "id": 2 }] }""";
+            OperationResult omitted = await ExecuteCreateInputAsync(
+                executor, argumentName, createMultiple ? $"[{item}]" : item,
+                createMultiple ? $"[{variableItem}]" : variableItem, useVariables);
             Assert.AreEqual(0, omitted.Errors.Count, string.Join(" | ", omitted.Errors.Select(error => error.ToString())));
+            Assert.IsNotNull(capturedInput);
+            Assert.IsNotNull(capturedLinkingInput);
+            Assert.IsFalse(capturedInput.ContainsKey("defaulted"), "An omitted SQL column must remain absent.");
+            Assert.IsFalse(capturedLinkingInput.ContainsKey("royalty_percentage"), "An omitted linking column must remain absent.");
 
-            item = "{ id: 1, bars: [{ id: 2, royalty_percentage: null }] }";
-            input = createMultiple ? $"[{item}]" : item;
-            OperationResult explicitNull = (await executor.ExecuteAsync($"{{ inspect({argumentName}: {input}) }}")).ExpectOperationResult();
+            capturedInput = null;
+            capturedLinkingInput = null;
+            item = "{ id: 1, defaulted: null, bars: [{ id: 2, royalty_percentage: null }] }";
+            variableItem = """{ "id": 1, "defaulted": null, "bars": [{ "id": 2, "royalty_percentage": null }] }""";
+            OperationResult explicitNull = await ExecuteCreateInputAsync(
+                executor, argumentName, createMultiple ? $"[{item}]" : item,
+                createMultiple ? $"[{variableItem}]" : variableItem, useVariables);
             Assert.AreEqual(0, explicitNull.Errors.Count, string.Join(" | ", explicitNull.Errors.Select(error => error.ToString())));
+            Assert.IsNotNull(capturedInput);
+            Assert.IsNotNull(capturedLinkingInput);
+            Assert.IsTrue(capturedInput.ContainsKey("defaulted"), "Explicit null must remain distinct from omission.");
+            Assert.IsNull(capturedInput["defaulted"]);
+            Assert.IsTrue(capturedLinkingInput.ContainsKey("royalty_percentage"), "Explicit null must remain present on a linking input.");
+            Assert.IsNull(capturedLinkingInput["royalty_percentage"]);
 
+            capturedInput = null;
+            capturedLinkingInput = null;
+            item = "{ id: 1, defaulted: 7, bars: [{ id: 2, royalty_percentage: 0.75 }] }";
+            variableItem = """{ "id": 1, "defaulted": 7, "bars": [{ "id": 2, "royalty_percentage": 0.75 }] }""";
+            OperationResult supplied = await ExecuteCreateInputAsync(
+                executor, argumentName, createMultiple ? $"[{item}]" : item,
+                createMultiple ? $"[{variableItem}]" : variableItem, useVariables);
+            Assert.AreEqual(0, supplied.Errors.Count, string.Join(" | ", supplied.Errors.Select(error => error.ToString())));
+            Assert.IsNotNull(capturedInput);
+            Assert.IsNotNull(capturedLinkingInput);
+            Assert.AreEqual(7, capturedInput["defaulted"], "An explicit value must not be replaced by a SQL default.");
+            Assert.AreEqual(0.75, capturedLinkingInput["royalty_percentage"], "An explicit linking value must remain unchanged.");
+
+            capturedInput = null;
+            capturedLinkingInput = null;
             item = "{ id: 1, bars: [{}] }";
-            input = createMultiple ? $"[{item}]" : item;
-            OperationResult missingRequired = (await executor.ExecuteAsync($"{{ inspect({argumentName}: {input}) }}")).ExpectOperationResult();
+            variableItem = """{ "id": 1, "bars": [{}] }""";
+            OperationResult missingRequired = await ExecuteCreateInputAsync(
+                executor, argumentName, createMultiple ? $"[{item}]" : item,
+                createMultiple ? $"[{variableItem}]" : variableItem, useVariables);
             Assert.IsTrue(missingRequired.Errors.Count > 0, "Non-defaulted fields on the linking input must remain required.");
+            Assert.IsNull(capturedInput, "Invalid input must be rejected before invoking a resolver.");
+            Assert.IsNull(capturedLinkingInput);
 
             InputObjectTypeDefinitionNode linkingInput = mutationRoot.Definitions.OfType<InputObjectTypeDefinitionNode>()
                 .Single(node => node.Name.Value == CreateMutationBuilder.GenerateInputTypeName(linkingTypeName).Value);
@@ -1189,6 +1265,38 @@ type Foo @model(name:""Foo"") {{
             Assert.IsNull(defaultedField.DefaultValue);
             Assert.IsFalse(defaultedField.Type.IsNonNullType());
             Assert.AreEqual("Float", defaultedField.Type.NamedType().Name.Value);
+        }
+
+        private static async Task<OperationResult> ExecuteCreateInputAsync(
+            IRequestExecutor executor,
+            string argumentName,
+            string literalInput,
+            string variableInput,
+            bool useVariables)
+        {
+            OperationRequestBuilder request = OperationRequestBuilder.New();
+            if (useVariables)
+            {
+                IInputType inputType = executor.Schema.QueryType.Fields["inspect"].Arguments[argumentName].Type;
+                request.SetDocument($"query (${argumentName}: {inputType}) {{ inspect({argumentName}: ${argumentName}) }}")
+                    .SetVariableValues($"{{ \"{argumentName}\": {variableInput} }}");
+            }
+            else
+            {
+                request.SetDocument($"{{ inspect({argumentName}: {literalInput}) }}");
+            }
+
+            return (await executor.ExecuteAsync(request.Build())).ExpectOperationResult();
+        }
+
+        private static Dictionary<string, object?> ExtractInputFields(
+            IEnumerable<ObjectFieldNode> fields,
+            InputObjectType inputType,
+            IVariableValueCollection variables)
+        {
+            return fields.ToDictionary(
+                field => field.Name.Value,
+                field => ExecutionHelper.ExtractValueFromIValueNode(field.Value, inputType.Fields[field.Name.Value], variables));
         }
 
         private static ObjectTypeDefinitionNode GenerateSqlObjectTypeWithDefault(

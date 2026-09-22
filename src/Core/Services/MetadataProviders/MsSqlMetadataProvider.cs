@@ -248,6 +248,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string? sourceSchema = null;
             string? sourceTable = null;
             Dictionary<string, string> projectionBySourceColumn = new(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> sourceColumnsSeen = new(StringComparer.OrdinalIgnoreCase);
 
             foreach (ProjectionSourceColumn projectionColumn in projectionColumns)
             {
@@ -273,6 +274,19 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     // More than one underlying object. Inferring a key across a join is out of
                     // scope; such an entity needs source.key-fields, as it did before this change.
+                    return (new List<string>(), null);
+                }
+
+                // A source column reported twice means the result draws on more than one instance
+                // of the object: a self-join, which the check above cannot see, because browse mode
+                // reports the physical table rather than the alias. Such a join duplicates rows of
+                // the object just as any other does, so its key does not identify a row of the
+                // result. Declining is conservative — a projection that selects one column twice
+                // under different names is refused too, and simply needs source.key-fields, as it
+                // did before this change — and the alternative is a key that silently matches more
+                // than one row on an update or a delete.
+                if (!sourceColumnsSeen.Add(projectionColumn.SourceColumn))
+                {
                     return (new List<string>(), null);
                 }
 

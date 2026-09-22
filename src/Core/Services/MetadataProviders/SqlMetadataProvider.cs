@@ -1375,6 +1375,17 @@ namespace Azure.DataApiBuilder.Core.Services
 
             try
             {
+                // After the loops above, not inside them: a relationship's "target.fields" belong
+                // to the other entity's object, which may not have been read yet while this one is.
+                RejectConfiguredRelationshipReferencesToSkippedColumns();
+            }
+            catch (Exception e)
+            {
+                HandleOrRecordException(e);
+            }
+
+            try
+            {
                 await PopulateForeignKeyDefinitionAsync();
             }
             catch (Exception e)
@@ -2596,6 +2607,80 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
 
                 index = fieldEnd > fieldStart ? fieldEnd : fieldStart;
+            }
+        }
+
+        /// <summary>
+        /// Fails initialization when a configured relationship names a column that was left out of
+        /// a projection because its data type is not supported. Runs after every object definition
+        /// is populated, unlike the other reference checks: a relationship's "target.fields" belong
+        /// to the other entity's object, which may not have been read yet while this one is.
+        /// The reference would otherwise keep resolving — the exposed and backing column maps are
+        /// built from the configuration rather than from
+        /// <see cref="SourceDefinition.Columns"/> — and fail per request instead, in
+        /// MultipleCreateOrderHelper, which indexes that dictionary by each relationship field.
+        /// Foreign keys inferred from the catalog are deliberately not checked: there is no
+        /// configuration to correct there, so refusing to start would punish the database's shape
+        /// rather than the configuration, and the relationship simply not forming is the
+        /// proportionate outcome.
+        /// </summary>
+        private void RejectConfiguredRelationshipReferencesToSkippedColumns()
+        {
+            foreach ((string entityName, Entity entity) in Entities)
+            {
+                if (entity.Relationships is null)
+                {
+                    continue;
+                }
+
+                foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships)
+                {
+                    RejectRelationshipFields(
+                        entityName,
+                        relationship.SourceFields,
+                        $"source.fields of relationship {relationshipName} of entity {entityName}");
+
+                    RejectRelationshipFields(
+                        relationship.TargetEntity,
+                        relationship.TargetFields,
+                        $"target.fields of relationship {relationshipName} of entity {entityName}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fails initialization when any of the given fields, read as names configured on the given
+        /// entity, resolves to a column that entity's object does not expose.
+        /// </summary>
+        private void RejectRelationshipFields(string entityName, string[]? fields, string configurationSection)
+        {
+            if (fields is null
+                || fields.Length == 0
+                || !Entities.TryGetValue(entityName, out Entity? entity)
+                || !EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject)
+                || !_skippedColumnsByObject.TryGetValue(
+                        GetObjectCacheKey(databaseObject.SchemaName, databaseObject.Name),
+                        out Dictionary<string, string>? skippedColumns))
+            {
+                return;
+            }
+
+            foreach (string field in fields)
+            {
+                string backingColumn = ResolveBackingColumnName(entity, field);
+
+                if (!skippedColumns.TryGetValue(backingColumn, out string? dataType))
+                {
+                    continue;
+                }
+
+                throw new DataApiBuilderException(
+                    message: $"The {configurationSection} reference the column {backingColumn} of "
+                        + $"{databaseObject.SchemaName}.{databaseObject.Name}, whose data type {dataType} is not "
+                        + "supported. That column is not part of the exposed contract, so the relationship cannot be "
+                        + "honored. Remove it from the configuration.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
         }
 

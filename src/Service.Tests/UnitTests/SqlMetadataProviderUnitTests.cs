@@ -1146,6 +1146,115 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test to validate that a relationship naming a column left out of the projection fails
+        /// initialization.
+        /// The exposed and backing column maps are built from the configuration rather than from
+        /// the source definition, so the reference keeps resolving after the column is gone and
+        /// fails per request instead — in MultipleCreateOrderHelper, which indexes
+        /// <see cref="SourceDefinition.Columns"/> by each relationship field.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateRelationshipFieldOverUnsupportedColumnFailsInitialization()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            Entity sourceEntity = BuildReadOnlyEntity(
+                entityName: "UniqueKeyGeometrySource",
+                databaseObject: "dbo.unique_key_geometry_table",
+                sourceType: EntitySourceType.Table,
+                keyFields: null)
+                with
+            {
+                Relationships = new Dictionary<string, EntityRelationship>
+                {
+                    {
+                        "geometryType",
+                        new EntityRelationship(
+                            Cardinality: Cardinality.One,
+                            TargetEntity: "GeometryTypeTarget",
+                            SourceFields: new[] { "geom" },
+                            TargetFields: new[] { "id" },
+                            LinkingObject: null,
+                            LinkingSourceFields: Array.Empty<string>(),
+                            LinkingTargetFields: Array.Empty<string>())
+                    }
+                }
+            };
+
+            await SetUpEntitiesMetadataProviderAsync(new Dictionary<string, Entity>
+            {
+                { "UniqueKeyGeometrySource", sourceEntity },
+                {
+                    "GeometryTypeTarget",
+                    BuildReadOnlyEntity(
+                        entityName: "GeometryTypeTarget",
+                        databaseObject: "dbo.geometry_type_table",
+                        sourceType: EntitySourceType.Table,
+                        keyFields: null)
+                }
+            });
+
+            try
+            {
+                await _sqlMetadataProvider.InitializeAsync();
+                Assert.Fail("Expected DataApiBuilderException was not thrown for a relationship naming a column whose data type is not supported.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.IsTrue(
+                    ex.Message.Contains("geom"),
+                    message: "The error is expected to name the column the relationship cannot be honored over. "
+                        + $"Actual message: {ex.Message}");
+            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
+        /// Test to validate that a view built on a self-join does not have the object's key
+        /// inferred as its own.
+        /// Browse mode reports the physical table rather than the alias, so both instances of the
+        /// object look like one and the single-source check cannot see the join. What gives it away
+        /// is the key column being reported twice, once per instance. A self-join duplicates rows
+        /// of the object just as any other join does, so its key does not identify a row of the
+        /// result.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateViewOverSelfJoinDoesNotInferKey()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            await SetUpSingleEntityMetadataProviderAsync(
+                "SelfJoinGeometryView",
+                BuildReadOnlyEntity(
+                    entityName: "SelfJoinGeometryView",
+                    databaseObject: "dbo.self_join_geometry_view",
+                    sourceType: EntitySourceType.View,
+                    keyFields: null));
+
+            try
+            {
+                await _sqlMetadataProvider.InitializeAsync();
+                Assert.Fail("Expected DataApiBuilderException was not thrown for a view built on a self-join with no configured key.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.IsTrue(
+                    ex.Message.Contains("Primary key not configured"),
+                    message: "A self-join is out of scope for key inference, so the object is expected to require "
+                        + $"source.key-fields exactly as it did before. Actual message: {ex.Message}");
+            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
         /// Test to validate that a configured key loads a view whose underlying key the projection
         /// cannot express.
         /// The schema read runs for every object, so it also finds that no key of the object
@@ -1318,11 +1427,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// than in dab-config.MsSql.json, because several of them fail by design and every MSSQL
         /// fixture initializes every configured entity.
         /// </summary>
-        private static async Task SetUpSingleEntityMetadataProviderAsync(string entityName, Entity entity)
+        private static Task SetUpSingleEntityMetadataProviderAsync(string entityName, Entity entity)
+        {
+            return SetUpEntitiesMetadataProviderAsync(new Dictionary<string, Entity> { { entityName, entity } });
+        }
+
+        /// <summary>
+        /// Sets up a metadata provider over the given entities alone, declared in memory. Needed
+        /// wherever more than one entity is involved, such as a configured relationship.
+        /// </summary>
+        private static async Task SetUpEntitiesMetadataProviderAsync(Dictionary<string, Entity> entities)
         {
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig()
                 with
-            { Entities = new RuntimeEntities(new Dictionary<string, Entity> { { entityName, entity } }) };
+            { Entities = new RuntimeEntities(entities) };
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
             SetUpSQLMetadataProvider(runtimeConfigProvider);
             await ResetDbStateAsync();

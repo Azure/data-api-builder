@@ -16,6 +16,7 @@ DROP VIEW IF EXISTS geometry_all_view;
 DROP VIEW IF EXISTS hierarchyid_composite_view;
 DROP VIEW IF EXISTS unique_without_pk_view;
 DROP VIEW IF EXISTS join_geometry_view;
+DROP VIEW IF EXISTS self_join_geometry_view;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
@@ -895,6 +896,10 @@ EXEC('CREATE VIEW unique_without_pk_view AS SELECT code, name, geom FROM dbo.pk_
 -- A key inferred from the first object alone would not identify a row, since the join can duplicate
 -- its rows.
 EXEC('CREATE VIEW join_geometry_view AS SELECT a.id, a.name, b.geom FROM dbo.geometry_type_table a JOIN dbo.unique_key_geometry_table b ON b.name = a.name');
+-- A self-join, where browse mode reports the same physical table for both instances and so cannot
+-- be told apart from a single one by source lineage alone. What does give it away is the primary
+-- key column being reported twice, once for each instance.
+EXEC('CREATE VIEW self_join_geometry_view AS SELECT a.id, a.name, b.geom FROM dbo.geometry_type_table a JOIN dbo.geometry_type_table b ON b.name = a.name');
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       SELECT * FROM dbo.books
       WHERE id = @id');

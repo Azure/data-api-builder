@@ -1105,6 +1105,88 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test to validate that a view built on a join does not have one side's key inferred as its
+        /// own, even when every column the projection selects resolves to that side.
+        /// The second object of this view contributes only the unsupported column, so once that
+        /// column is dropped nothing the projection selects points at it. Browse mode still reports
+        /// its key column, flagged hidden, which is what identifies the result as a join. A key taken
+        /// from the first object alone would not identify a row, because the join can duplicate its
+        /// rows — the same class of defect as a partial key.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateViewOverJoinDoesNotInferKeyFromOneSide()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            await SetUpSingleEntityMetadataProviderAsync(
+                "JoinGeometryView",
+                BuildReadOnlyEntity(
+                    entityName: "JoinGeometryView",
+                    databaseObject: "dbo.join_geometry_view",
+                    sourceType: EntitySourceType.View,
+                    keyFields: null));
+
+            try
+            {
+                await _sqlMetadataProvider.InitializeAsync();
+                Assert.Fail("Expected DataApiBuilderException was not thrown for a view built on a join with no configured key.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.IsTrue(
+                    ex.Message.Contains("Primary key not configured"),
+                    message: "A join is out of scope for key inference, so the object is expected to require "
+                        + $"source.key-fields exactly as it did before. Actual message: {ex.Message}");
+            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
+        /// Test to validate that a configured key loads a view whose underlying key the projection
+        /// cannot express.
+        /// The schema read runs for every object, so it also finds that no key of the object
+        /// underneath is reachable here. That finding must not reject an object whose
+        /// source.key-fields already says how to reach it — failing then would recommend precisely
+        /// what was configured.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateConfiguredKeyIsHonoredWhenViewOmitsUnderlyingKey()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+
+            await SetUpSingleEntityMetadataProviderAsync(
+                "HierarchyIdCompositeViewWithKey",
+                BuildReadOnlyEntity(
+                    entityName: "HierarchyIdCompositeViewWithKey",
+                    databaseObject: "dbo.hierarchyid_composite_view",
+                    sourceType: EntitySourceType.View,
+                    keyFields: new[] { "tenant_id" }));
+
+            await _sqlMetadataProvider.InitializeAsync();
+
+            Assert.IsTrue(
+                _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue("HierarchyIdCompositeViewWithKey", out DatabaseObject databaseObject),
+                message: "Metadata inference failed for a view whose key is configured through source.key-fields.");
+
+            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
+
+            CollectionAssert.AreEqual(
+                new List<string> { "tenant_id" },
+                sourceDefinition.PrimaryKey,
+                message: "The configured key is expected to be the key in effect.");
+            Assert.IsFalse(
+                sourceDefinition.Columns.ContainsKey("node"),
+                message: "A column whose data type cannot be mapped is not expected in the source definition.");
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
         /// Test to validate that a doubled quote inside a policy literal is read as an escaped quote
         /// and does not end the literal, so the field prefix that follows stays data.
         /// </summary>

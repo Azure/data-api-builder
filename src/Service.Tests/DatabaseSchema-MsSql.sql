@@ -15,6 +15,7 @@ DROP VIEW IF EXISTS geometry_only_view;
 DROP VIEW IF EXISTS geometry_all_view;
 DROP VIEW IF EXISTS hierarchyid_composite_view;
 DROP VIEW IF EXISTS unique_without_pk_view;
+DROP VIEW IF EXISTS join_geometry_view;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
@@ -888,6 +889,12 @@ EXEC('CREATE VIEW geometry_all_view AS SELECT id, name, geom FROM dbo.geometry_t
 EXEC('CREATE VIEW hierarchyid_composite_view AS SELECT tenant_id, name, node FROM dbo.hierarchyid_composite_pk_table');
 -- Omits the primary key of the underlying table and carries its unique key whole.
 EXEC('CREATE VIEW unique_without_pk_view AS SELECT code, name, geom FROM dbo.pk_and_unique_geometry_table');
+-- A join whose second object contributes only the unsupported column. Once that column is dropped
+-- from the projection, every column the projection selects resolves to the first object, and only
+-- the hidden key column browse mode reports for the second one reveals that this is a join at all.
+-- A key inferred from the first object alone would not identify a row, since the join can duplicate
+-- its rows.
+EXEC('CREATE VIEW join_geometry_view AS SELECT a.id, a.name, b.geom FROM dbo.geometry_type_table a JOIN dbo.unique_key_geometry_table b ON b.name = a.name');
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       SELECT * FROM dbo.books
       WHERE id = @id');

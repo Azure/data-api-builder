@@ -229,13 +229,14 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        protected override async Task<List<string>> GetProjectionKeyFromResultSetAsync(string selectStatement)
+        protected override async Task<(List<string> Key, string? UnreachableKeyReason)> GetProjectionKeyFromResultSetAsync(
+            string selectStatement)
         {
             List<ProjectionSourceColumn> projectionColumns = await DescribeProjectionAsync(selectStatement);
 
             if (projectionColumns.Count == 0)
             {
-                return new List<string>();
+                return (new List<string>(), null);
             }
 
             // The key is taken from the underlying object's own catalog entry rather than from
@@ -250,14 +251,18 @@ namespace Azure.DataApiBuilder.Core.Services
 
             foreach (ProjectionSourceColumn projectionColumn in projectionColumns)
             {
-                if (projectionColumn.IsHidden
-                    || projectionColumn.SourceSchema is null
+                if (projectionColumn.SourceSchema is null
                     || projectionColumn.SourceTable is null
                     || projectionColumn.SourceColumn is null)
                 {
                     continue;
                 }
 
+                // Every row counts toward this check, the hidden ones included. Browse mode reports
+                // the key columns of each participating object, so an object whose every selected
+                // column was dropped from the projection survives in hidden rows alone. Skipping
+                // those first would read a join as a single object and infer one side's key for a
+                // result the other side can duplicate rows of.
                 if (sourceSchema is null)
                 {
                     sourceSchema = projectionColumn.SourceSchema;
@@ -268,15 +273,20 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     // More than one underlying object. Inferring a key across a join is out of
                     // scope; such an entity needs source.key-fields, as it did before this change.
-                    return new List<string>();
+                    return (new List<string>(), null);
                 }
 
-                projectionBySourceColumn[projectionColumn.SourceColumn] = projectionColumn.Name;
+                // Only a column the projection selects can carry a key: a hidden one is exactly
+                // what the projection left out.
+                if (!projectionColumn.IsHidden)
+                {
+                    projectionBySourceColumn[projectionColumn.SourceColumn] = projectionColumn.Name;
+                }
             }
 
             if (sourceSchema is null || sourceTable is null)
             {
-                return new List<string>();
+                return (new List<string>(), null);
             }
 
             ObjectCatalogMetadata? sourceCatalogMetadata =
@@ -284,7 +294,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (sourceCatalogMetadata is null)
             {
-                return new List<string>();
+                return (new List<string>(), null);
             }
 
             // The underlying object's primary key comes first, then its unique keys, in index order
@@ -321,7 +331,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (missingKeyColumn is null && projectionKey.Count > 0)
                 {
-                    return projectionKey;
+                    return (projectionKey, null);
                 }
 
                 // Remembered from the first key that came closest, to name something concrete if no
@@ -332,16 +342,18 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (unreachableKeyColumn is not null)
             {
-                throw new DataApiBuilderException(
-                    message: $"No key of {sourceSchema}.{sourceTable}, which this object is built on, is fully exposed "
+                // Returned rather than thrown: an object whose source.key-fields is configured is
+                // reachable by that key, and rejecting it here would recommend exactly what was
+                // already configured. The caller reports this only if the object ends up keyless.
+                return (
+                    new List<string>(),
+                    $"No key of {sourceSchema}.{sourceTable}, which this object is built on, is fully exposed "
                         + $"by it: the nearest one includes the column {unreachableKeyColumn}, which this object does "
                         + "not expose. It therefore cannot be reached by key. Configure source.key-fields with columns "
-                        + "it does expose that identify a row uniquely, if there are any.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        + "it does expose that identify a row uniquely, if there are any.");
             }
 
-            return new List<string>();
+            return (new List<string>(), null);
         }
 
         /// <summary>

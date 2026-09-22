@@ -125,6 +125,16 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly ConcurrentDictionary<string, ObjectCatalogMetadata> _objectCatalogMetadataCache = new(StringComparer.Ordinal);
 
         /// <summary>
+        /// Why no key of the object underneath a narrowed projection is reachable through it, for an
+        /// object the catalog holds no index for. Recorded rather than thrown where it is found,
+        /// because the schema read runs for every object while the answer only matters for one that
+        /// ends up with no key: an object whose source.key-fields is configured must not be rejected
+        /// over a key it was told not to use. Keyed by object with an ordinal comparer, for the
+        /// reason given on <see cref="_columnsMetadataCache"/>.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, string> _unreachableKeyReasonByObject = new(StringComparer.Ordinal);
+
+        /// <summary>
         /// The catalog facts an explicit schema projection needs and the "Columns" schema collection
         /// does not carry: which columns the database hides from "SELECT *", which columns identify
         /// a row, and which are identity columns. Together they replace what the data adapter
@@ -191,15 +201,17 @@ namespace Azure.DataApiBuilder.Core.Services
         /// A key column the projection left out must never be reported as part of a key: a partial
         /// key silently matches more than one row on an update or a delete.
         /// </summary>
-        /// <exception cref="DataApiBuilderException">
-        /// An implementation may fail here instead of returning empty, when it can tell that no key
-        /// of the underlying object is fully exposed and can name what is missing. That is a better
-        /// error than the generic missing-primary-key one, which reads as something the user forgot
-        /// to configure.
-        /// </exception>
-        protected virtual Task<List<string>> GetProjectionKeyFromResultSetAsync(string selectStatement)
+        /// <returns>
+        /// The key, and a reason when the provider can tell that no key of the underlying object is
+        /// fully exposed and can name what is missing. The reason is only reported when the object
+        /// ends up with no key at all: a configured source.key-fields settles the question, and
+        /// failing here anyway would reject an object whose configuration already says how to reach
+        /// it — while recommending exactly what was configured.
+        /// </returns>
+        protected virtual Task<(List<string> Key, string? UnreachableKeyReason)> GetProjectionKeyFromResultSetAsync(
+            string selectStatement)
         {
-            return Task.FromResult(new List<string>());
+            return Task.FromResult<(List<string>, string?)>((new List<string>(), null));
         }
 
         /// <summary>
@@ -1983,11 +1995,23 @@ namespace Azure.DataApiBuilder.Core.Services
             // asking for a CLR type. Only reached for an object the catalog could not key, and
             // resolved before the connection is opened for the same pooling reason as above.
             // Kept out of the cached metadata: it depends on this projection, not on the object.
-            List<string> describedKey = catalogMetadata is not null
+            List<string> describedKey = new();
+
+            if (catalogMetadata is not null
                 && catalogMetadata.PrimaryKeyColumns.Count == 0
-                && catalogMetadata.UniqueKeyCandidates.Count == 0
-                    ? await GetProjectionKeyFromResultSetAsync(selectStatement)
-                    : new List<string>();
+                && catalogMetadata.UniqueKeyCandidates.Count == 0)
+            {
+                (List<string> Key, string? UnreachableKeyReason) described =
+                    await GetProjectionKeyFromResultSetAsync(selectStatement);
+
+                describedKey = described.Key;
+
+                if (described.UnreachableKeyReason is not null)
+                {
+                    _unreachableKeyReasonByObject[GetObjectCacheKey(schemaName, tableName)] =
+                        described.UnreachableKeyReason;
+                }
+            }
 
             await conn.OpenAsync();
 
@@ -2364,6 +2388,17 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             string cacheKey = GetObjectCacheKey(schemaName, tableName);
 
+            // Reached only with no key in effect, which is what makes this the right place to report
+            // it: the schema read found that no key of the object underneath is reachable through
+            // this projection, and nothing configured has since supplied one.
+            if (_unreachableKeyReasonByObject.TryGetValue(cacheKey, out string? unreachableKeyReason))
+            {
+                throw new DataApiBuilderException(
+                    message: unreachableKeyReason,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
             if (!_skippedColumnsByObject.TryGetValue(cacheKey, out Dictionary<string, string>? skippedColumns)
                 || !_objectCatalogMetadataCache.TryGetValue(cacheKey, out ObjectCatalogMetadata? catalogMetadata))
             {
@@ -2634,6 +2669,7 @@ namespace Azure.DataApiBuilder.Core.Services
             _columnsMetadataCache.Clear();
             _skippedColumnsByObject.Clear();
             _objectCatalogMetadataCache.Clear();
+            _unreachableKeyReasonByObject.Clear();
         }
 
         /// <summary>

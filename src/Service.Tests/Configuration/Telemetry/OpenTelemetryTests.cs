@@ -93,7 +93,8 @@ public class OpenTelemetryTests
     }
 
     /// <summary>
-    /// Tests that an inbound HTTP request produces a recorded server span when Open Telemetry is enabled.
+    /// Tests that an inbound HTTP request produces a recorded server span when Open Telemetry is enabled,
+    /// and that this span continues the trace context received in the W3C traceparent header.
     /// The listener below never samples by itself, so the span can only be recorded because
     /// the OpenTelemetry TracerProvider subscribes to the ASP.NET Core activity source.
     /// </summary>
@@ -103,7 +104,8 @@ public class OpenTelemetryTests
         // Arrange
         SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, "http://localhost:4317", "key=key", OtlpExportProtocol.Grpc);
 
-        string requestPath = $"/otel-inbound-span-test-{Guid.NewGuid():N}";
+        ActivityTraceId incomingTraceId = ActivityTraceId.CreateRandom();
+        ActivitySpanId incomingParentSpanId = ActivitySpanId.CreateRandom();
         TaskCompletionSource<Activity> recordedServerActivity = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ActivityListener listener = new()
         {
@@ -111,7 +113,7 @@ public class OpenTelemetryTests
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.None,
             ActivityStopped = activity =>
             {
-                if (activity.Recorded && activity.Kind == ActivityKind.Server && activity.GetTagItem("url.path") as string == requestPath)
+                if (activity.TraceId == incomingTraceId)
                 {
                     recordedServerActivity.TrySetResult(activity);
                 }
@@ -127,13 +129,22 @@ public class OpenTelemetryTests
         Assert.IsNotNull(server.Services.GetService<TracerProvider>(), "TracerProvider should be registered.");
         using HttpClient client = server.CreateClient();
 
+        using HttpRequestMessage request = new(HttpMethod.Get, "/");
+        request.Headers.Add("traceparent", $"00-{incomingTraceId.ToHexString()}-{incomingParentSpanId.ToHexString()}-01");
+
         // Act
-        await client.GetAsync(requestPath);
+        using HttpResponseMessage response = await client.SendAsync(request);
 
         // Assert
         // The server activity is stopped once the request pipeline completes, which can happen after the response is returned.
         Task completedTask = await Task.WhenAny(recordedServerActivity.Task, Task.Delay(TimeSpan.FromSeconds(10)));
-        Assert.AreSame(recordedServerActivity.Task, completedTask, "An inbound HTTP request should produce a recorded server span.");
+        Assert.AreSame(recordedServerActivity.Task, completedTask, "An inbound HTTP request should produce a server span.");
+
+        Activity serverActivity = await recordedServerActivity.Task;
+        Assert.IsTrue(serverActivity.Recorded, "The server span should be recorded.");
+        Assert.AreEqual(ActivityKind.Server, serverActivity.Kind, "The span should be a server span.");
+        Assert.AreEqual(incomingTraceId, serverActivity.TraceId, "The server span should continue the incoming trace.");
+        Assert.AreEqual(incomingParentSpanId, serverActivity.ParentSpanId, "The server span should be parented to the incoming span.");
     }
 
     /// <summary>

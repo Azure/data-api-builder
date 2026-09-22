@@ -45,7 +45,12 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
 
         public override GraphQLRuntimeOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.Null)
+            if (reader.TokenType == JsonTokenType.True)
+            {
+                return new GraphQLRuntimeOptions(Enabled: true);
+            }
+
+            if (reader.TokenType == JsonTokenType.Null)
             {
                 return new GraphQLRuntimeOptions();
             }
@@ -181,9 +186,21 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
         public override void Write(Utf8JsonWriter writer, GraphQLRuntimeOptions value, JsonSerializerOptions options)
         {
             writer.WriteStartObject();
-            writer.WriteBoolean("enabled", value.Enabled);
-            writer.WriteString("path", value.Path);
-            writer.WriteBoolean("allow-introspection", value.AllowIntrospection);
+
+            if (value.Enabled is not null)
+            {
+                writer.WriteBoolean("enabled", value.Enabled.Value);
+            }
+
+            if (value.Path is not null)
+            {
+                writer.WriteString("path", value.Path);
+            }
+
+            if (value.AllowIntrospection is not null)
+            {
+                writer.WriteBoolean("allow-introspection", value.AllowIntrospection.Value);
+            }
 
             if (value.UserProvidedDepthLimit)
             {

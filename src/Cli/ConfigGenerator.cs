@@ -275,7 +275,11 @@ namespace Cli
                 DataSource: dataSource,
                 Runtime: new(
                     Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.True ? true : false),
-                    GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
+                    GraphQL: new(
+                        Enabled: graphQLEnabled,
+                        Path: graphQLPath,
+                        AllowIntrospection: true,
+                        MultipleMutationOptions: multipleMutationOptions),
                     Mcp: new(
                         Enabled: mcpEnabled,
                         Path: mcpPath ?? McpRuntimeOptions.DEFAULT_PATH,

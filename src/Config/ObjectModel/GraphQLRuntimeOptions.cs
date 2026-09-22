@@ -6,9 +6,9 @@ using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
-public record GraphQLRuntimeOptions(bool Enabled = true,
-                                    string Path = GraphQLRuntimeOptions.DEFAULT_PATH,
-                                    bool AllowIntrospection = true,
+public record GraphQLRuntimeOptions(bool? Enabled = null,
+                                    string? Path = null,
+                                    bool? AllowIntrospection = null,
                                     int? DepthLimit = null,
                                     MultipleMutationOptions? MultipleMutationOptions = null,
                                     bool EnableAggregation = true,

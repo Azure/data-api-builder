@@ -475,7 +475,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 // helpers that read IHttpContextAccessor will see the role. We also ensure the
                 // Simulator authentication handler can authenticate the user by flowing the
                 // Authorization header commonly used in tests/simulator scenarios.
-                CallToolResult callResult;
                 IConfiguration? configuration = _serviceProvider.GetService<IConfiguration>();
                 string? stdioRole = configuration?.GetValue<string>("MCP:Role");
                 if (!string.IsNullOrWhiteSpace(stdioRole))
@@ -504,8 +503,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     try
                     {
                         // Execute the tool with the scoped service provider so any scoped services resolve correctly.
-                        callResult = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                            tool, toolName!, argsDoc, scopedProvider, ct);
+                        // Product completion must follow the successful stdout write, not just tool execution.
+                        await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                            tool, toolName!, argsDoc, scopedProvider, ct,
+                            writeStdioResponse: result => HandleCallToolAsync(id ?? default, result));
                     }
                     finally
                     {
@@ -518,11 +519,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
                 else
                 {
-                    callResult = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                        tool, toolName!, argsDoc, _serviceProvider, ct);
+                    await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                        tool, toolName!, argsDoc, _serviceProvider, ct,
+                        writeStdioResponse: result => HandleCallToolAsync(id ?? default, result));
                 }
-
-                await HandleCallToolAsync(id ?? default, callResult);
             }
             finally
             {

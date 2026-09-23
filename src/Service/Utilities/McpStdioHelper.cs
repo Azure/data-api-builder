@@ -6,9 +6,12 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -110,6 +113,15 @@ namespace Azure.DataApiBuilder.Service.Utilities
 
                 McpToolRegistry.InitializeAndRegisterTools(tools, registry, host.Services);
 
+                EngineTelemetrySession? productTelemetry = host.Services.GetService<EngineTelemetrySession>();
+                RuntimeConfigProvider? configuration = host.Services.GetService<RuntimeConfigProvider>();
+                if (productTelemetry is not null && configuration?.TryGetLoadedConfig(out Config.ObjectModel.RuntimeConfig? runtimeConfig) == true)
+                {
+                    productTelemetry.AcceptConfiguration(runtimeConfig!, "startup", configuration.ConfigFilePath, onlyIfUnconfigured: true);
+                    host.Services.GetService<EngineTelemetryHosting>()?.StartAsync(default).GetAwaiter().GetResult();
+                    productTelemetry.MarkHostReady();
+                }
+
                 IHostApplicationLifetime lifetime =
                     host.Services.GetRequiredService<IHostApplicationLifetime>();
                 IMcpStdioServer stdio =
@@ -119,8 +131,17 @@ namespace Azure.DataApiBuilder.Service.Utilities
 
                 return true;
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException)
             {
+                // Record pre-ready cancellation before finally stops/disables the session.
+                // StartupFailed is a no-op once ready; normal loop cancellation is not a
+                // startup failure. Preserve propagation to Program's existing handler.
+                host.Services.GetService<EngineTelemetrySession>()?.StartupFailed("metadata");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                host.Services.GetService<EngineTelemetrySession>()?.StartupFailed("metadata");
                 // Mirrors Startup.PerformOnConfigChangeAsync: report and return false instead of letting
                 // the exception escape a method whose contract is a bool, and Program.Main turns that
                 // false into ExitCode -1. Cancellation is left to Program.StartEngine's own handler.
@@ -148,6 +169,7 @@ namespace Azure.DataApiBuilder.Service.Utilities
             }
             finally
             {
+                host.Services.GetService<EngineTelemetrySession>()?.StopAsync().GetAwaiter().GetResult();
                 host.Dispose();
             }
         }

@@ -39,10 +39,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 return new ConflictResult();
             }
 
+            bool initializationStarted = false;
             try
             {
                 string mergedConfiguration = MergeJsonProvider.Merge(configuration.Configuration, configuration.ConfigurationOverrides);
 
+                initializationStarted = true;
                 bool initResult = await _configurationProvider.Initialize(
                     mergedConfiguration,
                     configuration.Schema,
@@ -61,6 +63,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
             }
             catch (Exception e)
             {
+                if (!initializationStarted)
+                {
+                    // The provider owns all later failures; malformed merge input never reaches it.
+                    _configurationProvider.ProductTelemetry?.ConfigurationChangeFailed();
+                }
+
                 _logger.LogError(
                     exception: e,
                     message: "{correlationId} Exception during configuration initialization.",

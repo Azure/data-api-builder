@@ -61,6 +61,8 @@ public abstract class RuntimeConfigLoader
 
     public bool IsNewConfigValidated;
 
+    internal Func<bool>? TelemetryCaptureEnabled { get; set; }
+
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
         _changeToken = new DabChangeToken();
@@ -265,6 +267,17 @@ public abstract class RuntimeConfigLoader
                 return false;
             }
 
+            // Capture original presence before any model clone/rewriting. No raw JSON escapes
+            // capture, and the default-off gate avoids allocating metadata in ordinary loads.
+            // Child loads run this same path and retain only their own original declarations.
+            if (TelemetryConfigurationPresence.IsCaptureEnabled())
+            {
+                config = config with
+                {
+                    TelemetryPresence = TelemetryConfigurationPresence.TryCapture(json, config, enabled: true)
+                };
+            }
+
             // Embed the DAB Application Name (with anonymous usage telemetry) into the connection
             // string of every MSSQL / DWSQL / PostgreSQL data source.
             //
@@ -419,7 +432,8 @@ public abstract class RuntimeConfigLoader
     /// </summary>
     /// <param name="connectionString">Connection string for connecting to database.</param>
     /// <param name="config">When provided, anonymous DAB telemetry is embedded into the `Application Name`
-    /// (honoring the `DAB_TELEMETRY_APPNAME_OPT_OUT` opt-out). When null, only the plain user agent is used.</param>
+    /// (honoring both product telemetry opt-outs). When null, only the plain user agent is used,
+    /// unless the global product telemetry veto is set.</param>
     /// <param name="liveDataSource">The data source whose connection is being opened, used to encode per-pool
     /// fields (Source, OBO). Ignored when <paramref name="config"/> is null.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
@@ -444,6 +458,28 @@ public abstract class RuntimeConfigLoader
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
                 innerException: ex);
+        }
+
+        // Check the shared veto before the legacy idempotency guard, including config-null paths
+        // and connection strings already decorated by an earlier load or embedding host.
+        if (ProductTelemetryPolicy.IsOptedOut())
+        {
+            string? optedOutApplicationName = ApplicationNameTelemetry.RemoveApplicationNameSegments(connectionStringBuilder.ApplicationName);
+            if (string.Equals(optedOutApplicationName, connectionStringBuilder.ApplicationName, StringComparison.Ordinal))
+            {
+                return connectionString;
+            }
+
+            if (string.IsNullOrEmpty(optedOutApplicationName))
+            {
+                connectionStringBuilder.Remove("Application Name");
+            }
+            else
+            {
+                connectionStringBuilder.ApplicationName = optedOutApplicationName;
+            }
+
+            return connectionStringBuilder.ConnectionString;
         }
 
         // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a
@@ -492,7 +528,9 @@ public abstract class RuntimeConfigLoader
     /// else add the Application Name property with DataApiBuilder Application Name based on hosted/oss platform.
     /// </summary>
     /// <param name="connectionString">Connection string for connecting to database.</param>
-    /// <param name="config">When provided, anonymous DAB usage telemetry is embedded in the Application Name (honoring the opt-out switch); otherwise the plain user agent is used.</param>
+    /// <param name="config">When provided, anonymous DAB usage telemetry is embedded in the Application Name
+    /// (honoring both product telemetry opt-outs); otherwise the plain user agent is used, unless
+    /// the global product telemetry veto is set.</param>
     /// <param name="liveDataSource">The data source whose connection is being opened, used to encode per-pool
     /// fields (Source, OBO). Ignored when <paramref name="config"/> is null.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
@@ -517,6 +555,28 @@ public abstract class RuntimeConfigLoader
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
                 innerException: ex);
+        }
+
+        // Check the shared veto before the legacy idempotency guard, including config-null paths
+        // and connection strings already decorated by an earlier load or embedding host.
+        if (ProductTelemetryPolicy.IsOptedOut())
+        {
+            string? optedOutApplicationName = ApplicationNameTelemetry.RemoveApplicationNameSegments(connectionStringBuilder.ApplicationName);
+            if (string.Equals(optedOutApplicationName, connectionStringBuilder.ApplicationName, StringComparison.Ordinal))
+            {
+                return connectionString;
+            }
+
+            if (string.IsNullOrEmpty(optedOutApplicationName))
+            {
+                connectionStringBuilder.Remove("Application Name");
+            }
+            else
+            {
+                connectionStringBuilder.ApplicationName = optedOutApplicationName;
+            }
+
+            return connectionStringBuilder.ConnectionString;
         }
 
         // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a

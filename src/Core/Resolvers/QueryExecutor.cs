@@ -9,8 +9,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlTypes;
@@ -292,21 +294,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 await conn.OpenAsync();
                 DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
                 TResult? result = default(TResult);
+                CommandBehavior commandBehavior = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ? CommandBehavior.SequentialAccess : CommandBehavior.CloseConnection;
+                // CancellationToken is passed to ExecuteReaderAsync to ensure that if the client times out while the query is executing, the execution will be cancelled and resources will be freed up.
+                CancellationToken cancellationToken = httpContext?.RequestAborted ?? CancellationToken.None;
+
+                // Start only at provider execution, not connection setup or the retry-policy boundary.
+                // Each execution gets its own scope, including executions in a retry attempt.
+                using EngineTelemetryMeasurementScope? databaseAttempt = BeginDatabaseAttempt(dataSourceName);
                 try
                 {
-                    CommandBehavior commandBehavior = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ? CommandBehavior.SequentialAccess : CommandBehavior.CloseConnection;
-                    // CancellationToken is passed to ExecuteReaderAsync to ensure that if the client times out while the query is executing, the execution will be cancelled and resources will be freed up.
-                    CancellationToken cancellationToken = httpContext?.RequestAborted ?? CancellationToken.None;
-                    using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(commandBehavior, cancellationToken);
+                    using (DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(commandBehavior, cancellationToken))
+                    {
+                        if (dataReaderHandler is not null && dbDataReader is not null)
+                        {
+                            result = await dataReaderHandler(dbDataReader, args);
+                        }
+                        else
+                        {
+                            result = default(TResult);
+                        }
+                    }
 
-                    if (dataReaderHandler is not null && dbDataReader is not null)
-                    {
-                        result = await dataReaderHandler(dbDataReader, args);
-                    }
-                    else
-                    {
-                        result = default(TResult);
-                    }
+                    databaseAttempt?.Complete(EngineTelemetryOutcome.Success);
+                }
+                catch (OperationCanceledException)
+                {
+                    databaseAttempt?.Complete(EngineTelemetryOutcome.Canceled);
+                    throw;
                 }
                 catch (DbException e)
                 {
@@ -384,18 +398,30 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 conn.Open();
                 DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
 
+                CommandBehavior commandBehavior = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ? CommandBehavior.SequentialAccess : CommandBehavior.CloseConnection;
+                using EngineTelemetryMeasurementScope? databaseAttempt = BeginDatabaseAttempt(dataSourceName);
                 try
                 {
-                    using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
-                        cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
-                    if (dataReaderHandler is not null && dbDataReader is not null)
+                    TResult? result;
+                    using (DbDataReader dbDataReader = cmd.ExecuteReader(commandBehavior))
                     {
-                        return dataReaderHandler(dbDataReader, args);
+                        if (dataReaderHandler is not null && dbDataReader is not null)
+                        {
+                            result = dataReaderHandler(dbDataReader, args);
+                        }
+                        else
+                        {
+                            result = default(TResult);
+                        }
                     }
-                    else
-                    {
-                        return default(TResult);
-                    }
+
+                    databaseAttempt?.Complete(EngineTelemetryOutcome.Success);
+                    return result;
+                }
+                catch (OperationCanceledException)
+                {
+                    databaseAttempt?.Complete(EngineTelemetryOutcome.Canceled);
+                    throw;
                 }
                 catch (DbException e)
                 {
@@ -412,6 +438,43 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 queryExecutionTimer.Stop();
                 AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
+            }
+        }
+
+        /// <summary>
+        /// Resolves only the provider category, preserving the request's captured source IDs
+        /// across reload. The session excludes work without an eligible request.
+        /// </summary>
+        private EngineTelemetryMeasurementScope? BeginDatabaseAttempt(string dataSourceName)
+        {
+            EngineTelemetrySession? session = ConfigProvider.ProductTelemetry;
+            RuntimeConfig? config = session?.CurrentRequest?.Config;
+            if (session?.IsEnabled != true || config is null)
+            {
+                return null;
+            }
+
+            try
+            {
+                string resolvedDataSourceName = string.IsNullOrEmpty(dataSourceName) ? config.DefaultDataSourceName : dataSourceName;
+                // A later executor selection may use the replacement model, while an already
+                // prepared command still uses the captured one. Match the actual source ID.
+                if (!config.CheckDataSourceExists(resolvedDataSourceName) &&
+                    ConfigProvider.TryGetLoadedConfig(out RuntimeConfig? currentConfig))
+                {
+                    config = currentConfig;
+                }
+
+                DatabaseType? provider = config.CheckDataSourceExists(resolvedDataSourceName)
+                    ? config.GetDataSourceFromDataSourceName(resolvedDataSourceName).DatabaseType
+                    : null;
+                return session.BeginDatabaseAttempt(provider);
+            }
+            catch (DataApiBuilderException)
+            {
+                // Multiple replacements can remove both models' attribution. Preserve the
+                // observed attempt as unknown rather than discard it or guess its provider.
+                return session.BeginDatabaseAttempt(null);
             }
         }
 

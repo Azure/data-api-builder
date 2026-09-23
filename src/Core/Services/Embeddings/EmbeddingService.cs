@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -26,6 +27,12 @@ public class EmbeddingService : IEmbeddingService
     private readonly ILogger<EmbeddingService> _logger;
     private readonly IFusionCache _cache;
     private readonly string _providerName;
+
+    /// <summary>
+    /// Optional product telemetry assigned by the host without changing the public constructor.
+    /// Only top-level service calls create measurements; internal calls use the core methods.
+    /// </summary>
+    internal EngineTelemetrySession? ProductTelemetry { get; set; }
 
     // Constants
     private const char KEY_DELIMITER = ':';
@@ -115,10 +122,27 @@ public class EmbeddingService : IEmbeddingService
     /// <inheritdoc/>
     public async Task<EmbeddingResult> TryEmbedAsync(string text, CancellationToken cancellationToken = default)
     {
+        using EngineTelemetryMeasurementScope? measurement = ProductTelemetry?.BeginEmbedding();
+        try
+        {
+            (EmbeddingResult result, EngineTelemetryOutcome outcome) = await TryEmbedCoreAsync(text, cancellationToken);
+            measurement?.Complete(outcome);
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            measurement?.Complete(EngineTelemetryOutcome.Canceled);
+            throw;
+        }
+    }
+
+    private async Task<(EmbeddingResult Result, EngineTelemetryOutcome Outcome)> TryEmbedCoreAsync(
+        string text, CancellationToken cancellationToken)
+    {
         EmbeddingResult? validationResult = ValidateTryEmbedRequest(text);
         if (validationResult != null)
         {
-            return validationResult;
+            return (validationResult, EngineTelemetryOutcome.Failure);
         }
 
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -145,7 +169,7 @@ public class EmbeddingService : IEmbeddingService
                 EmbeddingTelemetryHelper.TrackCacheMiss(_providerName);
             }
 
-            return new EmbeddingResult(true, embedding);
+            return (new EmbeddingResult(true, embedding), EngineTelemetryOutcome.Success);
         }
         catch (Exception ex)
         {
@@ -154,17 +178,37 @@ public class EmbeddingService : IEmbeddingService
             activity?.SetEmbeddingActivityError(ex);
             EmbeddingTelemetryHelper.TrackError(_providerName, ex.GetType().Name);
 
-            return new EmbeddingResult(false, null, "Failed to generate embedding.");
+            EngineTelemetryOutcome outcome = ex is OperationCanceledException
+                ? EngineTelemetryOutcome.Canceled
+                : EngineTelemetryOutcome.Failure;
+            return (new EmbeddingResult(false, null, "Failed to generate embedding."), outcome);
         }
     }
 
     /// <inheritdoc/>
     public async Task<EmbeddingBatchResult> TryEmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
     {
+        using EngineTelemetryMeasurementScope? measurement = ProductTelemetry?.BeginEmbedding();
+        try
+        {
+            (EmbeddingBatchResult result, EngineTelemetryOutcome outcome) = await TryEmbedBatchCoreAsync(texts, cancellationToken);
+            measurement?.Complete(outcome);
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            measurement?.Complete(EngineTelemetryOutcome.Canceled);
+            throw;
+        }
+    }
+
+    private async Task<(EmbeddingBatchResult Result, EngineTelemetryOutcome Outcome)> TryEmbedBatchCoreAsync(
+        string[] texts, CancellationToken cancellationToken)
+    {
         EmbeddingBatchResult? validationResult = ValidateTryEmbedBatchRequest(texts);
         if (validationResult != null)
         {
-            return validationResult;
+            return (validationResult, EngineTelemetryOutcome.Failure);
         }
 
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -175,7 +219,7 @@ public class EmbeddingService : IEmbeddingService
         {
             EmbeddingTelemetryHelper.TrackEmbeddingRequest(_providerName, texts.Length);
 
-            float[][] embeddings = await EmbedBatchAsync(texts, cancellationToken);
+            float[][] embeddings = await EmbedBatchCoreAsync(texts, cancellationToken);
 
             stopwatch.Stop();
             int dimensions = embeddings.Length > 0 ? embeddings[0].Length : 0;
@@ -186,7 +230,7 @@ public class EmbeddingService : IEmbeddingService
                 EmbeddingTelemetryHelper.TrackDimensions(_providerName, dimensions);
             }
 
-            return new EmbeddingBatchResult(true, embeddings);
+            return (new EmbeddingBatchResult(true, embeddings), EngineTelemetryOutcome.Success);
         }
         catch (Exception ex)
         {
@@ -195,12 +239,31 @@ public class EmbeddingService : IEmbeddingService
             activity?.SetEmbeddingActivityError(ex);
             EmbeddingTelemetryHelper.TrackError(_providerName, ex.GetType().Name);
 
-            return new EmbeddingBatchResult(false, null, "Failed to generate embeddings.");
+            EngineTelemetryOutcome outcome = ex is OperationCanceledException
+                ? EngineTelemetryOutcome.Canceled
+                : EngineTelemetryOutcome.Failure;
+            return (new EmbeddingBatchResult(false, null, "Failed to generate embeddings."), outcome);
         }
     }
 
     /// <inheritdoc/>
     public async Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken = default)
+    {
+        using EngineTelemetryMeasurementScope? measurement = ProductTelemetry?.BeginEmbedding();
+        try
+        {
+            float[] embedding = await EmbedCoreAsync(text, cancellationToken);
+            measurement?.Complete(EngineTelemetryOutcome.Success);
+            return embedding;
+        }
+        catch (OperationCanceledException)
+        {
+            measurement?.Complete(EngineTelemetryOutcome.Canceled);
+            throw;
+        }
+    }
+
+    private async Task<float[]> EmbedCoreAsync(string text, CancellationToken cancellationToken)
     {
         ValidateEmbedRequest(text);
 
@@ -322,6 +385,22 @@ public class EmbeddingService : IEmbeddingService
 
     /// <inheritdoc/>
     public async Task<float[][]> EmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
+    {
+        using EngineTelemetryMeasurementScope? measurement = ProductTelemetry?.BeginEmbedding();
+        try
+        {
+            float[][] embeddings = await EmbedBatchCoreAsync(texts, cancellationToken);
+            measurement?.Complete(EngineTelemetryOutcome.Success);
+            return embeddings;
+        }
+        catch (OperationCanceledException)
+        {
+            measurement?.Complete(EngineTelemetryOutcome.Canceled);
+            throw;
+        }
+    }
+
+    private async Task<float[][]> EmbedBatchCoreAsync(string[] texts, CancellationToken cancellationToken)
     {
         ValidateEmbedBatchRequest(texts);
 

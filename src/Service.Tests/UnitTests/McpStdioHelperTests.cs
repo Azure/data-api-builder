@@ -4,14 +4,18 @@
 #nullable enable
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Utilities;
@@ -149,10 +153,50 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             statusCode: HttpStatusCode.ServiceUnavailable,
             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
 
+        [DataTestMethod]
+        [TestCategory("EngineTelemetry")]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void StdioCancellationRecordsStartupFailureOnlyBeforeReadiness(bool ready)
+        {
+            CapturingProductExporter exporter = new();
+            using EngineTelemetrySession telemetry = EngineTelemetrySession.Create(
+                () => exporter, enableSyntheticCollection: true, readEnvironmentVariable: _ => null,
+                showNotice: () => { }, resolveIdentity: _ => new(Guid.NewGuid(), "ephemeral"), startTimer: false);
+            if (ready)
+            {
+                telemetry.AcceptConfiguration(new RuntimeConfig(null, new(DatabaseType.MSSQL, ""), new(new Dictionary<string, Entity>())));
+                telemetry.MarkHostReady();
+                Assert.IsTrue(telemetry.IsReady);
+            }
+
+            TestMcpStdioServer stdio = new() { RunException = ready ? new OperationCanceledException() : null };
+            TestMetadataProviderFactory metadata = new() { InitializeAsyncException = ready ? null : new TaskCanceledException() };
+            using ServiceProvider services = BuildServices(stdio, metadata, out _, telemetry);
+            TestHost host = new(services);
+
+            try
+            {
+                McpStdioHelper.RunMcpStdioHost(host);
+                Assert.Fail("Cancellation must still propagate to the existing bootstrap handler.");
+            }
+            catch (OperationCanceledException)
+            {
+                // Preserve the existing host's cancellation contract.
+            }
+
+            Assert.AreEqual(ready ? 1 : 0, stdio.RunAsyncCallCount);
+            Assert.AreEqual(1, host.DisposeCallCount);
+            Assert.AreEqual(ready ? 0 : 1, exporter.Events.Count(record => record.Name == "dab.engine.startup_failed"),
+                "The failure must be recorded before the helper stops and disables its session.");
+            Assert.AreEqual("dab.engine.stopped", exporter.Events.Last().Name);
+        }
+
         private static ServiceProvider BuildServices(
             TestMcpStdioServer stdioServer,
             TestMetadataProviderFactory metadataProviderFactory,
-            out TestApplicationLifetime lifetime)
+            out TestApplicationLifetime lifetime,
+            EngineTelemetrySession? telemetry = null)
         {
             lifetime = new TestApplicationLifetime();
 
@@ -161,6 +205,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             services.AddSingleton<IHostApplicationLifetime>(lifetime);
             services.AddSingleton<IMcpStdioServer>(stdioServer);
             services.AddSingleton<IMetadataProviderFactory>(metadataProviderFactory);
+            if (telemetry is not null)
+            {
+                services.AddSingleton(telemetry);
+            }
 
             return services.BuildServiceProvider();
         }
@@ -251,6 +299,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         private sealed class TestMcpStdioServer : IMcpStdioServer
         {
+            public Exception? RunException { get; init; }
+
             public int RunAsyncCallCount { get; private set; }
 
             public CancellationToken CancellationToken { get; private set; }
@@ -259,8 +309,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 RunAsyncCallCount++;
                 CancellationToken = cancellationToken;
-                return Task.CompletedTask;
+                return RunException is null ? Task.CompletedTask : Task.FromException(RunException);
             }
+        }
+
+        private sealed class CapturingProductExporter : IEngineTelemetryExporter
+        {
+            public ConcurrentQueue<EngineTelemetryEvent> Events { get; } = new();
+
+            public ValueTask<bool> ExportAsync(EngineTelemetryEvent record, CancellationToken cancellationToken)
+            {
+                Events.Enqueue(record);
+                return ValueTask.FromResult(true);
+            }
+
+            public void Dispose() { }
         }
     }
 }

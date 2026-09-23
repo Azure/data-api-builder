@@ -8,6 +8,8 @@ using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -30,6 +32,17 @@ public class RuntimeConfigProvider : IDisposable
     public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
 
     public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
+
+    // One engine-owned instance; never a process-global or customer telemetry provider.
+    internal EngineTelemetrySession? ProductTelemetry
+    {
+        get;
+        set
+        {
+            field = value;
+            _configLoader.TelemetryCaptureEnabled = () => value?.IsEnabled == true;
+        }
+    }
 
     /// <summary>
     /// Indicates whether the config was loaded after the runtime was initialized.
@@ -182,11 +195,17 @@ public class RuntimeConfigProvider : IDisposable
     /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
     /// <param name="accessToken">The string representation of a managed identity access token</param>
     /// <returns>true if the initialization succeeded, false otherwise.</returns>
-    public async Task<bool> Initialize(
+    public Task<bool> Initialize(
         string configuration,
         string? schema,
         string? accessToken)
+        => ProductTelemetry?.IsEnabled == true
+            ? ObserveInitializationAsync(() => InitializeCoreAsync(configuration, schema, accessToken))
+            : InitializeCoreAsync(configuration, schema, accessToken);
+
+    private async Task<bool> InitializeCoreAsync(string configuration, string? schema, string? accessToken)
     {
+        using IDisposable? capture = TelemetryConfigurationPresence.BeginCapture(_configLoader.TelemetryCaptureEnabled);
         if (string.IsNullOrEmpty(configuration))
         {
             throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
@@ -267,13 +286,20 @@ public class RuntimeConfigProvider : IDisposable
     /// <param name="connectionString">The connection string to the database.</param>
     /// <param name="accessToken">The string representation of a managed identity access token</param>
     /// <returns>true if the initialization succeeded, false otherwise.</returns>
-    public async Task<bool> Initialize(
+    public Task<bool> Initialize(
         string jsonConfig,
         string? graphQLSchema,
         string connectionString,
         string? accessToken,
         DeserializationVariableReplacementSettings? replacementSettings)
+        => ProductTelemetry?.IsEnabled == true
+            ? ObserveInitializationAsync(() => InitializeCoreAsync(jsonConfig, graphQLSchema, connectionString, accessToken, replacementSettings))
+            : InitializeCoreAsync(jsonConfig, graphQLSchema, connectionString, accessToken, replacementSettings);
+
+    private async Task<bool> InitializeCoreAsync(string jsonConfig, string? graphQLSchema, string connectionString,
+        string? accessToken, DeserializationVariableReplacementSettings? replacementSettings)
     {
+        using IDisposable? capture = TelemetryConfigurationPresence.BeginCapture(_configLoader.TelemetryCaptureEnabled);
         if (string.IsNullOrEmpty(connectionString))
         {
             throw new ArgumentException($"'{nameof(connectionString)}' cannot be null or empty.", nameof(connectionString));
@@ -324,6 +350,33 @@ public class RuntimeConfigProvider : IDisposable
         }
 
         return false;
+    }
+
+    private async Task<bool> ObserveInitializationAsync(Func<Task<bool>> initialize)
+    {
+        bool accepted = false;
+        try
+        {
+            bool initialized = await initialize();
+            // The existing V2 API can report true with no parsed model (no handlers ran).
+            // Match the controller's acceptance condition without changing that public API.
+            if (initialized && TryGetLoadedConfig(out RuntimeConfig? acceptedConfig))
+            {
+                // Publish telemetry only after every loaded-config handler has accepted it.
+                // Startup's own success is not sufficient while another handler is pending.
+                accepted = true;
+                ProductTelemetry?.AcceptConfiguration(acceptedConfig, "late_configuration", ConfigFilePath);
+            }
+
+            return initialized;
+        }
+        finally
+        {
+            if (!accepted)
+            {
+                ProductTelemetry?.ConfigurationChangeFailed();
+            }
+        }
     }
 
     /// <summary>

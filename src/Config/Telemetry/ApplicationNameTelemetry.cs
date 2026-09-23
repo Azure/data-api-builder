@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
 
@@ -62,6 +63,16 @@ public static class ApplicationNameTelemetry
     private const char SECTION_SEPARATOR = '|';
     private const char PAYLOAD_DELIMITER = '+';
 
+    // ProductInfo emits a three-component numeric version, without a prerelease/commit suffix.
+    // Require a complete payload with the four positional sections and the known minimum widths
+    // (context 4, runtime 20, entity 14), rather than treating any dab_ substring as telemetry.
+    // Allow additive flags and the reserved general section to be populated.
+    // NonBacktracking keeps recognition linear even for an unusually long customer Application Name.
+    private static readonly Regex _versionAndPayloadPattern = new(
+        @"\A(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+        + @"(?:\+[RGMX][TVSPX][SDPMCX][NACX][A-Z0-9?]*\|[A-Z0-9?]*\|[A-Z0-9?]{20,}\|[A-Z0-9?]{14,}\+)?\z",
+        RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
+
     /// <summary>Inputs available to a setting encoder.</summary>
     private readonly record struct EncodeInputs(RuntimeConfig Config, DataSource? LiveDataSource);
 
@@ -71,7 +82,7 @@ public static class ApplicationNameTelemetry
     /// <summary>
     /// Produces the pure telemetry string (<c>&lt;marker&gt;&lt;version&gt;+&lt;context&gt;||&lt;runtime&gt;|&lt;entity&gt;+</c>),
     /// where the marker is <c>dab_oss_</c> for open source or <c>dab_hosted_</c> when <c>DAB_APP_NAME_ENV</c>
-    /// is set. Independent of the opt-out switch. Used by the CLI and as the telemetry-bearing portion of
+    /// is set. Independent of both opt-out switches. Used by the CLI and as the telemetry-bearing portion of
     /// the connection-string segment. The empty section after context reserves the general-settings
     /// position for future use.
     /// </summary>
@@ -108,7 +119,9 @@ public static class ApplicationNameTelemetry
     /// <list type="bullet">
     /// <item>Open source uses the <c>dab_oss_</c> marker; the hosted scenario (<c>DAB_APP_NAME_ENV</c> set)
     /// uses <c>dab_hosted_</c> instead — the <c>dab_oss_</c> marker is not present in that case.</item>
-    /// <item>When opted out, only <c>&lt;marker&gt;&lt;version&gt;</c> is returned (no payload).</item>
+    /// <item>The global <c>DAB_TELEMETRY_OPT_OUT</c> veto returns an empty segment.</item>
+    /// <item>With only the legacy <c>DAB_TELEMETRY_APPNAME_OPT_OUT</c> opt-out, only
+    /// <c>&lt;marker&gt;&lt;version&gt;</c> is returned (no payload).</item>
     /// <item>Telemetry is always based on the product version, so it is never suppressed by
     /// <c>DAB_APP_NAME_ENV</c>.</item>
     /// </list>
@@ -117,12 +130,83 @@ public static class ApplicationNameTelemetry
     /// <param name="liveDataSource">The data source whose connection is being opened.</param>
     public static string BuildApplicationNameSegment(RuntimeConfig config, DataSource? liveDataSource)
     {
+        if (ProductTelemetryPolicy.IsOptedOut())
+        {
+            return string.Empty;
+        }
+
         // The marker itself reflects the hosting scenario (dab_oss_ vs dab_hosted_), so no separate
-        // label prefix is needed. When opted out, only the marker+version is emitted (no payload).
+        // label prefix is needed. The legacy opt-out emits only the marker+version (no payload).
         return IsOptedOut()
             ? ProductInfo.GetTelemetryApplicationNameBase()
             : EncodeTelemetryString(config, liveDataSource);
     }
+
+    /// <summary>
+    /// Removes complete trailing DAB Application Name segments, including their marker/version,
+    /// without trimming or rewriting the retained prefix. DAB appends with a comma; an OBO pipe
+    /// prefix is retained verbatim because it is not part of this injection's segment.
+    /// </summary>
+    /// <remarks>
+    /// Recognizes OSS/hosted markers across product versions and a versioned current
+    /// <c>DAB_APP_NAME_ENV</c> label. The reserved, unversioned hosted marker is also recognized for
+    /// the config-null fallback. Unknown layouts (including shorter payload sections), truncated
+    /// blocks and opaque custom legacy host labels are retained: their ownership cannot be
+    /// established from the string alone. A custom label from
+    /// an earlier environment likewise requires the original undecorated connection string.
+    /// Customer text identical to a complete recognized terminal segment is indistinguishable from
+    /// telemetry and is treated as telemetry. Replaced empty/default provider names cannot be
+    /// reconstructed; callers restore the provider default when no prefix remains.
+    /// </remarks>
+    internal static string? RemoveApplicationNameSegments(string? applicationName)
+    {
+        if (string.IsNullOrEmpty(applicationName))
+        {
+            return applicationName;
+        }
+
+        string? hostLabel = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+        string? hostMarker = string.IsNullOrWhiteSpace(hostLabel)
+            ? null
+            : hostLabel.EndsWith("_", StringComparison.Ordinal) ? hostLabel : hostLabel + "_";
+
+        int retainedLength = applicationName.Length;
+        bool segmentRemoved;
+        do
+        {
+            segmentRemoved = false;
+            // Prefer the longest recognized suffix: a configured host label can itself contain
+            // commas/pipes or a standard marker, and its whole label belongs to the DAB segment.
+            for (int start = 0; start < retainedLength; start++)
+            {
+                if (start != 0 && applicationName[start - 1] is not (',' or SECTION_SEPARATOR))
+                {
+                    continue;
+                }
+
+                ReadOnlySpan<char> segment = applicationName.AsSpan(start, retainedLength - start);
+                if (IsVersionedSegment(segment, ProductInfo.DAB_USER_AGENT_MARKER)
+                    || IsVersionedSegment(segment, HOSTED_USER_AGENT_MARKER)
+                    || (hostMarker is not null && IsVersionedSegment(segment, hostMarker))
+                    || segment.SequenceEqual("dab_hosted".AsSpan())
+                    || segment.SequenceEqual(HOSTED_USER_AGENT_MARKER.AsSpan()))
+                {
+                    // Remove only the comma introduced when appending. Preserve any preexisting
+                    // commas, whitespace or OBO prefix, even when another DAB segment precedes this one.
+                    retainedLength = start > 0 && applicationName[start - 1] == ',' ? start - 1 : start;
+                    segmentRemoved = true;
+                    break;
+                }
+            }
+        }
+        while (segmentRemoved);
+
+        return retainedLength == applicationName.Length ? applicationName : applicationName[..retainedLength];
+    }
+
+    private static bool IsVersionedSegment(ReadOnlySpan<char> segment, string marker) =>
+        segment.StartsWith(marker.AsSpan(), StringComparison.Ordinal)
+        && _versionAndPayloadPattern.IsMatch(segment[marker.Length..]);
 
     /// <summary>
     /// Decodes a telemetry-bearing Application Name into human-readable lines. The input may be a

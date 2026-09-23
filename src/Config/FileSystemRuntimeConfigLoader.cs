@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
@@ -207,6 +208,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         }
         catch (Exception ex)
         {
+            NotifyTelemetryReload(accepted: false);
             // Need to remove the dependencies in startup on the RuntimeConfigProvider
             // before we can have an ILogger here.
             Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
@@ -267,6 +269,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             replacementSettings ??= new DeserializationVariableReplacementSettings();
 
             string? parseError = null;
+            using IDisposable? capture = TelemetryConfigurationPresence.BeginCapture(TelemetryCaptureEnabled);
             if (!string.IsNullOrEmpty(json) && TryParseConfig(
                 json,
                 out RuntimeConfig,
@@ -360,12 +363,30 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         IsNewConfigValidated = false;
         SignalConfigChanged();
 
+        NotifyTelemetryReload(accepted: true);
+
         // Telemetry (and any other) logs buffered during the reload parse are otherwise only
         // drained once at startup. Flush them now so hot-reload logs are actually emitted and the
         // shared static buffer does not accumulate entries across successive reloads.
         FlushLogBuffer();
 
         logger?.LogInformation("Hot-reload process finished.");
+    }
+
+    // Lifecycle observers cannot interrupt loading, expose exception contents or run before
+    // the existing validation/metadata/schema subscribers finish accepting the replacement.
+    internal Action<RuntimeConfig?, bool>? TelemetryReloadCompleted { get; set; }
+
+    private void NotifyTelemetryReload(bool accepted)
+    {
+        try
+        {
+            TelemetryReloadCompleted?.Invoke(accepted ? RuntimeConfig : null, accepted);
+        }
+        catch (Exception)
+        {
+            // Product telemetry is never a configuration dependency.
+        }
     }
 
     /// <summary>

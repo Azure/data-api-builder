@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
@@ -69,6 +71,17 @@ namespace Azure.DataApiBuilder.Core.Services
 
         protected const int NUMBER_OF_RESTRICTIONS = 4;
 
+        /// <summary>
+        /// Column data types, as reported by the "Columns" schema collection, that the data
+        /// provider cannot map to a CLR type. Reading such a column makes
+        /// <see cref="DbDataAdapter.FillSchema(DataSet, SchemaType)"/> fail with
+        /// "DataReader.GetFieldType(N) returned null", which takes down the whole database object
+        /// even when the column itself is never exposed. They are therefore left out of the
+        /// projection used for schema discovery.
+        /// Empty by default: a provider only lists a type here when it genuinely cannot resolve it.
+        /// </summary>
+        protected virtual ImmutableHashSet<string> UnsupportedColumnDataTypes => ImmutableHashSet<string>.Empty;
+
         protected string ConnectionString { get; init; }
 
         protected IQueryBuilder SqlQueryBuilder { get; init; }
@@ -82,6 +95,149 @@ namespace Azure.DataApiBuilder.Core.Services
         private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
+
+        /// <summary>
+        /// Caches the "Columns" schema collection per database object for the duration of metadata
+        /// initialization, so schema discovery and column definition population share one catalog
+        /// round trip instead of querying twice per object. Cleared once initialization completes.
+        /// The key is compared with an ordinal comparer: under a case-sensitive collation
+        /// <c>dbo.Foo</c> and <c>dbo.foo</c> are distinct objects, and aliasing them would serve one
+        /// object's catalog rows for the other. Case-insensitive collations are unaffected, since
+        /// they cannot hold both names at once.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, DataTable> _columnsMetadataCache = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Columns left out of the schema projection per database object, mapped to the data type
+        /// that made them unreadable. Used to explain the omission when a configured primary key
+        /// turns out to be one of them. Keyed by object with an ordinal comparer for the reason
+        /// above; the inner column names stay case-insensitive, matching how this class resolves
+        /// configured field names against the schema.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, Dictionary<string, string>> _skippedColumnsByObject = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Catalog facts per database object that the "Columns" schema collection does not report.
+        /// Only populated for providers that declare <see cref="UnsupportedColumnDataTypes"/>, since
+        /// only those replace "*" with an explicit projection and therefore need them. Keyed by
+        /// object with an ordinal comparer, for the reason given on <see cref="_columnsMetadataCache"/>.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, ObjectCatalogMetadata> _objectCatalogMetadataCache = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Why no key of the object underneath a narrowed projection is reachable through it, for an
+        /// object the catalog holds no index for. Recorded rather than thrown where it is found,
+        /// because the schema read runs for every object while the answer only matters for one that
+        /// ends up with no key: an object whose source.key-fields is configured must not be rejected
+        /// over a key it was told not to use. Keyed by object with an ordinal comparer, for the
+        /// reason given on <see cref="_columnsMetadataCache"/>.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, string> _unreachableKeyReasonByObject = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// The catalog facts an explicit schema projection needs and the "Columns" schema collection
+        /// does not carry: which columns the database hides from "SELECT *", which columns identify
+        /// a row, and which are identity columns. Together they replace what the data adapter
+        /// reports under CommandBehavior.KeyInfo, which cannot be used once the projection is
+        /// narrowed: the adapter appends key columns the projection left out as hidden reader
+        /// columns, and an unsupported type among them reintroduces the very failure the narrowing
+        /// avoids.
+        /// </summary>
+        protected sealed class ObjectCatalogMetadata
+        {
+            /// <summary>
+            /// Columns the database omits from "SELECT *" — for SQL Server, the period columns of a
+            /// temporal table declared GENERATED ALWAYS ... HIDDEN. Naming them in a projection
+            /// would expose columns that are invisible today, so they are subtracted before the
+            /// unsupported data types are.
+            /// </summary>
+            public HashSet<string> HiddenColumns { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+            /// <summary>
+            /// Identity columns. Carried separately rather than through
+            /// <see cref="DataColumn.AutoIncrement"/>, whose setter coerces a DataType it cannot
+            /// increment to Int32: SQL Server allows identity on tinyint, numeric and decimal, and
+            /// the coercion would report the wrong SystemType, which reaches parameter typing and
+            /// the generated API schemas.
+            /// </summary>
+            public HashSet<string> IdentityColumns { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+            /// <summary>
+            /// The columns of the object's own primary key, in key order. Empty when the object has
+            /// none.
+            /// </summary>
+            public List<string> PrimaryKeyColumns { get; } = new();
+
+            /// <summary>
+            /// Unique indexes eligible to identify a row when the object has no primary key, in
+            /// index order, each holding its key columns in key order. Only indexes whose every key
+            /// column is non-nullable qualify.
+            /// Preserves what the data adapter does on the unnarrowed path: absent a primary key it
+            /// reports such a unique key as <see cref="DataTable.PrimaryKey"/>, and dropping that
+            /// would make the narrowed path demand source.key-fields for an object the other path
+            /// resolves on its own.
+            /// </summary>
+            public List<List<string>> UniqueKeyCandidates { get; } = new();
+        }
+
+        /// <summary>
+        /// Reads <see cref="ObjectCatalogMetadata"/> for a database object. Returns null by default:
+        /// a provider only implements this when it declares <see cref="UnsupportedColumnDataTypes"/>.
+        /// When it returns null the projection stays "*" and schema discovery behaves exactly as it
+        /// did before.
+        /// </summary>
+        protected virtual Task<ObjectCatalogMetadata?> GetObjectCatalogMetadataAsync(
+            string schemaName,
+            string tableName)
+        {
+            return Task.FromResult<ObjectCatalogMetadata?>(null);
+        }
+
+        /// <summary>
+        /// Returns the columns of a unique key the given projection exposes, in key order, for an
+        /// object the catalog holds no index for — a view, whose key the data adapter resolved
+        /// through the underlying table. Empty by default, and empty whenever the provider cannot
+        /// answer, which leaves the missing-primary-key error to be reported as before.
+        /// A key column the projection left out must never be reported as part of a key: a partial
+        /// key silently matches more than one row on an update or a delete.
+        /// </summary>
+        /// <returns>
+        /// The key, and a reason when the provider can tell that no key of the underlying object is
+        /// fully exposed and can name what is missing. The reason is only reported when the object
+        /// ends up with no key at all: a configured source.key-fields settles the question, and
+        /// failing here anyway would reject an object whose configuration already says how to reach
+        /// it — while recommending exactly what was configured.
+        /// </returns>
+        protected virtual Task<(List<string> Key, string? UnreachableKeyReason)> GetProjectionKeyFromResultSetAsync(
+            string selectStatement)
+        {
+            return Task.FromResult<(List<string>, string?)>((new List<string>(), null));
+        }
+
+        /// <summary>
+        /// Returns <see cref="ObjectCatalogMetadata"/> for a database object, reading the catalog
+        /// once per object for the duration of metadata initialization.
+        /// </summary>
+        protected async Task<ObjectCatalogMetadata?> GetCachedObjectCatalogMetadataAsync(
+            string schemaName,
+            string tableName)
+        {
+            string cacheKey = GetObjectCacheKey(schemaName, tableName);
+
+            if (_objectCatalogMetadataCache.TryGetValue(cacheKey, out ObjectCatalogMetadata? cachedMetadata))
+            {
+                return cachedMetadata;
+            }
+
+            ObjectCatalogMetadata? catalogMetadata = await GetObjectCatalogMetadataAsync(schemaName, tableName);
+
+            if (catalogMetadata is not null)
+            {
+                _objectCatalogMetadataCache[cacheKey] = catalogMetadata;
+            }
+
+            return catalogMetadata;
+        }
 
         protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
 
@@ -335,7 +491,16 @@ namespace Azure.DataApiBuilder.Core.Services
             _runtimeConfigValidator.ValidateEntityAndAutoentityConfigurations(runtimeConfig);
 
             GenerateDatabaseObjectForEntities();
-            await PopulateObjectDefinitionForEntities();
+
+            try
+            {
+                await PopulateObjectDefinitionForEntities();
+            }
+            finally
+            {
+                ReleaseCatalogMetadataCaches();
+            }
+
             GenerateExposedToBackingColumnMapsForEntities();
 
             // When IsLateConfigured is true we are in a hosted scenario and do not reveal primary key information.
@@ -1210,6 +1375,17 @@ namespace Azure.DataApiBuilder.Core.Services
 
             try
             {
+                // After the loops above, not inside them: a relationship's "target.fields" belong
+                // to the other entity's object, which may not have been read yet while this one is.
+                RejectConfiguredRelationshipReferencesToSkippedColumns();
+            }
+            catch (Exception e)
+            {
+                HandleOrRecordException(e);
+            }
+
+            try
+            {
                 await PopulateForeignKeyDefinitionAsync();
             }
             catch (Exception e)
@@ -1512,6 +1688,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (sourceDefinition.PrimaryKey.Count == 0)
             {
+                // When the object's own primary key is unreadable, say so. The message below reads
+                // as a configuration mistake, and no configuration can express that key.
+                RejectUnreadablePrimaryKey(schemaName, tableName);
+
                 throw new DataApiBuilderException(
                        message: $"Primary key not configured on the given database object {tableName}",
                        statusCode: HttpStatusCode.ServiceUnavailable,
@@ -1569,7 +1749,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 sourceDefinition.Columns.TryAdd(columnName, column);
             }
 
-            DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
+            ApplyIdentityColumnsFromCatalog(schemaName, tableName, sourceDefinition);
+
+            RejectPrimaryKeyOnUnsupportedColumn(schemaName, tableName, sourceDefinition);
+
+            RejectConfiguredReferencesToSkippedColumns(entityName, entity, schemaName, tableName);
+
+            DataTable columnsInTable = await GetCachedColumnsAsync(schemaName, tableName);
 
             PopulateColumnDefinitionWithHasDefaultAndDbType(
                 sourceDefinition,
@@ -1753,6 +1939,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Using a data adapter, obtains the schema of the given table name
         /// and adds the corresponding DataTable to the entities data set.
+        /// Columns whose data type the data provider cannot map to a CLR type are left out of the
+        /// projection, because the data adapter refuses to build a schema mapping for them and the
+        /// whole object would otherwise be unreachable. See <see cref="UnsupportedColumnDataTypes"/>.
         /// </summary>
         private async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,
@@ -1793,21 +1982,799 @@ namespace Azure.DataApiBuilder.Core.Services
                     innerException: ex);
             }
 
+            string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(schemaName, tableName);
+
+            // Resolved before the connection below is opened. Reading the catalog uses a connection
+            // of its own, and nesting that inside an already open one exhausts a small pool: with
+            // "Max Pool Size=1" the inner open waits for a connection the outer scope still holds.
+            string projection = await BuildSchemaProjectionAsync(schemaName, tableName);
+
+            bool isProjectionNarrowed = !string.Equals(projection, "*", StringComparison.Ordinal);
+
+            // Resolved before the connection below is opened, for the same reason as the projection:
+            // reading the catalog uses a connection of its own, and nesting that inside an already
+            // open one exhausts a small pool.
+            ObjectCatalogMetadata? catalogMetadata = isProjectionNarrowed
+                ? await GetCachedObjectCatalogMetadataAsync(schemaName, tableName)
+                : null;
+
+            string selectStatement = $"SELECT {projection} FROM {tableNameWithSchemaPrefix}";
+
+            // An ordinary view has no indexes of its own, so the catalog lookup above finds no key
+            // for it. FillSchema resolved one through the view's underlying table under KeyInfo, and
+            // describing the projection recovers the same route — without a reader, and without
+            // asking for a CLR type. Only reached for an object the catalog could not key, and
+            // resolved before the connection is opened for the same pooling reason as above.
+            // Kept out of the cached metadata: it depends on this projection, not on the object.
+            List<string> describedKey = new();
+
+            if (catalogMetadata is not null
+                && catalogMetadata.PrimaryKeyColumns.Count == 0
+                && catalogMetadata.UniqueKeyCandidates.Count == 0)
+            {
+                (List<string> Key, string? UnreachableKeyReason) described =
+                    await GetProjectionKeyFromResultSetAsync(selectStatement);
+
+                describedKey = described.Key;
+
+                if (described.UnreachableKeyReason is not null)
+                {
+                    _unreachableKeyReasonByObject[GetObjectCacheKey(schemaName, tableName)] =
+                        described.UnreachableKeyReason;
+                }
+            }
+
             await conn.OpenAsync();
+
+            if (isProjectionNarrowed)
+            {
+                // The projection left columns out, so the data adapter cannot be used here:
+                // FillSchema runs with CommandBehavior.KeyInfo, under which the provider performs
+                // its own key discovery and appends key columns missing from the SELECT list as
+                // hidden reader columns. A column whose CLR type the provider cannot resolve
+                // reintroduces "DataReader.GetFieldType(N) returned null" that way even though the
+                // projection excluded it — reachable through the object's own primary key, and
+                // through any unique index, including when a supported key is configured through
+                // source.key-fields. Reading the shape without KeyInfo keeps the projection
+                // authoritative; the primary key comes from the catalog instead.
+                return await ReadSchemaWithoutKeyInfoAsync(
+                    conn,
+                    selectStatement,
+                    tableNameWithSchemaPrefix,
+                    schemaName,
+                    tableName,
+                    catalogMetadata,
+                    describedKey);
+            }
 
             DataAdapterT adapterForTable = new();
             CommandT selectCommand = new()
             {
-                Connection = conn
+                Connection = conn,
+                CommandText = selectStatement
             };
-
-            string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(schemaName, tableName);
-            selectCommand.CommandText
-                = $"SELECT * FROM {tableNameWithSchemaPrefix}";
             adapterForTable.SelectCommand = selectCommand;
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableNameWithSchemaPrefix);
             return dataTable[0];
+        }
+
+        /// <summary>
+        /// Reads the shape of a narrowed projection without CommandBehavior.KeyInfo and registers
+        /// the result in <see cref="EntitiesDataSet"/> under the name the data adapter would have
+        /// used, so callers find it there on subsequent lookups. The primary key is taken from the
+        /// catalog, because the adapter's own key discovery is precisely what has to be avoided.
+        /// </summary>
+        private async Task<DataTable> ReadSchemaWithoutKeyInfoAsync(
+            ConnectionT conn,
+            string selectStatement,
+            string tableNameWithSchemaPrefix,
+            string schemaName,
+            string tableName,
+            ObjectCatalogMetadata? catalogMetadata,
+            List<string> describedKey)
+        {
+            DataTable dataTable = new(tableNameWithSchemaPrefix);
+
+            using (CommandT selectCommand = new())
+            {
+                selectCommand.Connection = conn;
+                selectCommand.CommandText = selectStatement;
+
+                // SchemaOnly describes the statement without returning rows. Without KeyInfo the
+                // reader carries exactly the projected columns and nothing else.
+                using DbDataReader reader =
+                    await selectCommand.ExecuteReaderAsync(CommandBehavior.SchemaOnly);
+
+                using DataTable? schemaTable = reader.GetSchemaTable();
+
+                if (schemaTable is null)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"The data provider reported no schema for {schemaName}.{tableName}.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
+                foreach (DataRow columnInfo in schemaTable.Rows)
+                {
+                    if (columnInfo["ColumnName"] is not string columnName)
+                    {
+                        continue;
+                    }
+
+                    // The provider-reported DataType is carried through unchanged. Auto-increment is
+                    // deliberately not set here — see ApplyIdentityColumnsFromCatalog for why
+                    // DataColumn.AutoIncrement cannot be the transport for it.
+                    DataColumn column = new(columnName, (Type)columnInfo["DataType"])
+                    {
+                        // Unknown nullability is treated as nullable. A column wrongly marked
+                        // non-nullable is reported as required through REST, GraphQL and OpenAPI and
+                        // rejects writes the database would accept, so the permissive direction is
+                        // the safe one when the provider does not report the flag.
+                        AllowDBNull = columnInfo["AllowDBNull"] is not bool allowDbNull || allowDbNull
+                    };
+
+                    dataTable.Columns.Add(column);
+                }
+            }
+
+            if (catalogMetadata is not null)
+            {
+                DataColumn[]? keyColumns = ResolveKeyColumns(dataTable, catalogMetadata)
+                    ?? (describedKey.Count > 0 ? TryResolveColumns(dataTable, describedKey) : null);
+
+                if (keyColumns is not null)
+                {
+                    dataTable.PrimaryKey = keyColumns;
+                }
+            }
+
+            EntitiesDataSet.Tables.Add(dataTable);
+
+            return dataTable;
+        }
+
+        /// <summary>
+        /// Picks the columns to report as <see cref="DataTable.PrimaryKey"/> on the narrowed path.
+        /// The object's own primary key wins. A key column the projection left out is not reported,
+        /// and the key is not silently replaced by another candidate either:
+        /// PopulateSourceDefinitionAsync fails through RejectUnreadablePrimaryKey when that key is
+        /// the one in effect, and a key configured through source.key-fields takes precedence over
+        /// this one anyway.
+        /// Absent a primary key, the first unique index whose every key column is present is used,
+        /// which is what the data adapter reports on the unnarrowed path. Returns null when nothing
+        /// identifies a row, leaving the caller to report a missing primary key as it does today.
+        /// </summary>
+        private static DataColumn[]? ResolveKeyColumns(DataTable dataTable, ObjectCatalogMetadata catalogMetadata)
+        {
+            if (catalogMetadata.PrimaryKeyColumns.Count > 0)
+            {
+                return TryResolveColumns(dataTable, catalogMetadata.PrimaryKeyColumns);
+            }
+
+            foreach (List<string> uniqueKeyCandidate in catalogMetadata.UniqueKeyCandidates)
+            {
+                DataColumn[]? keyColumns = TryResolveColumns(dataTable, uniqueKeyCandidate);
+
+                if (keyColumns is not null)
+                {
+                    return keyColumns;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Resolves every named column against the table, in the order given, or returns null when
+        /// one of them is absent.
+        /// </summary>
+        private static DataColumn[]? TryResolveColumns(DataTable dataTable, List<string> columnNames)
+        {
+            DataColumn[] columns = new DataColumn[columnNames.Count];
+
+            for (int index = 0; index < columnNames.Count; index++)
+            {
+                if (!dataTable.Columns.Contains(columnNames[index]))
+                {
+                    return null;
+                }
+
+                columns[index] = dataTable.Columns[columnNames[index]]!;
+            }
+
+            return columns;
+        }
+
+        /// <summary>
+        /// Builds the projection used to read the schema of a database object. Returns "*" unless
+        /// the object holds columns whose data type this provider cannot map to a CLR type, in
+        /// which case those columns are named out of the projection so the rest stays reachable.
+        /// The column list comes from the "Columns" schema collection, which reads catalog metadata
+        /// only and therefore never has to materialize the offending type.
+        /// </summary>
+        /// <exception cref="DataApiBuilderException">
+        /// Thrown when every column of the object has an unsupported data type. Returning "*" there
+        /// would re-issue the projection that cannot be read, hiding the reason behind the
+        /// provider's own error.
+        /// </exception>
+        private async Task<string> BuildSchemaProjectionAsync(string schemaName, string tableName)
+        {
+            if (UnsupportedColumnDataTypes.Count == 0)
+            {
+                return "*";
+            }
+
+            List<string> readableColumns = new();
+            Dictionary<string, string> skippedColumns = new(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                DataTable columnsInTable = await GetCachedColumnsAsync(schemaName, tableName);
+
+                // Classify from the "Columns" schema collection first, which is read for every
+                // object anyway. Only an object that actually holds an unsupported type needs the
+                // additional catalog facts below; asking for them up front would add a query per
+                // MSSQL and DWSQL object to every startup.
+                List<string> supportedColumns = new();
+
+                foreach (DataRow columnInfo in columnsInTable.Rows)
+                {
+                    if (columnInfo["COLUMN_NAME"] is not string columnName)
+                    {
+                        continue;
+                    }
+
+                    if (columnInfo["DATA_TYPE"] is not string dataType)
+                    {
+                        // The catalog did not report a usable type name, so this column cannot be
+                        // classified. Leave the projection alone rather than guess.
+                        return "*";
+                    }
+
+                    if (UnsupportedColumnDataTypes.Contains(dataType))
+                    {
+                        skippedColumns[columnName] = dataType;
+                    }
+                    else
+                    {
+                        supportedColumns.Add(columnName);
+                    }
+                }
+
+                if (skippedColumns.Count == 0)
+                {
+                    return "*";
+                }
+
+                if (supportedColumns.Count == 0)
+                {
+                    // Falling back to "*" here would re-issue the very projection that fails, so the
+                    // caller would see the opaque provider error instead of the reason for it.
+                    throw new DataApiBuilderException(
+                        message: $"Every column of {schemaName}.{tableName} has a data type that is not supported: "
+                            + $"{FormatSkippedColumns(skippedColumns)}. The object cannot be exposed.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
+                ObjectCatalogMetadata? catalogMetadata =
+                    await GetCachedObjectCatalogMetadataAsync(schemaName, tableName);
+
+                if (catalogMetadata is null)
+                {
+                    // Without the catalog there is no way to tell which columns the database hides
+                    // from "SELECT *". Naming columns anyway would add the hidden period columns of
+                    // a temporal table to the exposed contract, so leave the projection alone.
+                    return "*";
+                }
+
+                foreach (string columnName in supportedColumns)
+                {
+                    if (catalogMetadata.HiddenColumns.Contains(columnName))
+                    {
+                        // "SELECT *" does not return this column, so naming it would widen the
+                        // exposed contract instead of preserving it. It is not "skipped": it was
+                        // never part of the object's shape as the engine sees it, and the read-only
+                        // classification does not recognize generated-always period columns, so a
+                        // PUT would try to null them.
+                        continue;
+                    }
+
+                    readableColumns.Add(columnName);
+                }
+            }
+            catch (Exception ex) when (ex is not DataApiBuilderException)
+            {
+                // The column list is a best-effort optimization: without it the read below behaves
+                // exactly as it did before, failing loudly if an unsupported type is present.
+                _logger.LogDebug(
+                    "Unable to enumerate the columns of {schemaName}.{tableName}: {message}",
+                    schemaName,
+                    tableName,
+                    ex.Message);
+                return "*";
+            }
+
+            if (readableColumns.Count == 0)
+            {
+                // Every column that is not of an unsupported type is one the database hides from
+                // "SELECT *". Naming the hidden ones is not an option, and "*" would re-issue the
+                // projection that fails, so nothing about this object can be read.
+                throw new DataApiBuilderException(
+                    message: $"No column of {schemaName}.{tableName} can be read: "
+                        + $"{FormatSkippedColumns(skippedColumns)} have a data type that is not supported, and "
+                        + "every remaining column is one the database does not return from a SELECT *. "
+                        + "The object cannot be exposed.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            _skippedColumnsByObject[GetObjectCacheKey(schemaName, tableName)] = skippedColumns;
+
+            _logger.LogWarning(
+                "Skipping column(s) of {schemaName}.{tableName} whose data type is not supported: {skippedColumns}. "
+                + "They are not exposed through REST, GraphQL or MCP.",
+                schemaName,
+                tableName,
+                FormatSkippedColumns(skippedColumns));
+
+            return string.Join(", ", readableColumns.Select(column => SqlQueryBuilder.QuoteIdentifier(column)));
+        }
+
+        /// <summary>
+        /// Fails initialization when a configured primary key names a column that was left out of
+        /// the projection because its data type is not supported. The key would otherwise stay in
+        /// <see cref="SourceDefinition.PrimaryKey"/> while being absent from
+        /// <see cref="SourceDefinition.Columns"/>, and the inconsistency surfaces much later as a
+        /// lookup failure while building queries, the OpenAPI document or the EDM model.
+        /// </summary>
+        private void RejectPrimaryKeyOnUnsupportedColumn(
+            string schemaName,
+            string tableName,
+            SourceDefinition sourceDefinition)
+        {
+            if (!_skippedColumnsByObject.TryGetValue(GetObjectCacheKey(schemaName, tableName), out Dictionary<string, string>? skippedColumns))
+            {
+                return;
+            }
+
+            foreach (string primaryKey in sourceDefinition.PrimaryKey)
+            {
+                if (skippedColumns.TryGetValue(primaryKey, out string? dataType))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"The primary key column {primaryKey} of {schemaName}.{tableName} has the data type "
+                            + $"{dataType}, which is not supported. A primary key cannot be omitted from the object "
+                            + "metadata, so this object cannot be exposed.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Marks identity columns on the narrowed schema discovery path, which builds its columns
+        /// itself instead of letting the data adapter populate them.
+        /// The flag is not carried through <see cref="DataColumn.AutoIncrement"/>: its setter
+        /// coerces a DataType it cannot increment to Int32, and SQL Server allows identity on
+        /// tinyint, numeric and decimal, so doing that would report the wrong SystemType and reach
+        /// parameter typing and the generated API schemas. It comes from the catalog instead.
+        /// No-op for every object whose projection was not narrowed, which is where the adapter
+        /// still reports the flag itself.
+        /// </summary>
+        private void ApplyIdentityColumnsFromCatalog(
+            string schemaName,
+            string tableName,
+            SourceDefinition sourceDefinition)
+        {
+            if (!_objectCatalogMetadataCache.TryGetValue(
+                    GetObjectCacheKey(schemaName, tableName),
+                    out ObjectCatalogMetadata? catalogMetadata))
+            {
+                return;
+            }
+
+            foreach (string identityColumn in catalogMetadata.IdentityColumns)
+            {
+                if (sourceDefinition.Columns.TryGetValue(identityColumn, out ColumnDefinition? columnDefinition))
+                {
+                    columnDefinition.IsAutoGenerated = true;
+
+                    // Matches how the adapter-reported flag is treated above: an auto-increment
+                    // column is also read-only.
+                    columnDefinition.IsReadOnly = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fails initialization with the reason when the object's own primary key includes a column
+        /// left out of the projection because its data type is not supported. Without this the
+        /// caller reports a missing primary key, which reads as something the user forgot to
+        /// configure even though no configuration can express that key.
+        /// </summary>
+        private void RejectUnreadablePrimaryKey(string schemaName, string tableName)
+        {
+            string cacheKey = GetObjectCacheKey(schemaName, tableName);
+
+            // Reached only with no key in effect, which is what makes this the right place to report
+            // it: the schema read found that no key of the object underneath is reachable through
+            // this projection, and nothing configured has since supplied one.
+            if (_unreachableKeyReasonByObject.TryGetValue(cacheKey, out string? unreachableKeyReason))
+            {
+                throw new DataApiBuilderException(
+                    message: unreachableKeyReason,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            if (!_skippedColumnsByObject.TryGetValue(cacheKey, out Dictionary<string, string>? skippedColumns)
+                || !_objectCatalogMetadataCache.TryGetValue(cacheKey, out ObjectCatalogMetadata? catalogMetadata))
+            {
+                return;
+            }
+
+            foreach (string primaryKeyColumn in catalogMetadata.PrimaryKeyColumns)
+            {
+                if (skippedColumns.TryGetValue(primaryKeyColumn, out string? dataType))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"The primary key of {schemaName}.{tableName} includes the column {primaryKeyColumn}, "
+                            + $"whose data type {dataType} is not supported. The object cannot be exposed through that "
+                            + "key. Configure source.key-fields with a supported column that identifies a row uniquely, "
+                            + "if the object has one.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fails initialization when the configuration names a column that was left out of the
+        /// projection because its data type is not supported.
+        /// Such a name keeps resolving after the column is gone: the exposed and backing column maps
+        /// are built from entity fields and mappings without requiring the column to exist in
+        /// <see cref="SourceDefinition.Columns"/>, and the authorization resolver accepts explicitly
+        /// included field names. The reference then reaches code that indexes
+        /// <see cref="SourceDefinition.Columns"/> and fails per request instead of at startup — a
+        /// permission-derived default projection selects the column and the read fails serializing
+        /// it, a mutation throws while resolving the backing column, and MCP metadata advertises a
+        /// field no other surface has. Rejecting here keeps the configuration and the exposed
+        /// contract in agreement. Nothing that worked before stops working: an object with such a
+        /// column failed discovery outright, so the entity never loaded.
+        /// </summary>
+        private void RejectConfiguredReferencesToSkippedColumns(
+            string entityName,
+            Entity? entity,
+            string schemaName,
+            string tableName)
+        {
+            if (entity is null
+                || !_skippedColumnsByObject.TryGetValue(
+                    GetObjectCacheKey(schemaName, tableName),
+                    out Dictionary<string, string>? skippedColumnsForObject))
+            {
+                return;
+            }
+
+            // Held in a non-nullable local because the local function below captures it, and the
+            // guard above is not something the compiler can carry into that capture.
+            Dictionary<string, string> skippedColumns = skippedColumnsForObject;
+
+            // "mappings" and "fields" both key on the backing column name.
+            if (entity.Mappings is not null)
+            {
+                foreach (string backingColumn in entity.Mappings.Keys)
+                {
+                    RejectReference(backingColumn, "mappings");
+                }
+            }
+
+            if (entity.Fields is not null)
+            {
+                foreach (FieldMetadata field in entity.Fields)
+                {
+                    RejectReference(field.Name, "fields");
+                }
+            }
+
+            foreach (EntityPermission permission in entity.Permissions)
+            {
+                foreach (EntityAction action in permission.Actions)
+                {
+                    // A database policy is parsed per request against the OData model, which is
+                    // built from SourceDefinition.Columns. A policy naming a column that is not
+                    // there fails every request for that role instead of the configuration being
+                    // rejected once, at startup.
+                    foreach (string policyField in EnumeratePolicyFieldReferences(action.Policy?.Database))
+                    {
+                        // Policy identifiers are exposed names, the way the OData model's properties
+                        // are, so they are resolved through the configured aliases before being
+                        // compared against backing column names. Without that, an alias over a
+                        // supported column that happens to carry the name of a skipped one — a
+                        // "Location" alias of a text column beside a skipped "Location" spatial
+                        // column — would be rejected even though the policy references the
+                        // supported field.
+                        RejectReference(
+                            ResolveBackingColumnName(entity, policyField),
+                            $"database policy of role {permission.Role}");
+                    }
+
+                    if (action.Fields?.Include is null)
+                    {
+                        continue;
+                    }
+
+                    // An include list names columns that have to be readable. An exclude list naming
+                    // one of these columns asks for what already happened, so it is left alone.
+                    foreach (string includedField in action.Fields.Include)
+                    {
+                        RejectReference(includedField, $"permissions of role {permission.Role}");
+                    }
+                }
+            }
+
+            void RejectReference(string configuredName, string configurationSection)
+            {
+                if (!skippedColumns.TryGetValue(configuredName, out string? dataType))
+                {
+                    return;
+                }
+
+                throw new DataApiBuilderException(
+                    message: $"The {configurationSection} of entity {entityName} reference the column {configuredName} "
+                        + $"of {schemaName}.{tableName}, whose data type {dataType} is not supported. That column is not "
+                        + "part of the exposed contract, so the reference cannot be honored. Remove it from the "
+                        + "configuration.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+        }
+
+        /// <summary>
+        /// Yields the field names a database policy references through its "@item." prefix.
+        /// Single-quoted literals are skipped, with a doubled quote read as an escaped quote inside
+        /// one, so a literal that merely contains the prefix is not mistaken for a reference.
+        /// Scanned by hand rather than parsed: the OData model the parser needs does not exist yet
+        /// at this point in initialization. The names yielded are exposed names, which the caller
+        /// resolves through the configured aliases.
+        /// </summary>
+        private static IEnumerable<string> EnumeratePolicyFieldReferences(string? databasePolicy)
+        {
+            const string POLICY_FIELD_PREFIX = "@item.";
+
+            if (string.IsNullOrWhiteSpace(databasePolicy))
+            {
+                yield break;
+            }
+
+            int index = 0;
+
+            while (index < databasePolicy.Length)
+            {
+                if (databasePolicy[index] == '\'')
+                {
+                    index++;
+
+                    while (index < databasePolicy.Length)
+                    {
+                        if (databasePolicy[index] != '\'')
+                        {
+                            index++;
+                            continue;
+                        }
+
+                        // A doubled quote is an escaped quote within the literal, not its end.
+                        if (index + 1 < databasePolicy.Length && databasePolicy[index + 1] == '\'')
+                        {
+                            index += 2;
+                            continue;
+                        }
+
+                        index++;
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (string.Compare(
+                        databasePolicy,
+                        index,
+                        POLICY_FIELD_PREFIX,
+                        0,
+                        POLICY_FIELD_PREFIX.Length,
+                        StringComparison.OrdinalIgnoreCase) != 0)
+                {
+                    index++;
+                    continue;
+                }
+
+                int fieldStart = index + POLICY_FIELD_PREFIX.Length;
+                int fieldEnd = fieldStart;
+
+                while (fieldEnd < databasePolicy.Length
+                    && (char.IsLetterOrDigit(databasePolicy[fieldEnd]) || databasePolicy[fieldEnd] == '_'))
+                {
+                    fieldEnd++;
+                }
+
+                if (fieldEnd > fieldStart)
+                {
+                    yield return databasePolicy[fieldStart..fieldEnd];
+                }
+
+                index = fieldEnd > fieldStart ? fieldEnd : fieldStart;
+            }
+        }
+
+        /// <summary>
+        /// Fails initialization when a configured relationship names a column that was left out of
+        /// a projection because its data type is not supported. Runs after every object definition
+        /// is populated, unlike the other reference checks: a relationship's "target.fields" belong
+        /// to the other entity's object, which may not have been read yet while this one is.
+        /// The reference would otherwise keep resolving — the exposed and backing column maps are
+        /// built from the configuration rather than from
+        /// <see cref="SourceDefinition.Columns"/> — and fail per request instead, in
+        /// MultipleCreateOrderHelper, which indexes that dictionary by each relationship field.
+        /// Foreign keys inferred from the catalog are deliberately not checked: there is no
+        /// configuration to correct there, so refusing to start would punish the database's shape
+        /// rather than the configuration, and the relationship simply not forming is the
+        /// proportionate outcome.
+        /// </summary>
+        private void RejectConfiguredRelationshipReferencesToSkippedColumns()
+        {
+            foreach ((string entityName, Entity entity) in Entities)
+            {
+                if (entity.Relationships is null)
+                {
+                    continue;
+                }
+
+                foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships)
+                {
+                    RejectRelationshipFields(
+                        entityName,
+                        relationship.SourceFields,
+                        $"source.fields of relationship {relationshipName} of entity {entityName}");
+
+                    RejectRelationshipFields(
+                        relationship.TargetEntity,
+                        relationship.TargetFields,
+                        $"target.fields of relationship {relationshipName} of entity {entityName}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fails initialization when any of the given fields, read as names configured on the given
+        /// entity, resolves to a column that entity's object does not expose.
+        /// </summary>
+        private void RejectRelationshipFields(string entityName, string[]? fields, string configurationSection)
+        {
+            if (fields is null
+                || fields.Length == 0
+                || !Entities.TryGetValue(entityName, out Entity? entity)
+                || !EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject)
+                || !_skippedColumnsByObject.TryGetValue(
+                        GetObjectCacheKey(databaseObject.SchemaName, databaseObject.Name),
+                        out Dictionary<string, string>? skippedColumns))
+            {
+                return;
+            }
+
+            foreach (string field in fields)
+            {
+                string backingColumn = ResolveBackingColumnName(entity, field);
+
+                if (!skippedColumns.TryGetValue(backingColumn, out string? dataType))
+                {
+                    continue;
+                }
+
+                throw new DataApiBuilderException(
+                    message: $"The {configurationSection} reference the column {backingColumn} of "
+                        + $"{databaseObject.SchemaName}.{databaseObject.Name}, whose data type {dataType} is not "
+                        + "supported. That column is not part of the exposed contract, so the relationship cannot be "
+                        + "honored. Remove it from the configuration.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+        }
+
+        /// <summary>
+        /// Resolves an exposed field name to the column it is backed by, using the aliases the
+        /// configuration declares through "mappings" and through a field's "alias". An unaliased
+        /// name is already the backing name.
+        /// </summary>
+        private static string ResolveBackingColumnName(Entity entity, string exposedName)
+        {
+            // "fields" is consulted before "mappings", mirroring the precedence
+            // GenerateExposedToBackingColumnMapUtil applies when it builds the map the runtime
+            // resolves names through. Reversing it here would reject a configuration the runtime
+            // resolves the other way.
+            if (entity.Fields is not null)
+            {
+                foreach (FieldMetadata field in entity.Fields)
+                {
+                    if (!string.IsNullOrWhiteSpace(field.Alias)
+                        && string.Equals(field.Alias, exposedName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return field.Name;
+                    }
+                }
+            }
+
+            if (entity.Mappings is not null)
+            {
+                foreach (KeyValuePair<string, string> mapping in entity.Mappings)
+                {
+                    if (string.Equals(mapping.Value, exposedName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return mapping.Key;
+                    }
+                }
+            }
+
+            return exposedName;
+        }
+
+        /// <summary>
+        /// Renders skipped columns as "name (type)" pairs for log and error messages.
+        /// </summary>
+        private static string FormatSkippedColumns(Dictionary<string, string> skippedColumns)
+        {
+            return string.Join(", ", skippedColumns.Select(entry => $"{entry.Key} ({entry.Value})"));
+        }
+
+        /// <summary>
+        /// Key used by the per-object metadata caches held during initialization. The schema name is
+        /// length-prefixed rather than joined with a dot, because bracketed identifiers may contain
+        /// dots: <c>[a.b].[c]</c> and <c>[a].[b.c]</c> are different objects that a "schema.table"
+        /// key would collide, letting one reuse the other's catalog rows.
+        /// </summary>
+        private static string GetObjectCacheKey(string schemaName, string tableName)
+        {
+            return $"{schemaName.Length}:{schemaName}{tableName}";
+        }
+
+        /// <summary>
+        /// Releases the catalog metadata gathered during initialization. Nothing reads these caches
+        /// once object definitions are populated, and the cached tables are disposable.
+        /// </summary>
+        private void ReleaseCatalogMetadataCaches()
+        {
+            foreach (DataTable columnsInTable in _columnsMetadataCache.Values)
+            {
+                columnsInTable.Dispose();
+            }
+
+            _columnsMetadataCache.Clear();
+            _skippedColumnsByObject.Clear();
+            _objectCatalogMetadataCache.Clear();
+            _unreachableKeyReasonByObject.Clear();
+        }
+
+        /// <summary>
+        /// Returns the "Columns" schema collection for a database object, reading it from the
+        /// catalog once per object. Schema discovery and column definition population both need it,
+        /// and each <see cref="GetColumnsAsync"/> call opens its own connection.
+        /// </summary>
+        private async Task<DataTable> GetCachedColumnsAsync(string schemaName, string tableName)
+        {
+            string cacheKey = GetObjectCacheKey(schemaName, tableName);
+
+            if (_columnsMetadataCache.TryGetValue(cacheKey, out DataTable? cachedColumns))
+            {
+                return cachedColumns;
+            }
+
+            DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
+            _columnsMetadataCache[cacheKey] = columnsInTable;
+
+            return columnsInTable;
         }
 
         /// <summary>

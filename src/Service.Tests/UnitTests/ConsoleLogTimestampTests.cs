@@ -38,6 +38,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     {
         private const string LOG_MESSAGE = "timestamp probe message";
 
+        private const string SCOPE_MESSAGE = "timestamp probe scope";
+
         /// <summary>
         /// Matches the timestamp prefix: exactly three fractional-second digits followed
         /// by a literal 'Z'. The trailing 'Z' immediately after the third digit is what
@@ -319,19 +321,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// readable JSON records - structured log collectors depend on that contract - and
         /// those records carry the UTC timestamp required by the logging contract.
         /// </summary>
-        [TestMethod]
-        public void ConfigureHostLogging_ExplicitJsonFormatter_EmitsTimestampedJsonRecord()
+        [DataTestMethod]
+        [DataRow("en-US")]
+        [DataRow("th-TH")]
+        [DataRow("ar-SA")]
+        [DataRow("fi-FI")]
+        public void ConfigureHostLogging_ExplicitJsonFormatter_EmitsTimestampedJsonRecord(string cultureName)
         {
+            if (cultureName != "en-US")
+            {
+                AssertCultureAffectsTimestampRendering(cultureName);
+            }
+
             Dictionary<string, string?> settings = new() { ["Logging:Console:FormatterName"] = "json" };
 
-            Assert.AreEqual("json", GetConsoleLoggerOptions(settings).FormatterName,
-                "An explicitly configured console format must not be overridden.");
+            Assert.AreEqual(
+                UtcTimestampJsonConsoleFormatter.FORMATTER_NAME,
+                GetConsoleLoggerOptions(settings).FormatterName,
+                "The 'json' console format must map to the DAB formatter emitting the same record structure.");
 
             (string stdout, _, DateTime before, DateTime after) = CaptureConsole(() =>
-            {
-                using ILoggerFactory factory = CreateHostLoggerFactory(settings);
-                factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
-            });
+                RunUnderCulture(cultureName, () =>
+                {
+                    using ILoggerFactory factory = CreateHostLoggerFactory(settings);
+                    factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
+                }));
 
             string record = stdout.Split('\n').First(line => !string.IsNullOrWhiteSpace(line));
 
@@ -364,19 +378,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// syslog priority prefix - journald severity extraction depends on it - and the
         /// records carry the UTC timestamp required by the logging contract.
         /// </summary>
-        [TestMethod]
-        public void ConfigureHostLogging_ExplicitSystemdFormatter_EmitsTimestampedSystemdRecord()
+        [DataTestMethod]
+        [DataRow("en-US")]
+        [DataRow("th-TH")]
+        [DataRow("ar-SA")]
+        [DataRow("fi-FI")]
+        public void ConfigureHostLogging_ExplicitSystemdFormatter_EmitsTimestampedSystemdRecord(string cultureName)
         {
+            if (cultureName != "en-US")
+            {
+                AssertCultureAffectsTimestampRendering(cultureName);
+            }
+
             Dictionary<string, string?> settings = new() { ["Logging:Console:FormatterName"] = "systemd" };
 
-            Assert.AreEqual("systemd", GetConsoleLoggerOptions(settings).FormatterName,
-                "An explicitly configured console format must not be overridden.");
+            Assert.AreEqual(
+                UtcTimestampSystemdConsoleFormatter.FORMATTER_NAME,
+                GetConsoleLoggerOptions(settings).FormatterName,
+                "The 'systemd' console format must map to the DAB formatter emitting the same record structure.");
 
             (string stdout, _, DateTime before, DateTime after) = CaptureConsole(() =>
-            {
-                using ILoggerFactory factory = CreateHostLoggerFactory(settings);
-                factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
-            });
+                RunUnderCulture(cultureName, () =>
+                {
+                    using ILoggerFactory factory = CreateHostLoggerFactory(settings);
+                    factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
+                }));
 
             string record = stdout.Split('\n').First(line => !string.IsNullOrWhiteSpace(line));
 
@@ -420,6 +446,100 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "HH:mm:ss",
                 provider.GetRequiredService<IOptionsMonitor<JsonConsoleFormatterOptions>>().CurrentValue.TimestampFormat,
                 "An explicitly configured timestamp format must not be overridden.");
+
+            (string stdout, _, _, _) = CaptureConsole(() =>
+            {
+                using ILoggerFactory factory = CreateHostLoggerFactory(settings);
+                factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
+            });
+
+            string record = stdout.Split('\n').First(line => !string.IsNullOrWhiteSpace(line));
+            using JsonDocument document = JsonDocument.Parse(record);
+            string timestamp = document.RootElement.GetProperty("Timestamp").GetString()!;
+            Assert.IsTrue(
+                Regex.IsMatch(timestamp, @"^\d{2}:\d{2}:\d{2}$"),
+                $"The configured timestamp format must be used verbatim but got: '{timestamp}'");
+        }
+
+        /// <summary>
+        /// The console format can also be selected through the legacy
+        /// <see cref="ConsoleLoggerOptions.Format"/> member, which the console logger provider only
+        /// honors while no formatter name is set. Selecting a DAB formatter sets that property, so
+        /// the legacy selection has to be resolved before it - a deployment configuring
+        /// 'Logging:Console:Format=Systemd' must keep its syslog priority prefixed records.
+        /// </summary>
+        [TestMethod]
+        public void ConfigureHostLogging_LegacyFormatSystemd_EmitsTimestampedSystemdRecord()
+        {
+            Dictionary<string, string?> settings = new() { ["Logging:Console:Format"] = "Systemd" };
+
+            Assert.AreEqual(
+                UtcTimestampSystemdConsoleFormatter.FORMATTER_NAME,
+                GetConsoleLoggerOptions(settings).FormatterName,
+                "The legacy 'Systemd' console format must map to the DAB systemd formatter.");
+
+            (string stdout, _, DateTime before, DateTime after) = CaptureConsole(() =>
+            {
+                using ILoggerFactory factory = CreateHostLoggerFactory(settings);
+                factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
+            });
+
+            string record = stdout.Split('\n').First(line => !string.IsNullOrWhiteSpace(line));
+
+            // "<6>" is the syslog priority for Information.
+            Match match = Regex.Match(record, @"^<(?<priority>\d)>(?<ts>\S+?Z)");
+            Assert.IsTrue(match.Success,
+                $"The legacy 'Systemd' console format must emit '<priority>timestamp...' but got: '{record}'");
+            Assert.AreEqual("6", match.Groups["priority"].Value,
+                $"Information must map to syslog priority 6 but got: '{record}'");
+            AssertIsUtcTimestamp(match.Groups["ts"].Value, before, after);
+            StringAssert.Contains(record, LOG_MESSAGE);
+        }
+
+        /// <summary>
+        /// The legacy <see cref="ConsoleLoggerOptions"/> members which the console logger provider
+        /// copies onto the selected formatter's options - here IncludeScopes - must keep applying
+        /// once a DAB formatter is selected.
+        /// </summary>
+        [TestMethod]
+        public void ConfigureHostLogging_LegacyIncludeScopes_IncludesScopes()
+        {
+            Dictionary<string, string?> settings = new() { ["Logging:Console:IncludeScopes"] = "true" };
+
+            (string stdout, _, DateTime before, DateTime after) = CaptureConsole(() =>
+            {
+                using ILoggerFactory factory = CreateHostLoggerFactory(settings);
+                ILogger logger = factory.CreateLogger("TestCategory");
+                using (logger.BeginScope(SCOPE_MESSAGE))
+                {
+                    logger.LogInformation(LOG_MESSAGE);
+                }
+            });
+
+            StringAssert.Contains(stdout, SCOPE_MESSAGE,
+                $"The legacy IncludeScopes setting must keep including scopes but got: '{stdout}'");
+            AssertEveryEntryTimestamped(stdout, before, after);
+        }
+
+        /// <summary>
+        /// A timestamp format configured through the legacy <see cref="ConsoleLoggerOptions"/>
+        /// members is an intentional override and must survive the formatter selection too.
+        /// </summary>
+        [TestMethod]
+        public void ConfigureHostLogging_LegacyTimestampFormat_IsPreserved()
+        {
+            Dictionary<string, string?> settings = new() { ["Logging:Console:TimestampFormat"] = "HH:mm:ss " };
+
+            (string stdout, _, _, _) = CaptureConsole(() =>
+            {
+                using ILoggerFactory factory = CreateHostLoggerFactory(settings);
+                factory.CreateLogger("TestCategory").LogInformation(LOG_MESSAGE);
+            });
+
+            string record = stdout.Split('\n').First(line => !string.IsNullOrWhiteSpace(line));
+            Assert.IsTrue(
+                Regex.IsMatch(record, @"^\d{2}:\d{2}:\d{2} info: "),
+                $"The legacy timestamp format must be used verbatim but got: '{record}'");
         }
 
         /// <summary>
@@ -471,8 +591,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Guards against the regression tests below silently passing on a runtime built with
         /// globalization-invariant mode, where every culture behaves like the invariant culture.
+        /// Asserts that the culture really does render the shared timestamp format differently from
+        /// the invariant culture - through a different calendar (ar-SA, th-TH) or through a
+        /// different time separator (fi-FI).
         /// </summary>
-        private static void AssertCultureIsNonGregorian(string cultureName)
+        private static void AssertCultureAffectsTimestampRendering(string cultureName)
         {
             DateTime probe = DateTime.UtcNow;
             string cultureRendering = string.Empty;
@@ -482,8 +605,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreNotEqual(
                 probe.ToString(BootstrapLogger.UTC_TIMESTAMP_FORMAT, CultureInfo.InvariantCulture),
                 cultureRendering,
-                $"Culture '{cultureName}' is expected to use a non-Gregorian calendar; without that this test cannot " +
-                "detect culture-sensitive timestamp formatting.");
+                $"Culture '{cultureName}' is expected to render the timestamp format differently from the invariant " +
+                "culture; without that this test cannot detect culture-sensitive timestamp formatting.");
         }
 
         /// <summary>
@@ -499,7 +622,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("th-TH", true, DisplayName = "th-TH, stdio mode")]
         public void GetLoggerFactoryForLogLevel_NonGregorianCulture_EmitsInvariantUtcTimestamp(string cultureName, bool stdio)
         {
-            AssertCultureIsNonGregorian(cultureName);
+            AssertCultureAffectsTimestampRendering(cultureName);
 
             (string stdout, string stderr, DateTime before, DateTime after) = CaptureConsole(() =>
                 RunUnderCulture(cultureName, () =>
@@ -524,7 +647,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("th-TH")]
         public void ConfigureHostLogging_NonGregorianCulture_EmitsInvariantUtcTimestamp(string cultureName)
         {
-            AssertCultureIsNonGregorian(cultureName);
+            AssertCultureAffectsTimestampRendering(cultureName);
 
             (string stdout, string stderr, DateTime before, DateTime after) = CaptureConsole(() =>
                 RunUnderCulture(cultureName, () =>
@@ -553,7 +676,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("th-TH")]
         public void BootstrapLogger_NonGregorianCulture_EmitsInvariantUtcTimestamp(string cultureName)
         {
-            AssertCultureIsNonGregorian(cultureName);
+            AssertCultureAffectsTimestampRendering(cultureName);
 
             (string stdout, _, DateTime before, DateTime after) = CaptureConsole(() =>
                 RunUnderCulture(cultureName, () => BootstrapLogger.Instance.LogInformation(LOG_MESSAGE)));

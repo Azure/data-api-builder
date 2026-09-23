@@ -4,7 +4,6 @@
 using System;
 using System.Globalization;
 using System.IO;
-using System.Text;
 using Azure.DataApiBuilder.Product;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -97,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                 logEntry.EventId.Id,
                 logEntry.Exception?.ToString(),
                 logEntry.Category,
-                DateTimeOffset.UtcNow);
+                ConsoleFormatterShared.GetCurrentTimestamp(_formatterOptions));
         }
 
         private void WriteInternal(
@@ -118,17 +117,23 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
             // Untrusted values can reach the console through log messages, so neutralize the
             // control characters which would otherwise drive terminal escape sequences.
-            message = SanitizeControlCharacters(message)!;
-            exception = SanitizeControlCharacters(exception);
-            category = SanitizeControlCharacters(category)!;
+            message = ConsoleFormatterShared.SanitizeControlCharacters(message)!;
+            exception = ConsoleFormatterShared.SanitizeControlCharacters(exception);
+            category = ConsoleFormatterShared.SanitizeControlCharacters(category)!;
 
             SimpleConsoleFormatterOptions formatterOptions = _formatterOptions;
             bool singleLine = formatterOptions.SingleLine;
 
             // The timestamp is rendered here (rather than through the formatter's TimestampFormat
-            // option) so that it is always UTC and always culture invariant.
-            textWriter.Write(stamp.UtcDateTime.ToString(BootstrapLogger.UTC_TIMESTAMP_FORMAT, CultureInfo.InvariantCulture));
-            textWriter.Write(' ');
+            // option) so that the DAB supplied value is always UTC and always culture invariant.
+            textWriter.Write(ConsoleFormatterShared.FormatTimestamp(stamp, formatterOptions));
+            if (ConsoleFormatterShared.IsDabSuppliedTimestamp(formatterOptions))
+            {
+                // A deployment supplied format is written exactly as configured (the built-in
+                // formatter expects any trailing separator to be part of that format), but the DAB
+                // supplied timestamp needs a separator before the log level.
+                textWriter.Write(' ');
+            }
 
             if (EmitAnsiColorCodes(formatterOptions.ColorBehavior))
             {
@@ -163,56 +168,6 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             {
                 textWriter.Write(Environment.NewLine);
             }
-        }
-
-        /// <summary>
-        /// Escapes the control characters which can drive terminal escape sequences when written to
-        /// a console - the C0 range (U+0000-U+001F), DEL (U+007F) and the C1 range (U+0080-U+009F) -
-        /// as \uXXXX. Tab, carriage return and line feed are preserved for log formatting.
-        /// Mirrors the sanitization the built-in console formatter applies.
-        /// </summary>
-        private static string? SanitizeControlCharacters(string? value)
-        {
-            if (string.IsNullOrEmpty(value))
-            {
-                return value;
-            }
-
-            int firstIndex = -1;
-            for (int i = 0; i < value.Length; i++)
-            {
-                if (ShouldEscape(value[i]))
-                {
-                    firstIndex = i;
-                    break;
-                }
-            }
-
-            if (firstIndex < 0)
-            {
-                return value;
-            }
-
-            StringBuilder sanitized = new(value.Length + 8);
-            sanitized.Append(value, 0, firstIndex);
-            for (int i = firstIndex; i < value.Length; i++)
-            {
-                char c = value[i];
-                if (ShouldEscape(c))
-                {
-                    sanitized.Append("\\u").Append(((int)c).ToString("X4", CultureInfo.InvariantCulture));
-                }
-                else
-                {
-                    sanitized.Append(c);
-                }
-            }
-
-            return sanitized.ToString();
-
-            static bool ShouldEscape(char c)
-                => c is not '\t' and not '\n' and not '\r'
-                    && (c <= '\u001F' || (c >= '\u007F' && c <= '\u009F'));
         }
 
         private static void WriteMessage(TextWriter textWriter, string? message, bool singleLine)
@@ -319,71 +274,136 @@ namespace Azure.DataApiBuilder.Service.Telemetry
     }
 
     /// <summary>
-    /// Registration helpers for <see cref="UtcTimestampConsoleFormatter"/>.
+    /// Records whether the console logger provider was configured through the legacy
+    /// <see cref="ConsoleLoggerOptions"/> members rather than through
+    /// <see cref="ConsoleLoggerOptions.FormatterName"/>.
+    /// </summary>
+    /// <remarks>
+    /// The console logger provider only copies the legacy members onto the selected formatter's
+    /// options when <see cref="ConsoleLoggerOptions.FormatterName"/> is null. Selecting a DAB
+    /// formatter sets that property, which would otherwise silently drop those settings, so the
+    /// copy is performed here instead. A single flag is enough because the legacy members
+    /// themselves are left untouched on <see cref="ConsoleLoggerOptions"/>.
+    /// </remarks>
+    internal sealed class LegacyConsoleLoggerOptionsMarker
+    {
+        public bool IsActive { get; set; }
+    }
+
+    /// <summary>
+    /// Registration helpers for the DAB console formatters.
     /// </summary>
     public static class UtcTimestampConsoleFormatterExtensions
     {
         /// <summary>
-        /// Registers <see cref="UtcTimestampConsoleFormatter"/> and selects it on the console logger
-        /// provider so every console entry is prefixed with a culture invariant ISO 8601 UTC timestamp.
-        /// This only registers a formatter - the caller remains responsible for registering the console
+        /// Registers the DAB console formatters and selects the one matching the requested console
+        /// format, so that every console entry carries a culture invariant ISO 8601 UTC timestamp.
+        /// This only registers formatters - the caller remains responsible for registering the console
         /// provider exactly once - so it can be applied to a pipeline which already has one (e.g. the
         /// provider added by <see cref="Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder(string[])"/>)
         /// without emitting duplicate entries.
         /// </summary>
         /// <remarks>
-        /// The formatter is only selected when no console format was explicitly requested, or when the
-        /// default "simple" format was requested. A deployment which opts into "json" or "systemd" (via
-        /// <c>Logging:Console:FormatterName</c>) keeps that output contract, because structured log
-        /// collectors and systemd severity extraction depend on it. Those formats render their own
-        /// timestamp, which the built-in formatters omit entirely unless
-        /// <see cref="ConsoleFormatterOptions.TimestampFormat"/> is set, so the shared UTC format is
-        /// applied to them as well.
+        /// The record structure of the requested format is preserved, because structured log collectors
+        /// and systemd severity extraction depend on it: "simple" maps to
+        /// <see cref="UtcTimestampConsoleFormatter"/>, "json" to
+        /// <see cref="UtcTimestampJsonConsoleFormatter"/> and "systemd" to
+        /// <see cref="UtcTimestampSystemdConsoleFormatter"/>. A formatter name which is not one of the
+        /// three built-ins identifies a formatter the deployment registered itself and is left alone.
         /// </remarks>
         public static ILoggingBuilder AddUtcTimestampConsoleFormatter(this ILoggingBuilder builder)
         {
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ConsoleFormatter, UtcTimestampConsoleFormatter>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ConsoleFormatter, UtcTimestampJsonConsoleFormatter>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ConsoleFormatter, UtcTimestampSystemdConsoleFormatter>());
+            builder.Services.TryAddSingleton<LegacyConsoleLoggerOptionsMarker>();
 
             // PostConfigure runs after the "Logging:Console" configuration binding, so an explicitly
-            // configured FormatterName is visible here and is left untouched.
-            builder.Services.PostConfigure<ConsoleLoggerOptions>(options =>
-            {
-                if (string.IsNullOrEmpty(options.FormatterName) ||
-                    string.Equals(options.FormatterName, ConsoleFormatterNames.Simple, StringComparison.OrdinalIgnoreCase))
-                {
-                    options.FormatterName = UtcTimestampConsoleFormatter.FORMATTER_NAME;
-                }
-            });
+            // configured format - whether through FormatterName or through the legacy Format member -
+            // is visible here.
+            builder.Services.AddOptions<ConsoleLoggerOptions>()
+                .PostConfigure<LegacyConsoleLoggerOptionsMarker>(SelectUtcTimestampFormatter);
 
-            // "json" uses JsonConsoleFormatterOptions, "systemd" uses ConsoleFormatterOptions. Neither
-            // shares an options type with the "simple" formatter (SimpleConsoleFormatterOptions), so
-            // configuring them here cannot affect the DAB formatter above.
-            builder.Services.PostConfigure<JsonConsoleFormatterOptions>(ApplyUtcTimestampFormat);
-            builder.Services.PostConfigure<ConsoleFormatterOptions>(ApplyUtcTimestampFormat);
+            // Each built-in format binds a different options type, so the legacy members have to be
+            // mapped onto all three. SimpleConsoleFormatterOptions and JsonConsoleFormatterOptions
+            // derive from ConsoleFormatterOptions but are distinct options types, so configuring one
+            // does not affect the others.
+            builder.Services.AddOptions<SimpleConsoleFormatterOptions>()
+                .PostConfigure<IOptionsMonitor<ConsoleLoggerOptions>, LegacyConsoleLoggerOptionsMarker>(ApplyLegacyConsoleLoggerOptions);
+            builder.Services.AddOptions<JsonConsoleFormatterOptions>()
+                .PostConfigure<IOptionsMonitor<ConsoleLoggerOptions>, LegacyConsoleLoggerOptionsMarker>(ApplyLegacyConsoleLoggerOptions);
+            builder.Services.AddOptions<ConsoleFormatterOptions>()
+                .PostConfigure<IOptionsMonitor<ConsoleLoggerOptions>, LegacyConsoleLoggerOptionsMarker>(ApplyLegacyConsoleLoggerOptions);
 
             return builder;
         }
 
         /// <summary>
-        /// Applies the shared UTC timestamp format to a built-in console formatter, unless the
-        /// deployment already configured a timestamp format of its own.
+        /// Replaces the requested built-in console format with the DAB formatter producing the same
+        /// record structure.
         /// </summary>
-        /// <remarks>
-        /// The built-in "json" and "systemd" formatters render this format through
-        /// <c>DateTimeOffset.ToString(TimestampFormat)</c>, which resolves against
-        /// <see cref="CultureInfo.CurrentCulture"/>. On a host whose culture uses a non-Gregorian
-        /// calendar they therefore emit that calendar's year. Making those formats culture invariant
-        /// would require reimplementing them, so it is deliberately not done here: they are opt-in
-        /// formats whose output contract belongs to the log collector consuming them. The default
-        /// console format, which <see cref="UtcTimestampConsoleFormatter"/> owns, is invariant.
-        /// </remarks>
-        private static void ApplyUtcTimestampFormat(ConsoleFormatterOptions options)
+        private static void SelectUtcTimestampFormatter(ConsoleLoggerOptions options, LegacyConsoleLoggerOptionsMarker legacy)
         {
-            if (string.IsNullOrEmpty(options.TimestampFormat))
+            string requestedFormat;
+            if (string.IsNullOrEmpty(options.FormatterName))
             {
-                options.TimestampFormat = BootstrapLogger.UTC_TIMESTAMP_FORMAT;
-                options.UseUtcTimestamp = true;
+#pragma warning disable CS0618 // Type or member is obsolete
+                // A null FormatterName means the format is selected by the legacy Format member, and
+                // that the remaining legacy members apply to the selected formatter.
+                requestedFormat = options.Format == ConsoleLoggerFormat.Systemd
+                    ? ConsoleFormatterNames.Systemd
+                    : ConsoleFormatterNames.Simple;
+#pragma warning restore CS0618
+                legacy.IsActive = true;
             }
+            else
+            {
+                requestedFormat = options.FormatterName;
+            }
+
+            if (string.Equals(requestedFormat, ConsoleFormatterNames.Simple, StringComparison.OrdinalIgnoreCase))
+            {
+                options.FormatterName = UtcTimestampConsoleFormatter.FORMATTER_NAME;
+            }
+            else if (string.Equals(requestedFormat, ConsoleFormatterNames.Json, StringComparison.OrdinalIgnoreCase))
+            {
+                options.FormatterName = UtcTimestampJsonConsoleFormatter.FORMATTER_NAME;
+            }
+            else if (string.Equals(requestedFormat, ConsoleFormatterNames.Systemd, StringComparison.OrdinalIgnoreCase))
+            {
+                options.FormatterName = UtcTimestampSystemdConsoleFormatter.FORMATTER_NAME;
+            }
+        }
+
+        /// <summary>
+        /// Copies the legacy <see cref="ConsoleLoggerOptions"/> members onto a formatter's options,
+        /// reproducing what the console logger provider does when no formatter name is configured.
+        /// </summary>
+        private static void ApplyLegacyConsoleLoggerOptions(
+            ConsoleFormatterOptions formatterOptions,
+            IOptionsMonitor<ConsoleLoggerOptions> consoleLoggerOptionsMonitor,
+            LegacyConsoleLoggerOptionsMarker legacy)
+        {
+            // Resolving the console logger options runs their configuration and post-configuration
+            // chain - including SelectUtcTimestampFormatter - which is what populates the marker.
+            ConsoleLoggerOptions consoleLoggerOptions = consoleLoggerOptionsMonitor.CurrentValue;
+            if (!legacy.IsActive)
+            {
+                return;
+            }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+            formatterOptions.IncludeScopes = consoleLoggerOptions.IncludeScopes;
+            formatterOptions.TimestampFormat = consoleLoggerOptions.TimestampFormat;
+            formatterOptions.UseUtcTimestamp = consoleLoggerOptions.UseUtcTimestamp;
+
+            if (formatterOptions is SimpleConsoleFormatterOptions simpleFormatterOptions)
+            {
+                simpleFormatterOptions.ColorBehavior = consoleLoggerOptions.DisableColors
+                    ? LoggerColorBehavior.Disabled
+                    : LoggerColorBehavior.Default;
+            }
+#pragma warning restore CS0618
         }
     }
 }

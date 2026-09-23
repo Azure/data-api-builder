@@ -28,6 +28,8 @@ public class ConfigurationHotReloadTests
     private static RuntimeConfigProvider _configProvider;
     private static CapturingTextWriter _writer;
     private static TextWriter _originalConsoleOut;
+    private static TextWriter _installedConsoleOut;
+    private static TextWriter _runnerConsoleOut;
     private static readonly object _writerLock = new();
     private const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
     private const string GQL_QUERY_NAME = "books";
@@ -332,8 +334,21 @@ public class ConfigurationHotReloadTests
         {
             _originalConsoleOut = Console.Out;
             _writer = new CapturingTextWriter(_originalConsoleOut);
-            Console.SetOut(_writer);
+            InstallCaptureWriter();
         }
+    }
+
+    /// <summary>
+    /// Points <see cref="Console.Out"/> at the capture writer and remembers the wrapper the
+    /// console hands back, so a later replacement by the test runner can be detected.
+    /// <see cref="Console.SetOut"/> wraps the writer in a synchronized decorator, which is why
+    /// the installed value has to be recorded rather than compared against
+    /// <see cref="_writer"/> directly.
+    /// </summary>
+    private static void InstallCaptureWriter()
+    {
+        Console.SetOut(_writer);
+        _installedConsoleOut = Console.Out;
     }
 
     /// <summary>
@@ -347,7 +362,70 @@ public class ConfigurationHotReloadTests
             {
                 Console.SetOut(_originalConsoleOut);
                 _originalConsoleOut = null;
+                _installedConsoleOut = null;
             }
+        }
+    }
+
+    /// <summary>
+    /// Reattaches the capture writer for the duration of a test.
+    /// </summary>
+    /// <remarks>
+    /// MSTest installs its own <see cref="Console.Out"/> around every test method so that console
+    /// output can be attributed to that test, which undoes the class-level redirect. The two
+    /// diagnostics these tests assert on reach the console by different routes and are affected
+    /// differently: entries written through an injected <c>ILogger</c> go to the writer the console
+    /// logger provider captured at construction (the capture writer), while <c>BootstrapLogger</c>
+    /// resolves <see cref="Console.Out"/> on every write and therefore follows the runner's
+    /// replacement. Without this reattach only the former is observed, so the tests that wait for a
+    /// hot-reload success message time out.
+    /// The provider-bound writer instance is reused rather than replaced - a new instance would
+    /// leave the provider writing into the previous one.
+    /// </remarks>
+    [TestInitialize]
+    public void AttachCapturingConsole()
+    {
+        lock (_writerLock)
+        {
+            if (_writer is null)
+            {
+                return;
+            }
+
+            TextWriter runnerWriter = Console.Out;
+            if (ReferenceEquals(runnerWriter, _installedConsoleOut))
+            {
+                // The capture writer is still installed; nothing to reattach.
+                return;
+            }
+
+            // Forward to the runner's per-test writer so console output stays attributed to
+            // this test instead of being diverted to the stream captured at class initialization.
+            _runnerConsoleOut = runnerWriter;
+            _writer.SetForwardTarget(runnerWriter);
+            InstallCaptureWriter();
+        }
+    }
+
+    /// <summary>
+    /// Restores the per-test writer installed by the test runner, leaving the runner free to
+    /// dispose it, and points the capture writer back at the stream captured at class
+    /// initialization so late writes from the logger's background thread stay valid.
+    /// </summary>
+    [TestCleanup]
+    public void DetachCapturingConsole()
+    {
+        lock (_writerLock)
+        {
+            if (_runnerConsoleOut is null)
+            {
+                return;
+            }
+
+            _writer?.SetForwardTarget(_originalConsoleOut ?? TextWriter.Null);
+            Console.SetOut(_runnerConsoleOut);
+            _runnerConsoleOut = null;
+            _installedConsoleOut = null;
         }
     }
 
@@ -384,9 +462,9 @@ public class ConfigurationHotReloadTests
     /// </summary>
     private sealed class CapturingTextWriter : TextWriter
     {
-        private readonly TextWriter _inner;
         private readonly StringBuilder _buffer = new();
         private readonly object _bufferLock = new();
+        private volatile TextWriter _inner;
 
         public CapturingTextWriter(TextWriter inner)
         {
@@ -395,6 +473,31 @@ public class ConfigurationHotReloadTests
 
         public override Encoding Encoding => _inner.Encoding;
 
+        /// <summary>
+        /// Redirects the tee target without replacing this instance, so the console logger
+        /// provider - which holds this writer for its lifetime - keeps feeding the same buffer.
+        /// </summary>
+        public void SetForwardTarget(TextWriter inner)
+        {
+            _inner = inner;
+        }
+
+        /// <summary>
+        /// Forwards to the current tee target. The console logger writes from a background
+        /// thread, so a write can race with the test runner disposing its per-test writer;
+        /// that must not fail the test because the buffer has already been updated.
+        /// </summary>
+        private void Forward(Action<TextWriter> write)
+        {
+            try
+            {
+                write(_inner);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+        }
+
         public override void Write(char value)
         {
             lock (_bufferLock)
@@ -402,7 +505,7 @@ public class ConfigurationHotReloadTests
                 _buffer.Append(value);
             }
 
-            _inner.Write(value);
+            Forward(writer => writer.Write(value));
         }
 
         public override void Write(string value)
@@ -412,7 +515,7 @@ public class ConfigurationHotReloadTests
                 _buffer.Append(value);
             }
 
-            _inner.Write(value);
+            Forward(writer => writer.Write(value));
         }
 
         public override void WriteLine(string value)
@@ -422,10 +525,10 @@ public class ConfigurationHotReloadTests
                 _buffer.AppendLine(value);
             }
 
-            _inner.WriteLine(value);
+            Forward(writer => writer.WriteLine(value));
         }
 
-        public override void Flush() => _inner.Flush();
+        public override void Flush() => Forward(writer => writer.Flush());
 
         public string GetCapturedText()
         {

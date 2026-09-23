@@ -8,6 +8,7 @@ using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -381,7 +382,7 @@ public class RuntimeConfigProvider : IDisposable
         // Only used in hot reload to validate the configuration file
         if (_configLoader.DoesConfigNeedValidation())
         {
-            Console.WriteLine("Validating hot-reloaded configuration file.");
+            BootstrapLogger.Instance.LogInformation("Validating hot-reloaded configuration file.");
             IFileSystem fileSystem = new FileSystem();
             ILoggerFactory loggerFactory = new LoggerFactory();
             ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
@@ -408,7 +409,7 @@ public class RuntimeConfigProvider : IDisposable
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            Console.WriteLine("Validated hot-reloaded configuration file.");
+            BootstrapLogger.Instance.LogInformation("Validated hot-reloaded configuration file.");
         }
     }
 

@@ -32,7 +32,16 @@ namespace Azure.DataApiBuilder.Config;
 /// </remarks>
 public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 {
-    private bool _disposed;
+    private readonly SemaphoreSlim _hotReloadGate = new(initialCount: 1, maxCount: 1);
+    private readonly CancellationTokenSource _disposeCancellation = new();
+    private readonly object _operationLock = new();
+    private readonly object _watcherLock = new();
+    private readonly Func<IFileSystem, string, string, IConfigFileWatcher> _configFileWatcherFactory;
+    private TaskCompletionSource _activeOperationsDrained = CreateCompletedDrainSignal();
+    private Task _shutdownCompleted = Task.CompletedTask;
+    private int _activeOperationCount;
+    private int _disposed;
+    private int _shutdownResourcesDisposed;
     /// <summary>
     /// This stores either the default config name e.g. dab-config.json
     /// or user provided config file which could be a relative file path,
@@ -53,7 +62,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// <summary>
     /// Watches the config file for changes and triggers hot-reload when a change is detected.
     /// </summary>
-    private ConfigFileWatcher? _configFileWatcher;
+    private IConfigFileWatcher? _configFileWatcher;
 
     /// <summary>
     /// File system abstraction used to interact with the runtime config file.
@@ -96,9 +105,34 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         string? connectionString = null,
         bool isCliLoader = false,
         ILogger<FileSystemRuntimeConfigLoader>? logger = null)
+        : this(
+            fileSystem,
+            handler,
+            baseConfigFilePath,
+            connectionString,
+            isCliLoader,
+            logger,
+            static (watcherFileSystem, directoryName, configFileName) =>
+                new ConfigFileWatcher(
+                    new FileSystemWatcherWrapper(watcherFileSystem),
+                    directoryName,
+                    configFileName))
+    {
+    }
+
+    internal FileSystemRuntimeConfigLoader(
+        IFileSystem fileSystem,
+        HotReloadEventHandler<HotReloadEventArgs>? handler,
+        string baseConfigFilePath,
+        string? connectionString,
+        bool isCliLoader,
+        ILogger<FileSystemRuntimeConfigLoader>? logger,
+        Func<IFileSystem, string, string, IConfigFileWatcher> configFileWatcherFactory)
         : base(handler, connectionString)
     {
-        _fileSystem = fileSystem;
+        _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+        _configFileWatcherFactory = configFileWatcherFactory ??
+            throw new ArgumentNullException(nameof(configFileWatcherFactory));
         _baseConfigFilePath = baseConfigFilePath;
         ConfigFilePath = GetFinalConfigFilePath();
         _isCliLoader = isCliLoader;
@@ -106,23 +140,123 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     }
 
     /// <summary>
-    /// Disposes the config file watcher to release file handles and stop
-    /// monitoring the config file for changes.
+    /// Stops admitting new work and requests cancellation of active work. Coordinated hosts call
+    /// <see cref="StopAsync"/> before disposing dependencies when they need to drain active work.
+    /// Synchronous disposal does not wait indefinitely for an uncooperative event subscriber.
     /// </summary>
     public void Dispose()
     {
-        if (_disposed)
+        _ = BeginShutdown();
+    }
+
+    /// <summary>
+    /// Stops accepting hot-reload work, requests cancellation of the active operation, and waits
+    /// until all serialized work has exited. Host shutdown calls this before singleton disposal.
+    /// </summary>
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        Task shutdownCompleted = BeginShutdown();
+        await shutdownCompleted.WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    internal bool ShutdownResourcesDisposed =>
+        Volatile.Read(ref _shutdownResourcesDisposed) != 0;
+
+    private Task BeginShutdown()
+    {
+        bool firstShutdownRequest;
+        TaskCompletionSource? cancellationCallbacksCompleted = null;
+        Task shutdownCompleted;
+        lock (_operationLock)
         {
-            return;
+            firstShutdownRequest = Interlocked.Exchange(ref _disposed, 1) == 0;
+            if (firstShutdownRequest)
+            {
+                cancellationCallbacksCompleted = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                Task drainCompleted = Task.WhenAll(
+                    _activeOperationsDrained.Task,
+                    cancellationCallbacksCompleted.Task);
+                _shutdownCompleted = DisposeSynchronizationResourcesAfterDrainAsync(
+                    drainCompleted);
+            }
+
+            shutdownCompleted = _shutdownCompleted;
         }
 
-        _disposed = true;
-
-        if (_configFileWatcher is not null)
+        if (firstShutdownRequest)
         {
-            _configFileWatcher.NewFileContentsDetected -= OnNewFileContentsDetected;
-            _configFileWatcher.Dispose();
+            // Cancellation callbacks are user-extensible and may block. CancelAsync marks the
+            // token canceled without running those callbacks on the host's stopping thread.
+            _ = RequestOperationCancellationAsync(cancellationCallbacksCompleted!);
+            StopAndDisposeConfigFileWatcher();
+        }
+
+        return shutdownCompleted;
+    }
+
+    private async Task DisposeSynchronizationResourcesAfterDrainAsync(Task drainCompleted)
+    {
+        await drainCompleted.ConfigureAwait(false);
+
+        // Every operation admitted before shutdown, including gate waiters, has exited and every
+        // cancellation callback has completed. SemaphoreSlim and CancellationTokenSource can now
+        // be disposed without racing Wait, Release, token registration, or CancelAsync.
+        _hotReloadGate.Dispose();
+        _disposeCancellation.Dispose();
+        Volatile.Write(ref _shutdownResourcesDisposed, 1);
+    }
+
+    private async Task RequestOperationCancellationAsync(
+        TaskCompletionSource cancellationCallbacksCompleted)
+    {
+        try
+        {
+            await _disposeCancellation.CancelAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            SendLogToBufferOrLogger(
+                LogLevel.Warning,
+                $"A hot-reload cancellation callback failed during shutdown due to {ex.Message}");
+        }
+        finally
+        {
+            cancellationCallbacksCompleted.TrySetResult();
+        }
+    }
+
+    private void StopAndDisposeConfigFileWatcher()
+    {
+
+        IConfigFileWatcher? configFileWatcher;
+        lock (_watcherLock)
+        {
+            configFileWatcher = _configFileWatcher;
             _configFileWatcher = null;
+
+            if (configFileWatcher is not null)
+            {
+                configFileWatcher.NewFileContentsDetected -= OnNewFileContentsDetected;
+            }
+        }
+
+        if (configFileWatcher is not null)
+        {
+            try
+            {
+                configFileWatcher.StopWatching();
+            }
+            catch (Exception ex)
+            {
+                SendLogToBufferOrLogger(
+                    LogLevel.Warning,
+                    $"Unable to disable the configuration file watcher during shutdown due to {ex.Message}");
+            }
+
+            // Underlying FileSystemWatcher disposal can block while an OS callback completes.
+            // Dispose it on a background worker so host shutdown never waits for an active reload.
+            ScheduleConfigFileWatcherDisposal(configFileWatcher);
         }
     }
 
@@ -159,36 +293,43 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// </summary>
     private bool TrySetupConfigFileWatcher()
     {
-        // File watching / hot-reload isn't used for the CLI.
-        if (_isCliLoader)
+        lock (_watcherLock)
         {
-            return false;
-        }
-
-        // If the file watcher is already set up, we don't need to do it again.
-        if (_configFileWatcher is not null)
-        {
-            return false;
-        }
-
-        if (RuntimeConfig is not null)
-        {
-            try
+            // File watching / hot-reload isn't used for the CLI and must not start once disposal
+            // begins, including when disposal races with initial configuration loading.
+            if (_isCliLoader || IsDisposed)
             {
-                _configFileWatcher = new(new FileSystemWatcherWrapper(_fileSystem), GetConfigDirectoryName(), GetConfigFileName());
-                _configFileWatcher.NewFileContentsDetected += OnNewFileContentsDetected;
-            }
-            catch (Exception ex)
-            {
-                // Need to remove the dependencies in startup on the RuntimeConfigProvider
-                // before we can have an ILogger here.
-                Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
+                return false;
             }
 
-            return _configFileWatcher is not null;
-        }
+            // If the file watcher is already set up, we don't need to do it again.
+            if (_configFileWatcher is not null)
+            {
+                return false;
+            }
 
-        return false;
+            if (RuntimeConfig is not null)
+            {
+                try
+                {
+                    _configFileWatcher = _configFileWatcherFactory(
+                        _fileSystem,
+                        GetConfigDirectoryName(),
+                        GetConfigFileName());
+                    _configFileWatcher.NewFileContentsDetected += OnNewFileContentsDetected;
+                }
+                catch (Exception ex)
+                {
+                    // Need to remove the dependencies in startup on the RuntimeConfigProvider
+                    // before we can have an ILogger here.
+                    Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
+                }
+
+                return _configFileWatcher is not null;
+            }
+
+            return false;
+        }
     }
 
     /// <summary>
@@ -198,18 +339,218 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// </summary>
     private void OnNewFileContentsDetected(object? sender, EventArgs e)
     {
+        ProcessHotReloadNotification();
+    }
+
+    /// <summary>
+    /// Processes one file-change notification while serializing the complete hot-reload pipeline
+    /// for this loader instance. The gate begins before the current configuration is inspected and
+    /// remains held through all synchronous <see cref="RuntimeConfigLoader.SignalConfigChanged"/>
+    /// handlers so dependencies cannot be mixed across generations.
+    /// </summary>
+    /// <param name="beforeEnteringGate">
+    /// Optional observer invoked immediately before waiting for the serialization gate. This is
+    /// used by deterministic concurrency tests to prove a second notification reached the gate.
+    /// </param>
+    internal void ProcessHotReloadNotification(Action? beforeEnteringGate = null)
+    {
+        beforeEnteringGate?.Invoke();
+
+        if (!TryBeginSerializedOperation())
+        {
+            return;
+        }
+
+        bool gateEntered = false;
         try
         {
-            if (RuntimeConfig is not null)
+            try
             {
-                HotReloadConfig(RuntimeConfig.IsDevelopmentMode());
+                _hotReloadGate.Wait(_disposeCancellation.Token);
+                gateEntered = true;
             }
+            catch (OperationCanceledException) when (IsDisposed)
+            {
+                return;
+            }
+
+            try
+            {
+                if (RuntimeConfig is not null)
+                {
+                    HotReloadConfig(
+                        RuntimeConfig.IsDevelopmentMode(),
+                        _disposeCancellation.Token);
+                }
+            }
+            catch (OperationCanceledException) when (IsDisposed)
+            {
+                // Host shutdown canceled this generation before it could finish publication.
+            }
+            catch (Exception ex)
+            {
+                SendLogToBufferOrLogger(
+                    LogLevel.Error,
+                    $"Unable to hot reload configuration file due to {ex.Message}");
+            }
+        }
+        finally
+        {
+            if (gateEntered)
+            {
+                // Release before completing the tracked operation. The final operation can make
+                // the shutdown continuation dispose the semaphore immediately.
+                _hotReloadGate.Release();
+            }
+
+            EndSerializedOperation();
+        }
+    }
+
+    /// <summary>
+    /// Executes initial runtime dependency construction under the same per-loader gate used by
+    /// file-triggered hot reload. The operation may be asynchronous, and the gate remains held
+    /// until it completes so a configuration cannot change between metadata initialization and
+    /// dependent component publication.
+    /// </summary>
+    /// <param name="operation">The complete initial configuration operation to serialize.</param>
+    public Task ExecuteWithHotReloadSerializationAsync(Func<Task> operation)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        return ExecuteWithHotReloadSerializationAsync(_ => operation());
+    }
+
+    /// <summary>
+    /// Executes initial runtime dependency construction under the same per-loader gate used by
+    /// file-triggered hot reload, with cooperative shutdown cancellation.
+    /// </summary>
+    /// <param name="operation">
+    /// The complete initial configuration operation to serialize. The supplied token is canceled
+    /// when loader shutdown begins.
+    /// </param>
+    public async Task ExecuteWithHotReloadSerializationAsync(
+        Func<CancellationToken, Task> operation)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        if (IsDisposed)
+        {
+            throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
+        }
+
+        if (!TryBeginSerializedOperation())
+        {
+            throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
+        }
+
+        bool gateEntered = false;
+        try
+        {
+            try
+            {
+                await _hotReloadGate.WaitAsync(_disposeCancellation.Token).ConfigureAwait(false);
+                gateEntered = true;
+            }
+            catch (OperationCanceledException) when (IsDisposed)
+            {
+                throw new ObjectDisposedException(nameof(FileSystemRuntimeConfigLoader));
+            }
+
+            await operation(_disposeCancellation.Token).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (gateEntered)
+            {
+                _hotReloadGate.Release();
+            }
+
+            EndSerializedOperation();
+        }
+    }
+
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+    private bool TryBeginSerializedOperation()
+    {
+        lock (_operationLock)
+        {
+            if (IsDisposed)
+            {
+                return false;
+            }
+
+            if (_activeOperationCount++ == 0)
+            {
+                _activeOperationsDrained = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+
+            return true;
+        }
+    }
+
+    private void EndSerializedOperation()
+    {
+        TaskCompletionSource? drainedSignal = null;
+        lock (_operationLock)
+        {
+            if (--_activeOperationCount == 0)
+            {
+                drainedSignal = _activeOperationsDrained;
+            }
+        }
+
+        drainedSignal?.TrySetResult();
+    }
+
+    private static TaskCompletionSource CreateCompletedDrainSignal()
+    {
+        TaskCompletionSource signal = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        signal.SetResult();
+        return signal;
+    }
+
+    private void ScheduleConfigFileWatcherDisposal(IConfigFileWatcher configFileWatcher)
+    {
+        Action disposeWatcher = () =>
+        {
+            try
+            {
+                configFileWatcher.Dispose();
+            }
+            catch (Exception ex)
+            {
+                SendLogToBufferOrLogger(
+                    LogLevel.Warning,
+                    $"Unable to dispose the configuration file watcher due to {ex.Message}");
+            }
+        };
+
+        if (ThreadPool.QueueUserWorkItem(
+                static callback => callback(),
+                disposeWatcher,
+                preferLocal: false))
+        {
+            return;
+        }
+
+        try
+        {
+            Thread fallbackWorker = new(
+                static callback => ((Action)callback!).Invoke())
+            {
+                IsBackground = true,
+                Name = "DAB configuration watcher disposal"
+            };
+            fallbackWorker.Start(disposeWatcher);
         }
         catch (Exception ex)
         {
-            // Need to remove the dependencies in startup on the RuntimeConfigProvider
-            // before we can have an ILogger here.
-            Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
+            SendLogToBufferOrLogger(
+                LogLevel.Warning,
+                $"Unable to schedule configuration file watcher disposal due to {ex.Message}");
         }
     }
 
@@ -229,6 +570,27 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         bool? isDevMode = null,
         DeserializationVariableReplacementSettings? replacementSettings = null)
     {
+        return TryLoadConfig(
+            path,
+            out config,
+            logger,
+            isDevMode,
+            replacementSettings,
+            CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Loads runtime configuration with cooperative cancellation for retry waits.
+    /// </summary>
+    public bool TryLoadConfig(
+        string path,
+        [NotNullWhen(true)] out RuntimeConfig? config,
+        ILogger? logger,
+        bool? isDevMode,
+        DeserializationVariableReplacementSettings? replacementSettings,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         IsParseErrorEmitted = false;
         if (_fileSystem.File.Exists(path))
         {
@@ -244,6 +606,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             string json = string.Empty;
             while (runCount <= FileUtilities.RunLimit)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     json = _fileSystem.File.ReadAllText(path);
@@ -258,7 +621,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
                         throw;
                     }
 
-                    Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(FileUtilities.ExponentialRetryBase, runCount)));
+                    TimeSpan retryDelay = TimeSpan.FromSeconds(
+                        Math.Pow(FileUtilities.ExponentialRetryBase, runCount));
+                    if (cancellationToken.WaitHandle.WaitOne(retryDelay))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+
                     runCount++;
                 }
             }
@@ -341,14 +710,23 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// Hot Reloads the runtime config when the file watcher
     /// is active and detects a change to the underlying config file.
     /// </summary>
-    private void HotReloadConfig(bool isDevMode, ILogger? logger = null)
+    private void HotReloadConfig(bool isDevMode, CancellationToken cancellationToken)
     {
-        logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
+        cancellationToken.ThrowIfCancellationRequested();
+        SendLogToBufferOrLogger(
+            LogLevel.Information,
+            $"Starting hot-reload process for config: {ConfigFilePath}");
 
         // Use default replacement settings for hot reload
         DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
 
-        if (!TryLoadConfig(ConfigFilePath, out _, logger: logger, isDevMode: isDevMode, replacementSettings: replacementSettings))
+        if (!TryLoadConfig(
+            ConfigFilePath,
+            out _,
+            logger: null,
+            isDevMode: isDevMode,
+            replacementSettings: replacementSettings,
+            cancellationToken: cancellationToken))
         {
             throw new DataApiBuilderException(
                 message: "Deserialization of the configuration file failed.",
@@ -358,14 +736,14 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 
         IsNewConfigDetected = true;
         IsNewConfigValidated = false;
-        SignalConfigChanged();
+        SignalConfigChanged(message: string.Empty, cancellationToken);
 
         // Telemetry (and any other) logs buffered during the reload parse are otherwise only
         // drained once at startup. Flush them now so hot-reload logs are actually emitted and the
         // shared static buffer does not accumulate entries across successive reloads.
         FlushLogBuffer();
 
-        logger?.LogInformation("Hot-reload process finished.");
+        SendLogToBufferOrLogger(LogLevel.Information, "Hot-reload process finished.");
     }
 
     /// <summary>

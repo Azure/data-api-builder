@@ -86,6 +86,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            args.CancellationToken.ThrowIfCancellationRequested();
             CreateDocument(doOverrideExistingDocument: true);
             _roleSpecificDocuments.Clear(); // Clear role-specific document cache on config change
         }

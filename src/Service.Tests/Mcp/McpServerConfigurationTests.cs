@@ -76,8 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 Entities: new(new Dictionary<string, Entity>()));
             builder.Services.AddSingleton(TestHelper.GenerateInMemoryRuntimeConfigProvider(config));
             McpToolRegistry registry = new();
-            registry.RegisterTool(new ReadRecordsTool());
-            registry.RegisterTool(new AggregateRecordsTool());
+            registry.ReplaceAll([new ReadRecordsTool(), new AggregateRecordsTool()], config);
             builder.Services.AddSingleton(registry);
             builder.Services.ConfigureMcpServer(instructions: null);
             builder.Services.PostConfigure<HttpServerTransportOptions>(options => options.Stateless = true);

@@ -114,6 +114,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return "ARRAY_CONTAINS";
                 case PredicateOperation.NOT_ARRAY_CONTAINS:
                     return "NOT ARRAY_CONTAINS";
+                case PredicateOperation.IN:
+                    return "IN";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }
@@ -136,6 +138,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (predicate.Op == PredicateOperation.ARRAY_CONTAINS || predicate.Op == PredicateOperation.NOT_ARRAY_CONTAINS)
                 {
                     predicateString = $" {Build(predicate.Op)} ( {ResolveOperand(predicate.Left)}, {ResolveOperand(predicate.Right)})";
+                }
+                else if (predicate.Op == PredicateOperation.ARRAY_SOME ||
+                         predicate.Op == PredicateOperation.ARRAY_NONE ||
+                         predicate.Op == PredicateOperation.ARRAY_ALL)
+                {
+                    string arrayField = ResolveOperand(predicate.Left);
+                    string elementAlias = ArrayElementAlias(arrayField);
+
+                    Predicate elementPredicate = predicate.Right?.AsPredicate()
+                        ?? throw new ArgumentException("Array element filter (some/none/all) requires a nested predicate.");
+                    string elementPredicateStr = BuildArrayElementPredicate(elementPredicate, elementAlias);
+
+                    predicateString = predicate.Op switch
+                    {
+                        PredicateOperation.ARRAY_SOME => $" EXISTS(SELECT VALUE 1 FROM {elementAlias} IN {arrayField} WHERE {elementPredicateStr}) ",
+                        PredicateOperation.ARRAY_NONE => $" NOT EXISTS(SELECT VALUE 1 FROM {elementAlias} IN {arrayField} WHERE {elementPredicateStr}) ",
+                        // ARRAY_ALL: every element matches => no element exists that does not match.
+                        _ => $" NOT EXISTS(SELECT VALUE 1 FROM {elementAlias} IN {arrayField} WHERE NOT ({elementPredicateStr})) "
+                    };
+                }
+                else if (predicate.Op == PredicateOperation.ARRAY_ANY)
+                {
+                    string arrayField = ResolveOperand(predicate.Left);
+                    predicateString = ResolveOperand(predicate.Right).Equals("true")
+                        ? $" ARRAY_LENGTH({arrayField}) > 0 "
+                        : $" (NOT IS_DEFINED({arrayField}) OR ARRAY_LENGTH({arrayField}) = 0) ";
                 }
                 else if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
                 {
@@ -161,6 +189,36 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 return predicateString;
             }
+        }
+
+        /// <summary>
+        /// Generates a deterministic iteration alias for an array element based on the array field path,
+        /// e.g. "c.tags" => "element_c_tags".
+        /// </summary>
+        private static string ArrayElementAlias(string arrayField)
+            => "element_" + arrayField.Replace(".", "_").Replace("\"", string.Empty);
+
+        /// <summary>
+        /// Builds the predicate applied to each element of an array (used by some/none/all filters).
+        /// The element alias is bound directly to the array column reference while walking the predicate
+        /// tree, avoiding fragile string replacement on the rendered SQL.
+        /// </summary>
+        private string BuildArrayElementPredicate(Predicate predicate, string elementAlias)
+        {
+            // Leaf predicate: the left operand is the array column. The filter applies to the
+            // element value itself, so render the element alias in place of the column reference.
+            if (predicate.Left?.AsColumn() is not null)
+            {
+                string right = ResolveOperand(predicate.Right);
+                return right.Equals(GQLFilterParser.NullStringValue)
+                    ? $"{Build(predicate.Op)} IS_NULL({elementAlias})"
+                    : $"{elementAlias} {Build(predicate.Op)} {right}";
+            }
+
+            // Chain predicate (AND/OR): recurse into both operands.
+            string left = BuildArrayElementPredicate(predicate.Left!.AsPredicate()!, elementAlias);
+            string rightStr = BuildArrayElementPredicate(predicate.Right!.AsPredicate()!, elementAlias);
+            return $"({left} {Build(predicate.Op)} {rightStr})";
         }
 
         /// <summary>

@@ -162,7 +162,7 @@ type PlanetAgain @model {
         Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
         RuntimeConfigValidator validator = new(provider, fileSystem, loggerValidator.Object);
 
-        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, validator, fileSystem);
+        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, validator, fileSystem, provider.GetConfig().DefaultDataSourceName);
         Mock<IMetadataProviderFactory> metadataProviderFactory = new();
         metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(cosmosSqlMetadataProvider);
 

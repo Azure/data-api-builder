@@ -252,6 +252,49 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             context.Notifier.Verify(notifier => notifier.NotifyToolsListChanged(), Times.Never);
         }
 
+        [DataTestMethod]
+        [DataRow("default", "enum")]
+        [DataRow("default", "type")]
+        [DataRow("default", "required")]
+        [DataRow("const", "enum")]
+        [DataRow("const", "type")]
+        [DataRow("const", "required")]
+        [DataRow("examples", "enum")]
+        [DataRow("examples", "type")]
+        [DataRow("examples", "required")]
+        public void HotReload_WithReorderedArrayInSchemaInstanceData_NotifiesClient(string keyword, string propertyName)
+        {
+            string CreateSchema(string values)
+            {
+                string instance = "{\"" + propertyName + "\":" + values + "}";
+                return "{\"type\":\"object\",\"" + keyword + "\":" +
+                    (keyword == "examples" ? "[" + instance + "]" : instance) + "}";
+            }
+
+            RuntimeConfig currentConfig = CreateRuntimeConfig();
+            string currentSchema = CreateSchema("[\"a\",\"b\"]");
+            TestContext context = CreateContext(
+                () => currentConfig,
+                new TestMcpTool("extension_tool", ToolType.Custom, metadataFactory: () => new Tool
+                {
+                    Name = "extension_tool",
+                    InputSchema = JsonSerializer.Deserialize<JsonElement>(currentSchema)
+                }));
+            context.Service.EnsureInitialized();
+            context.Notifier.Verify(notifier => notifier.NotifyToolsListChanged(), Times.Never);
+
+            currentSchema = CreateSchema("[\"b\",\"a\"]");
+            currentConfig = CreateRuntimeConfig();
+            RaiseRegistryChanged(context.HotReloadEventHandler);
+
+            Assert.AreEqual(currentSchema, context.Registry.GetAdvertisedTools().Single().InputSchema.GetRawText());
+            context.Notifier.Verify(notifier => notifier.NotifyToolsListChanged(), Times.Once);
+
+            currentConfig = CreateRuntimeConfig();
+            RaiseRegistryChanged(context.HotReloadEventHandler);
+            context.Notifier.Verify(notifier => notifier.NotifyToolsListChanged(), Times.Once);
+        }
+
         [TestMethod]
         public void EnsureInitialized_WhenDatabaseMetadataUnavailable_PublishesConfigFallbackSchema()
         {

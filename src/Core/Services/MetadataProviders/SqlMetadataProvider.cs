@@ -477,8 +477,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// The cancellation-token signature intentionally replaces the former tokenless protected
         /// virtual slot. This method owns cancellable database schema I/O, and custom metadata
         /// provider subclassing is not a documented provider plug-in contract. Direct subclasses
-        /// must update their override and propagate <paramref name="cancellationToken"/>. See
-        /// <c>docs/design/McpToolRegistryHotReload.md</c> for the compatibility decision.
+        /// must update their override and propagate <paramref name="cancellationToken"/>. Retaining
+        /// tokenless dispatch here would allow schema I/O to escape coordinated shutdown cancellation.
         /// </remarks>
         protected virtual async Task FillSchemaForStoredProcedureAsync(
             Entity procedureEntity,
@@ -2026,8 +2026,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// The cancellation-token signature intentionally replaces the former tokenless protected
         /// virtual slot. This method owns cancellable database schema I/O, and custom metadata
         /// provider subclassing is not a documented provider plug-in contract. Direct subclasses
-        /// must update their override and propagate <paramref name="cancellationToken"/>. See
-        /// <c>docs/design/McpToolRegistryHotReload.md</c> for the compatibility decision.
+        /// must update their override and propagate <paramref name="cancellationToken"/>. Retaining
+        /// tokenless dispatch here would allow schema I/O to escape coordinated shutdown cancellation.
         /// </remarks>
         protected virtual async Task<DataTable> GetColumnsAsync(
             string schemaName,

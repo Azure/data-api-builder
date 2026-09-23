@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -262,6 +263,108 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 config);
 
             Assert.IsTrue(result.DiscoveryChanged);
+        }
+
+        /// <summary>
+        /// Schema instance values and unknown keywords contain data, not schemas. Even schema-like
+        /// names nested in those values must preserve array order when comparing discovery metadata.
+        /// </summary>
+        [DataTestMethod]
+        [DynamicData(nameof(SchemaInstanceDataCases), DynamicDataSourceType.Property)]
+        public void ReplaceAll_WithReorderedArrayInSchemaInstanceData_ReportsDiscoveryChange(
+            string instanceKeyword,
+            string dataPropertyName,
+            bool useOutputSchema,
+            bool nested)
+        {
+            string schemaAB = CreateSchemaWithInstanceData(instanceKeyword, dataPropertyName, nested, reverse: false);
+            string schemaBA = CreateSchemaWithInstanceData(instanceKeyword, dataPropertyName, nested, reverse: true);
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(new[] { CreateSchemaTool(schemaAB, useOutputSchema) }, config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { CreateSchemaTool(schemaBA, useOutputSchema) }, config);
+
+            Tool advertised = registry.GetAdvertisedTools().Single();
+            JsonElement advertisedSchema = useOutputSchema ? advertised.OutputSchema!.Value : advertised.InputSchema;
+            Assert.AreEqual(schemaBA, advertisedSchema.GetRawText(), "Serving must preserve the updated data array order.");
+            Assert.IsTrue(result.DiscoveryChanged, "Changed instance data must invalidate cached discovery metadata.");
+        }
+
+        /// <summary>
+        /// Genuine subschemas still canonicalize set-like keywords, including when a property or
+        /// definition happens to be named default, const, or examples.
+        /// </summary>
+        [DataTestMethod]
+        [DynamicData(nameof(NestedSchemaCases), DynamicDataSourceType.Property)]
+        public void ReplaceAll_WithEquivalentNestedSchemaSets_DoesNotReportDiscoveryChange(
+            string schemaTemplate,
+            bool useOutputSchema)
+        {
+            const string SCHEMA_AB =
+                "{\"type\":\"object\",\"properties\":{" +
+                "\"a\":{\"type\":[\"string\",\"null\"],\"enum\":[\"alpha\",\"beta\"]}," +
+                "\"b\":{\"type\":\"integer\"}},\"required\":[\"a\",\"b\"]}";
+            const string SCHEMA_BA =
+                "{\"required\":[\"b\",\"a\"],\"properties\":{" +
+                "\"b\":{\"type\":\"integer\"}," +
+                "\"a\":{\"enum\":[\"beta\",\"alpha\"],\"type\":[\"null\",\"string\"]}}," +
+                "\"type\":\"object\"}";
+            string schemaAB = schemaTemplate.Replace("$SCHEMA", SCHEMA_AB, StringComparison.Ordinal);
+            string schemaBA = schemaTemplate.Replace("$SCHEMA", SCHEMA_BA, StringComparison.Ordinal);
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(new[] { CreateSchemaTool(schemaAB, useOutputSchema) }, config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { CreateSchemaTool(schemaBA, useOutputSchema) }, config);
+
+            Assert.IsFalse(result.DiscoveryChanged);
+            Tool advertised = registry.GetAdvertisedTools().Single();
+            JsonElement advertisedSchema = useOutputSchema ? advertised.OutputSchema!.Value : advertised.InputSchema;
+            Assert.AreEqual(schemaBA, advertisedSchema.GetRawText(), "Canonicalization must not reorder the served schema.");
+        }
+
+        [DataTestMethod]
+        [DataRow("items")]
+        [DataRow("prefixItems")]
+        public void ReplaceAll_WithReorderedSchemaTuple_ReportsDiscoveryChange(string keyword)
+        {
+            string schemaAB = "{\"type\":\"object\",\"properties\":{\"values\":{\"type\":\"array\",\"" +
+                keyword + "\":[{\"type\":\"string\"},{\"type\":\"integer\"}]}}}";
+            string schemaBA = "{\"type\":\"object\",\"properties\":{\"values\":{\"type\":\"array\",\"" +
+                keyword + "\":[{\"type\":\"integer\"},{\"type\":\"string\"}]}}}";
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(new[] { CreateSchemaTool(schemaAB, useOutputSchema: false) }, config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { CreateSchemaTool(schemaBA, useOutputSchema: false) }, config);
+
+            Assert.IsTrue(result.DiscoveryChanged, "Tuple positions are significant even though their elements are schemas.");
+        }
+
+        [DataTestMethod]
+        [DataRow("inputSchema")]
+        [DataRow("outputSchema")]
+        public void ReplaceAll_WithSchemaNamedPropertyInMetadata_ReportsDiscoveryChange(string propertyName)
+        {
+            string metadataAB = "{\"name\":\"same_tool\",\"inputSchema\":{\"type\":\"object\"},\"_meta\":{\"" +
+                propertyName + "\":{\"enum\":[\"a\",\"b\"]}}}";
+            string metadataBA = "{\"name\":\"same_tool\",\"inputSchema\":{\"type\":\"object\"},\"_meta\":{\"" +
+                propertyName + "\":{\"enum\":[\"b\",\"a\"]}}}";
+            McpToolRegistry registry = new();
+            RuntimeConfig config = CreateRuntimeConfig();
+            registry.ReplaceAll(
+                new[] { new RetainedMetadataMcpTool(JsonSerializer.Deserialize<Tool>(metadataAB)!) }, config);
+
+            McpToolRegistryUpdateResult result = registry.ReplaceAll(
+                new[] { new RetainedMetadataMcpTool(JsonSerializer.Deserialize<Tool>(metadataBA)!) }, config);
+
+            JsonElement advertised = JsonSerializer.SerializeToElement(registry.GetAdvertisedTools().Single());
+            Assert.AreEqual("b", advertised.GetProperty("_meta").GetProperty(propertyName).GetProperty("enum")[0].GetString());
+            Assert.IsTrue(result.DiscoveryChanged, "Only the tool's actual input/output schema properties introduce schemas.");
         }
 
         /// <summary>
@@ -553,6 +656,107 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         #region Private helpers
+
+        public static IEnumerable<object[]> SchemaInstanceDataCases
+        {
+            get
+            {
+                foreach (string keyword in new[] { "default", "const", "examples", "enum", "x-extension" })
+                {
+                    foreach (string propertyName in new[] { "enum", "type", "required" })
+                    {
+                        foreach (bool useOutputSchema in new[] { false, true })
+                        {
+                            foreach (bool nested in new[] { false, true })
+                            {
+                                yield return new object[] { keyword, propertyName, useOutputSchema, nested };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public static IEnumerable<object[]> NestedSchemaCases
+        {
+            get
+            {
+                List<string> templates = new() { "$SCHEMA" };
+                foreach (string keyword in new[] { "properties", "patternProperties", "$defs", "definitions", "dependentSchemas", "dependencies" })
+                {
+                    templates.Add("{\"" + keyword + "\":{\"default\":$SCHEMA,\"const\":$SCHEMA,\"examples\":$SCHEMA}}");
+                }
+
+                foreach (string keyword in new[] { "items", "additionalItems", "additionalProperties", "unevaluatedItems", "unevaluatedProperties", "contains", "propertyNames", "not", "if", "then", "else", "contentSchema" })
+                {
+                    templates.Add("{\"" + keyword + "\":$SCHEMA}");
+                }
+
+                foreach (string keyword in new[] { "items", "prefixItems", "allOf", "anyOf", "oneOf" })
+                {
+                    templates.Add("{\"" + keyword + "\":[$SCHEMA]}");
+                }
+
+                foreach (string template in templates)
+                {
+                    string toolSchemaTemplate = template == "$SCHEMA"
+                        ? template
+                        : "{\"type\":\"object\",\"properties\":{\"value\":" + template + "}}";
+                    foreach (bool useOutputSchema in new[] { false, true })
+                    {
+                        yield return new object[] { toolSchemaTemplate, useOutputSchema };
+                    }
+                }
+            }
+        }
+
+        private static string CreateSchemaWithInstanceData(string keyword, string propertyName, bool nested, bool reverse)
+        {
+            JsonObject instanceData = new()
+            {
+                [propertyName] = reverse ? new JsonArray("b", "a") : new JsonArray("a", "b")
+            };
+            if (nested)
+            {
+                instanceData = new JsonObject
+                {
+                    ["inputSchema"] = new JsonObject
+                    {
+                        ["outputSchema"] = new JsonObject
+                        {
+                            ["properties"] = new JsonObject { ["value"] = instanceData }
+                        }
+                    }
+                };
+            }
+
+            return new JsonObject
+            {
+                ["type"] = "object",
+                ["properties"] = new JsonObject
+                {
+                    ["value"] = new JsonObject
+                    {
+                        [keyword] = keyword is "examples" or "enum" ? new JsonArray(instanceData) : instanceData
+                    }
+                }
+            }.ToJsonString();
+        }
+
+        private static RetainedMetadataMcpTool CreateSchemaTool(string schemaJson, bool useOutputSchema)
+        {
+            Tool metadata = new()
+            {
+                Name = "same_tool",
+                InputSchema = JsonSerializer.Deserialize<JsonElement>(useOutputSchema ? "{\"type\":\"object\"}" : schemaJson)
+            };
+            if (useOutputSchema)
+            {
+                metadata.OutputSchema = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+            }
+
+            return new RetainedMetadataMcpTool(metadata);
+        }
 
         /// <summary>
         /// Mock implementation of IMcpTool for testing purposes.

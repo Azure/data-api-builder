@@ -204,7 +204,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
             using MemoryStream canonicalJson = new();
             using (Utf8JsonWriter writer = new(canonicalJson))
             {
-                WriteCanonicalJson(writer, serializedMetadata.RootElement);
+                writer.WriteStartArray();
+                foreach (JsonElement tool in serializedMetadata.RootElement.EnumerateArray())
+                {
+                    WriteCanonicalJson(writer, tool, CanonicalJsonContext.Tool);
+                }
+
+                writer.WriteEndArray();
             }
 
             return Encoding.UTF8.GetString(canonicalJson.ToArray());
@@ -224,8 +230,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private static void WriteCanonicalJson(
             Utf8JsonWriter writer,
             JsonElement element,
-            string? propertyName = null,
-            bool isWithinJsonSchema = false)
+            CanonicalJsonContext context)
         {
             switch (element.ValueKind)
             {
@@ -239,10 +244,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         WriteCanonicalJson(
                             writer,
                             property.Value,
-                            property.Name,
-                            isWithinJsonSchema ||
-                                property.NameEquals("inputSchema") ||
-                                property.NameEquals("outputSchema"));
+                            GetCanonicalPropertyContext(context, property));
                     }
 
                     writer.WriteEndObject();
@@ -250,19 +252,15 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 case JsonValueKind.Array:
                     writer.WriteStartArray();
-                    if (!TryWriteOrderInsensitiveJsonSchemaStringArray(
-                            writer,
-                            element,
-                            propertyName,
-                            isWithinJsonSchema))
+                    if (context != CanonicalJsonContext.SchemaStringSet ||
+                        !TryWriteOrderInsensitiveJsonSchemaStringArray(writer, element))
                     {
+                        CanonicalJsonContext itemContext = context == CanonicalJsonContext.SchemaArray
+                            ? CanonicalJsonContext.Schema
+                            : CanonicalJsonContext.Data;
                         foreach (JsonElement item in element.EnumerateArray())
                         {
-                            WriteCanonicalJson(
-                                writer,
-                                item,
-                                propertyName: null,
-                                isWithinJsonSchema);
+                            WriteCanonicalJson(writer, item, itemContext);
                         }
                     }
 
@@ -286,22 +284,45 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
         }
 
+        /// <summary>
+        /// Only the tool's direct input/output schema fields introduce schema context. Within a
+        /// schema, follow known subschema keywords; defaults, constants, examples, enum instances,
+        /// and unknown extensions remain ordinary data at every nesting depth.
+        /// </summary>
+        private static CanonicalJsonContext GetCanonicalPropertyContext(
+            CanonicalJsonContext context,
+            JsonProperty property)
+        {
+            return context switch
+            {
+                CanonicalJsonContext.Tool when property.Name is "inputSchema" or "outputSchema" =>
+                    CanonicalJsonContext.Schema,
+                // Map keys are instance property/definition names, not schema keywords. Legacy
+                // dependencies can also contain string arrays, which the schema context preserves.
+                CanonicalJsonContext.SchemaMap => CanonicalJsonContext.Schema,
+                CanonicalJsonContext.Schema => property.Name switch
+                {
+                    "required" or "type" or "enum" => CanonicalJsonContext.SchemaStringSet,
+                    "properties" or "patternProperties" or "$defs" or "definitions" or
+                        "dependentSchemas" or "dependencies" => CanonicalJsonContext.SchemaMap,
+                    "allOf" or "anyOf" or "oneOf" or "prefixItems" => CanonicalJsonContext.SchemaArray,
+                    // Before draft 2020-12, items also allowed an ordered array of tuple schemas.
+                    "items" when property.Value.ValueKind == JsonValueKind.Array => CanonicalJsonContext.SchemaArray,
+                    "items" or "additionalItems" or "additionalProperties" or "unevaluatedItems" or
+                        "unevaluatedProperties" or "contains" or "propertyNames" or "not" or
+                        "if" or "then" or "else" or "contentSchema" => CanonicalJsonContext.Schema,
+                    _ => CanonicalJsonContext.Data
+                },
+                _ => CanonicalJsonContext.Data
+            };
+        }
+
         private static bool TryWriteOrderInsensitiveJsonSchemaStringArray(
             Utf8JsonWriter writer,
-            JsonElement element,
-            string? propertyName,
-            bool isWithinJsonSchema)
+            JsonElement element)
         {
-            // JSON Schema defines these arrays as sets, so their order does not change validation
-            // semantics. Do not sort every primitive array: values under keywords such as
-            // "default" and "examples" can be ordered JSON array instances whose order is part of
-            // the advertised metadata.
-            if (!isWithinJsonSchema ||
-                propertyName is not ("required" or "type" or "enum"))
-            {
-                return false;
-            }
-
+            // Called only for a schema's own required/type/enum keyword. Non-string enum entries
+            // are instance data and must not be traversed as schemas when this returns false.
             List<string> values = new();
             foreach (JsonElement item in element.EnumerateArray())
             {
@@ -320,6 +341,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             return true;
+        }
+
+        private enum CanonicalJsonContext
+        {
+            Data,
+            Tool,
+            Schema,
+            SchemaMap,
+            SchemaArray,
+            SchemaStringSet
         }
 
         private sealed record McpToolRegistrySnapshot(

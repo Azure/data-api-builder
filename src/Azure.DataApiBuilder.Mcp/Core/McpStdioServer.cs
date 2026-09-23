@@ -151,7 +151,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 break;
 
                             case "tools/list":
-                                await HandleListToolsAsync(id);
+                                await HandleListToolsAsync(id, cancellationToken);
                                 break;
 
                             case "tools/call":
@@ -302,9 +302,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="id">
         /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
         /// </param>
-        private async Task HandleListToolsAsync(JsonElement? id)
+        private async Task HandleListToolsAsync(JsonElement? id, CancellationToken cancellationToken)
         {
-            await EnsureToolsInitializedAsync();
+            await EnsureToolsInitializedAsync(cancellationToken);
 
             List<object> toolsWire = new();
 
@@ -321,23 +321,25 @@ namespace Azure.DataApiBuilder.Mcp.Core
             WriteResult(id, new { tools = toolsWire });
         }
 
-        private Task EnsureToolsInitializedAsync()
+        private Task EnsureToolsInitializedAsync(CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             lock (_initializationLock)
             {
-                return _initializationTask ??= InitializeToolsAsync();
+                return _initializationTask ??= InitializeToolsAsync(cancellationToken);
             }
         }
 
-        private async Task InitializeToolsAsync()
+        private async Task InitializeToolsAsync(CancellationToken cancellationToken)
         {
             IMetadataProviderFactory metadataProviderFactory =
                 _serviceProvider.GetRequiredService<IMetadataProviderFactory>();
-            await metadataProviderFactory.InitializeAsync();
+            await metadataProviderFactory.InitializeAsync(cancellationToken);
 
             IMcpToolRegistryRefreshService? registryRefreshService =
                 _serviceProvider.GetService<IMcpToolRegistryRefreshService>();
-            registryRefreshService?.EnsureInitialized();
+            registryRefreshService?.EnsureInitialized(cancellationToken);
         }
 
         /// <summary>
@@ -487,7 +489,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return;
             }
 
-            await EnsureToolsInitializedAsync();
+            await EnsureToolsInitializedAsync(ct);
 
             if (!_toolRegistry.TryGetTool(toolName!, out IMcpTool? tool) || tool is null)
             {

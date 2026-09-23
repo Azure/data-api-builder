@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
@@ -27,6 +28,7 @@ public class ConfigurationHotReloadTests
     private static RuntimeConfigProvider _configProvider;
     private static StringWriter _writer;
     private static readonly object _writerLock = new();
+    private static HotReloadFailureObserver _hotReloadFailureObserver;
     private const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
     private const string GQL_QUERY_NAME = "books";
     private const string HOT_RELOAD_SUCCESS_MESSAGE = "Validated hot-reloaded configuration file";
@@ -229,6 +231,11 @@ public class ConfigurationHotReloadTests
             {
                 Console.WriteLine($"Initializing test server (attempt {attempt}/{maxRetries})...");
                 _testServer = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", CONFIG_FILE_NAME }));
+                _hotReloadFailureObserver = new(
+                    _testServer.Services.GetRequiredService<ILogger<FileSystemRuntimeConfigLoader>>());
+                _testServer.Services
+                    .GetRequiredService<FileSystemRuntimeConfigLoader>()
+                    .SetLogger(_hotReloadFailureObserver);
                 _testClient = _testServer.CreateClient();
                 _configProvider = _testServer.Services.GetService<RuntimeConfigProvider>();
 
@@ -313,6 +320,79 @@ public class ConfigurationHotReloadTests
         lock (_writerLock)
         {
             return _writer.ToString().Contains(message);
+        }
+    }
+
+    /// <summary>
+    /// Observes the loader's structured hot-reload failure log. The loader now owns and logs reload
+    /// failures inside its serialized pipeline, so they no longer escape to ConfigFileWatcher's
+    /// legacy Console.WriteLine fallback.
+    /// </summary>
+    private sealed class HotReloadFailureObserver(
+        ILogger<FileSystemRuntimeConfigLoader> innerLogger) : ILogger<FileSystemRuntimeConfigLoader>
+    {
+        private readonly object _syncRoot = new();
+        private TaskCompletionSource<string> _failureSource = CreateFailureSource();
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => innerLogger.BeginScope(state);
+
+        public bool IsEnabled(LogLevel logLevel) =>
+            logLevel == LogLevel.Error || innerLogger.IsEnabled(logLevel);
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            innerLogger.Log(logLevel, eventId, state, exception, formatter);
+
+            if (logLevel != LogLevel.Error)
+            {
+                return;
+            }
+
+            string message = formatter(state, exception);
+            if (!message.Contains(
+                    HOT_RELOAD_FAILURE_MESSAGE,
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            RecordFailure(message);
+        }
+
+        public void Reset()
+        {
+            lock (_syncRoot)
+            {
+                _failureSource = CreateFailureSource();
+            }
+        }
+
+        public async Task<string> WaitForFailureAsync(TimeSpan timeout)
+        {
+            Task<string> failureTask;
+            lock (_syncRoot)
+            {
+                failureTask = _failureSource.Task;
+            }
+
+            return await failureTask.WaitAsync(timeout);
+        }
+
+        private static TaskCompletionSource<string> CreateFailureSource() =>
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        private void RecordFailure(string message)
+        {
+            lock (_syncRoot)
+            {
+                _failureSource.TrySetResult(message);
+            }
         }
     }
 
@@ -754,18 +834,15 @@ public class ConfigurationHotReloadTests
 
         // Act
         // Hot Reload should fail here
+        _hotReloadFailureObserver.Reset();
         GenerateConfigFile(
             connectionString: $"WrongConnectionString");
-        await WaitForConditionAsync(
-          () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
-          TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
-          TimeSpan.FromMilliseconds(500));
+        string failedConfigLog = await _hotReloadFailureObserver.WaitForFailureAsync(
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS));
 
         // Log that shows that hot-reload was not able to validate properly
-        string failedConfigLog;
         lock (_writerLock)
         {
-            failedConfigLog = _writer.ToString();
             _writer.GetStringBuilder().Clear();
         }
 
@@ -851,19 +928,16 @@ public class ConfigurationHotReloadTests
 
         // Act
         // Hot Reload should fail here
+        _hotReloadFailureObserver.Reset();
         GenerateConfigFile(
             databaseType: DatabaseType.PostgreSQL,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.POSTGRESQL).Replace("\\", "\\\\")}");
-        await WaitForConditionAsync(
-          () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
-          TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
-          TimeSpan.FromMilliseconds(500));
+        string failedConfigLog = await _hotReloadFailureObserver.WaitForFailureAsync(
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS));
 
         // Log that shows that hot-reload was not able to validate properly
-        string failedConfigLog;
         lock (_writerLock)
         {
-            failedConfigLog = _writer.ToString();
             _writer.GetStringBuilder().Clear();
         }
 
@@ -919,6 +993,7 @@ public class ConfigurationHotReloadTests
 
         // Act
         // Generate a config that will fail validation by disabling REST, GraphQL, and MCP (which is not allowed)
+        _hotReloadFailureObserver.Reset();
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: "false",
@@ -926,10 +1001,8 @@ public class ConfigurationHotReloadTests
             mcpEnabled: "false");
 
         // Wait for hot-reload to fail
-        await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
-            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
-            TimeSpan.FromMilliseconds(500));
+        await _hotReloadFailureObserver.WaitForFailureAsync(
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS));
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
 
@@ -967,16 +1040,15 @@ public class ConfigurationHotReloadTests
         bool originalGraphQLEnabled = lkgRuntimeConfig.Runtime.GraphQL.Enabled;
 
         // Act
+        _hotReloadFailureObserver.Reset();
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: "invalid",
             gQLEnabled: "invalid");
 
         // Wait for hot-reload to fail (parsing error should trigger failure message)
-        await WaitForConditionAsync(
-            () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
-            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
-            TimeSpan.FromMilliseconds(500));
+        await _hotReloadFailureObserver.WaitForFailureAsync(
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS));
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
 

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Mcp.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -58,7 +59,42 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "Expected shutdown response result.ok to be true.");
         }
 
-        private static (McpStdioServer server, StringWriter stdoutCapture) CreateServerWithCapturedOutput(TextReader inputReader)
+        [TestMethod]
+        public async Task RunAsync_CompleteInitializationHandshake_MarksToolListNotifierReady()
+        {
+            Mock<IMcpStdioToolListChangedNotifier> notifier = new();
+            string input =
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1.0\"}}}" + Environment.NewLine +
+                "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}" + Environment.NewLine +
+                "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"shutdown\"}" + Environment.NewLine;
+            (McpStdioServer server, _) = CreateServerWithCapturedOutput(
+                new StringReader(input),
+                notifier.Object);
+
+            await server.RunAsync(CancellationToken.None);
+
+            notifier.Verify(value => value.MarkInitialized(), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task RunAsync_InitializedNotificationBeforeInitialize_DoesNotMarkNotifierReady()
+        {
+            Mock<IMcpStdioToolListChangedNotifier> notifier = new();
+            string input =
+                "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}" + Environment.NewLine +
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"shutdown\"}" + Environment.NewLine;
+            (McpStdioServer server, _) = CreateServerWithCapturedOutput(
+                new StringReader(input),
+                notifier.Object);
+
+            await server.RunAsync(CancellationToken.None);
+
+            notifier.Verify(value => value.MarkInitialized(), Times.Never);
+        }
+
+        private static (McpStdioServer server, StringWriter stdoutCapture) CreateServerWithCapturedOutput(
+            TextReader inputReader,
+            IMcpStdioToolListChangedNotifier? notifier = null)
         {
             StringWriter stdoutCapture = new();
             McpStdoutWriter stdoutWriter = new(stdoutCapture);
@@ -66,6 +102,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ServiceCollection services = new();
             services.AddSingleton(stdoutWriter);
             services.AddSingleton<McpToolRegistry>();
+            if (notifier is not null)
+            {
+                services.AddSingleton(notifier);
+            }
+
             IServiceProvider serviceProvider = services.BuildServiceProvider();
 
             McpStdioServer server = new(

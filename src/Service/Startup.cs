@@ -138,6 +138,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(fileSystem);
             services.AddSingleton<FileSystemRuntimeConfigLoader>(sp => configLoader);
             services.AddSingleton<RuntimeConfigProvider>(sp => configProvider);
+            services.AddSingleton<RuntimeConfigLoaderShutdownService>();
 
             bool runtimeConfigAvailable = configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
 
@@ -526,7 +527,11 @@ namespace Azure.DataApiBuilder.Service
             // Subscribe the GraphQL schema refresh method to the specific hot-reload event
             _hotReloadEventHandler.Subscribe(
                 DabConfigEvents.GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED,
-                (_, _) => RefreshGraphQLSchema(services));
+                (_, args) =>
+                {
+                    args.CancellationToken.ThrowIfCancellationRequested();
+                    RefreshGraphQLSchema(services);
+                });
 
             // Cache config
             IFusionCacheBuilder fusionCacheBuilder = services.AddFusionCache()
@@ -605,6 +610,12 @@ namespace Azure.DataApiBuilder.Service
             ConfigureResponseCompression(services, runtimeConfig);
 
             services.AddControllers();
+
+            // Hosted services stop in reverse registration order. Register the loader drain last
+            // so reload work exits before any other hosted service begins shutting down and before
+            // the root provider disposes reload subscribers or their dependencies.
+            services.AddSingleton<IHostedService>(serviceProvider =>
+                serviceProvider.GetRequiredService<RuntimeConfigLoaderShutdownService>());
         }
 
         /// <summary>
@@ -1008,7 +1019,11 @@ namespace Azure.DataApiBuilder.Service
             IRequestExecutorManager requestExecutorManager = app.ApplicationServices.GetRequiredService<IRequestExecutorManager>();
             _hotReloadEventHandler.Subscribe(
                 "GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED",
-                (_, _) => EvictGraphQLSchema(requestExecutorManager));
+                (_, args) =>
+                {
+                    args.CancellationToken.ThrowIfCancellationRequested();
+                    EvictGraphQLSchema(requestExecutorManager);
+                });
 
             app.UseEndpoints(endpoints =>
             {
@@ -1432,18 +1447,12 @@ namespace Azure.DataApiBuilder.Service
         {
             try
             {
-                RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
-                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-
+                RuntimeConfig runtimeConfig =
+                    await RuntimeInitializationHelper.InitializeRuntimeDependenciesAsync(
+                        app.ApplicationServices);
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
-                // Now that the configuration has been set, perform validation of the runtime config
-                // itself.
-
-                runtimeConfigValidator.ValidateConfigProperties();
-
                 IMetadataProviderFactory sqlMetadataProviderFactory =
                     app.ApplicationServices.GetRequiredService<IMetadataProviderFactory>();
-                await sqlMetadataProviderFactory.InitializeAsync();
 
                 // Manually trigger DI service instantiation of GraphQLSchemaCreator and RestService
                 // to attempt to reduce chances that the first received client request

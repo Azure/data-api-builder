@@ -122,8 +122,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public async Task RunAsync_ListToolsReturnsOnlyEnabledToolMetadata()
         {
             McpToolRegistry registry = new();
-            registry.RegisterTool(new RecordingTool("enabled", isEnabled: true));
-            registry.RegisterTool(new RecordingTool("disabled", isEnabled: false));
+            registry.ReplaceAll(
+                new[] { new RecordingTool("enabled", isEnabled: true), new RecordingTool("disabled", isEnabled: false) },
+                CreateRuntimeConfig());
             string input = Request(id: 4, method: "tools/list") + Environment.NewLine;
             (McpStdioServer server, StringWriter output, _) = CreateServer(input, registry: registry);
 
@@ -137,16 +138,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
-        public async Task RunAsync_ListToolsConfigurationFailureReturnsInternalError()
+        public async Task RunAsync_ListToolsConfigurationFailureReturnsPublishedSnapshot()
         {
+            // Discovery serves the last published snapshot without re-reading runtime configuration.
+            McpToolRegistry registry = new();
+            registry.ReplaceAll(new[] { new RecordingTool("retained_tool") }, CreateRuntimeConfig());
             string input = Request(id: 3, method: "tools/list") + Environment.NewLine;
             (McpStdioServer server, StringWriter output, _) = CreateServer(
                 input,
+                registry: registry,
                 runtimeConfigProvider: new ThrowingRuntimeConfigProvider());
 
             await server.RunAsync(CancellationToken.None);
 
-            AssertError(ParseResponses(output).Single(), 3L, McpStdioJsonRpcErrorCodes.INTERNAL_ERROR, "Internal error");
+            JsonElement response = ParseResponses(output).Single();
+            Assert.AreEqual(3, response.GetProperty("id").GetInt32());
+            JsonElement tools = response.GetProperty("result").GetProperty("tools");
+            Assert.AreEqual(1, tools.GetArrayLength());
+            Assert.AreEqual("retained_tool", tools[0].GetProperty("name").GetString());
         }
 
         [DataTestMethod]
@@ -171,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             RecordingTool tool = new("test_tool");
             McpToolRegistry registry = new();
-            registry.RegisterTool(tool);
+            registry.ReplaceAll(new[] { tool }, CreateRuntimeConfig());
             string input = Request(
                 id: 12,
                 method: "tools/call",
@@ -191,7 +200,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             RecordingTool tool = new("legacy_tool");
             McpToolRegistry registry = new();
-            registry.RegisterTool(tool);
+            registry.ReplaceAll(new[] { tool }, CreateRuntimeConfig());
             string input = Request(
                 id: 13,
                 method: "tools/call",
@@ -211,8 +220,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RecordingTool standardTool = new("standard");
             RecordingTool legacyTool = new("legacy");
             McpToolRegistry registry = new();
-            registry.RegisterTool(standardTool);
-            registry.RegisterTool(legacyTool);
+            registry.ReplaceAll(new[] { standardTool, legacyTool }, CreateRuntimeConfig());
             string input = Request(
                 id: 14,
                 method: "tools/call",
@@ -231,7 +239,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             RecordingTool tool = new("role_tool");
             McpToolRegistry registry = new();
-            registry.RegisterTool(tool);
+            registry.ReplaceAll(new[] { tool }, CreateRuntimeConfig());
             HttpContextAccessor accessor = new();
             IConfiguration configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?> { ["MCP:Role"] = "writer" })
@@ -260,7 +268,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             RecordingTool tool = new("throwing_tool", exception: new InvalidOperationException("failure"));
             McpToolRegistry registry = new();
-            registry.RegisterTool(tool);
+            registry.ReplaceAll(new[] { tool }, CreateRuntimeConfig());
             HttpContextAccessor accessor = new();
             IConfiguration configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?> { ["MCP:Role"] = "reader" })

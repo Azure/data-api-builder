@@ -29,6 +29,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly McpToolRegistry _toolRegistry;
         private readonly IServiceProvider _serviceProvider;
         private readonly McpStdoutWriter _stdoutWriter;
+        private readonly IMcpStdioToolListChangedNotifier? _toolListChangedNotifier;
         private readonly TextReader? _inputReader;
         private readonly string _protocolVersion;
         private readonly object _initializationLock = new();
@@ -53,6 +54,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // notifications/message frames are serialized through one lock.
             // Falls back to a fresh instance if DI didn't register one (defensive).
             _stdoutWriter = _serviceProvider.GetService<McpStdoutWriter>() ?? new McpStdoutWriter();
+            _toolListChangedNotifier = _serviceProvider.GetService<IMcpStdioToolListChangedNotifier>();
 
             // Allow protocol version to be configured via IConfiguration, using centralized defaults.
             IConfiguration? configuration = _serviceProvider.GetService<IConfiguration>();
@@ -69,6 +71,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // By default read via Console.In so the loop honors the configured
             // Console.InputEncoding in stdio mode.
             TextReader reader = _inputReader ?? Console.In;
+            bool initializeResponseWritten = false;
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -131,9 +134,20 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         {
                             case "initialize":
                                 HandleInitialize(id, root);
+                                // This assignment is reached only after WriteResult succeeds.
+                                initializeResponseWritten = true;
                                 break;
 
                             case "notifications/initialized":
+                                // This notification completes the MCP handshake only after the
+                                // server successfully wrote its initialize response. Ignore an
+                                // out-of-order notification rather than enabling capabilities the
+                                // client has not negotiated.
+                                if (initializeResponseWritten)
+                                {
+                                    _toolListChangedNotifier?.MarkInitialized();
+                                }
+
                                 break;
 
                             case "tools/list":
@@ -186,6 +200,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             string? clientRequestedProtocolVersion = GetClientProtocolVersion(root);
             string negotiatedProtocolVersion =
                 McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(_protocolVersion, clientRequestedProtocolVersion);
+            bool supportsToolListChanged = _toolListChangedNotifier is not null;
 
             // Get the description from runtime config if available
             string? description = null;
@@ -215,7 +230,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
-                        tools = new { listChanged = true },
+                        tools = new { listChanged = supportsToolListChanged },
                         logging = new { }
                     },
                     serverInfo = new
@@ -233,7 +248,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
-                        tools = new { listChanged = true },
+                        tools = new { listChanged = supportsToolListChanged },
                         logging = new { }
                     },
                     serverInfo = new
@@ -251,7 +266,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
-                        tools = new { listChanged = true },
+                        tools = new { listChanged = supportsToolListChanged },
                         logging = new { }
                     },
                     serverInfo = new
@@ -292,16 +307,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
             await EnsureToolsInitializedAsync();
 
             List<object> toolsWire = new();
-            int count = 0;
 
-            // Resolve runtime config to filter out disabled tools.
-            RuntimeConfigProvider runtimeConfigProvider = _serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            IEnumerable<Tool> tools = _toolRegistry.GetEnabledTools(runtimeConfig);
-
-            foreach (Tool tool in tools)
+            foreach (Tool tool in _toolRegistry.GetAdvertisedTools())
             {
-                count++;
                 toolsWire.Add(new
                 {
                     name = tool.Name,
@@ -327,8 +335,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 _serviceProvider.GetRequiredService<IMetadataProviderFactory>();
             await metadataProviderFactory.InitializeAsync();
 
-            IEnumerable<IMcpTool> tools = _serviceProvider.GetServices<IMcpTool>();
-            McpToolRegistry.InitializeAndRegisterTools(tools, _toolRegistry, _serviceProvider);
+            IMcpToolRegistryRefreshService? registryRefreshService =
+                _serviceProvider.GetService<IMcpToolRegistryRefreshService>();
+            registryRefreshService?.EnsureInitialized();
         }
 
         /// <summary>

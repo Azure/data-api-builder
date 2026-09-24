@@ -285,7 +285,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string updateOperations = Build(structure.UpdateOperations, ", ");
             string columnsToBeReturned =
                 MakeOutputColumns(structure.OutputColumns, isUpdateTriggerEnabled ? string.Empty : OutputQualifier.Inserted.ToString());
-            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
+            // Insert-capable upserts must serialize the existence decision with competing upserts for
+            // the same key. UPDLOCK avoids lock-conversion deadlocks and HOLDLOCK retains the key-range
+            // lock (including a missing-key range) through the ambient transaction. Update-only fallback
+            // queries do not have an insert race and retain the existing locking behavior.
+            string existenceCheckTable = structure.IsFallbackToUpdate
+                ? tableName
+                : $"{tableName} WITH (UPDLOCK, HOLDLOCK)";
+            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {existenceCheckTable} WHERE {pkPredicates}";
 
             // Query to get the number of records with a given PK.
             string prefixQuery = $"DECLARE @ROWS_TO_UPDATE int;" +

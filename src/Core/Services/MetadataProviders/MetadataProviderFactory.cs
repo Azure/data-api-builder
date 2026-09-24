@@ -49,13 +49,19 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             foreach ((string dataSourceName, DataSource dataSource) in _runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())
             {
+                RuntimeConfigProvider runtimeConfigProvider = _runtimeConfigProvider;
+                if (_runtimeConfigProvider.GetConfig().TryGetConfigLoaderFromDataSourceName(dataSourceName, out FileSystemRuntimeConfigLoader? configLoader))
+                {
+                    runtimeConfigProvider = new RuntimeConfigProvider(configLoader);
+                }
+
                 ISqlMetadataProvider metadataProvider = dataSource.DatabaseType switch
                 {
-                    DatabaseType.CosmosDB_NoSQL => new CosmosSqlMetadataProvider(_runtimeConfigProvider, _runtimeConfigValidator, _fileSystem),
-                    DatabaseType.MSSQL => new MsSqlMetadataProvider(_runtimeConfigProvider, _runtimeConfigValidator, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
-                    DatabaseType.DWSQL => new MsSqlMetadataProvider(_runtimeConfigProvider, _runtimeConfigValidator, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
-                    DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(_runtimeConfigProvider, _runtimeConfigValidator, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
-                    DatabaseType.MySQL => new MySqlMetadataProvider(_runtimeConfigProvider, _runtimeConfigValidator, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
+                    DatabaseType.CosmosDB_NoSQL => new CosmosSqlMetadataProvider(runtimeConfigProvider, _runtimeConfigValidator, _fileSystem),
+                    DatabaseType.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _runtimeConfigValidator, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
+                    DatabaseType.DWSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _runtimeConfigValidator, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
+                    DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _runtimeConfigValidator, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
+                    DatabaseType.MySQL => new MySqlMetadataProvider(runtimeConfigProvider, _runtimeConfigValidator, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
                     _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
                 };
 

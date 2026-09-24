@@ -258,6 +258,8 @@ public record RuntimeConfig
 
     private Dictionary<string, string> _entityPathNameToEntityName = new();
 
+    private Dictionary<string, FileSystemRuntimeConfigLoader> _dataSourceNameToConfigLoader = new();
+
     /// <summary>
     /// List of all datasources.
     /// </summary>
@@ -303,6 +305,11 @@ public record RuntimeConfig
     public bool RemoveGeneratedAutoentityNameFromDataSourceName(string entityName)
     {
         return _entityNameToDataSourceName.Remove(entityName);
+    }
+
+    public bool TryGetConfigLoaderFromDataSourceName(string dataSourceName, [NotNullWhen(true)] out FileSystemRuntimeConfigLoader? configLoader)
+    {
+        return _dataSourceNameToConfigLoader.TryGetValue(dataSourceName, out configLoader);
     }
 
     /// <summary>
@@ -370,24 +377,26 @@ public record RuntimeConfig
         {
             IEnumerable<KeyValuePair<string, Entity>>? allEntities = Entities?.AsEnumerable();
             IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = Autoentities?.AsEnumerable();
-
-            HashSet<string> alreadyReviewedEntityNames = new(this.Entities.Entities.Keys);
-            HashSet<string> alreadyReviewedAutoentityNames = new(this.Autoentities.Autoentities.Keys);
-
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
-            // This loader is not used as a part of hot reload and therefore does not need a handler.
-            FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
             // Pass the parent's AKV options so @akv() references in child configs can
             // be resolved using the parent's Key Vault configuration.
             // If a child config defines its own azure-key-vault section, TryParseConfig's
             // ExtractAzureKeyVaultOptions will detect it and override these parent options.
-            DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: this.AzureKeyVault, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore);
+            DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: this.AzureKeyVault, doReplaceEnvVar: true, doReplaceAkvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Ignore)
+            {
+                // Defer Application Name (telemetry) injection to the top-level load. A child config
+                // has no global runtime section and only its own entities; the root performs the
+                // injection once over the fully-merged config so each data source's pool reflects the
+                // global runtime and the complete entity set.
+                SkipApplicationNameInjection = true
+            };
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-
+                // This loader is not used as a part of hot reload and therefore does not need a handler.
+                FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null, baseConfigFilePath: dataSourceFile);
                 if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replacementSettings: replacementSettings))
                 {
                     try
@@ -398,19 +407,7 @@ public record RuntimeConfig
                         // Store the child config reference for per-child validation.
                         ChildConfigs.Add((dataSourceFile, config));
 
-                        // Skip datasource files that were already reviewed: if the child has content
-                        // and every one of its entities and autoentities is already present, it was
-                        // merged in a previous construction and must not be added again.
-                        bool childHasContent = config.Entities.Entities.Count > 0 || config.Autoentities.Autoentities.Count > 0;
-                        bool alreadyReviewed = childHasContent
-                            && config.Entities.Entities.Keys.All(alreadyReviewedEntityNames.Contains)
-                            && config.Autoentities.Autoentities.Keys.All(alreadyReviewedAutoentityNames.Contains);
-
-                        /*if (alreadyReviewed)
-                        {
-                            continue;
-                        }*/
-
+                        _dataSourceNameToConfigLoader.TryAdd(config.DefaultDataSourceName, loader);
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _autoentityNameToDataSourceName = _autoentityNameToDataSourceName.Concat(config._autoentityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);

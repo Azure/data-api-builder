@@ -56,7 +56,8 @@ namespace Azure.DataApiBuilder.Service.Utilities
                 mcpToolRegistryRefreshService?.EnsureInitialized(cancellationToken);
             }).ConfigureAwait(false);
 
-            return initializedConfig!;
+            return initializedConfig ?? throw new InvalidOperationException(
+                "Runtime dependency initialization did not run.");
         }
     }
 }

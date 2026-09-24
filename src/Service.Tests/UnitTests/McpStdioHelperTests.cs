@@ -48,22 +48,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "MCP stdio mode should not stop a host that was never started.");
             Assert.AreEqual(1, stdioServer.RunAsyncCallCount,
                 "MCP stdio mode should still run the stdio JSON-RPC loop.");
-            Assert.AreEqual(1, refreshService.EnsureInitializedCallCount,
-                "MCP stdio mode should initialize the shared tool registry before running the loop.");
+            Assert.AreEqual(0, refreshService.EnsureInitializedCallCount,
+                "MCP stdio mode should defer shared tool registry initialization until the protocol loop needs tools.");
             CollectionAssert.AreEqual(
-                new[] { "metadata", "registry" },
+                Array.Empty<string>(),
                 metadataProviderFactory.InitializationOrder,
-                "MCP stdio mode should initialize metadata before publishing the registry.");
-            Assert.IsTrue(metadataProviderFactory.CancellationToken.CanBeCanceled,
-                "Metadata initialization must receive the loader's shutdown cancellation token.");
-            Assert.AreEqual(metadataProviderFactory.CancellationToken, refreshService.CancellationToken,
-                "Metadata initialization and registry publication must share the serialized operation's token.");
+                "MCP stdio mode should not infer metadata before the protocol loop starts.");
             Assert.AreEqual(lifetime.ApplicationStopping, stdioServer.CancellationToken,
                 "The stdio loop should keep using the host lifetime cancellation token.");
             Assert.AreEqual(1, host.DisposeCallCount,
                 "MCP stdio mode should dispose the host after the stdio loop exits.");
-            Assert.AreEqual(1, metadataProviderFactory.InitializeAsyncCallCount,
-                "MCP stdio mode must initialize metadata exactly once through the shared runtime initialization path.");
+            Assert.AreEqual(0, metadataProviderFactory.InitializeAsyncCallCount,
+                "MCP stdio mode must not initialize metadata before the protocol loop needs tools.");
             Assert.IsTrue(serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>().ShutdownResourcesDisposed,
                 "MCP stdio shutdown must drain the loader before disposing the host.");
         }
@@ -112,21 +108,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             string reported = capturedError.ToString();
 
-            Assert.IsFalse(result, "A host failure should be reported through the bool contract.");
-            Assert.AreEqual(failDuringStdio ? 1 : 0, stdioServer.RunAsyncCallCount,
-                "The stdio loop must run only when metadata initialization succeeds.");
+            Assert.AreEqual(!failDuringStdio, result,
+                "Only failures from the stdio loop should be reported by the host helper before lazy tool initialization.");
+            Assert.AreEqual(1, stdioServer.RunAsyncCallCount,
+                "The stdio loop must run even when metadata initialization would fail later.");
             TestMcpToolRegistryRefreshService refreshService =
                 (TestMcpToolRegistryRefreshService)serviceProvider.GetRequiredService<IMcpToolRegistryRefreshService>();
-            Assert.AreEqual(failDuringStdio ? 1 : 0, refreshService.EnsureInitializedCallCount,
-                "The registry must not publish tools after metadata initialization fails.");
+            Assert.AreEqual(0, refreshService.EnsureInitializedCallCount,
+                "The host helper must not publish tools before the stdio loop needs them.");
             Assert.AreEqual(1, host.DisposeCallCount,
                 "The host must still be disposed when initialization or the loop fails.");
             Assert.IsTrue(serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>().ShutdownResourcesDisposed,
                 "Failure reporting must not bypass the loader's shutdown drain.");
-            StringAssert.Contains(reported, "MCP stdio host",
-                "The operator needs to know which host failed, not only that one did.");
-            StringAssert.Contains(reported, failure.Message,
-                "GetAwaiter().GetResult() rethrows the original exception, so the cause must survive.");
+            if (failDuringStdio)
+            {
+                StringAssert.Contains(reported, "MCP stdio host",
+                    "The operator needs to know which host failed, not only that one did.");
+                StringAssert.Contains(reported, failure.Message,
+                    "GetAwaiter().GetResult() rethrows the original exception, so the cause must survive.");
+            }
+            else
+            {
+                Assert.AreEqual(string.Empty, reported,
+                    "Lazy metadata failures must not be reported before a tool request starts initialization.");
+            }
+
             Assert.AreEqual(string.Empty, capturedOut.ToString(),
                 "stdout is the JSON-RPC channel; a stray byte on it corrupts the protocol.");
         }
@@ -138,9 +144,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// real stream without installing a writer that would outlive the call.
         /// </summary>
         [TestMethod]
-        public void RunMcpStdioHost_StartupFails_WhenStandardErrorSuppressed_LeavesConsoleUnchanged()
+        public void RunMcpStdioHost_LoopFails_WhenStandardErrorSuppressed_LeavesConsoleUnchanged()
         {
-            TestMcpStdioServer stdioServer = new();
+            Exception failure = InferenceFailure();
+            TestMcpStdioServer stdioServer = new()
+            {
+                RunAsyncException = failure
+            };
             TestMetadataProviderFactory metadataProviderFactory = new()
             {
                 InitializeAsyncException = InferenceFailure()
@@ -168,8 +178,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(result, "The bool contract holds whether or not stderr was suppressed.");
             Assert.IsTrue(consoleErrorUntouched,
                 "The report must not leave a replacement writer installed on Console.Error.");
-            Assert.AreEqual(0, stdioServer.RunAsyncCallCount,
-                "The stdio loop must not run after startup failed.");
+            Assert.AreEqual(1, stdioServer.RunAsyncCallCount,
+                "The stdio loop failure should be reported without changing Console.Error.");
         }
 
         [DataTestMethod]
@@ -192,14 +202,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 BuildServices(stdioServer, metadataProviderFactory, out _);
             TestHost host = new(serviceProvider);
 
-            OperationCanceledException actual = Assert.ThrowsException<OperationCanceledException>(
-                () => McpStdioHelper.RunMcpStdioHost(host));
+            if (cancelDuringStdio)
+            {
+                OperationCanceledException actual = Assert.ThrowsException<OperationCanceledException>(
+                    () => McpStdioHelper.RunMcpStdioHost(host));
 
-            Assert.AreSame(failure, actual, "Cancellation must propagate to Program.StartEngine, not become a startup failure.");
-            Assert.AreEqual(cancelDuringStdio ? 1 : 0, stdioServer.RunAsyncCallCount);
+                Assert.AreSame(failure, actual, "Cancellation must propagate to Program.StartEngine, not become a startup failure.");
+            }
+            else
+            {
+                Assert.IsTrue(McpStdioHelper.RunMcpStdioHost(host),
+                    "Metadata cancellation should be deferred until a tool request starts lazy initialization.");
+            }
+
+            Assert.AreEqual(1, stdioServer.RunAsyncCallCount);
             TestMcpToolRegistryRefreshService refreshService =
                 (TestMcpToolRegistryRefreshService)serviceProvider.GetRequiredService<IMcpToolRegistryRefreshService>();
-            Assert.AreEqual(cancelDuringStdio ? 1 : 0, refreshService.EnsureInitializedCallCount);
+            Assert.AreEqual(0, refreshService.EnsureInitializedCallCount);
             Assert.AreEqual(1, host.DisposeCallCount);
             Assert.IsTrue(serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>().ShutdownResourcesDisposed,
                 "Cancellation must still drain the loader before disposing the host.");

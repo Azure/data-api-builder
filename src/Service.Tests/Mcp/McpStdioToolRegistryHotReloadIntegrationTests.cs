@@ -65,6 +65,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     .Returns(new Dictionary<string, DatabaseObject>());
                 Mock<IMetadataProviderFactory> metadataProviderFactory = new();
                 metadataProviderFactory
+                    .Setup(factory => factory.InitializeAsync())
+                    .Returns(Task.CompletedTask);
+                metadataProviderFactory
                     .Setup(factory => factory.GetMetadataProvider(It.IsAny<string>()))
                     .Returns(sqlMetadataProvider.Object);
 
@@ -73,12 +76,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 ChannelTextWriter stdout = new();
                 using McpStdoutWriter stdoutWriter = new(stdout);
                 McpStdioToolListChangedNotifier notifier = new(stdoutWriter);
-                using ServiceProvider serviceProvider = new ServiceCollection()
-                    .AddSingleton(stdoutWriter)
-                    .AddSingleton<IMcpStdioToolListChangedNotifier>(notifier)
-                    .AddSingleton(configProvider.Object)
-                    .BuildServiceProvider();
-
                 McpToolRegistryRefreshService refreshService = new(
                     configProvider.Object,
                     Array.Empty<IMcpTool>(),
@@ -88,6 +85,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     NullLogger<McpToolRegistryRefreshService>.Instance,
                     hotReloadEventHandler);
                 refreshService.EnsureInitialized();
+                using ServiceProvider serviceProvider = new ServiceCollection()
+                    .AddSingleton(stdoutWriter)
+                    .AddSingleton<IMcpStdioToolListChangedNotifier>(notifier)
+                    .AddSingleton(configProvider.Object)
+                    .AddSingleton<IMetadataProviderFactory>(metadataProviderFactory.Object)
+                    .AddSingleton<IMcpToolRegistryRefreshService>(refreshService)
+                    .BuildServiceProvider();
 
                 McpStdioServer server = new(registry, serviceProvider, stdin);
                 using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));

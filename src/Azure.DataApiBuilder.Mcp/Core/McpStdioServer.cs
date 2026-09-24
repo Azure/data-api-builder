@@ -6,6 +6,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Telemetry;
@@ -31,6 +32,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly IMcpStdioToolListChangedNotifier? _toolListChangedNotifier;
         private readonly TextReader? _inputReader;
         private readonly string _protocolVersion;
+        private readonly object _initializationLock = new();
+        private Task? _initializationTask;
 
         private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
 
@@ -148,7 +151,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 break;
 
                             case "tools/list":
-                                HandleListTools(id);
+                                await HandleListToolsAsync(id, cancellationToken);
                                 break;
 
                             case "tools/call":
@@ -299,8 +302,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="id">
         /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
         /// </param>
-        private void HandleListTools(JsonElement? id)
+        private async Task HandleListToolsAsync(JsonElement? id, CancellationToken cancellationToken)
         {
+            await EnsureToolsInitializedAsync(cancellationToken);
+
             List<object> toolsWire = new();
 
             foreach (Tool tool in _toolRegistry.GetAdvertisedTools())
@@ -314,6 +319,27 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             WriteResult(id, new { tools = toolsWire });
+        }
+
+        private Task EnsureToolsInitializedAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            lock (_initializationLock)
+            {
+                return _initializationTask ??= InitializeToolsAsync(cancellationToken);
+            }
+        }
+
+        private async Task InitializeToolsAsync(CancellationToken cancellationToken)
+        {
+            IMetadataProviderFactory metadataProviderFactory =
+                _serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+            await metadataProviderFactory.InitializeAsync(cancellationToken);
+
+            IMcpToolRegistryRefreshService? registryRefreshService =
+                _serviceProvider.GetService<IMcpToolRegistryRefreshService>();
+            registryRefreshService?.EnsureInitialized(cancellationToken);
         }
 
         /// <summary>
@@ -462,6 +488,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing tool name");
                 return;
             }
+
+            await EnsureToolsInitializedAsync(ct);
 
             if (!_toolRegistry.TryGetTool(toolName!, out IMcpTool? tool) || tool is null)
             {

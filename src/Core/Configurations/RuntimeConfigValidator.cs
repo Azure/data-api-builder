@@ -787,11 +787,9 @@ public class RuntimeConfigValidator : IConfigValidator
 
         if (autoentitiesPropertyExists)
         {
-            RuntimeConfig rootConfig = _runtimeConfigProvider.GetConfig();
-
             foreach (KeyValuePair<string, Autoentity> autoentityDef in config.Autoentities)
             {
-                if (rootConfig.AutoentityResolutionCounts.TryGetValue(autoentityDef.Key, out int resolvedCount))
+                if (config.AutoentityResolutionCounts.TryGetValue(autoentityDef.Key, out int resolvedCount))
                 {
                     resolvedAutoentityCount += resolvedCount;
                 }

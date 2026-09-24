@@ -12,6 +12,12 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public class LogBuffer
     {
+        /// <summary>
+        /// Upper bound on buffered entries. Prevents unbounded growth when the buffer is never drained
+        /// (e.g. a loader with no logger in a hot-reload loop). The oldest entries are dropped first.
+        /// </summary>
+        internal const int MAX_BUFFERED_ENTRIES = 1000;
+
         private readonly ConcurrentQueue<(LogLevel LogLevel, string Message, Exception? Exception)> _logBuffer;
         private readonly object _flushLock = new();
 
@@ -26,6 +32,12 @@ namespace Azure.DataApiBuilder.Config
         public void BufferLog(LogLevel logLevel, string message, Exception? exception = null)
         {
             _logBuffer.Enqueue((logLevel, message, exception));
+
+            // Keep the buffer bounded so it cannot grow without limit if it is never drained. Dropping
+            // the oldest entries first preserves the most recent (most useful) diagnostics.
+            while (_logBuffer.Count > MAX_BUFFERED_ENTRIES && _logBuffer.TryDequeue(out _))
+            {
+            }
         }
 
         /// <summary>

@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using System;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -10,6 +11,7 @@ using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Telemetry;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -227,6 +229,90 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Flip back off — must propagate again.
             writer.IsEnabled = false;
             Assert.IsFalse(logger.IsEnabled(LogLevel.Information));
+        }
+
+        [TestMethod]
+        public void McpLogger_BeginScope_ReturnsReusableDisposableScope()
+        {
+            McpLogger logger = new("Category", Mock.Of<IMcpLogNotificationWriter>());
+
+            IDisposable? first = logger.BeginScope("first");
+            IDisposable? second = logger.BeginScope("second");
+
+            Assert.IsNotNull(first);
+            Assert.AreSame(first, second);
+            first.Dispose();
+        }
+
+        [TestMethod]
+        public void McpLogger_Disabled_DoesNotInvokeFormatterOrWriter()
+        {
+            Mock<IMcpLogNotificationWriter> writer = new();
+            writer.SetupGet(x => x.IsEnabled).Returns(false);
+            McpLogger logger = new("Category", writer.Object);
+            bool formatterCalled = false;
+
+            logger.Log(LogLevel.Information, default, "state", null, (state, exception) =>
+            {
+                formatterCalled = true;
+                return state;
+            });
+
+            Assert.IsFalse(formatterCalled);
+            writer.Verify(x => x.WriteNotification(It.IsAny<LogLevel>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [TestMethod]
+        public void McpLogger_EnabledWithNullFormatter_Throws()
+        {
+            Mock<IMcpLogNotificationWriter> writer = new();
+            writer.SetupGet(x => x.IsEnabled).Returns(true);
+            McpLogger logger = new("Category", writer.Object);
+
+            Assert.ThrowsException<ArgumentNullException>(() =>
+                logger.Log<string>(LogLevel.Information, default, "state", null, null!));
+        }
+
+        [TestMethod]
+        public void McpLogger_EmptyMessageWithoutException_DoesNotWrite()
+        {
+            Mock<IMcpLogNotificationWriter> writer = new();
+            writer.SetupGet(x => x.IsEnabled).Returns(true);
+            McpLogger logger = new("Category", writer.Object);
+
+            logger.Log(LogLevel.Information, default, "state", null, (_, _) => string.Empty);
+
+            writer.Verify(x => x.WriteNotification(It.IsAny<LogLevel>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [DataTestMethod]
+        [DataRow("")]
+        [DataRow("message")]
+        public void McpLogger_Exception_AppendsDetailsAndWrites(string formattedMessage)
+        {
+            Mock<IMcpLogNotificationWriter> writer = new();
+            writer.SetupGet(x => x.IsEnabled).Returns(true);
+            McpLogger logger = new("Category", writer.Object);
+            InvalidOperationException exception = new("failure");
+
+            logger.Log(LogLevel.Error, default, "state", exception, (_, _) => formattedMessage);
+
+            writer.Verify(x => x.WriteNotification(
+                LogLevel.Error,
+                "Category",
+                It.Is<string>(message => message.Contains("InvalidOperationException") && message.Contains("failure"))), Times.Once);
+        }
+
+        [TestMethod]
+        public void McpLoggerProvider_DisposeClearsLoggersAndPreventsFurtherCreation()
+        {
+            McpLoggerProvider provider = new(Mock.Of<IMcpLogNotificationWriter>());
+            _ = provider.CreateLogger("Category");
+
+            provider.Dispose();
+            provider.Dispose();
+
+            Assert.ThrowsException<ObjectDisposedException>(() => provider.CreateLogger("Other"));
         }
     }
 }

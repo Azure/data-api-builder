@@ -242,6 +242,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                return McpResponseBuilder.BuildErrorResult(toolName, "OperationCanceled", "The create operation was canceled.", logger);
+            }
             catch (Exception ex)
             {
                 return McpResponseBuilder.BuildErrorResult(toolName, "Error", $"Error: {ex.Message}", logger);

@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -438,45 +440,49 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForAggregationsWithAliases()
         {
-            string msSqlQuery = @"
-                SELECT 
-                    MAX(categoryid) AS max, 
-                    MAX(price) AS max_price,
-                    MIN(price) AS min_price,
-                    AVG(price) AS avg_price,
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        MAX(categoryid) AS max,
+                        MAX(price) AS max_price,
+                        MIN(price) AS min_price,
+                        AVG(price) AS avg_price,
+                        SUM(price) AS sum_price
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForAggregationsWithAliases(msSqlQuery);
+            await TestSupportForAggregationsWithAliases(postgresQuery);
         }
 
         /// <summary>
         /// Test to check GraphQL support for aggregations with aliases and groupby.
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// Note: an explicit ORDER BY categoryid is required here because DAB's actual generated query selects
+        /// categoryid as an extra column, which changes Postgres's query plan (and therefore GROUP BY row order)
+        /// compared to a query that only selects the aggregates.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByAggregationsWithAliases()
         {
-            string msSqlQuery = @"
-                SELECT
-                    MAX(categoryid) AS max,
-                    MAX(price) AS max_price,
-                    MIN(price) AS min_price,
-                    AVG(price) AS avg_price,
-                    SUM(price) AS sum_price,
-                    COUNT(categoryid) AS count
-                FROM stocks_price
-                GROUP BY categoryid
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        MAX(categoryid) AS max,
+                        MAX(price) AS max_price,
+                        MIN(price) AS min_price,
+                        AVG(price) AS avg_price,
+                        SUM(price) AS sum_price,
+                        COUNT(categoryid) AS count
+                    FROM stocks_price
+                    GROUP BY categoryid
+                    ORDER BY categoryid
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForGroupByAggregationsWithAliases(msSqlQuery);
+            await TestSupportForGroupByAggregationsWithAliases(postgresQuery);
         }
 
         /// <summary>
@@ -484,17 +490,17 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForMinAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    MIN(price) AS min_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        MIN(price) AS min_price
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForMinAggregation(msSqlQuery);
+            await TestSupportForMinAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -502,17 +508,17 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForMaxAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    MAX(price) AS max_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        MAX(price) AS max_price
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForMaxAggregation(msSqlQuery);
+            await TestSupportForMaxAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -520,17 +526,17 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForAvgAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    AVG(price) AS avg_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        AVG(price) AS avg_price
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForAvgAggregation(msSqlQuery);
+            await TestSupportForAvgAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -538,17 +544,17 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForSumAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        SUM(price) AS sum_price
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForSumAggregation(msSqlQuery);
+            await TestSupportForSumAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -556,17 +562,17 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForCountAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    COUNT(categoryid) AS count_categoryid
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        COUNT(categoryid) AS count_categoryid
+                    FROM stocks_price
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForCountAggregation(msSqlQuery);
+            await TestSupportForCountAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -574,18 +580,19 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForHavingAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                HAVING SUM(price) > 50
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            // HAVING may exclude the only row; json_agg over zero rows returns NULL, not [].
+            string postgresQuery = @"
+                SELECT COALESCE(json_agg(to_jsonb(table0)), '[]') FROM (
+                    SELECT
+                        MAX(id) AS max
+                    FROM publishers
+                    HAVING MAX(id) > 2346
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForHavingAggregation(msSqlQuery);
+            await TestSupportForHavingAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -593,19 +600,19 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByHavingAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                GROUP BY categoryid, pieceid
-                HAVING SUM(price) > 50
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        SUM(price) AS sum_price
+                    FROM stocks_price
+                    GROUP BY categoryid, pieceid
+                    HAVING SUM(price) > 50
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForGroupByHavingAggregation(msSqlQuery);
+            await TestSupportForGroupByHavingAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -613,22 +620,22 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByHavingFieldsAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    categoryid,
-                    pieceid,
-                    SUM(price) AS sum_price,
-                    COUNT(pieceid) AS count_piece
-                FROM stocks_price
-                GROUP BY categoryid, pieceid
-                HAVING SUM(price) > 50 AND COUNT(pieceid) <= 100
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        categoryid,
+                        pieceid,
+                        SUM(price) AS sum_price,
+                        COUNT(pieceid) AS count_piece
+                    FROM stocks_price
+                    GROUP BY categoryid, pieceid
+                    HAVING SUM(price) > 50 AND COUNT(pieceid) <= 100
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForGroupByHavingFieldsAggregation(msSqlQuery);
+            await TestSupportForGroupByHavingFieldsAggregation(postgresQuery);
         }
 
         /// <summary>
@@ -636,23 +643,314 @@ FROM
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByNoAggregation()
         {
-            string msSqlQuery = @"
-                SELECT
-                    categoryid,
-                    pieceid
-                FROM stocks_price
-                GROUP BY categoryid, pieceid
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+            // ORDER BY makes explicit the row order that groupBy defaults to (declared groupBy field order) absent an orderBy argument.
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        categoryid,
+                        pieceid
+                    FROM stocks_price
+                    GROUP BY categoryid, pieceid
+                    ORDER BY categoryid, pieceid
+                ) AS table0";
 
             // Execute the test for the SQL query
-            await TestSupportForGroupByNoAggregation(msSqlQuery);
+            await TestSupportForGroupByNoAggregation(postgresQuery);
+        }
+
+        /// <summary>
+        /// Tests groupBy with aggregations on a mapped column.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByAggregationWithMappedColumns()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings(orderBy: { column1: ASC }) {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+                aggregations {
+                    max_column1: max(field: column1)
+                    count_column1: count(field: column1)
+                }
+            }
+        }
+    }";
+
+            string postgresQuery = @"
+                SELECT json_agg(to_jsonb(table0)) FROM (
+                    SELECT
+                        __column1 AS column1,
+                        MAX(__column1) AS max_column1,
+                        COUNT(__column1) AS count_column1
+                    FROM GQLmappings
+                    GROUP BY __column1
+                    ORDER BY __column1
+                ) AS table0";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+            using JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedDocument.RootElement);
+        }
+
+        /// <summary>
+        /// Tests aggregations over a mapped column without grouped fields.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForAggregationWithMappedColumnReturnsExpectedValues()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings {
+            groupBy {
+                aggregations {
+                    max_column1: max(field: column1)
+                    min_column1: min(field: column1)
+                    sum_column1: sum(field: column1)
+                    count_column1: count(field: column1)
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    {
+                        ""aggregations"": {
+                            ""max_column1"": 5,
+                            ""min_column1"": 1,
+                            ""sum_column1"": 13,
+                            ""count_column1"": 4
+                        }
+                    }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests selecting only a mapped field from groupBy.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByFieldsOnlyWithMappedColumnReturnsExpectedValues()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings(orderBy: { column1: ASC }) {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    { ""fields"": { ""column1"": 1 } },
+                    { ""fields"": { ""column1"": 3 } },
+                    { ""fields"": { ""column1"": 4 } },
+                    { ""fields"": { ""column1"": 5 } }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests grouped fields and aggregations over the same mapped column.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByFieldsAndAggregationWithMappedColumnReturnsExpectedValues()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings(orderBy: { column1: ASC }) {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+                aggregations {
+                    count_column1: count(field: column1)
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    { ""fields"": { ""column1"": 1 }, ""aggregations"": { ""count_column1"": 1 } },
+                    { ""fields"": { ""column1"": 3 }, ""aggregations"": { ""count_column1"": 1 } },
+                    { ""fields"": { ""column1"": 4 }, ""aggregations"": { ""count_column1"": 1 } },
+                    { ""fields"": { ""column1"": 5 }, ""aggregations"": { ""count_column1"": 1 } }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests orderBy on a mapped column in a groupBy query.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByWithOrderByOnMappedColumn()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings(orderBy: { column1: DESC }) {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    { ""fields"": { ""column1"": 5 } },
+                    { ""fields"": { ""column1"": 4 } },
+                    { ""fields"": { ""column1"": 3 } },
+                    { ""fields"": { ""column1"": 1 } }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests a HAVING filter on an aggregation over a mapped column.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByHavingAggregationOnMappedColumn()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings(orderBy: { column1: ASC }) {
+            groupBy(fields: [column1]) {
+                aggregations {
+                    max_column1: max(field: column1, having: { gt: 3 })
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    { ""aggregations"": { ""max_column1"": 4 } },
+                    { ""aggregations"": { ""max_column1"": 5 } }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests grouped fields, aggregations, and HAVING over a mapped column.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByFieldsAggregationsAndHavingOnMappedColumn()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings(orderBy: { column1: ASC }) {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+                aggregations {
+                    max_column1: max(field: column1, having: { gt: 3 })
+                    count_column1: count(field: column1)
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    {
+                        ""fields"": { ""column1"": 4 },
+                        ""aggregations"": { ""max_column1"": 4, ""count_column1"": 1 }
+                    },
+                    {
+                        ""fields"": { ""column1"": 5 },
+                        ""aggregations"": { ""max_column1"": 5, ""count_column1"": 1 }
+                    }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests fields, aggregations, HAVING, and orderBy together over a mapped column.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByWithFieldsAggregationsHavingAndOrderByOnMappedColumn()
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"
+    {
+        gQLmappings(orderBy: { column1: DESC }) {
+            groupBy(fields: [column1]) {
+                fields {
+                    column1
+                }
+                aggregations {
+                    max_column1: max(field: column1, having: { gt: 3 })
+                    min_column1: min(field: column1)
+                    count_column1: count(field: column1)
+                }
+            }
+        }
+    }";
+
+            string expected = @"
+            {
+                ""groupBy"": [
+                    {
+                        ""fields"": { ""column1"": 5 },
+                        ""aggregations"": { ""max_column1"": 5, ""min_column1"": 5, ""count_column1"": 1 }
+                    },
+                    {
+                        ""fields"": { ""column1"": 4 },
+                        ""aggregations"": { ""max_column1"": 4, ""min_column1"": 4, ""count_column1"": 1 }
+                    }
+                ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         [TestMethod]
-        [Ignore]
         public override async Task TestNoAggregationOptionsForTableWithoutNumericFields()
         {
             await base.TestNoAggregationOptionsForTableWithoutNumericFields();

@@ -15,14 +15,17 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthentication;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -42,6 +45,7 @@ using HotChocolate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
@@ -911,6 +915,12 @@ type Moon {
             string expectedDabModifiedConnString,
             bool dabEnvOverride)
         {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            // Ensure telemetry is enabled (not opted out) so the Application Name carries the dab_oss payload.
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+
             // Explicitly set the DAB_APP_NAME_ENV to null to ensure that the DAB_APP_NAME_ENV is not set.
             if (dabEnvOverride)
             {
@@ -921,27 +931,39 @@ type Moon {
                 Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
             }
 
-            // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
-            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
-            expectedDabModifiedConnString += resolvedAssemblyVersion;
+            try
+            {
+                // The DAB-owned portion of the Application Name is the telemetry block: dab_oss_<version>
+                // for open source, or dab_hosted_<version> when DAB_APP_NAME_ENV is set (hosted). The encoded
+                // payload then follows, so we assert the Application Name prefix and that it terminates with '+'.
+                string expectedAppNamePrefix = expectedDabModifiedConnString
+                    + (dabEnvOverride ? $"dab_hosted_{ProductInfo.GetProductVersion()}" : ProductInfo.DAB_USER_AGENT);
 
-            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
 
-            // Act
-            bool configParsed = RuntimeConfigLoader.TryParseConfig(
-                json: runtimeConfig.ToJson(),
-                config: out RuntimeConfig updatedRuntimeConfig,
-                replacementSettings: new(doReplaceEnvVar: true));
+                // Act
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
 
-            // Assert
-            Assert.AreEqual(
-                expected: true,
-                actual: configParsed,
-                message: "Runtime config unexpectedly failed parsing.");
-            Assert.AreEqual(
-                expected: expectedDabModifiedConnString,
-                actual: updatedRuntimeConfig.DataSource.ConnectionString,
-                message: "DAB did not properly set the 'Application Name' connection string property.");
+                // Assert
+                Assert.AreEqual(
+                    expected: true,
+                    actual: configParsed,
+                    message: "Runtime config unexpectedly failed parsing.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.StartsWith(expectedAppNamePrefix, StringComparison.Ordinal),
+                    $"Expected connection string to start with '{expectedAppNamePrefix}' but was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Expected telemetry payload to terminate with '+' but connection string was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
         }
 
         /// <summary>
@@ -964,6 +986,12 @@ type Moon {
             string expectedDabModifiedConnString,
             bool dabEnvOverride)
         {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            // Ensure telemetry is enabled (not opted out) so the Application Name carries the dab_oss payload.
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+
             // Explicitly set the DAB_APP_NAME_ENV to null to ensure that the DAB_APP_NAME_ENV is not set.
             if (dabEnvOverride)
             {
@@ -974,27 +1002,269 @@ type Moon {
                 Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
             }
 
-            // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
-            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
-            expectedDabModifiedConnString += resolvedAssemblyVersion;
+            try
+            {
+                // The DAB-owned portion of the Application Name is the telemetry block: dab_oss_<version>
+                // for open source, or dab_hosted_<version> when DAB_APP_NAME_ENV is set (hosted). The encoded
+                // payload then follows, so we assert the Application Name prefix and that it terminates with '+'.
+                string expectedAppNamePrefix = expectedDabModifiedConnString
+                    + (dabEnvOverride ? $"dab_hosted_{ProductInfo.GetProductVersion()}" : ProductInfo.DAB_USER_AGENT);
 
-            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.PostgreSQL, configProvidedConnString);
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.PostgreSQL, configProvidedConnString);
 
-            // Act
-            bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                // Act
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
+
+                // Assert
+                Assert.AreEqual(
+                    expected: true,
+                    actual: configParsed,
+                    message: "Runtime config unexpectedly failed parsing.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.StartsWith(expectedAppNamePrefix, StringComparison.Ordinal),
+                    $"Expected connection string to start with '{expectedAppNamePrefix}' but was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Expected telemetry payload to terminate with '+' but connection string was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
+        }
+
+        /// <summary>
+        /// Validates that DWSQL data sources also receive the telemetry-bearing Application Name.
+        /// DWSQL uses the SqlClient connection-string builder (like MSSQL) and supports Application Name,
+        /// so the dab_oss telemetry block (with Source encoded as 'D') is embedded.
+        /// </summary>
+        [TestMethod]
+        public void DwSqlConnStringSupplementedWithAppNameProperty()
+        {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            // Ensure telemetry is enabled (not opted out) and no host label is set.
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+
+            try
+            {
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.DWSQL, "Data Source=<>;");
+
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
+
+                Assert.IsTrue(configParsed, "Runtime config unexpectedly failed parsing.");
+
+                string connectionString = updatedRuntimeConfig.DataSource.ConnectionString;
+                Assert.IsTrue(
+                    connectionString.StartsWith("Data Source=<>;Application Name=" + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal),
+                    $"Expected DWSQL Application Name to carry the telemetry block but was '{connectionString}'.");
+                Assert.IsTrue(
+                    connectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Expected DWSQL telemetry payload to terminate with '+' but was '{connectionString}'.");
+
+                // The encoded Source for a DWSQL pool must decode as 'D'.
+                IReadOnlyList<string> decoded = ApplicationNameTelemetry.Decode(connectionString);
+                Assert.IsTrue(
+                    decoded.Any(line => line.Contains("Source: D (DWSQL)")),
+                    string.Join(Environment.NewLine, decoded));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
+        }
+
+        /// <summary>
+        /// Validates that when telemetry is opted out via DAB_TELEMETRY_APPNAME_OPT_OUT=1, the connection
+        /// string Application Name carries only the version marker (dab_oss_&lt;version&gt;) with no payload.
+        /// </summary>
+        [TestMethod]
+        public void ConnStringAppNameOmitsPayloadWhenOptedOut()
+        {
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, "1");
+
+            try
+            {
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, "Data Source=<>;");
+
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
+
+                Assert.IsTrue(configParsed, "Runtime config unexpectedly failed parsing.");
+                Assert.AreEqual(
+                    "Data Source=<>;Application Name=" + ProductInfo.DAB_USER_AGENT,
+                    updatedRuntimeConfig.DataSource.ConnectionString,
+                    "Opted-out Application Name should be version-only with no telemetry payload.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
+        }
+
+        /// <summary>
+        /// Validates that the hosted / late-configured path (POST /configuration, which supplies the
+        /// connection string separately with doReplaceEnvVar:false) still embeds anonymous usage
+        /// telemetry — including the DAB_APP_NAME_ENV host label — into the connection string's
+        /// Application Name. This is the deployment shape where the 'dab_hosted' label is most valuable.
+        /// </summary>
+        [TestMethod]
+        public async Task HostedLateConfigConnStringSupplementedWithTelemetry()
+        {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
+
+            try
+            {
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, "Server=placeholder;");
+                FileSystemRuntimeConfigLoader loader = new(new MockFileSystem());
+                RuntimeConfigProvider provider = new(loader);
+
+                // Mirror the hosted /configuration path: connection string supplied separately, env-var
+                // replacement disabled. Telemetry must still be embedded.
+                bool initialized = await provider.Initialize(
+                    runtimeConfig.ToJson(),
+                    graphQLSchema: null,
+                    connectionString: "Server=hosted-sql;Database=hosteddb;",
+                    accessToken: null,
+                    replacementSettings: new(azureKeyVaultOptions: null, doReplaceEnvVar: false, doReplaceAkvVar: false));
+
+                Assert.IsTrue(initialized, "Hosted late-config initialization should succeed.");
+
+                string connectionString = provider.GetConfig().DataSource.ConnectionString;
+                Assert.IsTrue(
+                    connectionString.Contains("Application Name=dab_hosted_" + ProductInfo.GetProductVersion(), StringComparison.Ordinal),
+                    $"Hosted connection string should carry the dab_hosted_<version> marker but was '{connectionString}'.");
+                Assert.IsTrue(
+                    connectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Hosted connection string should carry the telemetry payload but was '{connectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
+        }
+
+        /// <summary>
+        /// Validates that an explicit connection-string override is applied to the default data source
+        /// even when env-var replacement is disabled (DoReplaceEnvVar == false). Telemetry, which is
+        /// gated on DoReplaceEnvVar, is not embedded in that case, but the override must still take effect.
+        /// </summary>
+        [TestMethod]
+        public void ConnStringOverrideAppliedWhenEnvVarReplacementDisabled()
+        {
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, "Server=in-config;");
+
+            bool parsed = RuntimeConfigLoader.TryParseConfig(
                 json: runtimeConfig.ToJson(),
                 config: out RuntimeConfig updatedRuntimeConfig,
-                replacementSettings: new(doReplaceEnvVar: true));
+                parseError: out _,
+                replacementSettings: new(doReplaceEnvVar: false),
+                connectionString: "Server=override-server;Database=overridedb;");
 
-            // Assert
+            Assert.IsTrue(parsed, "Runtime config unexpectedly failed parsing.");
             Assert.AreEqual(
-                expected: true,
-                actual: configParsed,
-                message: "Runtime config unexpectedly failed parsing.");
-            Assert.AreEqual(
-                expected: expectedDabModifiedConnString,
-                actual: updatedRuntimeConfig.DataSource.ConnectionString,
-                message: "DAB did not properly set the 'Application Name' connection string property.");
+                "Server=override-server;Database=overridedb;",
+                updatedRuntimeConfig.DataSource.ConnectionString,
+                "The explicit connection-string override should be applied even when env-var replacement (and telemetry) is disabled.");
+        }
+
+        /// <summary>
+        /// Multi-database hosted scenario: the late-config path supplements the default data source with
+        /// the separately-supplied connection string, and must also embed telemetry into child data
+        /// sources (from data-source-files) so every hosted connection pool carries the usage snapshot.
+        /// </summary>
+        [TestMethod]
+        public async Task HostedLateConfigMultiDbChildConnStringSupplementedWithTelemetry()
+        {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
+
+            // The RuntimeConfig constructor loads child data-source-files from a real FileSystem.
+            string childFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.IO.Path.GetRandomFileName() + ".json");
+
+            try
+            {
+                string childConfig = @"{
+                    ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                    ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=child-sql;Database=childdb;TrustServerCertificate=True;"" },
+                    ""entities"": { ""ChildEntity"": { ""source"": ""dbo.ChildTable"", ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""read""] }] } }
+                }";
+                await File.WriteAllTextAsync(childFilePath, childConfig);
+
+                string rootConfig = $@"{{
+                    ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                    ""data-source"": {{ ""database-type"": ""mssql"", ""connection-string"": ""Server=placeholder;"" }},
+                    ""data-source-files"": [""{childFilePath.Replace("\\", "\\\\")}""],
+                    ""runtime"": {{ ""rest"": {{ ""enabled"": true }} }},
+                    ""entities"": {{ ""RootEntity"": {{ ""source"": ""dbo.RootTable"", ""permissions"": [{{ ""role"": ""anonymous"", ""actions"": [""read""] }}] }} }}
+                }}";
+
+                FileSystemRuntimeConfigLoader loader = new(new MockFileSystem());
+                RuntimeConfigProvider provider = new(loader);
+
+                bool initialized = await provider.Initialize(
+                    rootConfig,
+                    graphQLSchema: null,
+                    connectionString: "Server=hosted-default;Database=defaultdb;",
+                    accessToken: null,
+                    replacementSettings: new(azureKeyVaultOptions: null, doReplaceEnvVar: false, doReplaceAkvVar: false));
+
+                Assert.IsTrue(initialized, "Hosted multi-database late-config initialization should succeed.");
+
+                RuntimeConfig loaded = provider.GetConfig();
+                string expectedAppName = "Application Name=dab_hosted_" + ProductInfo.GetProductVersion();
+
+                // Default data source: supplemented with the supplied connection string + telemetry.
+                Assert.IsTrue(
+                    loaded.DataSource.ConnectionString.Contains(expectedAppName, StringComparison.Ordinal)
+                        && loaded.DataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Default data source should carry telemetry but was '{loaded.DataSource.ConnectionString}'.");
+
+                // Child data source: its own server, also supplemented with telemetry.
+                DataSource childDataSource = loaded.GetDataSourceFromDataSourceName(loaded.GetDataSourceNameFromEntityName("ChildEntity"));
+                Assert.IsTrue(
+                    childDataSource.ConnectionString.Contains(expectedAppName, StringComparison.Ordinal)
+                        && childDataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Child data source should carry telemetry but was '{childDataSource.ConnectionString}'.");
+                Assert.IsTrue(
+                    childDataSource.ConnectionString.Contains("child-sql", StringComparison.Ordinal),
+                    $"Child data source should retain its own server but was '{childDataSource.ConnectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+
+                if (File.Exists(childFilePath))
+                {
+                    File.Delete(childFilePath);
+                }
+            }
         }
 
         /// <summary>
@@ -3843,6 +4113,181 @@ type Moon {
         }
 
         /// <summary>
+        /// Ensures a cold-started runtime with omitted authentication ignores forged EasyAuth headers,
+        /// including in development mode where all authentication handlers remain registered for hot reload.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps)]
+        [DataRow(HostMode.Production, EasyAuthType.AppService)]
+        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps)]
+        [DataRow(HostMode.Development, EasyAuthType.AppService)]
+        [DoNotParallelize]
+        public async Task TestColdStartOmittedAuthenticationIgnoresForgedEasyAuthHeader(HostMode hostMode, EasyAuthType payloadType)
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+            Assert.IsNull(Environment.GetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR));
+            Assert.IsNull(Environment.GetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR));
+
+            RuntimeConfig configuration = CreateBasicRuntimeConfigWithNoEntity(
+                DatabaseType.MSSQL,
+                "Server=placeholder;");
+            RuntimeOptions runtimeOptions = configuration.Runtime! with
+            {
+                Host = new(Cors: null, Authentication: null, Mode: hostMode)
+            };
+            configuration = configuration with { Runtime = runtimeOptions };
+            JsonObject configObject = JsonNode.Parse(configuration.ToJson())!.AsObject();
+            JsonObject host = configObject["runtime"]!["host"]!.AsObject();
+            Assert.IsTrue(host.Remove("authentication"));
+            string serializedConfiguration = configObject.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+            Assert.IsFalse(host.ContainsKey("authentication"));
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, serializedConfiguration);
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            Microsoft.Extensions.Hosting.IHostApplicationLifetime lifetime =
+                server.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
+            Assert.IsTrue(lifetime.ApplicationStarted.IsCancellationRequested, "Host did not finish starting.");
+            Assert.IsFalse(lifetime.ApplicationStopping.IsCancellationRequested, "Runtime initialization failed.");
+            RuntimeConfigProvider configProvider = server.Services.GetRequiredService<RuntimeConfigProvider>();
+            Assert.IsFalse(configProvider.IsLateConfigured);
+
+            Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider schemeProvider =
+                server.Services.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME));
+            Microsoft.AspNetCore.Authentication.AuthenticationScheme? defaultScheme =
+                await schemeProvider.GetDefaultAuthenticateSchemeAsync();
+            if (hostMode == HostMode.Development)
+            {
+                // With all handlers available and no default, request-time selection must ignore EasyAuth.
+                Assert.IsNull(defaultScheme);
+                Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+                Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+            }
+            else
+            {
+                Assert.IsNotNull(defaultScheme);
+                Assert.AreEqual(UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME, defaultScheme.Name);
+                Assert.IsNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+                Assert.IsNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+            }
+
+            const string FORGED_ROLE = "ForgedRole";
+            string forgedPrincipal = payloadType == EasyAuthType.StaticWebApps
+                ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: true, specificRole: FORGED_ROLE)
+                : AuthTestHelper.CreateAppServiceEasyAuthToken(
+                    roleClaimType: AuthenticationOptions.ROLE_CLAIM_TYPE,
+                    additionalClaims:
+                    [
+                        new AppServiceClaim { Typ = AuthenticationOptions.ROLE_CLAIM_TYPE, Val = FORGED_ROLE }
+                    ]);
+            HttpContext context = await server.SendAsync(requestContext =>
+            {
+                requestContext.Request.Path = "/api/not-an-entity";
+                requestContext.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER] = forgedPrincipal;
+                requestContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = FORGED_ROLE;
+                requestContext.Request.Scheme = "https";
+            });
+
+            Assert.AreEqual(StatusCodes.Status404NotFound, context.Response.StatusCode);
+            Assert.IsNotNull(context.User.Identity);
+            Assert.IsFalse(context.User.Identity.IsAuthenticated);
+            Assert.IsFalse(context.User.IsInRole(FORGED_ROLE));
+            Assert.AreEqual(
+                AuthorizationType.Anonymous.ToString(),
+                context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
+        }
+
+        /// <summary>
+        /// Preserves the existing late-configuration bootstrap and App Service request path.
+        /// Both EasyAuth handlers remain registered. Header trust in this mode is the hosting
+        /// service's responsibility; this in-process test simulates its authenticated ingress.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        [DoNotParallelize]
+        public async Task TestLateConfigurationPreservesEasyAuthSchemes(string configurationEndpoint)
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using HttpClient client = server.CreateClient();
+            client.BaseAddress = new Uri("https://localhost");
+            RuntimeConfigProvider configProvider = server.Services.GetRequiredService<RuntimeConfigProvider>();
+            Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider schemeProvider =
+                server.Services.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
+
+            Assert.IsTrue(configProvider.IsLateConfigured);
+            Assert.IsFalse(configProvider.TryGetLoadedConfig(out _));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+            Assert.IsNull(await schemeProvider.GetSchemeAsync(UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME));
+
+            Microsoft.AspNetCore.Authentication.AuthenticationScheme? defaultScheme =
+                await schemeProvider.GetDefaultAuthenticateSchemeAsync();
+            Assert.IsNotNull(defaultScheme);
+            Assert.AreEqual(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME, defaultScheme.Name);
+
+            using HttpResponseMessage beforeHydration = await client.GetAsync("/api/not-an-entity");
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, beforeHydration.StatusCode);
+
+            RuntimeConfig configuration = CreateBasicRuntimeConfigWithNoEntity(
+                DatabaseType.MSSQL,
+                "Server=placeholder;");
+            RuntimeOptions runtimeOptions = configuration.Runtime! with
+            {
+                Host = new(
+                    Cors: null,
+                    Authentication: new(Provider: EasyAuthType.AppService.ToString()),
+                    Mode: HostMode.Production)
+            };
+            configuration = configuration with { Runtime = runtimeOptions };
+            using HttpRequestMessage hydrationRequest = new(HttpMethod.Post, configurationEndpoint)
+            {
+                Content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint)
+            };
+            // Honor an externally configured bootstrap token without changing process-wide state
+            // or including the token on subsequent data requests.
+            string? bootstrapToken = Environment.GetEnvironmentVariable(Startup.CONFIG_AUTH_TOKEN_ENV_VAR);
+            if (!string.IsNullOrEmpty(bootstrapToken))
+            {
+                hydrationRequest.Headers.Add(Startup.CONFIG_AUTH_HEADER, bootstrapToken);
+            }
+
+            using HttpResponseMessage hydrationResponse = await client.SendAsync(hydrationRequest);
+            Assert.AreEqual(HttpStatusCode.OK, hydrationResponse.StatusCode);
+            Assert.IsTrue(configProvider.IsLateConfigured);
+            Assert.IsTrue(configProvider.TryGetLoadedConfig(out _));
+            Assert.IsNull(Environment.GetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR));
+            Assert.IsNull(Environment.GetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+
+            const string REQUIRED_ROLE = "LateConfiguredRole";
+            string principal = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                roleClaimType: AuthenticationOptions.ROLE_CLAIM_TYPE,
+                additionalClaims:
+                [
+                    new AppServiceClaim { Typ = AuthenticationOptions.ROLE_CLAIM_TYPE, Val = REQUIRED_ROLE }
+                ]);
+            HttpContext context = await server.SendAsync(requestContext =>
+            {
+                requestContext.Request.Path = "/api/not-an-entity";
+                requestContext.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER] = principal;
+                requestContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = REQUIRED_ROLE;
+                requestContext.Request.Scheme = "https";
+            });
+
+            Assert.AreEqual(StatusCodes.Status404NotFound, context.Response.StatusCode);
+            Assert.IsNotNull(context.User.Identity);
+            Assert.IsTrue(context.User.Identity.IsAuthenticated);
+            Assert.IsTrue(context.User.IsInRole(REQUIRED_ROLE));
+            Assert.AreEqual(REQUIRED_ROLE, context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]);
+        }
+
+        /// <summary>
         /// In CosmosDB NoSQL, we store data in the form of JSON. Practically, JSON can be very complex.
         /// But DAB doesn't support JSON with circular references e.g if 'Character.Moon' is a valid JSON Path, then
         /// 'Moon.Character' should not be there, DAB would throw an exception during the load itself.
@@ -3985,8 +4430,6 @@ type Planet @model(name:""PlanetAlias"") {
             $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
-            // When host is in Production mode with AppService as Identity Provider and the environment variables are not set
-            // we do not throw an exception any longer(PR: 2943), instead log a warning to the user. In this case expectError is false.
             // This test only checks for startup errors, so no requests are sent to the test server.
             try
             {
@@ -6026,8 +6469,12 @@ type Planet @model(name:""PlanetAlias"") {
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
         [DataRow("dbo_publishers", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", "Entity 'dbo_publishers' conflicts in autoentity pattern 'PublisherAutoEntity'. Use --patterns.exclude to skip it.", DisplayName = "Autoentities fail due to entity name")]
-        [DataRow("UniquePublisher", "dbo_publishers", "uniquePluralPublishers", "/unique/publisher", "Entity dbo_publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql singular type")]
-        [DataRow("UniquePublisher", "uniqueSingularPublisher", "dbo_publishers", "/unique/publisher", "Entity dbo_publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql plural type")]
+        [DataRow("UniquePublisher", "dbo_publishers", "uniquePluralPublishers", "/unique/publisher",
+            "\r\nGraphQL naming conflict detected.\r\n\r\nEntities:\r\n  UniquePublisher\r\n  dbo_publishers\r\n\r\nBoth entities generate the following GraphQL names:\r\n  dbo_publishers_by_pk\r\n  createdbo_publishers\r\n  updatedbo_publishers\r\n  deletedbo_publishers\r\n\r\nConfigure distinct GraphQL singular and plural names for one of the entities to resolve this conflict.",
+            DisplayName = "Autoentities fail due to graphql singular type")]
+        [DataRow("UniquePublisher", "uniqueSingularPublisher", "dbo_publishers", "/unique/publisher",
+            "\r\nGraphQL naming conflict detected.\r\n\r\nEntities:\r\n  UniquePublisher\r\n  dbo_publishers\r\n\r\nBoth entities generate the following GraphQL names:\r\n  dbo_publishers\r\n\r\nConfigure distinct GraphQL singular and plural names for one of the entities to resolve this conflict.",
+            DisplayName = "Autoentities fail due to graphql plural type")]
         [DataRow("UniquePublisher", "uniqueSingularPublisher", "uniquePluralPublishers", "/dbo_publishers", "The rest path: dbo_publishers specified for entity: dbo_publishers is already used by another entity.", DisplayName = "Autoentities fail due to rest path")]
         public async Task ValidateAutoentityGenerationConflicts(string entityName, string singular, string plural, string path, string exceptionMessage)
         {

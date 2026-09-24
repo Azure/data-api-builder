@@ -7,7 +7,9 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
+using HotChocolate.Language;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -92,6 +94,42 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.IsFalse(model.SchemaElements.OfType<IEdmEntityType>().Any(),
                 "Linking entities should not be added to the EDM model.");
+        }
+
+        [TestMethod]
+        public void BuildModel_CosmosModelAlias_AddsConfiguredEntitySet()
+        {
+            DocumentNode graphQLSchema = Utf8GraphQLParser.Parse(
+                """
+                type Planet @model(name: "PlanetAlias") {
+                    id: ID
+                    name: String
+                }
+                """);
+
+            IEdmModel model = new EdmModelBuilder()
+                .BuildModel(graphQLSchema)
+                .GetModel();
+
+            Assert.IsNotNull(model.EntityContainer);
+            Assert.IsTrue(model.EntityContainer.EntitySets().Any(entitySet => entitySet.Name == "Planet"));
+            Assert.IsTrue(model.EntityContainer.EntitySets().Any(entitySet => entitySet.Name == "PlanetAlias"));
+
+            Dictionary<string, SingleValueNode> claimValueNodes = new()
+            {
+                ["@dabClaim0"] = new ConstantNode("Mars")
+            };
+            ODataParser parser = new();
+            parser.BuildModel(graphQLSchema);
+
+            FilterClause filterClause = parser.GetFilterClause(
+                filterQueryString: "?$filter=name eq @dabClaim0",
+                resourcePath: "PlanetAlias",
+                customResolver: new ClaimsTypeDataUriResolver(claimValueNodes),
+                parameterAliasNodes: claimValueNodes);
+
+            BinaryOperatorNode comparison = (BinaryOperatorNode)filterClause.Expression;
+            Assert.AreEqual("Mars", ((ConstantNode)comparison.Right).Value);
         }
 
         #region Helpers

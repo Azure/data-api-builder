@@ -130,6 +130,17 @@
                 Action: Read
               }
             ]
+          },
+          {
+            Role: claim_policy_tester,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {
+                  Database: @item.name eq @claims.userId
+                }
+              }
+            ]
           }
         ]
       }

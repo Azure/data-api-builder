@@ -253,6 +253,28 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             validator.ValidateFileSinkPath(ConfigWith(telemetry: telemetry));
         }
 
+        [TestMethod]
+        public void ValidateFileSinkPath_PathLongerThanRecommendation_DoesNotThrow()
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            string path = $"logs/{new string('a', 256)}.txt";
+            TelemetryOptions telemetry = new(File: new FileSinkOptions { Enabled = true, Path = path });
+
+            validator.ValidateFileSinkPath(ConfigWith(telemetry: telemetry));
+        }
+
+        [DataTestMethod]
+        [DataRow("logs/", DisplayName = "Path ending in a directory has no file name")]
+        [DataRow("logs/bad\0name.txt", DisplayName = "File name contains a null character")]
+        public void ValidateFileSinkPath_InvalidFileName_Throws(string path)
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            TelemetryOptions telemetry = new(File: new FileSinkOptions { Enabled = true, Path = path });
+
+            Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidateFileSinkPath(ConfigWith(telemetry: telemetry)));
+        }
+
         #endregion
 
         #region ValidateEmbeddingsOptions
@@ -320,6 +342,201 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             EmbeddingsOptions embeddings = new(Provider: EmbeddingProviderType.OpenAI, BaseUrl: "https://api.openai.com", ApiKey: "key", Enabled: true, Model: "text-embedding-3-small");
 
             validator.ValidateEmbeddingsOptions(ConfigWith(embeddings: embeddings));
+        }
+
+        [DataTestMethod]
+        [DataRow(0, null, DisplayName = "Timeout must be positive")]
+        [DataRow(null, 0, DisplayName = "Dimensions must be positive")]
+        public void ValidateEmbeddings_NonPositiveNumericOptions_Throw(int? timeoutMs, int? dimensions)
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            EmbeddingsOptions embeddings = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "key",
+                TimeoutMs: timeoutMs,
+                Dimensions: dimensions);
+
+            Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidateEmbeddingsOptions(ConfigWith(embeddings: embeddings)));
+        }
+
+        [DataTestMethod]
+        [DataRow(true, 0, "health check", null, DisplayName = "Enabled health threshold must be positive")]
+        [DataRow(true, 1000, "", null, DisplayName = "Enabled health test text cannot be empty")]
+        [DataRow(true, 1000, "health check", 0, DisplayName = "Expected dimensions must be positive")]
+        public void ValidateEmbeddings_InvalidEnabledHealthOptions_Throw(
+            bool enabled,
+            int thresholdMs,
+            string testText,
+            int? expectedDimensions)
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            EmbeddingsOptions embeddings = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "key",
+                Health: new EmbeddingsHealthCheckConfig(enabled, thresholdMs, testText, expectedDimensions));
+
+            Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidateEmbeddingsOptions(ConfigWith(embeddings: embeddings)));
+        }
+
+        [TestMethod]
+        public void ValidateEmbeddings_EnabledEndpointWithEmptyRoles_Throws()
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            EmbeddingsOptions embeddings = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "key",
+                Endpoint: new EmbeddingsEndpointOptions(enabled: true, roles: System.Array.Empty<string>()));
+
+            Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidateEmbeddingsOptions(ConfigWith(embeddings: embeddings)));
+        }
+
+        [TestMethod]
+        public void ValidateEmbeddings_ProductionEndpointWithoutRoles_Throws()
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            EmbeddingsOptions embeddings = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "key",
+                Endpoint: new EmbeddingsEndpointOptions(enabled: true));
+
+            Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidateEmbeddingsOptions(ConfigWith(
+                    embeddings: embeddings,
+                    hostMode: HostMode.Production)));
+        }
+
+        [DataTestMethod]
+        [DataRow(true, 0, false, null, DisplayName = "Enabled cache lifetime must be positive")]
+        [DataRow(true, 24, true, "", DisplayName = "Enabled level-two cache requires a connection string")]
+        public void ValidateEmbeddings_InvalidCacheOptions_Throw(
+            bool enabled,
+            int ttlHours,
+            bool level2Enabled,
+            string? connectionString)
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            EmbeddingsCacheOptions cache = new(
+                Enabled: enabled,
+                TtlHours: ttlHours,
+                Level2: new EmbeddingsCacheLevel2Options(level2Enabled, connectionString));
+            EmbeddingsOptions embeddings = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "key",
+                Cache: cache);
+
+            Assert.ThrowsException<DataApiBuilderException>(
+                () => validator.ValidateEmbeddingsOptions(ConfigWith(embeddings: embeddings)));
+        }
+
+        [TestMethod]
+        public void ValidateEmbeddings_ValidCacheOptions_DoNotThrow()
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            EmbeddingsCacheOptions cache = new(
+                Enabled: true,
+                TtlHours: 12,
+                Level2: new EmbeddingsCacheLevel2Options(true, "localhost:6379"));
+            EmbeddingsOptions embeddings = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "key",
+                Cache: cache);
+
+            validator.ValidateEmbeddingsOptions(ConfigWith(embeddings: embeddings));
+        }
+
+        #endregion
+
+        #region Stored Procedure and MCP Validation
+
+        [TestMethod]
+        public void ValidateStoredProcedureDuplicateParameters_DuplicateThrows()
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            Entity entity = CreateStoredProcedureEntity(new()
+            {
+                new ParameterMetadata { Name = "id" },
+                new ParameterMetadata { Name = "id" }
+            });
+
+            Assert.ThrowsException<DataApiBuilderException>(() =>
+                validator.ValidateStoredProcedureDuplicateParameters(ConfigWith(
+                    entities: new() { ["Procedure"] = entity })));
+        }
+
+        [TestMethod]
+        public void ValidateStoredProcedureDuplicateParameters_SkipsTablesAndNullParameters()
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            Entity procedure = CreateStoredProcedureEntity(parameters: null);
+            Entity table = CreateStoredProcedureEntity(new()
+            {
+                new ParameterMetadata { Name = "id" },
+                new ParameterMetadata { Name = "id" }
+            }) with
+            {
+                Source = new("books", EntitySourceType.Table, null, null)
+            };
+
+            validator.ValidateStoredProcedureDuplicateParameters(ConfigWith(
+                entities: new() { ["Procedure"] = procedure, ["Book"] = table }));
+        }
+
+        [DataTestMethod]
+        [DataRow(0, DisplayName = "Aggregate timeout cannot be zero")]
+        [DataRow(601, DisplayName = "Aggregate timeout cannot exceed ten minutes")]
+        public void ValidateMcpUri_OutOfRangeAggregateTimeout_Throws(int timeout)
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            McpRuntimeOptions mcp = new(
+                Enabled: true,
+                Path: "/mcp",
+                DmlTools: new DmlToolsConfig(aggregateRecordsQueryTimeout: timeout));
+
+            Assert.ThrowsException<DataApiBuilderException>(() => validator.ValidateMcpUri(ConfigWith(mcp: mcp)));
+        }
+
+        [TestMethod]
+        public void ValidateRelationshipConfigCorrectness_StoredProcedureRelationshipThrows()
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            Entity entity = CreateStoredProcedureEntity(parameters: null) with
+            {
+                Relationships = new Dictionary<string, EntityRelationship>
+                {
+                    ["author"] = CreateRelationship("Author")
+                }
+            };
+
+            Assert.ThrowsException<DataApiBuilderException>(() =>
+                validator.ValidateRelationshipConfigCorrectness(ConfigWith(
+                    entities: new() { ["Procedure"] = entity })));
+        }
+
+        [TestMethod]
+        public void ValidateRelationshipConfigCorrectness_UndefinedTargetThrows()
+        {
+            RuntimeConfigValidator validator = CreateValidator();
+            Entity entity = CreateStoredProcedureEntity(parameters: null) with
+            {
+                Source = new("books", EntitySourceType.Table, null, null),
+                Relationships = new Dictionary<string, EntityRelationship>
+                {
+                    ["author"] = CreateRelationship("Missing")
+                }
+            };
+
+            Assert.ThrowsException<DataApiBuilderException>(() =>
+                validator.ValidateRelationshipConfigCorrectness(ConfigWith(
+                    entities: new() { ["Book"] = entity })));
         }
 
         #endregion
@@ -400,7 +617,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             McpRuntimeOptions? mcp = null,
             TelemetryOptions? telemetry = null,
             EmbeddingsOptions? embeddings = null,
-            string? baseRoute = null)
+            string? baseRoute = null,
+            HostMode hostMode = HostMode.Development,
+            Dictionary<string, Entity>? entities = null)
         {
             return new RuntimeConfig(
                 Schema: "test-schema",
@@ -409,12 +628,40 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Rest: rest ?? new RestRuntimeOptions(),
                     GraphQL: graphQL ?? new GraphQLRuntimeOptions(),
                     Mcp: mcp,
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development),
+                    Host: new(Cors: null, Authentication: null, Mode: hostMode),
                     BaseRoute: baseRoute,
                     Telemetry: telemetry,
                     Embeddings: embeddings),
-                Entities: new(new Dictionary<string, Entity>()));
+                Entities: new(entities ?? new Dictionary<string, Entity>()));
         }
+
+        private static Entity CreateStoredProcedureEntity(List<ParameterMetadata>? parameters)
+        {
+            return new Entity(
+                Source: new("procedure", EntitySourceType.StoredProcedure, parameters, null),
+                GraphQL: new("Procedure", "Procedures"),
+                Fields: null,
+                Rest: new(Enabled: true),
+                Permissions: new[]
+                {
+                    new EntityPermission("anonymous", new[]
+                    {
+                        new EntityAction(EntityActionOperation.Execute, null, null)
+                    })
+                },
+                Mappings: null,
+                Relationships: null);
+        }
+
+        private static EntityRelationship CreateRelationship(string targetEntity) =>
+            new(
+                Cardinality.One,
+                targetEntity,
+                System.Array.Empty<string>(),
+                System.Array.Empty<string>(),
+                LinkingObject: null,
+                System.Array.Empty<string>(),
+                System.Array.Empty<string>());
 
         #endregion
     }

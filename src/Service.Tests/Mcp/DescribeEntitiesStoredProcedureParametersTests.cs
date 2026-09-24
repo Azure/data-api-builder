@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -240,17 +241,35 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
             services.AddSingleton(configProvider);
 
+            // Real HttpContext with the X-MS-API-ROLE header and a ClaimsPrincipal carrying the
+            // corresponding role claim. This lets IsValidRoleContext be checked with the exact
+            // production semantic (User.IsInRole(header)) rather than an unconditional test bypass.
+            DefaultHttpContext httpContext = new();
+            httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = AuthorizationResolver.ROLE_ANONYMOUS;
+            httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+                new[] { new Claim(ClaimTypes.Role, AuthorizationResolver.ROLE_ANONYMOUS) },
+                authenticationType: "TestAuth"));
+
             Mock<IAuthorizationResolver> mockAuthResolver = new();
-            mockAuthResolver.Setup(x => x.IsValidRoleContext(It.IsAny<HttpContext>())).Returns(true);
+            mockAuthResolver
+                .Setup(x => x.IsValidRoleContext(It.IsAny<HttpContext>()))
+                .Returns((HttpContext ctx) =>
+                {
+                    string headerValue = ctx.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
+                    return !string.IsNullOrWhiteSpace(headerValue)
+                        && ctx.User is not null
+                        && ctx.User.IsInRole(headerValue);
+                });
+            mockAuthResolver
+                .Setup(x => x.AreRoleAndOperationDefinedForEntity(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EntityActionOperation>()))
+                .Returns((string entityName, string roleName, EntityActionOperation operation) =>
+                    string.Equals(entityName, TEST_ENTITY_NAME, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(roleName, AuthorizationResolver.ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase)
+                    && operation == EntityActionOperation.Execute);
             services.AddSingleton(mockAuthResolver.Object);
 
-            Mock<HttpContext> mockHttpContext = new();
-            Mock<HttpRequest> mockRequest = new();
-            mockRequest.Setup(x => x.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns("anonymous");
-            mockHttpContext.Setup(x => x.Request).Returns(mockRequest.Object);
-
             Mock<IHttpContextAccessor> mockHttpContextAccessor = new();
-            mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
+            mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
             services.AddSingleton(mockHttpContextAccessor.Object);
 
             services.AddLogging();

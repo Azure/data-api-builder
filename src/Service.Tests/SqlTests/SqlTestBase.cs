@@ -84,12 +84,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected async static Task InitializeTestFixture(
             List<string> customQueries = null,
             List<string[]> customEntities = null,
-            bool isRestBodyStrict = true)
+            bool isRestBodyStrict = true,
+            string connectionStringOptions = null)
         {
             TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
 
             // Get the base config file from disk
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+
+            // Append additional connection-string options for the test fixture (e.g. "UseAffectedRows=true"),
+            // when specified. This allows tests to exercise connection-string dependent behavior.
+            if (!string.IsNullOrEmpty(connectionStringOptions))
+            {
+                string baseConnectionString = runtimeConfig.DataSource.ConnectionString;
+                string separator = baseConnectionString.TrimEnd().EndsWith(";") ? string.Empty : ";";
+                runtimeConfig = runtimeConfig with
+                {
+                    DataSource = runtimeConfig.DataSource with
+                    {
+                        ConnectionString = baseConnectionString + separator + connectionStringOptions
+                    }
+                };
+            }
 
             // Setting the rest.request-body-strict flag as per the test fixtures.
             if (!isRestBodyStrict)

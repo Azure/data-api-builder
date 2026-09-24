@@ -190,6 +190,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     context,
                                     parameters,
                                     sqlMetadataProvider,
+                                    _runtimeConfigProvider.GetConfig(),
                                     !isPointMutation);
 
                         // For point create multiple mutation operation, a single item is created in the
@@ -1066,6 +1067,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IMiddlewareContext context,
                 IDictionary<string, object?> mutationInputParamsFromGQLContext,
                 ISqlMetadataProvider sqlMetadataProvider,
+                RuntimeConfig runtimeConfig,
                 bool isMultipleInputType = false)
         {
             // rootFieldName can be either "item" or "items" depending on whether the operation
@@ -1073,7 +1075,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string rootFieldName = isMultipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
 
             // Parse the hotchocolate input parameters into .net object types
-            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, rootFieldName, mutationInputParamsFromGQLContext);
+            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, rootFieldName, mutationInputParamsFromGQLContext, sqlMetadataProvider, entityName, runtimeConfig);
 
             if (parsedInputParams is null)
             {
@@ -1743,14 +1745,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         internal static object? GQLMultipleCreateArgumentToDictParams(
                 IMiddlewareContext context,
                 string rootFieldName,
-                IDictionary<string, object?> mutationParameters)
+                IDictionary<string, object?> mutationParameters,
+                ISqlMetadataProvider metadataProvider,
+                string entityName,
+                RuntimeConfig runtimeConfig)
         {
             if (mutationParameters.TryGetValue(rootFieldName, out object? inputParameters))
             {
                 ObjectField fieldSchema = context.Selection.Field;
                 IInputValueDefinition itemsArgumentSchema = fieldSchema.Arguments[rootFieldName];
                 InputObjectType inputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
-                return GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, inputParameters);
+                return GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, inputParameters, metadataProvider, entityName, runtimeConfig);
             }
             else
             {
@@ -1798,7 +1803,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         internal static object? GQLMultipleCreateArgumentToDictParamsHelper(
             IMiddlewareContext context,
             InputObjectType inputObjectType,
-            object? inputParameters)
+            object? inputParameters,
+            ISqlMetadataProvider metadataProvider,
+            string entityName,
+            RuntimeConfig runtimeConfig)
         {
             // This condition is met for input types that accept an array of values
             // where the mutation input field is 'items' such as
@@ -1820,7 +1828,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     object? parsedInputFieldItem = GQLMultipleCreateArgumentToDictParamsHelper(
                                             context: context,
                                             inputObjectType: inputObjectType,
-                                            inputParameters: inputField.Value);
+                                            inputParameters: inputField.Value,
+                                            metadataProvider: metadataProvider,
+                                            entityName: entityName,
+                                            runtimeConfig: runtimeConfig);
                     if (parsedInputFieldItem is not null)
                     {
                         parsedInputFieldItems.Add((IDictionary<string, object?>)parsedInputFieldItem);
@@ -1847,33 +1858,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach (ObjectFieldNode inputFieldNode in inputFieldNodes)
                 {
                     string fieldName = inputFieldNode.Name.Value;
+                    string targetEntityName = entityName;
+                    Dictionary<string, EntityRelationship>? entityRelationships = runtimeConfig.Entities![entityName].Relationships;
+                    if (entityRelationships is not null && entityRelationships.ContainsKey(fieldName))
+                    {
+                        targetEntityName = entityRelationships[fieldName].TargetEntity;
+                    }
+
+                    SyntaxKind fieldKind = metadataProvider.TryGetArrayElementSyntaxKind(targetEntityName, fieldName, out SyntaxKind arrayFieldKind)
+                        ? arrayFieldKind : inputFieldNode.Value.Kind;
+
                     // For the mutation pointMultipleCreateExample (outlined in the method summary),
                     // the following condition will evaluate to true for fields 'authors' and 'reviews'.
                     // Fields 'authors'/'reviews' can again consist of combination of scalar and relationship fields.
                     // So, the input object type for 'authors'/'reviews' is fetched and the same function is
                     // invoked with the fetched input object type again to parse the input fields of 'authors'/'reviews'.
-                    if (inputFieldNode.Value.Kind == SyntaxKind.ListValue)
+                    if (fieldKind == SyntaxKind.ListValue)
                     {
                         parsedInputFields.Add(
                             fieldName,
                             GQLMultipleCreateArgumentToDictParamsHelper(
                                 context,
                                 GetInputObjectTypeForAField(fieldName, inputObjectType.Fields),
-                                inputFieldNode.Value.Value));
+                                inputFieldNode.Value.Value,
+                                metadataProvider,
+                                targetEntityName,
+                                runtimeConfig));
                     }
                     // For the mutation pointMultipleCreateExample (outlined in the method summary),
                     // the following condition will evaluate to true for fields 'publishers'.
                     // Field 'publishers' can again consist of combination of scalar and relationship fields.
                     // So, the input object type for 'publishers' is fetched and the same function is
                     // invoked with the fetched input object type again to parse the input fields of 'publishers'.
-                    else if (inputFieldNode.Value.Kind == SyntaxKind.ObjectValue)
+                    else if (fieldKind == SyntaxKind.ObjectValue)
                     {
                         parsedInputFields.Add(
                             fieldName,
                             GQLMultipleCreateArgumentToDictParamsHelper(
                                 context,
                                 GetInputObjectTypeForAField(fieldName, inputObjectType.Fields),
-                                inputFieldNode.Value.Value));
+                                inputFieldNode.Value.Value,
+                                metadataProvider,
+                                targetEntityName,
+                                runtimeConfig));
                     }
                     // The flow enters this block for all scalar input fields.
                     else
@@ -2351,7 +2378,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             foreach (ObjectFieldNode field in fieldNodes)
             {
                 Tuple<IValueNode?, SyntaxKind> fieldDetails = GraphQLUtils.GetFieldDetails(field.Value, context.Variables);
-                SyntaxKind underlyingFieldKind = fieldDetails.Item2;
+                SyntaxKind underlyingFieldKind = metadataProvider.TryGetArrayElementSyntaxKind(entityName, field.Name.Value, out SyntaxKind arrayFieldKind) ? arrayFieldKind : fieldDetails.Item2;
 
                 // For a column field, we do not have to recurse to process fields in the value - which is required for relationship fields.
                 if (GraphQLUtils.IsScalarField(underlyingFieldKind) || underlyingFieldKind is SyntaxKind.NullValue)

@@ -684,7 +684,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private static (MsSqlQueryExecutor QueryExecutor, RuntimeConfigProvider Provider) CreateQueryExecutorForPoolingTest(
             string connectionString,
             bool enableObo,
-            Mock<IHttpContextAccessor> httpContextAccessor)
+            Mock<IHttpContextAccessor> httpContextAccessor,
+            IOboTokenProvider? oboTokenProvider = null)
         {
             DataSource dataSource = new(
                 DatabaseType: DatabaseType.MSSQL,
@@ -719,7 +720,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
 
-            MsSqlQueryExecutor queryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+            MsSqlQueryExecutor queryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, oboTokenProvider: oboTokenProvider);
             return (queryExecutor, provider);
         }
 
@@ -1013,7 +1014,359 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             return httpContextAccessor;
         }
 
+        [TestMethod]
+        public void AddStatementId_NoHttpContextReturns()
+        {
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(value: null);
+            (MsSqlQueryExecutor executor, _) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", false, accessor);
+
+            InvokeAddStatementId(executor, "id-1");
+        }
+
+        [TestMethod]
+        public void AddStatementId_AddsThenAppendsValues()
+        {
+            DefaultHttpContext context = new();
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(context);
+            (MsSqlQueryExecutor executor, _) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", false, accessor);
+
+            InvokeAddStatementId(executor, "id-1");
+            InvokeAddStatementId(executor, "id-2");
+
+            Assert.AreEqual("id-1;id-2", context.Items["QueryIdentifyingIds"]);
+        }
+
+        [TestMethod]
+        public void AddStatementId_NonStringExistingValueIsPreserved()
+        {
+            DefaultHttpContext context = new();
+            context.Items["QueryIdentifyingIds"] = 42;
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(context);
+            (MsSqlQueryExecutor executor, _) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", false, accessor);
+
+            InvokeAddStatementId(executor, "id-2");
+
+            Assert.AreEqual(42, context.Items["QueryIdentifyingIds"]);
+        }
+
+        private static void InvokeAddStatementId(MsSqlQueryExecutor executor, string statementId) =>
+            typeof(MsSqlQueryExecutor).GetMethod(
+                "AddStatementIDToMiddlewareContext",
+                BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(executor, new object[] { statementId });
+
+        private static void InvokeInfoMessageHandler(SqlConnection connection, int errorNumber, string message)
+        {
+            SqlException exception = SqlTestHelper.CreateSqlException(errorNumber, message);
+            ConstructorInfo constructor = typeof(SqlInfoMessageEventArgs)
+                .GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic).Single();
+            ParameterInfo parameter = constructor.GetParameters().Single();
+            object constructorArgument = parameter.ParameterType == typeof(SqlException)
+                ? exception
+                : exception.Errors;
+            SqlInfoMessageEventArgs eventArgs = (SqlInfoMessageEventArgs)constructor.Invoke(new[] { constructorArgument });
+
+            SqlInfoMessageEventHandler? handler = GetInstanceFields(typeof(SqlConnection))
+                .Where(field => typeof(Delegate).IsAssignableFrom(field.FieldType))
+                .Select(field => field.GetValue(connection))
+                .OfType<SqlInfoMessageEventHandler>()
+                .FirstOrDefault();
+
+            Assert.IsNotNull(handler, "The SqlConnection InfoMessage handler was not registered.");
+            handler(connection, eventArgs);
+        }
+
+        private static IEnumerable<FieldInfo> GetInstanceFields(Type type)
+        {
+            for (Type? current = type; current is not null; current = current.BaseType)
+            {
+                foreach (FieldInfo field in current.GetFields(
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                {
+                    yield return field;
+                }
+            }
+        }
+
+        [TestMethod]
+        public void CreateConnection_MissingDataSourceThrows()
+        {
+            Mock<IHttpContextAccessor> accessor = new();
+            (MsSqlQueryExecutor executor, _) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", false, accessor);
+
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                executor.CreateConnection("missing"));
+
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.DataSourceNotFound, exception.SubStatusCode);
+        }
+
+        [TestMethod]
+        public void CreateConnection_InfoMessageHandlerCapturesKnownCodeAndHandlesContextFailure()
+        {
+            DefaultHttpContext context = new();
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(context);
+            (MsSqlQueryExecutor executor, RuntimeConfigProvider provider) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", false, accessor);
+            using SqlConnection connection = executor.CreateConnection(provider.GetConfig().DefaultDataSourceName);
+
+            InvokeInfoMessageHandler(connection, 15806, "statement-id");
+
+            Assert.IsTrue(context.Items.ContainsKey("QueryIdentifyingIds"));
+
+            Mock<HttpContext> failingContext = new();
+            failingContext.SetupGet(x => x.Items).Throws(new InvalidOperationException("Unavailable items collection."));
+            accessor.Setup(x => x.HttpContext).Returns(failingContext.Object);
+
+            InvokeInfoMessageHandler(connection, 15806, "second-statement-id");
+        }
+
+        [TestMethod]
+        public async Task SetManagedIdentityAccessToken_OboBearerTokenSetsConnectionToken()
+        {
+            DefaultHttpContext context = new();
+            context.Request.Headers.Authorization = "Bearer incoming-token";
+            context.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity("test"));
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(context);
+            Mock<IOboTokenProvider> tokenProvider = new();
+            tokenProvider.Setup(x => x.GetAccessTokenOnBehalfOfAsync(
+                    context.User, "incoming-token", "https://database.windows.net"))
+                .ReturnsAsync("database-token");
+            (MsSqlQueryExecutor executor, RuntimeConfigProvider configProvider) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", true, accessor, tokenProvider.Object);
+            using SqlConnection connection = new();
+
+            await executor.SetManagedIdentityAccessTokenIfAnyAsync(
+                connection, configProvider.GetConfig().DefaultDataSourceName);
+
+            Assert.AreEqual("database-token", connection.AccessToken);
+        }
+
+        [DataTestMethod]
+        [DataRow("", DisplayName = "Missing Authorization header")]
+        [DataRow("Basic credentials", DisplayName = "Non-Bearer Authorization header")]
+        public async Task SetManagedIdentityAccessToken_OboMissingBearerTokenThrows(string authorization)
+        {
+            DefaultHttpContext context = new();
+            context.Request.Headers.Authorization = authorization;
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(context);
+            (MsSqlQueryExecutor executor, RuntimeConfigProvider configProvider) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", true, accessor, Mock.Of<IOboTokenProvider>());
+            using SqlConnection connection = new();
+
+            DataApiBuilderException exception = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() =>
+                executor.SetManagedIdentityAccessTokenIfAnyAsync(
+                    connection, configProvider.GetConfig().DefaultDataSourceName));
+
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure, exception.SubStatusCode);
+        }
+
+        [TestMethod]
+        public async Task SetManagedIdentityAccessToken_OboWithoutTokenProviderThrows()
+        {
+            DefaultHttpContext context = new();
+            context.Request.Headers.Authorization = "Bearer incoming-token";
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(context);
+            (MsSqlQueryExecutor executor, RuntimeConfigProvider configProvider) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", true, accessor);
+            using SqlConnection connection = new();
+
+            DataApiBuilderException exception = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() =>
+                executor.SetManagedIdentityAccessTokenIfAnyAsync(
+                    connection, configProvider.GetConfig().DefaultDataSourceName));
+
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure, exception.SubStatusCode);
+        }
+
+        [TestMethod]
+        public async Task SetManagedIdentityAccessToken_OboWithoutHttpContextUsesConfiguredAuthentication()
+        {
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(value: null);
+            (MsSqlQueryExecutor executor, RuntimeConfigProvider configProvider) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;User ID=user;Password=password;", true, accessor, Mock.Of<IOboTokenProvider>());
+            using SqlConnection connection = new();
+
+            await executor.SetManagedIdentityAccessTokenIfAnyAsync(
+                connection, configProvider.GetConfig().DefaultDataSourceName);
+
+            Assert.IsNull(connection.AccessToken);
+        }
+
+        [TestMethod]
+        public async Task SetManagedIdentityAccessToken_UnavailableDefaultCredentialIsIgnored()
+        {
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.Setup(x => x.HttpContext).Returns(value: null);
+            (MsSqlQueryExecutor executor, RuntimeConfigProvider configProvider) = CreateQueryExecutorForPoolingTest(
+                "Server=localhost;Database=test;", false, accessor);
+            Mock<DefaultAzureCredential> credential = new();
+            credential
+                .Setup(x => x.GetTokenAsync(It.IsAny<TokenRequestContext>(), It.IsAny<CancellationToken>()))
+                .Returns(ValueTask.FromException<AccessToken>(new CredentialUnavailableException("Credential unavailable.")));
+            executor.AzureCredential = credential.Object;
+            using SqlConnection connection = new();
+
+            await executor.SetManagedIdentityAccessTokenIfAnyAsync(
+                connection, configProvider.GetConfig().DefaultDataSourceName);
+
+            Assert.IsNull(connection.AccessToken);
+        }
+
         #endregion
+
+        [DataTestMethod]
+        [DataRow(true, DisplayName = "RequestAborted cancels an explicitly cancellable query")]
+        [DataRow(false, DisplayName = "The explicit token cancels a query with RequestAborted")]
+        public async Task ExecuteQueryAsync_WithExplicitAndRequestTokens_ObservesEitherCancellation(
+            bool cancelRequest)
+        {
+            RuntimeConfig mockConfig = new(
+                Schema: string.Empty,
+                DataSource: new(DatabaseType.MSSQL, string.Empty, new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null)),
+                Entities: new(new Dictionary<string, Entity>()));
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(
+                FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
+                new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            Mock<ILogger<IQueryExecutor>> logger = new();
+            DefaultHttpContext context = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            httpContextAccessor.Setup(accessor => accessor.HttpContext).Returns(context);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+            Mock<MsSqlQueryExecutor> queryExecutor = new(
+                provider,
+                dbExceptionParser,
+                logger.Object,
+                httpContextAccessor.Object,
+                null,
+                null)
+            {
+                CallBase = true
+            };
+            queryExecutor
+                .Setup(executor => executor.CreateConnection(It.IsAny<string>()))
+                .Returns(new SqlConnection());
+            queryExecutor
+                .Setup(executor => executor.SetManagedIdentityAccessTokenIfAnyAsync(
+                    It.IsAny<DbConnection>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            CancellationToken observedToken = default;
+            TaskCompletionSource executionEntered = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            queryExecutor
+                .Setup(executor => executor.ExecuteQueryAgainstDbAsync<object>(
+                    It.IsAny<SqlConnection>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                    It.IsAny<HttpContext>(),
+                    It.IsAny<string>(),
+                    It.IsAny<List<string>>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(
+                    (SqlConnection connection,
+                     string sql,
+                     IDictionary<string, DbConnectionParam> parameters,
+                     Func<DbDataReader, List<string>, Task<object>> handler,
+                     HttpContext requestContext,
+                     string dataSourceName,
+                     List<string> arguments,
+                     CancellationToken token) =>
+                    {
+                        observedToken = token;
+                        executionEntered.TrySetResult();
+                        return WaitUntilCanceledAsync(token);
+                    });
+
+            using CancellationTokenSource explicitCancellation = new();
+            using CancellationTokenSource requestCancellation = new();
+            context.RequestAborted = requestCancellation.Token;
+            Task<object?> queryTask = queryExecutor.Object.ExecuteQueryAsync<object>(
+                sqltext: string.Empty,
+                parameters: new Dictionary<string, DbConnectionParam>(),
+                dataReaderHandler: null,
+                dataSourceName: provider.GetConfig().DefaultDataSourceName,
+                cancellationToken: explicitCancellation.Token,
+                httpContext: context,
+                args: null);
+
+            try
+            {
+                await executionEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                if (cancelRequest)
+                {
+                    requestCancellation.Cancel();
+                }
+                else
+                {
+                    explicitCancellation.Cancel();
+                }
+
+                try
+                {
+                    await queryTask.WaitAsync(TimeSpan.FromSeconds(5));
+                    Assert.Fail("Expected linked query cancellation.");
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected from either linked source.
+                }
+
+                Assert.IsTrue(observedToken.IsCancellationRequested);
+                Assert.AreEqual(cancelRequest, requestCancellation.IsCancellationRequested);
+                Assert.AreEqual(!cancelRequest, explicitCancellation.IsCancellationRequested);
+                queryExecutor.Verify(executor => executor.ExecuteQueryAgainstDbAsync<object>(
+                    It.IsAny<SqlConnection>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                    It.IsAny<HttpContext>(),
+                    It.IsAny<string>(),
+                    It.IsAny<List<string>>()),
+                    Times.Never);
+            }
+            finally
+            {
+                explicitCancellation.Cancel();
+                requestCancellation.Cancel();
+                try
+                {
+                    await queryTask.WaitAsync(TimeSpan.FromSeconds(5));
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during cleanup.
+                }
+
+                await loader.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+            }
+
+            static async Task<object> WaitUntilCanceledAsync(CancellationToken token)
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                return null;
+            }
+        }
 
         /// <summary>
         /// Validates that when the CancellationToken from httpContext.RequestAborted times out

@@ -1,6 +1,8 @@
 -- Copyright (c) Microsoft Corporation.
 -- Licensed under the MIT License.
 
+SET QUOTED_IDENTIFIER ON;
+
 BEGIN TRANSACTION
 DROP SECURITY POLICY IF EXISTS revenuesSecPolicy;
 DROP FUNCTION IF EXISTS revenuesPredicate;
@@ -41,6 +43,7 @@ DROP TABLE IF EXISTS comics;
 DROP TABLE IF EXISTS brokers;
 DROP TABLE IF EXISTS type_table;
 DROP TABLE IF EXISTS vector_type_table;
+DROP TABLE IF EXISTS vector_owners;
 DROP TABLE IF EXISTS profiles;
 DROP TABLE IF EXISTS trees;
 DROP TABLE IF EXISTS fungi;
@@ -236,10 +239,17 @@ CREATE TABLE type_table(
     uuid_types uniqueidentifier DEFAULT newid()
 );
 
+CREATE TABLE vector_owners(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(100) NOT NULL
+);
+
 CREATE TABLE vector_type_table(
     id int IDENTITY(5001, 1) PRIMARY KEY,
+    owner_id int NULL,
     vector_data vector(3),
-    vector_data_max vector(1998)
+    vector_data_max vector(1998),
+    CONSTRAINT FK_vector_type_table_owner FOREIGN KEY (owner_id) REFERENCES vector_owners(id) ON DELETE CASCADE
 );
 
 CREATE TABLE profiles(
@@ -510,8 +520,8 @@ WITH cteN(Number) AS
   CROSS JOIN sys.all_columns AS s2
 )
 INSERT INTO bookmarks ([id], [bkname])
-SELECT 
-[Number], 
+SELECT
+[Number],
 'Test Item #' + format([Number], '00000')
 FROM cteN WHERE [Number] <= @UpperBound;
 SET IDENTITY_INSERT bookmarks OFF
@@ -524,8 +534,8 @@ WITH cteN(Number) AS
   CROSS JOIN sys.all_columns AS s2
 )
 INSERT INTO mappedbookmarks ([id], [bkname])
-SELECT 
-[Number], 
+SELECT
+[Number],
 'Test Item #' + format([Number], '00000')
 FROM cteN WHERE [Number] <= @UpperBound;
 
@@ -870,9 +880,9 @@ CREATE TABLE date_only_table (
     event_timestamp datetime NOT NULL
 );
 
-INSERT INTO date_only_table( event_date, event_time, event_timestamp) 
-VALUES ('2023-01-01', '08:30:00', '2023-01-01 08:30:00'), 
-       ('2023-02-15', '12:45:00', '2023-02-15 12:45:00'), 
+INSERT INTO date_only_table( event_date, event_time, event_timestamp)
+VALUES ('2023-01-01', '08:30:00', '2023-01-01 08:30:00'),
+       ('2023-02-15', '12:45:00', '2023-02-15 12:45:00'),
        ('2023-03-30', '17:15:00', '2023-03-30 17:15:00');
 
 INSERT INTO [order items](id, productname)

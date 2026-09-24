@@ -41,6 +41,7 @@ DROP TABLE IF EXISTS default_with_function_table;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS user_profiles;
 DROP TABLE IF EXISTS dimaccount;
+DROP TABLE IF EXISTS date_only_table;
 DROP FUNCTION IF EXISTS insertCompositeView;
 
 DROP SCHEMA IF EXISTS foo;
@@ -361,14 +362,14 @@ INSERT INTO bookmarks (id, bkname)
 SELECT
 	value,
     CONCAT('Test Item #' , value)
-FROM 
+FROM
     GENERATE_SERIES(1, 10000, 1) as value;
 
 INSERT INTO mappedbookmarks (id, bkname)
 SELECT
 	value,
     CONCAT('Test Item #' , value)
-FROM 
+FROM
     GENERATE_SERIES(1, 10000, 1) as value;
 
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');
@@ -378,7 +379,7 @@ INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (5, 'Filtered Reco
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 INSERT INTO clubs(id, name) VALUES (1111, 'Manchester United'), (1112, 'FC Barcelona'), (1113, 'Real Madrid');
 INSERT INTO players(id, name, current_club_id, new_club_id)
-    VALUES 
+    VALUES
         (1, 'Cristiano Ronaldo', 1113, 1111),
         (2, 'Leonel Messi', 1112, 1113);
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
@@ -487,3 +488,14 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER insertCompositeViewTrigger INSTEAD OF INSERT ON books_publishers_view_composite_insertable
   FOR EACH ROW EXECUTE PROCEDURE insertCompositeView();
+
+CREATE TABLE date_only_table (
+    event_date date NOT NULL,
+    event_time time NOT NULL,
+    event_timestamp timestamp NOT NULL
+);
+
+INSERT INTO date_only_table(event_date, event_time, event_timestamp)
+VALUES ('2023-01-01', '08:30:00', '2023-01-01 08:30:00'),
+       ('2023-02-15', '12:45:00', '2023-02-15 12:45:00'),
+       ('2023-03-30', '17:15:00', '2023-03-30 17:15:00');

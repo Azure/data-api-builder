@@ -85,6 +85,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         protected void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            args.CancellationToken.ThrowIfCancellationRequested();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
             _isAggregationEnabled = runtimeConfig.EnableAggregation;
@@ -318,7 +319,8 @@ namespace Azure.DataApiBuilder.Core.Services
                             configEntity: entity,
                             entities: entities,
                             rolesAllowedForEntity: rolesAllowedForEntity,
-                            rolesAllowedForFields: rolesAllowedForFields);
+                            rolesAllowedForFields: rolesAllowedForFields,
+                            databaseType: sqlMetadataProvider.GetDatabaseType());
 
                         if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)
                         {
@@ -560,7 +562,8 @@ namespace Azure.DataApiBuilder.Core.Services
                                 configEntity: linkingEntity,
                                 entities: new(new Dictionary<string, Entity>()),
                                 rolesAllowedForEntity: new List<string>(),
-                                rolesAllowedForFields: new Dictionary<string, IEnumerable<string>>()
+                                rolesAllowedForFields: new Dictionary<string, IEnumerable<string>>(),
+                                databaseType: sqlMetadataProvider.GetDatabaseType()
                             );
 
                         linkingObjectTypes.Add(linkingEntityName, node);

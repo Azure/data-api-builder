@@ -391,6 +391,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return Task.CompletedTask;
         }
 
+        public Task InitializeAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.CompletedTask;
+        }
+
         private string GraphQLSchema()
         {
             if (_cosmosDb.GraphQLSchema is not null)
@@ -528,6 +534,19 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             name = field;
             return true;
+        }
+
+        /// <summary>
+        /// Array types are not yet supported for Cosmos. Returns false.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="fieldName">Name of the field.</param>
+        /// <param name="fieldKind">The kind of the field in GraphQL.</param>
+        /// <returns>False, as array types are not supported.</returns>
+        public bool TryGetArrayElementSyntaxKind(string entityName, string fieldName, out SyntaxKind fieldKind)
+        {
+            fieldKind = default;
+            return false;
         }
 
         public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()

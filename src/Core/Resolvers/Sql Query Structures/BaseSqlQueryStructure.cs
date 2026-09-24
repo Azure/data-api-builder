@@ -478,7 +478,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "Date" => DateOnly.Parse(param),
                 "Guid" => Guid.Parse(param),
                 "TimeOnly" => TimeOnly.Parse(param),
-                "TimeSpan" => TimeOnly.Parse(param),
+                "TimeSpan" => TimeSpan.Parse(param, CultureInfo.InvariantCulture),
                 "Single[]" => ParseArrayIntoSystemType(param, systemType),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };
@@ -723,6 +723,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     innerException: e);
 
             }
+        }
+
+        /// <summary>
+        /// Transforms the value of an object as a string.
+        /// Array/vector columns (e.g. SQL Server 'vector') arrive as a List<IValueNode>.
+        /// Calling ToString() on a list/array only yields the CLR type name, so instead extract
+        /// the underlying element values and serialize them into a JSON array string (e.g. "[1.5,2.5,3.5]").
+        /// </summary>
+        /// <param name="value">The value to be transformed into a string.</param>
+        /// <returns>A string representation of the value.</returns>
+        protected static string GetStringifiedValue(object value)
+        {
+            return value switch
+            {
+                IEnumerable<IValueNode> valueNodes => JsonSerializer.Serialize(valueNodes.Select(TypeHelper.GetValue)),
+                _ => value.ToString()!
+            };
         }
     }
 }

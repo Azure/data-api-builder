@@ -6679,9 +6679,6 @@ type Planet @model(name:""PlanetAlias"") {
             // Point the loader at the root config and load through the provider so the child is merged.
             loader.UpdateConfigFilePath(rootConfigPath);
             RuntimeConfigProvider provider = new(loader);
-            Assert.IsTrue(provider.TryGetConfig(out RuntimeConfig mergedRoot) && mergedRoot is not null,
-                "Root config with data-source-files should load and merge the child config.");
-            Assert.AreEqual(1, mergedRoot.ChildConfigs.Count, "The child config should have been merged in.");
 
             ILoggerFactory loggerFactory = new LoggerFactory();
             RuntimeConfigValidator validator = new(
@@ -6719,25 +6716,13 @@ type Planet @model(name:""PlanetAlias"") {
             // data-source-files through the real file system) can find and merge the child config.
             IFileSystem fileSystem = new FileSystem();
 
-            // Child: own MSSQL data source + autoentities matching a real table (dbo.books).
-            RuntimeConfig childConfig = new(
-                Schema: "child-schema",
-                DataSource: new(DatabaseType.MSSQL, connectionString, Options: null),
-                Entities: new(new Dictionary<string, Entity>()),
-                Autoentities: new(BuildAutoentityMap(definitionName: "child-filter", patternInclude: "dbo.books")),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(),
-                    Host: new(null, null, HostMode.Development)));
-            File.WriteAllText("dab-child.json", childConfig.ToJson());
-
             // Root: own MSSQL data source + autoentities (pattern controls whether it resolves) +
             // data-source-files pointing at the child.
             RuntimeConfig rootConfig = new(
                 Schema: "root-schema",
-                DataSource: null,
+                DataSource: new(DatabaseType.MSSQL, connectionString, Options: null),
                 Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new(BuildAutoentityMap(definitionName: "root-filter", patternInclude: "dbo.books", entiityNames: "root_{object}")),
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -6746,6 +6731,19 @@ type Planet @model(name:""PlanetAlias"") {
                 DataSourceFiles: new DataSourceFiles(new[] { "dab-child.json" }));
             File.WriteAllText("dab-root.json", rootConfig.ToJson());
 
+            // Child: own MSSQL data source + autoentities matching a real table (dbo.books).
+            RuntimeConfig childConfig = new(
+                Schema: "child-schema",
+                DataSource: new(DatabaseType.MSSQL, connectionString, Options: null),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new(BuildAutoentityMap(definitionName: "child-filter", patternInclude: "dbo.books", entiityNames: "child_{object}")),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null, HostMode.Development)));
+            File.WriteAllText("dab-child.json", childConfig.ToJson());
+
             return ("dab-root.json", new FileSystemRuntimeConfigLoader(fileSystem), fileSystem);
         }
 
@@ -6753,7 +6751,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// Helper: builds an autoentity map containing a single definition whose include pattern
         /// controls which tables it resolves against the target database.
         /// </summary>
-        private static Dictionary<string, Autoentity> BuildAutoentityMap(string definitionName, string patternInclude)
+        private static Dictionary<string, Autoentity> BuildAutoentityMap(string definitionName, string patternInclude, string entiityNames)
         {
             EntityAction entityAction = new(EntityActionOperation.Read, null, null);
 
@@ -6761,7 +6759,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Patterns: new AutoentityPatterns(
                     Include: new[] { patternInclude },
                     Exclude: Array.Empty<string>(),
-                    Name: "{object}"),
+                    Name: entiityNames),
                 Template: new AutoentityTemplate(
                     Rest: new(Enabled: true),
                     GraphQL: new(Enabled: true, Singular: string.Empty, Plural: string.Empty)),

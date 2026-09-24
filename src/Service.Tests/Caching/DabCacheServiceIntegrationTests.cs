@@ -717,6 +717,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                 .Returns(entityToDatabaseObject);
             Mock<IMetadataProviderFactory> mockMetadataProviderFactory = new();
             Mock<IAuthorizationResolver> mockAuthorizationResolver = new();
+            mockAuthorizationResolver
+                .Setup(resolver => resolver.ResolveDBPolicy(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<EntityActionOperation>(),
+                    It.IsAny<HttpContext>()))
+                .Returns(ResolvedDatabasePolicy.Empty);
             Mock<RestRequestContext> mockRestRequestContext = new(
                 entityName,
                 new DatabaseTable());
@@ -817,6 +824,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             Mock<IMetadataProviderFactory> mockMetadataProviderFactory = new();
             Mock<IHttpContextAccessor> mockHttpContextAccessor = new();
             Mock<IAuthorizationResolver> mockAuthorizationResolver = new();
+            mockAuthorizationResolver
+                .Setup(resolver => resolver.ResolveDBPolicy(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<EntityActionOperation>(),
+                    It.IsAny<HttpContext>()))
+                .Returns(ResolvedDatabasePolicy.Empty);
             Mock<ILogger<IQueryEngine>> mockLogger = new();
             Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = CreateMockRuntimeConfigProvider(entityName);
             Mock<GQLFilterParser> mockFilterParser = new(mockRuntimeConfigProvider.Object, mockMetadataProviderFactory.Object);

@@ -632,6 +632,95 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Verifies relationship validation can log explicit columns, infer either foreign-key direction, or fall back to database verification for direct and linking relationships.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(false, "explicit", DisplayName = "Direct relationship uses explicitly configured columns")]
+        [DataRow(false, "forward", DisplayName = "Direct relationship infers a forward foreign key")]
+        [DataRow(false, "reverse", DisplayName = "Direct relationship infers a reverse foreign key")]
+        [DataRow(false, "none", DisplayName = "Direct relationship falls back when no foreign key metadata exists")]
+        [DataRow(true, "explicit", DisplayName = "Linking relationship uses explicitly configured columns")]
+        [DataRow(true, "forward", DisplayName = "Linking relationship infers both forward foreign keys")]
+        [DataRow(true, "none", DisplayName = "Linking relationship falls back when no foreign key metadata exists")]
+        public void ValidateRelationships_LoggingResolvesConfiguredAndInferredColumns(bool useLinkingObject, string resolution)
+        {
+            string[] sourceFields = resolution == "explicit" ? new[] { "source_id" } : null;
+            string[] targetFields = resolution == "explicit" ? new[] { "target_id" } : null;
+            string[] linkingSourceFields = useLinkingObject && resolution == "explicit" ? new[] { "link_source_id" } : null;
+            string[] linkingTargetFields = useLinkingObject && resolution == "explicit" ? new[] { "link_target_id" } : null;
+            string linkingObjectName = useLinkingObject ? "dbo.LINKING_TABLE" : null;
+            EntityRelationship relationship = new(
+                Cardinality: Cardinality.One,
+                TargetEntity: "Target",
+                SourceFields: sourceFields,
+                TargetFields: targetFields,
+                LinkingObject: linkingObjectName,
+                LinkingSourceFields: linkingSourceFields,
+                LinkingTargetFields: linkingTargetFields);
+            Dictionary<string, Entity> entities = new()
+            {
+                ["Source"] = GetSampleEntityUsingSourceAndRelationshipMap(
+                    "SOURCE_TABLE",
+                    new Dictionary<string, EntityRelationship> { ["relationship"] = relationship },
+                    new EntityGraphQLOptions("Source", "Sources", true)),
+                ["Target"] = GetSampleEntityUsingSourceAndRelationshipMap(
+                    "TARGET_TABLE",
+                    relationshipMap: null,
+                    new EntityGraphQLOptions("Target", "Targets", true))
+            };
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType.MSSQL, string.Empty),
+                Runtime: new RuntimeOptions(new(), new(), new(), new(null, null)),
+                Entities: new RuntimeEntities(entities));
+
+            DatabaseTable sourceTable = new("dbo", "SOURCE_TABLE");
+            DatabaseTable targetTable = new("dbo", "TARGET_TABLE");
+            DatabaseTable linkingTable = new("dbo", "LINKING_TABLE");
+            RelationShipPair sourceTarget = new(sourceTable, targetTable);
+            RelationShipPair targetSource = new(targetTable, sourceTable);
+            RelationShipPair linkingSource = new(linkingTable, sourceTable);
+            RelationShipPair linkingTarget = new(linkingTable, targetTable);
+            Dictionary<RelationShipPair, ForeignKeyDefinition> foreignKeys = new();
+            if (resolution == "forward")
+            {
+                if (useLinkingObject)
+                {
+                    foreignKeys[linkingSource] = CreateForeignKey(linkingSource);
+                    foreignKeys[linkingTarget] = CreateForeignKey(linkingTarget);
+                }
+                else
+                {
+                    foreignKeys[sourceTarget] = CreateForeignKey(sourceTarget);
+                }
+            }
+            else if (resolution == "reverse")
+            {
+                foreignKeys[targetSource] = CreateForeignKey(targetSource);
+            }
+
+            Mock<ISqlMetadataProvider> metadataProvider = new();
+            metadataProvider.SetupGet(x => x.EntityToDatabaseObject).Returns(new Dictionary<string, DatabaseObject>
+            {
+                ["Source"] = sourceTable,
+                ["Target"] = targetTable
+            });
+            metadataProvider.SetupGet(x => x.PairToFkDefinition).Returns(foreignKeys);
+            metadataProvider.Setup(x => x.ParseSchemaAndDbTableName(linkingObjectName)).Returns(("dbo", "LINKING_TABLE"));
+            metadataProvider.Setup(x => x.VerifyForeignKeyExistsInDB(It.IsAny<DatabaseTable>(), It.IsAny<DatabaseTable>())).Returns(true);
+            string exposedField = string.Empty;
+            metadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), It.IsAny<string>(), out exposedField)).Returns(true);
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(metadataProvider.Object);
+
+            MockFileSystem fileSystem = new();
+            RuntimeConfigProvider provider = new(new FileSystemRuntimeConfigLoader(fileSystem));
+            RuntimeConfigValidator validator = new(provider, fileSystem, Mock.Of<ILogger<RuntimeConfigValidator>>());
+
+            validator.ValidateRelationships(runtimeConfig, metadataProviderFactory.Object);
+        }
+
+        /// <summary>
         /// Test method that ensures our validation code catches the cases where source and target fields do not match in some way
         /// and the linking object is null, indicating we have a one-many or many-one relationship.
         /// Not matching can either be because one is null and the other is not, or because they have a different number of fields.
@@ -1259,7 +1348,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "Book", bookWithUpperCase }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType, "book");
         }
 
         /// <summary>
@@ -1302,7 +1391,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "executeBook", bookTable },
                 { "Book_by_pk", bookByPkStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType, "Book_by_pk");
         }
 
         /// <summary>
@@ -1346,7 +1435,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "ExecuteBooks", bookTable },
                 { "AddBook", addBookStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType, "AddBook");
         }
 
         /// <summary>
@@ -1384,7 +1473,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
         }
 
         /// <summary>
@@ -1427,7 +1516,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
         }
 
         /// <summary>
@@ -1465,7 +1554,45 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             entityCollection.Add("book_alt", book_alt);
             entityCollection.Add("book", book);
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
+        }
+
+        /// <summary>
+        /// Validates that a detailed error is thrown when autoentities includes objects whose names
+        /// differ only by singular/plural form (e.g. dbo.Category and dbo.Categories), causing
+        /// DAB to generate conflicting GraphQL type and operation names.
+        ///
+        /// "dbo_Category" entity → singular: Category, plural: Categories
+        /// "dbo_Categories" entity → singular: Category, plural: Categories (after pluralization)
+        ///
+        /// Both entities generate the same pk query, list query, and mutation names.
+        /// </summary>
+        [TestMethod]
+        [DataRow(DatabaseType.MSSQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateAutoEntitiesWithSingularPluralNameCollisionGenerateDuplicateQueries(DatabaseType databaseType)
+        {
+            // Entity Name: dbo_Category
+            // Singular: Category (from entity name processed by autoentities)
+            // Plural: Categories (pluralized from singular)
+            Entity categoryEntity = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Category", "Categories");
+
+            // Entity Name: dbo_Categories
+            // Singular: Category (after singularization by autoentities)
+            // Plural: Categories
+            Entity categoriesEntity = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Category", "Categories");
+
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "dbo_Categories", categoriesEntity },
+                { "dbo_Category", categoryEntity }
+            };
+
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(
+                entityCollection,
+                "dbo_Category",
+                databaseType,
+                conflictingEntityName: "dbo_Categories");
         }
 
         /// <summary>
@@ -1612,14 +1739,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// queries with the same name.
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
-        /// <param name="entityName">Entity name to construct the expected exception message</param>
-        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName, DatabaseType databaseType)
+        /// <param name="entityName">The entity name expected to appear in the conflict message as the conflicting entity.</param>
+        /// <param name="databaseType">Database type used during validation.</param>
+        /// <param name="conflictingEntityName">The other entity name expected to appear in the conflict message.</param>
+        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(
+            SortedDictionary<string, Entity> entityCollection,
+            string entityName,
+            DatabaseType databaseType,
+            string conflictingEntityName)
         {
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
                action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(databaseType, new(entityCollection)));
 
-            Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
+            StringAssert.Contains(dabException.Message, "GraphQL naming conflict detected.");
+            StringAssert.Contains(dabException.Message, entityName);
+            StringAssert.Contains(dabException.Message, conflictingEntityName);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
             Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
         }
@@ -2462,6 +2597,56 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
                 Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
             }
+        }
+
+        /// <summary>
+        /// Regression test for validate-only mode losing operation ownership after an earlier conflict.
+        /// When an entity successfully registers some of its generated operation names but then fails on
+        /// a later name, the previously added names must still be attributed to that entity so that a
+        /// subsequent entity colliding on one of them reports the correct conflicting entity.
+        ///
+        /// Sequence:
+        /// - First:  singular "Alpha", plural "Shared" -> registers alpha_by_pk, shared, ...
+        /// - Second: singular "Beta",  plural "Shared" -> registers beta_by_pk, then collides on shared (owned by First).
+        /// - Third:  singular "Beta",  plural "Thirds" -> collides on beta_by_pk, which must be owned by Second.
+        ///
+        /// Because validate-only mode records exceptions instead of throwing, both conflicts are collected.
+        /// The conflict recorded for Third must identify Second (not just Third).
+        /// </summary>
+        [TestMethod]
+        public void ValidateOnlyMode_ConflictAfterPartialAdd_ReportsActualConflictingEntity()
+        {
+            Entity first = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Alpha", "Shared");
+            Entity second = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Beta", "Shared");
+            Entity third = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Beta", "Thirds");
+
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "First", first },
+                { "Second", second },
+                { "Third", third }
+            };
+
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(
+                provider,
+                fileSystem,
+                new Mock<ILogger<RuntimeConfigValidator>>().Object,
+                isValidateOnly: true);
+
+            configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(DatabaseType.MySQL, new(entityCollection));
+
+            List<Exception> exceptions = configValidator.ConfigValidationExceptions;
+
+            // Two conflicts are expected: Second (vs First) and Third (vs Second).
+            Assert.AreEqual(expected: 2, actual: exceptions.Count);
+
+            // Regression assertion: the conflict recorded for Third must identify Second as the entity
+            // that first registered beta_by_pk, even though Second failed on a later operation (shared).
+            Exception thirdConflict = exceptions.Single(e => e.Message.Contains("Third"));
+            StringAssert.Contains(thirdConflict.Message, "Second");
         }
 
         /// <summary>
@@ -3683,6 +3868,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { targetEntity, sampleEntity2 }
             };
             return entityMap;
+        }
+
+        private static ForeignKeyDefinition CreateForeignKey(RelationShipPair pair)
+        {
+            return new ForeignKeyDefinition
+            {
+                Pair = pair,
+                ReferencingColumns = new() { "referencing_id" },
+                ReferencedColumns = new() { "referenced_id" }
+            };
         }
     }
 }

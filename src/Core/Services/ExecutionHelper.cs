@@ -188,54 +188,77 @@ namespace Azure.DataApiBuilder.Service.Services
                 // The selection type can be a wrapper type like NonNullType or ListType.
                 // To get the most inner type (aka the named type) we use our named type helper.
                 ITypeDefinition namedType = context.Selection.Field.Type.NamedType();
-
-                // Each scalar in HotChocolate has a runtime type representation.
-                // In order to let scalar values flow through the GraphQL type completion
-                // efficiently we want the leaf types to match the runtime type.
-                // If that is not the case a value will go through the type converter to try to
-                // transform it into the runtime type.
-                // We also want to ensure here that we do not unnecessarily convert values to
-                // strings and then force the conversion to parse them.
-                try
-                {
-                    return namedType switch
-                    {
-                        StringType => fieldValue.GetString(), // spec
-                        UnsignedByteType => fieldValue.GetByte(),
-                        ShortType => fieldValue.GetInt16(),
-                        IntType => fieldValue.GetInt32(), // spec
-                        LongType => fieldValue.GetInt64(),
-                        FloatType => fieldValue.GetDouble(), // spec
-                        SingleType => fieldValue.GetSingle(),
-                        DecimalType => fieldValue.GetDecimal(),
-                        DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" (double quotes) due to stringagg parsing and hence we need to ensure parsing is correct.
-                        DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
-                        HotChocolate.Types.NodaTime.LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
-                        // HC v16 deprecated ByteArrayType in favor of Base64StringType; DAB-generated
-                        // schemas now bind byte[] fields to Base64StringType (see BYTEARRAY_TYPE).
-                        Base64StringType => fieldValue.GetBytesFromBase64(),
-                        BooleanType => fieldValue.GetBoolean(), // spec
-                        UrlType => new Uri(fieldValue.GetString()!),
-                        UuidType => fieldValue.GetGuid(),
-                        DurationType => XmlConvert.ToTimeSpan(fieldValue.GetString()!),
-                        AnyType => fieldValue.ToString(),
-                        _ => fieldValue.GetString()
-                    };
-                }
-                catch (Exception ex) when (ex is InvalidOperationException or FormatException)
-                {
-                    // this usually means that database column type was changed since generating the GraphQL schema
-                    // for e.g. System.FormatException - One of the identified items was in an invalid format
-                    // System.InvalidOperationException - The requested operation requires an element of type 'Number', but the target element has type 'String'.
-                    throw new DataApiBuilderException(
-                        message: $"The {context.Selection.Field.Name} value could not be parsed for configured GraphQL data type {namedType.Name}",
-                        statusCode: HttpStatusCode.Conflict,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
-                        ex);
-                }
+                return CoerceJsonLeafValueToRuntimeType(fieldValue, namedType, context.Selection.Field.Name);
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Converts a single JSON scalar value into the CLR runtime type that matches the
+        /// provided GraphQL leaf (scalar/enum) type.
+        /// HotChocolate expects leaf values to already be materialized into their runtime
+        /// representation. If a raw <see cref="JsonElement"/> reaches a scalar's result
+        /// coercion, HC fails with EXEC_INVALID_LEAF_VALUE (e.g. "Single cannot coerce the
+        /// runtime value of type System.Text.Json.JsonElement"). This helper is shared by the
+        /// single-leaf resolver and the leaf-list materialization (e.g. a SQL vector column
+        /// exposed as [Single]).
+        /// </summary>
+        /// <param name="fieldValue">The JSON scalar value to convert.</param>
+        /// <param name="namedType">The named (inner) GraphQL leaf type of the field.</param>
+        /// <param name="fieldName">Field name used for error reporting.</param>
+        /// <returns>The runtime value, or null when the JSON value is null/undefined.</returns>
+        private static object? CoerceJsonLeafValueToRuntimeType(JsonElement fieldValue, ITypeDefinition namedType, string fieldName)
+        {
+            if (fieldValue.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+            {
+                return null;
+            }
+
+            // Each scalar in HotChocolate has a runtime type representation.
+            // In order to let scalar values flow through the GraphQL type completion
+            // efficiently we want the leaf types to match the runtime type.
+            // If that is not the case a value will go through the type converter to try to
+            // transform it into the runtime type.
+            // We also want to ensure here that we do not unnecessarily convert values to
+            // strings and then force the conversion to parse them.
+            try
+            {
+                return namedType switch
+                {
+                    StringType => fieldValue.GetString(), // spec
+                    UnsignedByteType => fieldValue.GetByte(),
+                    ShortType => fieldValue.GetInt16(),
+                    IntType => fieldValue.GetInt32(), // spec
+                    LongType => fieldValue.GetInt64(),
+                    FloatType => fieldValue.GetDouble(), // spec
+                    SingleType => fieldValue.GetSingle(),
+                    DecimalType => fieldValue.GetDecimal(),
+                    DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" (double quotes) due to stringagg parsing and hence we need to ensure parsing is correct.
+                    DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
+                    HotChocolate.Types.NodaTime.LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
+                    // HC v16 deprecated ByteArrayType in favor of Base64StringType; DAB-generated
+                    // schemas now bind byte[] fields to Base64StringType (see BYTEARRAY_TYPE).
+                    Base64StringType => fieldValue.GetBytesFromBase64(),
+                    BooleanType => fieldValue.GetBoolean(), // spec
+                    UrlType => new Uri(fieldValue.GetString()!),
+                    UuidType => fieldValue.GetGuid(),
+                    DurationType => XmlConvert.ToTimeSpan(fieldValue.GetString()!),
+                    AnyType => fieldValue.ToString(),
+                    _ => fieldValue.GetString()
+                };
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+            {
+                // this usually means that database column type was changed since generating the GraphQL schema
+                // for e.g. System.FormatException - One of the identified items was in an invalid format
+                // System.InvalidOperationException - The requested operation requires an element of type 'Number', but the target element has type 'String'.
+                throw new DataApiBuilderException(
+                    message: $"The {fieldName} value could not be parsed for configured GraphQL data type {namedType.Name}",
+                    statusCode: HttpStatusCode.Conflict,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
+                    ex);
+            }
         }
 
         /// <summary>
@@ -296,6 +319,27 @@ namespace Azure.DataApiBuilder.Service.Services
                 IMetadata? metadata = GetMetadata(context);
                 object result = queryEngine.ResolveList(listValue, context.Selection.Field, ref metadata);
                 SetNewMetadataChildren(context, metadata);
+
+                // When the list's element type is a leaf (scalar/enum) type - for example a SQL
+                // vector column surfaced as [Single], or a PostgreSQL int[]/string[] column -
+                // HotChocolate hands each element directly to the scalar's result coercion.
+                // ResolveList returns the elements as raw JsonElement instances, which scalar
+                // types cannot coerce (EXEC_INVALID_LEAF_VALUE). We therefore materialize each
+                // element into its runtime representation here. Lists of object types are left
+                // untouched because their leaf fields are resolved individually via ExecuteLeafField.
+                ITypeDefinition namedType = context.Selection.Field.Type.NamedType();
+                if (namedType.IsLeafType() && result is List<JsonElement> listElements)
+                {
+                    string fieldName = context.Selection.Field.Name;
+                    List<object?> runtimeValues = new(listElements.Count);
+                    foreach (JsonElement element in listElements)
+                    {
+                        runtimeValues.Add(CoerceJsonLeafValueToRuntimeType(element, namedType, fieldName));
+                    }
+
+                    return runtimeValues;
+                }
+
                 return result;
             }
 

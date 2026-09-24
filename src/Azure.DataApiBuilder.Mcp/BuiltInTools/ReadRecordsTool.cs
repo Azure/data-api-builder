@@ -201,7 +201,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 if (!string.IsNullOrWhiteSpace(select))
                 {
                     // Update the context to specify which fields will be returned from the entity.
-                    IEnumerable<string> fieldsReturnedForFind = select.Split(",").ToList();
+                    List<string> fieldsReturnedForFind = select.Split(',').Select(field => field.Trim()).ToList();
+                    if (fieldsReturnedForFind.Any(string.IsNullOrEmpty))
+                    {
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "The 'select' argument cannot contain empty field names.", logger);
+                    }
+
                     context.UpdateReturnFields(fieldsReturnedForFind);
                 }
 

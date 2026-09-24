@@ -1,9 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text.Json;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
@@ -132,6 +137,125 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             StringAssert.StartsWith(nextLink, "/api/Book");
             Assert.IsFalse(nextLink.Contains("localhost"), "Relative link should not contain the host.");
+        }
+
+        /// <summary>
+        /// Verifies string, number, null, and Boolean cursor values resolve while object and array values are rejected.
+        /// </summary>
+        [TestMethod]
+        public void TryResolveJsonElementToScalarVariable_HandlesEveryJsonKind()
+        {
+            using JsonDocument document = JsonDocument.Parse("[\"text\",12.5,null,true,false,{},[]]");
+            JsonElement.ArrayEnumerator elements = document.RootElement.EnumerateArray();
+
+            elements.MoveNext();
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out object? text));
+            Assert.AreEqual("text", text);
+            elements.MoveNext();
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out object? number));
+            Assert.AreEqual(12.5, number);
+            elements.MoveNext();
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out object? nullValue));
+            Assert.IsNull(nullValue);
+            elements.MoveNext();
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out object? trueValue));
+            Assert.AreEqual(true, trueValue);
+            elements.MoveNext();
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out object? falseValue));
+            Assert.AreEqual(false, falseValue);
+            elements.MoveNext();
+            Assert.IsFalse(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out _));
+            elements.MoveNext();
+            Assert.IsFalse(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out _));
+        }
+
+        [TestMethod]
+        public void MakeCursorFromJsonElement_IncludesOrderByAndRemainingPrimaryKey()
+        {
+            using JsonDocument document = JsonDocument.Parse("{\"name\":\"Ada\",\"id\":7}");
+
+            string cursor = SqlPaginationUtil.MakeCursorFromJsonElement(
+                document.RootElement,
+                new List<string> { "id" },
+                new List<OrderByColumn> { new("dbo", "authors", "name", "a", OrderBy.DESC) },
+                entityName: "Author");
+            string decoded = SqlPaginationUtil.Base64Decode(cursor);
+
+            StringAssert.Contains(decoded, "name");
+            StringAssert.Contains(decoded, "Ada");
+            StringAssert.Contains(decoded, "id");
+            StringAssert.Contains(decoded, "\"Direction\":1");
+        }
+
+        [TestMethod]
+        public void MakeCursorFromJsonElement_GroupByOmitsPrimaryKeys()
+        {
+            using JsonDocument document = JsonDocument.Parse("{\"total\":12}");
+
+            string decoded = SqlPaginationUtil.Base64Decode(SqlPaginationUtil.MakeCursorFromJsonElement(
+                document.RootElement,
+                new List<string> { "missing" },
+                new List<OrderByColumn> { new("", "", "total", "", OrderBy.ASC) },
+                isGroupByQuery: true));
+
+            StringAssert.Contains(decoded, "total");
+            Assert.IsFalse(decoded.Contains("missing"));
+        }
+
+        [TestMethod]
+        public void MakeCursorFromJsonElement_RejectsNonScalarCursorValue()
+        {
+            using JsonDocument document = JsonDocument.Parse("{\"id\":{}}");
+
+            Assert.ThrowsException<DataApiBuilderException>(() => SqlPaginationUtil.MakeCursorFromJsonElement(
+                document.RootElement,
+                new List<string> { "id" },
+                orderByColumns: null));
+        }
+
+        [TestMethod]
+        public void ConstructBaseUriForPagination_UsesValidForwardedHeadersAndBaseRoute()
+        {
+            DefaultHttpContext context = new();
+            context.Request.Scheme = "http";
+            context.Request.Host = new HostString("internal:5000");
+            context.Request.Path = "/api/books";
+            context.Request.Headers["X-Forwarded-Proto"] = " HTTPS ";
+            context.Request.Headers["X-Forwarded-Host"] = " example.com:8443 ";
+
+            string result = SqlPaginationUtil.ConstructBaseUriForPagination(context, "/gateway");
+
+            Assert.AreEqual("https://example.com:8443/gateway/api/books", result);
+        }
+
+        [TestMethod]
+        public void ConstructBaseUriForPagination_InvalidForwardedHeadersFallBackToRequest()
+        {
+            DefaultHttpContext context = new();
+            context.Request.Scheme = "http";
+            context.Request.Host = new HostString("localhost:5000");
+            context.Request.Path = "/api/books";
+            context.Request.Headers["X-Forwarded-Proto"] = "ftp";
+            context.Request.Headers["X-Forwarded-Host"] = "bad host@value";
+
+            Assert.AreEqual("http://localhost:5000/api/books", SqlPaginationUtil.ConstructBaseUriForPagination(context));
+        }
+
+        [TestMethod]
+        public void FormatQueryString_IgnoresBlankKeysAndValues()
+        {
+            NameValueCollection parameters = new()
+            {
+                { " ", "ignored" },
+                { "$filter", " " },
+                { "$first", "10" }
+            };
+
+            string result = SqlPaginationUtil.FormatQueryString(parameters);
+
+            StringAssert.Contains(result, "$first=10");
+            Assert.IsFalse(result.Contains("ignored"));
+            Assert.IsFalse(result.Contains("filter"));
         }
     }
 }

@@ -39,8 +39,13 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <param name="filterQueryString">Represents the $filter part of the query string</param>
         /// <param name="resourcePath">Represents the resource path, in our case the entity name.</param>
         /// <param name="customResolver">ODataUriResolver resolving different kinds of Uri parsing context.</param>
+        /// <param name="parameterAliasNodes">Typed AST values for parameter aliases referenced by the filter.</param>
         /// <returns>An AST FilterClause that represents the filter portion of the WHERE clause.</returns>
-        public FilterClause GetFilterClause(string filterQueryString, string resourcePath, ODataUriResolver? customResolver = null)
+        public FilterClause GetFilterClause(
+            string filterQueryString,
+            string resourcePath,
+            ODataUriResolver? customResolver = null,
+            IReadOnlyDictionary<string, SingleValueNode>? parameterAliasNodes = null)
         {
             if (_model is null)
             {
@@ -60,7 +65,18 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     parser.Resolver = customResolver;
                 }
 
-                return parser.ParseFilter();
+                if (parameterAliasNodes is { Count: > 0 })
+                {
+                    foreach ((string alias, SingleValueNode valueNode) in parameterAliasNodes)
+                    {
+                        parser.ParameterAliasNodes.Add(alias, valueNode);
+                    }
+                }
+
+                FilterClause filterClause = parser.ParseFilter();
+                return parameterAliasNodes is not { Count: > 0 }
+                    ? filterClause
+                    : new ParameterAliasRewriter(parameterAliasNodes).Rewrite(filterClause);
             }
             catch (ODataException e)
             {

@@ -71,10 +71,11 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            args.CancellationToken.ThrowIfCancellationRequested();
             _metadataProviders.Clear();
             ConfigureMetadataProviders();
             // Blocks the current thread until initialization is finished.
-            this.InitializeAsync().GetAwaiter().GetResult();
+            this.InitializeAsync(args.CancellationToken).GetAwaiter().GetResult();
         }
 
         /// <inheritdoc />
@@ -94,11 +95,18 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <inheritdoc />
         public async Task InitializeAsync()
         {
+            await InitializeAsync(CancellationToken.None);
+        }
+
+        /// <inheritdoc />
+        public async Task InitializeAsync(CancellationToken cancellationToken)
+        {
             foreach ((_, ISqlMetadataProvider provider) in _metadataProviders)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (provider is not null)
                 {
-                    await provider.InitializeAsync();
+                    await provider.InitializeAsync(cancellationToken);
                 }
             }
         }

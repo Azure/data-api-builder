@@ -18,6 +18,14 @@ namespace Azure.DataApiBuilder.Config
         public bool DoReplaceAkvVar { get; set; }
         public EnvironmentVariableReplacementFailureMode EnvFailureMode { get; set; } = EnvironmentVariableReplacementFailureMode.Throw;
 
+        /// <summary>
+        /// When true, connection-string Application Name (telemetry) injection is skipped during this
+        /// parse. This is set for nested child config loads in a multi-database setup: a child config
+        /// lacks the global runtime section and knows only its own entities, so the top-level load
+        /// performs the injection once over the fully-merged config for every data source.
+        /// </summary>
+        public bool SkipApplicationNameInjection { get; set; }
+
         // @env\('  : match @env('
         // @akv\('  : match @akv('
         // .*?      : lazy match any character except newline 0 or more times

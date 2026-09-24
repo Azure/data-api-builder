@@ -98,6 +98,7 @@ update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_0
 update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_08:update" --fields.include "*" --policy-database "@item.id eq 9"
 update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_08:delete" --fields.include "*" --policy-database "@item.id eq 9"
 update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_08:read" --fields.include "*"
+update Book --config "dab-config.PostgreSql.json" --permissions "claim_policy_tester:read" --fields.include "*" --policy-database "@item.title eq @claims.userId"
 update Book --config "dab-config.PostgreSql.json" --permissions "test_role_with_noread:create,update,delete"
 update Book --config "dab-config.PostgreSql.json" --permissions "test_role_with_excluded_fields:create,update,delete"
 update Book --config "dab-config.PostgreSql.json" --permissions "test_role_with_excluded_fields:read" --fields.exclude "publisher_id"
@@ -178,3 +179,4 @@ add dbo_DimAccount --config "dab-config.PostgreSql.json" --source "dimaccount" -
 update dbo_DimAccount --config "dab-config.PostgreSql.json" --map "parentaccountkey:ParentAccountKey,accountkey:AccountKey" 
 update dbo_DimAccount --config "dab-config.PostgreSql.json" --relationship parent_account --target.entity dbo_DimAccount --cardinality one --relationship.fields "parentaccountkey:accountkey"
 update dbo_DimAccount --config "dab-config.PostgreSql.json" --relationship child_accounts --target.entity dbo_DimAccount --cardinality many --relationship.fields "accountkey:parentaccountkey"
+add DateOnlyTable --config "dab-config.PostgreSql.json" --source "date_only_table" --permissions "anonymous:*" --rest true --graphql true --source.key-fields "event_date"

@@ -67,14 +67,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Init(parameters);
         }
 
-        /// <inheritdoc/>
-        public override string MakeDbConnectionParam(object? value, string? columnName = null, bool lengthOverride = false)
-        {
-            string encodedParamName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
-            Parameters.Add(encodedParamName, new(value));
-            return encodedParamName;
-        }
-
         private static IEnumerable<LabelledColumn> GenerateQueryColumns(SelectionSetNode selectionSet, DocumentNode document, string tableName)
         {
             foreach (ISelectionNode selectionNode in selectionSet.Selections)

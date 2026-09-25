@@ -6685,7 +6685,7 @@ type Planet @model(name:""PlanetAlias"") {
                 fileSystem,
                 loggerFactory.CreateLogger<RuntimeConfigValidator>(),
                 isValidateOnly: true);
-            
+
             // Runs metadata initialization (real autoentity resolution against MSSQL) + presence validation.
             bool isValid = await validator.TryValidateConfig(rootConfigPath, loggerFactory);
             Assert.IsTrue(isValid, "Validation should succeed");

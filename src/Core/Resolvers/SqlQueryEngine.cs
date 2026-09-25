@@ -443,6 +443,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private static JsonDocument? ParseResultIntoJsonDocument(JsonElement? result)
         {
+            // An empty result set surfaces as a default (JsonValueKind.Undefined) JsonElement with no
+            // backing document; serializing it throws InvalidOperationException. Return null to match the
+            // non-cached path, which renders an empty payload (e.g. {"value":[]}).
+            if (result is { ValueKind: JsonValueKind.Undefined })
+            {
+                return null;
+            }
+
             byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
             return JsonDocument.Parse(jsonBytes);
         }

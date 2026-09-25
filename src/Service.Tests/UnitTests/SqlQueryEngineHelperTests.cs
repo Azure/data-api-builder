@@ -47,6 +47,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Regression test for https://github.com/Azure/data-api-builder/issues/3704
+        /// An empty cached read surfaces as a default (JsonValueKind.Undefined) JsonElement that has no
+        /// backing document. Serializing it previously threw InvalidOperationException (HTTP 500).
+        /// ParseResultIntoJsonDocument must instead return null, matching the non-cached empty-result path.
+        /// </summary>
+        [TestMethod]
+        public void ParseResultIntoJsonDocument_UndefinedElement_ReturnsNull()
+        {
+            JsonElement? undefined = default(JsonElement);
+            MethodInfo method = typeof(SqlQueryEngine).GetMethod(
+                "ParseResultIntoJsonDocument",
+                BindingFlags.Static | BindingFlags.NonPublic)!;
+
+            JsonDocument? result = (JsonDocument?)method.Invoke(null, new object?[] { undefined });
+
+            Assert.IsNull(result);
+        }
+
+        /// <summary>
         /// Verifies stored-procedure execution returns the first result object and maps empty or absent result arrays to null.
         /// </summary>
         [DataTestMethod]

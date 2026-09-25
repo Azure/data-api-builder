@@ -67,19 +67,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private const string EMPTY_QUERY = "{ books(filter: { id: { eq: -1 } }) { items { id title } } }";
         private const string FAILED_QUERY = "{ books { items { " + PRIVATE_FIELD + " } } }";
         private const string DISCOVERY_QUERY = "{ __schema { queryType { fields { name } } } }";
+        private const int UPSERT_ROUNDS = 4;
+        private const int CONCURRENT_UPSERTS = 4;
         private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(30);
 
         [DataTestMethod]
-        [DataRow(false, false, "Books", false, false)]
-        [DataRow(true, false, "Books", false, false)]
-        [DataRow(false, true, "Books", false, false)]
-        [DataRow(false, false, "swagger", false, false)]
-        [DataRow(false, false, "swagger/books", false, false)]
-        [DataRow(false, false, "mcp/books", false, false)]
-        [DataRow(false, false, "Books", true, false)]
-        [DataRow(false, false, "Books", false, true)]
+        [DataRow(false, false, "Books", false, false, false)]
+        [DataRow(true, false, "Books", false, false, false)]
+        [DataRow(false, true, "Books", false, false, false)]
+        [DataRow(false, false, "swagger", false, false, false)]
+        [DataRow(false, false, "swagger/books", false, false, false)]
+        [DataRow(false, false, "mcp/books", false, false, false)]
+        [DataRow(false, false, "Books", true, false, false)]
+        [DataRow(false, false, "Books", false, true, false)]
+        [DataRow(false, false, "Books", false, false, true)]
         public async Task RealHttpRequestsEmitMilestonesAndSqlUsageWithoutCustomerData(bool includeEmbeddingEndpoint, bool useAutoentities,
-            string restEntityPath, bool includeHealthProbes, bool includeCachedReads)
+            string restEntityPath, bool includeHealthProbes, bool includeCachedReads, bool includeUpserts)
         {
             if (!OperatingSystem.IsWindows())
             {
@@ -136,6 +139,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 Directory.CreateDirectory(directory);
                 JsonNode runtimeConfiguration = JsonNode.Parse(CreateConfig(connectionString))!;
                 runtimeConfiguration["entities"]!["Books"]!["rest"]!["path"] = restEntityPath;
+                if (includeUpserts)
+                {
+                    runtimeConfiguration["entities"]!["Books"]!["permissions"]![0]!["actions"] = new JsonArray("create", "read", "update");
+                }
+
                 if (includeCachedReads)
                 {
                     runtimeConfiguration["runtime"]!["cache"]!["enabled"] = true;
@@ -200,7 +208,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     enableSyntheticCollection: true,
                     configPath: configPath,
                     executionMode: "web",
-                    clock: includeCachedReads ? clock : null,
+                    clock: includeCachedReads || includeUpserts ? clock : null,
                     readEnvironmentVariable: _ => null,
                     showNotice: () => { },
                     resolveIdentity: _ => new(Guid.NewGuid(), "ephemeral"),
@@ -360,6 +368,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     AssertEmptyRows(await completions.SendAsync(client, HttpMethod.Post, "/graphql", EMPTY_QUERY));
                 }
 
+                if (includeUpserts)
+                {
+                    clock.Advance(TimeSpan.FromHours(6));
+                    session.Tick();
+                    await exporter.WaitForAsync("dab.engine.heartbeat");
+                    await AssertConcurrentUpsertsAsync(client, completions, connectionString, restEntityPath);
+                }
+
                 if (includeEmbeddingEndpoint)
                 {
                     // Use the actual Startup-mapped endpoint, controller and embedding service.
@@ -380,7 +396,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 await session.StopAsync();
                 await exporter.WaitForAsync(STOPPED);
                 EngineTelemetryEvent[] records = exporter.Records.ToArray();
-                AssertUsage(records, embeddingRequests: includeEmbeddingEndpoint ? 2 : 0, additionalGraphQLReads: includeCachedReads ? 2 : 1);
+                int upsertCount = includeUpserts ? 2 * UPSERT_ROUNDS * CONCURRENT_UPSERTS : 0;
+                AssertUsage(records, embeddingRequests: includeEmbeddingEndpoint ? 2 : 0,
+                    additionalGraphQLReads: includeCachedReads ? 2 : 1, additionalRestWrites: upsertCount);
+                if (includeUpserts)
+                {
+                    string window = clock.GetUtcNow().ToString("O", CultureInfo.InvariantCulture);
+                    EngineTelemetryEvent[] upserts = records.Where(record => record.Name == SUMMARY &&
+                        record.Properties["window_start"] == window).ToArray();
+                    AssertOutcomes(Summaries(upserts, "request"), count: upsertCount, successes: upsertCount, failures: 0);
+                    AssertOutcomes(Summaries(upserts, "operation"), count: upsertCount, successes: upsertCount, failures: 0);
+                    Assert.IsTrue(Summaries(upserts, "operation").All(record => record.Properties["operation"] == "write"));
+                    Assert.IsTrue(Count(Summaries(upserts, "database_attempt"), "success") >= upsertCount);
+                }
+
                 if (includeCachedReads)
                 {
                     string window = clock.GetUtcNow().ToString("O", CultureInfo.InvariantCulture);
@@ -863,7 +892,39 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual(0, body.RootElement.GetProperty("data").GetProperty("books").GetProperty("items").GetArrayLength());
         }
 
-        private static void AssertUsage(EngineTelemetryEvent[] records, int embeddingRequests = 0, int additionalGraphQLReads = 0)
+        private static async Task AssertConcurrentUpsertsAsync(HttpClient client, ResponseCompletionTracker completions,
+            string connectionString, string restEntityPath)
+        {
+            int id = 100;
+            foreach (HttpMethod method in new[] { HttpMethod.Put, HttpMethod.Patch })
+            {
+                for (int round = 0; round < UPSERT_ROUNDS; round++, id++)
+                {
+                    string path = $"/api/{restEntityPath}/id/{id}";
+                    TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                    Task<ServedResponse>[] requests = Enumerable.Range(0, CONCURRENT_UPSERTS).Select(async _ =>
+                    {
+                        await release.Task;
+                        return await completions.SendAsync(client, method, path, jsonBody: new { title = PRIVATE_VALUE });
+                    }).ToArray();
+                    release.SetResult();
+                    ServedResponse[] responses = await Task.WhenAll(requests).WaitAsync(_timeout);
+                    Assert.IsTrue(responses.All(response => response.StatusCode is HttpStatusCode.OK or HttpStatusCode.Created),
+                        "Concurrent same-key upserts must succeed without a duplicate-key error.");
+                    Assert.AreEqual(1, responses.Count(response => response.StatusCode == HttpStatusCode.Created));
+                    Assert.AreEqual(CONCURRENT_UPSERTS - 1, responses.Count(response => response.StatusCode == HttpStatusCode.OK));
+                    await using SqlConnection database = new(connectionString);
+                    await database.OpenAsync();
+                    using SqlCommand count = database.CreateCommand();
+                    count.CommandText = "SELECT COUNT(*) FROM dbo.TelemetryItems WHERE id=@id;";
+                    count.Parameters.Add("@id", SqlDbType.Int).Value = id;
+                    Assert.AreEqual(1, (int)(await count.ExecuteScalarAsync())!);
+                }
+            }
+        }
+
+        private static void AssertUsage(EngineTelemetryEvent[] records, int embeddingRequests = 0, int additionalGraphQLReads = 0,
+            int additionalRestWrites = 0)
         {
             EngineTelemetryEvent started = OnlyEvent(records, "dab.engine.process_started");
             EngineTelemetryEvent ready = OnlyEvent(records, READY);
@@ -882,17 +943,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.IsTrue(summaries.All(record => record.ConfigurationEpoch == 1));
             Assert.IsFalse(summaries.Any(record => record.Properties["family"] == "collection_loss"));
             EngineTelemetryEvent[] requests = Summaries(records, "request").ToArray();
-            Assert.AreEqual(3L + embeddingRequests + additionalGraphQLReads, Count(requests, "count"), "Health, OpenAPI and introspection must not add data requests.");
+            Assert.AreEqual(3L + embeddingRequests + additionalGraphQLReads + additionalRestWrites, Count(requests, "count"), "Health, OpenAPI and introspection must not add data requests.");
             Assert.IsTrue(requests.All(record => record.Properties["transport"] == "http"));
             AssertOutcomes(requests.Where(record => record.Properties["api"] == "rest" &&
-                record.Properties["role_class"] == "anonymous"), count: 1 + embeddingRequests, successes: 1 + embeddingRequests, failures: 0);
+                record.Properties["role_class"] == "anonymous"), count: 1 + embeddingRequests + additionalRestWrites,
+                successes: 1 + embeddingRequests + additionalRestWrites, failures: 0);
             AssertOutcomes(requests.Where(record => record.Properties["api"] == "graph_ql" &&
                 record.Properties["role_class"] == "anonymous"), count: 1 + additionalGraphQLReads, successes: 1 + additionalGraphQLReads, failures: 0);
             AssertOutcomes(requests.Where(record => record.Properties["api"] == "graph_ql" &&
                 record.Properties["role_class"] == "custom"), count: 1, successes: 0, failures: 1);
 
             EngineTelemetryEvent[] http = Summaries(records, "http_outcome").ToArray();
-            Assert.AreEqual(3L + embeddingRequests + additionalGraphQLReads, Count(http, "count"));
+            Assert.AreEqual(3L + embeddingRequests + additionalGraphQLReads + additionalRestWrites, Count(http, "count"));
             Assert.IsTrue(http.All(record => record.Properties["http_status_class"] == "success"),
                 "The GraphQL failure is logical, despite its completed 2xx HTTP response.");
             foreach (string api in new[] { "rest", "graph_ql" })
@@ -900,7 +962,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 EngineTelemetryEvent[] operations = Summaries(records, "operation")
                     .Where(record => record.Properties["api"] == api).ToArray();
                 Assert.IsTrue(Count(operations, "success") > 0, "Both real API paths must execute a logical SQL operation.");
-                Assert.IsTrue(operations.All(record => record.Properties["operation"] == "read" &&
+                Assert.IsTrue(operations.All(record => (record.Properties["operation"] == "read" ||
+                    additionalRestWrites > 0 && api == "rest" && record.Properties["operation"] == "write") &&
                     record.Properties["provider"] == "ms_sql" && record.Properties["object_type"] == "table"));
             }
 
@@ -1031,7 +1094,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             };
 
             public async Task<ServedResponse> SendAsync(HttpClient client, HttpMethod method, string path,
-                string? query = null, string role = "anonymous", string? text = null)
+                string? query = null, string role = "anonymous", string? text = null, object? jsonBody = null)
             {
                 string id = Guid.NewGuid().ToString("N");
                 TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -1050,6 +1113,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     else if (query is not null)
                     {
                         request.Content = JsonContent.Create(new { query });
+                    }
+                    else if (jsonBody is not null)
+                    {
+                        request.Content = JsonContent.Create(jsonBody);
                     }
 
                     using CancellationTokenSource timeout = new(_timeout);

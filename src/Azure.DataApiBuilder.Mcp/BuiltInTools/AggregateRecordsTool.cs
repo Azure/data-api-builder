@@ -436,9 +436,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             // Parse filter
             string? filter = root.TryGetProperty("filter", out JsonElement filterElement) ? filterElement.GetString() : null;
 
-            // Parse orderby (validation deferred until after groupby is known;
-            // if groupby is absent, orderby is silently ignored per #3279)
-            bool userProvidedOrderby = root.TryGetProperty("orderby", out JsonElement orderbyElement) && !string.IsNullOrWhiteSpace(orderbyElement.GetString());
+            // Validate the JSON type before reading orderby. Preserve null/blank as omitted;
+            // direction validation is deferred until groupby is known (see #3279).
+            bool userProvidedOrderby = root.TryGetProperty("orderby", out JsonElement orderbyElement);
+            if (userProvidedOrderby)
+            {
+                if (orderbyElement.ValueKind != JsonValueKind.String && orderbyElement.ValueKind != JsonValueKind.Null)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments",
+                        $"Argument 'orderby' must be a string ('asc' or 'desc'), for example \"desc\". Got: '{orderbyElement.ValueKind}'.", logger);
+                }
+
+                userProvidedOrderby = !string.IsNullOrWhiteSpace(orderbyElement.GetString());
+            }
+
             string orderby = "desc";
 
             // Parse first

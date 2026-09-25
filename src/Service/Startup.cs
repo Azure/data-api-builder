@@ -157,6 +157,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(fileSystem);
             services.AddSingleton<FileSystemRuntimeConfigLoader>(sp => configLoader);
             services.AddSingleton<RuntimeConfigProvider>(sp => configProvider);
+            services.AddSingleton<RuntimeConfigLoaderShutdownService>();
 
             bool runtimeConfigAvailable = configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
 
@@ -551,7 +552,11 @@ namespace Azure.DataApiBuilder.Service
             // Subscribe the GraphQL schema refresh method to the specific hot-reload event
             _hotReloadEventHandler.Subscribe(
                 DabConfigEvents.GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED,
-                (_, _) => RefreshGraphQLSchema(services));
+                (_, args) =>
+                {
+                    args.CancellationToken.ThrowIfCancellationRequested();
+                    RefreshGraphQLSchema(services);
+                });
 
             // Cache config
             IFusionCacheBuilder fusionCacheBuilder = services.AddFusionCache()
@@ -637,6 +642,12 @@ namespace Azure.DataApiBuilder.Service
             ConfigureResponseCompression(services, runtimeConfig);
 
             services.AddControllers();
+
+            // Hosted services stop in reverse registration order. Register the loader drain last
+            // so reload work exits before any other hosted service begins shutting down and before
+            // the root provider disposes reload subscribers or their dependencies.
+            services.AddSingleton<IHostedService>(serviceProvider =>
+                serviceProvider.GetRequiredService<RuntimeConfigLoaderShutdownService>());
         }
 
         /// <summary>
@@ -1044,7 +1055,11 @@ namespace Azure.DataApiBuilder.Service
             IRequestExecutorManager requestExecutorManager = app.ApplicationServices.GetRequiredService<IRequestExecutorManager>();
             _hotReloadEventHandler.Subscribe(
                 "GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED",
-                (_, _) => EvictGraphQLSchema(requestExecutorManager));
+                (_, args) =>
+                {
+                    args.CancellationToken.ThrowIfCancellationRequested();
+                    EvictGraphQLSchema(requestExecutorManager);
+                });
 
             app.UseEndpoints(endpoints =>
             {
@@ -1156,19 +1171,18 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Add services necessary for Authentication Middleware and based on the loaded
         /// runtime configuration set the AuthenticationOptions to be either
-        /// EasyAuth based (by default) or JwtBearerOptions.
-        /// When no runtime configuration is set on engine startup, set the
-        /// default authentication scheme to EasyAuth.
+        /// Unauthenticated (by default), EasyAuth based, or JwtBearerOptions.
+        /// When no runtime configuration is available on engine startup, set the
+        /// default authentication scheme to EasyAuth for late configuration.
         /// </summary>
         /// <param name="services">The service collection where authentication services are added.</param>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         private void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
-            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) &&
-                runtimeConfig.Runtime?.Host?.Authentication is not null)
+            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
-                HostMode mode = runtimeConfig.Runtime.Host.Mode;
+                AuthenticationOptions authOptions = runtimeConfig.Runtime?.Host?.Authentication ?? new();
+                HostMode mode = runtimeConfig.Runtime?.Host?.Mode ?? HostMode.Production;
                 if (authOptions.IsJwtConfiguredIdentityProvider())
                 {
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -1187,7 +1201,7 @@ namespace Azure.DataApiBuilder.Service
                 }
                 else if (authOptions.IsEasyAuthAuthenticationProvider())
                 {
-                    EasyAuthType easyAuthType = EnumExtensions.Deserialize<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider);
+                    EasyAuthType easyAuthType = EnumExtensions.Deserialize<EasyAuthType>(authOptions.Provider);
                     bool isProductionMode = mode != HostMode.Development;
                     bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
                     bool swaEnvironmentDetected = StaticWebAppsAuthentication.AreExpectedSWAEnvVarsPresent();
@@ -1467,22 +1481,18 @@ namespace Azure.DataApiBuilder.Service
         private async Task<bool> PerformOnConfigChangeAsync(IApplicationBuilder app)
         {
             TelemetryFailureStage stage = TelemetryFailureStage.Configuration;
+            TelemetryFailureContext? failure = ProductTelemetry?.IsEnabled == true ? TelemetryFailureContext.Current ?? new() : null;
+            using IDisposable? failureScope = TelemetryFailureContext.Enter(failure);
             try
             {
-                RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
-                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-
+                RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig =
+                    await RuntimeInitializationHelper.InitializeRuntimeDependenciesAsync(
+                        app.ApplicationServices);
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
-                // Now that the configuration has been set, perform validation of the runtime config
-                // itself.
-
-                stage = TelemetryFailureStage.Validation;
-                runtimeConfigValidator.ValidateConfigProperties();
-
                 stage = TelemetryFailureStage.Metadata;
                 IMetadataProviderFactory sqlMetadataProviderFactory =
                     app.ApplicationServices.GetRequiredService<IMetadataProviderFactory>();
-                await sqlMetadataProviderFactory.InitializeAsync();
 
                 // Manually trigger DI service instantiation of GraphQLSchemaCreator and RestService
                 // to attempt to reduce chances that the first received client request
@@ -1547,18 +1557,19 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Annotate before converting the failure to false. The provider's outer
                 // observer owns late-config reporting and can distinguish concurrent attempts.
-                TelemetryFailureContext.Current?.RecordFailure(stage);
+                failure?.RecordFailure(stage);
+                TelemetryFailureStage failureStage = failure?.FailureStage ?? stage;
                 // RuntimeConfigProvider owns late-configuration failure reporting, including
                 // parse/merge and post-parse initialization failures, exactly once per attempt.
                 if (_configProvider?.IsLateConfigured != true)
                 {
                     if (ProductTelemetry?.IsReady == true)
                     {
-                        ProductTelemetry.ConfigurationChangeFailed(stage);
+                        ProductTelemetry.ConfigurationChangeFailed(failureStage);
                     }
                     else
                     {
-                        ProductTelemetry?.StartupFailed(stage);
+                        ProductTelemetry?.StartupFailed(failureStage);
                     }
                 }
 

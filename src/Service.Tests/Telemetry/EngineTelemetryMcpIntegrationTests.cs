@@ -600,6 +600,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             private readonly string _configPath = Path.Combine(Path.GetTempPath(), SENTINEL, "dab-config.json");
             private readonly FileSystemRuntimeConfigLoader _loader;
             private readonly IConfigurationRoot _configuration;
+            private readonly List<IMcpTool> _tools = new();
             private int _identityResolutions;
             internal CapturingExporter Exporter { get; } = new();
             internal ManualClock Clock { get; } = new();
@@ -665,7 +666,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 tool.Setup(candidate => candidate.IsEnabled(It.IsAny<RuntimeConfig>())).Returns(true);
                 tool.Setup(candidate => candidate.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()))
                     .Returns(execute);
-                Registry.RegisterTool(tool.Object);
+                _tools.Add(tool.Object);
+                Registry.ReplaceAll(_tools, ConfigProvider.GetConfig());
                 return tool;
             }
 

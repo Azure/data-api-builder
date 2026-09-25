@@ -113,6 +113,89 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual("1", attempts[0].Properties["success"]);
         }
 
+        [DataTestMethod]
+        [DataRow(false, "none")]
+        [DataRow(true, "none")]
+        [DataRow(false, "connection")]
+        [DataRow(true, "connection")]
+        [DataRow(false, "command")]
+        [DataRow(true, "command")]
+        public async Task TokenAwareExecutionKeepsCallerCancellationAndCountsOnlyStartedCommands(bool cancelRequest, string boundary)
+        {
+            CapturingExporter exporter = new();
+            using EngineTelemetrySession session = EngineTelemetrySession.Create(() => exporter, enableSyntheticCollection: true,
+                readEnvironmentVariable: _ => null, showNotice: () => { },
+                resolveIdentity: _ => new(Guid.NewGuid(), "ephemeral"), startTimer: false);
+            RuntimeConfig config = CreateConfig(DatabaseType.MSSQL);
+            using FileSystemRuntimeConfigLoader loader = new(new MockFileSystem()) { RuntimeConfig = config };
+            using RuntimeConfigProvider provider = new(loader) { ProductTelemetry = session };
+            using CancellationTokenSource callerCancellation = new();
+            using CancellationTokenSource requestCancellation = new();
+            DefaultHttpContext http = new() { RequestAborted = requestCancellation.Token };
+            void Cancel() => (cancelRequest ? requestCancellation : callerCancellation).Cancel();
+            int executions = 0;
+            CancellationToken executionToken = default;
+            using DataTable table = new();
+            Mock<DbCommand> command = new();
+            command.Protected().Setup<Task<DbDataReader>>("ExecuteDbDataReaderAsync",
+                ItExpr.IsAny<CommandBehavior>(), ItExpr.IsAny<CancellationToken>())
+                .Returns((CommandBehavior _, CancellationToken token) =>
+                {
+                    executions++;
+                    executionToken = token;
+                    if (boundary == "command")
+                    {
+                        Cancel();
+                    }
+
+                    token.ThrowIfCancellationRequested();
+                    return Task.FromResult<DbDataReader>(table.CreateDataReader());
+                });
+            using ControlledConnection connection = new()
+            {
+                Command = command.Object,
+                OnOpenAsync = token =>
+                {
+                    Assert.IsTrue(token.CanBeCanceled);
+                    if (boundary == "connection")
+                    {
+                        Cancel();
+                    }
+                }
+            };
+            Mock<QueryExecutor<ControlledConnection>> executor = new(new MsSqlDbExceptionParser(provider),
+                NullLogger<IQueryExecutor>.Instance, provider, new HttpContextAccessor(), null) { CallBase = true };
+            executor.Setup(value => value.CreateConnection(config.DefaultDataSourceName)).Returns(connection);
+            session.AcceptConfiguration(config);
+            session.MarkHostReady();
+            using EngineTelemetryRequestScope request = session.BeginRequest(
+                EngineTelemetryApi.Rest, EngineTelemetryTransport.Http, EngineTelemetryRole.Anonymous);
+            Task<int> Execute() => executor.Object.ExecuteQueryAsync("SELECT 42", new Dictionary<string, DbConnectionParam>(),
+                (_, _) => Task.FromResult(42), config.DefaultDataSourceName, callerCancellation.Token, http);
+            if (boundary == "none")
+            {
+                Assert.AreEqual(42, await Execute());
+                Assert.IsTrue(executionToken.CanBeCanceled);
+                request.Complete(EngineTelemetryOutcome.Success, 200);
+            }
+            else
+            {
+                await Assert.ThrowsExceptionAsync<OperationCanceledException>(Execute);
+                request.Complete(EngineTelemetryOutcome.Canceled);
+            }
+
+            await session.StopAsync();
+            EngineTelemetryEvent[] attempts = exporter.Records.Where(record => record.Name == "dab.engine.usage_summary" &&
+                record.Properties["family"] == "database_attempt").ToArray();
+            Assert.AreEqual(boundary == "connection" ? 0 : 1, executions);
+            Assert.AreEqual(executions, attempts.Length);
+            if (executions == 1)
+            {
+                Assert.AreEqual("1", attempts[0].Properties[boundary == "command" ? "canceled" : "success"]);
+                Assert.AreEqual("1", attempts[0].Properties["count"]);
+            }
+        }
+
         private static RuntimeConfig CreateConfig(DatabaseType databaseType) => new(
             Schema: null, DataSource: new(databaseType, string.Empty),
             Entities: new(new Dictionary<string, Entity>()));
@@ -123,6 +206,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             internal DbCommand? Command { get; init; }
             internal Action? OnOpen { get; init; }
+            internal Action<CancellationToken>? OnOpenAsync { get; init; }
             [AllowNull]
             public override string ConnectionString { get; set; } = string.Empty;
             public override string Database => "synthetic";
@@ -138,6 +222,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             public override Task OpenAsync(CancellationToken cancellationToken)
             {
+                OnOpenAsync?.Invoke(cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
                 Open();
                 return Task.CompletedTask;

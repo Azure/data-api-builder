@@ -306,6 +306,56 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             AssertRequests(await fixture.StopAsync(), failure: 1);
         }
 
+        [TestMethod]
+        public async Task DeferredVariableBatchKeepsMemberEligibilityAndUnknownCompletion()
+        {
+            await using Fixture fixture = new(enableDefer: true);
+            using CancellationTokenSource deadline = new(_timeout);
+            await using IExecutionResult result = await fixture.ExecuteAsync(OperationRequestBuilder.New()
+                .SetDocument("query Q($take: Boolean!, $value: String!) { __typename ... @defer { echo(value: $value) @include(if: $take) } }")
+                .SetVariableValues(new IReadOnlyDictionary<string, object?>[]
+                {
+                    new Dictionary<string, object?> { ["take"] = false, ["value"] = "excluded_first" },
+                    new Dictionary<string, object?> { ["take"] = true, ["value"] = "included_second" },
+                    new Dictionary<string, object?> { ["take"] = false, ["value"] = "excluded_third" },
+                    new Dictionary<string, object?> { ["take"] = true, ["value"] = "included_fourth" }
+                }), deadline.Token);
+            OperationResultBatch batch = result.ExpectOperationResultBatch();
+            Assert.AreEqual(4, batch.Results.Count);
+            // Consume later variable sets first: each stream must own its own deferred
+            // coordinator, and eligibility must not rely on the stream's initial payload.
+            foreach (int index in new[] { 3, 2, 1, 0 })
+            {
+                IResponseStream stream = batch.Results[index].ExpectResponseStream();
+                List<string> payloads = new();
+                await foreach (OperationResult payload in stream.ReadResultsAsync().WithCancellation(deadline.Token))
+                {
+                    await using (payload)
+                    {
+                        Assert.AreEqual(0, payload.Errors.Count);
+                        payloads.Add(payload.ToJson());
+                    }
+                }
+
+                string text = string.Join("\n", payloads);
+                Assert.IsFalse(text.Contains(index == 1 ? "included_fourth" : "included_second", StringComparison.Ordinal));
+                if (index is 1 or 3)
+                {
+                    StringAssert.Contains(text, index == 1 ? "included_second" : "included_fourth");
+                }
+                else
+                {
+                    Assert.IsFalse(text.Contains("excluded_", StringComparison.Ordinal));
+                }
+            }
+
+            await result.DisposeAsync();
+            EngineTelemetryEvent[] records = await fixture.StopAsync();
+            AssertRequests(records, unknown: 2);
+            Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.first_request_served"));
+            Assert.IsFalse(records.Any(record => record.Name == "dab.engine.first_successful_request"));
+        }
+
         [DataTestMethod]
         [DataRow("query echo { echo(value:")]
         [DataRow("query Data { __type(name: \"echo\") {")]
@@ -509,10 +559,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             await using IExecutionResult actual = await fixture.ExecuteAsync(OperationRequestBuilder.New().SetDocument(document).SetVariableValues(variables));
             Assert.AreEqual(0, expected.ExpectOperationResult().Errors.Count);
             Assert.AreEqual(0, actual.ExpectOperationResult().Errors.Count);
+            Assert.AreEqual(first || second ? 1 : 0, baseline.ResolverRequests.Count,
+                "HC16.6.4 must include a merged field when either conditional occurrence is included.");
             Assert.AreEqual(baseline.ResolverRequests.Count, fixture.ResolverRequests.Count);
             Assert.IsTrue(baseline.ResolverRequests.Count is 0 or 1, "Merged occurrences must not be counted as separate requests.");
-            // Measure HC16's actual compiled merged-selection behavior, not an independent
-            // interpretation of the two source directives. Instrumentation must not alter it.
+            // Verify both the merged executor behavior and telemetry-on/off parity.
             AssertRequests(await fixture.StopAsync(), success: baseline.ResolverRequests.Count);
         }
 
@@ -554,16 +605,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         }
 
         private static void AssertRequests(EngineTelemetryEvent[] records, long success = 0, long failure = 0,
-            long partialFailure = 0, long canceled = 0, string transport = "in_process", string role = "anonymous", long? epoch = null)
+            long partialFailure = 0, long canceled = 0, string transport = "in_process", string role = "anonymous", long? epoch = null, long unknown = 0)
         {
             EngineTelemetryEvent[] summaries = Summaries(records, "request", epoch);
-            long count = success + failure + partialFailure + canceled;
+            long count = success + failure + partialFailure + canceled + unknown;
             Assert.AreEqual(count, summaries.Sum(record => Counter(record, "count")));
             Assert.AreEqual(success, summaries.Sum(record => Counter(record, "success")));
             Assert.AreEqual(failure, summaries.Sum(record => Counter(record, "failure")));
             Assert.AreEqual(partialFailure, summaries.Sum(record => Counter(record, "partial_failure")));
             Assert.AreEqual(canceled, summaries.Sum(record => Counter(record, "canceled")));
-            Assert.AreEqual(0L, summaries.Sum(record => Counter(record, "unknown")));
+            Assert.AreEqual(unknown, summaries.Sum(record => Counter(record, "unknown")));
             Assert.AreEqual(count, summaries.Sum(record => Counter(record, "timed_count")));
             Assert.IsTrue(summaries.All(record => record.Properties["api"] == "graph_ql"
                 && record.Properties["transport"] == transport && record.Properties["role_class"] == role));
@@ -611,7 +662,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             internal ConcurrentQueue<EngineTelemetryRequestScope?> ResumedRequests { get; } = new();
             internal Func<Task>? EchoGate { get; set; }
 
-            internal Fixture(bool enableTelemetry = true)
+            internal Fixture(bool enableTelemetry = true, bool enableDefer = false)
             {
                 Session = EngineTelemetrySession.Create(() => Exporter, enableSyntheticCollection: enableTelemetry,
                     clock: Clock, readEnvironmentVariable: _ => null, showNotice: () => { },
@@ -625,7 +676,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 // must not resolve a second product session or a diagnostic-scope stand-in.
                 EngineTelemetrySession session = Session;
                 ServiceCollection services = new();
-                services.AddGraphQL().AddQueryType(descriptor =>
+                services.AddGraphQL().ModifyOptions(options => options.EnableDefer = enableDefer).AddQueryType(descriptor =>
                 {
                     descriptor.Name("Query");
                     descriptor.Field("empty").Type<ListType<StringType>>().Resolve(_ => Array.Empty<string>());
@@ -653,11 +704,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             internal async Task<IRequestExecutor> GetExecutorAsync() => await _provider.GetRequestExecutorAsync();
 
-            internal async Task<IExecutionResult> ExecuteAsync(OperationRequestBuilder builder)
+            internal async Task<IExecutionResult> ExecuteAsync(OperationRequestBuilder builder, CancellationToken cancellationToken = default)
             {
                 IRequestExecutor executor = await GetExecutorAsync();
                 using IOperationRequest request = builder.Build();
-                return await executor.ExecuteAsync(request);
+                return await executor.ExecuteAsync(request, cancellationToken);
             }
 
             internal async Task AssertNoRequestTelemetryAsync()

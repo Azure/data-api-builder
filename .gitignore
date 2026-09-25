@@ -36,6 +36,7 @@ dab-config*.json
 
 # Local-Only files
 .env
+/docs/design/McpToolRegistryHotReload.md
 
 # Internal telemetry design drafts (keep local copies out of publication)
 /docs/design/engine-telemetry-functional-spec.md

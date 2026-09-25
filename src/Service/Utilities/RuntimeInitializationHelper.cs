@@ -1,0 +1,76 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using System;
+using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Mcp.Core;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Azure.DataApiBuilder.Service.Utilities
+{
+    /// <summary>
+    /// Coordinates initial configuration-dependent service construction for HTTP and stdio.
+    /// </summary>
+    internal static class RuntimeInitializationHelper
+    {
+        /// <summary>
+        /// Captures and validates the active configuration, initializes its database metadata,
+        /// and publishes the initial MCP registry while excluding file-triggered hot reloads.
+        /// </summary>
+        /// <param name="serviceProvider">The application service provider.</param>
+        /// <returns>The configuration generation initialized by this operation.</returns>
+        public static async Task<RuntimeConfig> InitializeRuntimeDependenciesAsync(
+            IServiceProvider serviceProvider)
+        {
+            ArgumentNullException.ThrowIfNull(serviceProvider);
+
+            TelemetryFailureStage stage = TelemetryFailureStage.Configuration;
+            try
+            {
+                FileSystemRuntimeConfigLoader configLoader =
+                    serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>();
+                RuntimeConfig? initializedConfig = null;
+
+                await configLoader.ExecuteWithHotReloadSerializationAsync(async cancellationToken =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    RuntimeConfigProvider runtimeConfigProvider =
+                        serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                    initializedConfig = runtimeConfigProvider.GetConfig();
+
+                    stage = TelemetryFailureStage.Validation;
+                    RuntimeConfigValidator runtimeConfigValidator =
+                        serviceProvider.GetRequiredService<RuntimeConfigValidator>();
+                    runtimeConfigValidator.ValidateConfigProperties();
+
+                    stage = TelemetryFailureStage.Metadata;
+                    IMetadataProviderFactory metadataProviderFactory =
+                        serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+                    await metadataProviderFactory
+                        .InitializeAsync(cancellationToken)
+                        .ConfigureAwait(false);
+
+                    // MCP services are absent when MCP was disabled at startup.
+                    stage = TelemetryFailureStage.Serving;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    IMcpToolRegistryRefreshService? mcpToolRegistryRefreshService =
+                        serviceProvider.GetService<IMcpToolRegistryRefreshService>();
+                    mcpToolRegistryRefreshService?.EnsureInitialized(cancellationToken);
+                }).ConfigureAwait(false);
+
+                return initializedConfig!;
+            }
+            catch (Exception)
+            {
+                // The caller owns this attempt and its event; preserve the original exception.
+                TelemetryFailureContext.Current?.RecordFailure(stage);
+                throw;
+            }
+        }
+    }
+}

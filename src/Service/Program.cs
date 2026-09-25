@@ -201,6 +201,11 @@ namespace Azure.DataApiBuilder.Service
                     {
                         services.AddSingleton(_mcpStdoutWriter);
                         services.AddSingleton<IMcpLogNotificationWriter>(_mcpNotificationWriter);
+                        services.AddSingleton<McpStdioToolListChangedNotifier>();
+                        services.AddSingleton<IMcpStdioToolListChangedNotifier>(serviceProvider =>
+                            serviceProvider.GetRequiredService<McpStdioToolListChangedNotifier>());
+                        services.AddSingleton<IMcpToolListChangedNotifier>(serviceProvider =>
+                            serviceProvider.GetRequiredService<McpStdioToolListChangedNotifier>());
                     }
                 })
                 .ConfigureLogging(logging =>

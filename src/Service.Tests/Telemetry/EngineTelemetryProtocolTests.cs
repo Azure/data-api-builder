@@ -581,7 +581,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             };
             Mock<IMcpTool> tool = CreateTool(result);
             McpToolRegistry registry = new();
-            registry.RegisterTool(tool.Object);
+            registry.ReplaceAll([tool.Object], CreateConfig());
             using StringWriter output = new();
             using McpStdoutWriter writer = new(output);
             using ServiceProvider provider = new ServiceCollection()

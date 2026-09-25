@@ -56,11 +56,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             using RuntimeConfigProvider provider = new(loader) { ProductTelemetry = session };
             Mock<IMcpTool> tool = new();
             tool.SetupGet(value => value.ToolType).Returns(ToolType.BuiltIn);
+            tool.Setup(value => value.IsEnabled(It.IsAny<RuntimeConfig>())).Returns(true);
             tool.Setup(value => value.GetToolMetadata()).Returns(new Tool { Name = "read_records" });
             tool.Setup(value => value.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new CallToolResult { Content = [new TextContentBlock { Text = "synthetic result" }] });
             McpToolRegistry registry = new();
-            registry.RegisterTool(tool.Object);
+            registry.ReplaceAll([tool.Object], config);
             int responses = 0;
             TaskCompletionSource sent = new(TaskCreationOptions.RunContinuationsAsynchronously);
             using IHost host = new HostBuilder().ConfigureLogging(logging => logging.ClearProviders())
@@ -141,6 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             TaskCompletionSource<RequestId> requestId = new(TaskCreationOptions.RunContinuationsAsynchronously);
             Mock<IMcpTool> tool = new();
             tool.SetupGet(value => value.ToolType).Returns(ToolType.BuiltIn);
+            tool.Setup(value => value.IsEnabled(It.IsAny<RuntimeConfig>())).Returns(true);
             tool.Setup(value => value.GetToolMetadata()).Returns(new Tool { Name = "read_records" });
             tool.Setup(value => value.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()))
                 .Returns(async (JsonDocument? _, IServiceProvider _, CancellationToken token) =>
@@ -151,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     return new CallToolResult { IsError = returnsError, Content = [] };
                 });
             McpToolRegistry registry = new();
-            registry.RegisterTool(tool.Object);
+            registry.ReplaceAll([tool.Object], config);
             using IHost host = new HostBuilder().ConfigureLogging(logging => logging.ClearProviders())
                 .ConfigureWebHost(web => web.UseTestServer().ConfigureServices(services =>
                 {

@@ -111,6 +111,17 @@ public abstract class RuntimeConfigLoader
     /// <param name="message"></param>
     protected void SignalConfigChanged(string message = "")
     {
+        SignalConfigChanged(message, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Notifies subscribers of an ordered configuration change with cooperative cancellation.
+    /// </summary>
+    protected void SignalConfigChanged(
+        string message,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         TelemetryFailureStage stage = TelemetryFailureStage.Validation;
         try
         {
@@ -121,34 +132,43 @@ public abstract class RuntimeConfigLoader
             if (RuntimeConfig!.IsDevelopmentMode())
             {
                 stage = TelemetryFailureStage.Configuration;
-                OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
+                RaiseOrderedEvent(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED);
                 stage = TelemetryFailureStage.Metadata;
-                OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
+                RaiseOrderedEvent(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED);
                 stage = TelemetryFailureStage.Serving;
-                OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-                OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-                OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
+                RaiseOrderedEvent(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED);
+                RaiseOrderedEvent(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED);
+                RaiseOrderedEvent(DOCUMENTOR_ON_CONFIG_CHANGED);
 
-                // Order of event firing matters: Authorization rules can only be updated after the
-                // MetadataProviderFactory has been updated with latest database object metadata.
-                // RuntimeConfig must already be updated and is implied to have been updated by the time
-                // this function is called.
-                OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
+                // Authorization depends on the refreshed metadata and current configuration.
+                RaiseOrderedEvent(AUTHZ_RESOLVER_ON_CONFIG_CHANGED);
 
-                // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
-                OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, message));
-                OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, message));
-                OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, message));
+                // Publish tools after metadata, query, mutation, and authorization dependencies.
+                RaiseOrderedEvent(MCP_TOOL_REGISTRY_ON_CONFIG_CHANGED);
+
+                // Evict before creating and refreshing the GraphQL schema.
+                RaiseOrderedEvent(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED);
+                RaiseOrderedEvent(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED);
+                RaiseOrderedEvent(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED);
             }
 
-            // Log Level Initializer is outside of if statement as it can be updated on both development and production mode.
+            // Logging can be updated in both development and production modes.
             stage = TelemetryFailureStage.Serving;
-            OnConfigChangedEvent(new HotReloadEventArgs(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, message));
+            RaiseOrderedEvent(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE);
         }
         catch (Exception)
         {
             TelemetryFailureContext.Current?.RecordFailure(stage);
             throw;
+        }
+
+        void RaiseOrderedEvent(string eventName)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            OnConfigChangedEvent(new HotReloadEventArgs(
+                eventName,
+                message,
+                cancellationToken));
         }
     }
 

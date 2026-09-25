@@ -1,3 +1,7 @@
+# Earlier telemetry property candidates
+
+The current [Engine and CLI telemetry doc sets](telemetry/README.md) define the functional contracts and implementation baseline. This earlier candidate inventory is not the shipped field schema.
+
 ### 1. Context - What is running?
 
 Context describes the product, its execution environment, and the metadata needed to interpret or correlate records. Database types here mean **configured sources**, not proof that those sources were queried.

@@ -1,5 +1,7 @@
 # Engine Usage Telemetry
 
+Current feature contracts and implementation handoffs are available in the separate [Engine and CLI telemetry doc sets](telemetry/README.md). The discussion below is background, not the current implementation contract.
+
 > **Status:** Design discussion, not an implementation plan &middot; **Tracking issue:** [#3215](https://github.com/Azure/data-api-builder/issues/3215) &middot; **Last updated:** 2026-09-10
 
 ## Decisions this document supports

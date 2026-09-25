@@ -9,13 +9,14 @@ Data API builder (DAB) embeds a compact, anonymous **usage-telemetry token** int
 The token has the shape:
 
 ```text
-dab_<environment>_<version>+<context>||<runtime>|<entity>+
+dab_<environment>_<version>+<context>|<general>|<runtime>|<entity>+
 ```
 
-Example (an MSSQL pool, REST + GraphQL on, Static Web Apps auth):
+Example (an MSSQL pool in Linux Container Apps, one data source, database identity not yet known,
+REST + GraphQL on, Static Web Apps API authentication):
 
 ```text
-dab_oss_2.0.0+XXSX||110000M1M000MMMMMWMM|100?111001110?+
+dab_oss_2.0.0+XXSX|L1AC0M|110000M1M000MMMMMWMM|100?111001110?+
 ```
 
 It is opt-out (`DAB_TELEMETRY_APPNAME_OPT_OUT=1`), carries no secrets or identifiers, and is purely additive to the existing `Application Name` value.
@@ -54,14 +55,15 @@ DAB already appended a plain `dab_oss_<version>` user agent to the `Application 
 ## The token format
 
 ```text
-dab_<environment>_<version>+<context>||<runtime>|<entity>+
+dab_<environment>_<version>+<context>|<general>|<runtime>|<entity>+
 ```
 
 - `dab_oss_` &mdash; the marker for open-source deployments. The hosted scenario uses `dab_hosted_` instead (see [Hosted label](#hosted-label-dab_app_name_env)); `dab_` (`ProductInfo.DAB_MARKER_PREFIX`) is the shared prefix used to locate and decode the token in both cases.
 - `<version>` &mdash; the product version `Major.Minor.Patch`. The telemetry is always based on the product version.
 - The payload is wrapped in `+ ... +` and has four positional sections: `context`, `general`, `runtime`, and `entity`.
 
-> **Reserved general section.** The tracking issue defines a `general` position but does not yet define any general settings. DAB therefore emits that section as empty (`||`). Reserving it now keeps the runtime and entity positions stable when general settings are added later.
+The general section occupies the previously reserved position. Older tokens with an empty general
+section (`||`) still decode; runtime and entity positions do not change.
 
 Each position in a section is a single character drawn from a small alphabet. The shared sentinel values are:
 
@@ -69,11 +71,11 @@ Each position in a section is a single character drawn from a small alphabet. Th
 | --- | --- |
 | `0` | feature present and off / false |
 | `1` | feature present and on / true |
-| `M` | **missing** &mdash; the config section that would answer this is absent |
+| `M` | **missing** &mdash; the relevant config or detection evidence is absent or inconclusive (except OS, where `M` means macOS) |
 | `X` | **not applicable** &mdash; not knowable when the pool opens (per-request fields) |
 | `?` | **not supported** &mdash; the concept is not yet modeled in DAB |
 
-A few positions use field-specific letters instead (Source and Auth provider), described below.
+A few positions use field-specific letters instead (Source, general host fields, and Auth provider), described below.
 
 ### Context section (4 characters)
 
@@ -87,6 +89,77 @@ Identifies *what kind of connection* this is. Only `Source` is knowable when a p
 | 4 | Role | always `X` (per-request: anonymous / authenticated / custom) |
 
 **Source map:** `MSSQL -> S`, `DWSQL -> D`, `PostgreSQL -> P`, `MySQL -> M`, `Cosmos -> C`, and `X` when there is no live data source (for example the CLI, which has no open connection).
+
+### General section (6 characters)
+
+The first four fields describe the process host. Multiple data sources describes the fully parsed,
+merged deployment. Managed identity describes **this pool's data source**, not the API authentication
+provider, a different database, or another dependency such as Key Vault.
+
+| Pos | Field | Encoding |
+| --- | --- | --- |
+| 1 | Operating system | `W` = Windows, `L` = Linux, `M` = macOS, `O` = Other, `U` = Unknown |
+| 2 | Running in container | `0` = No, `1` = Yes, `M` = Missing/unknown |
+| 3 | Hosting environment | `L` = Local, `A` = Azure, `W` = AWS, `G` = GCP, `O` = Other, `M` = Missing/unknown |
+| 4 | Azure hosting service | `C` = Container Apps, `K` = AKS, `S` = App Service, `I` = ACI, `O` = Other, `N` = Not Azure, `M` = Missing/unknown |
+| 5 | Multiple data sources | `0` = One, `1` = More than one, `M` = No parsed data sources |
+| 6 | Managed identity | `0` = Explicit non-MI database authentication, `1` = Explicit MI database authentication, `M` = Missing/unknown |
+
+**Detection is offline.** It never calls cloud metadata endpoints, inspects host files, or requests an
+access token. Values are sampled when the telemetry token is computed and are not cached across config
+reloads. Only categorical codes are retained; environment variable contents never enter the token.
+
+- **OS:** uses `OperatingSystem.IsWindows()`, `IsLinux()`, and `IsMacOS()`; other runtime platforms emit `O`.
+	The decoder also recognizes `U` for unknown OS values.
+- **Container:** reads `DOTNET_RUNNING_IN_CONTAINER` or `DOTNET_RUNNING_IN_CONTAINERS`, accepting
+	`true`/`false` or `1`/`0`, case-insensitively. Either valid flag can provide the answer. Contradictory
+	valid flags, or no valid flags, emit `M`; absence is not proof that the process is outside a container.
+- **Cloud / Azure service:** best-effort runtime signals are listed below. Conflicting clouds emit `M`.
+	With no cloud signals, generic `KUBERNETES_SERVICE_HOST` or Knative's `K_SERVICE` emits Other; otherwise the fallback is Local.
+	These are deployment hints, not guarantees or security checks. Local developer SDK credentials,
+	region/project settings, and `DAB_APP_NAME_ENV` do not identify the hosting cloud.
+- **Multiple sources:** counts parsed data-source configurations, including child configurations.
+	Missing file references are not counted. A root config with one child source is still single-source.
+- **MI:** SQL Server/DWSQL `Authentication=Active Directory Managed Identity` or `Active Directory MSI`
+	emits `1`. Explicit SQL credentials, integrated security, other explicit user/service-principal modes,
+	PostgreSQL/MySQL passwords, or a Cosmos account key emit `0`. Providers' connection-string builders
+	resolve authentication/password aliases using their effective last-value-wins semantics.
+	An OBO data source with MI or unknown startup/metadata credentials emits `M`: its single source token
+	covers both metadata and delegated-user request pools. Known non-MI credentials plus OBO emit `0`.
+	`Active Directory Default`, workload identity, unspecified
+	credential chains, external tokens, unresolved references, and unavailable authentication evidence
+	emit `M`. An available `IDENTITY_ENDPOINT` or `AZURE_CLIENT_ID` does **not** prove MI was used.
+	The effective connection string (including a hosted or file-load override) is inspected; no credential
+	selection is instrumented or inferred. The CLI uses the default data source when there is no live one.
+
+| Runtime signal (nonblank) | Cloud / service hint |
+| --- | --- |
+| `CONTAINER_APP_NAME`, `CONTAINER_APP_REVISION`, `CONTAINER_APP_JOB_NAME`, `CONTAINER_APP_JOB_EXECUTION_NAME` | Azure / Container Apps |
+| `WEBSITE_SITE_NAME`, `WEBSITE_INSTANCE_ID` | Azure / App Service |
+| `AWS_EXECUTION_ENV`, `AWS_LAMBDA_FUNCTION_NAME`, `ECS_CONTAINER_METADATA_URI`, `ECS_CONTAINER_METADATA_URI_V4` | AWS |
+| `CLOUD_RUN_JOB`, `CLOUD_RUN_WORKER_POOL`, `GAE_ENV` | GCP |
+
+`K_SERVICE` is shared by Cloud Run and non-GCP Knative deployments. For Cloud Run services without a
+provider-specific signal, use `DAB_HOSTING_ENVIRONMENT=GCP`; `K_SERVICE` alone never asserts GCP.
+
+#### Explicit hosting overrides
+
+`DAB_HOSTING_ENVIRONMENT` accepts the hosting letters above or `Local`, `Azure`, `AWS`, `GCP`,
+`Other`, `Missing`. `DAB_AZURE_HOSTING_SERVICE` accepts the service letters or `ContainerApps`,
+`AKS`, `AppService`, `ACI`/`ContainerInstances`, `Other`, `NotAzure`, `Missing`. Spaced service names
+(`Container Apps`, `App Service`, `Container Instances`, `Not Azure`) also work. Values are trimmed
+and case-insensitive. A blank value is absent; an invalid nonblank value is Missing.
+
+Overrides take precedence over detection. A specific Azure service implies Azure unless an explicit
+hosting override says otherwise. `NotAzure` suppresses automatic Azure hints but permits AWS/GCP
+detection or the Local/Other fallback. An explicit non-Azure hosting override always emits `N` for the Azure service;
+an explicit unknown hosting override emits `M`. Automatic host inference never replaces an explicit
+service override (`M` stays Missing, `N` stays Not Azure). Explicit Azure hosting with `NotAzure` service is contradictory and emits
+`M` for the service. Azure without an identifiable service also emits `M`, rather than guessing Other.
+
+For AKS and ACI, set `DAB_AZURE_HOSTING_SERVICE=AKS` or `ACI`. Generic Kubernetes or the presence of
+Azure credentials alone is not sufficient to identify either service. Overrides label telemetry only;
+they do not change authentication, credentials, hosting, or connection behavior.
 
 ### Runtime section (20 characters)
 
@@ -150,7 +223,7 @@ A single class, `ApplicationNameTelemetry` (in `Azure.DataApiBuilder.Config.Tele
 - `BuildApplicationNameSegment(config, liveDataSource)` produces what is actually embedded and honors the opt-out switch.
 - `Decode(applicationName)` turns a token back into human-readable lines and is tolerant of truncation, a missing trailing delimiter, an absent payload, and extra (newer) flags.
 
-Encode and decode are driven by **one ordered list of settings per section** (`_contextSettings`, `_runtimeSettings`, `_entitySettings`). Each setting knows how to encode itself and how to describe a decoded character, so the two directions can never drift apart, and adding a flag is a one-line, append-only change.
+Encode and decode are driven by **one ordered list of settings per section** (`_contextSettings`, `_generalSettings`, `_runtimeSettings`, `_entitySettings`). Each setting knows how to encode itself and how to describe a decoded character, so the two directions can never drift apart, and adding a flag is a one-line, append-only change. `ApplicationNameTelemetryEnvironment` captures the four categorical host values once per token and accepts an isolated environment reader for deterministic tests.
 
 ### Where and when the token is embedded
 
@@ -171,6 +244,12 @@ In a multi-database deployment each data source is its own pool, so the token is
 
 Embedding is idempotent: the engine-specific helpers parse the existing `Application Name` and **skip** if it already contains the shared `dab_` marker. This prevents duplicate OSS or hosted payloads if embedding runs more than once. A user-supplied `Application Name` without that marker is preserved and the token is appended after a comma.
 
+SQL Server's client rejects application names longer than 128 UTF-16 code units before any connection
+is opened. Composition therefore fits only the DAB-owned suffix into the remaining budget, without
+altering the original custom name or an existing isolation prefix. If no space remains, the original
+name is retained without a token. A partial token decodes only the fields that fit. The OBO executor
+continues to preserve its entire per-user hash first when applying its own 128-character limit.
+
 ### Opt-out (`DAB_TELEMETRY_APPNAME_OPT_OUT`)
 
 Setting `DAB_TELEMETRY_APPNAME_OPT_OUT=1` reduces the embedded value to **marker and version only** (`dab_oss_<version>` or `dab_hosted_<version>`, no payload). Any other value (or unset) leaves telemetry on.
@@ -184,6 +263,11 @@ When `DAB_APP_NAME_ENV` is set (DAB's hosted offering sets it to `dab_hosted`), 
 A new offline command supports inspection without a database:
 
 - `dab appname --config <file>` parses the config and prints the token. Context is emitted as placeholders (no live connection), so the `Source` is `X`. This command performs **no validation and opens no connection** &mdash; it is a static inspection tool, and it intentionally always shows the full encoding regardless of the opt-out switch.
+- General host fields describe the machine/container running the CLI, not a future deployment target. The MI field uses the config's default data source, or `M` if none is defined.
+- Inspection substitutes available local environment variables but never resolves Key Vault references,
+  including in child configurations. Unresolved authentication evidence is `M`. The inspection loader
+  reuses DAB's property converters, traverses children without runtime secret resolution or watchers,
+  and rejects cycles or more than 64 nested config files. It does not modify the runtime provider.
 - `dab appname --decode "<token>"` prints a human-readable legend, tolerant of truncation.
 - `-o, --output <file>` writes the result to a file instead of stdout.
 
@@ -218,7 +302,13 @@ SELECT program_name FROM sys.dm_exec_sessions
 WHERE program_name LIKE '%dab[_]%';
 ```
 
-- **PostgreSQL** — `pg_stat_activity.application_name` (PostgreSQL truncates this to 63 bytes; the decoder tolerates truncation):
+- **PostgreSQL** — `pg_stat_activity.application_name` (63 bytes in a standard build; the decoder tolerates truncation):
+
+	PostgreSQL 16 first clips the UTF-8 setting on a character boundary, then replaces non-printable
+	bytes with ASCII `\xhh` escapes, and finally clips that expanded value to 63 bytes for statistics.
+	Non-ASCII custom prefixes therefore leave less telemetry space than their original UTF-8 length
+	suggests: `用户` uses six UTF-8 bytes but expands to 24 ASCII bytes. Do not assume every Runtime or
+	Entity field survives. This is server normalization, not a reason for client-side truncation in DAB.
 
 ```sql
 SELECT application_name FROM pg_stat_activity
@@ -229,7 +319,12 @@ A captured token can be decoded back to a legend with `dab appname --decode "<to
 
 ## Testing
 
-- **Encoder / decoder unit tests** for token shape (including the reserved general section), each populated section's flag mapping, the Source and auth-provider maps, opt-out, hosted and OSS markers, and round-trip / truncation-tolerant decoding.
+- **Encoder / decoder unit tests** for token shape (including all six general flags and older empty general sections), each populated section's flag mapping, the Source and auth-provider maps, opt-out, hosted and OSS markers, and round-trip / truncation-tolerant decoding.
+- **General detection tests** for container aliases/invalid values/conflicts, hosting signals/overrides, credential ambiguity, per-source MI, parsed source counts, config/hosted connection overrides, and privacy. Host detection tests use isolated environment readers; no cloud or database connection is required.
+- **Boundary/integration regressions** construct actual SqlClient connections without opening them,
+	verify OBO metadata/request names and isolation hashes, model PostgreSQL's UTF-8 clipping, ASCII
+	escaping, and final 63-byte statistics clipping (asserting only the fields that survive),
+  compare MySQL alias semantics with its provider, and exercise nested offline CLI loading.
 - **Connection-string injection tests** for MSSQL, DWSQL, and PostgreSQL (including the user-supplied `Application Name` prefix case), and the no-op cases for MySQL / Cosmos.
 - **Multi-database tests** asserting child data sources encode the global runtime and merged entities, and a heterogeneous (MSSQL + PostgreSQL) case asserting the per-pool `Source` character.
 - **Hosted / late-config tests** asserting telemetry is embedded through `RuntimeConfigProvider.Initialize` for the single-source and multi-database cases, plus end-to-end `/configuration` and `/configuration/v2` endpoint tests.
@@ -246,4 +341,7 @@ A captured token can be decoded back to a legend with `dab appname --decode "<to
 ## References
 
 - Tracking issue: [#3216](https://github.com/Azure/data-api-builder/issues/3216)
+- [.NET runtime environment variables](https://learn.microsoft.com/dotnet/core/tools/dotnet-environment-variables#dotnet_running_in_container-and-dotnet_running_in_containers)
+- [Azure App Service environment variables](https://learn.microsoft.com/azure/app-service/reference-app-settings)
+- [Azure Container Apps built-in environment variables](https://learn.microsoft.com/azure/container-apps/environment-variables#built-in-environment-variables)
 - Key types: `ApplicationNameTelemetry` (`src/Config/Telemetry/`), `RuntimeConfigLoader` / `FileSystemRuntimeConfigLoader` (`src/Config/`), `RuntimeConfigProvider` (`src/Core/Configurations/`), `LogBuffer` (`src/Config/`), `AppNameOptions` (`src/Cli/Commands/`).

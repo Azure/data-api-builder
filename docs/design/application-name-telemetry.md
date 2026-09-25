@@ -302,7 +302,13 @@ SELECT program_name FROM sys.dm_exec_sessions
 WHERE program_name LIKE '%dab[_]%';
 ```
 
-- **PostgreSQL** — `pg_stat_activity.application_name` (PostgreSQL truncates this to 63 bytes; the decoder tolerates truncation):
+- **PostgreSQL** — `pg_stat_activity.application_name` (63 bytes in a standard build; the decoder tolerates truncation):
+
+	PostgreSQL 16 first clips the UTF-8 setting on a character boundary, then replaces non-printable
+	bytes with ASCII `\xhh` escapes, and finally clips that expanded value to 63 bytes for statistics.
+	Non-ASCII custom prefixes therefore leave less telemetry space than their original UTF-8 length
+	suggests: `用户` uses six UTF-8 bytes but expands to 24 ASCII bytes. Do not assume every Runtime or
+	Entity field survives. This is server normalization, not a reason for client-side truncation in DAB.
 
 ```sql
 SELECT application_name FROM pg_stat_activity
@@ -316,7 +322,8 @@ A captured token can be decoded back to a legend with `dab appname --decode "<to
 - **Encoder / decoder unit tests** for token shape (including all six general flags and older empty general sections), each populated section's flag mapping, the Source and auth-provider maps, opt-out, hosted and OSS markers, and round-trip / truncation-tolerant decoding.
 - **General detection tests** for container aliases/invalid values/conflicts, hosting signals/overrides, credential ambiguity, per-source MI, parsed source counts, config/hosted connection overrides, and privacy. Host detection tests use isolated environment readers; no cloud or database connection is required.
 - **Boundary/integration regressions** construct actual SqlClient connections without opening them,
-  verify OBO metadata/request names and isolation hashes, model PostgreSQL's 63-byte UTF-8 truncation,
+	verify OBO metadata/request names and isolation hashes, model PostgreSQL's UTF-8 clipping, ASCII
+	escaping, and final 63-byte statistics clipping (asserting only the fields that survive),
   compare MySQL alias semantics with its provider, and exercise nested offline CLI loading.
 - **Connection-string injection tests** for MSSQL, DWSQL, and PostgreSQL (including the user-supplied `Application Name` prefix case), and the no-op cases for MySQL / Cosmos.
 - **Multi-database tests** asserting child data sources encode the global runtime and merged entities, and a heterogeneous (MSSQL + PostgreSQL) case asserting the per-pool `Source` character.

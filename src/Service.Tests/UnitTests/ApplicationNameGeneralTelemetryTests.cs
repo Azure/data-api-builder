@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Globalization;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
@@ -543,35 +544,76 @@ public class ApplicationNameGeneralTelemetryTests
         Assert.AreNotEqual(name[..22], new SqlConnectionStringBuilder(otherUser.ConnectionString).ApplicationName[..22]);
     }
 
-    /// <summary>PostgreSQL's 63-byte truncation remains decodable, including hosted and UTF-8 prefixes.</summary>
+    /// <summary>
+    /// PostgreSQL normalizes non-printable UTF-8 bytes to ASCII hex escapes before publishing a
+    /// 63-byte statistics value. Decode only the fields that survive, not every Runtime field.
+    /// </summary>
     [DataTestMethod]
-    [DataRow(false, "")]
-    [DataRow(true, "")]
-    [DataRow(true, "用户")]
-    public void Review_PostgresByteTruncationKeepsGeneralPositions(bool hosted, string customName)
+    [DataRow(false, "", 6, 20, 14)]
+    [DataRow(true, "", 6, 20, 13)]
+    [DataRow(false, "用户", 6, 12, 0)]
+    [DataRow(true, "用户", 6, 9, 0)]
+    [DataRow(true, "abcdefghijklmnopqrst", 6, 13, 0)]
+    [DataRow(true, "\t", 6, 20, 8)]
+    [DataRow(true, "用户甲", 4, 0, 0)]
+    [DataRow(true, "用户用户", 0, 0, 0)]
+    [DataRow(true, "用户用户用户用户", 0, 0, 0)]
+    public void Review_PostgresNormalizationDecodesOnlySurvivingFields(
+        bool hosted, string customName, int generalFields, int runtimeFields, int entityFields)
     {
         Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, hosted ? "dab_hosted" : null);
         DataSource source = new(DatabaseType.PostgreSQL, "Host=unit-test.invalid;Password=test-only;");
-        string token = ApplicationNameTelemetry.EncodeTelemetryString(Config(source), source, _environment);
+        string encoded = ApplicationNameTelemetry.EncodeTelemetryString(Config(source), source, _environment);
+        // A fixed-width version keeps the boundary expectations independent of future release numbers.
+        string token = (hosted ? "dab_hosted_1.2.3" : "dab_oss_1.2.3") + encoded[encoded.IndexOf('+')..];
         string name = (customName.Length == 0 ? string.Empty : customName + ",") + token;
-        StringBuilder serverName = new();
-        int bytes = 0;
-        foreach (Rune rune in name.EnumerateRunes())
-        {
-            if (bytes + rune.Utf8SequenceLength > 63)
-            {
-                break;
-            }
+        string serverName = SimulatePostgres16ApplicationName(name);
+        IReadOnlyList<string> decoded = ApplicationNameTelemetry.Decode(serverName);
+        IReadOnlyList<string> fullDecoded = ApplicationNameTelemetry.Decode(token);
 
-            bytes += rune.Utf8SequenceLength;
-            serverName.Append(rune.ToString());
+        AssertSurvivingFields("General", generalFields);
+        AssertSurvivingFields("Runtime", runtimeFields);
+        AssertSurvivingFields("Entity", entityFields);
+        Assert.IsTrue(Encoding.UTF8.GetByteCount(serverName) <= 63);
+
+        if (hosted && customName == "用户")
+        {
+            // PostgreSQL 16.15 server-observed regression: six UTF-8 prefix bytes expand to 24.
+            Assert.AreEqual(@"\xe7\x94\xa8\xe6\x88\xb7,dab_hosted_1.2.3+XXPX|L1AC00|MMMM00MMM", serverName);
         }
 
-        IReadOnlyList<string> decoded = ApplicationNameTelemetry.Decode(serverName.ToString());
-        Assert.AreEqual(6, decoded.Count(line => line.StartsWith("General >", StringComparison.Ordinal)));
-        Assert.AreEqual(20, decoded.Count(line => line.StartsWith("Runtime >", StringComparison.Ordinal)));
-        Assert.IsTrue(decoded.Any(line => line.Contains("managed-identity: 0", StringComparison.Ordinal)));
-        Assert.IsTrue(Encoding.UTF8.GetByteCount(serverName.ToString()) <= 63);
+        void AssertSurvivingFields(string section, int expectedCount)
+        {
+            string prefix = section + " >";
+            string[] actual = decoded.Where(line => line.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
+            string[] expected = fullDecoded.Where(line => line.StartsWith(prefix, StringComparison.Ordinal)).Take(expectedCount).ToArray();
+            Assert.AreEqual(expectedCount, actual.Length, $"Surviving {section} fields in '{serverName}'.");
+            CollectionAssert.AreEqual(expected, actual, $"{section} must decode the exact surviving fields without shifting positions.");
+        }
+    }
+
+    /// <summary>Pin the test model's escaping to known server values instead of testing only its own calculations.</summary>
+    [DataTestMethod]
+    [DataRow(" !~\\", " !~\\")]
+    [DataRow("用户", @"\xe7\x94\xa8\xe6\x88\xb7")]
+    [DataRow("\t\n\r\u001f\u007f", @"\x09\x0a\x0d\x1f\x7f")]
+    [DataRow("\U0001F680", @"\xf0\x9f\x9a\x80")]
+    public void PostgresNormalizationModel_EscapesUtf8Bytes(string value, string expected)
+    {
+        Assert.AreEqual(expected, SimulatePostgres16ApplicationName(value));
+    }
+
+    /// <summary>Initial GUC clipping must not keep part of a multibyte character that straddles byte 63.</summary>
+    [DataTestMethod]
+    [DataRow(60, "用", @"\xe")]
+    [DataRow(61, "用", "")]
+    [DataRow(62, "用", "")]
+    [DataRow(59, "\U0001F680", @"\xf0")]
+    [DataRow(60, "\U0001F680", "")]
+    public void PostgresNormalizationModel_ClipsBeforeEscaping(int asciiLength, string suffix, string survivingEscape)
+    {
+        string prefix = new('a', asciiLength);
+        Assert.AreEqual(prefix + survivingEscape, SimulatePostgres16ApplicationName(prefix + suffix));
     }
 
     /// <summary>The effective connection string, not a config placeholder, supplies per-pool auth.</summary>
@@ -711,6 +753,46 @@ public class ApplicationNameGeneralTelemetryTests
 
         Assert.IsFalse(token.Contains(sensitiveValue, StringComparison.Ordinal));
         Assert.IsFalse(string.Join('\n', ApplicationNameTelemetry.Decode(token)).Contains(sensitiveValue, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Test-only model for UTF-8 PostgreSQL 16 with the standard NAMEDATALEN=64:
+    /// GUC_IS_NAME clips on a character boundary, check_application_name/pg_clean_ascii hex-escapes
+    /// bytes outside 0x20..0x7e, then pgstat_report_appname clips the expanded ASCII string to 63 bytes.
+    /// The last clip may split a four-character escape. Do not add this normalization to DAB itself.
+    /// See PostgreSQL REL_16_15: src/backend/utils/misc/guc.c, src/backend/commands/variable.c,
+    /// src/common/string.c, and src/backend/utils/activity/backend_status.c.
+    /// </summary>
+    private static string SimulatePostgres16ApplicationName(string value)
+    {
+        const int maxBytes = 63;
+        StringBuilder clippedName = new();
+        int bytes = 0;
+        foreach (Rune rune in value.EnumerateRunes())
+        {
+            if (bytes + rune.Utf8SequenceLength > maxBytes)
+            {
+                break;
+            }
+
+            bytes += rune.Utf8SequenceLength;
+            clippedName.Append(rune.ToString());
+        }
+
+        StringBuilder escapedName = new();
+        foreach (byte item in Encoding.UTF8.GetBytes(clippedName.ToString()))
+        {
+            if (item is >= 32 and <= 126)
+            {
+                escapedName.Append((char)item);
+            }
+            else
+            {
+                escapedName.Append("\\x").Append(item.ToString("x2", CultureInfo.InvariantCulture));
+            }
+        }
+
+        return escapedName.ToString(0, Math.Min(escapedName.Length, maxBytes));
     }
 
     private static ApplicationNameTelemetryEnvironment Capture(Dictionary<string, string> values) =>

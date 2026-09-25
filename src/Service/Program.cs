@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
@@ -101,7 +102,7 @@ namespace Azure.DataApiBuilder.Service
                 // other startup failures. Direct StartEngine callers retain their prior path.
                 if (validateUrls && !ValidateAspNetCoreUrls())
                 {
-                    productTelemetry.StartupFailed("configuration");
+                    productTelemetry.StartupFailed(TelemetryFailureStage.Configuration);
                     Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
                     return false;
                 }
@@ -137,7 +138,7 @@ namespace Azure.DataApiBuilder.Service
                     bool completed = McpStdioHelper.RunMcpStdioHost(host);
                     if (!completed)
                     {
-                        productTelemetry.StartupFailed("metadata");
+                        productTelemetry.StartupFailed(TelemetryFailureStage.Metadata);
                     }
 
                     return completed;

@@ -7,16 +7,20 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Utilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -189,7 +193,58 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(1, host.DisposeCallCount);
             Assert.AreEqual(ready ? 0 : 1, exporter.Events.Count(record => record.Name == "dab.engine.startup_failed"),
                 "The failure must be recorded before the helper stops and disables its session.");
+            if (!ready)
+            {
+                Assert.AreEqual("metadata", exporter.Events.Single(record => record.Name == "dab.engine.startup_failed").Properties["failure_stage"]);
+            }
+
             Assert.AreEqual("dab.engine.stopped", exporter.Events.Last().Name);
+        }
+
+        [DataTestMethod]
+        [TestCategory("EngineTelemetry")]
+        [DataRow(true, "metadata")]
+        [DataRow(false, "serving")]
+        public void StdioReportsMetadataAndServingFailuresSeparately(bool metadataFails, string expectedStage)
+        {
+            CapturingProductExporter exporter = new();
+            using EngineTelemetrySession telemetry = EngineTelemetrySession.Create(() => exporter, enableSyntheticCollection: true,
+                readEnvironmentVariable: _ => null, showNotice: () => { }, startTimer: false);
+            TestMetadataProviderFactory metadata = new() { InitializeAsyncException = metadataFails ? new InvalidOperationException("synthetic private failure") : null };
+            using FileSystemRuntimeConfigLoader loader = new(new MockFileSystem())
+            {
+                RuntimeConfig = new(null, new(DatabaseType.MSSQL, string.Empty), new(new Dictionary<string, Entity>()))
+            };
+            using RuntimeConfigProvider provider = new(loader) { ProductTelemetry = telemetry };
+            TestMcpStdioServer stdio = new();
+            using ServiceProvider services = new ServiceCollection()
+                .AddSingleton(telemetry)
+                .AddSingleton(provider)
+                .AddSingleton<IMetadataProviderFactory>(metadata)
+                .AddSingleton<McpToolRegistry>()
+                .AddSingleton<IHostApplicationLifetime>(new TestApplicationLifetime())
+                .AddSingleton<IMcpStdioServer>(stdio)
+                .AddSingleton<IMcpTool>(_ => throw new InvalidOperationException("synthetic private failure"))
+                .BuildServiceProvider();
+            TextWriter originalError = Console.Error;
+            using StringWriter capture = new();
+            try
+            {
+                Console.SetError(capture);
+                Assert.IsFalse(McpStdioHelper.RunMcpStdioHost(new TestHost(services)));
+            }
+            finally
+            {
+                Console.SetError(originalError);
+            }
+
+            EngineTelemetryEvent failure = exporter.Events.Single(record => record.Name == "dab.engine.startup_failed");
+            Assert.AreEqual(expectedStage, failure.Properties["failure_stage"]);
+            Assert.AreEqual("initialization", failure.Properties["failure_category"]);
+            Assert.AreEqual(1, metadata.InitializeAsyncCallCount);
+            Assert.AreEqual(0, stdio.RunAsyncCallCount, "Tool registration must fail before the ready stdio loop begins.");
+            Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab.engine.ready"));
+            Assert.IsFalse(failure.Properties.Values.Any(value => value.Contains("synthetic private failure", StringComparison.Ordinal)));
         }
 
         private static ServiceProvider BuildServices(

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.Telemetry;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Config;
@@ -12,6 +13,8 @@ namespace Azure.DataApiBuilder.Config;
 public class DabChangeToken : IChangeToken
 {
     private CancellationTokenSource _cts = new();
+    private static readonly FailureSignal _unobservedSignal = new(null);
+    private FailureSignal? _failureSignal;
 
     /// <summary>
     /// Gets a value that indicates if a change has occurred.
@@ -35,12 +38,25 @@ public class DabChangeToken : IChangeToken
     /// <seealso cref="https://github.com/dotnet/runtime/blob/2e0276cbbaeef01afc4cfabfb224ced729963c79/src/libraries/Microsoft.Extensions.Primitives/src/ChangeToken.cs"/>
     public IDisposable RegisterChangeCallback(Action<object?> callback, object? state)
     {
-        return _cts.Token.Register(callback, state);
+        ArgumentNullException.ThrowIfNull(callback);
+        return _cts.Token.Register(value =>
+        {
+            // Preserve the registration's normal ExecutionContext, but attribute failures to
+            // the particular reload that signaled this token, not the registration's attempt.
+            using IDisposable? failureScope = TelemetryFailureContext.Enter(Volatile.Read(ref _failureSignal)?.Context);
+            callback(value);
+        }, state);
     }
 
     public void SignalChange()
     {
+        // A token fires once. Freeze the first signal's context even if another caller also
+        // signals it while callbacks are running. The retained context contains only a stage.
+        FailureSignal signal = TelemetryFailureContext.Current is { } failure ? new(failure) : _unobservedSignal;
+        Interlocked.CompareExchange(ref _failureSignal, signal, null);
         _cts.Cancel();
     }
+
+    private sealed record FailureSignal(TelemetryFailureContext? Context);
 }
 

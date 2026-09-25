@@ -4,6 +4,7 @@
 using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -66,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 if (!initializationStarted)
                 {
                     // The provider owns all later failures; malformed merge input never reaches it.
-                    _configurationProvider.ProductTelemetry?.ConfigurationChangeFailed();
+                    _configurationProvider.ProductTelemetry?.ConfigurationChangeFailed(TelemetryFailureStage.Parsing);
                 }
 
                 _logger.LogError(

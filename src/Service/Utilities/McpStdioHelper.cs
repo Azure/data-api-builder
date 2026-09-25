@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
@@ -94,6 +95,7 @@ namespace Azure.DataApiBuilder.Service.Utilities
         /// reported, which Program.Main surfaces as a non-zero exit code.</returns>
         public static bool RunMcpStdioHost(IHost host)
         {
+            TelemetryFailureStage stage = TelemetryFailureStage.Metadata;
             try
             {
                 // Stdio mode never calls host.Run(), so Startup.Configure -- and with it
@@ -106,6 +108,7 @@ namespace Azure.DataApiBuilder.Service.Utilities
                     host.Services.GetRequiredService<IMetadataProviderFactory>();
                 metadataProviderFactory.InitializeAsync().GetAwaiter().GetResult();
 
+                stage = TelemetryFailureStage.Serving;
                 McpToolRegistry registry =
                     host.Services.GetRequiredService<McpToolRegistry>();
                 IEnumerable<IMcpTool> tools =
@@ -136,12 +139,12 @@ namespace Azure.DataApiBuilder.Service.Utilities
                 // Record pre-ready cancellation before finally stops/disables the session.
                 // StartupFailed is a no-op once ready; normal loop cancellation is not a
                 // startup failure. Preserve propagation to Program's existing handler.
-                host.Services.GetService<EngineTelemetrySession>()?.StartupFailed("metadata");
+                host.Services.GetService<EngineTelemetrySession>()?.StartupFailed(stage);
                 throw;
             }
             catch (Exception ex)
             {
-                host.Services.GetService<EngineTelemetrySession>()?.StartupFailed("metadata");
+                host.Services.GetService<EngineTelemetrySession>()?.StartupFailed(stage);
                 // Mirrors Startup.PerformOnConfigChangeAsync: report and return false instead of letting
                 // the exception escape a method whose contract is a bool, and Program.Main turns that
                 // false into ExitCode -1. Cancellation is left to Program.StartEngine's own handler.

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Globalization;
+using Azure.DataApiBuilder.Config.Telemetry;
 
 namespace Azure.DataApiBuilder.Core.Telemetry.Product
 {
@@ -25,6 +26,12 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
 
         internal static string Wire<T>(T value) where T : struct, Enum => (object)value switch
         {
+            TelemetryFailureStage.Initialization => "initialization",
+            TelemetryFailureStage.Configuration => "configuration",
+            TelemetryFailureStage.Parsing => "parsing",
+            TelemetryFailureStage.Validation => "validation",
+            TelemetryFailureStage.Metadata => "metadata",
+            TelemetryFailureStage.Serving => "serving",
             EngineTelemetryApi.Rest => "rest",
             EngineTelemetryApi.GraphQL => "graph_ql",
             EngineTelemetryApi.Mcp => "mcp",

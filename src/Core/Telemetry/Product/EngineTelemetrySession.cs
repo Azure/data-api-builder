@@ -205,19 +205,21 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             }
         }
 
-        public void ConfigurationChangeFailed()
+        public void ConfigurationChangeFailed(TelemetryFailureStage stage = TelemetryFailureStage.Unknown)
         {
             lock (_sync)
             {
                 if (_enabled)
                 {
                     Emit("dab.engine.configuration_change_failed", _configuration.Epoch,
-                        ImmutableDictionary<string, string>.Empty.Add("failure_category", "configuration"));
+                        ImmutableDictionary<string, string>.Empty
+                            .Add("failure_stage", Wire(stage))
+                            .Add("failure_category", "configuration"));
                 }
             }
         }
 
-        public void StartupFailed(string stage = "initialization")
+        public void StartupFailed(TelemetryFailureStage stage = TelemetryFailureStage.Initialization)
         {
             lock (_sync)
             {
@@ -225,7 +227,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 {
                     _startupFailed = true;
                     Emit("dab.engine.startup_failed", _configuration.Epoch, ImmutableDictionary<string, string>.Empty
-                        .Add("failure_stage", stage is "initialization" or "configuration" or "metadata" or "serving" ? stage : "unknown")
+                        .Add("failure_stage", Wire(stage))
                         .Add("failure_category", "initialization"));
                 }
             }

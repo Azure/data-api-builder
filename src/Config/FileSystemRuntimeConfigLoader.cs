@@ -199,6 +199,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
     /// </summary>
     private void OnNewFileContentsDetected(object? sender, EventArgs e)
     {
+        TelemetryFailureContext? failure = TelemetryCaptureEnabled?.Invoke() == true ? new() : null;
+        using IDisposable? failureScope = TelemetryFailureContext.Enter(failure);
         try
         {
             if (RuntimeConfig is not null)
@@ -208,7 +210,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         }
         catch (Exception ex)
         {
-            NotifyTelemetryReload(accepted: false);
+            // Dispatch/validation boundaries record more specific failures first. Otherwise
+            // the failure occurred while reading or parsing the replacement input.
+            failure?.RecordFailure(TelemetryFailureStage.Parsing);
+            NotifyTelemetryReload(accepted: false, failure?.FailureStage ?? TelemetryFailureStage.Unknown);
             // Need to remove the dependencies in startup on the RuntimeConfigProvider
             // before we can have an ILogger here.
             Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
@@ -375,13 +380,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
 
     // Lifecycle observers cannot interrupt loading, expose exception contents or run before
     // the existing validation/metadata/schema subscribers finish accepting the replacement.
-    internal Action<RuntimeConfig?, bool>? TelemetryReloadCompleted { get; set; }
+    internal Action<RuntimeConfig?, bool, TelemetryFailureStage>? TelemetryReloadCompleted { get; set; }
 
-    private void NotifyTelemetryReload(bool accepted)
+    private void NotifyTelemetryReload(bool accepted, TelemetryFailureStage stage = TelemetryFailureStage.Unknown)
     {
         try
         {
-            TelemetryReloadCompleted?.Invoke(accepted ? RuntimeConfig : null, accepted);
+            TelemetryReloadCompleted?.Invoke(accepted ? RuntimeConfig : null, accepted, stage);
         }
         catch (Exception)
         {

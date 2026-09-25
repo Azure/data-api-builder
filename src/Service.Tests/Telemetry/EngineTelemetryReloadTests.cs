@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
@@ -75,6 +76,84 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE
         ];
 
+        [DataTestMethod]
+        [DataRow("validation", "validation")]
+        [DataRow("metadata", "metadata")]
+        [DataRow("serving", "serving")]
+        public async Task InitialWebStartupReportsTheActualFailureStage(string boundary, string expectedStage)
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "dab-telemetry-stage-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            string path = Path.Combine(directory, "dab-config.json");
+            CapturingExporter exporter = new();
+            using EngineTelemetrySession session = CreateSession(exporter);
+            Mock<IMetadataProviderFactory> metadata = new(MockBehavior.Strict);
+            metadata.Setup(factory => factory.InitializeAsync()).Returns(boundary == "metadata"
+                ? Task.FromException(new InvalidOperationException(SENTINEL))
+                : Task.CompletedTask);
+            IHost? host = null;
+            try
+            {
+                string json = CreateConfigJson();
+                if (boundary == "validation")
+                {
+                    json = json.Replace("\"path\": \"/api\"", "\"path\": \"invalid path\"", StringComparison.Ordinal);
+                }
+
+                await File.WriteAllTextAsync(path, json);
+                host = new HostBuilder()
+                    .UseEnvironment(Environments.Production)
+                    .ConfigureAppConfiguration((_, builder) => builder.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["ConfigFileName"] = path,
+                        ["CONNSTRING"] = CONNECTION_STRING
+                    }))
+                    .ConfigureLogging(logging => logging.ClearProviders())
+                    .ConfigureWebHost(web => web
+                        .UseSetting(WebHostDefaults.ApplicationKey, typeof(Startup).Assembly.GetName().Name)
+                        .UseTestServer()
+                        .UseStartup(context => new Startup(context.Configuration, NullLogger<Startup>.Instance) { ProductTelemetry = session })
+                        .ConfigureTestServices(services =>
+                        {
+                            foreach (ServiceDescriptor descriptor in services.Where(descriptor =>
+                                descriptor.ServiceType.IsConstructedGenericType &&
+                                descriptor.ServiceType.GetGenericTypeDefinition() == typeof(ILogger<>)).ToArray())
+                            {
+                                services.Remove(descriptor);
+                            }
+
+                            services.Replace(ServiceDescriptor.Singleton(new DynamicLogLevelProvider()));
+                            services.Replace(ServiceDescriptor.Singleton(metadata.Object));
+                            if (boundary == "serving")
+                            {
+                                services.Replace(ServiceDescriptor.Singleton<GraphQLSchemaCreator>(_ => throw new InvalidOperationException(SENTINEL)));
+                            }
+                        })).Build();
+                using CancellationTokenSource timeout = new(_timeout);
+                try
+                {
+                    await host.StartAsync(timeout.Token);
+                }
+                catch (OperationCanceledException) when (!timeout.IsCancellationRequested)
+                {
+                    // Real Startup requests host shutdown after its initialization failure.
+                }
+
+                metadata.Verify(factory => factory.InitializeAsync(), boundary == "validation" ? Times.Never() : Times.Once());
+                Assert.IsFalse(session.IsReady);
+                EngineTelemetryEvent[] records = await DrainAsync(session, exporter);
+                EngineTelemetryEvent failure = records.Single(record => record.Name == "dab.engine.startup_failed");
+                Assert.AreEqual(expectedStage, failure.Properties["failure_stage"]);
+                Assert.AreEqual("initialization", failure.Properties["failure_category"]);
+                Assert.IsFalse(records.Any(record => record.Name == READY || record.Name == CHANGED));
+            }
+            finally
+            {
+                host?.Dispose();
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
         [TestMethod]
         public async Task FileReloadAcceptsReplacementOnlyAfterEverySynchronousSubscriberReturns()
         {
@@ -110,13 +189,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
         [DataTestMethod]
         [DataRow("parse")]
+        [DataRow("validation")]
         [DataRow(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED)]
         [DataRow(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE)]
         public async Task FileReloadRejectsParseOrSubscriberFailureWithoutAdvancingTelemetryAndCanRecover(string failurePoint)
         {
             using ReloadFixture fixture = new();
             bool reject = true;
-            if (failurePoint != "parse")
+            using IDisposable? validation = failurePoint == "validation"
+                ? ChangeToken.OnChange(fixture.Loader.GetChangeToken, () =>
+                {
+                    if (reject)
+                    {
+                        throw new InvalidOperationException(SENTINEL);
+                    }
+                }) : null;
+            if (failurePoint is not ("parse" or "validation"))
             {
                 fixture.Handler.Subscribe(failurePoint, (_, _) =>
                 {
@@ -139,6 +227,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 CollectionAssert.AreEqual(new[] { "rejected" }, fixture.Trace);
                 Assert.IsTrue(fixture.Loader.IsParseErrorEmitted);
                 Assert.AreSame(fixture.InitialConfig, fixture.Loader.RuntimeConfig);
+            }
+            else if (failurePoint == "validation")
+            {
+                CollectionAssert.AreEqual(new[] { "change_token", "rejected" }, fixture.Trace);
             }
             else
             {
@@ -163,6 +255,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             EngineTelemetryEvent failure = records.Single(record => record.Name == REJECTED);
             Assert.AreEqual(1L, failure.ConfigurationEpoch);
             Assert.AreEqual("configuration", failure.Properties["failure_category"]);
+            Assert.IsTrue(failure.Properties.ContainsKey("failure_stage"));
+            Assert.AreEqual(failurePoint == "parse" ? "parsing" :
+                failurePoint == "validation" ? "validation" :
+                failurePoint == METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED ? "metadata" : "serving",
+                failure.Properties["failure_stage"]);
             Assert.IsFalse(failure.Properties.ContainsKey("snapshot_schema"));
             Assert.AreEqual(2L, records.Single(record => record.Name == CHANGED).ConfigurationEpoch);
         }
@@ -173,11 +270,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         public async Task ThrowingTelemetryObserverDoesNotEscapeOrTurnAcceptanceIntoRejection(bool invalidJson)
         {
             using ReloadFixture fixture = new();
-            Action<RuntimeConfig?, bool>? forward = fixture.Loader.TelemetryReloadCompleted;
+            Action<RuntimeConfig?, bool, TelemetryFailureStage>? forward = fixture.Loader.TelemetryReloadCompleted;
             Assert.IsNotNull(forward);
-            fixture.Loader.TelemetryReloadCompleted = (config, accepted) =>
+            fixture.Loader.TelemetryReloadCompleted = (config, accepted, stage) =>
             {
-                forward(config, accepted);
+                forward(config, accepted, stage);
                 throw new InvalidOperationException(SENTINEL);
             };
 
@@ -218,6 +315,36 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             EngineTelemetryEvent[] records = await DrainAsync(session, exporter);
             CollectionAssert.AreEqual(new[] { PROCESS_STARTED, REJECTED, STOPPED }, records.Select(record => record.Name).ToArray());
             Assert.AreEqual(0L, records.Single(record => record.Name == REJECTED).ConfigurationEpoch);
+            Assert.IsTrue(records.Single(record => record.Name == REJECTED).Properties.ContainsKey("failure_stage"));
+            Assert.AreEqual("parsing", records.Single(record => record.Name == REJECTED).Properties["failure_stage"]);
+        }
+
+        [DataTestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task LateConfigurationValidationFailureIsDistinctAndCanRecover(bool versionTwo)
+        {
+            CapturingExporter exporter = new();
+            using EngineTelemetrySession session = CreateSession(exporter);
+            Mock<IQueryExecutor> executor = new(MockBehavior.Strict);
+            await using LateConfigServer server = CreateLateConfigServer(session, CreateQueryManager(executor).Object);
+            RuntimeConfigProvider provider = AssertUnconfiguredHost(server.Server, session);
+            string invalid = CreateConfigJson().Replace("\"path\": \"/api\"", "\"path\": \"invalid path\"", StringComparison.Ordinal);
+            bool accepted = versionTwo
+                ? await provider.Initialize(invalid, schema: null, accessToken: null)
+                : await provider.Initialize(invalid, graphQLSchema: null, connectionString: CONNECTION_STRING, accessToken: null, replacementSettings: null);
+            Assert.IsFalse(accepted);
+            Assert.IsFalse(session.IsReady);
+            AssertConfiguration(session, config: null, epoch: 0);
+            Assert.IsTrue(await InitializeAsync(provider, versionTwo));
+            Assert.IsTrue(session.IsReady);
+            EngineTelemetryEvent[] records = await DrainAsync(session, exporter);
+            EngineTelemetryEvent rejection = records.Single(record => record.Name == REJECTED);
+            Assert.AreEqual("validation", rejection.Properties["failure_stage"]);
+            Assert.AreEqual("configuration", rejection.Properties["failure_category"]);
+            Assert.AreEqual(0L, rejection.ConfigurationEpoch);
+            Assert.AreEqual(1L, records.Single(record => record.Name == READY).ConfigurationEpoch);
+            Assert.IsFalse(records.Any(record => record.Name == "dab.engine.startup_failed"));
         }
 
         [DataTestMethod]
@@ -259,6 +386,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             CollectionAssert.AreEqual(new[] { PROCESS_STARTED, accepted ? READY : REJECTED, STOPPED },
                 records.Select(record => record.Name).ToArray());
             Assert.AreEqual(accepted ? 1L : 0L, records[1].ConfigurationEpoch);
+            if (!accepted)
+            {
+                Assert.AreEqual("initialization", records[1].Properties["failure_stage"], "Custom handler rejection has no more specific known boundary.");
+            }
         }
 
         [DataTestMethod]
@@ -355,6 +486,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             EngineTelemetryEvent rejected = records.Single(record => record.Name == REJECTED);
             Assert.AreEqual(0L, rejected.ConfigurationEpoch);
             Assert.AreEqual("configuration", rejected.Properties["failure_category"]);
+            Assert.IsTrue(rejected.Properties.ContainsKey("failure_stage"));
+            Assert.AreEqual("metadata", rejected.Properties["failure_stage"]);
             Assert.IsFalse(rejected.Properties.ContainsKey("dab_api_id"));
             Assert.IsFalse(rejected.Properties.ContainsKey("snapshot_schema"));
         }
@@ -532,6 +665,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 Assert.IsNotNull(initial);
                 InitialConfig = initial;
                 Session = CreateSession(Exporter);
+                Loader.TelemetryCaptureEnabled = () => Session.IsEnabled;
                 Session.AcceptConfiguration(initial);
                 Session.MarkHostReady();
                 Assert.IsTrue(Session.IsReady);
@@ -544,7 +678,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 // Mirror Startup's forwarding delegate explicitly. This verifies the loader's
                 // real notification boundary, not Startup.ConfigureServices' delegate wiring.
                 // Capture observations for assertions outside Notify's exception-swallowing guard.
-                Loader.TelemetryReloadCompleted = (config, accepted) =>
+                Loader.TelemetryReloadCompleted = (config, accepted, stage) =>
                 {
                     Completions.Add((config, accepted));
                     Trace.Add(accepted ? "accepted" : "rejected");
@@ -554,7 +688,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     }
                     else
                     {
-                        Session.ConfigurationChangeFailed();
+                        Session.ConfigurationChangeFailed(stage);
                     }
                 };
             }

@@ -13,6 +13,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -243,7 +244,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.IsTrue(session.IsReady);
             session.MarkHostReady();
             session.AcceptConfiguration(config);
-            session.StartupFailed("metadata");
+            session.StartupFailed(TelemetryFailureStage.Metadata);
             EngineTelemetryEvent[] records = await DrainAsync(session, exporter);
 
             CollectionAssert.AreEqual(new[] { PROCESS_STARTED, READY, STOPPED }, records.Select(record => record.Name).ToArray());
@@ -363,18 +364,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         }
 
         [DataTestMethod]
-        [DataRow("initialization", "initialization")]
-        [DataRow("configuration", "configuration")]
-        [DataRow("metadata", "metadata")]
-        [DataRow("serving", "serving")]
-        [DataRow(SENTINEL, "unknown")]
-        public async Task StartupFailureIsOnceSanitizedAndPreventsReadiness(string stage, string expectedStage)
+        [DataRow((int)TelemetryFailureStage.Initialization, "initialization")]
+        [DataRow((int)TelemetryFailureStage.Configuration, "configuration")]
+        [DataRow((int)TelemetryFailureStage.Parsing, "parsing")]
+        [DataRow((int)TelemetryFailureStage.Validation, "validation")]
+        [DataRow((int)TelemetryFailureStage.Metadata, "metadata")]
+        [DataRow((int)TelemetryFailureStage.Serving, "serving")]
+        [DataRow(-1, "unknown")]
+        [DataRow(int.MaxValue, "unknown")]
+        public async Task StartupFailureIsOnceSanitizedAndPreventsReadiness(int stage, string expectedStage)
         {
             ManualTimeProvider clock = new();
             CapturingExporter exporter = new();
             using EngineTelemetrySession session = CreateSession(exporter, clock);
-            session.StartupFailed(stage);
-            session.StartupFailed("serving");
+            session.StartupFailed((TelemetryFailureStage)stage);
+            session.StartupFailed(TelemetryFailureStage.Serving);
             session.MarkHostReady();
             session.AcceptConfiguration(CreateConfig());
             Assert.IsFalse(session.IsReady);
@@ -1428,7 +1432,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             session.AcceptConfiguration(CreateConfig());
             session.MarkHostReady();
             session.ConfigurationChangeFailed();
-            session.StartupFailed(SENTINEL);
+            session.StartupFailed((TelemetryFailureStage)int.MaxValue);
             session.Tick();
             using EngineTelemetryRequestScope request = session.BeginRequest(EngineTelemetryApi.Rest, EngineTelemetryTransport.Http, EngineTelemetryRole.Anonymous);
             request.MarkEligible();

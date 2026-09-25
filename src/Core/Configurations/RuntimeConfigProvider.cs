@@ -199,53 +199,76 @@ public class RuntimeConfigProvider : IDisposable
         string configuration,
         string? schema,
         string? accessToken)
-        => ProductTelemetry?.IsEnabled == true
-            ? ObserveInitializationAsync(() => InitializeCoreAsync(configuration, schema, accessToken))
-            : InitializeCoreAsync(configuration, schema, accessToken);
+    {
+        if (ProductTelemetry?.IsEnabled == true)
+        {
+            return ObserveInitializationAsync(() => InitializeCoreAsync(configuration, schema, accessToken));
+        }
+
+        // Disabled nested providers must not annotate the caller's enabled attempt. The
+        // async core captures this masked context, while its caller is restored immediately.
+        using IDisposable? failureScope = TelemetryFailureContext.Enter(null);
+        return InitializeCoreAsync(configuration, schema, accessToken);
+    }
 
     private async Task<bool> InitializeCoreAsync(string configuration, string? schema, string? accessToken)
     {
         using IDisposable? capture = TelemetryConfigurationPresence.BeginCapture(_configLoader.TelemetryCaptureEnabled);
-        if (string.IsNullOrEmpty(configuration))
+        TelemetryFailureStage stage = TelemetryFailureStage.Parsing;
+        try
         {
-            throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
-        }
-
-        if (RuntimeConfigLoader.TryParseConfig(
-                configuration,
-                out RuntimeConfig? runtimeConfig,
-                out _,
-                replacementSettings: null))
-        {
-            _configLoader.RuntimeConfig = runtimeConfig;
-
-            if (string.IsNullOrEmpty(runtimeConfig.DataSource?.ConnectionString))
+            if (string.IsNullOrEmpty(configuration))
             {
-                throw new ArgumentException($"'{nameof(runtimeConfig.DataSource.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.DataSource.ConnectionString));
+                throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
 
-            if (runtimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
+            if (RuntimeConfigLoader.TryParseConfig(
+                    configuration,
+                    out RuntimeConfig? runtimeConfig,
+                    out _,
+                    replacementSettings: null))
             {
-                _configLoader.RuntimeConfig = HandleCosmosNoSqlConfiguration(schema, runtimeConfig, runtimeConfig.DataSource.ConnectionString);
+                stage = TelemetryFailureStage.Validation;
+                _configLoader.RuntimeConfig = runtimeConfig;
+
+                if (string.IsNullOrEmpty(runtimeConfig.DataSource?.ConnectionString))
+                {
+                    throw new ArgumentException($"'{nameof(runtimeConfig.DataSource.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.DataSource.ConnectionString));
+                }
+
+                if (runtimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
+                {
+                    _configLoader.RuntimeConfig = HandleCosmosNoSqlConfiguration(schema, runtimeConfig, runtimeConfig.DataSource.ConnectionString);
+                }
+
+                // Hosted / late-config (V2) parses with telemetry injection skipped; embed it into every
+                // data source's connection string so hosted connection pools carry the usage snapshot.
+                _configLoader.RuntimeConfig = EmbedTelemetryInDataSourceConnectionStrings(_configLoader.RuntimeConfig, skipDataSourceName: null);
+
+                // Flush the telemetry Debug log(s) buffered during embedding. The startup-time flush has
+                // already run by the time this late-config path executes, so without flushing here the
+                // buffered telemetry logs would never be emitted.
+                _configLoader.FlushLogBuffer();
+
+                ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
+            }
+            else
+            {
+                TelemetryFailureContext.Current?.RecordFailure(TelemetryFailureStage.Parsing);
             }
 
-            // Hosted / late-config (V2) parses with telemetry injection skipped; embed it into every
-            // data source's connection string so hosted connection pools carry the usage snapshot.
-            _configLoader.RuntimeConfig = EmbedTelemetryInDataSourceConnectionStrings(_configLoader.RuntimeConfig, skipDataSourceName: null);
+            stage = TelemetryFailureStage.Initialization;
+            bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
 
-            // Flush the telemetry Debug log(s) buffered during embedding. The startup-time flush has
-            // already run by the time this late-config path executes, so without flushing here the
-            // buffered telemetry logs would never be emitted.
-            _configLoader.FlushLogBuffer();
+            IsLateConfigured = true;
 
-            ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
+            return configLoadSucceeded;
         }
-
-        bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
-
-        IsLateConfigured = true;
-
-        return configLoadSucceeded;
+        catch (Exception)
+        {
+            TelemetryFailureContext.Current?.RecordFailure(stage);
+            throw;
+        }
     }
 
     /// <summary>
@@ -292,75 +315,97 @@ public class RuntimeConfigProvider : IDisposable
         string connectionString,
         string? accessToken,
         DeserializationVariableReplacementSettings? replacementSettings)
-        => ProductTelemetry?.IsEnabled == true
-            ? ObserveInitializationAsync(() => InitializeCoreAsync(jsonConfig, graphQLSchema, connectionString, accessToken, replacementSettings))
-            : InitializeCoreAsync(jsonConfig, graphQLSchema, connectionString, accessToken, replacementSettings);
+    {
+        if (ProductTelemetry?.IsEnabled == true)
+        {
+            return ObserveInitializationAsync(() => InitializeCoreAsync(jsonConfig, graphQLSchema, connectionString, accessToken, replacementSettings));
+        }
+
+        using IDisposable? failureScope = TelemetryFailureContext.Enter(null);
+        return InitializeCoreAsync(jsonConfig, graphQLSchema, connectionString, accessToken, replacementSettings);
+    }
 
     private async Task<bool> InitializeCoreAsync(string jsonConfig, string? graphQLSchema, string connectionString,
         string? accessToken, DeserializationVariableReplacementSettings? replacementSettings)
     {
         using IDisposable? capture = TelemetryConfigurationPresence.BeginCapture(_configLoader.TelemetryCaptureEnabled);
-        if (string.IsNullOrEmpty(connectionString))
+        TelemetryFailureStage stage = TelemetryFailureStage.Validation;
+        try
         {
-            throw new ArgumentException($"'{nameof(connectionString)}' cannot be null or empty.", nameof(connectionString));
-        }
-
-        if (string.IsNullOrEmpty(jsonConfig))
-        {
-            throw new ArgumentException($"'{nameof(jsonConfig)}' cannot be null or empty.", nameof(jsonConfig));
-        }
-
-        IsLateConfigured = true;
-
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, out _, replacementSettings))
-        {
-            // Late configuration injects a connection string into the parsed config's data source.
-            // A config with no data source (e.g. a root config that delegates to data-source-files)
-            // is not meaningful here. Return false to preserve pre-existing behavior — on main, the
-            // RuntimeConfig constructor threw when DataSource was null and TryParseConfig converted
-            // that into a 'false' return. Since DataSource is now nullable, we make the same
-            // determination explicitly rather than NRE'ing in the 'with' expression below.
-            if (runtimeConfig.DataSource is null)
+            if (string.IsNullOrEmpty(connectionString))
             {
-                return false;
+                throw new ArgumentException($"'{nameof(connectionString)}' cannot be null or empty.", nameof(connectionString));
             }
 
-            _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
+            stage = TelemetryFailureStage.Parsing;
+            if (string.IsNullOrEmpty(jsonConfig))
             {
-                DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
-                // Embed anonymous usage telemetry into the hosted / late-config connection string's
-                // Application Name (honoring the opt-out switch and the DAB_APP_NAME_ENV host label).
-                // Hosted deployments take this path, so it is exactly where the dab_hosted label matters.
-                _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = RuntimeConfigLoader.GetConnectionStringWithApplicationName(connectionString, runtimeConfig, runtimeConfig.DataSource) } }
-            };
-            ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
-            _configLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(_configLoader.RuntimeConfig.DefaultDataSourceName, _configLoader.RuntimeConfig.DataSource!);
+                throw new ArgumentException($"'{nameof(jsonConfig)}' cannot be null or empty.", nameof(jsonConfig));
+            }
 
-            // The default data source was supplemented with the separately-supplied connection string
-            // above. Embed telemetry into any additional (child / multi-database) data sources too, so
-            // every hosted connection pool carries the usage snapshot.
-            _configLoader.RuntimeConfig = EmbedTelemetryInDataSourceConnectionStrings(_configLoader.RuntimeConfig, skipDataSourceName: _configLoader.RuntimeConfig.DefaultDataSourceName);
+            IsLateConfigured = true;
 
-            // Flush the telemetry Debug log(s) buffered during embedding. The startup-time flush has
-            // already run by the time this late-config path executes, so without flushing here the
-            // buffered telemetry logs would never be emitted.
-            _configLoader.FlushLogBuffer();
+            if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, out _, replacementSettings))
+            {
+                stage = TelemetryFailureStage.Validation;
+                // Late configuration injects a connection string into the parsed config's data source.
+                // A config with no data source (e.g. a root config that delegates to data-source-files)
+                // is not meaningful here. Return false to preserve pre-existing behavior — on main, the
+                // RuntimeConfig constructor threw when DataSource was null and TryParseConfig converted
+                // that into a 'false' return. Since DataSource is now nullable, we make the same
+                // determination explicitly rather than NRE'ing in the 'with' expression below.
+                if (runtimeConfig.DataSource is null)
+                {
+                    TelemetryFailureContext.Current?.RecordFailure(stage);
+                    return false;
+                }
 
-            return await InvokeConfigLoadedHandlersAsync();
+                _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
+                {
+                    DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
+                    // Embed anonymous usage telemetry into the hosted / late-config connection string's
+                    // Application Name (honoring the opt-out switch and the DAB_APP_NAME_ENV host label).
+                    // Hosted deployments take this path, so it is exactly where the dab_hosted label matters.
+                    _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = RuntimeConfigLoader.GetConnectionStringWithApplicationName(connectionString, runtimeConfig, runtimeConfig.DataSource) } }
+                };
+                ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
+                _configLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(_configLoader.RuntimeConfig.DefaultDataSourceName, _configLoader.RuntimeConfig.DataSource!);
+
+                // The default data source was supplemented with the separately-supplied connection string
+                // above. Embed telemetry into any additional (child / multi-database) data sources too, so
+                // every hosted connection pool carries the usage snapshot.
+                _configLoader.RuntimeConfig = EmbedTelemetryInDataSourceConnectionStrings(_configLoader.RuntimeConfig, skipDataSourceName: _configLoader.RuntimeConfig.DefaultDataSourceName);
+
+                // Flush the telemetry Debug log(s) buffered during embedding. The startup-time flush has
+                // already run by the time this late-config path executes, so without flushing here the
+                // buffered telemetry logs would never be emitted.
+                _configLoader.FlushLogBuffer();
+
+                stage = TelemetryFailureStage.Initialization;
+                return await InvokeConfigLoadedHandlersAsync();
+            }
+
+            TelemetryFailureContext.Current?.RecordFailure(TelemetryFailureStage.Parsing);
+            return false;
         }
-
-        return false;
+        catch (Exception)
+        {
+            TelemetryFailureContext.Current?.RecordFailure(stage);
+            throw;
+        }
     }
 
     private async Task<bool> ObserveInitializationAsync(Func<Task<bool>> initialize)
     {
+        TelemetryFailureContext failure = new();
+        using IDisposable? failureScope = TelemetryFailureContext.Enter(failure);
         bool accepted = false;
         try
         {
             bool initialized = await initialize();
             // The existing V2 API can report true with no parsed model (no handlers ran).
             // Match the controller's acceptance condition without changing that public API.
-            if (initialized && TryGetLoadedConfig(out RuntimeConfig? acceptedConfig))
+            if (initialized && !failure.HasFailure && TryGetLoadedConfig(out RuntimeConfig? acceptedConfig))
             {
                 // Publish telemetry only after every loaded-config handler has accepted it.
                 // Startup's own success is not sufficient while another handler is pending.
@@ -374,7 +419,10 @@ public class RuntimeConfigProvider : IDisposable
         {
             if (!accepted)
             {
-                ProductTelemetry?.ConfigurationChangeFailed();
+                // Nested boundaries annotate failures before they are converted to false;
+                // unclassified/custom initialization failures use the closed fallback.
+                failure.RecordFailure(TelemetryFailureStage.Initialization);
+                ProductTelemetry?.ConfigurationChangeFailed(failure.FailureStage);
             }
         }
     }
@@ -467,19 +515,57 @@ public class RuntimeConfigProvider : IDisposable
 
     private async Task<bool> InvokeConfigLoadedHandlersAsync()
     {
+        TelemetryFailureContext? failure = TelemetryFailureContext.Current;
         List<Task<bool>> configLoadedTasks = new();
+        List<Task>? failureObservers = failure is null ? null : new();
         if (_configLoader.RuntimeConfig is not null)
         {
             foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
             {
-                configLoadedTasks.Add(configLoadedHandler(this, _configLoader.RuntimeConfig));
+                // Invoke in the existing order before observing the returned task, preserving
+                // synchronous throws and concurrency between already-started handlers.
+                Task<bool> task;
+                try
+                {
+                    task = configLoadedHandler(this, _configLoader.RuntimeConfig);
+                }
+                catch (Exception)
+                {
+                    failure?.RecordFailure(TelemetryFailureStage.Initialization);
+                    throw;
+                }
+
+                configLoadedTasks.Add(task);
+                if (failure is not null && task is not null)
+                {
+                    failureObservers!.Add(task.ContinueWith(static (completed, state) =>
+                    {
+                        if (!completed.IsCompletedSuccessfully || !completed.Result)
+                        {
+                            ((TelemetryFailureContext)state!).RecordFailure(TelemetryFailureStage.Initialization);
+                        }
+                    }, failure, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default));
+                }
             }
         }
 
-        bool[] results = await Task.WhenAll(configLoadedTasks);
-
-        // Verify that all tasks succeeded.
-        return results.All(x => x);
+        // Preserve eager WhenAll argument validation (including invalid null handler tasks)
+        // before entering the observer-drain path.
+        Task<bool[]> joinedHandlers = Task.WhenAll(configLoadedTasks);
+        try
+        {
+            // Join the original tasks: async wrappers can turn faulted cancellation exceptions
+            // into canceled tasks and change which exception WhenAll exposes to callers.
+            bool[] results = await joinedHandlers;
+            return results.All(x => x);
+        }
+        finally
+        {
+            if (failureObservers is not null)
+            {
+                await Task.WhenAll(failureObservers);
+            }
+        }
     }
 
     private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString, string dataSourceName = "")

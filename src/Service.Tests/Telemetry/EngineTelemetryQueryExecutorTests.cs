@@ -164,7 +164,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 }
             };
             Mock<QueryExecutor<ControlledConnection>> executor = new(new MsSqlDbExceptionParser(provider),
-                NullLogger<IQueryExecutor>.Instance, provider, new HttpContextAccessor(), null) { CallBase = true };
+                NullLogger<IQueryExecutor>.Instance, provider, new HttpContextAccessor(), null)
+            { CallBase = true };
             executor.Setup(value => value.CreateConnection(config.DefaultDataSourceName)).Returns(connection);
             session.AcceptConfiguration(config);
             session.MarkHostReady();

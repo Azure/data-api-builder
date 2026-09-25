@@ -316,7 +316,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             second.Setup(value => value.IsEnabled(It.IsAny<RuntimeConfig>())).Returns(true);
             first.Setup(value => value.GetToolMetadata()).Returns(() => new Tool
             {
-                Name = "first_tool", Description = description,
+                Name = "first_tool",
+                Description = description,
                 InputSchema = JsonSerializer.SerializeToElement(new { type = "object" })
             });
             second.Setup(value => value.GetToolMetadata()).Returns(() => new Tool

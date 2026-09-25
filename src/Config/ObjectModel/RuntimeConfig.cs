@@ -258,6 +258,8 @@ public record RuntimeConfig
 
     private Dictionary<string, string> _entityPathNameToEntityName = new();
 
+    private Dictionary<string, FileSystemRuntimeConfigLoader> _dataSourceNameToConfigLoader = new();
+
     /// <summary>
     /// List of all datasources.
     /// </summary>
@@ -303,6 +305,11 @@ public record RuntimeConfig
     public bool RemoveGeneratedAutoentityNameFromDataSourceName(string entityName)
     {
         return _entityNameToDataSourceName.Remove(entityName);
+    }
+
+    public bool TryGetConfigLoaderFromDataSourceName(string dataSourceName, [NotNullWhen(true)] out FileSystemRuntimeConfigLoader? configLoader)
+    {
+        return _dataSourceNameToConfigLoader.TryGetValue(dataSourceName, out configLoader);
     }
 
     /// <summary>
@@ -372,8 +379,6 @@ public record RuntimeConfig
             IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = Autoentities?.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
-            // This loader is not used as a part of hot reload and therefore does not need a handler.
-            FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
             // Pass the parent's AKV options so @akv() references in child configs can
             // be resolved using the parent's Key Vault configuration.
@@ -390,7 +395,8 @@ public record RuntimeConfig
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-
+                // This loader is not used as a part of hot reload and therefore does not need a handler.
+                FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null, baseConfigFilePath: dataSourceFile);
                 if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replacementSettings: replacementSettings))
                 {
                     try
@@ -401,6 +407,7 @@ public record RuntimeConfig
                         // Store the child config reference for per-child validation.
                         ChildConfigs.Add((dataSourceFile, config));
 
+                        _dataSourceNameToConfigLoader.TryAdd(config.DefaultDataSourceName, loader);
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _autoentityNameToDataSourceName = _autoentityNameToDataSourceName.Concat(config._autoentityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);

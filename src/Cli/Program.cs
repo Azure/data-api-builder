@@ -120,6 +120,7 @@ namespace Cli
 
             CliTelemetryOutcome outcome = CliTelemetryOutcome.Unknown;
             CliTelemetryFailureCategory failureCategory = CliTelemetryFailureCategory.Unknown;
+            CliTelemetryCommandResult? terminalResult = null;
             try
             {
                 Parser parser = new(settings =>
@@ -161,7 +162,14 @@ namespace Cli
                             return DabCliParserErrorHandler.ProcessErrorsAndReturnExitCode(parseErrors);
                         });
 
-                if (command?.Name == "start" && telemetry?.HasEngineStartupFailed == true)
+                if (terminalResult is CliTelemetryCommandResult terminal)
+                {
+                    // A final export observation distinguishes no schema from a successful
+                    // retry without changing the legacy exit code or consulting earlier errors.
+                    outcome = terminal.Outcome;
+                    failureCategory = terminal.FailureCategory;
+                }
+                else if (command?.Name == "start" && telemetry?.HasEngineStartupFailed == true)
                 {
                     // The web host can return normally after StopApplication during failed
                     // initialization. Keep that legacy exit code but report the observed failure.
@@ -210,6 +218,11 @@ namespace Cli
                 options.ExporterFactory = exporterFactory;
                 options.ExportCancellationTokenSource = exportCancellationTokenSource;
                 int result = handler();
+                if (options is ExportOptions exportOptions)
+                {
+                    terminalResult = exportOptions.TerminalTelemetryResult;
+                }
+
                 // These handlers reject the missing positional entity before ConfigGenerator.
                 if (result != CliReturnCode.SUCCESS && options is EntityOptions entityOptions
                     && string.IsNullOrWhiteSpace(entityOptions.Entity))

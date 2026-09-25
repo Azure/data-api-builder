@@ -38,6 +38,8 @@ namespace Cli
         /// <returns>Returns 0 if the export is successful, otherwise returns -1.</returns>
         public static bool Export(ExportOptions options, ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
+            options.TerminalTelemetryResult = null;
+
             // Attempt to locate the runtime configuration file based on CLI options
             if (!TryGetConfigFileBasedOnCliPrecedence(loader: loader, userProvidedConfigFile: options.Config, runtimeConfigFile: out string runtimeConfigFile,
                 logBuffer: null, telemetry: options.ProductTelemetry))
@@ -69,7 +71,15 @@ namespace Cli
                 {
                     try
                     {
-                        ExportGraphQL(options, runtimeConfig, fileSystem, loader, logger).Wait();
+                        Task<CliTelemetryCommandResult> export = ExportGraphQL(options, runtimeConfig, fileSystem, loader, logger);
+                        export.Wait();
+                        if (options.ProductTelemetry is { IsEnabled: true })
+                        {
+                            // This attempt terminates the retry loop. A normal return can mean
+                            // no schema, but keep the existing successful return/diagnostics.
+                            options.TerminalTelemetryResult = export.Result;
+                        }
+
                         isSuccess = true;
                         break;
                     }
@@ -106,8 +116,8 @@ namespace Cli
         /// <param name="fileSystem">The file system abstraction for handling file operations.</param>
         /// <param name="loader">The loader for runtime configuration files.</param>
         /// <param name="logger">The logger instance for logging information and errors.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        private static async Task ExportGraphQL(
+        /// <returns>The terminal observation if this attempt returns normally; thrown failures remain retryable.</returns>
+        private static async Task<CliTelemetryCommandResult> ExportGraphQL(
             ExportOptions options,
             RuntimeConfig runtimeConfig,
             IFileSystem fileSystem,
@@ -176,13 +186,14 @@ namespace Cli
             {
                 options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ExecutionFailure, CliTelemetryFailureCategory.Execution);
                 logger.LogError("Generated GraphQL schema is empty. Please ensure data is available to generate the schema.");
-                return;
+                return new(CliTelemetryOutcome.ExecutionFailure, CliTelemetryFailureCategory.Execution);
             }
 
             // Write the schema content to a file
             WriteSchemaFile(options, fileSystem, schemaText, logger);
 
             logger.LogInformation("Schema file exported successfully at {0}", options.OutputDirectory);
+            return new(CliTelemetryOutcome.Success, CliTelemetryFailureCategory.None);
         }
 
         private static async Task ReleaseLaunchReservationAsync(Task helper, CliTelemetryLaunchReservation reservation)

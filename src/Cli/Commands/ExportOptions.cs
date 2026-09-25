@@ -6,6 +6,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Core.Generator;
 using Azure.DataApiBuilder.Product;
 using Cli.Constants;
+using Cli.Telemetry;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
@@ -65,6 +66,10 @@ namespace Cli.Commands
 
         [Option("sampling-group-count", HelpText = "Specify the number of groups for sampling. This option is applicable only when the 'TimePartitionedSampler' mode is selected.")]
         public int? GroupCount { get; }
+
+        // Set only when export terminates normally, not by a failed attempt or helper engine.
+        // The historical bool/exit code does not distinguish a written schema from no schema.
+        internal CliTelemetryCommandResult? TerminalTelemetryResult { get; set; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

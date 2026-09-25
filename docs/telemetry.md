@@ -58,6 +58,17 @@ All events include schema version, random event ID, engine session ID, sequence,
 
 Context includes DAB version; coarse OS family/version; process architecture; normalized .NET version; execution mode; categorical launcher/hosting/container detection; and distribution/channel/packaging labels. Known CLI/service entry assemblies select a categorical launcher; other entry points remain unknown. Distribution/channel/packaging remain `unknown` without reliable build provenance; synthetic opt-in does not prove source packaging. No network discovery or raw environment value is recorded.
 
+Hosting is a best-effort observation captured once per enabled run, not platform attestation. Only nonblank presence of these documented built-in signals is considered:
+
+| `hosting` category | Required signals |
+| --- | --- |
+| `azure_container_apps` | Both `CONTAINER_APP_NAME` and `CONTAINER_APP_REVISION`, or both `CONTAINER_APP_JOB_NAME` and `CONTAINER_APP_JOB_EXECUTION_NAME` ([Container Apps built-ins](https://learn.microsoft.com/azure/container-apps/environment-variables#built-in-environment-variables)). |
+| `kubernetes` | Both `KUBERNETES_SERVICE_HOST` and `KUBERNETES_SERVICE_PORT_HTTPS`, with no nonblank Container Apps marker above ([Kubernetes in-pod signals](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#directly-accessing-the-rest-api)). |
+| `generic_container` | `DOTNET_RUNNING_IN_CONTAINER=true` without sufficient evidence for a specific platform. |
+| `unknown` | Insufficient evidence, or an explicit `DOTNET_RUNNING_IN_CONTAINER=false` conflicting with platform inference. |
+
+Complete Container Apps evidence takes precedence over Kubernetes evidence. Partial Container Apps evidence blocks a Kubernetes-specific inference; the generic/unknown fallback remains. `container` independently reflects the parsed .NET flag (`enabled`, `disabled` or `unknown`), so hosting can be known when that flag is absent. No names, revisions, job identifiers, addresses or ports are retained or exported. Disabled sessions do not inspect hosting signals; reloads do not refresh them.
+
 Configuration events contain `snapshot_schema=configuration-v1`, configuration delivery, source-provider categories and bucketed counts/limits. Fixed feature families are:
 
 | Family | Settings |
@@ -80,6 +91,8 @@ Both failure events include a closed `failure_stage`: `parsing`, `validation`, `
 The mapped embedding HTTP endpoint is included as REST request traffic even when its path is outside the entity REST prefix. Its embedding-service invocations form the separate embedding measurement family; cache-served invocations count without inventing a database attempt. Cache lookups include the dedicated embedding cache when enabled, without double-counting the default-cache fallback. This identification uses endpoint metadata, not request/response contents. Valid REST entity routes are not excluded merely because their names resemble documentation or static assets.
 
 Readiness requires accepted usable configuration and host/tool readiness. First-served and first-success are independently once per run. Discovery, health, documentation, introspection-only GraphQL, and MCP protocol-control/metadata traffic are excluded. HTTP 200 with GraphQL errors or an MCP tool error is not logical success. Variable-batch GraphQL results count independently. The current incremental/streaming GraphQL path reports `unknown` rather than inventing success from an unfinished stream.
+
+GraphQL data eligibility uses the executor's compiled root selections and coerced variables, including variable defaults and conditional fields/fragments. A successful execution whose data selections are all excluded by `@skip`/`@include` does not count as data usage. Decisions are request-local, including each variable-batch member; cached compiled operations do not retain telemetry eligibility. Failed validation/coercion of a selected data operation can still count as a failed attempt when effective selections are unavailable, never as successful usage. Eligible cached and empty reads count without requiring a database attempt or returned row. Each completed batch member uses its own result outcome, not another member's error.
 
 The dedicated internal health client marks its self-probes with an in-memory per-session value so REST/GraphQL health queries cannot establish usage milestones or add usage counts. The marker is neither stored nor exported and does not grant authorization. Ordinary requests, including callers supplying an unrelated marker, remain eligible. System roles are classified case-insensitively, matching authentication behavior.
 

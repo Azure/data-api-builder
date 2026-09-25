@@ -385,9 +385,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataRow("query Data { books { id } } query Discovery { __typename }", null, false)]
         [DataRow("query Data { books { id } }", "NotAnOperation", false)]
         [DataRow("{ ...Cycle } fragment Cycle on Query { ...Cycle __typename }", null, false)]
-        public void GraphQLDiscoveryClassificationUsesTheSelectedAstNotNamesOrAliases(string document, string? operationName, bool eligible)
+        public void GraphQLFailedRequestDataIntentUsesTheSelectedAstNotNamesOrAliases(string document, string? operationName, bool eligible)
         {
-            Assert.AreEqual(eligible, EngineTelemetryGraphQLListener.IsDataOperation(Utf8GraphQLParser.Parse(document), operationName));
+            Assert.AreEqual(eligible, EngineTelemetryGraphQLListener.HasDataIntent(Utf8GraphQLParser.Parse(document), operationName));
         }
 
         [TestMethod]

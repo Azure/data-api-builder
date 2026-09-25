@@ -30,12 +30,47 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 .Add("dotnet_version", $"{Environment.Version.Major}.{Environment.Version.Minor}.{Environment.Version.Build}")
                 .Add("execution_mode", executionMode is "web" or "mcp_stdio" or "embedded" ? executionMode : "unknown")
                 .Add("launcher", launcher)
-                .Add("hosting", container == true ? "generic_container" : "unknown")
+                .Add("hosting", GetHosting(container, readEnvironmentVariable))
                 .Add("container", container switch { true => "enabled", false => "disabled", _ => "unknown" })
                 // Test mode is not evidence of packaging or a release channel.
                 .Add("distribution", "unknown")
                 .Add("release_channel", "unknown")
                 .Add("packaging", "unknown");
+        }
+
+        private static string GetHosting(bool? container, Func<string, string?> readEnvironmentVariable)
+        {
+            // An explicit negative container flag conflicts with an orchestrator inference.
+            // Keep it as a separate observation and do not guess a hosting platform.
+            if (container == false)
+            {
+                return "unknown";
+            }
+
+            // Fixed allowlist; reduce values immediately to presence. Do not retain names,
+            // addresses, ports, credentials, or infer a region from any of these values.
+            bool app = Present("CONTAINER_APP_NAME");
+            bool revision = Present("CONTAINER_APP_REVISION");
+            bool job = Present("CONTAINER_APP_JOB_NAME");
+            bool execution = Present("CONTAINER_APP_JOB_EXECUTION_NAME");
+            bool kubernetesHost = Present("KUBERNETES_SERVICE_HOST");
+            bool kubernetesPort = Present("KUBERNETES_SERVICE_PORT_HTTPS");
+            if ((app && revision) || (job && execution))
+            {
+                // The more specific managed-platform evidence wins over Kubernetes signals.
+                return "azure_container_apps";
+            }
+
+            // Partial ACA evidence is insufficient to name that platform, but also prevents
+            // falling through to a less-specific orchestrator classification.
+            if (!(app || revision || job || execution) && kubernetesHost && kubernetesPort)
+            {
+                return "kubernetes";
+            }
+
+            return container == true ? "generic_container" : "unknown";
+
+            bool Present(string name) => !string.IsNullOrWhiteSpace(readEnvironmentVariable(name));
         }
 
         private static string GetOperatingSystem()

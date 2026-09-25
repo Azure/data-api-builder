@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Core.Telemetry.Product;
 using HotChocolate;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Instrumentation;
+using HotChocolate.Execution.Processing;
 using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -72,11 +73,11 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
         public override IDisposable ExecuteOperation(GraphQLRequestContext context)
         {
-            // The parsed document is now available, including on the operation-cache path.
-            // Mark before resolving fields; BeginRequest already captured the correct epoch.
+            // Compiled selections and coerced variables are available, even on operation-cache
+            // hits. Establish eligibility before resolvers, independently for each variable set.
             if (TryGetScope(context, out ExecutionScope? scope))
             {
-                scope.MarkEligible();
+                scope.CaptureEligibility();
             }
 
             return EmptyScope;
@@ -145,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             return diagnosticOutcome;
         }
 
-        internal static bool IsDataOperation(DocumentNode? document, string? operationName)
+        internal static bool HasDataIntent(DocumentNode? document, string? operationName)
         {
             if (document is null)
             {
@@ -179,9 +180,9 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                 return false;
             }
 
-            // Expand root fragments iteratively, with cycle protection even for invalid
-            // documents. Aliases and an operation called "IntrospectionQuery" do not decide
-            // eligibility. Nested fields below a data field are not separate requests.
+            // Failure-only fallback for requests rejected before effective selection exists.
+            // This identifies attempted data, never proves execution or successful usage.
+            // Expand root fragments with cycle protection even for invalid documents.
             Stack<SelectionSetNode> pending = new();
             HashSet<string> visitedFragments = new(StringComparer.Ordinal);
             pending.Push(operation.SelectionSet);
@@ -230,7 +231,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         {
             private readonly GraphQLRequestContext _context;
             private readonly HttpContext? _httpContext;
-            private bool _eligible;
+            private bool[]? _effectiveEligibility;
             private int _disposed;
 
             internal ExecutionScope(GraphQLRequestContext context, EngineTelemetryRequestScope request, HttpContext? httpContext)
@@ -242,14 +243,48 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
             internal EngineTelemetryRequestScope Request { get; }
 
-            internal void MarkEligible()
+            internal void CaptureEligibility()
             {
-                // Parse failures may have no document info. Only the parsed AST can establish
-                // eligibility; the source text or operation name alone cannot do so.
-                if (!_eligible && IsDataOperation(_context.OperationDocumentInfo?.Document, _context.Request.OperationName))
+                if (_effectiveEligibility is not null)
                 {
-                    _eligible = true;
-                    Request.MarkEligible();
+                    return;
+                }
+
+                try
+                {
+                    if (!_context.TryGetOperation(out var operation) || _context.VariableValues.IsDefaultOrEmpty)
+                    {
+                        return;
+                    }
+
+                    bool[] eligibility = new bool[_context.VariableValues.Length];
+                    bool anyData = false;
+                    for (int index = 0; index < eligibility.Length; index++)
+                    {
+                        ulong includeFlags = operation.CreateIncludeFlags(_context.VariableValues[index]);
+                        foreach (Selection selection in operation.RootSelectionSet.Selections)
+                        {
+                            if (!selection.Field.IsIntrospectionField && selection.IsIncluded(includeFlags))
+                            {
+                                eligibility[index] = true;
+                                anyData = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Retain only closed decisions, not variable values, names, or compiled
+                    // operations. Never attach request-specific flags to HC's cached operation.
+                    _effectiveEligibility = eligibility;
+                    if (anyData)
+                    {
+                        Request.MarkEligible();
+                    }
+                }
+                catch (Exception)
+                {
+                    // Optional classification cannot change GraphQL execution. Unavailable
+                    // effective selections cannot establish a successful request milestone.
                 }
             }
 
@@ -262,24 +297,35 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
                 try
                 {
-                    // Validation failures can finish without invoking ExecuteOperation.
-                    MarkEligible();
-                    if (_eligible)
+                    // Failures or middleware short circuits can skip ExecuteOperation.
+                    CaptureEligibility();
+                    if (_context.Result is OperationResultBatch batch)
                     {
-                        if (_context.Result is OperationResultBatch batch)
+                        for (int position = 0; position < batch.Results.Count; position++)
                         {
-                            // Variable batching has one RequestContext, but each result is a
-                            // separate execution. Fork the captured start/configuration rather
-                            // than starting a request in the possibly reloaded current epoch.
-                            // The original scope restores ambient state only; do not count it.
-                            foreach (IExecutionResult result in batch.Results)
+                            IExecutionResult result = batch.Results[position];
+                            // HC indexes ordinary variable results. Deferred stream results
+                            // have no index, but the pinned SDK preserves variable-set order.
+                            int? index = result is OperationResult operationResult ? operationResult.VariableIndex
+                                : batch.Results.Count == _effectiveEligibility?.Length ? position : null;
+                            if (index is int variableIndex && IsEffectiveData(variableIndex))
                             {
-                                CompleteResult(Request.ForkForCompletion(), result);
+                                // Result-local errors decide each member's outcome. A shared
+                                // diagnostic failure must not poison error-free batch peers.
+                                CompleteResult(Request.ForkForCompletion(), result, EngineTelemetryOutcome.Unknown);
                             }
                         }
-                        else
+                    }
+                    else
+                    {
+                        EngineTelemetryOutcome outcome = ClassifyResult(_context.Result, Request.Outcome, _context.RequestAborted.IsCancellationRequested);
+                        bool eligible = _effectiveEligibility is { Length: 1 }
+                            ? _effectiveEligibility[0]
+                            : IsFailedDataRequest(outcome);
+                        if (eligible)
                         {
-                            CompleteResult(Request, _context.Result);
+                            Request.MarkEligible();
+                            CompleteResult(Request, _context.Result, Request.Outcome);
                         }
                     }
                 }
@@ -290,10 +336,30 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                 }
             }
 
-            private void CompleteResult(EngineTelemetryRequestScope request, IExecutionResult? result)
+            private bool IsEffectiveData(int variableIndex) => _effectiveEligibility is not null &&
+                variableIndex >= 0 && variableIndex < _effectiveEligibility.Length && _effectiveEligibility[variableIndex];
+
+            private bool IsFailedDataRequest(EngineTelemetryOutcome outcome)
+            {
+                if (outcome is not (EngineTelemetryOutcome.Failure or EngineTelemetryOutcome.PartialFailure or EngineTelemetryOutcome.Canceled))
+                {
+                    return false;
+                }
+
+                if (_effectiveEligibility is not null)
+                {
+                    // A whole batch can fail before producing individual results. Count one
+                    // observed failed request only if at least one effective member was data.
+                    return Array.Exists(_effectiveEligibility, eligible => eligible);
+                }
+
+                return HasDataIntent(_context.OperationDocumentInfo?.Document, _context.Request.OperationName);
+            }
+
+            private void CompleteResult(EngineTelemetryRequestScope request, IExecutionResult? result, EngineTelemetryOutcome diagnosticOutcome)
             {
                 CancellationToken aborted = _context.RequestAborted;
-                EngineTelemetryOutcome outcome = ClassifyResult(result, Request.Outcome, aborted.IsCancellationRequested);
+                EngineTelemetryOutcome outcome = ClassifyResult(result, diagnosticOutcome, aborted.IsCancellationRequested);
                 request.SetOutcome(outcome);
                 if (_httpContext is not null)
                 {

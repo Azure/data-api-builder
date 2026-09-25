@@ -64,20 +64,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private const string PRIVATE_FIELD = "LOCALDB_PRIVATE_MISSING_FIELD_65cd20";
         private const string PRIVATE_QUERY_NAME = "LOCALDB_PRIVATE_QUERY_65cd20";
         private const string DATA_QUERY = "query " + PRIVATE_QUERY_NAME + " { books { items { id title } } }";
+        private const string EMPTY_QUERY = "{ books(filter: { id: { eq: -1 } }) { items { id title } } }";
         private const string FAILED_QUERY = "{ books { items { " + PRIVATE_FIELD + " } } }";
         private const string DISCOVERY_QUERY = "{ __schema { queryType { fields { name } } } }";
         private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(30);
 
         [DataTestMethod]
-        [DataRow(false, false, "Books", false)]
-        [DataRow(true, false, "Books", false)]
-        [DataRow(false, true, "Books", false)]
-        [DataRow(false, false, "swagger", false)]
-        [DataRow(false, false, "swagger/books", false)]
-        [DataRow(false, false, "mcp/books", false)]
-        [DataRow(false, false, "Books", true)]
+        [DataRow(false, false, "Books", false, false)]
+        [DataRow(true, false, "Books", false, false)]
+        [DataRow(false, true, "Books", false, false)]
+        [DataRow(false, false, "swagger", false, false)]
+        [DataRow(false, false, "swagger/books", false, false)]
+        [DataRow(false, false, "mcp/books", false, false)]
+        [DataRow(false, false, "Books", true, false)]
+        [DataRow(false, false, "Books", false, true)]
         public async Task RealHttpRequestsEmitMilestonesAndSqlUsageWithoutCustomerData(bool includeEmbeddingEndpoint, bool useAutoentities,
-            string restEntityPath, bool includeHealthProbes)
+            string restEntityPath, bool includeHealthProbes, bool includeCachedReads)
         {
             if (!OperatingSystem.IsWindows())
             {
@@ -134,6 +136,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 Directory.CreateDirectory(directory);
                 JsonNode runtimeConfiguration = JsonNode.Parse(CreateConfig(connectionString))!;
                 runtimeConfiguration["entities"]!["Books"]!["rest"]!["path"] = restEntityPath;
+                if (includeCachedReads)
+                {
+                    runtimeConfiguration["runtime"]!["cache"]!["enabled"] = true;
+                    runtimeConfiguration["runtime"]!["cache"]!["ttl-seconds"] = 600;
+                }
+
                 if (restEntityPath == "mcp/books")
                 {
                     runtimeConfiguration["runtime"]!["mcp"]!["path"] = "/api/mcp";
@@ -186,11 +194,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 EmbeddingProviderHandler embeddingProvider = new();
                 ResponseCompletionTracker completions = new();
                 HealthProbeHandler healthProbes = new(completions);
+                WindowClock clock = new();
                 session = EngineTelemetrySession.Create(
                     exporterFactory: () => exporter,
                     enableSyntheticCollection: true,
                     configPath: configPath,
                     executionMode: "web",
+                    clock: includeCachedReads ? clock : null,
                     readEnvironmentVariable: _ => null,
                     showNotice: () => { },
                     resolveIdentity: _ => new(Guid.NewGuid(), "ephemeral"),
@@ -283,6 +293,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                         "The real schema must expose the configured Books collection as books.");
                 }
 
+                foreach (string excludedQuery in new[]
+                {
+                    "{ __typename books @skip(if: true) { items { id } } }",
+                    "{ __typename ...Data @include(if: false) } fragment Data on Query { books { items { id } } }"
+                })
+                {
+                    ServedResponse excluded = await completions.SendAsync(client, HttpMethod.Post, "/graphql", excludedQuery);
+                    Assert.AreEqual(HttpStatusCode.OK, excluded.StatusCode);
+                    using JsonDocument body = JsonDocument.Parse(excluded.Body);
+                    Assert.IsFalse(body.RootElement.TryGetProperty("errors", out _));
+                    Assert.AreEqual(1, body.RootElement.GetProperty("data").EnumerateObject().Count(), "Only introspection should execute.");
+                }
+
                 // Start with a logical GraphQL failure. Legacy application/json negotiation
                 // returns HTTP 200 for validation errors: HTTP success is not logical success.
                 ServedResponse failure = await completions.SendAsync(client, HttpMethod.Post, "/graphql", FAILED_QUERY, PRIVATE_ROLE);
@@ -308,6 +331,35 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 ServedResponse graphQL = await completions.SendAsync(client, HttpMethod.Post, "/graphql", DATA_QUERY);
                 AssertRow(graphQL, graphQL: true);
 
+                if (includeCachedReads)
+                {
+                    // The full projection is already cached. Remove the owned seed row so
+                    // returning it again additionally proves these reads use the cache.
+                    await using (SqlConnection database = new(connectionString))
+                    {
+                        await database.OpenAsync();
+                        using SqlCommand clear = database.CreateCommand();
+                        clear.CommandText = "DELETE FROM dbo.TelemetryItems;";
+                        Assert.AreEqual(1, await clear.ExecuteNonQueryAsync());
+                    }
+
+                    // Advance only the telemetry clock, not the cache's expiration clock.
+                    clock.Advance(TimeSpan.FromHours(6));
+                    session.Tick();
+                    await exporter.WaitForAsync("dab.engine.heartbeat");
+                    // These requests are isolated in a new measurement window. Both must
+                    // count as successful usage even though neither executes a SQL command.
+                    for (int attempt = 0; attempt < 2; attempt++)
+                    {
+                        AssertRow(await completions.SendAsync(client, HttpMethod.Post, "/graphql", DATA_QUERY), graphQL: true);
+                    }
+                }
+                else
+                {
+                    // An actual successful empty SQL result still counts as data usage.
+                    AssertEmptyRows(await completions.SendAsync(client, HttpMethod.Post, "/graphql", EMPTY_QUERY));
+                }
+
                 if (includeEmbeddingEndpoint)
                 {
                     // Use the actual Startup-mapped endpoint, controller and embedding service.
@@ -328,7 +380,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 await session.StopAsync();
                 await exporter.WaitForAsync(STOPPED);
                 EngineTelemetryEvent[] records = exporter.Records.ToArray();
-                AssertUsage(records, embeddingRequests: includeEmbeddingEndpoint ? 2 : 0);
+                AssertUsage(records, embeddingRequests: includeEmbeddingEndpoint ? 2 : 0, additionalGraphQLReads: includeCachedReads ? 2 : 1);
+                if (includeCachedReads)
+                {
+                    string window = clock.GetUtcNow().ToString("O", CultureInfo.InvariantCulture);
+                    EngineTelemetryEvent[] cached = records.Where(record => record.Name == SUMMARY &&
+                        record.Properties["window_start"] == window).ToArray();
+                    AssertOutcomes(Summaries(cached, "request"), count: 2, successes: 2, failures: 0);
+                    AssertOutcomes(Summaries(cached, "operation"), count: 2, successes: 2, failures: 0);
+                    Assert.AreEqual(0L, Count(Summaries(cached, "database_attempt"), "count"));
+                    Assert.IsTrue(Count(Summaries(cached, "cache_lookup").Where(record =>
+                        record.Properties["cache_layer"] == "level1" && record.Properties["cache_result"] == "hit"), "count") >= 2,
+                        "Both real GraphQL requests must hit the cache.");
+                }
+
                 if (includeEmbeddingEndpoint)
                 {
                     EngineTelemetryEvent[] cache = Summaries(records, "cache_lookup").ToArray();
@@ -340,7 +405,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
                 AssertNoPrivateValues(records, databaseName, connectionString, configPath,
                     "TelemetryItems", "Books", PRIVATE_ROLE, PRIVATE_VALUE, PRIVATE_FIELD,
-                    PRIVATE_QUERY_NAME, DATA_QUERY, FAILED_QUERY, DISCOVERY_QUERY, @"(localdb)\MSSQLLocalDB", session.HealthProbeToken!);
+                    PRIVATE_QUERY_NAME, DATA_QUERY, EMPTY_QUERY, FAILED_QUERY, DISCOVERY_QUERY, @"(localdb)\MSSQLLocalDB", session.HealthProbeToken!);
             }
             finally
             {
@@ -790,7 +855,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 "The actual API must return the row from this test's unique database.");
         }
 
-        private static void AssertUsage(EngineTelemetryEvent[] records, int embeddingRequests = 0)
+        private static void AssertEmptyRows(ServedResponse response)
+        {
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            using JsonDocument body = JsonDocument.Parse(response.Body);
+            Assert.IsFalse(body.RootElement.TryGetProperty("errors", out _), response.Body);
+            Assert.AreEqual(0, body.RootElement.GetProperty("data").GetProperty("books").GetProperty("items").GetArrayLength());
+        }
+
+        private static void AssertUsage(EngineTelemetryEvent[] records, int embeddingRequests = 0, int additionalGraphQLReads = 0)
         {
             EngineTelemetryEvent started = OnlyEvent(records, "dab.engine.process_started");
             EngineTelemetryEvent ready = OnlyEvent(records, READY);
@@ -809,17 +882,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.IsTrue(summaries.All(record => record.ConfigurationEpoch == 1));
             Assert.IsFalse(summaries.Any(record => record.Properties["family"] == "collection_loss"));
             EngineTelemetryEvent[] requests = Summaries(records, "request").ToArray();
-            Assert.AreEqual(3L + embeddingRequests, Count(requests, "count"), "Health, OpenAPI and introspection must not add data requests.");
+            Assert.AreEqual(3L + embeddingRequests + additionalGraphQLReads, Count(requests, "count"), "Health, OpenAPI and introspection must not add data requests.");
             Assert.IsTrue(requests.All(record => record.Properties["transport"] == "http"));
             AssertOutcomes(requests.Where(record => record.Properties["api"] == "rest" &&
                 record.Properties["role_class"] == "anonymous"), count: 1 + embeddingRequests, successes: 1 + embeddingRequests, failures: 0);
             AssertOutcomes(requests.Where(record => record.Properties["api"] == "graph_ql" &&
-                record.Properties["role_class"] == "anonymous"), count: 1, successes: 1, failures: 0);
+                record.Properties["role_class"] == "anonymous"), count: 1 + additionalGraphQLReads, successes: 1 + additionalGraphQLReads, failures: 0);
             AssertOutcomes(requests.Where(record => record.Properties["api"] == "graph_ql" &&
                 record.Properties["role_class"] == "custom"), count: 1, successes: 0, failures: 1);
 
             EngineTelemetryEvent[] http = Summaries(records, "http_outcome").ToArray();
-            Assert.AreEqual(3L + embeddingRequests, Count(http, "count"));
+            Assert.AreEqual(3L + embeddingRequests + additionalGraphQLReads, Count(http, "count"));
             Assert.IsTrue(http.All(record => record.Properties["http_status_class"] == "success"),
                 "The GraphQL failure is logical, despite its completed 2xx HTTP response.");
             foreach (string api in new[] { "rest", "graph_ql" })
@@ -870,6 +943,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 Assert.IsFalse(content.Contains(value, StringComparison.OrdinalIgnoreCase),
                     "Product telemetry leaked a synthetic customer value.");
             }
+        }
+
+        private sealed class WindowClock : TimeProvider
+        {
+            private long _timestamp;
+            public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+            public override long GetTimestamp() => Interlocked.Read(ref _timestamp);
+            public override DateTimeOffset GetUtcNow() => new DateTimeOffset(2026, 9, 24, 0, 0, 0, TimeSpan.Zero).AddTicks(GetTimestamp());
+            internal void Advance(TimeSpan duration) => Interlocked.Add(ref _timestamp, duration.Ticks);
         }
 
         private sealed class CapturingExporter : IEngineTelemetryExporter

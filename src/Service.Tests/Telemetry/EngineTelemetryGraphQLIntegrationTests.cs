@@ -95,6 +95,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataRow("query echo { ...Info } fragment Info on Query { __type(name: \"echo\") { name } }", "echo")]
         [DataRow("query Data { echo(value: \"unused\") } query Discovery { __typename }", "Discovery")]
         [DataRow("{ __typename } # echo(value: \"not executed\")", null)]
+        [DataRow("{ __typename echo(value: \"excluded\") @skip(if: true) }", null)]
+        [DataRow("{ __typename echo(value: \"excluded\") @include(if: false) }", null)]
+        [DataRow("{ __typename ... on Query @skip(if: true) { echo(value: \"excluded\") } }", null)]
+        [DataRow("{ __typename ...Data @include(if: false) } fragment Data on Query { echo(value: \"excluded\") }", null)]
+        [DataRow("{ __typename ...Outer } fragment Outer on Query { ...Data @skip(if: true) } fragment Data on Query { echo(value: \"excluded\") }", null)]
+        [DataRow("query Q($take: Boolean! = false) { __typename echo(value: \"excluded\") @include(if: $take) }", "Q")]
+        [DataRow("{ echo(value: \"excluded\") @skip(if: true) }", null)]
         public async Task IntrospectionIsExcludedRegardlessOfAliasesNamesAndSourceText(string document, string? operationName)
         {
             await using Fixture fixture = new();
@@ -107,6 +114,196 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             EngineTelemetryEvent[] records = await fixture.StopAsync();
             AssertRequests(records);
             Assert.AreEqual(0, records.Count(record => record.Name == "dab.engine.first_request_served"));
+        }
+
+        [DataTestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task ConditionalVariableBatchCountsOnlyEffectiveDataMembers(bool http)
+        {
+            await using Fixture fixture = new();
+            (DefaultHttpContext context, ResponseCallbacks response) = CreateHttpContext();
+            const string query = "query Q($take: Boolean!, $fail: Boolean!) { __typename ...Data @include(if: $take) } fragment Data on Query { echo(value: \"synthetic\") fail @include(if: $fail) }";
+            IReadOnlyDictionary<string, object?>[] variables =
+            [
+                new Dictionary<string, object?> { ["take"] = false, ["fail"] = false },
+                new Dictionary<string, object?> { ["take"] = true, ["fail"] = false },
+                new Dictionary<string, object?> { ["take"] = false, ["fail"] = true },
+                new Dictionary<string, object?> { ["take"] = true, ["fail"] = true }
+            ];
+            OperationRequestBuilder builder = OperationRequestBuilder.New().SetDocument(query).SetVariableValues(variables);
+            if (http)
+            {
+                builder.SetGlobalState(nameof(HttpContext), context);
+            }
+
+            await using IExecutionResult result = await fixture.ExecuteAsync(builder);
+            OperationResultBatch batch = result.ExpectOperationResultBatch();
+            Assert.AreEqual(4, batch.Results.Count);
+            Assert.AreEqual(2, fixture.ResolverRequests.Count);
+            Assert.AreEqual(1, batch.Results.Count(value => value.ExpectOperationResult().Errors.Count > 0));
+            CollectionAssert.AreEqual(new int?[] { 0, 1, 2, 3 }, batch.Results.Select(value => value.ExpectOperationResult().VariableIndex).ToArray());
+            if (http)
+            {
+                Assert.AreEqual(2, response.Count, "Excluded variable sets must not register completion callbacks.");
+                await fixture.AssertNoRequestTelemetryAsync();
+                await response.CompleteAsync();
+            }
+
+            EngineTelemetryEvent[] records = await fixture.StopAsync();
+            AssertRequests(records, success: 1, partialFailure: 1, transport: http ? "http" : "in_process");
+            Assert.AreEqual(1, records.Count(value => value.Name == "dab.engine.first_successful_request"));
+        }
+
+        [TestMethod]
+        public async Task ConditionalEligibilityIsNotCachedAcrossVariableValues()
+        {
+            await using Fixture fixture = new();
+            const string document = "query Q($take: Boolean!) { __typename ...Data @include(if: $take) } fragment Data on Query { echo(value: \"synthetic\") }";
+            foreach (bool take in new[] { false, true, false })
+            {
+                await using IExecutionResult result = await fixture.ExecuteAsync(OperationRequestBuilder.New().SetDocument(document)
+                    .SetVariableValues(new Dictionary<string, object?> { ["take"] = take }));
+                Assert.AreEqual(0, result.ExpectOperationResult().Errors.Count);
+            }
+
+            Assert.AreEqual(1, fixture.ResolverRequests.Count);
+            AssertRequests(await fixture.StopAsync(), success: 1);
+        }
+
+        [DataTestMethod]
+        [DataRow(false, false)]
+        [DataRow(true, false)]
+        [DataRow(false, true)]
+        [DataRow(true, true)]
+        public async Task MergedConditionalFragmentSelectionsFollowExecutorInclusion(bool first, bool second)
+        {
+            const string document = "query Q($a: Boolean!, $b: Boolean!) { __typename ... on Query @include(if: $a) { echo(value: \"same\") } ... on Query @include(if: $b) { echo(value: \"same\") } }";
+            await AssertSelectionsMatchExecutorAsync(document, first, second);
+        }
+
+        [DataTestMethod]
+        [DataRow(false, false)]
+        [DataRow(true, false)]
+        [DataRow(false, true)]
+        [DataRow(true, true)]
+        public async Task RepeatedNamedFragmentsMatchTheUninstrumentedExecutor(bool first, bool second)
+        {
+            const string document = "query Q($a: Boolean!, $b: Boolean!) { __typename ...Data @include(if: $a) ... on Query @include(if: $b) { ...Data } } fragment Data on Query { echo(value: \"same\") }";
+            await AssertSelectionsMatchExecutorAsync(document, first, second);
+        }
+
+        [DataTestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task AllExcludedVariableMembersRemainUncounted(bool abortHttp)
+        {
+            await using Fixture fixture = new();
+            using CancellationTokenSource abort = new();
+            (DefaultHttpContext context, ResponseCallbacks response) = CreateHttpContext(abort.Token);
+            await using IExecutionResult result = await fixture.ExecuteAsync(OperationRequestBuilder.New()
+                .SetDocument("query Q($take: Boolean! = false) { __typename echo(value: \"synthetic\") @include(if: $take) }")
+                .SetVariableValues(new IReadOnlyDictionary<string, object?>[]
+                {
+                    new Dictionary<string, object?>(),
+                    new Dictionary<string, object?> { ["take"] = false }
+                }).SetGlobalState(nameof(HttpContext), context));
+            Assert.AreEqual(2, result.ExpectOperationResultBatch().Results.Count);
+            Assert.IsTrue(result.ExpectOperationResultBatch().Results.All(member => member.ExpectOperationResult().Errors.Count == 0));
+            Assert.AreEqual(0, fixture.ResolverRequests.Count);
+            Assert.AreEqual(0, response.Count);
+            if (abortHttp)
+            {
+                abort.Cancel();
+            }
+
+            await response.CompleteAsync();
+            EngineTelemetryEvent[] records = await fixture.StopAsync();
+            AssertRequests(records);
+            Assert.AreEqual(0, Summaries(records, "http_outcome").Length);
+            Assert.IsFalse(records.Any(record => record.Name is "dab.engine.first_request_served" or "dab.engine.first_successful_request"));
+        }
+
+        [TestMethod]
+        public async Task ConcurrentCachedOperationSelectionsRemainRequestLocal()
+        {
+            await using Fixture fixture = new();
+            const string document = "query Q($take: Boolean! = false) { __typename echo(value: \"synthetic\") @include(if: $take) }";
+            // Warm the shared compiled-operation cache with an excluded request first.
+            await using (IExecutionResult warmup = await fixture.ExecuteAsync(OperationRequestBuilder.New().SetDocument(document)))
+            {
+                Assert.AreEqual(0, warmup.ExpectOperationResult().Errors.Count);
+            }
+
+            IExecutionResult[] results = await Task.WhenAll(Enumerable.Range(0, 16).Select(index => fixture.ExecuteAsync(
+                OperationRequestBuilder.New().SetDocument(document).SetVariableValues(new Dictionary<string, object?> { ["take"] = index % 2 == 0 }))));
+            foreach (IExecutionResult result in results)
+            {
+                await using (result)
+                {
+                    Assert.AreEqual(0, result.ExpectOperationResult().Errors.Count);
+                }
+            }
+
+            Assert.AreEqual(8, fixture.ResolverRequests.Count);
+            Assert.IsTrue(fixture.ResolverRequests.All(request => request is { IsEligible: true }));
+            Assert.IsNull(fixture.Session.CurrentRequest);
+            AssertRequests(await fixture.StopAsync(), success: 8);
+        }
+
+        [TestMethod]
+        public async Task EmptyDataResultsQualifyWithoutDatabaseAttempts()
+        {
+            await using Fixture fixture = new();
+            await using IExecutionResult result = await fixture.ExecuteAsync(OperationRequestBuilder.New().SetDocument("{ empty }"));
+            Assert.AreEqual(0, result.ExpectOperationResult().Errors.Count);
+            EngineTelemetryEvent[] records = await fixture.StopAsync();
+            AssertRequests(records, success: 1);
+            Assert.AreEqual(0, Summaries(records, "database_attempt").Length);
+            Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.first_successful_request"));
+        }
+
+        [TestMethod]
+        public async Task ExcludedVariableMembersRemainExcludedOnHttpAbort()
+        {
+            await using Fixture fixture = new();
+            using CancellationTokenSource abort = new();
+            (DefaultHttpContext context, ResponseCallbacks response) = CreateHttpContext(abort.Token);
+            await using IExecutionResult result = await fixture.ExecuteAsync(OperationRequestBuilder.New()
+                .SetDocument("query Q($take: Boolean!) { __typename echo(value: \"synthetic\") @include(if: $take) }")
+                .SetVariableValues(new IReadOnlyDictionary<string, object?>[]
+                {
+                    new Dictionary<string, object?> { ["take"] = false },
+                    new Dictionary<string, object?> { ["take"] = true },
+                    new Dictionary<string, object?> { ["take"] = false }
+                }).SetGlobalState(nameof(HttpContext), context));
+            Assert.AreEqual(3, result.ExpectOperationResultBatch().Results.Count);
+            Assert.AreEqual(1, response.Count);
+            abort.Cancel();
+            await response.CompleteAsync();
+            EngineTelemetryEvent[] records = await fixture.StopAsync();
+            AssertRequests(records, canceled: 1, transport: "http");
+            AssertHttpOutcomes(records, 1, "unknown");
+            Assert.IsFalse(records.Any(record => record.Name == "dab.engine.first_successful_request"));
+        }
+
+        [TestMethod]
+        public async Task VariableBatchCoercionFailureCountsTheObservedFailureWithoutInventingPeerExecutions()
+        {
+            await using Fixture fixture = new();
+            IReadOnlyDictionary<string, object?>[] variables =
+            [
+                new Dictionary<string, object?> { ["value"] = "first" },
+                new Dictionary<string, object?> { ["value"] = null },
+                new Dictionary<string, object?> { ["value"] = "last" }
+            ];
+            await using IExecutionResult result = await fixture.ExecuteAsync(OperationRequestBuilder.New()
+                .SetDocument("query Q($value: String!) { echo(value: $value) }").SetVariableValues(variables));
+            // HC16 rejects the variable batch as a whole during coercion; it does not
+            // execute otherwise-valid peers or return a per-variable result batch here.
+            Assert.IsTrue(result.ExpectOperationResult().Errors.Count > 0);
+            Assert.AreEqual(0, fixture.ResolverRequests.Count);
+            AssertRequests(await fixture.StopAsync(), failure: 1);
         }
 
         [DataTestMethod]
@@ -303,6 +500,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual(0, records.Count(record => record.Name == "dab.engine.first_successful_request"));
         }
 
+        private static async Task AssertSelectionsMatchExecutorAsync(string document, bool first, bool second)
+        {
+            Dictionary<string, object?> variables = new() { ["a"] = first, ["b"] = second };
+            await using Fixture baseline = new(enableTelemetry: false);
+            await using IExecutionResult expected = await baseline.ExecuteAsync(OperationRequestBuilder.New().SetDocument(document).SetVariableValues(variables));
+            await using Fixture fixture = new();
+            await using IExecutionResult actual = await fixture.ExecuteAsync(OperationRequestBuilder.New().SetDocument(document).SetVariableValues(variables));
+            Assert.AreEqual(0, expected.ExpectOperationResult().Errors.Count);
+            Assert.AreEqual(0, actual.ExpectOperationResult().Errors.Count);
+            Assert.AreEqual(baseline.ResolverRequests.Count, fixture.ResolverRequests.Count);
+            Assert.IsTrue(baseline.ResolverRequests.Count is 0 or 1, "Merged occurrences must not be counted as separate requests.");
+            // Measure HC16's actual compiled merged-selection behavior, not an independent
+            // interpretation of the two source directives. Instrumentation must not alter it.
+            AssertRequests(await fixture.StopAsync(), success: baseline.ResolverRequests.Count);
+        }
+
         private static OperationRequestBuilder VariableRequest(HttpContext? context = null, bool includePartialFailure = true)
         {
             // Identical first/third variable sets must still count as separate actual executions.
@@ -398,15 +611,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             internal ConcurrentQueue<EngineTelemetryRequestScope?> ResumedRequests { get; } = new();
             internal Func<Task>? EchoGate { get; set; }
 
-            internal Fixture()
+            internal Fixture(bool enableTelemetry = true)
             {
-                Session = EngineTelemetrySession.Create(() => Exporter, enableSyntheticCollection: true,
+                Session = EngineTelemetrySession.Create(() => Exporter, enableSyntheticCollection: enableTelemetry,
                     clock: Clock, readEnvironmentVariable: _ => null, showNotice: () => { },
                     resolveIdentity: _ => new(new Guid("c4bd0757-e68a-4af6-ab1c-05e86e08f489"), "ephemeral"), startTimer: false);
                 Session.AcceptConfiguration(InitialConfiguration);
                 Session.MarkHostReady();
-                Assert.IsTrue(Session.IsEnabled);
-                Assert.IsTrue(Session.IsReady);
+                Assert.AreEqual(enableTelemetry, Session.IsEnabled);
+                Assert.AreEqual(enableTelemetry, Session.IsReady);
 
                 // Capture this session explicitly: HC has its own schema service provider and
                 // must not resolve a second product session or a diagnostic-scope stand-in.
@@ -415,6 +628,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 services.AddGraphQL().AddQueryType(descriptor =>
                 {
                     descriptor.Name("Query");
+                    descriptor.Field("empty").Type<ListType<StringType>>().Resolve(_ => Array.Empty<string>());
                     descriptor.Field("echo").Argument("value", argument => argument.Type<NonNullType<StringType>>())
                         .Type<StringType>().Resolve(async context =>
                         {

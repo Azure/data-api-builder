@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
@@ -34,26 +35,38 @@ namespace Azure.DataApiBuilder.Service.Utilities
 
             await configLoader.ExecuteWithHotReloadSerializationAsync(async cancellationToken =>
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                RuntimeConfigProvider runtimeConfigProvider =
-                    serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                initializedConfig = runtimeConfigProvider.GetConfig();
+                TelemetryFailureStage stage = TelemetryFailureStage.Configuration;
+                try
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    RuntimeConfigProvider runtimeConfigProvider =
+                        serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                    initializedConfig = runtimeConfigProvider.GetConfig();
 
-                RuntimeConfigValidator runtimeConfigValidator =
-                    serviceProvider.GetRequiredService<RuntimeConfigValidator>();
-                runtimeConfigValidator.ValidateConfigProperties();
+                    RuntimeConfigValidator runtimeConfigValidator =
+                        serviceProvider.GetRequiredService<RuntimeConfigValidator>();
+                    stage = TelemetryFailureStage.Validation;
+                    runtimeConfigValidator.ValidateConfigProperties();
 
-                IMetadataProviderFactory metadataProviderFactory =
-                    serviceProvider.GetRequiredService<IMetadataProviderFactory>();
-                await metadataProviderFactory
-                    .InitializeAsync(cancellationToken)
-                    .ConfigureAwait(false);
+                    stage = TelemetryFailureStage.Metadata;
+                    IMetadataProviderFactory metadataProviderFactory =
+                        serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+                    await metadataProviderFactory
+                        .InitializeAsync(cancellationToken)
+                        .ConfigureAwait(false);
 
-                // MCP services are absent when MCP was disabled at startup.
-                cancellationToken.ThrowIfCancellationRequested();
-                IMcpToolRegistryRefreshService? mcpToolRegistryRefreshService =
-                    serviceProvider.GetService<IMcpToolRegistryRefreshService>();
-                mcpToolRegistryRefreshService?.EnsureInitialized(cancellationToken);
+                    // MCP services are absent when MCP was disabled at startup.
+                    stage = TelemetryFailureStage.Serving;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    IMcpToolRegistryRefreshService? mcpToolRegistryRefreshService =
+                        serviceProvider.GetService<IMcpToolRegistryRefreshService>();
+                    mcpToolRegistryRefreshService?.EnsureInitialized(cancellationToken);
+                }
+                catch
+                {
+                    TelemetryFailureContext.Current?.RecordFailure(stage);
+                    throw;
+                }
             }).ConfigureAwait(false);
 
             return initializedConfig!;

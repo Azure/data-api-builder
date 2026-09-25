@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.IdentityModel.Tokens.Jwt;
 using Azure.Core;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Product;
 using Azure.Identity;
@@ -63,19 +64,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (!Clients.ContainsKey(dataSourceName))
                 {
                     CosmosClient client;
-                    string userAgent = ProductInfo.GetDataApiBuilderUserAgent();
-                    CosmosClientOptions options = new()
+                    string? userAgent = ProductTelemetryPolicy.IsOptedOut() ? null : ProductInfo.GetDataApiBuilderUserAgent();
+                    CosmosClientOptions options = new();
+                    if (userAgent is not null)
                     {
-                        ApplicationName = userAgent
-                    };
+                        options.ApplicationName = userAgent;
+                    }
 
                     (string? accountEndPoint, string? accountKey) = ParseCosmosConnectionString(dataSource.ConnectionString);
 
                     if (!string.IsNullOrEmpty(accountKey))
                     {
-                        client = new CosmosClientBuilder(dataSource.ConnectionString).WithContentResponseOnWrite(true)
-                            .WithApplicationName(userAgent)
-                            .Build();
+                        CosmosClientBuilder builder = new CosmosClientBuilder(dataSource.ConnectionString).WithContentResponseOnWrite(true);
+                        if (userAgent is not null)
+                        {
+                            builder.WithApplicationName(userAgent);
+                        }
+
+                        client = builder.Build();
                     }
                     else if (!_accessToken.ContainsKey(dataSourceName))
                     {

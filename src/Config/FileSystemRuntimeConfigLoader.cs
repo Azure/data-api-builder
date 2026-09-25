@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
@@ -374,6 +375,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
                 return;
             }
 
+            TelemetryFailureContext? failure = TelemetryCaptureEnabled?.Invoke() == true ? new() : null;
+            using IDisposable? failureScope = TelemetryFailureContext.Enter(failure);
             try
             {
                 if (RuntimeConfig is not null)
@@ -389,6 +392,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             }
             catch (Exception ex)
             {
+                // Dispatch/validation boundaries record more specific failures first. Otherwise
+                // the failure occurred while reading or parsing the replacement input.
+                failure?.RecordFailure(TelemetryFailureStage.Parsing);
+                NotifyTelemetryReload(accepted: false, failure?.FailureStage ?? TelemetryFailureStage.Unknown);
                 SendLogToBufferOrLogger(
                     LogLevel.Error,
                     $"Unable to hot reload configuration file due to {ex.Message}");
@@ -636,6 +643,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             replacementSettings ??= new DeserializationVariableReplacementSettings();
 
             string? parseError = null;
+            using IDisposable? capture = TelemetryConfigurationPresence.BeginCapture(TelemetryCaptureEnabled);
             if (!string.IsNullOrEmpty(json) && TryParseConfig(
                 json,
                 out RuntimeConfig,
@@ -738,12 +746,34 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         IsNewConfigValidated = false;
         SignalConfigChanged(message: string.Empty, cancellationToken);
 
+        // A dependency may deliberately retain its old snapshot and swallow its failure.
+        // Preserve that application behavior without reporting a fully accepted telemetry epoch.
+        TelemetryFailureContext? failure = TelemetryFailureContext.Current;
+        NotifyTelemetryReload(accepted: failure?.HasFailure != true,
+            stage: failure?.FailureStage ?? TelemetryFailureStage.Unknown);
+
         // Telemetry (and any other) logs buffered during the reload parse are otherwise only
         // drained once at startup. Flush them now so hot-reload logs are actually emitted and the
         // shared static buffer does not accumulate entries across successive reloads.
         FlushLogBuffer();
 
         SendLogToBufferOrLogger(LogLevel.Information, "Hot-reload process finished.");
+    }
+
+    // Lifecycle observers cannot interrupt loading, expose exception contents or run before
+    // the existing validation/metadata/schema subscribers finish accepting the replacement.
+    internal Action<RuntimeConfig?, bool, TelemetryFailureStage>? TelemetryReloadCompleted { get; set; }
+
+    private void NotifyTelemetryReload(bool accepted, TelemetryFailureStage stage = TelemetryFailureStage.Unknown)
+    {
+        try
+        {
+            TelemetryReloadCompleted?.Invoke(accepted ? RuntimeConfig : null, accepted, stage);
+        }
+        catch (Exception)
+        {
+            // Product telemetry is never a configuration dependency.
+        }
     }
 
     /// <summary>

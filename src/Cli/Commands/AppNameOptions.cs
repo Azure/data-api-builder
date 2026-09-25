@@ -6,7 +6,9 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Cli.Constants;
+using Cli.Telemetry;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 
@@ -58,7 +60,7 @@ namespace Cli.Commands
             // We intentionally do NOT run full `validate` here — validation opens a database
             // connection, whereas encoding only needs the parsed runtime/entity settings.
             // Requiring a live database would defeat the purpose of this static inspection command.
-            if (!ConfigGenerator.TryGetConfigForRuntimeEngine(Config, loader, fileSystem, out _))
+            if (!ConfigGenerator.TryGetConfigForRuntimeEngine(Config, loader, fileSystem, out _, logBuffer: null, telemetry: ProductTelemetry))
             {
                 logger.LogError("Could not determine the config file to use.");
                 return CliReturnCode.GENERAL_ERROR;
@@ -67,6 +69,7 @@ namespace Cli.Commands
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) || runtimeConfig is null)
             {
+                ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 logger.LogError("Failed to parse the config file.");
                 return CliReturnCode.GENERAL_ERROR;
             }
@@ -88,7 +91,16 @@ namespace Cli.Commands
                 // Mirror stdout behavior: append a trailing newline for human-readable (decode) output,
                 // but keep encode output exact (no trailing newline) so it can be copied/piped verbatim.
                 string fileContent = trailingNewLine ? content + Environment.NewLine : content;
-                fileSystem.File.WriteAllText(Output, fileContent);
+                try
+                {
+                    fileSystem.File.WriteAllText(Output, fileContent);
+                }
+                catch (Exception exception)
+                {
+                    CliTelemetryHosting.MarkException(ProductTelemetry, exception, CliTelemetryFailureCategory.Storage);
+                    throw;
+                }
+
                 logger.LogInformation("Wrote output to '{outputFile}'.", Output);
             }
             else if (trailingNewLine)

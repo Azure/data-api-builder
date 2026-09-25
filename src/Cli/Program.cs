@@ -3,7 +3,10 @@
 
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Cli.Commands;
+using Cli.Constants;
+using Cli.Telemetry;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 
@@ -42,7 +45,16 @@ namespace Cli
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null, isCliLoader: true);
 
-            return Execute(args, cliLogger, fileSystem, loader);
+            using CliTelemetrySession telemetry = CliTelemetryHosting.CreateStandalone();
+            try
+            {
+                return Execute(args, cliLogger, fileSystem, loader, telemetry);
+            }
+            finally
+            {
+                // Completion belongs to Execute; Main owns the bounded drain and disposal.
+                telemetry.StopAsync().GetAwaiter().GetResult();
+            }
         }
 
         /// <summary>
@@ -80,30 +92,142 @@ namespace Cli
         /// <param name="loader">Loads the runtime config.</param>
         /// <returns>Exit Code: 0 success, -1 failure</returns>
         public static int Execute(string[] args, ILogger cliLogger, IFileSystem fileSystem, FileSystemRuntimeConfigLoader loader)
+            => Execute(args, cliLogger, fileSystem, loader, telemetry: null);
+
+        /// <summary>
+        /// Executes one invocation with an explicitly supplied session. Never creates a session,
+        /// reads telemetry environment settings, or stops a caller-owned sender.
+        /// Optional launch/export dependencies are invocation-local; production callers omit them.
+        /// </summary>
+        internal static int Execute(string[] args, ILogger cliLogger, IFileSystem fileSystem,
+            FileSystemRuntimeConfigLoader loader, CliTelemetrySession? telemetry,
+            Func<string[], ProductTelemetryLaunchContext?, Action?, bool>? engineLauncher = null,
+            Func<Exporter>? exporterFactory = null, CancellationTokenSource? exportCancellationTokenSource = null)
         {
-            Parser parser = new(settings =>
+            CliTelemetryCommand? command = null;
+            if (telemetry is { IsEnabled: true })
             {
-                settings.CaseInsensitiveEnumValues = true;
-                settings.HelpWriter = Console.Out;
-            });
+                try
+                {
+                    command = CliTelemetryCommand.Inspect(args) with { Control = "none" };
+                }
+                catch (Exception)
+                {
+                    // Grammar inspection is optional and must not change the real parser's behavior.
+                    telemetry.Disable();
+                }
+            }
 
-            // Parsing user arguments and executing required methods.
-            int result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions, AddTelemetryOptions, ConfigureOptions, AutoConfigOptions, AutoConfigSimulateOptions, AppNameOptions>(args)
-                .MapResult(
-                    (InitOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (AddOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (UpdateOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (StartOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (ValidateOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (AddTelemetryOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (ConfigureOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (AutoConfigOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (AutoConfigSimulateOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (ExportOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (AppNameOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    errors => DabCliParserErrorHandler.ProcessErrorsAndReturnExitCode(errors));
+            CliTelemetryOutcome outcome = CliTelemetryOutcome.Unknown;
+            CliTelemetryFailureCategory failureCategory = CliTelemetryFailureCategory.Unknown;
+            try
+            {
+                Parser parser = new(settings =>
+                {
+                    settings.CaseInsensitiveEnumValues = true;
+                    settings.HelpWriter = Console.Out;
+                });
 
-            return result;
+                // The one real parse remains authoritative; inspection never constructs options.
+                int result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions, AddTelemetryOptions, ConfigureOptions, AutoConfigOptions, AutoConfigSimulateOptions, AppNameOptions>(args)
+                    .MapResult(
+                        (InitOptions options) => Invoke(options, () => options.Handler(cliLogger, loader, fileSystem)),
+                        (AddOptions options) => Invoke(options, () => options.Handler(cliLogger, loader, fileSystem)),
+                        (UpdateOptions options) => Invoke(options, () => options.Handler(cliLogger, loader, fileSystem)),
+                        (StartOptions options) => Invoke(options, () => options.Handler(cliLogger, loader, fileSystem)),
+                        (ValidateOptions options) => Invoke(options, () => options.Handler(cliLogger, loader, fileSystem)),
+                        (AddTelemetryOptions options) => Invoke(options, () => options.Handler(cliLogger, loader, fileSystem)),
+                        (ConfigureOptions options) => Invoke(options, () => options.Handler(cliLogger, loader, fileSystem)),
+                        (AutoConfigOptions options) => Invoke(options, () => options.Handler(cliLogger, loader, fileSystem)),
+                        (AutoConfigSimulateOptions options) => Invoke(options, () => options.Handler(cliLogger, loader, fileSystem)),
+                        (ExportOptions options) => Invoke(options, () => options.Handler(cliLogger, loader, fileSystem)),
+                        (AppNameOptions options) => Invoke(options, () => options.Handler(cliLogger, loader, fileSystem)),
+                        errors =>
+                        {
+                            List<Error> parseErrors = errors.ToList();
+                            string control = parseErrors.Any(error => error.Tag is ErrorType.HelpRequestedError or ErrorType.HelpVerbRequestedError)
+                                ? "help"
+                                : parseErrors.Any(error => error.Tag == ErrorType.VersionRequestedError) ? "version" : "none";
+                            if (command is not null)
+                            {
+                                command = command with { Control = control };
+                            }
+
+                            if (control == "none")
+                            {
+                                telemetry?.MarkFailure(CliTelemetryOutcome.ParseFailure, CliTelemetryFailureCategory.Arguments);
+                            }
+
+                            return DabCliParserErrorHandler.ProcessErrorsAndReturnExitCode(parseErrors);
+                        });
+
+                if (command?.Name == "start" && telemetry?.HasEngineStartupFailed == true)
+                {
+                    // The web host can return normally after StopApplication during failed
+                    // initialization. Keep that legacy exit code but report the observed failure.
+                    outcome = CliTelemetryOutcome.ExecutionFailure;
+                    failureCategory = CliTelemetryFailureCategory.Initialization;
+                }
+                else if (result == CliReturnCode.SUCCESS)
+                {
+                    // Recovered attempts are not failed commands. For start, this runs only
+                    // after the actual engine lifetime has returned to its handler.
+                    outcome = CliTelemetryOutcome.Success;
+                    failureCategory = CliTelemetryFailureCategory.None;
+                }
+                else
+                {
+                    UseFirstFailure();
+                }
+
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                outcome = CliTelemetryOutcome.Canceled;
+                failureCategory = CliTelemetryFailureCategory.Canceled;
+                telemetry?.MarkFailure(outcome, failureCategory);
+                throw;
+            }
+            catch (Exception exception)
+            {
+                CliTelemetryHosting.MarkException(telemetry, exception);
+                UseFirstFailure();
+                throw;
+            }
+            finally
+            {
+                if (command is not null)
+                {
+                    telemetry?.Complete(command.Name, command.Control, command.Options, outcome, failureCategory);
+                }
+            }
+
+            int Invoke(Options options, Func<int> handler)
+            {
+                options.ProductTelemetry = telemetry;
+                options.EngineLauncher = engineLauncher;
+                options.ExporterFactory = exporterFactory;
+                options.ExportCancellationTokenSource = exportCancellationTokenSource;
+                int result = handler();
+                // These handlers reject the missing positional entity before ConfigGenerator.
+                if (result != CliReturnCode.SUCCESS && options is EntityOptions entityOptions
+                    && string.IsNullOrWhiteSpace(entityOptions.Entity))
+                {
+                    telemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
+                }
+
+                return result;
+            }
+
+            void UseFirstFailure()
+            {
+                if (telemetry is { HasFailure: true })
+                {
+                    outcome = telemetry.FailureOutcome;
+                    failureCategory = telemetry.FailureCategory;
+                }
+            }
         }
     }
 }

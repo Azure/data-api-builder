@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Azure.DataApiBuilder.Service.Tests" />
+    <InternalsVisibleTo Include="Cli.Tests" />
   </ItemGroup>
 
   <ItemGroup>

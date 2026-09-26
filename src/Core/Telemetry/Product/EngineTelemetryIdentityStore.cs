@@ -120,9 +120,21 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 bool published = false;
                 try
                 {
-                    File.Move(temporaryPath, sidecar, overwrite: false);
-                    ownsTemporaryFile = false;
-                    published = true;
+                    if (OperatingSystem.IsLinux())
+                    {
+                        // File.Move(overwrite: false) can check then rename on Unix, allowing
+                        // concurrent creators to overwrite each other. Publish atomically with
+                        // no replacement; unsupported kernels/filesystems fail closed instead.
+                        published = NativeMethods.RenameLinuxFile(NativeMethods.AT_FDCWD, temporaryPath,
+                            NativeMethods.AT_FDCWD, sidecar, NativeMethods.RENAME_NOREPLACE) == 0;
+                    }
+                    else
+                    {
+                        File.Move(temporaryPath, sidecar, overwrite: false);
+                        published = true;
+                    }
+
+                    ownsTemporaryFile = !published;
                 }
                 catch (IOException)
                 {
@@ -479,6 +491,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             internal const int AT_FDCWD = -100;
             internal const int AT_SYMLINK_NOFOLLOW = 0x100;
             internal const int AT_EMPTY_PATH = 0x1000;
+            internal const uint RENAME_NOREPLACE = 1;
             internal const uint REQUIRED_STATUS = 0xB; // STATX_TYPE | STATX_MODE | STATX_UID
             internal const int FILE_TYPE_MASK = 0xF000;
             internal const int REGULAR_FILE = 0x8000;
@@ -496,6 +509,11 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             [DllImport("libc", EntryPoint = "open", SetLastError = true)]
             [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
             internal static extern int OpenLinuxFile([MarshalAs(UnmanagedType.LPUTF8Str)] string path, int flags);
+
+            [DllImport("libc", EntryPoint = "renameat2", SetLastError = true)]
+            [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+            internal static extern int RenameLinuxFile(int sourceDirectory, [MarshalAs(UnmanagedType.LPUTF8Str)] string source,
+                int destinationDirectory, [MarshalAs(UnmanagedType.LPUTF8Str)] string destination, uint flags);
 
             [DllImport("libc", EntryPoint = "statx", SetLastError = true)]
             [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]

@@ -214,7 +214,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     resolveIdentity: _ => new(Guid.NewGuid(), "ephemeral"),
                     startTimer: false);
 
-                host = Program.CreateHostBuilder(
+                host = Program.CreateHostBuilderCore(
                     ["--ConfigFileName", configPath, "--no-https-redirect"],
                     runMcpStdio: false, mcpRole: null, productTelemetry: session)
                     .UseEnvironment("Development")
@@ -587,7 +587,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     },
                     startTimer: false);
 
-                host = Program.CreateHostBuilder(
+                host = Program.CreateHostBuilderCore(
                     ["--ConfigFileName", configPath, "--no-https-redirect"],
                     runMcpStdio: true, mcpRole: "anonymous", productTelemetry: session)
                     .UseEnvironment("Development")

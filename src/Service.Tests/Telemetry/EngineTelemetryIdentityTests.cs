@@ -583,31 +583,36 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [TestMethod]
         public async Task ConcurrentCreatorsReadOneImmutableWinnerAndCleanTheirOwnTemporaryFiles()
         {
-            using TemporaryConfig files = new();
-            using Barrier start = new(12);
-            Task<EngineTelemetryIdentity>[] creators = Enumerable.Range(0, 12).Select(_ =>
-                Task.Factory.StartNew(() =>
-                {
-                    if (!start.SignalAndWait(TimeSpan.FromSeconds(10)))
+            // Repeated independent races exercise the native publication path, not a cached
+            // identity or a process-local lock. Every attempt must preserve one immutable winner.
+            for (int iteration = 0; iteration < 20; iteration++)
+            {
+                using TemporaryConfig files = new();
+                using Barrier start = new(12);
+                Task<EngineTelemetryIdentity>[] creators = Enumerable.Range(0, 12).Select(_ =>
+                    Task.Factory.StartNew(() =>
                     {
-                        throw new TimeoutException("Synthetic concurrent start did not complete.");
-                    }
+                        if (!start.SignalAndWait(TimeSpan.FromSeconds(10)))
+                        {
+                            throw new TimeoutException("Synthetic concurrent start did not complete.");
+                        }
 
-                    return ResolveEnabled(files.ConfigPath);
-                }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
+                        return ResolveEnabled(files.ConfigPath);
+                    }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
 
-            EngineTelemetryIdentity[] identities = await Task.WhenAll(creators).WaitAsync(TimeSpan.FromSeconds(30));
+                EngineTelemetryIdentity[] identities = await Task.WhenAll(creators).WaitAsync(TimeSpan.FromSeconds(30));
 
-            Assert.AreEqual(1, identities.Count(identity => identity.Stability == "newly_saved"));
-            Assert.AreEqual(11, identities.Count(identity => identity.Stability == "reused"));
-            Assert.AreEqual(1, identities.Select(identity => identity.ApiId).Distinct().Count());
-            AssertRandomGuid(identities[0].ApiId);
-            byte[] winnerBytes = File.ReadAllBytes(files.SidecarPath);
-            EngineTelemetryIdentity subsequent = ResolveEnabled(files.ConfigPath);
-            Assert.AreEqual("reused", subsequent.Stability);
-            Assert.AreEqual(identities[0].ApiId, subsequent.ApiId);
-            CollectionAssert.AreEqual(winnerBytes, File.ReadAllBytes(files.SidecarPath));
-            CollectionAssert.AreEquivalent(new[] { files.ConfigPath, files.SidecarPath }, Directory.GetFiles(files.DirectoryPath));
+                Assert.AreEqual(1, identities.Count(identity => identity.Stability == "newly_saved"), $"Iteration {iteration}.");
+                Assert.AreEqual(11, identities.Count(identity => identity.Stability == "reused"), $"Iteration {iteration}.");
+                Assert.AreEqual(1, identities.Select(identity => identity.ApiId).Distinct().Count(), $"Iteration {iteration}.");
+                AssertRandomGuid(identities[0].ApiId);
+                byte[] winnerBytes = File.ReadAllBytes(files.SidecarPath);
+                EngineTelemetryIdentity subsequent = ResolveEnabled(files.ConfigPath);
+                Assert.AreEqual("reused", subsequent.Stability);
+                Assert.AreEqual(identities[0].ApiId, subsequent.ApiId);
+                CollectionAssert.AreEqual(winnerBytes, File.ReadAllBytes(files.SidecarPath));
+                CollectionAssert.AreEquivalent(new[] { files.ConfigPath, files.SidecarPath }, Directory.GetFiles(files.DirectoryPath));
+            }
         }
 
         [TestMethod]

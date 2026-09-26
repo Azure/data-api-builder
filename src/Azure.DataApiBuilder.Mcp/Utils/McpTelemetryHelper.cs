@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
@@ -302,11 +303,15 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 httpContext = services.GetService<IHttpContextAccessor>()?.HttpContext;
             }
 
+            // Preserve HTTP header cardinality: joining multiple values would invent a
+            // custom role instead of marking the ambiguous input as unknown.
+            StringValues roleHeader = httpContext?.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] ?? StringValues.Empty;
             string? role = isStdio
                 ? configuration?.GetValue<string>("MCP:Role")
-                : httpContext?.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
-            EngineTelemetryRole roleClass = EngineTelemetrySession.ClassifyRole(
-                role, httpContext?.User.Identity?.IsAuthenticated == true);
+                : roleHeader.Count == 1 ? roleHeader[0] : null;
+            EngineTelemetryRole roleClass = roleHeader.Count > 1
+                ? EngineTelemetryRole.Unknown
+                : EngineTelemetrySession.ClassifyRole(role, httpContext?.User.Identity?.IsAuthenticated == true);
             EngineTelemetryTransport transport = EngineTelemetryTransport.InProcess;
             if (isStdio)
             {

@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
@@ -138,6 +139,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
             catch (Exception ex)
             {
+                // Keep serving the previous registry, while preserving the failed attempt's
+                // telemetry epoch rather than accepting a partially refreshed generation.
+                TelemetryFailureContext.Current?.RecordFailure(TelemetryFailureStage.Serving);
                 _logger.LogError(
                     ex,
                     "Failed to refresh the MCP tool registry after a runtime configuration change. " +

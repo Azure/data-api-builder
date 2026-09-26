@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
@@ -28,35 +29,48 @@ namespace Azure.DataApiBuilder.Service.Utilities
         {
             ArgumentNullException.ThrowIfNull(serviceProvider);
 
-            FileSystemRuntimeConfigLoader configLoader =
-                serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>();
-            RuntimeConfig? initializedConfig = null;
-
-            await configLoader.ExecuteWithHotReloadSerializationAsync(async cancellationToken =>
+            TelemetryFailureStage stage = TelemetryFailureStage.Configuration;
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                RuntimeConfigProvider runtimeConfigProvider =
-                    serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                initializedConfig = runtimeConfigProvider.GetConfig();
+                FileSystemRuntimeConfigLoader configLoader =
+                    serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>();
+                RuntimeConfig? initializedConfig = null;
 
-                RuntimeConfigValidator runtimeConfigValidator =
-                    serviceProvider.GetRequiredService<RuntimeConfigValidator>();
-                runtimeConfigValidator.ValidateConfigProperties();
+                await configLoader.ExecuteWithHotReloadSerializationAsync(async cancellationToken =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    RuntimeConfigProvider runtimeConfigProvider =
+                        serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                    initializedConfig = runtimeConfigProvider.GetConfig();
 
-                IMetadataProviderFactory metadataProviderFactory =
-                    serviceProvider.GetRequiredService<IMetadataProviderFactory>();
-                await metadataProviderFactory
-                    .InitializeAsync(cancellationToken)
-                    .ConfigureAwait(false);
+                    stage = TelemetryFailureStage.Validation;
+                    RuntimeConfigValidator runtimeConfigValidator =
+                        serviceProvider.GetRequiredService<RuntimeConfigValidator>();
+                    runtimeConfigValidator.ValidateConfigProperties();
 
-                // MCP services are absent when MCP was disabled at startup.
-                cancellationToken.ThrowIfCancellationRequested();
-                IMcpToolRegistryRefreshService? mcpToolRegistryRefreshService =
-                    serviceProvider.GetService<IMcpToolRegistryRefreshService>();
-                mcpToolRegistryRefreshService?.EnsureInitialized(cancellationToken);
-            }).ConfigureAwait(false);
+                    stage = TelemetryFailureStage.Metadata;
+                    IMetadataProviderFactory metadataProviderFactory =
+                        serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+                    await metadataProviderFactory
+                        .InitializeAsync(cancellationToken)
+                        .ConfigureAwait(false);
 
-            return initializedConfig!;
+                    // MCP services are absent when MCP was disabled at startup.
+                    stage = TelemetryFailureStage.Serving;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    IMcpToolRegistryRefreshService? mcpToolRegistryRefreshService =
+                        serviceProvider.GetService<IMcpToolRegistryRefreshService>();
+                    mcpToolRegistryRefreshService?.EnsureInitialized(cancellationToken);
+                }).ConfigureAwait(false);
+
+                return initializedConfig!;
+            }
+            catch (Exception)
+            {
+                // The caller owns this attempt and its event; preserve the original exception.
+                TelemetryFailureContext.Current?.RecordFailure(stage);
+                throw;
+            }
         }
     }
 }

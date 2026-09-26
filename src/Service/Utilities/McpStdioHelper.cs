@@ -8,7 +8,11 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Telemetry;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -92,6 +96,10 @@ namespace Azure.DataApiBuilder.Service.Utilities
         /// reported, which Program.Main surfaces as a non-zero exit code.</returns>
         public static bool RunMcpStdioHost(IHost host)
         {
+            EngineTelemetrySession? productTelemetry = host.Services.GetService<EngineTelemetrySession>();
+            TelemetryFailureContext? failure = productTelemetry?.IsEnabled == true ? TelemetryFailureContext.Current ?? new() : null;
+            using IDisposable? failureScope = TelemetryFailureContext.Enter(failure);
+            TelemetryFailureStage stage = TelemetryFailureStage.Configuration;
             try
             {
                 // This process entry point is deliberately synchronous and runs without an
@@ -106,17 +114,39 @@ namespace Azure.DataApiBuilder.Service.Utilities
                     .GetAwaiter()
                     .GetResult();
 
+                stage = TelemetryFailureStage.Serving;
+                // Resolve every required serving dependency before readiness. Shared runtime
+                // initialization intentionally allows MCP-disabled HTTP configurations, but a
+                // stdio process cannot serve without its registry/server.
                 IHostApplicationLifetime lifetime =
                     host.Services.GetRequiredService<IHostApplicationLifetime>();
                 IMcpStdioServer stdio =
                     host.Services.GetRequiredService<IMcpStdioServer>();
+                RuntimeConfigProvider? configuration = host.Services.GetService<RuntimeConfigProvider>();
+                if (productTelemetry is not null && configuration?.TryGetLoadedConfig(out Config.ObjectModel.RuntimeConfig? runtimeConfig) == true)
+                {
+                    productTelemetry.AcceptConfiguration(runtimeConfig!, "startup", configuration.ConfigFilePath, onlyIfUnconfigured: true);
+                    host.Services.GetService<EngineTelemetryHosting>()?.StartAsync(default).GetAwaiter().GetResult();
+                    productTelemetry.MarkHostReady();
+                }
 
                 stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
 
                 return true;
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException)
             {
+                // Record pre-ready cancellation before finally stops/disables the session.
+                // StartupFailed is a no-op once ready; normal loop cancellation is not a
+                // startup failure. Preserve propagation to Program's existing handler.
+                failure?.RecordFailure(stage);
+                productTelemetry?.StartupFailed(failure?.FailureStage ?? stage);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failure?.RecordFailure(stage);
+                productTelemetry?.StartupFailed(failure?.FailureStage ?? stage);
                 // Mirrors Startup.PerformOnConfigChangeAsync: report and return false instead of letting
                 // the exception escape a method whose contract is a bool, and Program.Main turns that
                 // false into ExitCode -1. Cancellation is left to Program.StartEngine's own handler.
@@ -144,29 +174,41 @@ namespace Azure.DataApiBuilder.Service.Utilities
             }
             finally
             {
-                FileSystemRuntimeConfigLoader? configLoader =
-                    host.Services.GetService<FileSystemRuntimeConfigLoader>();
-                if (configLoader is not null)
+                try
                 {
-                    TimeSpan shutdownTimeout = host.Services
-                        .GetService<IOptions<HostOptions>>()?
-                        .Value.ShutdownTimeout ?? new HostOptions().ShutdownTimeout;
-                    using CancellationTokenSource shutdownCancellation = new(shutdownTimeout);
-                    try
+                    FileSystemRuntimeConfigLoader? configLoader =
+                        host.Services.GetService<FileSystemRuntimeConfigLoader>();
+                    if (configLoader is not null)
                     {
-                        configLoader
-                            .StopAsync(shutdownCancellation.Token)
-                            .GetAwaiter()
-                            .GetResult();
-                    }
-                    catch (OperationCanceledException)
-                        when (shutdownCancellation.IsCancellationRequested)
-                    {
-                        // Match Generic Host shutdown semantics: cancellation bounds the drain.
+                        TimeSpan shutdownTimeout = host.Services
+                            .GetService<IOptions<HostOptions>>()?
+                            .Value.ShutdownTimeout ?? new HostOptions().ShutdownTimeout;
+                        using CancellationTokenSource shutdownCancellation = new(shutdownTimeout);
+                        try
+                        {
+                            configLoader
+                                .StopAsync(shutdownCancellation.Token)
+                                .GetAwaiter()
+                                .GetResult();
+                        }
+                        catch (OperationCanceledException)
+                            when (shutdownCancellation.IsCancellationRequested)
+                        {
+                            // Match Generic Host shutdown semantics: cancellation bounds the drain.
+                        }
                     }
                 }
-
-                host.Dispose();
+                finally
+                {
+                    try
+                    {
+                        productTelemetry?.StopAsync().GetAwaiter().GetResult();
+                    }
+                    finally
+                    {
+                        host.Dispose();
+                    }
+                }
             }
         }
     }

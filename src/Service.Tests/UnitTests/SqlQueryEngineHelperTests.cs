@@ -47,8 +47,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// An empty cached read produces an undefined JsonElement, which must return null
-        /// instead of throwing during serialization.
+        /// ParseResultIntoJsonDocument must return null for an undefined JsonElement from an empty cached read
+        /// to avoid a serialization exception.
         /// </summary>
         [TestMethod]
         public void ParseResultIntoJsonDocument_UndefinedElement_ReturnsNull()

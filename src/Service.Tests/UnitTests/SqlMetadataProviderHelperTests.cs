@@ -8,6 +8,7 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
+using System.Threading;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -241,7 +242,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             MsSqlMetadataProvider provider = CreateProvider();
 
-            System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)GetMsSqlMethod("GenerateAutoentitiesIntoEntities")
+            System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)GetMsSqlMethod(
+                "GenerateAutoentitiesIntoEntities", typeof(IReadOnlyDictionary<string, Autoentity>))
                 .Invoke(provider, new object?[] { null })!;
 
             await task;
@@ -257,7 +259,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 ["all"] = new Autoentity(null, null, null)
             };
 
-            System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)GetMsSqlMethod("GenerateAutoentitiesIntoEntities")
+            System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)GetMsSqlMethod(
+                "GenerateAutoentitiesIntoEntities", typeof(IReadOnlyDictionary<string, Autoentity>))
                 .Invoke(provider, new object?[] { autoentities })!;
 
             DataApiBuilderException exception = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() => task);
@@ -278,7 +281,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 ["all"] = new Autoentity(null, null, null)
             };
 
-            System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)GetMsSqlMethod("GenerateAutoentitiesIntoEntities")
+            System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)GetMsSqlMethod(
+                "GenerateAutoentitiesIntoEntities", typeof(IReadOnlyDictionary<string, Autoentity>))
                 .Invoke(provider, new object?[] { autoentities })!;
 
             await task;
@@ -360,7 +364,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "Book", "Author", "dbo.book_authors", new Dictionary<string, DatabaseObject>()
             });
 
-            MethodInfo generateAutoentities = GetBaseMethod("GenerateAutoentitiesIntoEntities");
+            MethodInfo generateAutoentities = GetBaseMethod(
+                "GenerateAutoentitiesIntoEntities", typeof(IReadOnlyDictionary<string, Autoentity>));
             TargetInvocationException exception = Assert.ThrowsException<TargetInvocationException>(
                 () => generateAutoentities.Invoke(provider, new object?[] { null }));
             Assert.IsInstanceOfType<NotSupportedException>(exception.InnerException);
@@ -401,7 +406,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)method.Invoke(provider, new object[]
             {
-                procedure, "Book", "dbo", "get_books", new StoredProcedureDefinition()
+                procedure, "Book", "dbo", "get_books", new StoredProcedureDefinition(), CancellationToken.None
             })!;
 
             DataApiBuilderException exception =
@@ -489,11 +494,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             (Dictionary<string, Dictionary<string, string>>)typeof(MsSqlMetadataProvider).BaseType!
                 .GetField($"<{propertyName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(provider)!;
 
-        private static MethodInfo GetBaseMethod(string methodName) =>
-            typeof(MsSqlMetadataProvider).BaseType!.GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)!;
+        private static MethodInfo GetBaseMethod(string methodName, params Type[] parameterTypes) =>
+            parameterTypes.Length == 0
+                ? typeof(MsSqlMetadataProvider).BaseType!.GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)!
+                : typeof(MsSqlMetadataProvider).BaseType!.GetMethod(
+                    methodName, BindingFlags.Instance | BindingFlags.NonPublic, parameterTypes)!;
 
-        private static MethodInfo GetMsSqlMethod(string methodName) =>
-            typeof(MsSqlMetadataProvider).GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)!;
+        private static MethodInfo GetMsSqlMethod(string methodName, params Type[] parameterTypes) =>
+            parameterTypes.Length == 0
+                ? typeof(MsSqlMetadataProvider).GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)!
+                : typeof(MsSqlMetadataProvider).GetMethod(
+                    methodName, BindingFlags.Instance | BindingFlags.NonPublic, parameterTypes)!;
 
         private static void ConfigureAutoentityQuery(MsSqlMetadataProvider provider, JsonArray result)
         {
@@ -503,6 +514,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     It.IsAny<IDictionary<string, DbConnectionParam>>(),
                     It.IsAny<Func<System.Data.Common.DbDataReader, List<string>?, System.Threading.Tasks.Task<JsonArray>>>(),
                     It.IsAny<string>(),
+                    It.IsAny<CancellationToken>(),
                     It.IsAny<Microsoft.AspNetCore.Http.HttpContext>(),
                     It.IsAny<List<string>>()))
                 .ReturnsAsync(result);

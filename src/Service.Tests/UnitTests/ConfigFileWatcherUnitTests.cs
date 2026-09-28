@@ -1,15 +1,23 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Service.Utilities;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
 
@@ -157,6 +165,617 @@ public class ConfigFileWatcherUnitTests
         {
             File.Delete(configName);
         }
+    }
+
+    [TestMethod]
+    public async Task ConcurrentHotReloadNotifications_SerializeCompletePipelines()
+    {
+        string testDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dab-config-reload-serialization-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(testDirectory);
+        string configPath = Path.Combine(testDirectory, "dab-config.json");
+        FileSystem fileSystem = new();
+        fileSystem.File.WriteAllText(
+            configPath,
+            GenerateRuntimeSectionStringFromParams(
+                restPath: "/initial",
+                gqlPath: "/graphql",
+                restEnabled: true,
+                gqlEnabled: true,
+                gqlIntrospection: true,
+                mode: HostMode.Development));
+
+        HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
+        using FileSystemRuntimeConfigLoader configLoader = new(
+            fileSystem,
+            hotReloadEventHandler,
+            configPath,
+            connectionString: string.Empty,
+            isCliLoader: true);
+        Assert.IsTrue(configLoader.TryLoadKnownConfig(out _));
+
+        string[] orderedEvents =
+        {
+            QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED,
+            METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED,
+            QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED,
+            MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED,
+            DOCUMENTOR_ON_CONFIG_CHANGED,
+            AUTHZ_RESOLVER_ON_CONFIG_CHANGED,
+            MCP_TOOL_REGISTRY_ON_CONFIG_CHANGED,
+            GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED,
+            GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED,
+            GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED,
+            LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE
+        };
+        List<string> observedEvents = new();
+        object observedEventsLock = new();
+        using ManualResetEventSlim generationAEnteredPipeline = new();
+        using ManualResetEventSlim releaseGenerationA = new();
+        using ManualResetEventSlim generationBReachedGate = new();
+
+        foreach (string eventName in orderedEvents)
+        {
+            hotReloadEventHandler.Subscribe(eventName, (_, args) =>
+            {
+                string generation = configLoader.RuntimeConfig!.Runtime!.Rest!.Path;
+                lock (observedEventsLock)
+                {
+                    observedEvents.Add($"{generation}:{args.EventName}");
+                }
+
+                if (string.Equals(generation, "/generation-a", StringComparison.Ordinal) &&
+                    string.Equals(args.EventName, QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, StringComparison.Ordinal))
+                {
+                    generationAEnteredPipeline.Set();
+                    if (!releaseGenerationA.Wait(TimeSpan.FromSeconds(10)))
+                    {
+                        throw new TimeoutException("Timed out waiting to release generation A.");
+                    }
+                }
+            });
+        }
+
+        Task reloadA = Task.CompletedTask;
+        Task reloadB = Task.CompletedTask;
+        try
+        {
+            fileSystem.File.WriteAllText(
+                configPath,
+                GenerateRuntimeSectionStringFromParams(
+                    restPath: "/generation-a",
+                    gqlPath: "/graphql",
+                    restEnabled: true,
+                    gqlEnabled: true,
+                    gqlIntrospection: true,
+                    mode: HostMode.Development));
+            reloadA = Task.Run(() => configLoader.ProcessHotReloadNotification());
+            Assert.IsTrue(
+                generationAEnteredPipeline.Wait(TimeSpan.FromSeconds(10)),
+                "Generation A did not reach its first ordered handler.");
+
+            fileSystem.File.WriteAllText(
+                configPath,
+                GenerateRuntimeSectionStringFromParams(
+                    restPath: "/generation-b",
+                    gqlPath: "/graphql",
+                    restEnabled: true,
+                    gqlEnabled: true,
+                    gqlIntrospection: true,
+                    mode: HostMode.Development));
+            reloadB = Task.Run(() => configLoader.ProcessHotReloadNotification(
+                beforeEnteringGate: generationBReachedGate.Set));
+            Assert.IsTrue(
+                generationBReachedGate.Wait(TimeSpan.FromSeconds(10)),
+                "Generation B did not reach the loader serialization gate.");
+
+            Assert.AreEqual(
+                "/generation-a",
+                configLoader.RuntimeConfig!.Runtime!.Rest!.Path,
+                "Generation B must not replace RuntimeConfig while generation A handlers are running.");
+
+            releaseGenerationA.Set();
+            await Task.WhenAll(reloadA, reloadB).WaitAsync(TimeSpan.FromSeconds(10));
+
+            string[] expectedEvents = orderedEvents
+                .Select(eventName => $"/generation-a:{eventName}")
+                .Concat(orderedEvents.Select(eventName => $"/generation-b:{eventName}"))
+                .ToArray();
+            string[] actualEvents;
+            lock (observedEventsLock)
+            {
+                actualEvents = observedEvents.ToArray();
+            }
+
+            CollectionAssert.AreEqual(
+                expectedEvents,
+                actualEvents,
+                "Every generation A handler must finish before generation B starts its pipeline.");
+            Assert.AreEqual("/generation-b", configLoader.RuntimeConfig!.Runtime!.Rest!.Path);
+        }
+        finally
+        {
+            releaseGenerationA.Set();
+            await Task.WhenAll(reloadA, reloadB).WaitAsync(TimeSpan.FromSeconds(10));
+            Directory.Delete(testDirectory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task StopAsync_CancelsAndDrainsActiveReloadBeforeReturning()
+    {
+        string testDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dab-config-dispose-during-reload-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(testDirectory);
+        string configPath = Path.Combine(testDirectory, "dab-config.json");
+        FileSystem fileSystem = new();
+        fileSystem.File.WriteAllText(
+            configPath,
+            GenerateRuntimeSectionStringFromParams(
+                restPath: "/initial",
+                gqlPath: "/graphql",
+                restEnabled: true,
+                gqlEnabled: true,
+                gqlIntrospection: true,
+                mode: HostMode.Development));
+
+        HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
+        BlockingDisposeConfigFileWatcher configFileWatcher = new();
+        FileSystemRuntimeConfigLoader configLoader = new(
+            fileSystem,
+            hotReloadEventHandler,
+            configPath,
+            connectionString: string.Empty,
+            isCliLoader: false,
+            logger: null,
+            configFileWatcherFactory: (_, _, _) => configFileWatcher);
+        Assert.IsTrue(configLoader.TryLoadKnownConfig(out _));
+
+        using ManualResetEventSlim reloadHandlerEntered = new();
+        using ManualResetEventSlim reloadCancellationObserved = new();
+        using ManualResetEventSlim releaseReloadHandler = new();
+        using ManualResetEventSlim queuedReloadReachedGate = new();
+        int laterHandlerInvocationCount = 0;
+        hotReloadEventHandler.Subscribe(
+            METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED,
+            (_, args) =>
+            {
+                reloadHandlerEntered.Set();
+                if (!args.CancellationToken.WaitHandle.WaitOne(TimeSpan.FromSeconds(10)))
+                {
+                    throw new TimeoutException("Timed out waiting for reload cancellation.");
+                }
+
+                reloadCancellationObserved.Set();
+                if (!releaseReloadHandler.Wait(TimeSpan.FromSeconds(10)))
+                {
+                    throw new TimeoutException("Timed out waiting to release the simulated metadata refresh.");
+                }
+            });
+        hotReloadEventHandler.Subscribe(
+            MCP_TOOL_REGISTRY_ON_CONFIG_CHANGED,
+            (_, _) => Interlocked.Increment(ref laterHandlerInvocationCount));
+
+        Task activeReload = Task.CompletedTask;
+        Task queuedReload = Task.CompletedTask;
+        Task stopTask = Task.CompletedTask;
+        try
+        {
+            fileSystem.File.WriteAllText(
+                configPath,
+                GenerateRuntimeSectionStringFromParams(
+                    restPath: "/blocked",
+                    gqlPath: "/graphql",
+                    restEnabled: true,
+                    gqlEnabled: true,
+                    gqlIntrospection: true,
+                    mode: HostMode.Development));
+            activeReload = Task.Run(() => configLoader.ProcessHotReloadNotification());
+            Assert.IsTrue(
+                reloadHandlerEntered.Wait(TimeSpan.FromSeconds(5)),
+                "The hot-reload pipeline did not reach the blocking metadata handler.");
+
+            queuedReload = Task.Run(() => configLoader.ProcessHotReloadNotification(
+                beforeEnteringGate: queuedReloadReachedGate.Set));
+            Assert.IsTrue(
+                queuedReloadReachedGate.Wait(TimeSpan.FromSeconds(5)),
+                "The queued callback did not reach the serialization gate.");
+
+            stopTask = configLoader.StopAsync(CancellationToken.None);
+            Assert.IsTrue(
+                reloadCancellationObserved.Wait(TimeSpan.FromSeconds(5)),
+                "Shutdown cancellation did not reach the active metadata handler.");
+            Assert.IsTrue(
+                configFileWatcher.StopWatchingCalled.Wait(TimeSpan.FromSeconds(1)),
+                "Shutdown must synchronously disable the watcher.");
+            Assert.IsTrue(
+                configFileWatcher.DisposeEntered.Wait(TimeSpan.FromSeconds(5)),
+                "Watcher resource disposal was not scheduled.");
+            Assert.IsFalse(
+                configFileWatcher.DisposeCompleted.IsSet,
+                "Loader disposal must not wait for potentially blocking watcher resource cleanup.");
+            Assert.AreSame(
+                queuedReload,
+                await Task.WhenAny(queuedReload, Task.Delay(TimeSpan.FromSeconds(1))),
+                "A callback waiting on the serialization gate must be canceled during shutdown.");
+            Assert.IsFalse(
+                stopTask.IsCompleted,
+                "Shutdown must drain the active reload before host-owned dependencies can be disposed.");
+            Assert.IsFalse(
+                configLoader.ShutdownResourcesDisposed,
+                "Synchronization resources cannot be disposed while a gate owner is still active.");
+            Assert.AreEqual(
+                0,
+                Volatile.Read(ref laterHandlerInvocationCount),
+                "Cancellation must prevent later ordered handlers from running.");
+
+            releaseReloadHandler.Set();
+            await Task.WhenAll(activeReload, queuedReload, stopTask).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.IsTrue(
+                configLoader.ShutdownResourcesDisposed,
+                "StopAsync must dispose loader-owned synchronization resources after the drain.");
+            Assert.AreEqual(
+                0,
+                Volatile.Read(ref laterHandlerInvocationCount),
+                "No later ordered handler may run after shutdown cancellation.");
+            Assert.AreEqual(
+                "/blocked",
+                configLoader.RuntimeConfig!.Runtime!.Rest!.Path,
+                "A callback queued before shutdown must exit without loading another generation.");
+        }
+        finally
+        {
+            releaseReloadHandler.Set();
+            configFileWatcher.ReleaseDispose.Set();
+            await configLoader.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+            await Task.WhenAll(activeReload, queuedReload, stopTask).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.IsTrue(
+                configFileWatcher.DisposeCompleted.Wait(TimeSpan.FromSeconds(5)),
+                "The watcher disposal worker did not finish after it was released.");
+            Directory.Delete(testDirectory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task Dispose_IsNonBlockingAndEventuallyDisposesOwnedResources()
+    {
+        FileSystemRuntimeConfigLoader configLoader = new(
+            new FileSystem(),
+            isCliLoader: true);
+        TaskCompletionSource operationEntered = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseOperation = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        Task activeOperation = configLoader.ExecuteWithHotReloadSerializationAsync(
+            async _ =>
+            {
+                operationEntered.TrySetResult();
+                await releaseOperation.Task.ConfigureAwait(false);
+            });
+
+        try
+        {
+            await operationEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Task disposeCall = Task.Run(configLoader.Dispose);
+            await disposeCall.WaitAsync(TimeSpan.FromSeconds(1));
+
+            Assert.IsFalse(
+                configLoader.ShutdownResourcesDisposed,
+                "Dispose must not tear down synchronization resources while admitted work remains.");
+        }
+        finally
+        {
+            releaseOperation.TrySetResult();
+            await activeOperation.WaitAsync(TimeSpan.FromSeconds(5));
+            await configLoader.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        Assert.IsTrue(
+            configLoader.ShutdownResourcesDisposed,
+            "Dispose must eventually release loader-owned synchronization resources.");
+    }
+
+    [TestMethod]
+    public async Task HostShutdown_DrainsReloadBeforeHostedServicesAndDependenciesStop()
+    {
+        string testDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dab-config-host-shutdown-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(testDirectory);
+        string configPath = Path.Combine(testDirectory, "dab-config.json");
+        FileSystem fileSystem = new();
+        fileSystem.File.WriteAllText(
+            configPath,
+            GenerateRuntimeSectionStringFromParams(
+                restPath: "/initial",
+                gqlPath: "/graphql",
+                restEnabled: true,
+                gqlEnabled: true,
+                gqlIntrospection: true,
+                mode: HostMode.Development));
+
+        HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
+        FileSystemRuntimeConfigLoader configLoader = new(
+            fileSystem,
+            hotReloadEventHandler,
+            configPath,
+            connectionString: string.Empty,
+            isCliLoader: true);
+        Assert.IsTrue(configLoader.TryLoadKnownConfig(out _));
+
+        ReloadDependency dependency = new();
+        using ManualResetEventSlim reloadHandlerEntered = new();
+        using ManualResetEventSlim reloadCancellationObserved = new();
+        hotReloadEventHandler.Subscribe(
+            METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED,
+            (_, args) => dependency.RunUntilCanceled(
+                args.CancellationToken,
+                reloadHandlerEntered,
+                reloadCancellationObserved));
+
+        Task activeReload = Task.CompletedTask;
+        HostedServiceStopObserver stopObserver = new(() => activeReload.IsCompleted);
+        IHost host = new HostBuilder()
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton(configLoader);
+                services.AddSingleton(_ => dependency);
+                services.AddSingleton<IHostedService>(stopObserver);
+                services.AddSingleton<RuntimeConfigLoaderShutdownService>();
+                services.AddSingleton<IHostedService>(serviceProvider =>
+                    serviceProvider.GetRequiredService<RuntimeConfigLoaderShutdownService>());
+            })
+            .Build();
+
+        try
+        {
+            Assert.AreSame(dependency, host.Services.GetRequiredService<ReloadDependency>());
+            await host.StartAsync();
+            fileSystem.File.WriteAllText(
+                configPath,
+                GenerateRuntimeSectionStringFromParams(
+                    restPath: "/active",
+                    gqlPath: "/graphql",
+                    restEnabled: true,
+                    gqlEnabled: true,
+                    gqlIntrospection: true,
+                    mode: HostMode.Development));
+            activeReload = Task.Run(() => configLoader.ProcessHotReloadNotification());
+            Assert.IsTrue(
+                reloadHandlerEntered.Wait(TimeSpan.FromSeconds(5)),
+                "The active reload did not reach its dependency.");
+
+            await host.StopAsync().WaitAsync(TimeSpan.FromSeconds(5));
+
+            Assert.IsTrue(
+                reloadCancellationObserved.IsSet,
+                "Hosted shutdown did not cancel the active reload.");
+            Assert.IsTrue(activeReload.IsCompleted, "Hosted shutdown returned before reload drain.");
+            Assert.IsTrue(
+                stopObserver.ReloadWasDrained,
+                "The loader drain must run before earlier hosted services stop.");
+            Assert.IsFalse(
+                dependency.IsDisposed,
+                "Host stopping must drain reload work before singleton disposal begins.");
+        }
+        finally
+        {
+            await configLoader.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+            await activeReload.WaitAsync(TimeSpan.FromSeconds(5));
+            host.Dispose();
+            Assert.IsTrue(dependency.IsDisposed, "Root provider disposal did not dispose the dependency.");
+            Assert.IsFalse(
+                dependency.WasUsedAfterDisposal,
+                "An active reload accessed a dependency after root provider disposal.");
+            Directory.Delete(testDirectory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task ShutdownService_HonorsHostCancellationForUncooperativeHandler()
+    {
+        string testDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dab-config-host-timeout-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(testDirectory);
+        string configPath = Path.Combine(testDirectory, "dab-config.json");
+        FileSystem fileSystem = new();
+        fileSystem.File.WriteAllText(
+            configPath,
+            GenerateRuntimeSectionStringFromParams(
+                restPath: "/initial",
+                gqlPath: "/graphql",
+                restEnabled: true,
+                gqlEnabled: true,
+                gqlIntrospection: true,
+                mode: HostMode.Development));
+
+        HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
+        FileSystemRuntimeConfigLoader configLoader = new(
+            fileSystem,
+            hotReloadEventHandler,
+            configPath,
+            connectionString: string.Empty,
+            isCliLoader: true);
+        Assert.IsTrue(configLoader.TryLoadKnownConfig(out _));
+
+        using ManualResetEventSlim handlerEntered = new();
+        using ManualResetEventSlim releaseHandler = new();
+        hotReloadEventHandler.Subscribe(
+            METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED,
+            (_, _) =>
+            {
+                handlerEntered.Set();
+                if (!releaseHandler.Wait(TimeSpan.FromSeconds(10)))
+                {
+                    throw new TimeoutException("Timed out waiting to release the handler.");
+                }
+            });
+
+        Task activeReload = Task.CompletedTask;
+        try
+        {
+            fileSystem.File.WriteAllText(
+                configPath,
+                GenerateRuntimeSectionStringFromParams(
+                    restPath: "/active",
+                    gqlPath: "/graphql",
+                    restEnabled: true,
+                    gqlEnabled: true,
+                    gqlIntrospection: true,
+                    mode: HostMode.Development));
+            activeReload = Task.Run(() => configLoader.ProcessHotReloadNotification());
+            Assert.IsTrue(
+                handlerEntered.Wait(TimeSpan.FromSeconds(5)),
+                "The active reload did not reach the uncooperative handler.");
+
+            RuntimeConfigLoaderShutdownService shutdownService = new(configLoader);
+            using CancellationTokenSource hostCancellation = new();
+            Task stopTask = shutdownService.StopAsync(hostCancellation.Token);
+            Assert.IsFalse(
+                stopTask.IsCompleted,
+                "The drain should still be waiting before the host timeout expires.");
+
+            hostCancellation.Cancel();
+            try
+            {
+                await stopTask.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.Fail("Hosted shutdown should observe the host cancellation token.");
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected: the configured host shutdown bound expired.
+            }
+
+            Assert.IsFalse(
+                activeReload.IsCompleted,
+                "Host timeout must not falsely report that an uncooperative handler was drained.");
+        }
+        finally
+        {
+            releaseHandler.Set();
+            await activeReload.WaitAsync(TimeSpan.FromSeconds(5));
+            await configLoader.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+            configLoader.Dispose();
+            Directory.Delete(testDirectory, recursive: true);
+        }
+    }
+
+    private sealed class ReloadDependency : IDisposable
+    {
+        private int _disposed;
+        private int _usedAfterDisposal;
+
+        public bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+        public bool WasUsedAfterDisposal => Volatile.Read(ref _usedAfterDisposal) != 0;
+
+        public void RunUntilCanceled(
+            CancellationToken cancellationToken,
+            ManualResetEventSlim entered,
+            ManualResetEventSlim cancellationObserved)
+        {
+            if (IsDisposed)
+            {
+                Interlocked.Exchange(ref _usedAfterDisposal, 1);
+            }
+
+            entered.Set();
+            cancellationToken.WaitHandle.WaitOne();
+            cancellationObserved.Set();
+
+            if (IsDisposed)
+            {
+                Interlocked.Exchange(ref _usedAfterDisposal, 1);
+            }
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _disposed, 1);
+        }
+    }
+
+    private sealed class HostedServiceStopObserver(Func<bool> isReloadDrained) : IHostedService
+    {
+        public bool ReloadWasDrained { get; private set; }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            ReloadWasDrained = isReloadDrained();
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class BlockingDisposeConfigFileWatcher : IConfigFileWatcher
+    {
+        public event EventHandler? NewFileContentsDetected
+        {
+            add { }
+            remove { }
+        }
+
+        public ManualResetEventSlim StopWatchingCalled { get; } = new();
+
+        public ManualResetEventSlim DisposeEntered { get; } = new();
+
+        public ManualResetEventSlim ReleaseDispose { get; } = new();
+
+        public ManualResetEventSlim DisposeCompleted { get; } = new();
+
+        public void StopWatching()
+        {
+            StopWatchingCalled.Set();
+        }
+
+        public void Dispose()
+        {
+            DisposeEntered.Set();
+            if (!ReleaseDispose.Wait(TimeSpan.FromSeconds(10)))
+            {
+                throw new TimeoutException("Timed out waiting to release watcher disposal.");
+            }
+
+            DisposeCompleted.Set();
+        }
+    }
+
+    [TestMethod]
+    public void ConfigFileWatcher_StopWatching_DisablesAndDetachesUnderlyingWatcher()
+    {
+        IFileSystem fileSystem = Mock.Of<IFileSystem>();
+        Mock.Get(fileSystem)
+            .Setup(fs => fs.File.Exists(It.IsAny<string>()))
+            .Returns(true);
+        Mock.Get(fileSystem)
+            .Setup(fs => fs.File.ReadAllBytes(It.IsAny<string>()))
+            .Returns(Encoding.UTF8.GetBytes("InitialValue"));
+        Mock<IFileSystemWatcher> fileSystemWatcher = new();
+        fileSystemWatcher
+            .Setup(watcher => watcher.FileSystem)
+            .Returns(fileSystem);
+        IConfigFileWatcher configFileWatcher = new ConfigFileWatcher(
+            fileSystemWatcher.Object,
+            Directory.GetCurrentDirectory(),
+            "dab-config.json");
+
+        configFileWatcher.StopWatching();
+        configFileWatcher.Dispose();
+
+        fileSystemWatcher.VerifySet(
+            watcher => watcher.EnableRaisingEvents = false,
+            Times.Once);
+        fileSystemWatcher.VerifyRemove(
+            watcher => watcher.Changed -= It.IsAny<FileSystemEventHandler>(),
+            Times.Once);
+        fileSystemWatcher.Verify(watcher => watcher.Dispose(), Times.Once);
     }
 
     #region ConfigFileWatcher NewFileContentsDetected event invocation tests

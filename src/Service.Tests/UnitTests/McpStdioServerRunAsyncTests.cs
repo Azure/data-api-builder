@@ -11,13 +11,12 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Service.Tests.Mcp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -170,7 +169,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Task runTask = server.RunAsync(CancellationToken.None);
 
             string initializeResponse = await stdoutCapture.FirstLineWritten.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            await metadataProviderFactory.InitializeStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await metadataProviderFactory.InitializationStarted.WaitAsync(TimeSpan.FromSeconds(5));
 
             using (JsonDocument response = JsonDocument.Parse(initializeResponse))
             {
@@ -227,44 +226,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 base.WriteLine(value);
                 LineCount++;
                 FirstLineWritten.TrySetResult(value ?? string.Empty);
-            }
-        }
-
-        private sealed class BlockingMetadataProviderFactory : IMetadataProviderFactory
-        {
-            private readonly TaskCompletionSource _completeInitialization =
-                new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            public TaskCompletionSource InitializeStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            public int InitializeAsyncCallCount { get; private set; }
-
-            public async Task InitializeAsync()
-            {
-                InitializeAsyncCallCount++;
-                InitializeStarted.TrySetResult();
-                await _completeInitialization.Task;
-            }
-
-            public void CompleteInitialization()
-            {
-                _completeInitialization.TrySetResult();
-            }
-
-            public ISqlMetadataProvider GetMetadataProvider(string dataSourceName)
-                => throw new NotImplementedException();
-
-            public IEnumerable<ISqlMetadataProvider> ListMetadataProviders()
-                => Array.Empty<ISqlMetadataProvider>();
-
-            public List<Exception> GetAllMetadataExceptions()
-                => new();
-
-            public void InitializeAsync(
-                Dictionary<string, Dictionary<string, DatabaseObject>> entityToDatabaseObjectMap,
-                Dictionary<string, Dictionary<string, string>> graphQLStoredProcedureExposedNameToEntityNameMap)
-            {
-                InitializeAsyncCallCount++;
             }
         }
 

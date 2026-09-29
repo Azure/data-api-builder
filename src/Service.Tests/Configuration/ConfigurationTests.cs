@@ -6671,30 +6671,39 @@ type Planet @model(name:""PlanetAlias"") {
         [TestCategory(TestCategory.MSSQL)]
         public async Task TestValidate_MultiConfigRootResolvingZero_ProducesRootScopedErrorAndValidChild()
         {
-            // Root autoentity matches nothing (resolves 0); child matches dbo.books (resolves).
-            (string rootConfigPath, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem) =
+            (string rootConfigPath, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem, string tempDir) =
                 ArrangeMultiConfigForMsSql();
 
-            // Point the loader at the root config and load through the provider so the child is merged.
-            loader.UpdateConfigFilePath(rootConfigPath);
-            RuntimeConfigProvider provider = new(loader);
-
             ILoggerFactory loggerFactory = new LoggerFactory();
-            RuntimeConfigValidator validator = new(
-                provider,
-                fileSystem,
-                loggerFactory.CreateLogger<RuntimeConfigValidator>(),
-                isValidateOnly: true);
+            try
+            {
+                loader.UpdateConfigFilePath(rootConfigPath);
+                RuntimeConfigProvider provider = new(loader);
 
-            // Runs metadata initialization (real autoentity resolution against MSSQL) + presence validation.
-            bool isValid = await validator.TryValidateConfig(rootConfigPath, loggerFactory);
-            Assert.IsTrue(isValid, "Validation should succeed");
+                RuntimeConfigValidator validator = new(
+                    provider,
+                    fileSystem,
+                    loggerFactory.CreateLogger<RuntimeConfigValidator>(),
+                    isValidateOnly: true);
 
-            List<Exception> presenceErrors = validator.ConfigValidationExceptions
-                .Where(e => e.Message.Contains("No entities found"))
-                .ToList();
-            Assert.AreEqual(0, presenceErrors.Count,
-                "Expected no errors to be found");
+                bool isValid = await validator.TryValidateConfig(rootConfigPath, loggerFactory);
+                Assert.IsTrue(isValid, "Validation should succeed");
+
+                List<Exception> presenceErrors = validator.ConfigValidationExceptions
+                    .Where(e => e.Message.Contains("No entities found"))
+                    .ToList();
+                Assert.AreEqual(0, presenceErrors.Count, "Expected no errors to be found");
+            }
+            finally
+            {
+                loggerFactory.Dispose();
+
+                // Guarantee cleanup so fixed-name/leftover files can never leak into another test or run.
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
         }
 
         /// <summary>
@@ -6706,14 +6715,18 @@ type Planet @model(name:""PlanetAlias"") {
         ///   <paramref name="rootPatternInclude"/>, and <c>data-source-files</c> pointing at the child.
         /// Returns the root config path plus a fresh loader and file system to drive validation.
         /// </summary>
-        private static (string RootConfigPath, FileSystemRuntimeConfigLoader ValidateLoader, IFileSystem FileSystem)
+        private static (string RootConfigPath, FileSystemRuntimeConfigLoader ValidateLoader, IFileSystem FileSystem, string tempDir)
             ArrangeMultiConfigForMsSql()
         {
             string connectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL);
-
-            // Use a real file system + temp directory so the RuntimeConfig constructor (which loads
-            // data-source-files through the real file system) can find and merge the child config.
             IFileSystem fileSystem = new FileSystem();
+
+            // Unique directory per invocation avoids cross-test/cross-run interference from leftover files.
+            string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dab-multiconfig-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            string rootConfigPath = System.IO.Path.Combine(tempDir, "dab-root.json");
+            string childConfigPath = System.IO.Path.Combine(tempDir, "dab-child.json");
 
             // Root: own MSSQL data source + autoentities (pattern controls whether it resolves) +
             // data-source-files pointing at the child.
@@ -6728,7 +6741,7 @@ type Planet @model(name:""PlanetAlias"") {
                     Mcp: new(),
                     Host: new(null, null, HostMode.Development)),
                 DataSourceFiles: new DataSourceFiles(new[] { "dab-child.json" }));
-            File.WriteAllText("dab-root.json", rootConfig.ToJson());
+            File.WriteAllText(rootConfigPath, rootConfig.ToJson());
 
             // Child: own MSSQL data source + autoentities matching a real table (dbo.books).
             RuntimeConfig childConfig = new(
@@ -6741,9 +6754,9 @@ type Planet @model(name:""PlanetAlias"") {
                     GraphQL: new(),
                     Mcp: new(),
                     Host: new(null, null, HostMode.Development)));
-            File.WriteAllText("dab-child.json", childConfig.ToJson());
+            File.WriteAllText(childConfigPath, childConfig.ToJson());
 
-            return ("dab-root.json", new FileSystemRuntimeConfigLoader(fileSystem), fileSystem);
+            return (rootConfigPath, new FileSystemRuntimeConfigLoader(fileSystem), fileSystem, tempDir);
         }
 
         /// <summary>

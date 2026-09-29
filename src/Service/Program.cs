@@ -178,7 +178,7 @@ namespace Azure.DataApiBuilder.Service
                     }
                 }
 
-                IHostBuilder hostBuilder = CreateHostBuilder(args, runMcpStdio, mcpRole, productTelemetry);
+                IHostBuilder hostBuilder = CreateHostBuilderCore(args, runMcpStdio, mcpRole, productTelemetry);
                 using IHost host = (configureHost is null ? hostBuilder : configureHost(hostBuilder)).Build();
 
                 if (runMcpStdio)
@@ -226,9 +226,11 @@ namespace Azure.DataApiBuilder.Service
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args, bool runMcpStdio, string? mcpRole)
-            => CreateHostBuilder(args, runMcpStdio, mcpRole, productTelemetry: null);
+            => CreateHostBuilderCore(args, runMcpStdio, mcpRole, productTelemetry: null);
 
-        internal static IHostBuilder CreateHostBuilder(string[] args, bool runMcpStdio, string? mcpRole, EngineTelemetrySession? productTelemetry)
+        // HostFactoryResolver discovers CreateHostBuilder by name, including nonpublic methods.
+        // Keep the engine-owned telemetry helper out of that convention-based lookup.
+        internal static IHostBuilder CreateHostBuilderCore(string[] args, bool runMcpStdio, string? mcpRole, EngineTelemetrySession? productTelemetry)
         {
             return Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration(builder =>

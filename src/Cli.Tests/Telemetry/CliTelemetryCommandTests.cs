@@ -10,6 +10,7 @@ using CommandLine;
 namespace Cli.Tests.Telemetry
 {
     [TestClass]
+    [TestCategory("CliTelemetry")]
     public class CliTelemetryCommandTests
     {
         private const string SENTINEL = "NEVER_COLLECT_c7d032_entity_path_connection_header_description";

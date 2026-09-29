@@ -24,9 +24,13 @@ This implementation adds CLI collection to the existing engine telemetry foundat
 6. Record command completion when the handler returns or an exception/cancellation is observed. Preserve return codes, output and thrown exceptions. A typed engine-startup-failure observation distinguishes the web host's legacy normal return after `StopApplication` from actual successful initialization. Export carries a typed terminal result separately from recoverable attempt failures: no schema is a telemetry failure even when the legacy exit code is zero, while a successful retry is still success.
 7. Gracefully drain only the owning queue, bounded to two seconds. Explicit disable discards without a final send.
 
+With deferred MCP stdio initialization, an early handshake is not engine readiness. The first tool list/call initializes metadata and publishes the registry; only successful completion accepts the serving model and marks telemetry ready. Failures remain cached protocol errors and produce one startup-failure observation; normal shutdown still preserves its exit code. Protocol-only sessions emit neither readiness nor data-use milestones.
+
 Asynchronous export helpers own one-shot launch reservations. Reserving creates no identity, event, worker or sender. Actual preflight-approved handoff may occur after ordinary command completion/disposal, using its original parent session and a later sequence. It owns a separate capacity-one queue; neither export nor the engine waits for telemetry. Explicit disable revokes all such reservations. Cancellation before the helper runs, or failed preflight, never emits intent. No nested `start` command event is manufactured. Existing export serving/retry/cancellation semantics are unchanged.
 
 The accepted configuration uses the actual CLI-selected root, including a generated merged root. There is no hash, child-source identity, or automatic join between independent root sidecars. Ambiguous command targets omit API linkage. The engine rechecks root consistency when accepting configuration; direct starts remain unlinked.
+
+Both identity stores share atomic Linux no-replace publication through `renameat2(RENAME_NOREPLACE)`, retaining Windows no-overwrite moves. Unsupported Linux publication never falls back to a check-then-replacing rename. The public service host-builder signature remains unchanged; its telemetry-aware helper is named `CreateHostBuilderCore` so ASP.NET's name-only discovery remains unambiguous.
 
 ## Requirements mapping
 

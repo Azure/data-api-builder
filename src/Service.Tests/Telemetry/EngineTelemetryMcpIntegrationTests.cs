@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
@@ -35,6 +36,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
     /// <summary>
     /// Exercises the real MCP wrapper, stdio server, DI scopes and enabled product session.
     /// Tool execution, config files, output, exporter, clock and identity are in-memory fakes.
+    /// A strict no-op metadata factory serves the pre-registered tools and already-ready session;
+    /// these are serving/telemetry tests, not coverage of metadata inference or bootstrap readiness.
     /// Mocked built-in names do not execute ReadRecordsTool or SQL; database-attempt scopes below
     /// are synthetic observations, not evidence of actual commands or database retries.
     /// </summary>
@@ -598,6 +601,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         {
             private readonly MockFileSystem _files = new();
             private readonly List<IMcpTool> _tools = new();
+            private readonly Mock<IMetadataProviderFactory> _metadataProviderFactory = new(MockBehavior.Strict);
             private readonly string _configPath = Path.Combine(Path.GetTempPath(), SENTINEL, "dab-config.json");
             private readonly FileSystemRuntimeConfigLoader _loader;
             private readonly IConfigurationRoot _configuration;
@@ -637,9 +641,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     ["MCP:Role"] = "anonymous"
                 }).Build();
                 Stdout = new(Output);
+                // The real server now requires lazy metadata initialization even when tools
+                // are pre-registered. Only that dependency is faked; keep the fixture's existing
+                // accepted config and ready epoch, and reject any other metadata operation.
+                _metadataProviderFactory.Setup(factory => factory.InitializeAsync(CancellationToken.None))
+                    .Returns(Task.CompletedTask);
                 Services = new ServiceCollection()
                     .AddSingleton(Session)
                     .AddSingleton(ConfigProvider)
+                    .AddSingleton<IMetadataProviderFactory>(_metadataProviderFactory.Object)
                     .AddSingleton<IConfiguration>(_configuration)
                     .AddSingleton(Stdout)
                     .AddHttpContextAccessor()
@@ -676,6 +686,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 using StringReader input = new(string.Join(Environment.NewLine, requests));
                 McpStdioServer server = new(Registry, Services, input);
                 await server.RunAsync(CancellationToken.None);
+                _metadataProviderFactory.Verify(factory => factory.InitializeAsync(CancellationToken.None), Times.Once);
+                _metadataProviderFactory.VerifyNoOtherCalls();
             }
 
             internal JsonElement[] ReadResponses() => Output.ToString()

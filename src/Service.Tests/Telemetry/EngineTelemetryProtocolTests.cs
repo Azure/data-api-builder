@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
@@ -583,10 +584,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             McpToolRegistry registry = new();
             registry.ReplaceAll([tool.Object], CreateConfig());
             Assert.AreEqual("read_records", registry.GetAdvertisedTools().Single().Name);
+            // Serving-only fixture: tools are already registered and no database is involved.
+            // Satisfy the real server's required lazy initialization explicitly, not via a product fallback.
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new(MockBehavior.Strict);
+            metadataProviderFactory.Setup(factory => factory.InitializeAsync(CancellationToken.None)).Returns(Task.CompletedTask);
             using StringWriter output = new();
             using McpStdoutWriter writer = new(output);
             using ServiceProvider provider = new ServiceCollection()
                 .AddSingleton(writer)
+                .AddSingleton<IMetadataProviderFactory>(metadataProviderFactory.Object)
                 .AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["MCP:StdioMode"] = "true"
@@ -600,6 +606,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 """);
             McpStdioServer server = new(registry, provider, input);
             await server.RunAsync(CancellationToken.None);
+            metadataProviderFactory.Verify(factory => factory.InitializeAsync(CancellationToken.None), Times.Once);
+            metadataProviderFactory.VerifyNoOtherCalls();
             tool.Verify(t => t.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()), Times.Once);
             string[] lines = output.ToString().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             Assert.AreEqual(4, lines.Length);

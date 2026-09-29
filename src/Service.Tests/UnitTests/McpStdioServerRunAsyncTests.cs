@@ -4,12 +4,19 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Service.Tests.Mcp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -125,6 +132,63 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(shutdownResponse.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
         }
 
+        [TestMethod]
+        public async Task RunAsync_InitializeRespondsBeforeMetadataInferenceCompletes()
+        {
+            const string INPUT =
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}\n" +
+                "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":{}}\n" +
+                "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\",\"params\":{}}\n" +
+                "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\",\"params\":{}}\n" +
+                "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"shutdown\"}\n";
+
+            SignalingTextWriter stdoutCapture = new();
+            BlockingMetadataProviderFactory metadataProviderFactory = new();
+            RuntimeConfig runtimeConfig = new(
+                Schema: RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK,
+                DataSource: null,
+                Entities: new RuntimeEntities(new Dictionary<string, Entity>()),
+                Runtime: new RuntimeOptions(
+                    Rest: null,
+                    GraphQL: null,
+                    Mcp: new McpRuntimeOptions(),
+                    Host: null));
+            RuntimeConfigProvider runtimeConfigProvider = new StubRuntimeConfigProvider(runtimeConfig);
+
+            ServiceProvider serviceProvider = new ServiceCollection()
+                .AddSingleton(new McpStdoutWriter(stdoutCapture))
+                .AddSingleton<McpToolRegistry>()
+                .AddSingleton<IMetadataProviderFactory>(metadataProviderFactory)
+                .AddSingleton(runtimeConfigProvider)
+                .BuildServiceProvider();
+            McpStdioServer server = new(
+                serviceProvider.GetRequiredService<McpToolRegistry>(),
+                serviceProvider,
+                new StringReader(INPUT));
+
+            Task runTask = server.RunAsync(CancellationToken.None);
+
+            string initializeResponse = await stdoutCapture.FirstLineWritten.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await metadataProviderFactory.InitializationStarted.WaitAsync(TimeSpan.FromSeconds(5));
+
+            using (JsonDocument response = JsonDocument.Parse(initializeResponse))
+            {
+                Assert.AreEqual(1, response.RootElement.GetProperty("id").GetInt32(),
+                    "Initialize must respond before metadata inference completes.");
+            }
+
+            Assert.AreEqual(1, stdoutCapture.LineCount,
+                "tools/list must wait until metadata inference and tool registration complete.");
+
+            metadataProviderFactory.CompleteInitialization();
+            await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+            Assert.AreEqual(4, stdoutCapture.LineCount,
+                "Expected initialize, two tools/list, and shutdown responses.");
+            Assert.AreEqual(1, metadataProviderFactory.InitializeAsyncCallCount,
+                "Metadata inference must run exactly once.");
+        }
+
         private static (McpStdioServer server, StringWriter stdoutCapture) CreateServerWithCapturedOutput(
             TextReader inputReader,
             IMcpStdioToolListChangedNotifier? notifier = null)
@@ -148,6 +212,50 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 inputReader);
 
             return (server, stdoutCapture);
+        }
+
+        private sealed class SignalingTextWriter : StringWriter
+        {
+            public TaskCompletionSource<string> FirstLineWritten { get; } =
+                new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public int LineCount { get; private set; }
+
+            public override void WriteLine(string? value)
+            {
+                base.WriteLine(value);
+                LineCount++;
+                FirstLineWritten.TrySetResult(value ?? string.Empty);
+            }
+        }
+
+        private sealed class StubRuntimeConfigProvider : RuntimeConfigProvider
+        {
+            private readonly RuntimeConfig _runtimeConfig;
+
+            public StubRuntimeConfigProvider(RuntimeConfig runtimeConfig) : base(new StubRuntimeConfigLoader())
+            {
+                _runtimeConfig = runtimeConfig;
+            }
+
+            public override RuntimeConfig GetConfig()
+            {
+                return _runtimeConfig;
+            }
+        }
+
+        private sealed class StubRuntimeConfigLoader : RuntimeConfigLoader
+        {
+            public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
+            {
+                config = null;
+                return false;
+            }
+
+            public override string GetPublishedDraftSchemaLink()
+            {
+                return RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK;
+            }
         }
     }
 }

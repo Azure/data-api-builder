@@ -27,8 +27,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
     /// Linux requires an owner-controlled directory and a private, owner-readable identity file.
     /// Static directory links and final-component links are rejected; final reads also use native
     /// no-follow handles. This is not a sandbox against a directory owner replacing ancestors or
-    /// mounts during a call. Persistence supports Windows and Linux x64/arm64 with statx; other
-    /// platforms/native APIs fail closed to ephemeral identity. No permission changes are attempted.
+    /// mounts during a call. Persistence supports Windows and Linux x64/arm64 with statx and
+    /// renameat2; unavailable platforms/native APIs fail closed. No permission changes are attempted.
     /// No directories, installation IDs, network clients, locks or retry loops are created. Local
     /// filesystem calls themselves have no hard time limit; filesystem crash durability is best effort.
     /// </remarks>
@@ -177,18 +177,10 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                     return null;
                 }
 
-                bool published = false;
-                try
-                {
-                    File.Move(temporaryPath, statePath, overwrite: false);
-                    ownsTemporaryFile = false;
-                    published = true;
-                }
-                catch (IOException)
-                {
-                    // Possibly lost a creation race. Read the winner once, never retry publication.
-                }
+                bool published = TryPublishState(temporaryPath, statePath);
+                ownsTemporaryFile = !published;
 
+                // Possibly lost a creation race. Read the winner once, never retry publication.
                 if (!isSafeDirectory() || ReadIdentity(statePath, idPropertyName, requireWindowsOwner, out savedId) != ReadResult.Valid
                     || !isSafeDirectory() || (published && savedId != candidate))
                 {
@@ -214,6 +206,35 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                         // for cleanup. A crash or cleanup failure may leave this tiny file behind.
                     }
                 }
+            }
+        }
+
+        private static bool TryPublishState(string temporaryPath, string statePath)
+        {
+            if (OperatingSystem.IsLinux())
+            {
+                // File.Move(overwrite: false) can check then rename on Unix, allowing concurrent
+                // creators to overwrite each other, including a newly arrived file or dangling link.
+                // Publish atomically with no replacement. Unsupported kernels/filesystems return
+                // failure; missing libc entry points reach the callers' storage-failure catches.
+                // Never fall back to the unsafe managed move, repair permissions or log native errors.
+                return NativeMethods.RenameLinuxFile(NativeMethods.AT_FDCWD, temporaryPath,
+                    NativeMethods.AT_FDCWD, statePath, NativeMethods.RENAME_NOREPLACE) == 0;
+            }
+
+            if (!OperatingSystem.IsWindows())
+            {
+                return false;
+            }
+
+            try
+            {
+                File.Move(temporaryPath, statePath, overwrite: false);
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
             }
         }
 
@@ -522,6 +543,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             internal const int AT_FDCWD = -100;
             internal const int AT_SYMLINK_NOFOLLOW = 0x100;
             internal const int AT_EMPTY_PATH = 0x1000;
+            internal const uint RENAME_NOREPLACE = 1;
             internal const uint REQUIRED_STATUS = 0xB; // STATX_TYPE | STATX_MODE | STATX_UID
             internal const int FILE_TYPE_MASK = 0xF000;
             internal const int REGULAR_FILE = 0x8000;
@@ -539,6 +561,11 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             [DllImport("libc", EntryPoint = "open", SetLastError = true)]
             [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
             internal static extern int OpenLinuxFile([MarshalAs(UnmanagedType.LPUTF8Str)] string path, int flags);
+
+            [DllImport("libc", EntryPoint = "renameat2", SetLastError = true)]
+            [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+            internal static extern int RenameLinuxFile(int sourceDirectory, [MarshalAs(UnmanagedType.LPUTF8Str)] string source,
+                int destinationDirectory, [MarshalAs(UnmanagedType.LPUTF8Str)] string destination, uint flags);
 
             [DllImport("libc", EntryPoint = "statx", SetLastError = true)]
             [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]

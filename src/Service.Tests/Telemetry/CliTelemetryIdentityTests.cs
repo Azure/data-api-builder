@@ -960,7 +960,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             }
             finally
             {
-                Directory.Delete(link);
+                if (OperatingSystem.IsLinux())
+                {
+                    // Unix directory links are unlinked as files, including dangling links.
+                    // Directory.Delete can stat a missing target and throw during cleanup.
+                    File.Delete(link);
+                }
+                else
+                {
+                    Directory.Delete(link);
+                }
             }
         }
 

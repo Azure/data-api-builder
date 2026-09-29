@@ -8,7 +8,10 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Threading.Channels;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Mcp.Core;
@@ -38,9 +41,11 @@ namespace Cli.Tests.Telemetry
     /// <summary>
     /// Real Execute/parser/handler -> service bootstrap -> metadata -> request -> shutdown
     /// coverage. Only telemetry delivery/installation, HTTP transport and stdio streams are
-    /// substituted. Requires Windows and the fixed current-user MSSQLLocalDB instance; each
-    /// integration case owns its database and config directory. Never calls Main, changes
-    /// product-telemetry environment variables, contacts a cloud sink, or writes a real profile.
+    /// substituted; stdio metadata initialization is counted by forwarding to the real factory.
+    /// Requires Windows; database-backed cases own a database in the fixed current-user
+    /// MSSQLLocalDB instance, while handshake-only cases never create/open a database. Every
+    /// case owns its config directory. Never calls Main, changes product-telemetry environment
+    /// variables, contacts a cloud sink, or writes a real profile.
     /// Kept out of the database-free EngineTelemetry category deliberately.
     /// </summary>
     [TestClass]
@@ -130,19 +135,13 @@ namespace Cli.Tests.Telemetry
             await engine.Created.Task.WaitAsync(_startupTimeout);
             await AssertBootstrapLinkAsync(fixture, cli, engine, CliTelemetryLaunchSource.StartStdio);
             IServiceProvider services = await engine.Probe.Captured.Task.WaitAsync(_startupTimeout);
-            EngineTelemetryEvent ready = await fixture.Events.WaitAsync<EngineTelemetryEvent>(engine.Context!.EngineSessionId, READY);
             await input.Reading.Task.WaitAsync(_timeout);
-            AssertReady(fixture, engine, services, ready);
+            AssertStdioAwaitingTools(fixture, cli, engine, services);
 
-            Assert.IsFalse(engine.Probe.ReadyWhenCaptured, "The stdio server is resolved before the real helper marks readiness.");
-            Assert.IsFalse(engine.Probe.HttpPipelineConfigured, "The real stdio helper must initialize metadata without Startup.Configure/HTTP Start.");
             CancellationToken applicationStarted = engine.Probe.Lifetime!.ApplicationStarted;
-            Assert.IsFalse(applicationStarted.IsCancellationRequested);
             Assert.IsInstanceOfType(services.GetRequiredService<IMcpStdioServer>(), typeof(McpStdioServer));
             Assert.AreSame(engine.Stdout, services.GetServices<McpStdoutWriter>().Single());
             McpToolRegistry registry = services.GetRequiredService<McpToolRegistry>();
-            Assert.IsTrue(registry.TryGetTool("read_records", out IMcpTool? tool));
-            Assert.AreSame(services.GetServices<IMcpTool>().OfType<ReadRecordsTool>().Single(), tool);
             Assert.IsFalse(command.IsCompleted, "An open input channel must keep the actual CLI command alive.");
 
             input.Send(Rpc(1, "initialize", new
@@ -154,14 +153,27 @@ namespace Cli.Tests.Telemetry
             JsonElement initialized = await output.ResponseAsync(1);
             Assert.AreEqual("2025-03-26", initialized.GetProperty("result").GetProperty("protocolVersion").GetString());
             input.Send("""{"jsonrpc":"2.0","method":"notifications/initialized"}""");
-            input.Send(Rpc(2, "tools/list"));
-            JsonElement listed = await output.ResponseAsync(2);
+            input.Send(Rpc(2, "ping"));
+            JsonElement ping = await output.ResponseAsync(2);
+            Assert.IsTrue(ping.GetProperty("result").GetProperty("ok").GetBoolean());
+            AssertStdioAwaitingTools(fixture, cli, engine, services);
+            Assert.IsFalse(command.IsCompleted, "The early handshake is not engine readiness or CLI completion.");
+
+            // Main defers metadata and registry publication until the first list/call. Only
+            // their successful completion accepts the loaded config and marks the engine ready.
+            input.Send(Rpc(3, "tools/list"));
+            EngineTelemetryEvent ready = await fixture.Events.WaitAsync<EngineTelemetryEvent>(engine.Context!.EngineSessionId, READY);
+            JsonElement listed = await output.ResponseAsync(3);
             Assert.IsTrue(listed.GetProperty("result").GetProperty("tools").EnumerateArray()
                 .Any(item => item.GetProperty("name").GetString() == "read_records"));
+            AssertReady(fixture, engine, services, ready);
+            Assert.AreEqual(1, engine.MetadataInitializations);
+            Assert.IsTrue(registry.TryGetTool("read_records", out IMcpTool? tool));
+            Assert.AreSame(services.GetServices<IMcpTool>().OfType<ReadRecordsTool>().Single(), tool);
             AssertNoCommand(fixture, cli);
 
-            input.Send(Rpc(3, "tools/call", new { name = "read_records", arguments = new { entity = "Books", first = 10 } }));
-            JsonElement read = await output.ResponseAsync(3);
+            input.Send(Rpc(4, "tools/call", new { name = "read_records", arguments = new { entity = "Books", first = 10 } }));
+            JsonElement read = await output.ResponseAsync(4);
             Assert.IsFalse(read.TryGetProperty("error", out _));
             JsonElement result = read.GetProperty("result");
             Assert.IsFalse(result.TryGetProperty("isError", out JsonElement isError) && isError.GetBoolean());
@@ -175,6 +187,7 @@ namespace Cli.Tests.Telemetry
             }
 
             await fixture.Events.WaitAsync<EngineTelemetryEvent>(engine.Context.EngineSessionId, FIRST_SUCCESS);
+            Assert.AreEqual(1, engine.MetadataInitializations, "The tool call must reuse the list request's cached initialization.");
             Assert.IsFalse(command.IsCompleted, "Returning a real tool response is not CLI completion.");
             AssertNoCommand(fixture, cli);
             if (endWithEof)
@@ -183,8 +196,8 @@ namespace Cli.Tests.Telemetry
             }
             else
             {
-                input.Send(Rpc(4, "shutdown"));
-                JsonElement shutdown = await output.ResponseAsync(4);
+                input.Send(Rpc(5, "shutdown"));
+                JsonElement shutdown = await output.ResponseAsync(5);
                 Assert.IsTrue(shutdown.GetProperty("result").GetProperty("ok").GetBoolean());
             }
 
@@ -192,11 +205,7 @@ namespace Cli.Tests.Telemetry
             await cli.StopAsync().WaitAsync(_timeout);
             Assert.IsFalse(applicationStarted.IsCancellationRequested, "No HTTP host may be started, even transiently.");
             Assert.IsFalse(engine.Probe.HttpPipelineConfigured);
-            JsonElement[] responses = output.ReadAll(); // Parses EVERY captured stdout line, not just known responses.
-            Assert.IsTrue(responses.All(response => response.GetProperty("jsonrpc").GetString() == "2.0"));
-            CollectionAssert.AreEqual(Enumerable.Range(1, endWithEof ? 3 : 4).ToArray(), responses
-                .Where(response => response.TryGetProperty("id", out _))
-                .Select(response => response.GetProperty("id").GetInt32()).ToArray());
+            AssertProtocolResponseIds(output, endWithEof ? 4 : 5);
             AssertCommand(fixture, cli, "start", "success", "none");
             AssertSuccessfulLifetime(fixture, cli, engine, api: "mcp", transport: "stdio");
         }
@@ -204,7 +213,78 @@ namespace Cli.Tests.Telemetry
         [DataTestMethod]
         [DataRow(false)]
         [DataRow(true)]
-        public async Task RealMetadataFailureReturnsLinkedInitializationFailureWithoutReady(bool stdio)
+        public async Task StartStdioHandshakeOnlyShutsDownWithoutInitializingMetadata(bool endWithEof)
+        {
+            // Deliberately do not create/open a database. This normal config names the owned,
+            // uncreated database and an absent table; handshake/control must not infer metadata.
+            await using WorkflowFixture fixture = await WorkflowFixture.CreateAsync(createDatabase: false);
+            await fixture.InitializeConfigurationAsync(source: "dbo.MissingBooks");
+            using CliTelemetrySession cli = fixture.CreateCli();
+            using ChannelTextReader input = new();
+            using ProtocolWriter output = new();
+            await using EngineInvocation engine = new(fixture, input: input, output: output);
+
+            Task<int> command = engine.ExecuteAsync(cli,
+                ["start", "--config", fixture.ConfigPath, "--mcp-stdio", "--log-level", "None"]);
+            await AssertBootstrapLinkAsync(fixture, cli, engine, CliTelemetryLaunchSource.StartStdio);
+            IServiceProvider services = await engine.Probe.Captured.Task.WaitAsync(_startupTimeout);
+            await input.Reading.Task.WaitAsync(_timeout);
+            CancellationToken applicationStarted = engine.Probe.Lifetime!.ApplicationStarted;
+            AssertStdioAwaitingTools(fixture, cli, engine, services);
+
+            input.Send(Rpc(1, "initialize", new
+            {
+                protocolVersion = "2025-03-26",
+                capabilities = new { },
+                clientInfo = new { name = "cli-handshake-test", version = "1.0" }
+            }));
+            JsonElement initialized = await output.ResponseAsync(1);
+            Assert.AreEqual("2025-03-26", initialized.GetProperty("result").GetProperty("protocolVersion").GetString());
+            input.Send("""{"jsonrpc":"2.0","method":"notifications/initialized"}""");
+            input.Send(Rpc(2, "ping"));
+            JsonElement ping = await output.ResponseAsync(2);
+            Assert.IsTrue(ping.GetProperty("result").GetProperty("ok").GetBoolean());
+            AssertStdioAwaitingTools(fixture, cli, engine, services);
+            Assert.IsFalse(command.IsCompleted);
+
+            if (endWithEof)
+            {
+                input.Complete();
+            }
+            else
+            {
+                input.Send(Rpc(3, "shutdown"));
+                JsonElement shutdown = await output.ResponseAsync(3);
+                Assert.IsTrue(shutdown.GetProperty("result").GetProperty("ok").GetBoolean());
+            }
+
+            Assert.AreEqual(CliReturnCode.SUCCESS, await command.WaitAsync(_timeout));
+            await cli.StopAsync().WaitAsync(_timeout);
+            Assert.IsFalse(applicationStarted.IsCancellationRequested);
+            Assert.IsFalse(engine.Probe.HttpPipelineConfigured);
+            Assert.IsFalse(engine.Session!.HasStartupFailed);
+            Assert.IsFalse(cli.HasEngineStartupFailed);
+            Assert.AreEqual(0, engine.MetadataInitializations);
+            Assert.AreEqual(0, engine.IdentityResolutions);
+            Assert.AreEqual(1, engine.LaunchCalls);
+            AssertProtocolResponseIds(output, endWithEof ? 2 : 3);
+            CliTelemetryEvent completed = AssertCommand(fixture, cli, "start", "success", "none");
+            EngineTelemetryEvent[] records = fixture.Events.Engine(engine.Context!.EngineSessionId);
+            CollectionAssert.AreEqual(new[] { PROCESS_STARTED, STOPPED }, records.Select(record => record.Name).ToArray());
+            Assert.IsTrue(records.All(record => record.ConfigurationEpoch == 0
+                && !record.Properties.ContainsKey("runtime.rest.effective")));
+            // Init already saved the API sidecar and the CLI bridge adopted it. A handshake
+            // neither creates another identity nor accepts a metadata-backed configuration.
+            Assert.IsTrue(records.All(record => record.Properties["dab_api_id_stability"] == "reused"));
+            AssertLinkage(fixture, cli, engine, completed);
+            AssertPrivateValuesAbsent(fixture);
+        }
+
+        [DataTestMethod]
+        [DataRow(false, false)]
+        [DataRow(true, false)]
+        [DataRow(true, true)]
+        public async Task RealMetadataFailureReturnsLinkedInitializationFailureWithoutReady(bool stdio, bool endWithEof)
         {
             await using WorkflowFixture fixture = await WorkflowFixture.CreateAsync();
             // The config passes CLI preflight but names an absent table in THIS owned database.
@@ -224,9 +304,66 @@ namespace Cli.Tests.Telemetry
             await engine.Created.Task.WaitAsync(_startupTimeout);
             await AssertBootstrapLinkAsync(fixture, cli, engine,
                 stdio ? CliTelemetryLaunchSource.StartStdio : CliTelemetryLaunchSource.StartWeb);
-            Assert.AreEqual(stdio ? CliReturnCode.GENERAL_ERROR : CliReturnCode.SUCCESS, await command.WaitAsync(_startupTimeout),
-                "Preserve the existing web host's normal-return exit code even though telemetry observes failed initialization.");
+            if (stdio)
+            {
+                IServiceProvider services = await engine.Probe.Captured.Task.WaitAsync(_startupTimeout);
+                await input.Reading.Task.WaitAsync(_timeout);
+                AssertStdioAwaitingTools(fixture, cli, engine, services);
+                input.Send(Rpc(1, "initialize", new
+                {
+                    protocolVersion = "2025-03-26",
+                    capabilities = new { },
+                    clientInfo = new { name = "cli-metadata-failure-test", version = "1.0" }
+                }));
+                JsonElement initialized = await output.ResponseAsync(1);
+                Assert.AreEqual("2025-03-26", initialized.GetProperty("result").GetProperty("protocolVersion").GetString());
+                input.Send("""{"jsonrpc":"2.0","method":"notifications/initialized"}""");
+                AssertStdioAwaitingTools(fixture, cli, engine, services);
+
+                input.Send(Rpc(2, "tools/list"));
+                await fixture.Events.WaitAsync<EngineTelemetryEvent>(engine.Context!.EngineSessionId, STARTUP_FAILED);
+                JsonElement failedList = await output.ResponseAsync(2);
+                Assert.AreEqual(McpStdioJsonRpcErrorCodes.INTERNAL_ERROR, failedList.GetProperty("error").GetProperty("code").GetInt32());
+                Assert.IsFalse(failedList.TryGetProperty("result", out _));
+
+                // The initialization fault is cached, not retried or treated as a loop failure.
+                input.Send(Rpc(3, "tools/call", new { name = "read_records", arguments = new { entity = "Books", first = 10 } }));
+                JsonElement failedCall = await output.ResponseAsync(3);
+                Assert.AreEqual(McpStdioJsonRpcErrorCodes.INTERNAL_ERROR, failedCall.GetProperty("error").GetProperty("code").GetInt32());
+                Assert.IsFalse(failedCall.TryGetProperty("result", out _));
+                input.Send(Rpc(4, "ping"));
+                JsonElement ping = await output.ResponseAsync(4);
+                Assert.IsTrue(ping.GetProperty("result").GetProperty("ok").GetBoolean());
+                Assert.AreEqual(1, engine.MetadataInitializations);
+                Assert.IsTrue(engine.Session!.HasStartupFailed);
+                Assert.IsFalse(engine.Session.IsReady);
+                Assert.IsFalse(command.IsCompleted, "A metadata error response must leave the protocol loop running.");
+                AssertNoCommand(fixture, cli);
+
+                if (endWithEof)
+                {
+                    input.Complete();
+                }
+                else
+                {
+                    input.Send(Rpc(5, "shutdown"));
+                    JsonElement shutdown = await output.ResponseAsync(5);
+                    Assert.IsTrue(shutdown.GetProperty("result").GetProperty("ok").GetBoolean());
+                }
+            }
+
+            Assert.AreEqual(CliReturnCode.SUCCESS, await command.WaitAsync(_startupTimeout),
+                "Web preserves its normal-return exit code; stdio catches deferred metadata failure and exits normally after shutdown/EOF.");
             await cli.StopAsync().WaitAsync(_timeout);
+            Assert.IsTrue(engine.Session!.HasStartupFailed);
+            Assert.IsTrue(cli.HasEngineStartupFailed, "The explicit observer must retain initialization failure despite exit code zero.");
+            if (stdio)
+            {
+                Assert.IsFalse(engine.Probe.Started.Task.IsCompleted);
+                Assert.IsFalse(engine.Probe.HttpPipelineConfigured);
+                Assert.AreEqual(1, engine.MetadataInitializations);
+                AssertProtocolResponseIds(output, endWithEof ? 4 : 5);
+            }
 
             Assert.AreEqual(1, engine.LaunchCalls, "A real launch occurred; this is not a CLI preflight rejection.");
             CliTelemetryEvent completed = AssertCommand(fixture, cli, "start", "execution_failure", "initialization");
@@ -432,6 +569,29 @@ namespace Cli.Tests.Telemetry
             Assert.AreEqual(0, engine.IdentityResolutions, "The engine must not independently regenerate the API identity.");
         }
 
+        private static void AssertStdioAwaitingTools(WorkflowFixture fixture, CliTelemetrySession cli,
+            EngineInvocation engine, IServiceProvider services)
+        {
+            Assert.IsNotNull(engine.Session);
+            Assert.AreSame(engine.Session, services.GetRequiredService<EngineTelemetrySession>());
+            Assert.IsTrue(engine.Session.IsEnabled);
+            Assert.IsFalse(engine.Session.IsReady);
+            Assert.IsFalse(engine.Session.HasStartupFailed);
+            Assert.IsFalse(cli.HasEngineStartupFailed);
+            Assert.IsFalse(engine.Probe.ReadyWhenCaptured, "The helper resolves the real stdio server before the handshake and deferred metadata.");
+            Assert.IsFalse(engine.Probe.HttpPipelineConfigured);
+            Assert.IsFalse(engine.Probe.Lifetime!.ApplicationStarted.IsCancellationRequested);
+            Assert.AreEqual(0, engine.MetadataInitializations, "Initialize, initialized notification and ping must not initialize database metadata.");
+            Assert.AreEqual(0, engine.IdentityResolutions, "The CLI bridge already supplied the saved API identity.");
+            Assert.AreEqual(0, services.GetRequiredService<McpToolRegistry>().GetAdvertisedTools().Count,
+                "The initial registry snapshot is published only after deferred metadata initialization.");
+            EngineTelemetryEvent[] records = fixture.Events.Engine(engine.Context!.EngineSessionId);
+            CollectionAssert.AreEqual(new[] { PROCESS_STARTED }, records.Select(record => record.Name).ToArray());
+            Assert.IsTrue(records.All(record => record.ConfigurationEpoch == 0
+                && !record.Properties.ContainsKey("runtime.rest.effective")));
+            AssertNoCommand(fixture, cli);
+        }
+
         private static void AssertReady(WorkflowFixture fixture, EngineInvocation engine, IServiceProvider services, EngineTelemetryEvent ready)
         {
             Assert.IsTrue(engine.Session!.IsReady);
@@ -558,6 +718,15 @@ namespace Cli.Tests.Telemetry
         private static long Count(IEnumerable<EngineTelemetryEvent> records, string key)
             => records.Sum(record => long.Parse(record.Properties[key], CultureInfo.InvariantCulture));
 
+        private static void AssertProtocolResponseIds(ProtocolWriter output, int responseCount)
+        {
+            JsonElement[] responses = output.ReadAll(); // Parses EVERY captured stdout line, not just known responses.
+            Assert.IsTrue(responses.All(response => response.GetProperty("jsonrpc").GetString() == "2.0"));
+            CollectionAssert.AreEqual(Enumerable.Range(1, responseCount).ToArray(), responses
+                .Where(response => response.TryGetProperty("id", out _))
+                .Select(response => response.GetProperty("id").GetInt32()).ToArray());
+        }
+
         private static string Rpc(int id, string method, object? parameters = null)
             => JsonSerializer.Serialize(new { jsonrpc = "2.0", id, method, @params = parameters });
 
@@ -587,8 +756,8 @@ namespace Cli.Tests.Telemetry
 
             public static async Task<WorkflowFixture> CreateAsync(bool createDatabase = true)
             {
-                // Even the no-database scheduling case uses this fixture's real Windows
-                // sidecar persistence. It does not require an installed/running SQL instance.
+                // The no-database scheduling and handshake cases still use this fixture's real
+                // Windows sidecar persistence, but do not require an installed/running SQL instance.
                 if (!OperatingSystem.IsWindows())
                 {
                     Assert.Inconclusive("CliTelemetryLocalDb: platform_unavailable");
@@ -760,6 +929,7 @@ namespace Cli.Tests.Telemetry
             private int _launchCalls;
             private int _factoryCalls;
             private int _identityResolutions;
+            private int _metadataInitializations;
             public HostProbe Probe { get; }
             public McpStdoutWriter? Stdout { get; }
             public ProductTelemetryLaunchContext? Context { get; private set; }
@@ -772,6 +942,7 @@ namespace Cli.Tests.Telemetry
             public int LaunchCalls => Volatile.Read(ref _launchCalls);
             public int FactoryCalls => Volatile.Read(ref _factoryCalls);
             public int IdentityResolutions => Volatile.Read(ref _identityResolutions);
+            public int MetadataInitializations => Volatile.Read(ref _metadataInitializations);
 
             public EngineInvocation(WorkflowFixture fixture, bool pauseHttpStartup = false,
                 ChannelTextReader? input = null, ProtocolWriter? output = null)
@@ -844,6 +1015,13 @@ namespace Cli.Tests.Telemetry
                             services.AddSingleton<IStartupFilter>(Probe);
                             if (_input is not null)
                             {
+                                ServiceDescriptor metadataFactory = services.Single(service => service.ServiceType == typeof(IMetadataProviderFactory));
+                                Assert.AreEqual(typeof(MetadataProviderFactory), metadataFactory.ImplementationType);
+                                Assert.AreEqual(ServiceLifetime.Singleton, metadataFactory.Lifetime);
+                                services.AddSingleton<MetadataProviderFactory>();
+                                services.Replace(ServiceDescriptor.Singleton<IMetadataProviderFactory>(provider =>
+                                    new ObservingMetadataProviderFactory(provider.GetRequiredService<MetadataProviderFactory>(),
+                                        () => Interlocked.Increment(ref _metadataInitializations))));
                                 services.RemoveAll<McpStdoutWriter>();
                                 services.AddSingleton(Stdout!);
                                 services.RemoveAll<IMcpLogNotificationWriter>();
@@ -851,8 +1029,9 @@ namespace Cli.Tests.Telemetry
                                 services.RemoveAll<IMcpStdioServer>();
                                 services.AddSingleton<IMcpStdioServer>(provider =>
                                 {
-                                    // The real helper resolves this AFTER metadata and BEFORE
-                                    // MarkHostReady. HTTP startup filters never run in stdio.
+                                    // The real helper resolves this BEFORE the protocol handshake.
+                                    // The server defers metadata/registry/readiness until list/call;
+                                    // HTTP startup filters never run in stdio.
                                     Probe.Capture(provider);
                                     return new McpStdioServer(provider.GetRequiredService<McpToolRegistry>(), provider, _input);
                                 });
@@ -888,6 +1067,35 @@ namespace Cli.Tests.Telemetry
                         Stdout?.Dispose();
                     }
                 }
+            }
+        }
+
+        /// <summary>Counts stdio initialization calls without faking metadata, changing cancellation or swallowing failures.</summary>
+        private sealed class ObservingMetadataProviderFactory(IMetadataProviderFactory inner, Action onInitialize) : IMetadataProviderFactory
+        {
+            public ISqlMetadataProvider GetMetadataProvider(string dataSourceName) => inner.GetMetadataProvider(dataSourceName);
+
+            public IEnumerable<ISqlMetadataProvider> ListMetadataProviders() => inner.ListMetadataProviders();
+
+            public List<Exception> GetAllMetadataExceptions() => inner.GetAllMetadataExceptions();
+
+            public Task InitializeAsync()
+            {
+                onInitialize();
+                return inner.InitializeAsync();
+            }
+
+            public Task InitializeAsync(CancellationToken cancellationToken)
+            {
+                onInitialize();
+                return inner.InitializeAsync(cancellationToken);
+            }
+
+            public void InitializeAsync(Dictionary<string, Dictionary<string, DatabaseObject>> entityToDatabaseObjectMap,
+                Dictionary<string, Dictionary<string, string>> graphQLStoredProcedureExposedNameToEntityNameMap)
+            {
+                onInitialize();
+                inner.InitializeAsync(entityToDatabaseObjectMap, graphQLStoredProcedureExposedNameToEntityNameMap);
             }
         }
 

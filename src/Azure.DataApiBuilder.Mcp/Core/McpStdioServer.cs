@@ -302,6 +302,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="id">
         /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
         /// </param>
+        /// <param name="cancellationToken">Token used to cancel deferred tool initialization.</param>
         private async Task HandleListToolsAsync(JsonElement? id, CancellationToken cancellationToken)
         {
             await EnsureToolsInitializedAsync(cancellationToken);
@@ -321,6 +322,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
             WriteResult(id, new { tools = toolsWire });
         }
 
+        /// <summary>
+        /// Starts deferred MCP tool initialization once and returns the cached initialization task.
+        /// </summary>
+        /// <param name="cancellationToken">Token used to cancel initialization before it starts.</param>
+        /// <returns>The task representing the in-flight or completed tool initialization.</returns>
         private Task EnsureToolsInitializedAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -331,6 +337,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
         }
 
+        /// <summary>
+        /// Initializes database metadata providers and publishes the initial MCP tool registry snapshot.
+        /// </summary>
+        /// <param name="cancellationToken">Token used to cancel metadata inference and registry refresh.</param>
         private async Task InitializeToolsAsync(CancellationToken cancellationToken)
         {
             IMetadataProviderFactory metadataProviderFactory =

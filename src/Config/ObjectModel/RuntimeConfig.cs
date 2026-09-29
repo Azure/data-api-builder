@@ -258,8 +258,6 @@ public record RuntimeConfig
 
     private Dictionary<string, string> _entityPathNameToEntityName = new();
 
-    private Dictionary<string, FileSystemRuntimeConfigLoader> _dataSourceNameToConfigLoader = new();
-
     /// <summary>
     /// List of all datasources.
     /// </summary>
@@ -305,11 +303,6 @@ public record RuntimeConfig
     public bool RemoveGeneratedAutoentityNameFromDataSourceName(string entityName)
     {
         return _entityNameToDataSourceName.Remove(entityName);
-    }
-
-    public bool TryGetConfigLoaderFromDataSourceName(string dataSourceName, [NotNullWhen(true)] out FileSystemRuntimeConfigLoader? configLoader)
-    {
-        return _dataSourceNameToConfigLoader.TryGetValue(dataSourceName, out configLoader);
     }
 
     /// <summary>
@@ -375,8 +368,8 @@ public record RuntimeConfig
 
         if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
         {
-            IEnumerable<KeyValuePair<string, Entity>>? allEntities = Entities?.AsEnumerable();
-            IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = Autoentities?.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>>? allEntities = Entities is null ? new List<KeyValuePair<string, Entity>>().AsEnumerable() : Entities.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = Autoentities is null ? new List<KeyValuePair<string, Autoentity>>().AsEnumerable() : Autoentities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
 
@@ -407,12 +400,11 @@ public record RuntimeConfig
                         // Store the child config reference for per-child validation.
                         ChildConfigs.Add((dataSourceFile, config));
 
-                        _dataSourceNameToConfigLoader.TryAdd(config.DefaultDataSourceName, loader);
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _autoentityNameToDataSourceName = _autoentityNameToDataSourceName.Concat(config._autoentityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                        allEntities = allEntities?.Concat(config.Entities.AsEnumerable());
-                        allAutoentities = allAutoentities?.Concat(config.Autoentities.AsEnumerable());
+                        allEntities = allEntities.Concat(config.Entities.AsEnumerable());
+                        allAutoentities = allAutoentities.Concat(config.Autoentities.AsEnumerable());
                     }
                     catch (Exception e)
                     {
@@ -437,8 +429,8 @@ public record RuntimeConfig
                 }
             }
 
-            this.Entities = new RuntimeEntities(allEntities != null ? allEntities.ToDictionary(x => x.Key, x => x.Value) : new Dictionary<string, Entity>());
-            this.Autoentities = new RuntimeAutoentities(allAutoentities != null ? allAutoentities.ToDictionary(x => x.Key, x => x.Value) : new Dictionary<string, Autoentity>());
+            this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
+            this.Autoentities = new RuntimeAutoentities(allAutoentities.ToDictionary(x => x.Key, x => x.Value));
         }
 
         SetupDataSourcesUsed();

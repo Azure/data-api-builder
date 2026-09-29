@@ -142,6 +142,60 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             AssertErrorType(result, "InvalidArguments");
         }
 
+        /// <summary>
+        /// Rejects invalid orderby shapes and members before metadata resolution, with a usable example.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("\"id desc\"")]
+        [DataRow("\"id\"")]
+        [DataRow("\"desc\"")]
+        [DataRow("null")]
+        [DataRow("123")]
+        [DataRow("true")]
+        [DataRow("false")]
+        [DataRow("{}")]
+        [DataRow("[123]")]
+        [DataRow("[true]")]
+        [DataRow("[false]")]
+        [DataRow("[{}]")]
+        [DataRow("[[]]")]
+        [DataRow("[null]")]
+        [DataRow("[\"\"]")]
+        [DataRow("[\"   \"]")]
+        [DataRow("[\"id desc\",123]")]
+        [DataRow("[\"id desc\",null]")]
+        [DataRow("[null,123]")]
+        public async Task ReadRecords_InvalidOrderby_ReturnsActionableInvalidArguments(string orderby)
+        {
+            IServiceProvider sp = CreateServiceProvider(CreateConfig());
+            CallToolResult result = await ExecuteAsync(
+                new ReadRecordsTool(), sp, $"{{\"entity\":\"Book\",\"orderby\":{orderby}}}");
+
+            string message = AssertErrorType(result, "InvalidArguments");
+            StringAssert.Contains(message, "'orderby'");
+            StringAssert.Contains(message, "array of non-empty strings");
+            StringAssert.Contains(message, "[\"name asc\", \"year desc\"]");
+        }
+
+        /// <summary>
+        /// Valid string lists, empty lists, and omitted ordering must still reach metadata resolution.
+        /// This test checks shape validation only, not field resolution or database execution.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("{\"entity\":\"Book\"}")]
+        [DataRow("{\"entity\":\"Book\",\"orderby\":[]}")]
+        [DataRow("{\"entity\":\"Book\",\"orderby\":[\"id\"]}")]
+        [DataRow("{\"entity\":\"Book\",\"orderby\":[\"id asc\"]}")]
+        [DataRow("{\"entity\":\"Book\",\"orderby\":[\"id desc\"]}")]
+        [DataRow("{\"entity\":\"Book\",\"orderby\":[\"title asc\",\"id desc\"]}")]
+        public async Task ReadRecords_ValidOrderbyShape_ReachesMetadataResolution(string arguments)
+        {
+            IServiceProvider sp = CreateServiceProvider(CreateConfig());
+            CallToolResult result = await ExecuteAsync(new ReadRecordsTool(), sp, arguments);
+
+            AssertErrorType(result, "EntityNotFound");
+        }
+
         [TestMethod]
         public async Task UpdateRecord_MissingFields_ReturnsInvalidArguments()
         {
@@ -229,12 +283,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             return await tool.ExecuteAsync(args, sp, CancellationToken.None);
         }
 
-        private static void AssertErrorType(CallToolResult result, string expectedType)
+        private static string AssertErrorType(CallToolResult result, string expectedType)
         {
             Assert.IsTrue(result.IsError == true, "Expected an error result.");
             TextContentBlock block = (TextContentBlock)result.Content[0];
-            JsonElement root = JsonDocument.Parse(block.Text).RootElement;
-            Assert.AreEqual(expectedType, root.GetProperty("error").GetProperty("type").GetString());
+            using JsonDocument payload = JsonDocument.Parse(block.Text);
+            JsonElement error = payload.RootElement.GetProperty("error");
+            Assert.AreEqual(expectedType, error.GetProperty("type").GetString());
+            return error.GetProperty("message").GetString()!;
         }
 
         private static RuntimeConfig CreateConfig(

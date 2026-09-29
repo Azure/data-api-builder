@@ -6,12 +6,13 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using System.Threading;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Mcp.Core;
-using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataApiBuilder.Service.Utilities
 {
@@ -87,28 +88,23 @@ namespace Azure.DataApiBuilder.Service.Utilities
         /// Runs the MCP stdio host.
         /// </summary>
         /// <param name="host"> The host to run.</param>
-        /// <returns>True when the stdio loop ran to completion; false when startup failed and was
+        /// <returns>True when the stdio loop ran to completion; false when startup or the loop failed and was
         /// reported, which Program.Main surfaces as a non-zero exit code.</returns>
         public static bool RunMcpStdioHost(IHost host)
         {
             try
             {
-                // Stdio mode never calls host.Run(), so Startup.Configure -- and with it
-                // PerformOnConfigChangeAsync, the only caller of IMetadataProviderFactory
-                // .InitializeAsync() -- never executes. Without this, entities are known to
-                // the tool registry (their names come from config) while no entity ever gets
-                // a database object, and every tool call fails with
-                // "Database object for entity '<name>' has not been inferred."
-                IMetadataProviderFactory metadataProviderFactory =
-                    host.Services.GetRequiredService<IMetadataProviderFactory>();
-                metadataProviderFactory.InitializeAsync().GetAwaiter().GetResult();
-
-                McpToolRegistry registry =
-                    host.Services.GetRequiredService<McpToolRegistry>();
-                IEnumerable<IMcpTool> tools =
-                    host.Services.GetServices<IMcpTool>();
-
-                McpToolRegistry.InitializeAndRegisterTools(tools, registry, host.Services);
+                // This process entry point is deliberately synchronous and runs without an
+                // ASP.NET, UI, or other custom SynchronizationContext. Bridging the two async
+                // operations with GetAwaiter().GetResult() therefore cannot deadlock on a
+                // captured context and preserves direct exception propagation.
+                // Stdio deliberately does not start the web host, so Startup.Configure does not
+                // initialize runtime dependencies. Run the same serialized validation, metadata,
+                // and registry sequence used by HTTP startup before opening the stdio loop.
+                RuntimeInitializationHelper
+                    .InitializeRuntimeDependenciesAsync(host.Services)
+                    .GetAwaiter()
+                    .GetResult();
 
                 IHostApplicationLifetime lifetime =
                     host.Services.GetRequiredService<IHostApplicationLifetime>();
@@ -148,6 +144,28 @@ namespace Azure.DataApiBuilder.Service.Utilities
             }
             finally
             {
+                FileSystemRuntimeConfigLoader? configLoader =
+                    host.Services.GetService<FileSystemRuntimeConfigLoader>();
+                if (configLoader is not null)
+                {
+                    TimeSpan shutdownTimeout = host.Services
+                        .GetService<IOptions<HostOptions>>()?
+                        .Value.ShutdownTimeout ?? new HostOptions().ShutdownTimeout;
+                    using CancellationTokenSource shutdownCancellation = new(shutdownTimeout);
+                    try
+                    {
+                        configLoader
+                            .StopAsync(shutdownCancellation.Token)
+                            .GetAwaiter()
+                            .GetResult();
+                    }
+                    catch (OperationCanceledException)
+                        when (shutdownCancellation.IsCancellationRequested)
+                    {
+                        // Match Generic Host shutdown semantics: cancellation bounds the drain.
+                    }
+                }
+
                 host.Dispose();
             }
         }

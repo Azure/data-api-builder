@@ -88,6 +88,46 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         /// <summary>
+        /// Regression test for https://github.com/Azure/data-api-builder/issues/3541
+        /// A JWT-configured provider whose name is not an out-of-box provider (e.g. "Custom") must
+        /// resolve to the same "Bearer" scheme the JWT handler is registered under. Previously this
+        /// resolved to the unregistered "OAuthAuthentication" scheme, causing AuthenticateAsync to
+        /// throw "No authentication handler is registered for the scheme 'OAuthAuthentication'".
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("Custom", DisplayName = "Custom JWT provider authenticates via the Bearer scheme")]
+        [DataRow("AzureAD", DisplayName = "AzureAD JWT provider authenticates via the Bearer scheme")]
+        [DataRow("EntraID", DisplayName = "EntraID JWT provider authenticates via the Bearer scheme")]
+        [TestMethod]
+        public async Task TestValidToken_JwtConfiguredProviders(string provider)
+        {
+            RsaSecurityKey key = new(RSA.Create(2048));
+            string token = CreateJwt(
+                audience: AUDIENCE,
+                issuer: LOCAL_ISSUER,
+                notBefore: DateTime.UtcNow.AddDays(-1),
+                expirationTime: DateTime.UtcNow.AddDays(1),
+                signingKey: key
+                );
+
+            HttpContext postMiddlewareContext =
+                await SendRequestAndGetHttpContextState(
+                    key,
+                    token,
+                    clientRoleHeader: null,
+                    provider: provider);
+
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: AuthorizationType.Authenticated.ToString(),
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
+        }
+
+        /// <summary>
         /// Test to validate that the user request is treated with anonymous role when
         /// the jwt token is missing.
         /// </summary>
@@ -302,15 +342,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// and configures Authentication options with passed in SecurityKey
         /// </summary>
         /// <param name="key"></param>
+        /// <param name="provider">Runtime configured identity provider name (e.g. "AzureAD" or a
+        /// custom OAuth/JWT provider such as "Custom"). All resolve to JWT bearer authentication.</param>
         /// <returns>IHost</returns>
-        private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key)
+        private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key, string provider = "AzureAD")
         {
             // Setup RuntimeConfigProvider object for the pipeline.
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = new(new MockFileSystem());
             AuthenticationOptions authOptions = new()
             {
-                Provider = "AzureAD"
+                Provider = provider
             };
 
             RuntimeConfig runtimeConfig = RuntimeConfigAuthHelper.CreateTestConfigWithAuthNProvider(authOptions);
@@ -384,9 +426,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         private static async Task<HttpContext> SendRequestAndGetHttpContextState(
             SecurityKey key,
             string token,
-            string clientRoleHeader = null)
+            string clientRoleHeader = null,
+            string provider = "AzureAD")
         {
-            using IHost host = await CreateWebHostCustomIssuer(key);
+            using IHost host = await CreateWebHostCustomIssuer(key, provider);
             TestServer server = host.GetTestServer();
 
             return await server.SendAsync(context =>

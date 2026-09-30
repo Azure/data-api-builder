@@ -52,22 +52,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 "MCP stdio mode should not stop a host that was never started.");
             Assert.AreEqual(1, stdioServer.RunAsyncCallCount,
                 "MCP stdio mode should still run the stdio JSON-RPC loop.");
-            Assert.AreEqual(1, refreshService.EnsureInitializedCallCount,
-                "MCP stdio mode should initialize the shared tool registry before running the loop.");
+            Assert.AreEqual(0, refreshService.EnsureInitializedCallCount,
+                "MCP stdio mode should defer shared tool registry initialization until the protocol loop needs tools.");
             CollectionAssert.AreEqual(
-                new[] { "metadata", "registry" },
+                Array.Empty<string>(),
                 metadataProviderFactory.InitializationOrder,
-                "MCP stdio mode should initialize metadata before publishing the registry.");
-            Assert.IsTrue(metadataProviderFactory.CancellationToken.CanBeCanceled,
-                "Metadata initialization must receive the loader's shutdown cancellation token.");
-            Assert.AreEqual(metadataProviderFactory.CancellationToken, refreshService.CancellationToken,
-                "Metadata initialization and registry publication must share the serialized operation's token.");
+                "MCP stdio mode should not infer metadata before the protocol loop starts.");
             Assert.AreEqual(lifetime.ApplicationStopping, stdioServer.CancellationToken,
                 "The stdio loop should keep using the host lifetime cancellation token.");
             Assert.AreEqual(1, host.DisposeCallCount,
                 "MCP stdio mode should dispose the host after the stdio loop exits.");
-            Assert.AreEqual(1, metadataProviderFactory.InitializeAsyncCallCount,
-                "MCP stdio mode must initialize metadata exactly once through the shared runtime initialization path.");
+            Assert.AreEqual(0, metadataProviderFactory.InitializeAsyncCallCount,
+                "MCP stdio mode must not initialize metadata before the protocol loop needs tools.");
             Assert.IsTrue(serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>().ShutdownResourcesDisposed,
                 "MCP stdio shutdown must drain the loader before disposing the host.");
         }
@@ -116,21 +112,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             string reported = capturedError.ToString();
 
-            Assert.IsFalse(result, "A host failure should be reported through the bool contract.");
-            Assert.AreEqual(failDuringStdio ? 1 : 0, stdioServer.RunAsyncCallCount,
-                "The stdio loop must run only when metadata initialization succeeds.");
+            Assert.AreEqual(!failDuringStdio, result,
+                "Only failures from the stdio loop should be reported by the host helper before lazy tool initialization.");
+            Assert.AreEqual(1, stdioServer.RunAsyncCallCount,
+                "The stdio loop must run even when metadata initialization would fail later.");
             TestMcpToolRegistryRefreshService refreshService =
                 (TestMcpToolRegistryRefreshService)serviceProvider.GetRequiredService<IMcpToolRegistryRefreshService>();
-            Assert.AreEqual(failDuringStdio ? 1 : 0, refreshService.EnsureInitializedCallCount,
-                "The registry must not publish tools after metadata initialization fails.");
+            Assert.AreEqual(0, refreshService.EnsureInitializedCallCount,
+                "The host helper must not publish tools before the stdio loop needs them.");
             Assert.AreEqual(1, host.DisposeCallCount,
                 "The host must still be disposed when initialization or the loop fails.");
             Assert.IsTrue(serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>().ShutdownResourcesDisposed,
                 "Failure reporting must not bypass the loader's shutdown drain.");
-            StringAssert.Contains(reported, "MCP stdio host",
-                "The operator needs to know which host failed, not only that one did.");
-            StringAssert.Contains(reported, failure.Message,
-                "GetAwaiter().GetResult() rethrows the original exception, so the cause must survive.");
+            if (failDuringStdio)
+            {
+                StringAssert.Contains(reported, "MCP stdio host",
+                    "The operator needs to know which host failed, not only that one did.");
+                StringAssert.Contains(reported, failure.Message,
+                    "GetAwaiter().GetResult() rethrows the original exception, so the cause must survive.");
+            }
+            else
+            {
+                Assert.AreEqual(string.Empty, reported,
+                    "Lazy metadata failures must not be reported before a tool request starts initialization.");
+            }
+
             Assert.AreEqual(string.Empty, capturedOut.ToString(),
                 "stdout is the JSON-RPC channel; a stray byte on it corrupts the protocol.");
         }
@@ -142,9 +148,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// real stream without installing a writer that would outlive the call.
         /// </summary>
         [TestMethod]
-        public void RunMcpStdioHost_StartupFails_WhenStandardErrorSuppressed_LeavesConsoleUnchanged()
+        public void RunMcpStdioHost_LoopFails_WhenStandardErrorSuppressed_LeavesConsoleUnchanged()
         {
-            TestMcpStdioServer stdioServer = new();
+            Exception failure = InferenceFailure();
+            TestMcpStdioServer stdioServer = new()
+            {
+                RunAsyncException = failure
+            };
             TestMetadataProviderFactory metadataProviderFactory = new()
             {
                 InitializeAsyncException = InferenceFailure()
@@ -172,8 +182,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(result, "The bool contract holds whether or not stderr was suppressed.");
             Assert.IsTrue(consoleErrorUntouched,
                 "The report must not leave a replacement writer installed on Console.Error.");
-            Assert.AreEqual(0, stdioServer.RunAsyncCallCount,
-                "The stdio loop must not run after startup failed.");
+            Assert.AreEqual(1, stdioServer.RunAsyncCallCount,
+                "The stdio loop failure should be reported without changing Console.Error.");
         }
 
         [DataTestMethod]
@@ -196,14 +206,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 BuildServices(stdioServer, metadataProviderFactory, out _);
             TestHost host = new(serviceProvider);
 
-            OperationCanceledException actual = Assert.ThrowsException<OperationCanceledException>(
-                () => McpStdioHelper.RunMcpStdioHost(host));
+            if (cancelDuringStdio)
+            {
+                OperationCanceledException actual = Assert.ThrowsException<OperationCanceledException>(
+                    () => McpStdioHelper.RunMcpStdioHost(host));
 
-            Assert.AreSame(failure, actual, "Cancellation must propagate to Program.StartEngine, not become a startup failure.");
-            Assert.AreEqual(cancelDuringStdio ? 1 : 0, stdioServer.RunAsyncCallCount);
+                Assert.AreSame(failure, actual, "Cancellation must propagate to Program.StartEngine, not become a startup failure.");
+            }
+            else
+            {
+                Assert.IsTrue(McpStdioHelper.RunMcpStdioHost(host),
+                    "Metadata cancellation should be deferred until a tool request starts lazy initialization.");
+            }
+
+            Assert.AreEqual(1, stdioServer.RunAsyncCallCount);
             TestMcpToolRegistryRefreshService refreshService =
                 (TestMcpToolRegistryRefreshService)serviceProvider.GetRequiredService<IMcpToolRegistryRefreshService>();
-            Assert.AreEqual(cancelDuringStdio ? 1 : 0, refreshService.EnsureInitializedCallCount);
+            Assert.AreEqual(0, refreshService.EnsureInitializedCallCount);
             Assert.AreEqual(1, host.DisposeCallCount);
             Assert.IsTrue(serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>().ShutdownResourcesDisposed,
                 "Cancellation must still drain the loader before disposing the host.");
@@ -218,7 +237,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestCategory("EngineTelemetry")]
         [DataRow(false)]
         [DataRow(true)]
-        public void StdioCancellationRecordsStartupFailureOnlyBeforeReadiness(bool ready)
+        public void StdioLoopCancellationRecordsStartupFailureOnlyBeforeReadiness(bool ready)
         {
             CapturingProductExporter exporter = new();
             using EngineTelemetrySession telemetry = EngineTelemetrySession.Create(
@@ -231,8 +250,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.IsTrue(telemetry.IsReady);
             }
 
-            TestMcpStdioServer stdio = new() { RunAsyncException = ready ? new OperationCanceledException() : null };
-            TestMetadataProviderFactory metadata = new() { InitializeAsyncException = ready ? null : new TaskCanceledException() };
+            TestMcpStdioServer stdio = new() { RunAsyncException = new OperationCanceledException() };
+            TestMetadataProviderFactory metadata = new();
             using ServiceProvider services = BuildServices(stdio, metadata, out _, telemetry);
             TestHost host = new(services);
 
@@ -246,13 +265,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 // Preserve the existing host's cancellation contract.
             }
 
-            Assert.AreEqual(ready ? 1 : 0, stdio.RunAsyncCallCount);
+            Assert.AreEqual(1, stdio.RunAsyncCallCount);
+            Assert.AreEqual(0, metadata.InitializeAsyncCallCount);
             Assert.AreEqual(1, host.DisposeCallCount);
             Assert.AreEqual(ready ? 0 : 1, exporter.Events.Count(record => record.Name == "dab.engine.startup_failed"),
                 "The failure must be recorded before the helper stops and disables its session.");
             if (!ready)
             {
-                Assert.AreEqual("metadata", exporter.Events.Single(record => record.Name == "dab.engine.startup_failed").Properties["failure_stage"]);
+                Assert.AreEqual("serving", exporter.Events.Single(record => record.Name == "dab.engine.startup_failed").Properties["failure_stage"]);
             }
 
             Assert.AreEqual("dab.engine.stopped", exporter.Events.Last().Name);
@@ -260,23 +280,35 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         [DataTestMethod]
         [TestCategory("EngineTelemetry")]
-        [DataRow(true, "metadata")]
-        [DataRow(false, "serving")]
-        public void StdioReportsMetadataAndServingFailuresSeparately(bool metadataFails, string expectedStage)
+        [DataRow(true, false, "metadata")]
+        [DataRow(false, false, "serving")]
+        [DataRow(true, true, "metadata")]
+        [DataRow(false, true, "serving")]
+        public void StdioReportsDeferredMetadataAndServingFailuresSeparately(bool metadataFails, bool canceled, string expectedStage)
         {
             CapturingProductExporter exporter = new();
             using EngineTelemetrySession telemetry = EngineTelemetrySession.Create(() => exporter, enableSyntheticCollection: true,
                 readEnvironmentVariable: _ => null, showNotice: () => { }, startTimer: false);
-            TestMetadataProviderFactory metadata = new() { InitializeAsyncException = metadataFails ? new InvalidOperationException("synthetic private failure") : null };
+            Exception exception = canceled ? new TaskCanceledException() : new InvalidOperationException("synthetic private failure");
+            TestMetadataProviderFactory metadata = new() { InitializeAsyncException = metadataFails ? exception : null };
             TestMcpStdioServer stdio = new();
+            using StringReader input = new("""
+                {"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+                {"jsonrpc":"2.0","id":2,"method":"tools/list"}
+                {"jsonrpc":"2.0","id":3,"method":"tools/list"}
+                {"jsonrpc":"2.0","id":4,"method":"ping"}
+                {"jsonrpc":"2.0","id":5,"method":"shutdown"}
+                """);
+            using StringWriter output = new();
             using ServiceProvider services = BuildServices(stdio, metadata, out _, telemetry,
-                registryFailure: metadataFails ? null : new InvalidOperationException("synthetic private failure"));
+                registryFailure: metadataFails ? null : exception, input: input, output: output);
             TextWriter originalError = Console.Error;
             using StringWriter capture = new();
             try
             {
                 Console.SetError(capture);
-                Assert.IsFalse(McpStdioHelper.RunMcpStdioHost(new TestHost(services)));
+                Assert.IsTrue(McpStdioHelper.RunMcpStdioHost(new TestHost(services)),
+                    "Deferred failures are reported as JSON-RPC errors; the control loop can still shut down normally.");
             }
             finally
             {
@@ -287,9 +319,44 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(expectedStage, failure.Properties["failure_stage"]);
             Assert.AreEqual("initialization", failure.Properties["failure_category"]);
             Assert.AreEqual(1, metadata.InitializeAsyncCallCount);
-            Assert.AreEqual(0, stdio.RunAsyncCallCount, "Tool registration must fail before the ready stdio loop begins.");
+            string[] responses = output.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+            Assert.AreEqual(5, responses.Length);
+            StringAssert.Contains(responses[0], "protocolVersion");
+            StringAssert.Contains(responses[1], "Internal error");
+            StringAssert.Contains(responses[2], "Internal error");
+            StringAssert.Contains(responses[3], "\"ok\":true");
+            Assert.AreEqual(string.Empty, capture.ToString());
             Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab.engine.ready"));
             Assert.IsFalse(failure.Properties.Values.Any(value => value.Contains("synthetic private failure", StringComparison.Ordinal)));
+        }
+
+        [TestMethod]
+        [TestCategory("EngineTelemetry")]
+        public void ControlOnlyStdioSessionDoesNotInitializeToolsOrReportReady()
+        {
+            CapturingProductExporter exporter = new();
+            using EngineTelemetrySession telemetry = EngineTelemetrySession.Create(() => exporter, enableSyntheticCollection: true,
+                readEnvironmentVariable: _ => null, showNotice: () => { }, startTimer: false);
+            TestMetadataProviderFactory metadata = new() { InitializeAsyncException = InferenceFailure() };
+            using StringReader input = new("""
+                {"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+                {"jsonrpc":"2.0","method":"notifications/initialized"}
+                {"jsonrpc":"2.0","id":2,"method":"ping"}
+                {"jsonrpc":"2.0","id":3,"method":"shutdown"}
+                """);
+            using StringWriter output = new();
+            using ServiceProvider services = BuildServices(new(), metadata, out _, telemetry, input: input, output: output);
+            TestHost host = new(services);
+
+            Assert.IsTrue(McpStdioHelper.RunMcpStdioHost(host));
+
+            Assert.AreEqual(0, metadata.InitializeAsyncCallCount);
+            Assert.AreEqual(0, ((TestMcpToolRegistryRefreshService)services.GetRequiredService<IMcpToolRegistryRefreshService>()).EnsureInitializedCallCount);
+            Assert.AreEqual(3, output.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Length);
+            CollectionAssert.AreEqual(new[] { "dab.engine.process_started", "dab.engine.stopped" },
+                exporter.Events.Select(record => record.Name).ToArray());
+            Assert.AreEqual(0, host.StartAsyncCallCount);
+            Assert.AreEqual(1, host.DisposeCallCount);
         }
 
         [TestMethod]
@@ -335,7 +402,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Console.SetError(originalError);
             }
 
-            Assert.AreEqual(1, metadata.InitializeAsyncCallCount);
+            Assert.AreEqual(0, metadata.InitializeAsyncCallCount);
             Assert.AreEqual(1, host.DisposeCallCount);
             Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab.engine.ready"));
             EngineTelemetryEvent failure = exporter.Events.Single(record => record.Name == "dab.engine.startup_failed");
@@ -348,7 +415,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TestMetadataProviderFactory metadataProviderFactory,
             out TestApplicationLifetime lifetime,
             EngineTelemetrySession? telemetry = null,
-            Exception? registryFailure = null)
+            Exception? registryFailure = null,
+            TextReader? input = null,
+            TextWriter? output = null)
         {
             lifetime = new TestApplicationLifetime();
 
@@ -374,7 +443,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             services.AddSingleton(runtimeConfigValidator);
             services.AddSingleton<IMcpToolRegistryRefreshService>(refreshService);
             services.AddSingleton<IHostApplicationLifetime>(lifetime);
-            services.AddSingleton<IMcpStdioServer>(stdioServer);
+            if (input is null)
+            {
+                services.AddSingleton<IMcpStdioServer>(stdioServer);
+            }
+            else
+            {
+                services.AddSingleton<McpToolRegistry>();
+                services.AddSingleton(new McpStdoutWriter(output!));
+                services.AddSingleton<IMcpStdioServer>(provider => new McpStdioServer(
+                    provider.GetRequiredService<McpToolRegistry>(), provider, input));
+            }
+
             services.AddSingleton<IMetadataProviderFactory>(metadataProviderFactory);
             if (telemetry is not null)
             {

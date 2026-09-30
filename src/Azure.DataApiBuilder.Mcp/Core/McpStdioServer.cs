@@ -4,9 +4,12 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Telemetry;
 using Azure.DataApiBuilder.Mcp.Utils;
@@ -31,6 +34,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly IMcpStdioToolListChangedNotifier? _toolListChangedNotifier;
         private readonly TextReader? _inputReader;
         private readonly string _protocolVersion;
+        private readonly object _initializationLock = new();
+        private Task? _initializationTask;
 
         private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
 
@@ -148,7 +153,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 break;
 
                             case "tools/list":
-                                HandleListTools(id);
+                                await HandleListToolsAsync(id, cancellationToken);
                                 break;
 
                             case "tools/call":
@@ -212,6 +217,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 catch (Exception)
                 {
                     // Rethrow to avoid masking configuration errors
+                    ObserveToolInitialization(TelemetryFailureStage.Configuration);
                     throw;
                 }
             }
@@ -299,8 +305,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="id">
         /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
         /// </param>
-        private void HandleListTools(JsonElement? id)
+        /// <param name="cancellationToken">Token used to cancel deferred tool initialization.</param>
+        private async Task HandleListToolsAsync(JsonElement? id, CancellationToken cancellationToken)
         {
+            await EnsureToolsInitializedAsync(cancellationToken);
+
             List<object> toolsWire = new();
 
             foreach (Tool tool in _toolRegistry.GetAdvertisedTools())
@@ -314,6 +323,81 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             WriteResult(id, new { tools = toolsWire });
+        }
+
+        /// <summary>
+        /// Starts deferred MCP tool initialization once and returns the cached initialization task.
+        /// </summary>
+        /// <param name="cancellationToken">Token used to cancel initialization before it starts.</param>
+        /// <returns>The task representing the in-flight or completed tool initialization.</returns>
+        private Task EnsureToolsInitializedAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            lock (_initializationLock)
+            {
+                return _initializationTask ??= InitializeToolsAsync(cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// Initializes database metadata providers and publishes the initial MCP tool registry snapshot.
+        /// </summary>
+        /// <param name="cancellationToken">Token used to cancel metadata inference and registry refresh.</param>
+        private async Task InitializeToolsAsync(CancellationToken cancellationToken)
+        {
+            TelemetryFailureStage stage = TelemetryFailureStage.Metadata;
+            try
+            {
+                IMetadataProviderFactory metadataProviderFactory =
+                    _serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+                await metadataProviderFactory.InitializeAsync(cancellationToken);
+
+                stage = TelemetryFailureStage.Serving;
+                IMcpToolRegistryRefreshService? registryRefreshService =
+                    _serviceProvider.GetService<IMcpToolRegistryRefreshService>();
+                registryRefreshService?.EnsureInitialized(cancellationToken);
+            }
+            catch (Exception)
+            {
+                // RunAsync converts failures into protocol errors and can keep handling control
+                // messages. Record the failed startup here, before that exception is consumed.
+                ObserveToolInitialization(stage);
+                throw;
+            }
+
+            ObserveToolInitialization();
+        }
+
+        private void ObserveToolInitialization(TelemetryFailureStage? failureStage = null)
+        {
+            try
+            {
+                EngineTelemetrySession? telemetry = _serviceProvider.GetService<EngineTelemetrySession>()
+                    ?? _serviceProvider.GetService<RuntimeConfigProvider>()?.ProductTelemetry;
+                if (telemetry?.IsEnabled != true)
+                {
+                    return;
+                }
+
+                if (failureStage.HasValue)
+                {
+                    telemetry.StartupFailed(failureStage.Value);
+                }
+                else
+                {
+                    RuntimeConfigProvider? provider = _serviceProvider.GetService<RuntimeConfigProvider>();
+                    if (provider?.TryGetLoadedConfig(out RuntimeConfig? config) == true)
+                    {
+                        telemetry.AcceptConfiguration(config, "startup", provider.ConfigFilePath, onlyIfUnconfigured: true);
+                        telemetry.MarkHostReady();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Optional telemetry must not affect initialization, tool execution or JSON-RPC.
+            }
         }
 
         /// <summary>
@@ -462,6 +546,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing tool name");
                 return;
             }
+
+            await EnsureToolsInitializedAsync(ct);
 
             if (!_toolRegistry.TryGetTool(toolName!, out IMcpTool? tool) || tool is null)
             {

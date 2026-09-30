@@ -20,6 +20,7 @@ using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
@@ -694,6 +695,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             using McpStdoutWriter writer = new(output);
             using ServiceProvider provider = new ServiceCollection()
                 .AddSingleton(writer)
+                .AddSingleton(Mock.Of<IMetadataProviderFactory>())
                 .AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["MCP:StdioMode"] = "true"

@@ -624,15 +624,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 McpToolRegistry registry = host.Services.GetRequiredService<McpToolRegistry>();
                 ReadRecordsTool readTool = host.Services.GetServices<IMcpTool>().OfType<ReadRecordsTool>().Single();
                 Assert.IsFalse(registry.TryGetTool("read_records", out _),
-                    "The real stdio helper, not the test or a started hosted service, must initialize the registry.");
+                    "The real stdio server, not the test or a started hosted service, must initialize the registry.");
                 lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
                 CancellationToken applicationStarted = lifetime.ApplicationStarted;
                 Assert.IsFalse(applicationStarted.IsCancellationRequested);
                 Assert.IsTrue(session.IsEnabled);
                 Assert.IsFalse(session.IsReady);
 
-                // Build only: no Start/Run and no HTTP listener. The real helper initializes
-                // metadata, registers the actual tools, marks ready, serves until input EOF,
+                // Build only: no Start/Run and no HTTP listener. The real stdio loop initializes
+                // metadata lazily, registers the actual tools, marks ready, serves until input EOF,
                 // then flushes telemetry and disposes the host. Do not synthesize observations.
                 IHost stdioHost = host;
                 using (CancellationTokenRegistration stopOnTimeout = deadline.Token.Register(lifetime.StopApplication))

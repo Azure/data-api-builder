@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
@@ -640,6 +641,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 Services = new ServiceCollection()
                     .AddSingleton(Session)
                     .AddSingleton(ConfigProvider)
+                    .AddSingleton(Mock.Of<IMetadataProviderFactory>())
                     .AddSingleton<IConfiguration>(_configuration)
                     .AddSingleton(Stdout)
                     .AddHttpContextAccessor()

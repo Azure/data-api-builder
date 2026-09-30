@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Telemetry;
-using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Service.Telemetry;
@@ -99,36 +98,17 @@ namespace Azure.DataApiBuilder.Service.Utilities
             EngineTelemetrySession? productTelemetry = host.Services.GetService<EngineTelemetrySession>();
             TelemetryFailureContext? failure = productTelemetry?.IsEnabled == true ? TelemetryFailureContext.Current ?? new() : null;
             using IDisposable? failureScope = TelemetryFailureContext.Enter(failure);
-            TelemetryFailureStage stage = TelemetryFailureStage.Configuration;
+            TelemetryFailureStage stage = TelemetryFailureStage.Serving;
             try
             {
-                // This process entry point is deliberately synchronous and runs without an
-                // ASP.NET, UI, or other custom SynchronizationContext. Bridging the two async
-                // operations with GetAwaiter().GetResult() therefore cannot deadlock on a
-                // captured context and preserves direct exception propagation.
-                // Stdio deliberately does not start the web host, so Startup.Configure does not
-                // initialize runtime dependencies. Run the same serialized validation, metadata,
-                // and registry sequence used by HTTP startup before opening the stdio loop.
-                RuntimeInitializationHelper
-                    .InitializeRuntimeDependenciesAsync(host.Services)
-                    .GetAwaiter()
-                    .GetResult();
-
-                stage = TelemetryFailureStage.Serving;
-                // Resolve every required serving dependency before readiness. Shared runtime
-                // initialization intentionally allows MCP-disabled HTTP configurations, but a
-                // stdio process cannot serve without its registry/server.
+                // Resolve the protocol loop without inferring database metadata. The server
+                // answers initialize immediately and reports readiness only after its first
+                // tools/list or tools/call successfully initializes metadata and the registry.
                 IHostApplicationLifetime lifetime =
                     host.Services.GetRequiredService<IHostApplicationLifetime>();
                 IMcpStdioServer stdio =
                     host.Services.GetRequiredService<IMcpStdioServer>();
-                RuntimeConfigProvider? configuration = host.Services.GetService<RuntimeConfigProvider>();
-                if (productTelemetry is not null && configuration?.TryGetLoadedConfig(out Config.ObjectModel.RuntimeConfig? runtimeConfig) == true)
-                {
-                    productTelemetry.AcceptConfiguration(runtimeConfig!, "startup", configuration.ConfigFilePath, onlyIfUnconfigured: true);
-                    host.Services.GetService<EngineTelemetryHosting>()?.StartAsync(default).GetAwaiter().GetResult();
-                    productTelemetry.MarkHostReady();
-                }
+                host.Services.GetService<EngineTelemetryHosting>()?.StartAsync(default).GetAwaiter().GetResult();
 
                 stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
 

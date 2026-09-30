@@ -16,6 +16,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -158,6 +161,136 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             }
         }
 
+        [DataTestMethod]
+        [DataRow((int)CliTelemetryDatabaseType.Unknown, "unknown")]
+        [DataRow((int)CliTelemetryDatabaseType.MsSql, "mssql")]
+        [DataRow((int)CliTelemetryDatabaseType.DwSql, "dwsql")]
+        [DataRow((int)CliTelemetryDatabaseType.PostgreSql, "postgresql")]
+        [DataRow((int)CliTelemetryDatabaseType.MySql, "mysql")]
+        [DataRow((int)CliTelemetryDatabaseType.CosmosDbNoSql, "cosmosdb_nosql")]
+        [DataRow((int)CliTelemetryDatabaseType.CosmosDbPostgreSql, "cosmosdb_postgresql")]
+        [DataRow((int)CliTelemetryDatabaseType.Multiple, "multiple")]
+        [DataRow(-1, "unknown")]
+        [DataRow(int.MaxValue, "unknown")]
+        public async Task SessionProviderCategoriesSurviveActualSdkSerialization(int provider, string expected)
+        {
+            const string ROOT = "PRIVATE_PROVIDER_CONFIG_9b63.json";
+            RecordingHandler handler = new();
+            ApplicationInsightsTelemetryDestination destination = NewDestination();
+            using ProductTelemetrySenderPool pool = new(selected => new EngineTelemetryApplicationInsightsExporter(selected, handler));
+            using CliTelemetrySession session = CliTelemetrySession.Create(() => pool.AcquireLease(destination),
+                enableSyntheticCollection: true, readEnvironmentVariable: _ => null, showNotice: () => { },
+                resolveInstallation: () => new(Guid.NewGuid(), "newly_saved"),
+                lookupIdentity: _ => throw new AssertFailedException("Provider observation must not look up identity."),
+                createIdentity: _ => new(Guid.NewGuid(), "ephemeral"));
+
+            session.ObserveDatabaseType(ROOT, (CliTelemetryDatabaseType)provider);
+            Assert.IsNotNull(session.BeginEngineLaunch(ROOT, CliTelemetryLaunchSource.StartWeb, (CliTelemetryDatabaseType)provider));
+            session.Complete("init", "none", ImmutableDictionary<string, string>.Empty.Add("option_database_type", "true"),
+                CliTelemetryOutcome.Success);
+            await session.StopAsync().WaitAsync(_testTimeout);
+
+            CapturedRequest[] requests = handler.Requests.ToArray();
+            Assert.AreEqual(3, requests.Length, "Exercise the real session and worker, not manually constructed properties.");
+            string[] names = ["dab.cli.first_run", "dab.cli.engine_launch", "dab.cli.command"];
+            for (int index = 0; index < requests.Length; index++)
+            {
+                CapturedRequest request = requests[index];
+                Assert.AreEqual(destination.TrackEndpoint, request.Uri);
+                Assert.IsTrue(EngineTelemetrySdkTransportHandler.HasOnlyApprovedEnvelopeTags(request.Body));
+                Assert.IsFalse(request.Body.Contains(ROOT, StringComparison.Ordinal));
+                using JsonDocument body = JsonDocument.Parse(request.Body);
+                Assert.AreEqual(names[index], body.RootElement.GetProperty("data").GetProperty("baseData").GetProperty("name").GetString());
+                JsonElement properties = EventProperties(body);
+                Assert.AreEqual(index == 0 ? "unknown" : expected, properties.GetProperty("database_type").GetString());
+                Assert.AreEqual(session.SessionId.ToString("D"), properties.GetProperty("dab_process_session_id").GetString());
+                Assert.AreEqual("true", properties.GetProperty("dab_is_synthetic").GetString());
+                Assert.IsFalse(properties.TryGetProperty("dab_config_epoch", out _));
+                if (index == 2)
+                {
+                    Assert.AreEqual("true", properties.GetProperty("option_database_type").GetString());
+                }
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task ConfigurationContextAndAll96OptionsReachTheSdkTogetherWithoutValues(bool observed)
+        {
+            const string ROOT = "PRIVATE_FULL_CONTEXT_58e12";
+            const string JSON = """
+                { "data-source":{"database-type":"mssql","connection-string":"PRIVATE_FULL_CONTEXT_58e12"},
+                  "runtime":{"rest":false,"graphql":true,"mcp":true,"cache":{"enabled":true},
+                    "host":{"authentication":{"provider":"PRIVATE_FULL_CONTEXT_58e12"}}},
+                  "entities":{"PRIVATE_FULL_CONTEXT_58e12":{"source":"PRIVATE_FULL_CONTEXT_58e12","permissions":[]}} }
+                """;
+            // Maximum envelope pressure: all approved slots plus context and both identities.
+            string[] keys =
+            [
+                "config", "database_type", "connection_string", "cosmosdb_nosql_database", "cosmosdb_nosql_container",
+                "graphql_schema", "set_session_context", "host_mode", "cors_origin", "auth_provider", "auth_audience",
+                "auth_issuer", "rest_path", "runtime_base_route", "rest_disabled", "graphql_path", "graphql_disabled",
+                "mcp_path", "mcp_disabled", "rest_enabled", "graphql_enabled", "mcp_enabled", "rest_request_body_strict",
+                "graphql_multiple_mutations_create_enabled", "mcp_aggregate_records_query_timeout", "source", "permissions",
+                "source_type", "source_params", "source_key_fields", "rest", "rest_methods", "graphql", "graphql_operation",
+                "fields_include", "fields_exclude", "policy_request", "policy_database", "cache_enabled", "cache_ttl_seconds",
+                "cache_level", "health_enabled", "description", "parameters_name", "parameters_description", "parameters_required",
+                "parameters_default", "fields_name", "fields_alias", "fields_description", "fields_primary_key", "mcp_dml_tools",
+                "mcp_custom_tool", "relationship", "cardinality", "target_entity", "linking_object", "linking_source_fields",
+                "linking_target_fields", "relationship_fields", "map", "verbose", "log_level", "no_https_redirect", "mcp_stdio",
+                "output", "graphql_schema_file", "generate", "sampling_mode", "sampling_count", "sampling_partition_key_path",
+                "sampling_days", "sampling_group_count", "app_insights_conn_string", "app_insights_enabled", "otel_endpoint",
+                "otel_enabled", "otel_headers", "otel_protocol", "otel_service_name", "data_source_database_type",
+                "data_source_connection_string", "data_source_options_database", "data_source_options_container",
+                "data_source_options_schema", "data_source_options_set_session_context", "data_source_health_name",
+                "data_source_user_delegated_auth_enabled", "data_source_user_delegated_auth_database_audience",
+                "data_source_user_delegated_auth_provider", "data_source_health_enabled", "data_source_health_threshold_ms",
+                "data_source_files", "runtime_graphql_depth_limit", "runtime_graphql_enabled", "runtime_graphql_path"
+            ];
+            Assert.AreEqual(96, keys.Length);
+            RuntimeConfig config = JsonSerializer.Deserialize<RuntimeConfig>(JSON, RuntimeConfigLoader.GetSerializationOptions())!;
+            config = config with { TelemetryPresence = TelemetryConfigurationPresence.TryCaptureBounded(JSON, config, enabled: true) };
+            Assert.IsNotNull(config.TelemetryPresence);
+            RecordingHandler handler = new();
+            ApplicationInsightsTelemetryDestination destination = NewDestination();
+            using ProductTelemetrySenderPool pool = new(selected => new EngineTelemetryApplicationInsightsExporter(selected, handler));
+            using CliTelemetrySession session = CliTelemetrySession.Create(() => pool.AcquireLease(destination),
+                enableSyntheticCollection: true, readEnvironmentVariable: _ => null, showNotice: () => { },
+                resolveInstallation: () => new(Guid.NewGuid(), "reused"),
+                lookupIdentity: _ => new(Guid.NewGuid(), "reused"),
+                createIdentity: _ => throw new AssertFailedException("Configuration projection must not create API identity."));
+            session.ObserveConfiguration(ROOT);
+            if (observed)
+            {
+                session.ObserveConfigurationDetails(ROOT, config);
+            }
+
+            session.Complete("configure", "none", keys.ToImmutableDictionary(key => "option_" + key, _ => "true"),
+                CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
+            await session.StopAsync().WaitAsync(_testTimeout);
+
+            CapturedRequest request = handler.Requests.Single();
+            Assert.IsFalse(request.Body.Contains(ROOT, StringComparison.Ordinal));
+            Assert.IsTrue(Encoding.UTF8.GetByteCount(request.Body) <= 65536);
+            Assert.IsTrue(EngineTelemetrySdkTransportHandler.HasOnlyApprovedEnvelopeTags(request.Body));
+            using JsonDocument body = JsonDocument.Parse(request.Body);
+            JsonElement properties = EventProperties(body);
+            Assert.AreEqual(96, properties.EnumerateObject().Count(property => property.Name.StartsWith("option_", StringComparison.Ordinal)));
+            Assert.IsTrue(properties.TryGetProperty("dab_api_id", out _));
+            Assert.IsTrue(properties.TryGetProperty("dab_installation_id", out _));
+            Assert.IsFalse(properties.TryGetProperty("dab_config_epoch", out _));
+            string contextJson = properties.GetProperty("configuration_context").GetString()!;
+            Assert.IsTrue(contextJson.Length <= 8192);
+            using JsonDocument context = JsonDocument.Parse(contextJson);
+            Assert.AreEqual(83, context.RootElement.EnumerateObject().Count());
+            Assert.AreEqual("cli-configuration-v1", context.RootElement.GetProperty("snapshot_schema").GetString());
+            Assert.AreEqual(observed ? "loaded" : "unknown", context.RootElement.GetProperty("observation").GetString());
+            Assert.AreEqual(observed ? "disabled" : "unknown", context.RootElement.GetProperty("runtime.rest.configured").GetString());
+            Assert.AreEqual(observed ? "jwt" : "unknown", context.RootElement.GetProperty("authentication.provider.configured").GetString());
+            Assert.AreEqual(observed ? "1" : "unknown", context.RootElement.GetProperty("scale.entity_count").GetString());
+        }
+
         [TestMethod]
         public async Task CachedSdkHostOverridesAreRejectedInAnIsolatedProcess()
         {
@@ -185,6 +318,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             start.ArgumentList.Add(typeof(CliTelemetryExporterTests).Assembly.Location);
             start.ArgumentList.Add("--TestCaseFilter:FullyQualifiedName=" + typeof(CliTelemetryExporterTests).FullName + "." + nameof(CachedSdkHostOverridesAreRejectedInAnIsolatedProcess));
             start.ArgumentList.Add("--logger:console;verbosity=minimal");
+            // Testhost can run from a read-only mounted assembly directory. The child adapter
+            // needs a writable results location even though it writes only a console receipt.
+            start.ArgumentList.Add("--ResultsDirectory:" + System.IO.Path.GetTempPath());
             start.Environment[WORKER] = "1";
             start.Environment[EngineTelemetryApplicationInsightsExporter.STATSBEAT_DISABLED_VARIABLE] = "true";
             start.Environment[EngineTelemetryApplicationInsightsExporter.SDK_STATS_DISABLED_VARIABLE] = "true";
@@ -199,11 +335,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             try
             {
                 await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(45));
-                Assert.AreEqual(0, process.ExitCode, "Isolated SDK privacy control must pass.");
                 string result = await output;
+                string diagnostic = await error;
+                Assert.AreEqual(0, process.ExitCode, "Isolated SDK privacy control must pass.\n" + result + diagnostic);
                 Assert.IsTrue(result.Contains("Passed:", StringComparison.Ordinal) && result.Contains("Total:", StringComparison.Ordinal),
                     "A successful process with no selected tests is not privacy evidence.");
-                _ = await error;
             }
             finally
             {

@@ -74,6 +74,8 @@ namespace Cli.Commands
                 return CliReturnCode.GENERAL_ERROR;
             }
 
+            CliTelemetryHosting.ObserveConfigurationDetails(ProductTelemetry, fileSystem, runtimeConfigProvider.ConfigFilePath, runtimeConfig);
+
             // There is no live connection context at design time, so the context fields
             // (Protocol/Object/Source/Role) are emitted as placeholders.
             string telemetryAppName = ApplicationNameTelemetry.EncodeTelemetryString(runtimeConfig, liveDataSource: null);

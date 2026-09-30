@@ -23,8 +23,9 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         // Lets the CLI skip even path resolution for consumed, abandoned or revoked tickets.
         internal bool IsAvailable => Volatile.Read(ref _owner)?.CanBeginReservedLaunch == true;
 
-        internal ProductTelemetryLaunchContext? Begin(string? rootPath)
-            => Interlocked.Exchange(ref _owner, null)?.BeginReservedEngineLaunch(rootPath, _source);
+        internal ProductTelemetryLaunchContext? Begin(string? rootPath,
+            CliTelemetryDatabaseType databaseType = CliTelemetryDatabaseType.Unknown)
+            => Interlocked.Exchange(ref _owner, null)?.BeginReservedEngineLaunch(rootPath, _source, databaseType);
 
         public void Dispose() => Interlocked.Exchange(ref _owner, null);
     }

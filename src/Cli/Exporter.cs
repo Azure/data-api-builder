@@ -59,6 +59,8 @@ namespace Cli
                 return false;
             }
 
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
+
             // Do not retry if schema generation logic is running
             int retryCount = options.Generate ? COSMOS_DB_RETRY_COUNT : DAB_SERVICE_RETRY_COUNT;
 

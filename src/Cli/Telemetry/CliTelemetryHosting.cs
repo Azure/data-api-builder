@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System.IO.Abstractions;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
@@ -39,6 +41,45 @@ namespace Cli.Telemetry
                 telemetry.ObserveConfiguration(ResolveConfigurationPath(fileSystem, path));
             }
         }
+
+        /// <summary>
+        /// Project only the model the command already loaded or successfully wrote. This does
+        /// no configuration discovery, identity I/O, or model serialization and retains no model.
+        /// A successful save can supply the bytes already written, never a telemetry-only reread.
+        /// </summary>
+        internal static void ObserveConfigurationDetails(CliTelemetrySession? telemetry, IFileSystem fileSystem,
+            string path, RuntimeConfig config, string? writtenJson = null)
+        {
+            if (telemetry is not { CanObserveCommand: true })
+            {
+                return;
+            }
+
+            string? root = ResolveConfigurationPath(fileSystem, path);
+            try
+            {
+                if (writtenJson is not null)
+                {
+                    // 'with' updates can retain stale original-input provenance. Use the actual
+                    // successful write's structural presence, without retaining or loading JSON.
+                    config = config with
+                    {
+                        TelemetryPresence = TelemetryConfigurationPresence.TryCaptureBounded(writtenJson, config, enabled: true)
+                    };
+                }
+
+                telemetry.ObserveConfigurationDetails(root, config, saved: writtenJson is not null);
+            }
+            catch (Exception)
+            {
+                // A written config remains a successful write even if optional evidence is lost.
+                telemetry.ObserveConfigurationDetails(root, null);
+            }
+        }
+
+        internal static IDisposable? BeginConfigurationCapture(CliTelemetrySession? telemetry)
+            => TelemetryConfigurationPresence.BeginCommandCapture(telemetry is { CanObserveCommand: true }
+                ? telemetry.IsConfigurationCaptureEnabled : null);
 
         /// <summary>
         /// Resolve only the path the command already selected, using that command's filesystem.

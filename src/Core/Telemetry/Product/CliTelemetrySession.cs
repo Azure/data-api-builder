@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Globalization;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
 
 namespace Azure.DataApiBuilder.Core.Telemetry.Product
@@ -69,6 +70,9 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         private string? _configurationPath;
         private bool _configurationObserved;
         private bool _configurationAmbiguous;
+        private CliTelemetryDatabaseType _databaseType;
+        private CliTelemetryConfigurationSnapshot? _configurationSnapshot;
+        private long _configurationProjectionVersion;
         private EngineTelemetryIdentity? _configurationIdentity;
         private Lazy<EngineTelemetryIdentity?>? _lookupResolution;
         private Lazy<EngineTelemetryIdentity?>? _createResolution;
@@ -168,6 +172,10 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         public bool IsEnabled => Volatile.Read(ref _enabled);
         public Guid SessionId { get; }
 
+        internal bool CanObserveCommand => IsEnabled && !Volatile.Read(ref _completed);
+
+        internal bool IsConfigurationCaptureEnabled() => CanObserveCommand;
+
         internal bool HasEngineStartupFailed => Volatile.Read(ref _engineStartupFailed);
 
         internal void ObserveEngineStartupFailure()
@@ -264,6 +272,90 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         }
 
         /// <summary>
+        /// Record a closed provider category after normal config loading or a successful write.
+        /// No model is retained and no identity lookup or creation occurs. A same-root write can
+        /// replace the category; unknown or different roots permanently suppress command evidence.
+        /// </summary>
+        public void ObserveDatabaseType(string? rootPath, CliTelemetryDatabaseType databaseType)
+        {
+            if (!IsEnabled)
+            {
+                return;
+            }
+
+            try
+            {
+                lock (_sync)
+                {
+                    if (!_enabled || _completed)
+                    {
+                        return;
+                    }
+
+                    ObserveTarget(rootPath);
+                    _configurationProjectionVersion++;
+                    _configurationSnapshot = null;
+                    _databaseType = _configurationAmbiguous ? CliTelemetryDatabaseType.Unknown
+                        : CliTelemetryDatabaseTypeFormatter.Normalize(databaseType);
+                }
+            }
+            catch (Exception)
+            {
+                Disable();
+            }
+        }
+
+        /// <summary>
+        /// Snapshot the model already used by the command. Only bounded categorical evidence is
+        /// retained; projection and caller enumeration occur outside the session lock. A newer
+        /// observation, completion or disable cannot be overwritten by a slow older projection.
+        /// </summary>
+        internal void ObserveConfigurationDetails(string? rootPath, RuntimeConfig? config, bool saved = false)
+        {
+            if (!CanObserveCommand)
+            {
+                return;
+            }
+
+            try
+            {
+                long version;
+                lock (_sync)
+                {
+                    if (!_enabled || _completed)
+                    {
+                        return;
+                    }
+
+                    ObserveTarget(rootPath);
+                    if (_configurationAmbiguous)
+                    {
+                        return;
+                    }
+
+                    version = ++_configurationProjectionVersion;
+                    _databaseType = CliTelemetryDatabaseType.Unknown;
+                    _configurationSnapshot = null;
+                }
+
+                CliTelemetryDatabaseType provider = CliTelemetryDatabaseTypeFormatter.FromConfiguration(config);
+                CliTelemetryConfigurationSnapshot snapshot = CliTelemetryConfigurationSnapshot.Create(config, saved);
+                lock (_sync)
+                {
+                    if (_enabled && !_completed && !_configurationAmbiguous && version == _configurationProjectionVersion)
+                    {
+                        _databaseType = provider;
+                        _configurationSnapshot = snapshot;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // The cleared observation stays unknown; optional projection never fails a command.
+            }
+        }
+
+        /// <summary>
         /// Called only after the CLI successfully writes a configuration. No success is inferred
         /// here. A missing path is a no-op, never a request to create identity in the current directory.
         /// </summary>
@@ -308,7 +400,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         /// Enqueues engine_launch before returning its immutable bridge, not an export receipt.
         /// Identity I/O occurs outside the gate and cannot revive a stopped/completed CLI.
         /// </summary>
-        public ProductTelemetryLaunchContext? BeginEngineLaunch(string? rootPath, CliTelemetryLaunchSource source)
+        public ProductTelemetryLaunchContext? BeginEngineLaunch(string? rootPath, CliTelemetryLaunchSource source,
+            CliTelemetryDatabaseType databaseType = CliTelemetryDatabaseType.Unknown)
         {
             if (!IsEnabled || source is not (CliTelemetryLaunchSource.StartWeb
                 or CliTelemetryLaunchSource.StartStdio or CliTelemetryLaunchSource.ExportGraphQL))
@@ -354,7 +447,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                     }
 
                     ProductTelemetryLaunchContext launch = new(Guid.NewGuid(), SessionId, _installation!, identity, source);
-                    return Emit("dab.cli.engine_launch", LaunchProperties(launch), identity) ? launch : null;
+                    return Emit("dab.cli.engine_launch", LaunchProperties(launch, databaseType), identity) ? launch : null;
                 }
             }
             catch (Exception)
@@ -399,7 +492,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
 
         // Called only by a consumed reservation, at the preflight-approved handoff. Identity
         // resolution must remain outside _sync so neither completion nor revocation waits on it.
-        internal ProductTelemetryLaunchContext? BeginReservedEngineLaunch(string? rootPath, CliTelemetryLaunchSource source)
+        internal ProductTelemetryLaunchContext? BeginReservedEngineLaunch(string? rootPath, CliTelemetryLaunchSource source,
+            CliTelemetryDatabaseType databaseType = CliTelemetryDatabaseType.Unknown)
         {
             Func<IProductTelemetryExporter<IProductTelemetryEvent>>? exporterFactory = _exporterFactory;
             if (exporterFactory is null || !CanBeginReservedLaunch)
@@ -447,7 +541,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                     delivery = new(() => exporterFactory(), capacity: 1, maxAttempts: 3,
                         flushTimeout: TimeSpan.FromSeconds(2), timeProvider: _clock!);
                     (_deferredDeliveries ??= []).Add(delivery);
-                    return Emit("dab.cli.engine_launch", LaunchProperties(launch), identity, delivery) ? launch : null;
+                    return Emit("dab.cli.engine_launch", LaunchProperties(launch, databaseType), identity, delivery) ? launch : null;
                 }
             }
             catch (Exception)
@@ -526,6 +620,10 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                     properties.Add("outcome", Wire(outcome));
                     properties.Add("failure_category", Wire(failureCategory));
                     properties.Add("duration_ms", Math.Max(0, elapsed.Ticks / TimeSpan.TicksPerMillisecond).ToString(CultureInfo.InvariantCulture));
+                    properties.Add("database_type", CliTelemetryDatabaseTypeFormatter.Wire(
+                        _configurationAmbiguous ? CliTelemetryDatabaseType.Unknown : _databaseType));
+                    properties.Add("configuration_context", (_configurationAmbiguous ? CliTelemetryConfigurationSnapshot.Unknown
+                        : _configurationSnapshot ?? CliTelemetryConfigurationSnapshot.Unknown).Json);
                     if (options is not null && options.Count <= MAX_OPTIONS)
                     {
                         foreach ((string key, string value) in options)
@@ -641,6 +739,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             {
                 _configurationAmbiguous = true;
                 _configurationIdentity = null;
+                _databaseType = CliTelemetryDatabaseType.Unknown;
+                _configurationSnapshot = null;
             }
         }
 
@@ -661,6 +761,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         {
             _configurationPath = null;
             _configurationIdentity = null;
+            _databaseType = CliTelemetryDatabaseType.Unknown;
+            _configurationSnapshot = null;
             _lookupResolution = null;
             _createResolution = null;
         }
@@ -677,6 +779,13 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             }
 
             properties = properties.SetItems(_context!);
+            if (!properties.ContainsKey("database_type"))
+            {
+                // First-run precedes command configuration. Never fill launch evidence from
+                // mutable command state; only the approved internal callers supply this field.
+                properties = properties.SetItem("database_type", "unknown");
+            }
+
             if (identity is not null)
             {
                 properties = properties.Add("dab_api_id", identity.ApiId.ToString("D"))
@@ -689,8 +798,12 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 && (deferredDelivery ?? _delivery!).TryEnqueue(new(Guid.NewGuid(), SessionId, ++_sequence, occurredAt, name, properties));
         }
 
-        private static ImmutableDictionary<string, string> LaunchProperties(ProductTelemetryLaunchContext launch)
+        // The explicit preflight category belongs only to this launch event, not the five-field
+        // engine bridge. Capture it in the immutable envelope before any delivery worker runs.
+        private static ImmutableDictionary<string, string> LaunchProperties(ProductTelemetryLaunchContext launch,
+            CliTelemetryDatabaseType databaseType)
             => ImmutableDictionary<string, string>.Empty
+                .Add("database_type", CliTelemetryDatabaseTypeFormatter.Wire(databaseType))
                 .Add("dab_launched_engine_session_id", launch.EngineSessionId.ToString("D"))
                 .Add("dab_parent_cli_session_id", launch.ParentCliSessionId.ToString("D"))
                 .Add("launch_source", launch.Source switch

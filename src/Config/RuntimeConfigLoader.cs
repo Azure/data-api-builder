@@ -308,11 +308,11 @@ public abstract class RuntimeConfigLoader
             // Capture original presence before any model clone/rewriting. No raw JSON escapes
             // capture, and the default-off gate avoids allocating metadata in ordinary loads.
             // Child loads run this same path and retain only their own original declarations.
-            if (TelemetryConfigurationPresence.IsCaptureEnabled())
+            if (TelemetryConfigurationPresence.TryCaptureForCurrentScope(json, config) is { } presence)
             {
                 config = config with
                 {
-                    TelemetryPresence = TelemetryConfigurationPresence.TryCapture(json, config, enabled: true)
+                    TelemetryPresence = presence
                 };
             }
 

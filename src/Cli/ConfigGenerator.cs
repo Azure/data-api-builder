@@ -387,6 +387,8 @@ namespace Cli
                 return false;
             }
 
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
+
             if (runtimeConfig.DataSource is null)
             {
                 options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
@@ -654,6 +656,8 @@ namespace Cli
                 return false;
             }
 
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
+
             const string ROLE_ANONYMOUS = "anonymous";
             const string ROLE_AUTHENTICATED = "authenticated";
 
@@ -708,6 +712,8 @@ namespace Cli
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
+
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             if (runtimeConfig.DataSource is null)
             {
@@ -2285,6 +2291,8 @@ namespace Cli
                 return false;
             }
 
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
+
             if (runtimeConfig.DataSource is null)
             {
                 options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
@@ -3103,6 +3111,8 @@ namespace Cli
                 options.CliBuffer.BufferLog(LogLevel.Information, $"Loaded config file: {runtimeConfigFile}");
             }
 
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, deserializedRuntimeConfig);
+
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource?.ConnectionString))
             {
                 options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
@@ -3210,14 +3220,16 @@ namespace Cli
                 // A consumed/revoked ticket must not fall back to an ordinary second launch.
                 if (reservation.IsAvailable)
                 {
-                    launchContext = reservation.Begin(CliTelemetryHosting.ResolveConfigurationPath(fileSystem, runtimeConfigFile));
+                    launchContext = reservation.Begin(CliTelemetryHosting.ResolveConfigurationPath(fileSystem, runtimeConfigFile),
+                        CliTelemetryDatabaseTypeFormatter.FromConfiguration(deserializedRuntimeConfig));
                 }
             }
             else if (options.ProductTelemetry is { IsEnabled: true } telemetry)
             {
                 launchContext = telemetry.BeginEngineLaunch(
                     CliTelemetryHosting.ResolveConfigurationPath(fileSystem, runtimeConfigFile),
-                    options.ProductTelemetryLaunchSource ?? (options.McpStdio ? CliTelemetryLaunchSource.StartStdio : CliTelemetryLaunchSource.StartWeb));
+                    options.ProductTelemetryLaunchSource ?? (options.McpStdio ? CliTelemetryLaunchSource.StartStdio : CliTelemetryLaunchSource.StartWeb),
+                    CliTelemetryDatabaseTypeFormatter.FromConfiguration(deserializedRuntimeConfig));
             }
 
             // Both handoffs enqueue before the service creates its session; never wait
@@ -3256,7 +3268,7 @@ namespace Cli
 
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
-            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? _))
+            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? loadedConfig))
             {
                 options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 // When IsParseErrorEmitted is true, TryLoadConfig already emitted the
@@ -3269,6 +3281,8 @@ namespace Cli
 
                 return false;
             }
+
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, loadedConfig);
 
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
@@ -3579,6 +3593,8 @@ namespace Cli
                 return false;
             }
 
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
+
             if (runtimeConfig.Runtime is null)
             {
                 options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
@@ -3657,6 +3673,8 @@ namespace Cli
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
+
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             // Get existing autoentities or create new collection
             Dictionary<string, Autoentity> autoEntitiesDictionary = runtimeConfig.Autoentities?.Autoentities != null
@@ -3942,6 +3960,8 @@ namespace Cli
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
+
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             if (runtimeConfig.DataSource?.DatabaseType != DatabaseType.MSSQL)
             {

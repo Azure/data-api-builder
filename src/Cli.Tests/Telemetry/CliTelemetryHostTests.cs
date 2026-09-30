@@ -73,6 +73,113 @@ namespace Cli.Tests.Telemetry
         public void Cleanup() => _settings.Dispose();
 
         [TestMethod]
+        public async Task NormallyLoadedChildConfigurationsContributeContextWithoutAnEngineLaunch()
+        {
+            await using WorkflowFixture fixture = await WorkflowFixture.CreateAsync(createDatabase: false);
+            await fixture.InitializeConfigurationAsync();
+            string childPath = IOPath.Combine(fixture.DirectoryPath, "child.json");
+            File.WriteAllText(childPath, """
+                { "data-source":{"database-type":"mysql","connection-string":""},
+                  "entities":{"Child":{"source":"PRIVATE_CHILD_TABLE","cache":{"enabled":false},"permissions":[]}} }
+                """);
+            using (FileSystemRuntimeConfigLoader setup = CreateLoader(fixture.FileSystem))
+            {
+                Assert.IsTrue(setup.TryLoadConfig(fixture.ConfigPath, out RuntimeConfig? config));
+                Assert.IsTrue(Utils.WriteRuntimeConfigToFile(fixture.ConfigPath,
+                    config with { DataSourceFiles = new([childPath]) }, fixture.FileSystem));
+            }
+
+            byte[] rootBytes = File.ReadAllBytes(fixture.ConfigPath);
+            byte[] childBytes = File.ReadAllBytes(childPath);
+            string previousDirectory = Directory.GetCurrentDirectory();
+            try
+            {
+                // Unchanged child loaders watch the default filename; use this fixture's
+                // stable root rather than triggering retries against a missing default.
+                Directory.SetCurrentDirectory(fixture.DirectoryPath);
+                string[] args = ["add", "Books", "--source", "PRIVATE_CHILD_TABLE", "--permissions", "anonymous:read", "--config", fixture.ConfigPath];
+                using (FileSystemRuntimeConfigLoader baseline = CreateLoader(fixture.FileSystem))
+                {
+                    Assert.AreEqual(CliReturnCode.GENERAL_ERROR, Program.Execute(args, NullLogger.Instance, fixture.FileSystem, baseline));
+                    Assert.IsNotNull(baseline.RuntimeConfig);
+                    Assert.AreEqual(2, baseline.RuntimeConfig.Entities.Count());
+                    Assert.IsNull(baseline.RuntimeConfig.TelemetryPresence);
+                    Assert.IsNull(baseline.RuntimeConfig.ChildConfigs.Single().Config.TelemetryPresence);
+                }
+
+                using CliTelemetrySession cli = fixture.CreateCli();
+                using FileSystemRuntimeConfigLoader observed = CreateLoader(fixture.FileSystem);
+                Assert.AreEqual(CliReturnCode.GENERAL_ERROR, Program.Execute(args, NullLogger.Instance, fixture.FileSystem, observed, cli));
+                Assert.IsNotNull(observed.RuntimeConfig);
+                Assert.IsNotNull(observed.RuntimeConfig.TelemetryPresence);
+                Assert.IsNotNull(observed.RuntimeConfig.ChildConfigs.Single().Config.TelemetryPresence);
+                await cli.StopAsync().WaitAsync(_timeout);
+                CliTelemetryEvent command = fixture.Events.Cli(cli.SessionId).Single();
+                Assert.AreEqual(COMMAND, command.Name);
+                Assert.AreEqual("validation_failure", command.Properties["outcome"]);
+                Assert.AreEqual("configuration", command.Properties["failure_category"]);
+                Assert.AreEqual("multiple", command.Properties["database_type"]);
+                using JsonDocument context = JsonDocument.Parse(command.Properties["configuration_context"]);
+                Assert.AreEqual("loaded", context.RootElement.GetProperty("observation").GetString());
+                Assert.AreEqual("mssql,mysql", context.RootElement.GetProperty("data_sources.types").GetString());
+                Assert.AreEqual("2-10", context.RootElement.GetProperty("scale.entity_count").GetString());
+                Assert.AreEqual("disabled", context.RootElement.GetProperty("entities.any.cache.configured").GetString());
+                Assert.AreEqual("enabled", context.RootElement.GetProperty("integrations.multiple_source_files.configured").GetString());
+                Assert.IsFalse(command.Properties["configuration_context"].Contains("PRIVATE_CHILD_TABLE", StringComparison.Ordinal));
+                CollectionAssert.AreEqual(rootBytes, File.ReadAllBytes(fixture.ConfigPath));
+                CollectionAssert.AreEqual(childBytes, File.ReadAllBytes(childPath));
+                AssertPrivateValuesAbsent(fixture);
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(previousDirectory);
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task ValidateReportsTheLoadedProviderOnSuccessAndMetadataRejection(bool missingTable)
+        {
+            await using WorkflowFixture fixture = await WorkflowFixture.CreateAsync();
+            await fixture.InitializeConfigurationAsync(source: missingTable ? "dbo.MissingBooks" : "dbo.Books");
+            // Unlike startup, the validate command also applies the JSON schema. Make the
+            // fixture explicit about this table not being a stored-procedure custom tool.
+            Assert.AreEqual(CliReturnCode.SUCCESS, fixture.Execute(
+                ["update", "Books", "--mcp.custom-tool", "false", "--config", fixture.ConfigPath]));
+            using (FileSystemRuntimeConfigLoader loader = CreateLoader(fixture.FileSystem))
+            {
+                Assert.IsTrue(loader.TryLoadConfig(fixture.ConfigPath, out RuntimeConfig? config));
+                // The placeholder selects the packaged schema without any HTTP lookup. This
+                // is fixture setup only; validate still runs its real schema and DB checks.
+                // Omit unused customer sinks: their schema requires destinations even when off.
+                Assert.IsTrue(Utils.WriteRuntimeConfigToFile(fixture.ConfigPath,
+                    config with { Schema = RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK, Runtime = config.Runtime! with { Telemetry = null } },
+                    fixture.FileSystem));
+            }
+
+            StringLogger validationLog = new();
+            Mock<ILoggerFactory> loggerFactory = new();
+            loggerFactory.Setup(factory => factory.CreateLogger(It.IsAny<string>())).Returns(validationLog);
+            Utils.LoggerFactoryForCli = loggerFactory.Object;
+            ConfigGenerator.SetLoggerForCliConfigGenerator(loggerFactory.Object.CreateLogger<ConfigGenerator>());
+            byte[] before = File.ReadAllBytes(fixture.ConfigPath);
+            int baseline = fixture.Execute(["validate", "--config", fixture.ConfigPath]);
+            using CliTelemetrySession cli = fixture.CreateCli();
+            int observed = fixture.Execute(["validate", "--config", fixture.ConfigPath], cli);
+            await cli.StopAsync().WaitAsync(_timeout);
+
+            Assert.AreEqual(missingTable ? CliReturnCode.GENERAL_ERROR : CliReturnCode.SUCCESS, baseline, validationLog.GetLog());
+            Assert.AreEqual(baseline, observed);
+            Assert.AreEqual(1, fixture.Events.Cli(cli.SessionId).Length, "Validation is not an engine launch.");
+            AssertCommand(fixture, cli, "validate", missingTable ? "validation_failure" : "success",
+                missingTable ? "configuration" : "none");
+            CollectionAssert.AreEqual(before, File.ReadAllBytes(fixture.ConfigPath));
+            CollectionAssert.AreEqual(fixture.SidecarBytes, File.ReadAllBytes(fixture.ConfigPath + ".dab-telemetry.json"));
+            AssertPrivateValuesAbsent(fixture);
+        }
+
+        [TestMethod]
         public async Task InitAddStartWebKeepsTheSidecarIdentityAndCompletesOnlyAfterHostShutdown()
         {
             await using WorkflowFixture fixture = await WorkflowFixture.CreateAsync();
@@ -517,6 +624,8 @@ namespace Cli.Tests.Telemetry
                 Assert.AreEqual(fixture.ApiId.ToString("D"), launch.Properties["dab_api_id"]);
                 Assert.AreEqual(fixture.InstallationId.ToString("D"), launch.Properties["dab_installation_id"]);
                 Assert.AreEqual("export_graphql", launch.Properties["launch_source"]);
+                Assert.AreEqual("mssql", launch.Properties["database_type"]);
+                Assert.AreEqual("mssql", completed.Properties["database_type"]);
                 Assert.AreEqual(completed.Sequence + 1, launch.Sequence);
                 Assert.AreEqual(1, launches);
                 CliTelemetryEvent[] records = fixture.Events.Cli(cli.SessionId);
@@ -566,6 +675,7 @@ namespace Cli.Tests.Telemetry
             Assert.IsFalse(started.Properties.ContainsKey("runtime.rest.effective"));
             CliTelemetryEvent launch = await fixture.Events.WaitAsync<CliTelemetryEvent>(cli.SessionId, LAUNCH);
             Assert.AreEqual(context.EngineSessionId.ToString("D"), launch.Properties["dab_launched_engine_session_id"]);
+            Assert.AreEqual("mssql", launch.Properties["database_type"]);
             Assert.AreEqual(0, engine.IdentityResolutions, "The engine must not independently regenerate the API identity.");
         }
 
@@ -637,7 +747,12 @@ namespace Cli.Tests.Telemetry
             Assert.AreEqual(command, completed.Properties["command"]);
             Assert.AreEqual(outcome, completed.Properties["outcome"]);
             Assert.AreEqual(failureCategory, completed.Properties["failure_category"]);
+            Assert.AreEqual("mssql", completed.Properties["database_type"]);
             Assert.AreEqual("none", completed.Properties["control"]);
+            using JsonDocument context = JsonDocument.Parse(completed.Properties["configuration_context"]);
+            Assert.AreEqual(command is "init" or "add" ? "saved" : "loaded", context.RootElement.GetProperty("observation").GetString());
+            Assert.AreEqual("mssql", context.RootElement.GetProperty("data_sources.types").GetString());
+            Assert.AreEqual(command == "init" ? "0" : "1", context.RootElement.GetProperty("scale.entity_count").GetString());
             Assert.IsFalse(completed.Properties.ContainsKey("dab_config_epoch"));
             Assert.IsTrue(long.Parse(completed.Properties["duration_ms"], CultureInfo.InvariantCulture) >= 0);
             return completed;

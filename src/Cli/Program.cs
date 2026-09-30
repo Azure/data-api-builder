@@ -217,6 +217,7 @@ namespace Cli
                 options.EngineLauncher = engineLauncher;
                 options.ExporterFactory = exporterFactory;
                 options.ExportCancellationTokenSource = exportCancellationTokenSource;
+                using IDisposable? capture = CliTelemetryHosting.BeginConfigurationCapture(telemetry);
                 int result = handler();
                 if (options is ExportOptions exportOptions)
                 {

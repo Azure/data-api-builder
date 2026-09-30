@@ -638,7 +638,14 @@ namespace Cli
             try
             {
                 string jsonContent = runtimeConfig.ToJson();
-                return WriteJsonToFile(file, jsonContent, fileSystem, telemetry);
+                bool written = WriteJsonToFile(file, jsonContent, fileSystem, telemetry);
+                if (written)
+                {
+                    // A proposed provider change is not configured until its write succeeds.
+                    CliTelemetryHosting.ObserveConfigurationDetails(telemetry, fileSystem, file, runtimeConfig, jsonContent);
+                }
+
+                return written;
             }
             catch (Exception e)
             {

@@ -566,19 +566,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [TestMethod]
         public void GetToolMetadata_FallsBackToConfig_WhenDbMetadataUnavailable()
         {
-            // Arrange - use a service provider without metadata factory
+            // Arrange - metadata mapping does not contain the configured entity.
             ParameterMetadata[] parameters = new[]
             {
                 new ParameterMetadata { Name = "userId", Description = "User ID" }
             };
             Entity entity = CreateTestStoredProcedureEntity(parameters: parameters);
             DynamicCustomTool tool = new("GetUser", entity);
-
-            ServiceCollection services = new();
-            services.AddLogging();
+            IServiceProvider serviceProvider = BuildServiceProviderForMetadata(
+                "GetUser",
+                new Dictionary<string, ParameterDefinition>(),
+                metadataAvailable: false);
+            RuntimeConfig config = serviceProvider
+                .GetRequiredService<RuntimeConfigProvider>()
+                .GetConfig();
+            IMetadataProviderFactory metadataProviderFactory = serviceProvider
+                .GetRequiredService<IMetadataProviderFactory>();
 
             // Act
-            tool.InitializeMetadata(services.BuildServiceProvider());
+            tool.InitializeMetadata(config, metadataProviderFactory);
             JsonElement props = ParseSchemaProperties(tool.GetToolMetadata());
 
             // Assert - should use config-based permissive type array
@@ -852,9 +858,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             Entity entity = CreateTestStoredProcedureEntity();
             DynamicCustomTool tool = new(entityName, entity);
-            IServiceProvider sp = BuildServiceProviderForMetadata(entityName, dbParameters);
+            IServiceProvider serviceProvider = BuildServiceProviderForMetadata(entityName, dbParameters);
+            RuntimeConfig config = serviceProvider
+                .GetRequiredService<RuntimeConfigProvider>()
+                .GetConfig();
+            IMetadataProviderFactory metadataProviderFactory = serviceProvider
+                .GetRequiredService<IMetadataProviderFactory>();
 
-            tool.InitializeMetadata(sp);
+            tool.InitializeMetadata(config, metadataProviderFactory);
             return tool.GetToolMetadata().InputSchema;
         }
 
@@ -868,9 +879,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             Entity entity = CreateTestStoredProcedureEntity();
             DynamicCustomTool tool = new(entityName, entity);
-            IServiceProvider sp = BuildServiceProviderForMetadata(entityName, dbParameters);
+            IServiceProvider serviceProvider = BuildServiceProviderForMetadata(entityName, dbParameters);
+            RuntimeConfig config = serviceProvider
+                .GetRequiredService<RuntimeConfigProvider>()
+                .GetConfig();
+            IMetadataProviderFactory metadataProviderFactory = serviceProvider
+                .GetRequiredService<IMetadataProviderFactory>();
 
-            tool.InitializeMetadata(sp);
+            tool.InitializeMetadata(config, metadataProviderFactory);
             return ParseSchemaProperties(tool.GetToolMetadata());
         }
 
@@ -887,7 +903,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// </summary>
         private static IServiceProvider BuildServiceProviderForMetadata(
             string entityName,
-            Dictionary<string, ParameterDefinition> dbParameters)
+            Dictionary<string, ParameterDefinition> dbParameters,
+            bool metadataAvailable = true)
         {
             Entity entity = new(
                 Source: new("test_procedure", EntitySourceType.StoredProcedure, Parameters: null, KeyFields: null),
@@ -935,7 +952,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Mock<ISqlMetadataProvider> mockSqlMetadataProvider = new();
             mockSqlMetadataProvider
                 .Setup(x => x.EntityToDatabaseObject)
-                .Returns(new Dictionary<string, DatabaseObject> { [entityName] = dbObject });
+                .Returns(metadataAvailable
+                    ? new Dictionary<string, DatabaseObject> { [entityName] = dbObject }
+                    : new Dictionary<string, DatabaseObject>());
 
             Mock<IMetadataProviderFactory> mockMetadataProviderFactory = new();
             mockMetadataProviderFactory

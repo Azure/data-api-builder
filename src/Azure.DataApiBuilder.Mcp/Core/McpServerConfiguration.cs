@@ -2,8 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,13 +30,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     throw new InvalidOperationException("Tool registry is not available.");
                 }
 
-                RuntimeConfigProvider runtimeConfigProvider = request.Services!.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-                List<Tool> tools = toolRegistry.GetEnabledTools(runtimeConfig).ToList();
-
                 return ValueTask.FromResult(new ListToolsResult
                 {
-                    Tools = tools
+                    Tools = toolRegistry.GetAdvertisedTools().ToList()
                 });
             })
             .WithCallToolHandler(async (RequestContext<CallToolRequestParams> request, CancellationToken ct) =>
@@ -97,6 +91,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 options.ServerInfo = new() { Name = McpProtocolDefaults.MCP_SERVER_NAME, Version = McpProtocolDefaults.MCP_SERVER_VERSION };
                 options.Capabilities ??= new();
                 options.Capabilities.Tools ??= new();
+                // WithListToolsHandler enables tool discovery, but HTTP session broadcast is not
+                // implemented. Do not promise list-change notifications to HTTP clients. Stdio
+                // advertises and implements this capability in its separate initialize handler.
+                options.Capabilities.Tools.ListChanged = false;
                 options.ServerInstructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null;
             });
 

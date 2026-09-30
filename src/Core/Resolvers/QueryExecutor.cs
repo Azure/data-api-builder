@@ -172,6 +172,59 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             HttpContext? httpContext = null,
             List<string>? args = null)
         {
+            return await ExecuteQueryAsyncCore(
+                sqltext,
+                parameters,
+                dataReaderHandler,
+                dataSourceName,
+                CancellationToken.None,
+                httpContext,
+                args);
+        }
+
+        /// <inheritdoc/>
+        public async Task<TResult?> ExecuteQueryAsync<TResult>(
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
+            string dataSourceName,
+            CancellationToken cancellationToken,
+            HttpContext? httpContext = null,
+            List<string>? args = null)
+        {
+            return await ExecuteQueryAsyncCore(
+                sqltext,
+                parameters,
+                dataReaderHandler,
+                dataSourceName,
+                cancellationToken,
+                httpContext,
+                args);
+        }
+
+        private async Task<TResult?> ExecuteQueryAsyncCore<TResult>(
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
+            string dataSourceName,
+            CancellationToken cancellationToken,
+            HttpContext? httpContext,
+            List<string>? args)
+        {
+            CancellationToken requestAborted =
+                httpContext?.RequestAborted ?? CancellationToken.None;
+            using CancellationTokenSource? linkedCancellation =
+                cancellationToken.CanBeCanceled &&
+                requestAborted.CanBeCanceled &&
+                cancellationToken != requestAborted
+                    ? CancellationTokenSource.CreateLinkedTokenSource(
+                        cancellationToken,
+                        requestAborted)
+                    : null;
+            CancellationToken operationCancellationToken = linkedCancellation?.Token ??
+                (cancellationToken.CanBeCanceled ? cancellationToken : requestAborted);
+
+            operationCancellationToken.ThrowIfCancellationRequested();
             int retryAttempt = 0;
 
             if (string.IsNullOrEmpty(dataSourceName))
@@ -190,12 +243,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
-            await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
+            await SetManagedIdentityAccessTokenIfAnyAsync(
+                conn,
+                dataSourceName,
+                operationCancellationToken);
 
             TResult? result = default(TResult);
 
-            result = await _retryPolicyAsync.ExecuteAsync(async () =>
+            result = await _retryPolicyAsync.ExecuteAsync(async retryCancellationToken =>
             {
+                retryCancellationToken.ThrowIfCancellationRequested();
                 retryAttempt++;
                 try
                 {
@@ -206,7 +263,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
                     }
 
-                    TResult? result = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
+                    // Preserve virtual dispatch to the established overload for legacy callers
+                    // and test doubles. The token-aware overload is required when the caller
+                    // supplied a token; retryCancellationToken then represents that token linked
+                    // with HttpContext.RequestAborted when both are cancellable.
+                    TResult? result = cancellationToken.CanBeCanceled
+                        ? await ExecuteQueryAgainstDbAsync(
+                            conn,
+                            sqltext,
+                            parameters,
+                            dataReaderHandler,
+                            httpContext,
+                            dataSourceName,
+                            args,
+                            retryCancellationToken)
+                        : await ExecuteQueryAgainstDbAsync(
+                            conn,
+                            sqltext,
+                            parameters,
+                            dataReaderHandler,
+                            httpContext,
+                            dataSourceName,
+                            args);
 
                     if (retryAttempt > 1)
                     {
@@ -236,7 +314,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         throw DbExceptionParser.Parse(e);
                     }
                 }
-            });
+            }, operationCancellationToken);
 
             return result;
         }
@@ -285,18 +363,59 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string dataSourceName,
             List<string>? args = null)
         {
+            return await ExecuteQueryAgainstDbAsyncCore(
+                conn,
+                sqltext,
+                parameters,
+                dataReaderHandler,
+                httpContext,
+                dataSourceName,
+                args,
+                httpContext?.RequestAborted ?? CancellationToken.None);
+        }
+
+        public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
+            TConnection conn,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
+            HttpContext? httpContext,
+            string dataSourceName,
+            List<string>? args,
+            CancellationToken cancellationToken)
+        {
+            return await ExecuteQueryAgainstDbAsyncCore(
+                conn,
+                sqltext,
+                parameters,
+                dataReaderHandler,
+                httpContext,
+                dataSourceName,
+                args,
+                cancellationToken);
+        }
+
+        private async Task<TResult?> ExecuteQueryAgainstDbAsyncCore<TResult>(
+            TConnection conn,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
+            HttpContext? httpContext,
+            string dataSourceName,
+            List<string>? args,
+            CancellationToken cancellationToken)
+        {
             Stopwatch queryExecutionTimer = new();
             queryExecutionTimer.Start();
             try
             {
-                await conn.OpenAsync();
+                await conn.OpenAsync(cancellationToken);
                 DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
                 TResult? result = default(TResult);
                 try
                 {
                     CommandBehavior commandBehavior = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ? CommandBehavior.SequentialAccess : CommandBehavior.CloseConnection;
                     // CancellationToken is passed to ExecuteReaderAsync to ensure that if the client times out while the query is executing, the execution will be cancelled and resources will be freed up.
-                    CancellationToken cancellationToken = httpContext?.RequestAborted ?? CancellationToken.None;
                     using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(commandBehavior, cancellationToken);
 
                     if (dataReaderHandler is not null && dbDataReader is not null)
@@ -429,8 +548,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName = "")
+        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(
+            DbConnection conn,
+            string dataSourceName = "")
         {
+            await SetManagedIdentityAccessTokenIfAnyAsync(
+                conn,
+                dataSourceName,
+                CancellationToken.None);
+        }
+
+        /// <inheritdoc />
+        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(
+            DbConnection conn,
+            string dataSourceName,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             // no-op in the base class.
             await Task.Yield();
         }

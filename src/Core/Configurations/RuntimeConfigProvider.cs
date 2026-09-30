@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 /// should not load the config directly, or maintain a reference to it, so that we can do hot-reloading by replacing
 /// the config that is available from this type.
 /// </remarks>
-public class RuntimeConfigProvider
+public class RuntimeConfigProvider : IDisposable
 {
     public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
 
@@ -46,6 +46,7 @@ public class RuntimeConfigProvider
     private RuntimeConfigLoader _configLoader;
     private DabChangeToken _changeToken = new();
     private readonly IDisposable _changeTokenRegistration;
+    private bool _disposed;
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
@@ -89,6 +90,12 @@ public class RuntimeConfigProvider
     /// </summary>
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _changeTokenRegistration.Dispose();
     }
 
@@ -188,11 +195,12 @@ public class RuntimeConfigProvider
         if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig,
+                out _,
                 replacementSettings: null))
         {
             _configLoader.RuntimeConfig = runtimeConfig;
 
-            if (string.IsNullOrEmpty(runtimeConfig.DataSource.ConnectionString))
+            if (string.IsNullOrEmpty(runtimeConfig.DataSource?.ConnectionString))
             {
                 throw new ArgumentException($"'{nameof(runtimeConfig.DataSource.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.DataSource.ConnectionString));
             }
@@ -201,6 +209,15 @@ public class RuntimeConfigProvider
             {
                 _configLoader.RuntimeConfig = HandleCosmosNoSqlConfiguration(schema, runtimeConfig, runtimeConfig.DataSource.ConnectionString);
             }
+
+            // Hosted / late-config (V2) parses with telemetry injection skipped; embed it into every
+            // data source's connection string so hosted connection pools carry the usage snapshot.
+            _configLoader.RuntimeConfig = EmbedTelemetryInDataSourceConnectionStrings(_configLoader.RuntimeConfig, skipDataSourceName: null);
+
+            // Flush the telemetry Debug log(s) buffered during embedding. The startup-time flush has
+            // already run by the time this late-config path executes, so without flushing here the
+            // buffered telemetry logs would never be emitted.
+            _configLoader.FlushLogBuffer();
 
             ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
         }
@@ -269,20 +286,79 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replacementSettings))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, out _, replacementSettings))
         {
+            // Late configuration injects a connection string into the parsed config's data source.
+            // A config with no data source (e.g. a root config that delegates to data-source-files)
+            // is not meaningful here. Return false to preserve pre-existing behavior — on main, the
+            // RuntimeConfig constructor threw when DataSource was null and TryParseConfig converted
+            // that into a 'false' return. Since DataSource is now nullable, we make the same
+            // determination explicitly rather than NRE'ing in the 'with' expression below.
+            if (runtimeConfig.DataSource is null)
+            {
+                return false;
+            }
+
             _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {
                 DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
-                _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
+                // Embed anonymous usage telemetry into the hosted / late-config connection string's
+                // Application Name (honoring the opt-out switch and the DAB_APP_NAME_ENV host label).
+                // Hosted deployments take this path, so it is exactly where the dab_hosted label matters.
+                _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = RuntimeConfigLoader.GetConnectionStringWithApplicationName(connectionString, runtimeConfig, runtimeConfig.DataSource) } }
             };
             ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
-            _configLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(_configLoader.RuntimeConfig.DefaultDataSourceName, _configLoader.RuntimeConfig.DataSource);
+            _configLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(_configLoader.RuntimeConfig.DefaultDataSourceName, _configLoader.RuntimeConfig.DataSource!);
+
+            // The default data source was supplemented with the separately-supplied connection string
+            // above. Embed telemetry into any additional (child / multi-database) data sources too, so
+            // every hosted connection pool carries the usage snapshot.
+            _configLoader.RuntimeConfig = EmbedTelemetryInDataSourceConnectionStrings(_configLoader.RuntimeConfig, skipDataSourceName: _configLoader.RuntimeConfig.DefaultDataSourceName);
+
+            // Flush the telemetry Debug log(s) buffered during embedding. The startup-time flush has
+            // already run by the time this late-config path executes, so without flushing here the
+            // buffered telemetry logs would never be emitted.
+            _configLoader.FlushLogBuffer();
 
             return await InvokeConfigLoadedHandlersAsync();
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Embeds anonymous usage telemetry into the <c>Application Name</c> of each data source's
+    /// connection string. Hosted / late-config initialization parses with env-var replacement disabled,
+    /// so the loader's telemetry injection is skipped; this re-applies it so every hosted connection
+    /// pool — single- or multi-database — carries the usage snapshot. Engines without telemetry support
+    /// (e.g. MySQL, Cosmos) are left unchanged by the underlying dispatcher.
+    /// </summary>
+    /// <param name="config">The runtime config whose data-source connection strings are updated.</param>
+    /// <param name="skipDataSourceName">An optional data source to skip (e.g. the default, already
+    /// supplemented with a separately-supplied connection string); pass <c>null</c> to process all.</param>
+    /// <returns>The config with telemetry embedded (and its default data source kept in sync).</returns>
+    private static RuntimeConfig EmbedTelemetryInDataSourceConnectionStrings(RuntimeConfig config, string? skipDataSourceName)
+    {
+        foreach ((string dataSourceName, DataSource dataSource) in config.GetDataSourceNamesToDataSourcesIterator().ToList())
+        {
+            if (skipDataSourceName is not null && string.Equals(dataSourceName, skipDataSourceName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            DataSource updatedDataSource = dataSource with
+            {
+                ConnectionString = RuntimeConfigLoader.GetConnectionStringWithApplicationName(dataSource.ConnectionString, config, dataSource)
+            };
+            config.UpdateDataSourceNameToDataSource(dataSourceName, updatedDataSource);
+
+            if (string.Equals(dataSourceName, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
+            {
+                config = config with { DataSource = updatedDataSource };
+            }
+        }
+
+        return config;
     }
 
     /// <summary>

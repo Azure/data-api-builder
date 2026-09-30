@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Data;
 using System.Data.Common;
 using System.Net;
 using System.Text.Json;
@@ -191,6 +190,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     context,
                                     parameters,
                                     sqlMetadataProvider,
+                                    _runtimeConfigProvider.GetConfig(),
                                     !isPointMutation);
 
                         // For point create multiple mutation operation, a single item is created in the
@@ -542,86 +542,59 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 try
                 {
-                    if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
+                    // When the URL path has no primary key route but the request body contains
+                    // ALL PK columns, promote those values into PrimaryKeyValuePairs so the upsert
+                    // path can build a proper UPDATE ... WHERE pk = value (with INSERT fallback)
+                    // instead of blindly inserting and failing on a PK violation.
+                    // Every PK column must be present — including auto-generated ones — because
+                    // a partial composite key cannot uniquely identify a row for UPDATE.
+                    if ((context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
+                        && context.PrimaryKeyValuePairs.Count == 0)
                     {
-                        // When no primary key values are provided (empty PrimaryKeyValuePairs),
-                        // there is no row to look up for update. The upsert degenerates to a
-                        // pure INSERT - execute it via the insert path so the mutation engine
-                        // generates a correct INSERT statement instead of an UPDATE with an
-                        // empty WHERE clause (WHERE 1 = 1) that would match every row.
-                        if (context.PrimaryKeyValuePairs.Count == 0)
+                        SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(context.EntityName);
+                        bool allPKsInBody = true;
+                        List<string> pkExposedNames = new();
+
+                        foreach (string pk in sourceDefinition.PrimaryKey)
                         {
-                            DbResultSetRow? insertResultRow = null;
-
-                            try
+                            if (!sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, pk, out string? exposedName))
                             {
-                                using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
-                                {
-                                    insertResultRow =
-                                        await PerformMutationOperation(
-                                            entityName: context.EntityName,
-                                            operationType: EntityActionOperation.Insert,
-                                            parameters: parameters,
-                                            sqlMetadataProvider: sqlMetadataProvider);
-
-                                    if (insertResultRow is null)
-                                    {
-                                        throw new DataApiBuilderException(
-                                            message: "An unexpected error occurred while trying to execute the query.",
-                                            statusCode: HttpStatusCode.InternalServerError,
-                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                                    }
-
-                                    if (insertResultRow.Columns.Count == 0)
-                                    {
-                                        throw new DataApiBuilderException(
-                                            message: "Could not insert row with given values.",
-                                            statusCode: HttpStatusCode.Forbidden,
-                                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
-                                    }
-
-                                    if (isDatabasePolicyDefinedForReadAction)
-                                    {
-                                        FindRequestContext findRequestContext = ConstructFindRequestContext(context, insertResultRow, roleName, sqlMetadataProvider);
-                                        IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
-                                        selectOperationResponse = await queryEngine.ExecuteAsync(findRequestContext);
-                                    }
-
-                                    transactionScope.Complete();
-                                }
-                            }
-                            catch (TransactionException)
-                            {
-                                throw _dabExceptionWithTransactionErrorMessage;
+                                allPKsInBody = false;
+                                break;
                             }
 
-                            if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
+                            if (!context.FieldValuePairsInBody.ContainsKey(exposedName))
                             {
-                                IEnumerable<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
-                                foreach (string columnInResponse in insertResultRow.Columns.Keys)
-                                {
-                                    if (!allowedExposedColumns.Contains(columnInResponse))
-                                    {
-                                        insertResultRow.Columns.Remove(columnInResponse);
-                                    }
-                                }
+                                allPKsInBody = false;
+                                break;
                             }
 
-                            string pkRouteForLocationHeader = isReadPermissionConfiguredForRole
-                                ? SqlResponseHelpers.ConstructPrimaryKeyRoute(context, insertResultRow.Columns, sqlMetadataProvider)
-                                : string.Empty;
-
-                            return SqlResponseHelpers.ConstructCreatedResultResponse(
-                                insertResultRow.Columns,
-                                selectOperationResponse,
-                                pkRouteForLocationHeader,
-                                isReadPermissionConfiguredForRole,
-                                isDatabasePolicyDefinedForReadAction,
-                                context.OperationType,
-                                GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()),
-                                GetHttpContext());
+                            pkExposedNames.Add(exposedName);
                         }
 
+                        if (allPKsInBody)
+                        {
+                            // Populate PrimaryKeyValuePairs from the body so the upsert path
+                            // generates an UPDATE with the correct WHERE clause.
+                            foreach (string exposedName in pkExposedNames)
+                            {
+                                if (context.FieldValuePairsInBody.TryGetValue(exposedName, out object? value))
+                                {
+                                    context.PrimaryKeyValuePairs[exposedName] = value!;
+                                }
+                            }
+                        }
+                    }
+
+                    // When an upsert still has no primary key values after checking the body,
+                    // it degenerates to a pure INSERT. Fall through to the shared insert/update
+                    // handling so the mutation engine generates a correct INSERT statement instead
+                    // of an UPDATE with an empty WHERE clause (WHERE 1 = 1) that would match every row.
+                    bool isKeylessUpsert = (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
+                        && context.PrimaryKeyValuePairs.Count == 0;
+
+                    if (!isKeylessUpsert && (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental))
+                    {
                         DbResultSet? upsertOperationResult;
                         DbResultSetRow upsertOperationResultSetRow;
 
@@ -723,7 +696,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else
                     {
-                        // This code block gets executed when the operation type is one among Insert, Update or UpdateIncremental.
+                        // This code block handles Insert, Update, UpdateIncremental,
+                        // and keyless upsert (which degenerates to Insert).
+                        EntityActionOperation effectiveOperationType = isKeylessUpsert
+                            ? EntityActionOperation.Insert
+                            : context.OperationType;
+
                         DbResultSetRow? mutationResultRow = null;
 
                         try
@@ -734,56 +712,41 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 mutationResultRow =
                                         await PerformMutationOperation(
                                             entityName: context.EntityName,
-                                            operationType: context.OperationType,
+                                            operationType: effectiveOperationType,
                                             parameters: parameters,
                                             sqlMetadataProvider: sqlMetadataProvider);
 
-                                if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
+                                if (mutationResultRow is null)
                                 {
-                                    if (context.OperationType is EntityActionOperation.Insert)
+                                    HttpStatusCode statusCode = effectiveOperationType is EntityActionOperation.Insert
+                                        ? HttpStatusCode.InternalServerError
+                                        : HttpStatusCode.NotFound;
+
+                                    // Ideally this case should not happen, however may occur due to unexpected reasons,
+                                    // like the DbDataReader being null. We throw an exception
+                                    // which will be returned as an UnexpectedError.
+                                    throw new DataApiBuilderException(
+                                        message: "An unexpected error occurred while trying to execute the query.",
+                                        statusCode: statusCode,
+                                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                                }
+
+                                if (mutationResultRow.Columns.Count == 0)
+                                {
+                                    if (effectiveOperationType is EntityActionOperation.Insert)
                                     {
-                                        if (mutationResultRow is null)
-                                        {
-                                            // Ideally this case should not happen, however may occur due to unexpected reasons,
-                                            // like the DbDataReader being null. We throw an exception
-                                            // which will be returned as an UnexpectedError.
-                                            throw new DataApiBuilderException(
-                                                message: "An unexpected error occurred while trying to execute the query.",
-                                                statusCode: HttpStatusCode.InternalServerError,
-                                                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                                        }
-
-                                        if (mutationResultRow.Columns.Count == 0)
-                                        {
-                                            throw new DataApiBuilderException(
-                                                message: "Could not insert row with given values.",
-                                                statusCode: HttpStatusCode.Forbidden,
-                                                subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
-                                                );
-                                        }
+                                        throw new DataApiBuilderException(
+                                            message: "Could not insert row with given values.",
+                                            statusCode: HttpStatusCode.Forbidden,
+                                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
+                                            );
                                     }
-                                    else
-                                    {
-                                        if (mutationResultRow is null)
-                                        {
-                                            // Ideally this case should not happen, however may occur due to unexpected reasons,
-                                            // like the DbDataReader being null. We throw an exception
-                                            // which will be returned as an UnexpectedError
-                                            throw new DataApiBuilderException(message: "An unexpected error occurred while trying to execute the query.",
-                                                                                statusCode: HttpStatusCode.NotFound,
-                                                                                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                                        }
 
-                                        if (mutationResultRow.Columns.Count == 0)
-                                        {
-                                            // This code block is reached when Update or UpdateIncremental operation does not successfully find the record to
-                                            // update. An exception is thrown which will be returned as a 404 NotFound response.
-                                            throw new DataApiBuilderException(message: "No Update could be performed, record not found",
-                                                                                statusCode: HttpStatusCode.NotFound,
-                                                                                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-                                        }
-
-                                    }
+                                    // This code block is reached when Update or UpdateIncremental operation does not successfully find the record to
+                                    // update. An exception is thrown which will be returned as a 404 NotFound response.
+                                    throw new DataApiBuilderException(message: "No Update could be performed, record not found",
+                                                                        statusCode: HttpStatusCode.NotFound,
+                                                                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                                 }
 
                                 // The role with which the REST request is executed can have database policies defined for the read action.
@@ -827,17 +790,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         string primaryKeyRouteForLocationHeader = isReadPermissionConfiguredForRole ? SqlResponseHelpers.ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider)
                                                                                                     : string.Empty;
 
-                        if (context.OperationType is EntityActionOperation.Insert)
+                        if (effectiveOperationType is EntityActionOperation.Insert)
                         {
                             // Location Header is made up of the Base URL of the request and the primary key of the item created.
-                            // For POST requests, the primary key info would not be available in the URL and needs to be appended. So, the primary key of the newly created item
-                            // which is stored in the primaryKeyRoute is used to construct the Location Header.
-                            return SqlResponseHelpers.ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
+                            // For POST requests and keyless PUT/PATCH requests, the primary key info would not be available
+                            // in the URL and needs to be appended. So, the primary key of the newly created item which is
+                            // stored in the primaryKeyRoute is used to construct the Location Header.
+                            // effectiveOperationType (Insert) is passed so that ConstructCreatedResultResponse populates
+                            // the Location header for both true POST inserts and keyless upserts that result in an insert.
+                            return SqlResponseHelpers.ConstructCreatedResultResponse(
+                                mutationResultRow!.Columns,
+                                selectOperationResponse,
+                                primaryKeyRouteForLocationHeader,
+                                isReadPermissionConfiguredForRole,
+                                isDatabasePolicyDefinedForReadAction,
+                                effectiveOperationType,
+                                GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()),
+                                GetHttpContext());
                         }
 
-                        if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
+                        if (effectiveOperationType is EntityActionOperation.Update || effectiveOperationType is EntityActionOperation.UpdateIncremental)
                         {
-                            return SqlResponseHelpers.ConstructOkMutationResponse(mutationResultRow!.Columns, selectOperationResponse, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
+                            return SqlResponseHelpers.ConstructOkMutationResponse(
+                                mutationResultRow!.Columns,
+                                selectOperationResponse,
+                                isReadPermissionConfiguredForRole,
+                                isDatabasePolicyDefinedForReadAction);
                         }
                     }
 
@@ -1089,6 +1067,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IMiddlewareContext context,
                 IDictionary<string, object?> mutationInputParamsFromGQLContext,
                 ISqlMetadataProvider sqlMetadataProvider,
+                RuntimeConfig runtimeConfig,
                 bool isMultipleInputType = false)
         {
             // rootFieldName can be either "item" or "items" depending on whether the operation
@@ -1096,7 +1075,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string rootFieldName = isMultipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
 
             // Parse the hotchocolate input parameters into .net object types
-            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, rootFieldName, mutationInputParamsFromGQLContext);
+            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, rootFieldName, mutationInputParamsFromGQLContext, sqlMetadataProvider, entityName, runtimeConfig);
 
             if (parsedInputParams is null)
             {
@@ -1766,14 +1745,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         internal static object? GQLMultipleCreateArgumentToDictParams(
                 IMiddlewareContext context,
                 string rootFieldName,
-                IDictionary<string, object?> mutationParameters)
+                IDictionary<string, object?> mutationParameters,
+                ISqlMetadataProvider metadataProvider,
+                string entityName,
+                RuntimeConfig runtimeConfig)
         {
             if (mutationParameters.TryGetValue(rootFieldName, out object? inputParameters))
             {
                 ObjectField fieldSchema = context.Selection.Field;
                 IInputValueDefinition itemsArgumentSchema = fieldSchema.Arguments[rootFieldName];
                 InputObjectType inputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
-                return GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, inputParameters);
+                return GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, inputParameters, metadataProvider, entityName, runtimeConfig);
             }
             else
             {
@@ -1821,7 +1803,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         internal static object? GQLMultipleCreateArgumentToDictParamsHelper(
             IMiddlewareContext context,
             InputObjectType inputObjectType,
-            object? inputParameters)
+            object? inputParameters,
+            ISqlMetadataProvider metadataProvider,
+            string entityName,
+            RuntimeConfig runtimeConfig)
         {
             // This condition is met for input types that accept an array of values
             // where the mutation input field is 'items' such as
@@ -1843,7 +1828,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     object? parsedInputFieldItem = GQLMultipleCreateArgumentToDictParamsHelper(
                                             context: context,
                                             inputObjectType: inputObjectType,
-                                            inputParameters: inputField.Value);
+                                            inputParameters: inputField.Value,
+                                            metadataProvider: metadataProvider,
+                                            entityName: entityName,
+                                            runtimeConfig: runtimeConfig);
                     if (parsedInputFieldItem is not null)
                     {
                         parsedInputFieldItems.Add((IDictionary<string, object?>)parsedInputFieldItem);
@@ -1870,33 +1858,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach (ObjectFieldNode inputFieldNode in inputFieldNodes)
                 {
                     string fieldName = inputFieldNode.Name.Value;
+                    string targetEntityName = entityName;
+                    Dictionary<string, EntityRelationship>? entityRelationships = runtimeConfig.Entities![entityName].Relationships;
+                    if (entityRelationships is not null && entityRelationships.ContainsKey(fieldName))
+                    {
+                        targetEntityName = entityRelationships[fieldName].TargetEntity;
+                    }
+
+                    SyntaxKind fieldKind = metadataProvider.TryGetArrayElementSyntaxKind(targetEntityName, fieldName, out SyntaxKind arrayFieldKind)
+                        ? arrayFieldKind : inputFieldNode.Value.Kind;
+
                     // For the mutation pointMultipleCreateExample (outlined in the method summary),
                     // the following condition will evaluate to true for fields 'authors' and 'reviews'.
                     // Fields 'authors'/'reviews' can again consist of combination of scalar and relationship fields.
                     // So, the input object type for 'authors'/'reviews' is fetched and the same function is
                     // invoked with the fetched input object type again to parse the input fields of 'authors'/'reviews'.
-                    if (inputFieldNode.Value.Kind == SyntaxKind.ListValue)
+                    if (fieldKind == SyntaxKind.ListValue)
                     {
                         parsedInputFields.Add(
                             fieldName,
                             GQLMultipleCreateArgumentToDictParamsHelper(
                                 context,
                                 GetInputObjectTypeForAField(fieldName, inputObjectType.Fields),
-                                inputFieldNode.Value.Value));
+                                inputFieldNode.Value.Value,
+                                metadataProvider,
+                                targetEntityName,
+                                runtimeConfig));
                     }
                     // For the mutation pointMultipleCreateExample (outlined in the method summary),
                     // the following condition will evaluate to true for fields 'publishers'.
                     // Field 'publishers' can again consist of combination of scalar and relationship fields.
                     // So, the input object type for 'publishers' is fetched and the same function is
                     // invoked with the fetched input object type again to parse the input fields of 'publishers'.
-                    else if (inputFieldNode.Value.Kind == SyntaxKind.ObjectValue)
+                    else if (fieldKind == SyntaxKind.ObjectValue)
                     {
                         parsedInputFields.Add(
                             fieldName,
                             GQLMultipleCreateArgumentToDictParamsHelper(
                                 context,
                                 GetInputObjectTypeForAField(fieldName, inputObjectType.Fields),
-                                inputFieldNode.Value.Value));
+                                inputFieldNode.Value.Value,
+                                metadataProvider,
+                                targetEntityName,
+                                runtimeConfig));
                     }
                     // The flow enters this block for all scalar input fields.
                     else
@@ -2272,7 +2276,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///     }
         /// }
         /// </code>
-        /// 
+        ///
         /// Example 2 - Multiple items creation:
         /// <code>
         /// mutation {
@@ -2374,7 +2378,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             foreach (ObjectFieldNode field in fieldNodes)
             {
                 Tuple<IValueNode?, SyntaxKind> fieldDetails = GraphQLUtils.GetFieldDetails(field.Value, context.Variables);
-                SyntaxKind underlyingFieldKind = fieldDetails.Item2;
+                SyntaxKind underlyingFieldKind = metadataProvider.TryGetArrayElementSyntaxKind(entityName, field.Name.Value, out SyntaxKind arrayFieldKind) ? arrayFieldKind : fieldDetails.Item2;
 
                 // For a column field, we do not have to recurse to process fields in the value - which is required for relationship fields.
                 if (GraphQLUtils.IsScalarField(underlyingFieldKind) || underlyingFieldKind is SyntaxKind.NullValue)

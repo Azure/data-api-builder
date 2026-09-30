@@ -90,7 +90,7 @@ namespace Cli.Commands
         [Option("set-session-context", Default = false, Required = false, HelpText = "Enable sending data to MsSql using session context.")]
         public bool SetSessionContext { get; }
 
-        [Option("host-mode", Default = HostMode.Production, Required = false, HelpText = "Specify the Host mode - Development or Production")]
+        [Option("host-mode", Default = HostMode.Production, Required = false, HelpText = "Specify the Host mode - development or production")]
         public HostMode HostMode { get; }
 
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
@@ -111,19 +111,19 @@ namespace Cli.Commands
         [Option("runtime.base-route", Default = null, Required = false, HelpText = "Specifies the base route for API requests.")]
         public string? RuntimeBaseRoute { get; }
 
-        [Option("rest.disabled", Default = false, Required = false, HelpText = "Disables REST endpoint for all entities.")]
+        [Option("rest.disabled", Default = false, Required = false, Hidden = true, HelpText = "[Deprecated] Use --rest.enabled false instead. Disables REST endpoint for all entities.")]
         public bool RestDisabled { get; }
 
         [Option("graphql.path", Default = GraphQLRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the GraphQL endpoint's default prefix.")]
         public string GraphQLPath { get; }
 
-        [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
+        [Option("graphql.disabled", Default = false, Required = false, Hidden = true, HelpText = "[Deprecated] Use --graphql.enabled false instead. Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
 
         [Option("mcp.path", Default = McpRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the MCP endpoint's default prefix.")]
         public string McpPath { get; }
 
-        [Option("mcp.disabled", Default = false, Required = false, HelpText = "Disables MCP endpoint for all entities.")]
+        [Option("mcp.disabled", Default = false, Required = false, Hidden = true, HelpText = "[Deprecated] Use --mcp.enabled false instead. Disables MCP endpoint for all entities.")]
         public bool McpDisabled { get; }
 
         [Option("rest.enabled", Required = false, HelpText = "(Default: true) Enables REST endpoint for all entities. Supported values: true, false.")]
@@ -139,7 +139,7 @@ namespace Cli.Commands
         [Option("rest.request-body-strict", Required = false, HelpText = "(Default: false) When true, rejects extraneous/unmapped fields in the REST request body. When false, allows and ignores them.")]
         public CliBool RestRequestBodyStrict { get; }
 
-        [Option("graphql.multiple-create.enabled", Required = false, HelpText = "(Default: false) Enables multiple create operation for GraphQL. Supported values: true, false.")]
+        [Option("graphql.multiple-mutations.create.enabled", Required = false, HelpText = "(Default: false) Enables multiple create operation for GraphQL. Supported values: true, false.")]
         public CliBool MultipleCreateOperationEnabled { get; }
 
         [Option("mcp.aggregate-records.query-timeout", Required = false, HelpText = "Set the execution timeout in seconds for the aggregate-records MCP tool. Default: 30 (integer). Range: 1-600.")]

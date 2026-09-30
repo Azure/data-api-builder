@@ -86,6 +86,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            args.CancellationToken.ThrowIfCancellationRequested();
             CreateDocument(doOverrideExistingDocument: true);
             _roleSpecificDocuments.Clear(); // Clear role-specific document cache on config change
         }
@@ -235,7 +236,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     new() { Url = url }
                 },
-                Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, globalTagsDict, role),
+                Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, globalTagsDict, role, isRequestBodyStrict: runtimeConfig.IsRequestBodyStrict),
                 Components = components,
                 Tags = globalTagsDict.Values.ToList()
             };
@@ -300,7 +301,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="globalTags">Dictionary of global tags keyed by normalized REST path for reuse.</param>
         /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
         /// <returns>All possible paths in the DAB engine's REST API endpoint.</returns>
-        private OpenApiPaths BuildPaths(RuntimeEntities entities, string defaultDataSourceName, Dictionary<string, OpenApiTag> globalTags, string? role = null)
+        private OpenApiPaths BuildPaths(RuntimeEntities entities, string defaultDataSourceName, Dictionary<string, OpenApiTag> globalTags, string? role = null, bool isRequestBodyStrict = true)
         {
             OpenApiPaths pathsCollection = new();
 
@@ -377,7 +378,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         sourceDefinition: sourceDefinition,
                         includePrimaryKeyPathComponent: true,
                         configuredRestOperations: configuredRestOperations,
-                        tags: tags);
+                        tags: tags,
+                        isRequestBodyStrict: isRequestBodyStrict);
 
                     if (pkOperations.Count > 0)
                     {
@@ -400,7 +402,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         sourceDefinition: sourceDefinition,
                         includePrimaryKeyPathComponent: false,
                         configuredRestOperations: configuredRestOperations,
-                        tags: tags);
+                        tags: tags,
+                        isRequestBodyStrict: isRequestBodyStrict);
 
                     if (operations.Count > 0)
                     {
@@ -435,7 +438,8 @@ namespace Azure.DataApiBuilder.Core.Services
             SourceDefinition sourceDefinition,
             bool includePrimaryKeyPathComponent,
             Dictionary<OperationType, bool> configuredRestOperations,
-            List<OpenApiTag> tags)
+            List<OpenApiTag> tags,
+            bool isRequestBodyStrict = true)
         {
             Dictionary<OperationType, OpenApiOperation> openApiPathItemOperations = new();
 
@@ -457,7 +461,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     if (configuredRestOperations[OperationType.Put])
                     {
                         OpenApiOperation putOperation = CreateBaseOperation(description: PUT_DESCRIPTION, tags: tags);
-                        putOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
+                        string putPatchSchemaRef = isRequestBodyStrict ? $"{entityName}_NoPK" : entityName;
+                        putOperation.RequestBody = CreateOpenApiRequestBodyPayload(putPatchSchemaRef, requestBodyRequired);
                         putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
                         putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
                         openApiPathItemOperations.Add(OperationType.Put, putOperation);
@@ -466,7 +471,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     if (configuredRestOperations[OperationType.Patch])
                     {
                         OpenApiOperation patchOperation = CreateBaseOperation(description: PATCH_DESCRIPTION, tags: tags);
-                        patchOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
+                        string patchSchemaRef = isRequestBodyStrict ? $"{entityName}_NoPK" : entityName;
+                        patchOperation.RequestBody = CreateOpenApiRequestBodyPayload(patchSchemaRef, requestBodyRequired);
                         patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
                         patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
                         openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
@@ -496,7 +502,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (configuredRestOperations[OperationType.Post])
                 {
-                    string postBodySchemaReferenceId = DoesSourceContainAutogeneratedPrimaryKey(sourceDefinition) ? $"{entityName}_NoAutoPK" : $"{entityName}";
+                    string postBodySchemaReferenceId = isRequestBodyStrict && DoesSourceContainAutogeneratedPrimaryKey(sourceDefinition) ? $"{entityName}_NoAutoPK" : $"{entityName}";
                     OpenApiOperation postOperation = CreateBaseOperation(description: POST_DESCRIPTION, tags: tags);
                     postOperation.RequestBody = CreateOpenApiRequestBodyPayload(postBodySchemaReferenceId, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true));
                     postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
@@ -509,7 +515,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // which is useful for entities with identity/auto-generated keys.
                 if (DoesSourceContainAutogeneratedPrimaryKey(sourceDefinition))
                 {
-                    string keylessBodySchemaReferenceId = $"{entityName}_NoAutoPK";
+                    string keylessBodySchemaReferenceId = isRequestBodyStrict ? $"{entityName}_NoAutoPK" : entityName;
                     bool keylessRequestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true);
 
                     if (configuredRestOperations[OperationType.Put])
@@ -675,7 +681,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// This method adds the input parameters from the stored procedure definition to the OpenApi operation parameters.
-        /// A input parameter will be marked REQUIRED if default value is not available.
+        /// A input parameter will be marked REQUIRED when it is explicitly flagged in config or when no default value is available.
         /// </summary>
         private static void AddStoredProcedureInputParameters(OpenApiOperation operation, StoredProcedureDefinition spDefinition)
         {
@@ -685,7 +691,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     GetOpenApiQueryParameter(
                         name: paramKey,
                         description: "Input parameter for stored procedure arguments",
-                        required: false,
+                        required: parameterDefinition.Required ?? !parameterDefinition.HasConfigDefault,
                         type: TypeHelper.GetJsonDataTypeFromSystemType(parameterDefinition.SystemType).ToString().ToLower()
                     )
                 );
@@ -1130,9 +1136,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 StoredProcedureDefinition spDef = (StoredProcedureDefinition)sourceDef;
                 foreach (KeyValuePair<string, ParameterDefinition> parameterMetadata in spDef.Parameters)
                 {
-                    // A parameter which does not have any of the following properties
+                    // A parameter which is explicitly marked required or has no default value
                     // results in the body being required so that a value can be provided.
-                    if (!parameterMetadata.Value.HasConfigDefault)
+                    if (parameterMetadata.Value.Required ?? !parameterMetadata.Value.HasConfigDefault)
                     {
                         requestBodyRequired = true;
                         break;
@@ -1276,14 +1282,16 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Builds the schema objects for all entities present in the runtime configuration.
-        /// Two schemas per entity are created:
-        /// 1) {EntityName}      -> Primary keys present in schema, used for request bodies (excluding GET) and all response bodies.
-        /// 2) {EntityName}_NoAutoPK -> No auto-generated primary keys present in schema, used for POST requests where PK is not autogenerated and GET (all).
-        /// 3) {EntityName}_NoPK -> No primary keys present in schema, used for POST requests where PK is autogenerated and GET (all).
+        /// When isRequestBodyStrict is true, up to three schemas per entity are created:
+        /// 1) {EntityName}          -> All columns including primary keys. Used for response bodies and as request body when strict mode is off.
+        /// 2) {EntityName}_NoAutoPK -> Excludes auto-generated primary keys. Used for POST request bodies (strict mode only).
+        /// 3) {EntityName}_NoPK     -> Excludes all primary keys. Used for PUT/PATCH request bodies (strict mode only).
+        /// When isRequestBodyStrict is false, only the base {EntityName} schema is created and all
+        /// request body operations reference it directly, since extra properties are allowed.
         /// Schema objects can be referenced elsewhere in the OpenAPI document with the intent to reduce document verbosity.
         /// </summary>
         /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
-        /// <param name="isRequestBodyStrict">When true, request body schemas disallow extra fields.</param>
+        /// <param name="isRequestBodyStrict">When true, generates separate request body schemas that disallow extra fields.</param>
         /// <returns>Collection of schemas for entities defined in the runtime configuration.</returns>
         private Dictionary<string, OpenApiSchema> CreateComponentSchemas(RuntimeEntities entities, string defaultDataSourceName, string? role = null, bool isRequestBodyStrict = true)
         {
@@ -1342,7 +1350,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities, isRequestBodySchema: false));
 
                     // Only generate request body schemas if mutation operations are available
-                    if (hasPostOperation || hasPutPatchOperation)
+                    if (isRequestBodyStrict && (hasPostOperation || hasPutPatchOperation))
                     {
                         // Create an entity's request body component schema excluding autogenerated primary keys.
                         // A POST request requires any non-autogenerated primary key references to be in the request body.
@@ -1415,7 +1423,10 @@ namespace Azure.DataApiBuilder.Core.Services
                     Default = def.Default is not null ? new OpenApiString(def.Default) : null
                 });
 
-                if (def.Required == true)
+                // A parameter is required when it is explicitly marked required in the runtime config,
+                // or when no default value is available, in which case a value must be provided in the
+                // request body. This mirrors the logic used by IsRequestBodyRequired.
+                if (def.Required ?? !def.HasConfigDefault)
                 {
                     required.Add(parameter);
                 }
@@ -1477,12 +1488,18 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (metadataProvider.TryGetBackingColumn(entityName, field, out string? backingColumnValue) && !string.IsNullOrEmpty(backingColumnValue))
                 {
                     string typeMetadata = string.Empty;
+                    string subTypeMetadata = string.Empty;
                     string formatMetadata = string.Empty;
                     string? fieldDescription = null;
 
                     if (dbObject.SourceDefinition.Columns.TryGetValue(backingColumnValue, out ColumnDefinition? columnDef))
                     {
                         typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(columnDef.SystemType).ToString().ToLower();
+
+                        if (string.Equals(typeMetadata, JsonDataType.Array.ToString().ToLower(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            subTypeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(columnDef.ElementSystemType!).ToString().ToLower();
+                        }
                     }
 
                     if (entityConfig?.Fields != null)
@@ -1495,7 +1512,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         Type = typeMetadata,
                         Format = formatMetadata,
-                        Description = fieldDescription
+                        Description = fieldDescription,
+                        Items = !string.IsNullOrWhiteSpace(subTypeMetadata) ? new OpenApiSchema() { Type = subTypeMetadata } : null
                     });
                 }
             }

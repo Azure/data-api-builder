@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             ServiceCollection services = new();
             RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
-            services.AddSingleton(configProvider);
+            services.AddSingleton<RuntimeConfigProvider>(sp => configProvider);
             services.AddLogging();
             return services.BuildServiceProvider();
         }
@@ -214,6 +214,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         private class ImmediateCompletionTool : IMcpTool
         {
             public ToolType ToolType { get; } = ToolType.BuiltIn;
+
+            public bool IsEnabled(RuntimeConfig config) => true;
 
             public Tool GetToolMetadata()
             {
@@ -256,6 +258,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             }
 
             public ToolType ToolType { get; }
+
+            public bool IsEnabled(RuntimeConfig config) => true;
 
             public Tool GetToolMetadata()
             {

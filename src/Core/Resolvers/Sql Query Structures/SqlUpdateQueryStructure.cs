@@ -122,26 +122,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     Predicates.Add(CreatePredicateForParam(new KeyValuePair<string, object?>(pkBackingColumn, param.Value)));
                 }
                 else // Unpack the input argument type as columns to update
-                if (param.Key == UpdateAndPatchMutationBuilder.INPUT_ARGUMENT_NAME)
-                {
-                    IDictionary<string, object?> updateFields =
-                        GQLMutArgumentToDictParams(context, UpdateAndPatchMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams);
-
-                    foreach (KeyValuePair<string, object?> field in updateFields)
+                    if (param.Key == UpdateAndPatchMutationBuilder.INPUT_ARGUMENT_NAME)
                     {
-                        string fieldBackingColumn = field.Key;
-                        if (sqlMetadataProvider.TryGetBackingColumn(entityName, field.Key, out string? resolvedBackingColumn)
-                            && !string.IsNullOrWhiteSpace(resolvedBackingColumn))
-                        {
-                            fieldBackingColumn = resolvedBackingColumn;
-                        }
+                        IDictionary<string, object?> updateFields =
+                            GQLMutArgumentToDictParams(context, UpdateAndPatchMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams);
 
-                        if (columns.Contains(fieldBackingColumn))
+                        foreach (KeyValuePair<string, object?> field in updateFields)
                         {
-                            UpdateOperations.Add(CreatePredicateForParam(new KeyValuePair<string, object?>(key: fieldBackingColumn, field.Value)));
+                            string fieldBackingColumn = field.Key;
+                            if (sqlMetadataProvider.TryGetBackingColumn(entityName, field.Key, out string? resolvedBackingColumn)
+                                && !string.IsNullOrWhiteSpace(resolvedBackingColumn))
+                            {
+                                fieldBackingColumn = resolvedBackingColumn;
+                            }
+
+                            if (columns.Contains(fieldBackingColumn))
+                            {
+                                UpdateOperations.Add(CreatePredicateForParam(new KeyValuePair<string, object?>(key: fieldBackingColumn, field.Value)));
+                            }
                         }
                     }
-                }
             }
 
             if (UpdateOperations.Count == 0)
@@ -183,11 +183,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
+                string stringValue = GetStringifiedValue(param.Value);
                 predicate = new(
                     new PredicateOperand(
                         new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"{MakeDbConnectionParam(GetParamAsSystemType(param.Value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)), backingColumn)}"));
+                    new PredicateOperand($"{MakeDbConnectionParam(GetParamAsSystemType(stringValue, backingColumn, GetColumnSystemType(backingColumn)), backingColumn)}"));
             }
 
             return predicate;

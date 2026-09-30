@@ -24,7 +24,7 @@ namespace Cli.Commands
             IEnumerable<string>? patternsInclude = null,
             IEnumerable<string>? patternsExclude = null,
             string? patternsName = null,
-            string? templateMcpDmlTool = null,
+            string? templateMcpDmlTools = null,
             bool? templateRestEnabled = null,
             bool? templateGraphqlEnabled = null,
             bool? templateCacheEnabled = null,
@@ -39,7 +39,7 @@ namespace Cli.Commands
             PatternsInclude = patternsInclude;
             PatternsExclude = patternsExclude;
             PatternsName = patternsName;
-            TemplateMcpDmlTool = templateMcpDmlTool;
+            TemplateMcpDmlTools = templateMcpDmlTools;
             TemplateRestEnabled = templateRestEnabled;
             TemplateGraphqlEnabled = templateGraphqlEnabled;
             TemplateCacheEnabled = templateCacheEnabled;
@@ -58,11 +58,11 @@ namespace Cli.Commands
         [Option("patterns.exclude", Required = false, HelpText = "T-SQL LIKE pattern(s) to exclude database objects. Space-separated array of patterns. Default: null")]
         public IEnumerable<string>? PatternsExclude { get; }
 
-        [Option("patterns.name", Required = false, HelpText = "Interpolation syntax for entity naming (must be unique for each generated entity). Default: '{object}'")]
+        [Option("patterns.name", Required = false, HelpText = "Interpolation syntax for entity naming (must be unique for each generated entity). Default: '{schema}_{object}'")]
         public string? PatternsName { get; }
 
-        [Option("template.mcp.dml-tool", Required = false, HelpText = "Enable/disable DML tools for generated entities. Allowed values: true, false. Default: true")]
-        public string? TemplateMcpDmlTool { get; }
+        [Option("template.mcp.dml-tools", Required = false, HelpText = "Enable/disable DML tools for generated entities. Allowed values: true, false. Default: true")]
+        public string? TemplateMcpDmlTools { get; }
 
         [Option("template.rest.enabled", Required = false, HelpText = "Enable/disable REST endpoint for generated entities. Allowed values: true, false. Default: true")]
         public bool? TemplateRestEnabled { get; }

@@ -256,6 +256,67 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// without a primary key route, where the request body contains
+        /// all PK columns that match an existing row.
+        /// The engine should detect the PK in the body, route through the
+        /// upsert path, find the existing row, and perform an UPDATE (200 OK).
+        /// This is a regression test: previously, a keyless upsert with body PKs
+        /// always executed an INSERT, which would fail on a PK violation.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Update_KeylessWithPKInBody_ExistingRow_Test()
+        {
+            // id=1 exists in the magazines table with title='Vogue'.
+            // Sending a PUT with the PK in the body should UPDATE the existing row.
+            string requestBody = @"
+            {
+                ""id"": 1,
+                ""title"": ""Updated Vogue"",
+                ""issue_number"": 9999
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integration_NonAutoGenPK_EntityName,
+                    sqlQuery: GetQuery(nameof(PutOne_Update_KeylessWithPKInBody_ExistingRow_Test)),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request
+        /// without a primary key route, where the request body contains
+        /// all PK columns that do NOT match any existing row.
+        /// The engine should detect the PK in the body, route through the
+        /// upsert path, find no existing row, and perform an INSERT (201 Created).
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Insert_KeylessWithPKInBody_NewRow_Test()
+        {
+            string requestBody = @"
+            {
+                ""id"": " + STARTING_ID_FOR_TEST_INSERTS + @",
+                ""title"": ""Brand New Magazine"",
+                ""issue_number"": 42
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integration_NonAutoGenPK_EntityName,
+                    sqlQuery: GetQuery(nameof(PutOne_Insert_KeylessWithPKInBody_NewRow_Test)),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
         /// Tests the PutOne functionality with a REST PUT request using
         /// headers that include as a key "If-Match" with an item that does exist,
         /// resulting in an update occuring. We then verify that the update occurred.
@@ -1054,6 +1115,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests that a PUT request with an invalid If-Match header value
+        /// (anything other than "*") returns a 400 Bad Request response
+        /// because ETags are not supported.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Update_InvalidIfMatchHeader_Returns400_Test()
+        {
+            Dictionary<string, StringValues> headerDictionary = new();
+            headerDictionary.Add("If-Match", "\"abc123\"");
+            string requestBody = @"
+            {
+                ""title"": ""The Return of the King"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: string.Empty,
+                    operationType: EntityActionOperation.Upsert,
+                    headers: new HeaderDictionary(headerDictionary),
+                    requestBody: requestBody,
+                    exceptionExpected: true,
+                    expectedErrorMessage: "Etags not supported, use '*'",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
         /// Tests that a PUT request with If-Match header (strict update semantics)
         /// still requires a primary key route. When If-Match is present, the operation
         /// becomes Update (not Upsert), so it cannot be converted to Insert.
@@ -1092,7 +1184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         [TestMethod]
         public virtual async Task PutWithNoPrimaryKeyRouteAndPartialCompositeKeyInBodyTest()
         {
-            // Body only contains categoryid but not pieceid — both are required
+            // Body only contains categoryid but not pieceid - both are required
             // since neither is auto-generated.
             string requestBody = @"
             {

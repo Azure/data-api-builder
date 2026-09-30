@@ -231,6 +231,10 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(typeof(byte[]), BYTEARRAY_TYPE)]
         [DataRow(typeof(Guid), UUID_TYPE)]
         [DataRow(typeof(TimeOnly), LOCALTIME_TYPE)]
+        [DataRow(typeof(int[]), INT_TYPE)]
+        [DataRow(typeof(string[]), STRING_TYPE)]
+        [DataRow(typeof(bool[]), BOOLEAN_TYPE)]
+        [DataRow(typeof(long[]), LONG_TYPE)]
         public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
         {
             SourceDefinition table = new();
@@ -355,6 +359,21 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many, isNullableRelationship: isNullable);
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == FIELD_NAME_FOR_TARGET);
             Assert.AreEqual(expected: isNullable, actual: field.Type is INullableTypeNode);
+        }
+
+        // A NOT NULL foreign-key column yields a non-nullable relationship field for MSSQL, but a
+        // nullable one for DWSQL since DWSQL does not enforce foreign key constraints.
+        [DataRow(DatabaseType.DWSQL, Cardinality.One, true, DisplayName = "Many-to-one relationship field is nullable for DWSQL despite NOT NULL FK.")]
+        [DataRow(DatabaseType.DWSQL, Cardinality.Many, true, DisplayName = "Cardinality.Many relationship field is nullable for DWSQL despite NOT NULL FK metadata.")]
+        [DataRow(DatabaseType.MSSQL, Cardinality.One, false, DisplayName = "Many-to-one relationship field is non-nullable for MSSQL with NOT NULL FK.")]
+        [DataRow(DatabaseType.MSSQL, Cardinality.Many, false, DisplayName = "Cardinality.Many relationship field is non-nullable for MSSQL with NOT NULL FK metadata.")]
+        [TestMethod]
+        public void RelationshipFieldIsNullableForDwSqlDespiteNonNullableForeignKey(DatabaseType databaseType, Cardinality cardinality, bool expectedNullable)
+        {
+            ObjectTypeDefinitionNode od =
+                GenerateObjectWithRelationship(cardinality, isNullableRelationship: false, databaseType: databaseType);
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == FIELD_NAME_FOR_TARGET);
+            Assert.AreEqual(expectedNullable, field.Type is INullableTypeNode);
         }
 
         [TestMethod]
@@ -752,7 +771,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             );
         }
 
-        private static ObjectTypeDefinitionNode GenerateObjectWithRelationship(Cardinality cardinality, bool isNullableRelationship = false)
+        private static ObjectTypeDefinitionNode GenerateObjectWithRelationship(Cardinality cardinality, bool isNullableRelationship = false, DatabaseType databaseType = DatabaseType.MSSQL)
         {
             SourceDefinition table = GenerateTableWithForeignKeyDefinition(isNullableRelationship);
 
@@ -782,7 +801,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 dbObject,
                 configEntity, new(new Dictionary<string, Entity>() { { TARGET_ENTITY, relationshipEntity } }),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                databaseType: databaseType
                 );
         }
 
@@ -949,6 +969,156 @@ type Book @model(name:""Book"") {
             // Verify the field argument only includes numeric fields
             InputValueDefinitionNode fieldArg = aggregationType.Fields.First().Arguments[0];
             Assert.AreEqual("BookNumericAggregateFields", fieldArg.Type.NamedType().Name.Value);
+        }
+
+        /// <summary>
+        /// Verify that array columns produce a ListTypeNode in the GraphQL schema.
+        /// For example, int[] should produce [Int] and string[] should produce [String].
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(typeof(int[]), typeof(int), INT_TYPE)]
+        [DataRow(typeof(string[]), typeof(string), STRING_TYPE)]
+        [DataRow(typeof(bool[]), typeof(bool), BOOLEAN_TYPE)]
+        [DataRow(typeof(long[]), typeof(long), LONG_TYPE)]
+        [DataRow(typeof(float[]), typeof(float), SINGLE_TYPE)]
+        [DataRow(typeof(double[]), typeof(double), FLOAT_TYPE)]
+        [DataRow(typeof(decimal[]), typeof(decimal), DECIMAL_TYPE)]
+        public void ArrayColumnProducesListTypeNode(Type arraySystemType, Type elementType, string expectedGraphQLElementType)
+        {
+            SourceDefinition table = new();
+            string columnName = COLUMN_NAME;
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = arraySystemType,
+                IsArrayType = true,
+                ElementSystemType = elementType,
+                IsNullable = true,
+                IsReadOnly = true
+            });
+
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
+
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
+                "table",
+                dbObject,
+                GenerateEmptyEntity("table"),
+                new(new Dictionary<string, Entity>()),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap(columnName: columnName)
+                );
+
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
+
+            // The field type should be a ListTypeNode (nullable array), not a NamedTypeNode.
+            Assert.IsInstanceOfType(field.Type, typeof(ListTypeNode), "Array column should produce a ListTypeNode.");
+
+            // The inner element type should be the correct GraphQL scalar.
+            ListTypeNode listType = (ListTypeNode)field.Type;
+            Assert.AreEqual(expectedGraphQLElementType, listType.Type.NamedType().Name.Value);
+        }
+
+        /// <summary>
+        /// Verify that a non-nullable array column produces NonNullTypeNode wrapping a ListTypeNode.
+        /// </summary>
+        [TestMethod]
+        public void NonNullableArrayColumnProducesNonNullListType()
+        {
+            SourceDefinition table = new();
+            string columnName = COLUMN_NAME;
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(string[]),
+                IsArrayType = true,
+                ElementSystemType = typeof(string),
+                IsNullable = false,
+                IsReadOnly = true
+            });
+
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
+
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
+                "table",
+                dbObject,
+                GenerateEmptyEntity("table"),
+                new(new Dictionary<string, Entity>()),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap(columnName: columnName)
+                );
+
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
+
+            // Should be NonNullType wrapping a ListType.
+            Assert.IsTrue(field.Type.IsNonNullType(), "Non-nullable array column should produce NonNullTypeNode.");
+            NonNullTypeNode nonNullType = (NonNullTypeNode)field.Type;
+            Assert.IsInstanceOfType(nonNullType.Type, typeof(ListTypeNode), "Inner type should be ListTypeNode.");
+        }
+
+        /// <summary>
+        /// Verify that array columns are marked with the AutoGenerated directive (read-only)
+        /// and thus excluded from mutation input types.
+        /// </summary>
+        [TestMethod]
+        public void ArrayColumnHasAutoGeneratedDirective()
+        {
+            SourceDefinition table = new();
+            string columnName = COLUMN_NAME;
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(int[]),
+                IsArrayType = true,
+                ElementSystemType = typeof(int),
+                IsNullable = true,
+                IsReadOnly = true
+            });
+
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
+
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
+                "entity",
+                dbObject,
+                GenerateEmptyEntity("entity"),
+                new(new Dictionary<string, Entity>()),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap(columnName: columnName)
+                );
+
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
+            Assert.IsTrue(
+                field.Directives.Any(d => d.Name.Value == AutoGeneratedDirectiveType.DirectiveName),
+                "Array columns should have AutoGenerated directive since they are read-only.");
+        }
+
+        /// <summary>
+        /// Verify that byte[] is NOT treated as an array column (it maps to ByteArray scalar).
+        /// </summary>
+        [TestMethod]
+        public void ByteArrayIsNotTreatedAsArrayColumn()
+        {
+            SourceDefinition table = new();
+            string columnName = COLUMN_NAME;
+            table.Columns.Add(columnName, new ColumnDefinition
+            {
+                SystemType = typeof(byte[]),
+                IsArrayType = false,
+                IsNullable = true
+            });
+
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
+
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
+                "table",
+                dbObject,
+                GenerateEmptyEntity("table"),
+                new(new Dictionary<string, Entity>()),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap(columnName: columnName)
+                );
+
+            FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
+
+            // byte[] should produce a NamedTypeNode (ByteArray scalar), NOT a ListTypeNode.
+            Assert.IsNotInstanceOfType(field.Type, typeof(ListTypeNode), "byte[] should not be treated as an array column.");
+            Assert.AreEqual(BYTEARRAY_TYPE, field.Type.NamedType().Name.Value);
         }
     }
 }

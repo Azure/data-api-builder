@@ -80,12 +80,15 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Executed when a hot-reload event occurs. Pulls the latest
         /// runtimeconfig object from the provider and updates the flag indicating
-        /// whether multiple create operations are enabled, and the entities based on the new config.
+        /// whether multiple create operations are enabled, whether aggregation is enabled,
+        /// and the entities based on the new config.
         /// </summary>
         protected void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            args.CancellationToken.ThrowIfCancellationRequested();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
+            _isAggregationEnabled = runtimeConfig.EnableAggregation;
             _entities = runtimeConfig.Entities;
         }
 
@@ -105,6 +108,15 @@ namespace Azure.DataApiBuilder.Core.Services
             // Generate the Query and the Mutation Node.
             (DocumentNode queryNode, DocumentNode mutationNode) = GenerateQueryAndMutationNodes(root, inputTypes);
 
+            // Hot Chocolate v16 validates schemas eagerly during host startup
+            // (RequestExecutorWarmupService) and rejects an empty Query type with
+            // "The object type `Query` has to at least define one field in order to be valid."
+            // This can occur in valid runtime configurations: GraphQL globally disabled,
+            // every entity opting out of GraphQL via `graphql.enabled = false`, or no entities
+            // configured. Inject a hidden placeholder field with a no-op resolver so the schema
+            // is structurally valid; HC v16 also rejects fields without resolvers.
+            queryNode = EnsureQueryHasAtLeastOneField(queryNode, sb);
+
             return sb
                 .AddDocument(root)
                 .AddAuthorizeDirectiveType()
@@ -122,10 +134,81 @@ namespace Azure.DataApiBuilder.Core.Services
                 .AddDocument(queryNode)
                 // Generate the GraphQL mutations from the provided objects
                 .AddDocument(mutationNode)
-                // Enable the OneOf directive (https://github.com/graphql/graphql-spec/pull/825) to support the DefaultValue type
-                .ModifyOptions(o => o.EnableOneOf = true)
                 // Adds our type interceptor that will create the resolvers.
                 .TryAddTypeInterceptor(new ResolverTypeInterceptor(new ExecutionHelper(_queryEngineFactory, _mutationEngineFactory, _runtimeConfigProvider)));
+        }
+
+        /// <summary>
+        /// Name of the hidden placeholder field added to <c>Query</c> when no entity contributes
+        /// a query field, used to keep the schema valid for HC v16's eager validation.
+        /// </summary>
+        internal const string EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME = "_dab";
+
+        /// <summary>
+        /// If the generated <c>Query</c> object type has no fields, append a hidden placeholder
+        /// field and register a null-returning resolver for it. The placeholder is shadowed in
+        /// any configuration that produces real query fields, so it is only visible in
+        /// otherwise-empty schemas (GraphQL globally disabled, all entities opting out,
+        /// no entities configured).
+        /// </summary>
+        /// <remarks>
+        /// Marked <c>internal</c> rather than <c>private</c> so the test project (granted access
+        /// via <c>InternalsVisibleTo</c> in <c>SqlMetadataProvider.cs</c>) can exercise the rewrite
+        /// logic directly without spinning up the full schema builder pipeline.
+        /// </remarks>
+        internal static DocumentNode EnsureQueryHasAtLeastOneField(DocumentNode queryNode, ISchemaBuilder sb)
+        {
+            // Locate the empty Query definition, if any. HotChocolate's DocumentNode exposes
+            // Definitions as an ordered IReadOnlyList with no by-name index, so this is the
+            // cheapest available lookup. Common case: Query has fields and we return unchanged
+            // without allocating a new definitions list.
+            int emptyQueryIndex = -1;
+            for (int i = 0; i < queryNode.Definitions.Count; i++)
+            {
+                if (queryNode.Definitions[i] is ObjectTypeDefinitionNode { Name.Value: "Query", Fields.Count: 0 })
+                {
+                    emptyQueryIndex = i;
+                    break;
+                }
+            }
+
+            if (emptyQueryIndex < 0)
+            {
+                return queryNode;
+            }
+
+            ObjectTypeDefinitionNode emptyQuery = (ObjectTypeDefinitionNode)queryNode.Definitions[emptyQueryIndex];
+
+            FieldDefinitionNode placeholderField = new(
+                location: null,
+                new NameNode(EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME),
+                new StringValueNode(
+                    "Internal placeholder; only present when no entity contributes a query field. "
+                    + "Always returns null and is never reachable in normal operation."),
+                arguments: new List<InputValueDefinitionNode>(),
+                type: new NamedTypeNode(new NameNode("String")),
+                directives: new List<DirectiveNode>());
+
+            ObjectTypeDefinitionNode rewrittenQuery = new(
+                emptyQuery.Location,
+                emptyQuery.Name,
+                emptyQuery.Description,
+                emptyQuery.Directives,
+                emptyQuery.Interfaces,
+                new List<FieldDefinitionNode> { placeholderField });
+
+            // HC v16 requires every field to have a resolver; bind a no-op that always
+            // returns null. The field is unreachable in normal operation because callers
+            // for empty-Query configurations never issue GraphQL requests.
+            sb.AddResolver("Query", EMPTY_SCHEMA_PLACEHOLDER_FIELD_NAME, _ => null);
+
+            IDefinitionNode[] newDefinitions = new IDefinitionNode[queryNode.Definitions.Count];
+            for (int i = 0; i < queryNode.Definitions.Count; i++)
+            {
+                newDefinitions[i] = i == emptyQueryIndex ? rewrittenQuery : queryNode.Definitions[i];
+            }
+
+            return new DocumentNode(newDefinitions);
         }
 
         /// <summary>
@@ -213,9 +296,9 @@ namespace Azure.DataApiBuilder.Core.Services
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                     SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
                     bool isStoredProcedure = entity.Source.Type is EntitySourceType.StoredProcedure;
+                    EntityActionOperation operation = isStoredProcedure ? EntityActionOperation.Execute : EntityActionOperation.Read;
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        EntityActionOperation operation = isStoredProcedure ? EntityActionOperation.Execute : EntityActionOperation.Read;
                         IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: operation);
                         if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                         {
@@ -227,7 +310,6 @@ namespace Azure.DataApiBuilder.Core.Services
                         }
                     }
 
-                    // The roles allowed for Fields are the roles allowed to READ the fields, so any role that has a read definition for the field.
                     // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.
                     if (rolesAllowedForEntity.Any())
                     {
@@ -237,7 +319,8 @@ namespace Azure.DataApiBuilder.Core.Services
                             configEntity: entity,
                             entities: entities,
                             rolesAllowedForEntity: rolesAllowedForEntity,
-                            rolesAllowedForFields: rolesAllowedForFields);
+                            rolesAllowedForFields: rolesAllowedForFields,
+                            databaseType: sqlMetadataProvider.GetDatabaseType());
 
                         if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)
                         {
@@ -315,23 +398,18 @@ namespace Azure.DataApiBuilder.Core.Services
                 GenerateSourceTargetLinkingObjectDefinitions(objectTypes, linkingObjectTypes);
             }
 
-            // Return a list of all the object types to be exposed in the schema.
-            Dictionary<string, FieldDefinitionNode> fields = new();
+            NameNode nameNode = new(value: GraphQLUtils.DB_OPERATION_RESULT_TYPE);
 
             // Add the DBOperationResult type to the schema
-            NameNode nameNode = new(value: GraphQLUtils.DB_OPERATION_RESULT_TYPE);
-            FieldDefinitionNode field = GetDbOperationResultField();
-
-            fields.TryAdd(GraphQLUtils.DB_OPERATION_RESULT_FIELD_NAME, field);
-
             objectTypes.Add(GraphQLUtils.DB_OPERATION_RESULT_TYPE, new ObjectTypeDefinitionNode(
                 location: null,
                 name: nameNode,
                 description: null,
                 new List<DirectiveNode>(),
                 new List<NamedTypeNode>(),
-                fields.Values.ToImmutableList()));
+                ImmutableList.Create(GetDbOperationResultField())));
 
+            // Return a list of all the object types to be exposed in the schema.
             List<IDefinitionNode> nodes = new(objectTypes.Values);
             nodes.AddRange(enumTypes.Values);
             return new DocumentNode(nodes);
@@ -484,7 +562,8 @@ namespace Azure.DataApiBuilder.Core.Services
                                 configEntity: linkingEntity,
                                 entities: new(new Dictionary<string, Entity>()),
                                 rolesAllowedForEntity: new List<string>(),
-                                rolesAllowedForFields: new Dictionary<string, IEnumerable<string>>()
+                                rolesAllowedForFields: new Dictionary<string, IEnumerable<string>>(),
+                                databaseType: sqlMetadataProvider.GetDatabaseType()
                             );
 
                         linkingObjectTypes.Add(linkingEntityName, node);
@@ -666,7 +745,7 @@ namespace Azure.DataApiBuilder.Core.Services
             DocumentNode cosmosResult = GenerateCosmosGraphQLObjects(cosmosDataSourceNames, inputObjects);
             DocumentNode sqlResult = GenerateSqlGraphQLObjects(sql, inputObjects);
             // Create Root node with definitions from both cosmos and sql.
-            DocumentNode root = new(cosmosResult.Definitions.Concat(sqlResult.Definitions).ToImmutableList());
+            DocumentNode root = cosmosResult.WithDefinitions(cosmosResult.Definitions.Concat(sqlResult.Definitions).ToImmutableList());
 
             // Merge the inputobjectType definitions from cosmos and sql onto the root.
             return (root.WithDefinitions(root.Definitions.Concat(inputObjects.Values).ToImmutableList()), inputObjects);

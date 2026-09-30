@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -32,6 +33,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         private const EntityActionOperation TEST_OPERATION = EntityActionOperation.Create;
         private const string TEST_AUTHENTICATION_TYPE = "TestAuth";
         private const string TEST_CLAIMTYPE_NAME = "TestName";
+
+        [TestMethod]
+        public void GetRolesForOperation_NullEntityNameThrows()
+        {
+            Assert.ThrowsException<ArgumentNullException>(() =>
+                IAuthorizationResolver.GetRolesForOperation(null!, EntityActionOperation.Read, null));
+        }
 
         #region Role Context Tests
         /// <summary>
@@ -906,6 +914,171 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
+        /// Reproduces the real-world Book entity scenario: a single role with MULTIPLE actions
+        /// (read with no field restriction, create/update excluding a column, delete with no
+        /// field restriction) all defined in one EntityPermission.Actions array - unlike
+        /// AuthorizationHelpers.InitRuntimeConfig which only ever builds a single action per role.
+        /// </summary>
+        [TestMethod("Multiple actions per role - column exclusion on create/update only")]
+        public void MultipleActionsPerRole_ColumnExclusionOnCreateAndUpdate()
+        {
+            EntityActionFields createUpdateFields = new(Exclude: new() { "col3" });
+            EntityAction readAction = new(Action: EntityActionOperation.Read, Fields: null, Policy: new(null, null));
+            EntityAction createAction = new(Action: EntityActionOperation.Create, Fields: createUpdateFields, Policy: new(null, null));
+            EntityAction updateAction = new(Action: EntityActionOperation.Update, Fields: createUpdateFields, Policy: new(null, null));
+            EntityAction deleteAction = new(Action: EntityActionOperation.Delete, Fields: null, Policy: new(null, null));
+
+            EntityPermission permissionForEntity = new(
+                Role: AuthorizationHelpers.TEST_ROLE,
+                Actions: new EntityAction[] { readAction, createAction, updateAction, deleteAction });
+
+            Entity sampleEntity = new(
+                Source: new EntitySource(AuthorizationHelpers.TEST_ENTITY, EntitySourceType.Table, null, null),
+                Fields: null,
+                Rest: new(Array.Empty<SupportedHttpVerb>()),
+                GraphQL: new(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ENTITY),
+                Permissions: new EntityPermission[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new("AppService", null))),
+                Entities: new(new Dictionary<string, Entity> { { AuthorizationHelpers.TEST_ENTITY, sampleEntity } }));
+
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            // Read should allow all columns (no exclusion for read).
+            Assert.IsTrue(authZResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Read,
+                new List<string> { "col1", "col3" }),
+                "Read should allow all columns since no fields are excluded for the read action.");
+
+            // Create should DENY col3 since it is excluded for create.
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Create,
+                new List<string> { "col1", "col3" }),
+                "Create should deny col3 since it is excluded for the create action.");
+
+            // Update should DENY col3 since it is excluded for update.
+            Assert.IsFalse(authZResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Update,
+                new List<string> { "col1", "col3" }),
+                "Update should deny col3 since it is excluded for the update action.");
+
+            // Round-trip the config through JSON serialization/deserialization (as happens when DAB
+            // loads a real config file from disk) to rule out any bug specific to the JSON converters
+            // (e.g. shared/aliased Fields.Exclude HashSet instances across sibling actions).
+            string json = runtimeConfig.ToJson();
+            Assert.IsTrue(
+                RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig? roundTrippedConfig),
+                "Round-tripped config should parse successfully.");
+            AuthorizationResolver roundTrippedResolver = AuthorizationHelpers.InitAuthorizationResolver(roundTrippedConfig!);
+
+            Assert.IsTrue(roundTrippedResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Read,
+                new List<string> { "col1", "col3" }),
+                "After round-trip, read should still allow all columns.");
+
+            Assert.IsFalse(roundTrippedResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Create,
+                new List<string> { "col1", "col3" }),
+                "After round-trip, create should still deny excluded col3.");
+
+            Assert.IsFalse(roundTrippedResolver.AreColumnsAllowedForOperation(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                operation: EntityActionOperation.Update,
+                new List<string> { "col1", "col3" }),
+                "After round-trip, update should still deny excluded col3.");
+        }
+
+        /// <summary>
+        /// Parses the EXACT real-world Book entity config structure from JSON (entity-level "fields"
+        /// array listing only id/title, plus a multi-action role that excludes publisher_id for
+        /// create/update) and asserts that Fields.Exclude survives deserialization for each action.
+        /// This isolates whether the bug is in the JSON config converters (EntityActionConverter /
+        /// EntityActionFields) independent of any database/metadata provider.
+        /// </summary>
+        [TestMethod("Real config JSON: Fields.Exclude survives parse for multi-action role")]
+        public void RealConfigJson_FieldsExcludeSurvivesParse()
+        {
+            string configJson = @"{
+              ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/v0.10.23/dab.draft.schema.json"",
+              ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=localhost;Database=master;""
+              },
+              ""runtime"": {
+                ""rest"": { ""enabled"": true, ""path"": ""/api"", ""request-body-strict"": true },
+                ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
+                ""host"": { ""mode"": ""development"", ""authentication"": { ""provider"": ""StaticWebApps"" } }
+              },
+              ""entities"": {
+                ""Book"": {
+                  ""source"": { ""object"": ""books"", ""type"": ""table"" },
+                  ""fields"": [
+                    { ""name"": ""id"", ""alias"": ""id"", ""primary-key"": false },
+                    { ""name"": ""title"", ""alias"": ""title"", ""primary-key"": false }
+                  ],
+                  ""permissions"": [
+                    {
+                      ""role"": ""test_role_with_excluded_fields_on_mutation"",
+                      ""actions"": [
+                        { ""action"": ""read"" },
+                        { ""action"": ""create"", ""fields"": { ""exclude"": [ ""publisher_id"" ] } },
+                        { ""action"": ""update"", ""fields"": { ""exclude"": [ ""publisher_id"" ] } },
+                        { ""action"": ""delete"" }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }";
+
+            Assert.IsTrue(
+                RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig? config),
+                "Config should parse successfully.");
+            Assert.IsNotNull(config);
+
+            Entity bookEntity = config!.Entities["Book"];
+            EntityPermission permission =
+                bookEntity.Permissions.Single(p => p.Role == "test_role_with_excluded_fields_on_mutation");
+
+            EntityAction createAction =
+                permission.Actions.Single(a => a.Action == EntityActionOperation.Create);
+            EntityAction updateAction =
+                permission.Actions.Single(a => a.Action == EntityActionOperation.Update);
+
+            Assert.IsNotNull(createAction.Fields, "Create action Fields should not be null after parsing.");
+            Assert.IsNotNull(updateAction.Fields, "Update action Fields should not be null after parsing.");
+
+            Assert.IsTrue(
+                createAction.Fields!.Exclude.Contains("publisher_id"),
+                $"Create action Exclude should contain publisher_id. Actual: [{string.Join(",", createAction.Fields.Exclude)}]");
+            Assert.IsTrue(
+                updateAction.Fields!.Exclude.Contains("publisher_id"),
+                $"Update action Exclude should contain publisher_id. Actual: [{string.Join(",", updateAction.Fields.Exclude)}]");
+        }
+
+        /// <summary>
         /// Test that all columns should be excluded if the exclusion contains wildcard character.
         /// </summary>
         [TestMethod("Wildcard column exclusion")]
@@ -1120,14 +1293,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="expectedParsedPolicy">The policy which is expected to be generated after parsing.</param>
         [DataTestMethod]
         [DataRow("@claims.user_email ne @item.col1 and @claims.contact_no eq @item.col2 and not(@claims.name eq @item.col3)",
-            "'xyz@microsoft.com' ne col1 and 1234 eq col2 and not('Aaron' eq col3)",
+            "@dabClaim0 ne col1 and @dabClaim1 eq col2 and not(@dabClaim2 eq col3)",
             DisplayName = "Valid policy parsing test for string and int64 claimvaluetypes.")]
         [DataRow("(@claims.isemployee eq @item.col1 and @item.col2 ne @claims.user_email) or" +
-            "('David' ne @item.col3 and @claims.contact_no ne @item.col3)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
-            "('David' ne col3 and 1234 ne col3)", DisplayName = "Valid policy parsing test for constant string and int64 claimvaluetypes.")]
+            "('David' ne @item.col3 and @claims.contact_no ne @item.col3)", "(@dabClaim0 eq col1 and col2 ne @dabClaim1) or" +
+            "('David' ne col3 and @dabClaim2 ne col3)", DisplayName = "Valid policy parsing test for constant string and int64 claimvaluetypes.")]
         [DataRow("(@item.rating gt @claims.emprating) and (@claims.isemployee eq true)",
-            "(rating gt 4.2) and (true eq true)", DisplayName = "Valid policy parsing test for double and boolean claimvaluetypes.")]
-        [DataRow("@item.rating eq @claims.emprating)", "rating eq 4.2)", DisplayName = "Valid policy parsing test for double claimvaluetype.")]
+            "(rating gt @dabClaim0) and (@dabClaim1 eq true)", DisplayName = "Valid policy parsing test for double and boolean claimvaluetypes.")]
+        [DataRow("@item.rating eq @claims.emprating)", "rating eq @dabClaim0)", DisplayName = "Valid policy parsing test for double claimvaluetype.")]
         public void ParseValidDbPolicy(string policy, string expectedParsedPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
@@ -1151,8 +1324,56 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
-            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
-            Assert.AreEqual(parsedPolicy, expectedParsedPolicy);
+            ResolvedDatabasePolicy parsedPolicy = authZResolver.ResolveDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+            Assert.AreEqual(parsedPolicy.Policy, expectedParsedPolicy);
+        }
+
+        /// <summary>
+        /// Validates that a string claim is kept out of database authorization policy text and
+        /// associated with an inert OData parameter alias. This prevents claim contents from
+        /// being reinterpreted as policy syntax during URI parsing.
+        /// </summary>
+        /// <param name="claimValue">The raw claim value (as it appears in the JWT) to substitute.</param>
+        [DataTestMethod]
+        [DataRow(
+            "alice' or 1 eq 1 or '",
+            DisplayName = "Literal quote injection remains outside policy text")]
+        [DataRow(
+            "O'Brien",
+            DisplayName = "Legitimate single-quote-bearing value remains unchanged")]
+        [DataRow(
+            "alice%27 or 1 eq 1 or %27",
+            DisplayName = "Encoded quote injection remains outside policy text")]
+        [DataRow(
+            "alice%2527 or 1 eq 1 or %2527",
+            DisplayName = "Double-encoded quote injection remains outside policy text")]
+        [DataRow(
+            "50% complete",
+            DisplayName = "Legitimate percent characters remain unchanged")]
+        public void DbPolicy_StringClaim_UsesTypedParameterAlias(string claimValue)
+        {
+            const string policyDefinition = "@item.col1 eq @claims.userId";
+
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                entityName: TEST_ENTITY,
+                roleName: TEST_ROLE,
+                operation: TEST_OPERATION,
+                includedCols: new HashSet<string> { "col1" },
+                databasePolicy: policyDefinition);
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            Mock<HttpContext> context = new();
+
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            identity.AddClaim(new Claim("userId", claimValue, ClaimValueTypes.String));
+            ClaimsPrincipal principal = new(identity);
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            ResolvedDatabasePolicy parsedPolicy = authZResolver.ResolveDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+
+            Assert.AreEqual("col1 eq @dabClaim0", parsedPolicy.Policy);
+            Assert.AreEqual(claimValue, parsedPolicy.ClaimValues["@dabClaim0"]);
         }
 
         /// <summary>
@@ -1183,11 +1404,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         #pragma warning restore format
         public void DbPolicy_ClaimValueTypeParsing(string claimValueType, string claimValue, bool supportedValueType)
         {
-            // To adhere with OData 4 ABNF construction rules (Section 7: Literal Data Values)
-            // - Primitive string literals in URLS must be enclosed within single quotes.
-            // - http://docs.oasis-open.org/odata/odata/v4.01/cs01/abnf/odata-abnf-construction-rules.txt
-            string odataClaimValue = (claimValueType == ClaimValueTypes.String) ? "'" + claimValue + "'" : claimValue;
-            string expectedPolicy = odataClaimValue + " eq col1";
+            string expectedPolicy = "@dabClaim0 eq col1";
             string policyDefinition = "@claims.testClaim eq @item.col1";
 
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
@@ -1211,9 +1428,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             try
             {
-                string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+                ResolvedDatabasePolicy parsedPolicy = authZResolver.ResolveDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
                 Assert.IsTrue(supportedValueType);
-                Assert.AreEqual(expectedPolicy, parsedPolicy);
+                Assert.AreEqual(expectedPolicy, parsedPolicy.Policy);
+
+                object? typedClaimValue = parsedPolicy.ClaimValues["@dabClaim0"];
+                if (claimValueType == JsonClaimValueTypes.JsonNull)
+                {
+                    Assert.IsNull(typedClaimValue);
+                }
+                else
+                {
+                    Assert.AreEqual(
+                        claimValue.ToLowerInvariant(),
+                        Convert.ToString(typedClaimValue, System.Globalization.CultureInfo.InvariantCulture)?.ToLowerInvariant());
+                }
             }
             catch (DataApiBuilderException ex)
             {
@@ -1224,6 +1453,42 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                     message: "Test expected to fail- a claim value for claim belonging to the user had datatype " +
                     "which is not currently supported by DAB.");
             }
+        }
+
+        /// <summary>
+        /// A claim whose value does not match its declared primitive type must fail before
+        /// policy parsing and must never be interpreted as OData syntax.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(ClaimValueTypes.Integer, "1 or 1 eq 1", DisplayName = "Invalid primitive claim fails: malformed integer")]
+        [DataRow(ClaimValueTypes.Double, "NaN", DisplayName = "Invalid primitive claim fails: NaN")]
+        [DataRow(ClaimValueTypes.Double, "Infinity", DisplayName = "Invalid primitive claim fails: positive infinity")]
+        [DataRow(ClaimValueTypes.Double, "-Infinity", DisplayName = "Invalid primitive claim fails: negative infinity")]
+        [DataRow(ClaimValueTypes.Double, "1e9999", DisplayName = "Invalid primitive claim fails: exponent overflow")]
+        public void DbPolicy_InvalidPrimitiveClaim_FailsClosed(string claimValueType, string claimValue)
+        {
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                entityName: TEST_ENTITY,
+                roleName: TEST_ROLE,
+                operation: TEST_OPERATION,
+                includedCols: new HashSet<string> { "col1" },
+                databasePolicy: "@claims.testClaim eq @item.col1");
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            Mock<HttpContext> context = new();
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            identity.AddClaim(new Claim("testClaim", claimValue, claimValueType));
+            context.Setup(x => x.User).Returns(new ClaimsPrincipal(identity));
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                authZResolver.ResolveDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object));
+
+            Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.UnsupportedClaimValueType, exception.SubStatusCode);
+            Assert.AreEqual(
+                "The claim value for claim: testClaim belonging to the user is invalid for its declared data type.",
+                exception.Message);
         }
 
         /// <summary>
@@ -1259,7 +1524,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             try
             {
-                authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+                authZResolver.ResolveDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
             }
             catch (DataApiBuilderException ex)
             {
@@ -1311,16 +1576,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // Act
-            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+            ResolvedDatabasePolicy parsedPolicy = authZResolver.ResolveDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
 
             // Assert
-            string expectedPolicy = $"'profile' eq col2 and '1111' eq col3";
-            Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
+            string expectedPolicy = "@dabClaim0 eq col2 and @dabClaim1 eq col3";
+            Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy.Policy);
+            Assert.AreEqual("profile", parsedPolicy.ClaimValues["@dabClaim0"]);
+            Assert.AreEqual("1111", parsedPolicy.ClaimValues["@dabClaim1"]);
         }
 
         // Indirectly tests the AuthorizationResolver private method:
         // GetDBPolicyForRequest(string entityName, string roleName, string operation)
-        // by calling public method TryProcessDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object)
+        // by calling public method ResolveDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object)
         // The result of executing that method will determine whether execution behaves as expected.
         // When string.Empty is returned,
         // then no policy is found for the provided entity, role, and operation combination, therefore,
@@ -1363,15 +1630,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(clientRole);
 
-            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object);
-            string errorMessage = "TryProcessDBPolicy returned unexpected value.";
+            ResolvedDatabasePolicy parsedPolicy = authZResolver.ResolveDBPolicy(TEST_ENTITY, clientRole, requestOperation, context.Object);
+            string errorMessage = "ResolveDBPolicy returned unexpected value.";
             if (expectPolicy)
             {
-                Assert.AreEqual(actual: parsedPolicy, expected: policy, message: errorMessage);
+                Assert.AreEqual(actual: parsedPolicy.Policy, expected: policy, message: errorMessage);
             }
             else
             {
-                Assert.AreEqual(actual: parsedPolicy, expected: string.Empty, message: errorMessage);
+                Assert.AreEqual(actual: parsedPolicy.Policy, expected: string.Empty, message: errorMessage);
             }
         }
 
@@ -1475,6 +1742,53 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.AreEqual(expected: @"{""src1"":{""endpoint"":""https://graph.microsoft.com/v1.0/users/{userID}/getMemberObjects""}}", actual: claimsInRequestContext["_claim_sources"]);
             Assert.AreEqual(expected: "1706816426", actual: claimsInRequestContext["iat"]);
             Assert.AreEqual(expected: "", actual: claimsInRequestContext["nullValuedClaim"]);
+        }
+
+        [TestMethod]
+        public void GetProcessedUserClaims_MultipleClaimsPreserveArrayValueTypes()
+        {
+            List<Claim> claims = new()
+            {
+                new("booleans", "true", ClaimValueTypes.Boolean),
+                new("booleans", "false", ClaimValueTypes.Boolean),
+                new("integers", "-1", ClaimValueTypes.Integer),
+                new("integers", "2", ClaimValueTypes.Integer),
+                new("integer32s", "-3", ClaimValueTypes.Integer32),
+                new("integer32s", "4", ClaimValueTypes.Integer32),
+                new("uinteger32s", "5", ClaimValueTypes.UInteger32),
+                new("uinteger32s", "6", ClaimValueTypes.UInteger32),
+                new("integer64s", "-7", ClaimValueTypes.Integer64),
+                new("integer64s", "8", ClaimValueTypes.Integer64),
+                new("uinteger64s", "9", ClaimValueTypes.UInteger64),
+                new("uinteger64s", "10", ClaimValueTypes.UInteger64),
+                new("doubles", "11", ClaimValueTypes.Double),
+                new("doubles", "12", ClaimValueTypes.Double),
+                new("strings", "first", ClaimValueTypes.String),
+                new("strings", "second", ClaimValueTypes.String),
+                new("jsonNulls", "null", JsonClaimValueTypes.JsonNull),
+                new("jsonNulls", "null", JsonClaimValueTypes.JsonNull),
+                new("jsonObjects", "{\"id\":1}", JsonClaimValueTypes.Json),
+                new("jsonObjects", "{\"id\":2}", JsonClaimValueTypes.Json),
+                new("customs", "alpha", ClaimValueTypes.DateTime),
+                new("customs", "beta", ClaimValueTypes.DateTime)
+            };
+            ClaimsIdentity identity = new(claims, TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            DefaultHttpContext context = new() { User = new ClaimsPrincipal(identity) };
+
+            Dictionary<string, string> processedClaims = AuthorizationResolver.GetProcessedUserClaims(context);
+
+            Assert.AreEqual("[true,false]", processedClaims["booleans"]);
+            Assert.AreEqual("[-1,2]", processedClaims["integers"]);
+            Assert.AreEqual("[-3,4]", processedClaims["integer32s"]);
+            Assert.AreEqual("[5,6]", processedClaims["uinteger32s"]);
+            Assert.AreEqual("[-7,8]", processedClaims["integer64s"]);
+            Assert.AreEqual("[9,10]", processedClaims["uinteger64s"]);
+            Assert.AreEqual("[11,12]", processedClaims["doubles"]);
+            Assert.AreEqual("[\"first\",\"second\"]", processedClaims["strings"]);
+            Assert.AreEqual("[\"null\",\"null\"]", processedClaims["jsonNulls"]);
+            Assert.AreEqual("[\"{\\u0022id\\u0022:1}\",\"{\\u0022id\\u0022:2}\"]", processedClaims["jsonObjects"]);
+            Assert.AreEqual("[\"alpha\",\"beta\"]", processedClaims["customs"]);
+            Assert.AreEqual(0, AuthorizationResolver.GetProcessedUserClaims(null).Count);
         }
 
         /// <summary>

@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                                     .AddEasyAuthAuthentication(easyAuthProvider);
                             }
 
-                            services.AddSingleton(runtimeConfigProvider);
+                            services.AddSingleton<RuntimeConfigProvider>(sp => runtimeConfigProvider);
 
                             // https://github.com/dotnet/aspnetcore/issues/53332#issuecomment-2091861884
                             // AddRouting() adds required services that .NET8 does not add by default
@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                                     };
                                 });
                             services.AddAuthorization();
-                            services.AddSingleton(runtimeConfigProvider);
+                            services.AddSingleton<RuntimeConfigProvider>(sp => runtimeConfigProvider);
                         })
                         .ConfigureLogging(o =>
                         {

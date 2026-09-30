@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -28,17 +29,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
     /// <summary>
     /// Dynamic custom MCP tool generated from stored procedure entity configuration.
     /// Each custom tool represents a single stored procedure exposed as a dedicated MCP tool.
-    /// 
-    /// Note: The entity configuration is captured at tool construction time. If the RuntimeConfig
-    /// is hot-reloaded, GetToolMetadata() will return cached metadata (name, description, parameters)
-    /// from the original configuration. This is acceptable because:
-    /// 1. MCP clients typically call tools/list once at startup
-    /// 2. ExecuteAsync always validates against the current runtime configuration
-    /// 3. Cached metadata improves performance for repeated metadata requests
+    /// A new instance is created for each MCP registry generation so its cached metadata remains
+    /// aligned with the runtime configuration used to advertise it.
     /// </summary>
     public class DynamicCustomTool : IMcpTool
     {
         private readonly Entity _entity;
+        private JsonElement? _cachedInputSchema;
 
         /// <summary>
         /// Initializes a new instance of DynamicCustomTool.
@@ -49,6 +46,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             EntityName = entityName ?? throw new ArgumentNullException(nameof(entityName));
             _entity = entity ?? throw new ArgumentNullException(nameof(entity));
+            ToolName = ConvertToToolName(entityName);
 
             // Validate that this is a stored procedure
             if (_entity.Source.Type != EntitySourceType.StoredProcedure)
@@ -65,24 +63,66 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public ToolType ToolType { get; } = ToolType.Custom;
 
         /// <summary>
+        /// Returns true because <see cref="CustomMcpToolFactory"/> creates an instance only when
+        /// the source entity has <c>mcp.custom-tool</c> enabled for the candidate configuration.
+        /// Each registry generation recreates that membership, so an extant dynamic tool is
+        /// enabled by construction. Execution still revalidates enablement against current state.
+        /// </summary>
+        public bool IsEnabled(RuntimeConfig config) => true;
+
+        /// <summary>
         /// Gets the entity name associated with this custom tool.
         /// </summary>
         public string EntityName { get; }
+
+        /// <summary>
+        /// Gets the normalized MCP tool name without materializing the complete metadata schema.
+        /// </summary>
+        internal string ToolName { get; }
+
+        /// <summary>
+        /// Initializes the input schema using an explicit configuration and metadata-provider
+        /// generation. Falls back to config-based metadata when database metadata is unavailable.
+        /// </summary>
+        public bool InitializeMetadata(
+            RuntimeConfig config,
+            IMetadataProviderFactory metadataProviderFactory)
+        {
+            return InitializeMetadata(config, metadataProviderFactory, out _);
+        }
+
+        /// <summary>
+        /// Initializes the input schema using an explicit configuration and metadata-provider
+        /// generation and reports why configuration metadata was used when database enrichment
+        /// is unavailable.
+        /// </summary>
+        public bool InitializeMetadata(
+            RuntimeConfig config,
+            IMetadataProviderFactory metadataProviderFactory,
+            out string fallbackReason)
+        {
+            ArgumentNullException.ThrowIfNull(config);
+            ArgumentNullException.ThrowIfNull(metadataProviderFactory);
+            _cachedInputSchema = BuildInputSchemaFromDbMetadata(
+                config,
+                metadataProviderFactory,
+                out fallbackReason);
+            return _cachedInputSchema.HasValue;
+        }
 
         /// <summary>
         /// Gets the metadata for this custom tool, including name, description, and input schema.
         /// </summary>
         public Tool GetToolMetadata()
         {
-            string toolName = ConvertToToolName(EntityName);
-            string description = _entity.Description ?? $"Executes the {toolName} stored procedure";
+            string description = _entity.Description ?? $"Executes the {ToolName} stored procedure";
 
             // Build input schema based on parameters
             JsonElement inputSchema = BuildInputSchema();
 
             return new Tool
             {
-                Name = toolName,
+                Name = ToolName,
                 Description = description,
                 InputSchema = inputSchema
             };
@@ -97,7 +137,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             CancellationToken cancellationToken = default)
         {
             ILogger<DynamicCustomTool>? logger = serviceProvider.GetService<ILogger<DynamicCustomTool>>();
-            string toolName = GetToolMetadata().Name;
+            string toolName = ToolName;
 
             try
             {
@@ -168,7 +208,28 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     return McpErrorHelpers.PermissionDenied(toolName, EntityName, "execute", authError, logger);
                 }
 
-                // 6) Build request payload
+                // 6) Validate parameters against DB metadata (StoredProcedureDefinition.Parameters),
+                // which is the source of truth for parameter names.
+                // Note: Comparison is case-sensitive (default Dictionary<string,...> comparer),
+                // consistent with the existing REST/GraphQL SP execution path.
+                if (dbObject is not DatabaseStoredProcedure storedProcedure)
+                {
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity '{EntityName}' is not a stored procedure.", logger);
+                }
+
+                StoredProcedureDefinition spDefinition = storedProcedure.StoredProcedureDefinition;
+                if (parameters.Count > 0 && spDefinition.Parameters is not null)
+                {
+                    foreach (KeyValuePair<string, object?> param in parameters)
+                    {
+                        if (!spDefinition.Parameters.ContainsKey(param.Key))
+                        {
+                            return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", $"Invalid parameter: {param.Key}", logger);
+                        }
+                    }
+                }
+
+                // 7) Build request payload
                 JsonElement? requestPayloadRoot = null;
                 if (parameters.Count > 0)
                 {
@@ -193,14 +254,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     }
                 }
 
-                // Add default parameters from configuration if not provided
-                if (entityConfig.Source.Parameters != null)
+                // Apply config-declared defaults from the merged ParameterDefinitions.
+                // This covers all parameters (including DB-discovered ones with config defaults)
+                // and applies them per-missing-parameter when the user didn't supply a value.
+                if (spDefinition.Parameters is not null)
                 {
-                    foreach (ParameterMetadata param in entityConfig.Source.Parameters)
+                    foreach ((string paramName, ParameterDefinition paramDef) in spDefinition.Parameters)
                     {
-                        if (!context.FieldValuePairsInBody.ContainsKey(param.Name))
+                        if (!context.FieldValuePairsInBody.ContainsKey(paramName) && paramDef.HasConfigDefault)
                         {
-                            context.FieldValuePairsInBody[param.Name] = param.Default;
+                            context.FieldValuePairsInBody[paramName] = paramDef.ConfigDefaultValue;
                         }
                     }
                 }
@@ -219,6 +282,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     queryResult = await queryEngine.ExecuteAsync(context, dataSourceName).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch (DataApiBuilderException dabEx)
                 {
@@ -266,9 +333,99 @@ namespace Azure.DataApiBuilder.Mcp.Core
         }
 
         /// <summary>
-        /// Builds the input schema for the tool based on entity parameters.
+        /// Builds the input schema for the tool. Returns cached DB-metadata-based schema
+        /// if available (set by InitializeMetadata), otherwise falls back to config-based schema.
         /// </summary>
         private JsonElement BuildInputSchema()
+        {
+            if (_cachedInputSchema.HasValue)
+            {
+                return _cachedInputSchema.Value;
+            }
+
+            return BuildInputSchemaFromConfig();
+        }
+
+        /// <summary>
+        /// Builds the input schema from DB metadata (StoredProcedureDefinition.Parameters).
+        /// Returns null if metadata cannot be resolved (caller should fall back to config-based schema).
+        /// </summary>
+        private JsonElement? BuildInputSchemaFromDbMetadata(
+            RuntimeConfig config,
+            IMetadataProviderFactory metadataProviderFactory,
+            out string fallbackReason)
+        {
+            if (!McpMetadataHelper.TryResolveMetadata(
+                    EntityName,
+                    config,
+                    metadataProviderFactory,
+                    out _,
+                    out DatabaseObject dbObject,
+                    out _,
+                    out fallbackReason))
+            {
+                return null;
+            }
+
+            if (dbObject is not DatabaseStoredProcedure storedProcedure)
+            {
+                fallbackReason =
+                    $"Database object '{dbObject.FullName}' for entity '{EntityName}' is not a stored procedure.";
+                return null;
+            }
+
+            fallbackReason = string.Empty;
+
+            StoredProcedureDefinition spDefinition = storedProcedure.StoredProcedureDefinition;
+            if (spDefinition.Parameters is null || spDefinition.Parameters.Count == 0)
+            {
+                // Zero-param SP: return empty properties schema
+                return JsonSerializer.SerializeToElement(new Dictionary<string, object>
+                {
+                    ["type"] = "object",
+                    ["properties"] = new Dictionary<string, object>()
+                });
+            }
+
+            Dictionary<string, object> properties = new();
+            List<string> requiredParameters = new();
+            foreach ((string paramName, ParameterDefinition paramDef) in spDefinition.Parameters)
+            {
+                Dictionary<string, object> paramSchema = new()
+                {
+                    ["type"] = MapSystemTypeToJsonSchemaType(paramDef.SystemType),
+                    ["description"] = BuildParameterDescription(paramName, paramDef)
+                };
+
+                properties[paramName] = paramSchema;
+
+                // A DB metadata parameter is required unless config marks it optional or supplies
+                // a default the engine applies when the caller omits it.
+                if (IsParameterRequired(paramDef.Required, paramDef.HasConfigDefault))
+                {
+                    requiredParameters.Add(paramName);
+                }
+            }
+
+            Dictionary<string, object> schema = new()
+            {
+                ["type"] = "object",
+                ["properties"] = properties
+            };
+
+            if (requiredParameters.Count > 0)
+            {
+                schema["required"] = requiredParameters;
+            }
+
+            return JsonSerializer.SerializeToElement(schema);
+        }
+
+        /// <summary>
+        /// Builds the input schema from config-side ParameterMetadata.
+        /// Used as fallback when DB metadata is not available.
+        /// </summary>
+        private JsonElement BuildInputSchemaFromConfig()
         {
             Dictionary<string, object> schema = new()
             {
@@ -279,21 +436,104 @@ namespace Azure.DataApiBuilder.Mcp.Core
             if (_entity.Source.Parameters != null && _entity.Source.Parameters.Any())
             {
                 Dictionary<string, object> properties = (Dictionary<string, object>)schema["properties"];
+                List<string> requiredParameters = new();
 
                 foreach (ParameterMetadata param in _entity.Source.Parameters)
                 {
-                    // Note: Parameter type information is not available in ParameterMetadata,
-                    // so we allow multiple JSON types to match the behavior of GetParameterValue
-                    // that handles string, number, boolean, and null values.
                     properties[param.Name] = new Dictionary<string, object>
                     {
                         ["type"] = new[] { "string", "number", "boolean", "null" },
                         ["description"] = param.Description ?? $"Parameter {param.Name}"
                     };
+
+                    // A parameter is required unless config marks it optional or supplies a default.
+                    if (IsParameterRequired(param.Required, param.Default is not null))
+                    {
+                        requiredParameters.Add(param.Name);
+                    }
+                }
+
+                if (requiredParameters.Count > 0)
+                {
+                    schema["required"] = requiredParameters;
                 }
             }
 
             return JsonSerializer.SerializeToElement(schema);
+        }
+
+        /// <summary>
+        /// Determines whether a stored procedure parameter should be advertised as required in the
+        /// tool input schema. A parameter is required when configuration does not mark it optional
+        /// and does not provide a default value the engine can apply when the caller omits it.
+        /// </summary>
+        private static bool IsParameterRequired(bool? configuredRequired, bool hasDefault)
+        {
+            // If the engine can supply a default when the caller omits the parameter,
+            // it should not be advertised as required.
+            if (hasDefault)
+            {
+                return false;
+            }
+
+            return configuredRequired ?? true;
+        }
+
+        /// <summary>
+        /// Maps a .NET System.Type to the appropriate JSON Schema type string.
+        /// </summary>
+        private static object MapSystemTypeToJsonSchemaType(Type? systemType)
+        {
+            if (systemType is null)
+            {
+                return new[] { "string", "number", "boolean", "null" };
+            }
+
+            // Handle nullable types
+            Type underlyingType = Nullable.GetUnderlyingType(systemType) ?? systemType;
+
+            if (underlyingType == typeof(int) || underlyingType == typeof(long) ||
+                underlyingType == typeof(short) || underlyingType == typeof(byte) ||
+                underlyingType == typeof(sbyte) || underlyingType == typeof(uint) ||
+                underlyingType == typeof(ulong) || underlyingType == typeof(ushort))
+            {
+                return "integer";
+            }
+
+            if (underlyingType == typeof(float) || underlyingType == typeof(double) ||
+                underlyingType == typeof(decimal))
+            {
+                return "number";
+            }
+
+            if (underlyingType == typeof(bool))
+            {
+                return "boolean";
+            }
+
+            if (underlyingType == typeof(string) || underlyingType == typeof(Guid) ||
+                underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset))
+            {
+                return "string";
+            }
+
+            // Default: permissive multi-type
+            return new[] { "string", "number", "boolean", "null" };
+        }
+
+        /// <summary>
+        /// Builds a description string for a parameter using DB metadata.
+        /// Uses ParameterDefinition.Description when available, falling back to generic text.
+        /// </summary>
+        private static string BuildParameterDescription(string paramName, ParameterDefinition paramDef)
+        {
+            string description = paramDef.Description ?? $"Parameter {paramName}";
+            if (paramDef.HasConfigDefault)
+            {
+                description += $" (default: {paramDef.ConfigDefaultValue})";
+            }
+
+            return description;
         }
 
         /// <summary>

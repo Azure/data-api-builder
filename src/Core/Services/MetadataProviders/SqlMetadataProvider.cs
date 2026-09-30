@@ -123,18 +123,7 @@ namespace Azure.DataApiBuilder.Core.Services
             _databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
             _logger = logger;
             _isValidateOnly = isValidateOnly;
-            foreach ((string entityName, Entity entityMetatdata) in Entities)
-            {
-                if (runtimeConfig.IsRestEnabled)
-                {
-                    string restPath = entityMetatdata.Rest?.Path ?? entityName;
-                    _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
-                }
-                else
-                {
-                    _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
-                }
-            }
+            LogRestPathsForEntities(runtimeConfig, Entities);
 
             ConnectionString = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).ConnectionString;
             EntitiesDataSet = new();
@@ -169,7 +158,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Database object for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -187,7 +176,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Database object for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -200,7 +189,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Database object for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -213,7 +202,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Stored Procedure Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"Stored procedure definition for entity '{entityName}' has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
@@ -313,6 +302,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc />
         public async Task InitializeAsync()
         {
+            await InitializeAsync(CancellationToken.None);
+        }
+
+        /// <inheritdoc />
+        public async Task InitializeAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
 
             if (_isValidateOnly)
@@ -322,27 +318,37 @@ namespace Azure.DataApiBuilder.Core.Services
                 // To enable to check for multiple data-sources just remove this validation and each entity will have its own connection check.
                 try
                 {
-                    await ValidateDatabaseConnection();
+                    await ValidateDatabaseConnection(cancellationToken);
                 }
-                catch (DataApiBuilderException e)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    HandleOrRecordException(e);
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    HandleOrRecordException(e is DataApiBuilderException dabe ? dabe : new DataApiBuilderException(
+                        message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE + $" {e.Message}",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                        innerException: e));
                     return;
                 }
             }
 
             if (GetDatabaseType() == DatabaseType.MSSQL)
             {
-                await GenerateAutoentitiesIntoEntities(Autoentities);
+                await GenerateAutoentitiesIntoEntities(Autoentities, cancellationToken);
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             // Running these entity validations only in development mode to ensure
             // fast startup of engine in production mode.
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             _runtimeConfigValidator.ValidateEntityAndAutoentityConfigurations(runtimeConfig);
 
             GenerateDatabaseObjectForEntities();
-            await PopulateObjectDefinitionForEntities();
+            await PopulateObjectDefinitionForEntities(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             GenerateExposedToBackingColumnMapsForEntities();
 
             // When IsLateConfigured is true we are in a hosted scenario and do not reveal primary key information.
@@ -401,6 +407,25 @@ namespace Azure.DataApiBuilder.Core.Services
             return false;
         }
 
+        /// <inheritdoc/>
+        public bool TryGetArrayElementSyntaxKind(string entityName, string fieldName, out SyntaxKind fieldKind)
+        {
+            if (TryGetBackingColumn(entityName, fieldName, out string? columnName))
+            {
+                SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
+                ColumnDefinition column = sourceDefinition.Columns[columnName];
+
+                // If the column is an array type, we need to get the syntax kind from the element system type.
+                if (column.IsArrayType && TypeHelper.TryGetSyntaxKindFromSystemType(column.ElementSystemType!, out fieldKind))
+                {
+                    return true;
+                }
+            }
+
+            fieldKind = default;
+            return false;
+        }
+
         /// <summary>
         /// Log Primary key information. Function only called when not
         /// in a hosted scenario. Log relevant information about Primary keys
@@ -448,12 +473,20 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Verify that the stored procedure exists in the database schema, then populate its database object parameters accordingly
         /// </summary>
+        /// <remarks>
+        /// The cancellation-token signature intentionally replaces the former tokenless protected
+        /// virtual slot. This method owns cancellable database schema I/O, and custom metadata
+        /// provider subclassing is not a documented provider plug-in contract. Direct subclasses
+        /// must update their override and propagate <paramref name="cancellationToken"/>. Retaining
+        /// tokenless dispatch here would allow schema I/O to escape coordinated shutdown cancellation.
+        /// </remarks>
         protected virtual async Task FillSchemaForStoredProcedureAsync(
             Entity procedureEntity,
             string entityName,
             string schemaName,
             string storedProcedureSourceName,
-            StoredProcedureDefinition storedProcedureDefinition)
+            StoredProcedureDefinition storedProcedureDefinition,
+            CancellationToken cancellationToken)
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
@@ -462,15 +495,25 @@ namespace Azure.DataApiBuilder.Core.Services
 
             try
             {
-                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
-                await conn.OpenAsync();
+                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(
+                    conn,
+                    _dataSourceName,
+                    cancellationToken);
+                await conn.OpenAsync(cancellationToken);
 
                 // To restrict the parameters for the current stored procedure, specify its name
                 procedureRestrictions[0] = conn.Database;
                 procedureRestrictions[1] = schemaName;
                 procedureRestrictions[2] = storedProcedureSourceName;
 
-                procedureMetadata = await conn.GetSchemaAsync(collectionName: "Procedures", restrictionValues: procedureRestrictions);
+                procedureMetadata = await conn.GetSchemaAsync(
+                    collectionName: "Procedures",
+                    restrictionValues: procedureRestrictions,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -495,7 +538,10 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             // Each row in the procedureParams DataTable corresponds to a single parameter
-            DataTable parameterMetadata = await conn.GetSchemaAsync(collectionName: "ProcedureParameters", restrictionValues: procedureRestrictions);
+            DataTable parameterMetadata = await conn.GetSchemaAsync(
+                collectionName: "ProcedureParameters",
+                restrictionValues: procedureRestrictions,
+                cancellationToken);
 
             // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
             foreach (DataRow row in parameterMetadata.Rows)
@@ -559,9 +605,32 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="schemaName">Name of the schema in which the table is present.</param>
         /// <param name="tableName">Name of the table.</param>
         /// <param name="sourceDefinition">Table definition to update.</param>
-        public virtual Task PopulateTriggerMetadataForTable(string entityName, string schemaName, string tableName, SourceDefinition sourceDefinition)
+        public virtual Task PopulateTriggerMetadataForTable(
+            string entityName,
+            string schemaName,
+            string tableName,
+            SourceDefinition sourceDefinition)
         {
             throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Updates trigger metadata with cooperative cancellation. Derived implementations that
+        /// only override the established member retain their existing behavior.
+        /// </summary>
+        public virtual Task PopulateTriggerMetadataForTable(
+            string entityName,
+            string schemaName,
+            string tableName,
+            SourceDefinition sourceDefinition,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return PopulateTriggerMetadataForTable(
+                entityName,
+                schemaName,
+                tableName,
+                sourceDefinition);
         }
 
         /// <summary>
@@ -715,9 +784,22 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Creates entities for each table that is found, based on the autoentity configuration.
         /// This method is only called for tables in MsSql.
         /// </summary>
-        protected virtual Task GenerateAutoentitiesIntoEntities(IReadOnlyDictionary<string, Autoentity>? autoentities)
+        protected virtual Task GenerateAutoentitiesIntoEntities(
+            IReadOnlyDictionary<string, Autoentity>? autoentities)
         {
-            throw new NotSupportedException($"{GetType().Name} does not support Autoentities yet.");
+            throw new NotSupportedException($"{GetType().Name} does not support autoentities yet.");
+        }
+
+        /// <summary>
+        /// Creates autoentities with cooperative cancellation. Derived implementations that only
+        /// override the established member retain their existing behavior.
+        /// </summary>
+        protected virtual Task GenerateAutoentitiesIntoEntities(
+            IReadOnlyDictionary<string, Autoentity>? autoentities,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return GenerateAutoentitiesIntoEntities(autoentities);
         }
 
         /// <summary>
@@ -727,6 +809,33 @@ namespace Azure.DataApiBuilder.Core.Services
         private void RemoveGeneratedAutoentities()
         {
             _runtimeConfigProvider.RemoveGeneratedAutoentitiesFromConfig();
+        }
+
+        /// <summary>
+        /// Removes whitespace from the generated entity name and capitalizes the character
+        /// immediately following each removed whitespace (camelCase join).
+        /// For example, "Order Items" becomes "OrderItems" and "dbo_Order Items" becomes "dbo_OrderItems".
+        /// </summary>
+        /// <param name="name">The entity name to process.</param>
+        /// <returns>The entity name with whitespace removed and following characters capitalized.</returns>
+        protected static string RemoveWhitespaceAddCamelCase(string name)
+        {
+            StringBuilder result = new(name.Length);
+            bool capitalizeNext = false;
+
+            foreach (char character in name)
+            {
+                if (char.IsWhiteSpace(character))
+                {
+                    capitalizeNext = true;
+                    continue;
+                }
+
+                result.Append(capitalizeNext ? char.ToUpperInvariant(character) : character);
+                capitalizeNext = false;
+            }
+
+            return result.ToString();
         }
 
         protected void PopulateDatabaseObjectForEntity(
@@ -1016,6 +1125,30 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
+        /// Helper method that logs the REST paths for all entities and shows if the REST calls are enabled/disabled for any entity.
+        /// </summary>
+        /// <param name="runtimeConfig"></param>
+        /// <param name="entities"></param>
+        protected void LogRestPathsForEntities(RuntimeConfig runtimeConfig, IReadOnlyDictionary<string, Entity> entities)
+        {
+            if (!_isValidateOnly)
+            {
+                foreach ((string entityName, Entity entityMetatdata) in entities)
+                {
+                    if (runtimeConfig.IsRestEnabled)
+                    {
+                        string restPath = entityMetatdata.Rest?.Path ?? entityName;
+                        _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
+                    }
+                    else
+                    {
+                        _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Adds a new foreign key definition for the target entity in the relationship metadata.
         /// The last argument "relationshipData" is modified (hydrated with the new foreign key definition)
         /// as a side effect of executing this function.
@@ -1133,21 +1266,34 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Populates table definition for entities specified as tables or views
         /// Populates procedure definition for entities specified as stored procedures
         /// </summary>
-        private async Task PopulateObjectDefinitionForEntities()
+        private async Task PopulateObjectDefinitionForEntities(
+            CancellationToken cancellationToken)
         {
             foreach ((string entityName, Entity entity) in Entities)
             {
-                await PopulateObjectDefinitionForEntity(entityName, entity);
+                cancellationToken.ThrowIfCancellationRequested();
+                await PopulateObjectDefinitionForEntity(
+                    entityName,
+                    entity,
+                    cancellationToken);
             }
 
             foreach ((string entityName, Entity entity) in _linkingEntities)
             {
-                await PopulateObjectDefinitionForEntity(entityName, entity);
+                cancellationToken.ThrowIfCancellationRequested();
+                await PopulateObjectDefinitionForEntity(
+                    entityName,
+                    entity,
+                    cancellationToken);
             }
 
             try
             {
-                await PopulateForeignKeyDefinitionAsync();
+                await PopulateForeignKeyDefinitionAsync(cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -1155,10 +1301,14 @@ namespace Azure.DataApiBuilder.Core.Services
             }
         }
 
-        private async Task PopulateObjectDefinitionForEntity(string entityName, Entity entity)
+        private async Task PopulateObjectDefinitionForEntity(
+            string entityName,
+            Entity entity,
+            CancellationToken cancellationToken)
         {
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 EntitySourceType entitySourceType = GetEntitySourceType(entityName, entity);
                 if (entitySourceType is EntitySourceType.StoredProcedure)
                 {
@@ -1167,14 +1317,16 @@ namespace Azure.DataApiBuilder.Core.Services
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
-                        GetStoredProcedureDefinition(entityName));
+                        GetStoredProcedureDefinition(entityName),
+                        cancellationToken);
 
                     if (GetDatabaseType() == DatabaseType.MSSQL || GetDatabaseType() == DatabaseType.DWSQL)
                     {
                         await PopulateResultSetDefinitionsForStoredProcedureAsync(
                             GetSchemaName(entityName),
                             GetDatabaseObjectName(entityName),
-                            GetStoredProcedureDefinition(entityName));
+                            GetStoredProcedureDefinition(entityName),
+                            cancellationToken);
                     }
                 }
                 else if (entitySourceType is EntitySourceType.Table)
@@ -1202,7 +1354,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(
                             entityName,
                             GetSchemaName(entityName),
-                            GetDatabaseObjectName(entityName));
+                            GetDatabaseObjectName(entityName),
+                            cancellationToken);
 
                         pkFields = dataTable.PrimaryKey.Select(pk => pk.ColumnName).ToList();
                     }
@@ -1215,7 +1368,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetSourceDefinition(entityName),
-                        pkFields);
+                        pkFields,
+                        cancellationToken);
                 }
                 else
                 {
@@ -1242,7 +1396,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(
                             entityName,
                             GetSchemaName(entityName),
-                            GetDatabaseObjectName(entityName));
+                            GetDatabaseObjectName(entityName),
+                            cancellationToken);
 
                         pkFields = dataTable.PrimaryKey.Select(pk => pk.ColumnName).ToList();
                     }
@@ -1253,8 +1408,13 @@ namespace Azure.DataApiBuilder.Core.Services
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         viewDefinition,
-                        pkFields);
+                        pkFields,
+                        cancellationToken);
                 }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception e)
             {
@@ -1269,7 +1429,8 @@ namespace Azure.DataApiBuilder.Core.Services
         private async Task PopulateResultSetDefinitionsForStoredProcedureAsync(
             string schemaName,
             string storedProcedureName,
-            SourceDefinition sourceDefinition)
+            SourceDefinition sourceDefinition,
+            CancellationToken cancellationToken)
         {
             StoredProcedureDefinition storedProcedureDefinition = (StoredProcedureDefinition)sourceDefinition;
             string dbStoredProcedureName = $"{schemaName}.{storedProcedureName}";
@@ -1283,7 +1444,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 sqltext: queryForResultSetDetails,
                 parameters: null!,
                 dataReaderHandler: QueryExecutor.GetJsonArrayAsync,
-                dataSourceName: _dataSourceName);
+                dataSourceName: _dataSourceName,
+                cancellationToken: cancellationToken);
 
             using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
 
@@ -1443,8 +1605,10 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName,
             SourceDefinition sourceDefinition,
-            List<string> pkFields)
+            List<string> pkFields,
+            CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             sourceDefinition.PrimaryKey = [.. pkFields];
 
             if (sourceDefinition.PrimaryKey.Count == 0)
@@ -1458,10 +1622,19 @@ namespace Azure.DataApiBuilder.Core.Services
             Entities.TryGetValue(entityName, out Entity? entity);
             if (GetDatabaseType() is DatabaseType.MSSQL && entity is not null && entity.Source.Type is EntitySourceType.Table)
             {
-                await PopulateTriggerMetadataForTable(entityName, schemaName, tableName, sourceDefinition);
+                await PopulateTriggerMetadataForTable(
+                    entityName,
+                    schemaName,
+                    tableName,
+                    sourceDefinition,
+                    cancellationToken);
             }
 
-            DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
+            DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(
+                entityName,
+                schemaName,
+                tableName,
+                cancellationToken);
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
@@ -1474,19 +1647,29 @@ namespace Azure.DataApiBuilder.Core.Services
                     && IsGraphQLReservedName(entity, columnName, graphQLEnabledGlobally: runtimeConfig.IsGraphQLEnabled))
                 {
                     throw new DataApiBuilderException(
-                       message: $"The column '{columnName}' violates GraphQL name restrictions.",
+                       message: $"The column '{columnName}' from '{entityName}' violates GraphQL name restrictions.",
                        statusCode: HttpStatusCode.ServiceUnavailable,
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                 }
+
+                Type systemType = (Type)columnInfoFromAdapter["DataType"];
+
+                // Detect array types: concrete array types (e.g., int[]) have IsArray=true,
+                // while Npgsql reports abstract System.Array for PostgreSQL array columns.
+                // byte[] is excluded since it maps to the bytea/ByteArray scalar type.
+                bool isArrayType = (systemType.IsArray && systemType != typeof(byte[])) || systemType == typeof(Array);
 
                 ColumnDefinition column = new()
                 {
                     IsNullable = (bool)columnInfoFromAdapter["AllowDBNull"],
                     IsAutoGenerated = (bool)columnInfoFromAdapter["IsAutoIncrement"],
-                    SystemType = (Type)columnInfoFromAdapter["DataType"],
+                    SystemType = systemType,
+                    IsArrayType = isArrayType,
+                    ElementSystemType = isArrayType && systemType.IsArray ? systemType.GetElementType() : null,
                     // An auto-increment column is also considered as a read-only column. For other types of read-only columns,
                     // the flag is populated later via PopulateColumnDefinitionsWithReadOnlyFlag() method.
-                    IsReadOnly = (bool)columnInfoFromAdapter["IsAutoIncrement"]
+                    // Array columns are also treated as read-only until write support for array types is implemented.
+                    IsReadOnly = (bool)columnInfoFromAdapter["IsAutoIncrement"] || isArrayType
                 };
 
                 // Tests may try to add the same column simultaneously
@@ -1496,7 +1679,10 @@ namespace Azure.DataApiBuilder.Core.Services
                 sourceDefinition.Columns.TryAdd(columnName, column);
             }
 
-            DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
+            DataTable columnsInTable = await GetColumnsAsync(
+                schemaName,
+                tableName,
+                cancellationToken);
 
             PopulateColumnDefinitionWithHasDefaultAndDbType(
                 sourceDefinition,
@@ -1506,7 +1692,11 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // For MySql, database name is equivalent to schema name.
                 string schemaOrDatabaseName = GetDatabaseType() is DatabaseType.MySQL ? GetDatabaseName() : schemaName;
-                await PopulateColumnDefinitionsWithReadOnlyFlag(tableName, schemaOrDatabaseName, sourceDefinition);
+                await PopulateColumnDefinitionsWithReadOnlyFlag(
+                    tableName,
+                    schemaOrDatabaseName,
+                    sourceDefinition,
+                    cancellationToken);
             }
         }
 
@@ -1517,7 +1707,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="tableName">Name of the table.</param>
         /// <param name="schemaOrDatabaseName">Name of the schema (for MsSql/PgSql)/database (for MySql) of the table.</param>
         /// <param name="sourceDefinition">Table definition.</param>
-        private async Task PopulateColumnDefinitionsWithReadOnlyFlag(string tableName, string schemaOrDatabaseName, SourceDefinition sourceDefinition)
+        private async Task PopulateColumnDefinitionsWithReadOnlyFlag(
+            string tableName,
+            string schemaOrDatabaseName,
+            SourceDefinition sourceDefinition,
+            CancellationToken cancellationToken)
         {
             string schemaOrDatabaseParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
             string quotedTableName = SqlQueryBuilder.QuoteTableNameAsDBConnectionParam(tableName);
@@ -1533,7 +1727,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 sqltext: queryToGetReadOnlyColumns,
                 parameters: parameters,
                 dataReaderHandler: SummarizeReadOnlyFieldsMetadata,
-                dataSourceName: _dataSourceName);
+                dataSourceName: _dataSourceName,
+                cancellationToken: cancellationToken);
 
             if (readOnlyFields is not null && readOnlyFields.Count > 0)
             {
@@ -1598,7 +1793,8 @@ namespace Azure.DataApiBuilder.Core.Services
         private async Task<DataTable> GetTableWithSchemaFromDataSetAsync(
             string entityName,
             string schemaName,
-            string tableName)
+            string tableName,
+            CancellationToken cancellationToken)
         {
             // Because we have an instance of SqlMetadataProvider for each individual database
             // (note: this means each actual database not each database type), we do not
@@ -1612,7 +1808,14 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 try
                 {
-                    dataTable = await FillSchemaForTableAsync(schemaName, tableName);
+                    dataTable = await FillSchemaForTableAsync(
+                        schemaName,
+                        tableName,
+                        cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
                 }
                 catch (Exception ex) when (ex is not DataApiBuilderException)
                 {
@@ -1656,14 +1859,22 @@ namespace Azure.DataApiBuilder.Core.Services
         /// It is specifically used to validate the connection string provided in the runtime configuration
         /// for single datasource.
         /// </summary>
-        private async Task ValidateDatabaseConnection()
+        private async Task ValidateDatabaseConnection(
+            CancellationToken cancellationToken)
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(
+                conn,
+                _dataSourceName,
+                cancellationToken);
             try
             {
-                await conn.OpenAsync();
+                await conn.OpenAsync(cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -1679,11 +1890,12 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Using a data adapter, obtains the schema of the given table name
-        /// and adds the corresponding entity in the data set.
+        /// and adds the corresponding DataTable to the entities data set.
         /// </summary>
         private async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,
-            string tableName)
+            string tableName,
+            CancellationToken cancellationToken)
         {
             using ConnectionT conn = new();
             // If connection string is set to empty string
@@ -1707,7 +1919,14 @@ namespace Azure.DataApiBuilder.Core.Services
                 // for non-MySql DB types, this will throw an exception
                 // for malformed connection strings
                 conn.ConnectionString = ConnectionString;
-                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
+                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(
+                    conn,
+                    _dataSourceName,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -1720,10 +1939,10 @@ namespace Azure.DataApiBuilder.Core.Services
                     innerException: ex);
             }
 
-            await conn.OpenAsync();
+            await conn.OpenAsync(cancellationToken);
 
-            DataAdapterT adapterForTable = new();
-            CommandT selectCommand = new()
+            using DataAdapterT adapterForTable = new();
+            using CommandT selectCommand = new()
             {
                 Connection = conn
             };
@@ -1733,7 +1952,40 @@ namespace Azure.DataApiBuilder.Core.Services
                 = $"SELECT * FROM {tableNameWithSchemaPrefix}";
             adapterForTable.SelectCommand = selectCommand;
 
-            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableNameWithSchemaPrefix);
+            cancellationToken.ThrowIfCancellationRequested();
+            using CancellationTokenRegistration cancellationRegistration =
+                cancellationToken.Register(
+                    static commandState =>
+                    {
+                        try
+                        {
+                            ((DbCommand)commandState!).Cancel();
+                        }
+                        catch (Exception)
+                        {
+                            // Cancellation is best effort. The provider operation reports its
+                            // own completion or failure to the thread executing FillSchema.
+                        }
+                    },
+                    selectCommand);
+
+            DataTable[] dataTable;
+            try
+            {
+                dataTable = adapterForTable.FillSchema(
+                    EntitiesDataSet,
+                    SchemaType.Source,
+                    tableNameWithSchemaPrefix);
+            }
+            catch (Exception ex) when (cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(
+                    "Schema discovery was canceled during shutdown.",
+                    ex,
+                    cancellationToken);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
             return dataTable[0];
         }
 
@@ -1770,14 +2022,25 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <returns>A data table where each row corresponds to a
         /// column of the table.</returns>
+        /// <remarks>
+        /// The cancellation-token signature intentionally replaces the former tokenless protected
+        /// virtual slot. This method owns cancellable database schema I/O, and custom metadata
+        /// provider subclassing is not a documented provider plug-in contract. Direct subclasses
+        /// must update their override and propagate <paramref name="cancellationToken"/>. Retaining
+        /// tokenless dispatch here would allow schema I/O to escape coordinated shutdown cancellation.
+        /// </remarks>
         protected virtual async Task<DataTable> GetColumnsAsync(
             string schemaName,
-            string tableName)
+            string tableName,
+            CancellationToken cancellationToken)
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
-            await conn.OpenAsync();
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(
+                conn,
+                _dataSourceName,
+                cancellationToken);
+            await conn.OpenAsync(cancellationToken);
             // We can specify the Catalog, Schema, Table Name, Column Name to get
             // the specified column(s).
             // Hence, we should create a 4 members array.
@@ -1791,7 +2054,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Each row in the columnsInTable DataTable corresponds to
             // a single column of the table.
-            DataTable columnsInTable = await conn.GetSchemaAsync("Columns", columnRestrictions);
+            DataTable columnsInTable = await conn.GetSchemaAsync(
+                "Columns",
+                columnRestrictions,
+                cancellationToken);
 
             return columnsInTable;
         }
@@ -1826,8 +2092,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Fills the table definition with information of the foreign keys
         /// for all the tables.
         /// </summary>
-        private async Task PopulateForeignKeyDefinitionAsync()
+        private async Task PopulateForeignKeyDefinitionAsync(
+            CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // For each database object, that has a relationship metadata,
             // build the array storing all the schemaNames(for now the defaultSchemaName)
             // and the array for all tableNames
@@ -1862,7 +2130,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 dataReaderHandler: SummarizeFkMetadata,
                 dataSourceName: _dataSourceName,
                 httpContext: null,
-                args: null);
+                args: null,
+                cancellationToken: cancellationToken);
 
             if (PairToFkDefinition is not null)
             {

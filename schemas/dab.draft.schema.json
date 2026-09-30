@@ -24,7 +24,7 @@
             "postgresql",
             "mysql",
             "cosmosdb_nosql",
-            "cosmosdb_postgresql"
+            "dwsql"
           ]
         },
         "connection-string": {
@@ -32,7 +32,7 @@
           "type": "string"
         },
         "options": {
-          "description": "Database specific properties for the backend database",
+          "description": "Database-specific connection and configuration properties. Available options depend on the database-type.",
           "type": "object"
         },
         "health": {
@@ -42,7 +42,7 @@
           "properties": {
             "enabled": {
               "$ref": "#/$defs/boolean-or-string",
-              "description": "Enable health check endpoint for something",
+              "description": "Enable health check for this data source.",
               "default": true,
               "additionalProperties": false
             },
@@ -97,7 +97,7 @@
           "then": {
             "properties": {
               "options": {
-                "description": "Database specific properties for the backend database",
+                "description": "Database-specific connection and configuration properties. Available options depend on the database-type.",
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
@@ -124,7 +124,7 @@
           "if": {
             "properties": {
               "database-type": {
-                "const": "mssql"
+                "enum": ["mssql", "dwsql"]
               }
             }
           },
@@ -212,12 +212,13 @@
             },
             "enabled": {
               "$ref": "#/$defs/boolean-or-string",
-              "description": "Allow enabling/disabling REST requests for all entities."
+              "description": "Allow enabling/disabling REST requests for all entities.",
+              "default": true
             },
             "request-body-strict": {
               "$ref": "#/$defs/boolean-or-string",
               "description": "Does not allow extraneous fields in request body when set to true.",
-              "default": true
+              "default": false
             }
           }
         },
@@ -237,12 +238,18 @@
             },
             "enabled": {
               "$ref": "#/$defs/boolean-or-string",
-              "description": "Allow enabling/disabling GraphQL requests for all entities."
+              "description": "Allow enabling/disabling GraphQL requests for all entities.",
+              "default": true
             },
             "depth-limit": {
               "type": [ "integer", "null" ],
-              "description": "Maximum allowed depth of a GraphQL query.",
+              "description": "Maximum allowed depth of a GraphQL query. Only positive integers are enforced. Default: null (no limit). Use -1 to explicitly remove a previously set limit.",
               "default": null
+            },
+            "enable-aggregation": {
+              "$ref": "#/$defs/boolean-or-string",
+              "description": "Allow enabling/disabling aggregation (groupBy, sum, avg, min, max, count) for supported database types (MSSQL, DWSQL).",
+              "default": true
             },
             "multiple-mutations": {
               "type": "object",
@@ -280,6 +287,18 @@
               "description": "Allow enabling/disabling MCP requests for all entities.",
               "default": true
             },
+            "description": {
+              "type": "string",
+              "description": "Description of the MCP server, exposed as the 'instructions' field in the MCP initialize response to provide behavioral context to MCP clients and agents."
+            },
+            "allowed-hosts": {
+              "type": "array",
+              "description": "Host names that are trusted to reach the browser-reachable MCP endpoint. Protects the MCP Streamable HTTP transport against DNS rebinding attacks by validating the incoming Host and Origin headers. Loopback hosts (localhost, 127.0.0.1, ::1) are always trusted. A single entry of '*' disables Host/Origin validation and is not recommended.",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            },
             "dml-tools": {
               "description": "Configuration for MCP Data Manipulation Language (DML) tools. Set to true/false to enable/disable all tools, or use an object to configure individual tools.",
               "oneOf": [
@@ -295,32 +314,32 @@
                     "describe-entities": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the describe-entities tool.",
-                      "default": false
+                      "default": true
                     },
                     "create-record": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the create-record tool.",
-                      "default": false
+                      "default": true
                     },
                     "read-records": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the read-records tool.",
-                      "default": false
+                      "default": true
                     },
                     "update-record": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the update-record tool.",
-                      "default": false
+                      "default": true
                     },
                     "delete-record": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the delete-record tool.",
-                      "default": false
+                      "default": true
                     },
                     "execute-entity": {
                       "$ref": "#/$defs/boolean-or-string",
                       "description": "Enable/disable the execute-entity tool.",
-                      "default": false
+                      "default": true
                     },
                     "aggregate-records": {
                       "description": "Enable/disable or configure the aggregate-records MCP tool.",
@@ -349,7 +368,7 @@
                           }
                         }
                       ],
-                      "default": false
+                      "default": true
                     }
                   }
                 }
@@ -432,7 +451,7 @@
                       "description": "Unauthenticated provider where all operations run as anonymous. Use when Data API builder is behind an app gateway or APIM where authentication is handled externally."
                     }
                   ],
-                  "default": "AppService"
+                  "default": "Unauthenticated"
                 },
                 "jwt": {
                   "type": "object",
@@ -486,7 +505,40 @@
             "ttl-seconds": {
               "type": "integer",
               "description": "Time to live in seconds",
-              "default": 5
+              "default": 5,
+              "minimum": 1
+            },
+            "level-2": {
+              "type": "object",
+              "description": "Configuration for the level 2 (distributed) cache and backplane.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "#/$defs/boolean-or-string",
+                  "description": "Enable or disable the level 2 distributed cache.",
+                  "default": false
+                },
+                "provider": {
+                  "type": "string",
+                  "description": "The provider for the L2 cache. Currently only 'redis' is supported."
+                },
+                "connection-string": {
+                  "type": "string",
+                  "description": "The connection string for the level 2 cache provider."
+                },
+                "partition": {
+                  "type": "string",
+                  "description": "The prefix to use for cache keys in level 2 and backplane, useful in a shared environment to avoid collisions."
+                }
+              },
+              "if": {
+                "properties": {
+                  "enabled": { "const": true }
+                }
+              },
+              "then": {
+                "required": ["connection-string"]
+              }
             }
           }
         },
@@ -726,6 +778,206 @@
               "default": 4
             }
           }
+        },
+        "embeddings": {
+          "type": "object",
+          "description": "Configuration for text embedding/vectorization service. Supports OpenAI and Azure OpenAI providers.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether the embedding service is enabled. Defaults to true.",
+              "default": true
+            },
+            "provider": {
+              "type": "string",
+              "description": "The embedding provider type.",
+              "enum": ["azure-openai", "openai"]
+            },
+            "base-url": {
+              "type": "string",
+              "description": "The provider base URL. For Azure OpenAI, use the Azure resource endpoint. For OpenAI, use https://api.openai.com."
+            },
+            "api-key": {
+              "type": "string",
+              "description": "The API key for authentication. Supports environment variable substitution with @env('VAR_NAME')."
+            },
+            "model": {
+              "type": "string",
+              "description": "The model or deployment name. Required for Azure OpenAI (deployment name). For OpenAI, defaults to 'text-embedding-3-small' if not specified."
+            },
+            "api-version": {
+              "type": "string",
+              "description": "Azure API version. Only used for Azure OpenAI provider.",
+              "default": "2023-05-15"
+            },
+            "dimensions": {
+              "type": "integer",
+              "description": "Output vector dimensions. Defaults to 1536 if not specified. Useful for Redis schema alignment.",
+              "default": 1536,
+              "minimum": 1
+            },
+            "timeout-ms": {
+              "type": "integer",
+              "description": "Request timeout in milliseconds.",
+              "default": 30000,
+              "minimum": 1,
+              "maximum": 300000
+            },
+            "endpoint": {
+              "type": "object",
+              "description": "REST endpoint configuration for the embedding service.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether the /embed REST endpoint is enabled. Defaults to false.",
+                  "default": false
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The URL path for the embedding endpoint. Defaults to '/embed'.",
+                  "default": "/embed"
+                },
+                "roles": {
+                  "type": "array",
+                  "description": "The roles allowed to access the embedding endpoint. Defaults to ['authenticated'].",
+                  "default": ["authenticated"],
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "health": {
+              "type": "object",
+              "description": "Health check configuration for the embedding service.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether health checks are enabled for embeddings. Defaults to false.",
+                  "default": false
+                },
+                "threshold-ms": {
+                  "type": "integer",
+                  "description": "The maximum response time in milliseconds to be considered healthy.",
+                  "default": 1000,
+                  "minimum": 1,
+                  "maximum": 300000
+                },
+                "test-text": {
+                  "type": "string",
+                  "description": "The text to use for health check validation.",
+                  "default": "health check"
+                },
+                "expected-dimensions": {
+                  "type": "integer",
+                  "description": "The expected number of dimensions in the embedding result. If specified, dimension validation is performed.",
+                  "minimum": 1
+                }
+              }
+            },
+            "cache": {
+              "type": "object",
+              "description": "Cache configuration for embeddings. Includes L1 (in-memory) and optional L2 (Azure Managed Redis) caching.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether caching is enabled for embeddings. Defaults to true.",
+                  "default": true
+                },
+                "ttl-hours": {
+                  "type": "integer",
+                  "description": "Time-to-live for cached embeddings in hours. Defaults to 24 hours. Set high since embeddings are deterministic.",
+                  "default": 24,
+                  "minimum": 1
+                },
+                "level-2": {
+                  "type": "object",
+                  "description": "Configuration for L2 distributed cache using Azure Managed Redis.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Whether L2 (distributed Redis) cache is enabled. Defaults to false.",
+                      "default": false
+                    },
+                    "connection-string": {
+                      "type": "string",
+                      "description": "The connection string for Azure Managed Redis. Supports environment variable substitution with @env('VAR_NAME'). Example: 'contoso.redis.cache.windows.net:6380,password=...,ssl=True,abortConnect=False'. Authentication is auto-detected: when a password is present in the connection string, connection-string based authentication is used; when no password is present and the endpoint is not localhost/loopback, Microsoft Entra ID (token-based) authentication is used via DefaultAzureCredential (Managed Identity when available, with standard credential fallbacks)."
+                    }
+                  },
+                  "required": ["enabled"]
+                }
+              }
+            },
+            "chunking": {
+              "type": "object",
+              "description": "Chunking configuration for text processing before embedding. Used to split large text inputs into smaller chunks.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether chunking is enabled. Defaults to true.",
+                  "default": true
+                },
+                "size-chars": {
+                  "type": "integer",
+                  "description": "The size of each chunk in characters.",
+                  "default": 800,
+                  "minimum": 1
+                },
+                "overlap-chars": {
+                  "type": "integer",
+                  "description": "The number of characters to overlap between consecutive chunks. Overlap helps maintain context across chunk boundaries.",
+                  "default": 100,
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": ["provider", "base-url", "api-key"],
+          "allOf": [
+            {
+              "$comment": "Azure OpenAI requires the model (deployment name) to be specified.",
+              "if": {
+                "properties": {
+                  "provider": {
+                    "const": "azure-openai"
+                  }
+                },
+                "required": ["provider"]
+              },
+              "then": {
+                "required": ["model"],
+                "properties": {
+                  "api-version": {
+                    "type": "string",
+                    "description": "Azure API version. Required for Azure OpenAI provider.",
+                    "default": "2023-05-15"
+                  }
+                }
+              }
+            },
+            {
+              "$comment": "OpenAI does not require model (defaults to text-embedding-3-small) and does not use api-version.",
+              "if": {
+                "properties": {
+                  "provider": {
+                    "const": "openai"
+                  }
+                },
+                "required": ["provider"]
+              },
+              "then": {
+                "properties": {
+                  "api-version": false
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -808,8 +1060,8 @@
                 },
                 "name": {
                   "type": "string",
-                  "description": "Entity name interpolation pattern using {schema} and {object}. Null defaults to {object}. Must be unique for every entity inside the pattern",
-                  "default": "{object}"
+                  "description": "Entity name interpolation pattern using {schema} and {object}. Null defaults to {schema}_{object}. Must be unique for every entity inside the pattern",
+                  "default": "{schema}_{object}"
                 }
               }
             },
@@ -907,9 +1159,11 @@
                 "additionalProperties": false,
                 "properties": {
                   "role": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                   },
                   "actions": {
+                    "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                     "oneOf": [
                       {
                         "type": "string",
@@ -956,7 +1210,7 @@
           "properties": {
             "description": {
               "type": "string",
-              "description": "Optional description for the entity. Will be surfaced in generated API documentation and GraphQL schema as comments."
+              "description": "Optional description for the entity. Will be surfaced in MCP tool discovery, generated API documentation, and GraphQL schema as comments."
             },
             "health": {
               "description": "Health check configuration for entity",
@@ -1047,10 +1301,6 @@
                         "type": "string"
                       },
                       "description": "DEPRECATED. Use the 'fields' array and set 'primary-key: true' on each key field instead. List of fields to be used as primary keys."
-                    },
-                    "object-description": {
-                      "type": "string",
-                      "description": "Human-readable description of the database object, used for MCP tool discovery and documentation."
                     }
                   },
                   "required": ["type", "object"]
@@ -1300,9 +1550,11 @@
                   "additionalProperties": false,
                   "properties": {
                     "role": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                     },
                     "actions": {
+                      "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                       "oneOf": [
                         {
                           "type": "string",
@@ -1374,9 +1626,11 @@
                   "additionalProperties": false,
                   "properties": {
                     "role": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "The role to which this permission applies (e.g. anonymous, authenticated, or a custom role)."
                     },
                     "actions": {
+                      "description": "The operations permitted for this role. Use '*' to allow all, or specify an array of actions.",
                       "oneOf": [
                         {
                           "type": "string",

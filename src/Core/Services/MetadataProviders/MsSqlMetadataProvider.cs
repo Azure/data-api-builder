@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlTypes;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
@@ -31,16 +32,20 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         private RuntimeConfigProvider _runtimeConfigProvider;
 
+        private RuntimeConfig? _childConfig;
+
         public MsSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             RuntimeConfigValidator runtimeConfigValidator,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,
-            bool isValidateOnly = false)
+            bool isValidateOnly = false,
+            RuntimeConfig? childConfig = null)
             : base(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
+            _childConfig = childConfig;
         }
 
         public override string GetDefaultSchemaName()
@@ -59,7 +64,27 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public override async Task PopulateTriggerMetadataForTable(string entityName, string schemaName, string tableName, SourceDefinition sourceDefinition)
+        public override Task PopulateTriggerMetadataForTable(
+            string entityName,
+            string schemaName,
+            string tableName,
+            SourceDefinition sourceDefinition)
+        {
+            return PopulateTriggerMetadataForTable(
+                entityName,
+                schemaName,
+                tableName,
+                sourceDefinition,
+                CancellationToken.None);
+        }
+
+        /// <inheritdoc/>
+        public override async Task PopulateTriggerMetadataForTable(
+            string entityName,
+            string schemaName,
+            string tableName,
+            SourceDefinition sourceDefinition,
+            CancellationToken cancellationToken)
         {
             string enumerateEnabledTriggers = SqlQueryBuilder.BuildFetchEnabledTriggersQuery();
             Dictionary<string, DbConnectionParam> parameters = new()
@@ -72,7 +97,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 sqltext: enumerateEnabledTriggers,
                 parameters: parameters,
                 dataReaderHandler: QueryExecutor.GetJsonArrayAsync,
-                dataSourceName: _dataSourceName);
+                dataSourceName: _dataSourceName,
+                cancellationToken: cancellationToken);
             using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
 
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
@@ -81,13 +107,19 @@ namespace Azure.DataApiBuilder.Core.Services
                 if ("UPDATE".Equals(type_desc))
                 {
                     sourceDefinition.IsUpdateDMLTriggerEnabled = true;
-                    _logger.LogInformation($"An update trigger is enabled for the entity: {entityName}");
+                    if (!_isValidateOnly)
+                    {
+                        _logger.LogInformation($"An update trigger is enabled for the entity: {entityName}");
+                    }
                 }
 
                 if ("INSERT".Equals(type_desc))
                 {
                     sourceDefinition.IsInsertDMLTriggerEnabled = true;
-                    _logger.LogInformation($"An insert trigger is enabled for the entity: {entityName}");
+                    if (!_isValidateOnly)
+                    {
+                        _logger.LogInformation($"An insert trigger is enabled for the entity: {entityName}");
+                    }
                 }
             }
         }
@@ -114,6 +146,15 @@ namespace Azure.DataApiBuilder.Core.Services
                     columnDefinition.DbType = TypeHelper.GetDbTypeFromSystemType(columnDefinition.SystemType);
 
                     string sqlDbTypeName = (string)columnInfo["DATA_TYPE"];
+
+                    if (columnDefinition.SystemType == typeof(SqlVector<Single>))
+                    {
+                        sqlDbTypeName = "vector";   // Currently the "DATA_TYPE" column returns "varbinary" for vector type columns. This is a known issue https://learn.microsoft.com/en-us/sql/t-sql/data-types/vector-data-type?view=sql-server-ver17&tabs=csharp#known-issues
+                        columnDefinition.IsArrayType = true;
+                        columnDefinition.ElementSystemType = typeof(Single);
+                        columnDefinition.SystemType = columnDefinition.ElementSystemType.MakeArrayType();
+                    }
+
                     if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
                     {
                         // The DbType enum in .NET does not distinguish between VarChar and NVarChar. Both are mapped to DbType.String.
@@ -142,12 +183,16 @@ namespace Azure.DataApiBuilder.Core.Services
             string entityName,
             string schemaName,
             string storedProcedureSourceName,
-            StoredProcedureDefinition storedProcedureDefinition)
+            StoredProcedureDefinition storedProcedureDefinition,
+            CancellationToken cancellationToken)
         {
             using DbConnection conn = new SqlConnection();
             conn.ConnectionString = ConnectionString;
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
-            await conn.OpenAsync();
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(
+                conn,
+                _dataSourceName,
+                cancellationToken);
+            await conn.OpenAsync(cancellationToken);
 
             string[] procedureRestrictions = new string[NUMBER_OF_RESTRICTIONS];
 
@@ -156,7 +201,10 @@ namespace Azure.DataApiBuilder.Core.Services
             procedureRestrictions[1] = schemaName;
             procedureRestrictions[2] = storedProcedureSourceName;
 
-            DataTable procedureMetadata = await conn.GetSchemaAsync(collectionName: "Procedures", restrictionValues: procedureRestrictions);
+            DataTable procedureMetadata = await conn.GetSchemaAsync(
+                collectionName: "Procedures",
+                restrictionValues: procedureRestrictions,
+                cancellationToken: cancellationToken);
 
             // Stored procedure does not exist in DB schema
             if (procedureMetadata.Rows.Count == 0)
@@ -168,7 +216,10 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             // Each row in the procedureParams DataTable corresponds to a single parameter
-            DataTable parameterMetadata = await conn.GetSchemaAsync(collectionName: "ProcedureParameters", restrictionValues: procedureRestrictions);
+            DataTable parameterMetadata = await conn.GetSchemaAsync(
+                collectionName: "ProcedureParameters",
+                restrictionValues: procedureRestrictions,
+                cancellationToken: cancellationToken);
 
             // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
             foreach (DataRow row in parameterMetadata.Rows)
@@ -293,7 +344,18 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        protected override async Task GenerateAutoentitiesIntoEntities(IReadOnlyDictionary<string, Autoentity>? autoentities)
+        protected override Task GenerateAutoentitiesIntoEntities(
+            IReadOnlyDictionary<string, Autoentity>? autoentities)
+        {
+            return GenerateAutoentitiesIntoEntities(
+                autoentities,
+                CancellationToken.None);
+        }
+
+        /// <inheritdoc/>
+        protected override async Task GenerateAutoentitiesIntoEntities(
+            IReadOnlyDictionary<string, Autoentity>? autoentities,
+            CancellationToken cancellationToken)
         {
             if (autoentities is null)
             {
@@ -302,10 +364,15 @@ namespace Azure.DataApiBuilder.Core.Services
 
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             Dictionary<string, Entity> entities = new();
+            Dictionary<string, string> entityNameToRawEntity = new();
             foreach ((string autoentityName, Autoentity autoentity) in autoentities)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 int addedEntities = 0;
-                JsonArray? resultArray = await QueryAutoentitiesAsync(autoentity);
+                JsonArray? resultArray = await QueryAutoentitiesAsync(
+                    autoentityName,
+                    autoentity,
+                    cancellationToken);
                 if (resultArray is null)
                 {
                     continue;
@@ -316,7 +383,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     if (resultObject is null)
                     {
                         throw new DataApiBuilderException(
-                            message: $"Cannot create new entity from autoentity pattern due to an internal error.",
+                            message: $"Cannot create new entity from autoentities definition '{autoentityName}' due to an internal error.",
                             statusCode: HttpStatusCode.InternalServerError,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
@@ -329,15 +396,35 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     if (string.IsNullOrWhiteSpace(entityName) || string.IsNullOrWhiteSpace(objectName) || string.IsNullOrWhiteSpace(schemaName))
                     {
-                        _logger.LogError("Skipping autoentity generation: entity_name or object is null or empty for autoentity pattern '{AutoentityName}'.", autoentityName);
+                        _logger.LogError("Skipping autoentity generation: 'entity_name', 'object', or 'schema' is null or empty for autoentities definition '{autoentityName}'.", autoentityName);
                         continue;
+                    }
+
+                    // Remove whitespace from the entity name and camelCase-join words so the result is
+                    // a valid identifier for REST paths and GraphQL singular/plural names.
+                    string rawEntityName = entityName;
+                    entityName = RemoveWhitespaceAddCamelCase(entityName);
+
+                    if (string.IsNullOrEmpty(entityName))
+                    {
+                        _logger.LogError(
+                            "Skipping autoentity generation: entity name '{rawEntityName}' for schema '{schemaName}' resolves to an empty string after whitespace removal for autoentities definition '{autoentityName}'.",
+                            rawEntityName, schemaName, autoentityName);
+                        continue;
+                    }
+
+                    if (rawEntityName != entityName)
+                    {
+                        _logger.LogDebug(
+                            "Entity name '{rawEntityName}' was normalized to '{entityName}' by removing whitespace.",
+                            rawEntityName, entityName);
                     }
 
                     // Create the entity using the template settings and permissions from the autoentity configuration.
                     // Currently the source type is always Table for auto-generated entities from database objects.
                     Entity generatedEntity = new(
                         Source: new EntitySource(
-                            Object: objectName,
+                            Object: $"{schemaName}.{objectName}",
                             Type: EntitySourceType.Table,
                             Parameters: null,
                             KeyFields: null),
@@ -354,36 +441,66 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     // Add the generated entity to the linking entities dictionary.
                     // This allows the entity to be processed later during metadata population.
+                    // A collision can occur when two database objects produce the same entity name after
+                    // whitespace removal (e.g. "Order Item" and "OrderItem" both yield "OrderItem").
                     if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddGeneratedAutoentityNameToDataSourceName(entityName, autoentityName))
                     {
+                        string checkEntityName = entityNameToRawEntity.ContainsKey(entityName) && !rawEntityName.Contains(" ")
+                            ? entityNameToRawEntity[entityName]
+                            : rawEntityName;
+                        string collisionMessage = checkEntityName.Contains(" ")
+                            ? $"Entity '{entityName}' normalized from '{checkEntityName}' from '{schemaName}' schema conflicts in autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it."
+                            : $"Entity '{entityName}' conflicts in autoentity pattern '{autoentityName}'. Use --patterns.exclude to skip it.";
                         throw new DataApiBuilderException(
-                            message: $"Entity with name '{entityName}' already exists. Cannot create new entity from autoentity pattern with definition-name '{autoentityName}'.",
+                            message: collisionMessage,
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
 
-                    if (runtimeConfig.IsRestEnabled)
-                    {
-                        _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, entityName);
-                    }
-                    else
-                    {
-                        _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
-                    }
-
                     addedEntities++;
+                    entityNameToRawEntity.Add(entityName, rawEntityName);
                 }
 
                 if (addedEntities == 0)
                 {
-                    _logger.LogWarning("No new entities were generated from the autoentity {autoentityName} defined in the configuration.", autoentityName);
+                    _logger.LogWarning("No new entities were generated from the autoentities definition '{autoentityName}'.", autoentityName);
+                }
+
+                // Track resolution count for validation.
+                runtimeConfig.AutoentityResolutionCounts[autoentityName] = addedEntities;
+                if (_childConfig is not null)
+                {
+                    _childConfig.AutoentityResolutionCounts[autoentityName] = addedEntities;
                 }
             }
 
+            LogRestPathsForEntities(runtimeConfig, entities);
             _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);
         }
 
-        public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)
+        /// <summary>
+        /// Queries the database for autoentities based on the provided autoentity definition.
+        /// </summary>
+        /// <param name="autoentityName">The name of the autoentity definition.</param>
+        /// <param name="autoentity">The autoentity definition containing patterns for inclusion, exclusion, and name.</param>
+        /// <returns>A JsonArray containing the queried autoentities, or an empty array if none are found.</returns>
+        public Task<JsonArray?> QueryAutoentitiesAsync(
+            string autoentityName,
+            Autoentity autoentity)
+        {
+            return QueryAutoentitiesAsync(
+                autoentityName,
+                autoentity,
+                CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Queries the database for autoentities with cooperative cancellation.
+        /// </summary>
+        public async Task<JsonArray?> QueryAutoentitiesAsync(
+            string autoentityName,
+            Autoentity autoentity,
+            CancellationToken cancellationToken)
         {
             string include = string.Join(",", autoentity.Patterns.Include);
             string exclude = string.Join(",", autoentity.Patterns.Exclude);
@@ -396,16 +513,17 @@ namespace Azure.DataApiBuilder.Core.Services
                 { $"{BaseQueryStructure.PARAM_NAME_PREFIX}name_pattern", new(namePattern, null, SqlDbType.NVarChar) }
             };
 
-            _logger.LogInformation("Query for Autoentities is being executed with the following parameters.");
-            _logger.LogInformation($"Autoentities include pattern: {include}");
-            _logger.LogInformation($"Autoentities exclude pattern: {exclude}");
-            _logger.LogInformation($"Autoentities name pattern: {namePattern}");
+            _logger.LogDebug("Query for autoentities is being executed with the following parameters.");
+            _logger.LogDebug("The autoentities definition '{autoentityName}' include pattern: {include}", autoentityName, include);
+            _logger.LogDebug("The autoentities definition '{autoentityName}' exclude pattern: {exclude}", autoentityName, exclude);
+            _logger.LogDebug("The autoentities definition '{autoentityName}' name pattern: {namePattern}", autoentityName, namePattern);
 
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: getAutoentitiesQuery,
                 parameters: parameters,
                 dataReaderHandler: QueryExecutor.GetJsonArrayAsync,
-                dataSourceName: _dataSourceName);
+                dataSourceName: _dataSourceName,
+                cancellationToken: cancellationToken);
 
             return resultArray;
         }

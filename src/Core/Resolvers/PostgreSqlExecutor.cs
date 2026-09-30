@@ -2,15 +2,18 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
+using System.Net;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -102,8 +105,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
         /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
-        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName)
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(
+            DbConnection conn,
+            string dataSourceName,
+            CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.
             if (string.IsNullOrEmpty(dataSourceName))
             {
@@ -124,7 +131,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string? accessToken = accessTokenFromController ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
-                        await GetAccessTokenAsync(dataSourceName));
+                        await GetAccessTokenAsync(dataSourceName, cancellationToken));
 
                 if (accessToken is not null)
                 {
@@ -146,6 +153,117 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return string.IsNullOrEmpty(builder.Password);
         }
 
+        /// <inheritdoc />
+        public override void PopulateDbTypeForParameter(
+            KeyValuePair<string, DbConnectionParam> parameterEntry,
+            DbParameter parameter)
+        {
+            if (parameterEntry.Value.UseDatabaseTypeInference && parameter is NpgsqlParameter npgsqlParameter)
+            {
+                npgsqlParameter.NpgsqlDbType = NpgsqlDbType.Unknown;
+            }
+        }
+
+        /// <inheritdoc/>
+        public override async Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
+            DbDataReader dbDataReader, List<string>? args = null)
+        {
+            // Insert-capable PostgreSQL upserts acquire a transaction-level advisory lock in a separate
+            // first statement. Consume that result before reading the existence count. Keeping the lock
+            // statement separate ensures the count receives a fresh READ COMMITTED snapshot after any
+            // competing same-key transaction has committed.
+            if (Enumerable.Range(0, dbDataReader.FieldCount).Any(
+                ordinal => string.Equals(
+                    dbDataReader.GetName(ordinal),
+                    PostgresQueryBuilder.UPSERT_LOCK_ACQUIRED,
+                    StringComparison.Ordinal)))
+            {
+                if (!await dbDataReader.NextResultAsync())
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Neither insert nor update could be performed.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                }
+            }
+
+            // RS1: COUNT of rows matching PK (no policy) — used to distinguish
+            // "row doesn't exist" from "row exists but policy blocked".
+            DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
+            DbResultSetRow? resultSetRowWithCountOfRowsWithGivenPk = resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault();
+            int numOfRecordsWithGivenPK;
+            bool isFallbackToUpdate;
+
+            if (resultSetRowWithCountOfRowsWithGivenPk is not null &&
+                resultSetRowWithCountOfRowsWithGivenPk.Columns.TryGetValue(PostgresQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, out object? rowsWithGivenPK) &&
+                resultSetRowWithCountOfRowsWithGivenPk.Columns.TryGetValue(PostgresQueryBuilder.IS_FALLBACK_TO_UPDATE, out object? fallbackToUpdate))
+            {
+                // PostgreSQL COUNT(*) returns Int64; convert to int.
+                numOfRecordsWithGivenPK = Convert.ToInt32(rowsWithGivenPK!);
+                isFallbackToUpdate = Convert.ToBoolean(fallbackToUpdate!);
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: $"Neither insert nor update could be performed.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            // RS2: UPDATE result, or UPDATE+INSERT CTE result.
+            DbResultSet dbResultSet = await dbDataReader.NextResultAsync()
+                ? await ExtractResultSetFromDbDataReaderAsync(dbDataReader)
+                : throw new DataApiBuilderException(
+                    message: $"Neither insert nor update could be performed.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+
+            if (numOfRecordsWithGivenPK == 1) // Row existed — we attempted an UPDATE.
+            {
+                if (dbResultSet.Rows.Count == 0)
+                {
+                    // Row exists but UPDATE returned no rows — update policy blocked it.
+                    throw new DataApiBuilderException(
+                        message: DataApiBuilderException.AUTHORIZATION_FAILURE,
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+                }
+            }
+            else if (dbResultSet.Rows.Count == 0)
+            {
+                // If true, the row simply didn't exist — return 404 (same as MsSql's null-RS2 path).
+                // If false, the INSERT ran but create policy blocked it — return 403.
+
+                if (isFallbackToUpdate)
+                {
+                    if (args is not null && args.Count > 1)
+                    {
+                        string prettyPrintPk = args[0];
+                        string entityName = args[1];
+
+                        throw new DataApiBuilderException(
+                            message: $"Cannot perform INSERT and could not find {entityName} " +
+                            $"with primary key {prettyPrintPk} to perform UPDATE on.",
+                            statusCode: HttpStatusCode.NotFound,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound);
+                    }
+
+                    throw new DataApiBuilderException(
+                        message: $"Neither insert nor update could be performed.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                }
+
+                // Row didn't exist but INSERT returned no rows — create policy blocked it.
+                throw new DataApiBuilderException(
+                    message: DataApiBuilderException.AUTHORIZATION_FAILURE,
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+            }
+
+            return dbResultSet;
+        }
+
         /// <summary>
         /// Determines if the saved default azure credential's access token is valid and not expired.
         /// </summary>
@@ -163,7 +281,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <returns>The string representation of the access token if found,
         /// null otherwise.</returns>
-        private async Task<string?> GetAccessTokenAsync(string dataSourceName)
+        private async Task<string?> GetAccessTokenAsync(
+            string dataSourceName,
+            CancellationToken cancellationToken)
         {
             bool firstAttemptAtDefaultAccessToken = _defaultAccessToken is null;
 
@@ -171,7 +291,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 _defaultAccessToken =
                     await AzureCredential.GetTokenAsync(
-                        new TokenRequestContext(new[] { DATABASE_SCOPE }));
+                        new TokenRequestContext(new[] { DATABASE_SCOPE }),
+                        cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             // because there can be scenarios where password is not specified but
             // default managed identity is not the intended method of authentication

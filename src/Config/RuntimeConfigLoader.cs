@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
@@ -26,6 +27,28 @@ public abstract class RuntimeConfigLoader
     private DabChangeToken _changeToken;
     private HotReloadEventHandler<HotReloadEventArgs>? _handler;
     protected readonly string? _connectionString;
+
+    protected static LogBuffer _logBuffer = new();
+
+    /// <summary>
+    /// Logger used to drain buffered logs. <c>null</c> on a base loader with no logging; loaders that
+    /// own a logger (e.g. <see cref="FileSystemRuntimeConfigLoader"/>) override this so
+    /// <see cref="FlushLogBuffer"/> can emit to it.
+    /// </summary>
+    protected virtual ILogger? Logger => null;
+
+    /// <summary>
+    /// Flushes any logs buffered during config parsing / telemetry embedding (notably the telemetry
+    /// Application Name Debug log) to <see cref="Logger"/>. Safe no-op when no logger is available (the
+    /// buffered logs remain until a later flush), so it cannot lose logs or regress flush behavior.
+    /// </summary>
+    public void FlushLogBuffer()
+    {
+        if (Logger is not null)
+        {
+            _logBuffer.FlushToLogger(Logger);
+        }
+    }
 
     // Public to allow the RuntimeProvider and other users of class to set via out param.
     // May be candidate to refactor by changing all of the Parse/Load functions to save
@@ -86,32 +109,57 @@ public abstract class RuntimeConfigLoader
     /// <param name="message"></param>
     protected void SignalConfigChanged(string message = "")
     {
+        SignalConfigChanged(message, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Notifies subscribers of an ordered configuration change with cooperative cancellation.
+    /// </summary>
+    protected void SignalConfigChanged(
+        string message,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
         // Signal that a change has occurred to all change token listeners.
         RaiseChanged();
 
         // All the data inside of the if statement should only update when DAB is in development mode.
         if (RuntimeConfig!.IsDevelopmentMode())
         {
-            OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
-            OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
-            OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-            OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-            OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
+            RaiseOrderedEvent(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED);
+            RaiseOrderedEvent(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED);
+            RaiseOrderedEvent(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED);
+            RaiseOrderedEvent(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED);
+            RaiseOrderedEvent(DOCUMENTOR_ON_CONFIG_CHANGED);
 
             // Order of event firing matters: Authorization rules can only be updated after the
             // MetadataProviderFactory has been updated with latest database object metadata.
             // RuntimeConfig must already be updated and is implied to have been updated by the time
             // this function is called.
-            OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
+            RaiseOrderedEvent(AUTHZ_RESOLVER_ON_CONFIG_CHANGED);
+
+            // Custom MCP tool schemas depend on refreshed database metadata. Publish the new
+            // registry only after query, mutation, and authorization dependencies are ready.
+            RaiseOrderedEvent(MCP_TOOL_REGISTRY_ON_CONFIG_CHANGED);
 
             // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
-            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, message));
-            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, message));
-            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, message));
+            RaiseOrderedEvent(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED);
+            RaiseOrderedEvent(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED);
+            RaiseOrderedEvent(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED);
         }
 
         // Log Level Initializer is outside of if statement as it can be updated on both development and production mode.
-        OnConfigChangedEvent(new HotReloadEventArgs(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, message));
+        RaiseOrderedEvent(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE);
+
+        void RaiseOrderedEvent(string eventName)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            OnConfigChangedEvent(new HotReloadEventArgs(
+                eventName,
+                message,
+                cancellationToken));
+        }
     }
 
     /// <summary>
@@ -179,16 +227,34 @@ public abstract class RuntimeConfigLoader
     /// </summary>
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
+    /// <param name="parseError">A clean error message when parsing fails, or null on success.</param>
     /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, no variable replacement will be performed.</param>
-    /// <param name="logger">logger to log messages</param>
     /// <param name="connectionString">connectionString to add to config if specified</param>
     /// <returns>True if the config was parsed, otherwise false.</returns>
     public static bool TryParseConfig(string json,
         [NotNullWhen(true)] out RuntimeConfig? config,
         DeserializationVariableReplacementSettings? replacementSettings = null,
-        ILogger? logger = null,
         string? connectionString = null)
     {
+        return TryParseConfig(json, out config, out _, replacementSettings, connectionString);
+    }
+
+    /// <summary>
+    /// Parses a JSON string into a <c>RuntimeConfig</c> object for single database scenario.
+    /// </summary>
+    /// <param name="json">JSON that represents the config file.</param>
+    /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
+    /// <param name="parseError">A clean error message when parsing fails, or null on success.</param>
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, no variable replacement will be performed.</param>
+    /// <param name="connectionString">connectionString to add to config if specified</param>
+    /// <returns>True if the config was parsed, otherwise false.</returns>
+    public static bool TryParseConfig(string json,
+        [NotNullWhen(true)] out RuntimeConfig? config,
+        out string? parseError,
+        DeserializationVariableReplacementSettings? replacementSettings = null,
+        string? connectionString = null)
+    {
+        parseError = null;
         // First pass: extract AzureKeyVault options if AKV replacement is requested
         if (replacementSettings?.DoReplaceAkvVar is true)
         {
@@ -204,7 +270,12 @@ public abstract class RuntimeConfigLoader
                     azureKeyVaultOptions: azureKeyVaultOptions,
                     doReplaceEnvVar: replacementSettings.DoReplaceEnvVar,
                     doReplaceAkvVar: replacementSettings.DoReplaceAkvVar,
-                    envFailureMode: replacementSettings.EnvFailureMode);
+                    envFailureMode: replacementSettings.EnvFailureMode)
+                {
+                    // Preserve the child-config skip flag across this AKV-driven rebuild so nested
+                    // configs still defer Application Name injection to the top-level load.
+                    SkipApplicationNameInjection = replacementSettings.SkipApplicationNameInjection
+                };
             }
         }
 
@@ -219,43 +290,52 @@ public abstract class RuntimeConfigLoader
                 return false;
             }
 
-            // retreive current connection string from config
-            string updatedConnectionString = config.DataSource.ConnectionString;
+            // Embed the DAB Application Name (with anonymous usage telemetry) into the connection
+            // string of every MSSQL / DWSQL / PostgreSQL data source.
+            //
+            // We iterate the fully-merged data-source map and pass the merged `config`, so that in a
+            // multi-database setup each data source reflects the GLOBAL runtime settings and the
+            // COMPLETE (merged) entity set rather than its own partial child config. Child configs skip
+            // this step during their own parse (SkipApplicationNameInjection); the top-level load runs
+            // it once here, after the merge, so every connection pool carries a self-contained snapshot
+            // of the deployment.
+            //
+            // The explicit connection-string override (the `connectionString` parameter), when present,
+            // applies only to the default data source.
+            // The explicit connection-string override is applied to the default data source regardless of
+            // env-var replacement, while telemetry embedding is gated on DoReplaceEnvVar (and skipped for
+            // nested child configs, which defer injection to the top-level load).
+            bool embedTelemetry = replacementSettings?.DoReplaceEnvVar == true && replacementSettings?.SkipApplicationNameInjection != true;
+            bool hasConnectionStringOverride = !string.IsNullOrEmpty(connectionString);
 
-            if (!string.IsNullOrEmpty(connectionString))
+            if (embedTelemetry || hasConnectionStringOverride)
             {
-                // update connection string if provided.
-                updatedConnectionString = connectionString;
-            }
-
-            Dictionary<string, string> datasourceNameToConnectionString = new();
-
-            // add to dictionary if datasourceName is present
-            datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
-
-            // iterate over dictionary and update runtime config with connection strings.
-            foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
-            {
-                string updatedConnection = connectionValue;
-
-                DataSource ds = config.GetDataSourceFromDataSourceName(dataSourceKey);
-
-                // Add Application Name for telemetry for MsSQL or PgSql
-                if (ds.DatabaseType is DatabaseType.MSSQL && replacementSettings?.DoReplaceEnvVar == true)
+                foreach ((string dataSourceName, DataSource dataSource) in config.GetDataSourceNamesToDataSourcesIterator().ToList())
                 {
-                    updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
-                }
-                else if (ds.DatabaseType is DatabaseType.PostgreSQL && replacementSettings?.DoReplaceEnvVar == true)
-                {
-                    updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue);
-                }
+                    bool isDefaultDataSource = string.Equals(dataSourceName, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase);
 
-                ds = ds with { ConnectionString = updatedConnection };
-                config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
+                    // The override applies only to the default data source; others keep their own value.
+                    bool applyOverrideHere = isDefaultDataSource && hasConnectionStringOverride;
 
-                if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
-                {
-                    config = config with { DataSource = ds };
+                    // Nothing to do for a non-default data source when we're not embedding telemetry.
+                    if (!embedTelemetry && !applyOverrideHere)
+                    {
+                        continue;
+                    }
+
+                    string baseConnectionString = applyOverrideHere ? connectionString! : dataSource.ConnectionString;
+
+                    string updatedConnectionString = embedTelemetry
+                        ? GetConnectionStringWithApplicationName(baseConnectionString, config, dataSource)
+                        : baseConnectionString;
+
+                    DataSource updatedDataSource = dataSource with { ConnectionString = updatedConnectionString };
+                    config.UpdateDataSourceNameToDataSource(dataSourceName, updatedDataSource);
+
+                    if (isDefaultDataSource)
+                    {
+                        config = config with { DataSource = updatedDataSource };
+                    }
                 }
             }
         }
@@ -263,18 +343,9 @@ public abstract class RuntimeConfigLoader
             ex is JsonException ||
             ex is DataApiBuilderException)
         {
-            string errorMessage = ex is JsonException ? "Deserialization of the configuration file failed." :
-                "Deserialization of the configuration file failed during a post-processing step.";
-
-            // logger can be null when called from CLI
-            if (logger is null)
-            {
-                Console.Error.WriteLine(errorMessage + $"\n" + $"Message:\n {ex.Message}\n" + $"Stack Trace:\n {ex.StackTrace}");
-            }
-            else
-            {
-                logger.LogError(exception: ex, message: errorMessage);
-            }
+            parseError = ex is DataApiBuilderException
+                ? ex.Message
+                : $"Deserialization of the configuration file failed. {ex.Message}";
 
             config = null;
             return false;
@@ -334,6 +405,10 @@ public abstract class RuntimeConfigLoader
         // Add AzureKeyVaultOptionsConverterFactory to ensure AKV config is deserialized properly
         options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replacementSettings));
 
+        // Add EmbeddingsOptionsConverterFactory to handle embeddings configuration
+        options.Converters.Add(new EmbeddingsOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new EmbeddingsCacheOptionsConverterFactory());
+
         // Only add the extensible string converter if we have replacement settings
         if (replacementSettings is not null)
         {
@@ -344,21 +419,42 @@ public abstract class RuntimeConfigLoader
     }
 
     /// <summary>
+    /// Embeds the DAB <c>Application Name</c> (with anonymous usage telemetry) into the connection
+    /// string for the given data source, dispatching to the engine-specific implementation. Engines
+    /// that do not support telemetry (e.g. MySQL) return the connection string unchanged.
+    /// </summary>
+    /// <param name="connectionString">Connection string for connecting to the database.</param>
+    /// <param name="config">The fully-resolved runtime config used to compute the telemetry payload.</param>
+    /// <param name="dataSource">The data source whose connection is being opened (selects the engine and per-pool fields).</param>
+    /// <returns>The connection string with the telemetry-bearing <c>Application Name</c> embedded.</returns>
+    public static string GetConnectionStringWithApplicationName(string connectionString, RuntimeConfig config, DataSource dataSource)
+    {
+        return dataSource.DatabaseType switch
+        {
+            DatabaseType.MSSQL or DatabaseType.DWSQL => GetMsSqlConnectionStringWithApplicationName(connectionString, config, dataSource),
+            DatabaseType.PostgreSQL => GetPgSqlConnectionStringWithApplicationName(connectionString, config, dataSource),
+            _ => connectionString,
+        };
+    }
+
+    /// <summary>
     /// It adds or replaces a property in the connection string with `Application Name` property.
     /// If the connection string already contains the property, it appends the property `Application Name` to the connection string,
     /// else add the Application Name property with DataApiBuilder Application Name based on hosted/oss platform.
     /// </summary>
     /// <param name="connectionString">Connection string for connecting to database.</param>
+    /// <param name="config">When provided, anonymous DAB telemetry is embedded into the `Application Name`
+    /// (honoring the `DAB_TELEMETRY_APPNAME_OPT_OUT` opt-out). When null, only the plain user agent is used.</param>
+    /// <param name="liveDataSource">The data source whose connection is being opened, used to encode per-pool
+    /// fields (Source, OBO). Ignored when <paramref name="config"/> is null.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
-    internal static string GetConnectionStringWithApplicationName(string connectionString)
+    internal static string GetMsSqlConnectionStringWithApplicationName(string connectionString, RuntimeConfig? config = null, DataSource? liveDataSource = null)
     {
         // If the connection string is null, empty, or whitespace, return it as is.
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             return connectionString;
         }
-
-        string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
 
         // Create a StringBuilder from the connection string.
         SqlConnectionStringBuilder connectionStringBuilder;
@@ -373,6 +469,26 @@ public abstract class RuntimeConfigLoader
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
                 innerException: ex);
+        }
+
+        // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a
+        // second telemetry block if either form is already present.
+        if (connectionStringBuilder.ApplicationName?.Contains(ProductInfo.DAB_MARKER_PREFIX, StringComparison.Ordinal) == true)
+        {
+            return connectionString;
+        }
+
+        // When the full runtime config is available, embed anonymous DAB telemetry into the
+        // Application Name (honoring the opt-out switch). Otherwise fall back to the plain user agent.
+        string applicationName = config is null
+            ? ProductInfo.GetDataApiBuilderUserAgent()
+            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, liveDataSource);
+
+        if (config is not null)
+        {
+            // Emit the telemetry-bearing Application Name (never the full connection string, which can
+            // contain secrets) at Debug, once per pool, as required by the telemetry design.
+            _logBuffer.BufferLog(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
         }
 
         string defaultApplicationName = new SqlConnectionStringBuilder().ApplicationName;
@@ -401,16 +517,17 @@ public abstract class RuntimeConfigLoader
     /// else add the Application Name property with DataApiBuilder Application Name based on hosted/oss platform.
     /// </summary>
     /// <param name="connectionString">Connection string for connecting to database.</param>
+    /// <param name="config">When provided, anonymous DAB usage telemetry is embedded in the Application Name (honoring the opt-out switch); otherwise the plain user agent is used.</param>
+    /// <param name="liveDataSource">The data source whose connection is being opened, used to encode per-pool
+    /// fields (Source, OBO). Ignored when <paramref name="config"/> is null.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
-    internal static string GetPgSqlConnectionStringWithApplicationName(string connectionString)
+    internal static string GetPgSqlConnectionStringWithApplicationName(string connectionString, RuntimeConfig? config = null, DataSource? liveDataSource = null)
     {
         // If the connection string is null, empty, or whitespace, return it as is.
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             return connectionString;
         }
-
-        string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
 
         // Create a StringBuilder from the connection string.
         NpgsqlConnectionStringBuilder connectionStringBuilder;
@@ -425,6 +542,26 @@ public abstract class RuntimeConfigLoader
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
                 innerException: ex);
+        }
+
+        // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a
+        // second telemetry block if either form is already present.
+        if (connectionStringBuilder.ApplicationName?.Contains(ProductInfo.DAB_MARKER_PREFIX, StringComparison.Ordinal) == true)
+        {
+            return connectionString;
+        }
+
+        // When the full runtime config is available, embed anonymous DAB telemetry into the
+        // Application Name (honoring the opt-out switch). Otherwise fall back to the plain user agent.
+        string applicationName = config is null
+            ? ProductInfo.GetDataApiBuilderUserAgent()
+            : ApplicationNameTelemetry.BuildApplicationNameSegment(config, liveDataSource);
+
+        if (config is not null)
+        {
+            // Emit the telemetry-bearing Application Name (never the full connection string, which can
+            // contain secrets) at Debug, once per pool, as required by the telemetry design.
+            _logBuffer.BufferLog(LogLevel.Debug, $"DAB telemetry Application Name computed for '{liveDataSource?.DatabaseType}' data source: {applicationName}");
         }
 
         // If the connection string does not contain the `Application Name` property, add it.

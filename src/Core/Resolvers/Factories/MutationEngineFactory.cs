@@ -94,6 +94,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            args.CancellationToken.ThrowIfCancellationRequested();
             _mutationEngines = new Dictionary<DatabaseType, IMutationEngine>();
             ConfigureMutationEngines();
         }
@@ -107,7 +108,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                     $"{nameof(databaseType)}:{databaseType} could not be found within the config",
                     HttpStatusCode.BadRequest,
                     DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
-            };
+            }
 
             return mutationEngine;
         }

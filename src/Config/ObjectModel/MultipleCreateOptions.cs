@@ -18,4 +18,3 @@ public class MultipleCreateOptions
         Enabled = enabled;
     }
 };
-

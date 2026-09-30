@@ -174,8 +174,8 @@ type PlanetAgain @model {
                 _ = builder.ConfigureTestServices(services =>
                 {
                     services.AddSingleton<IFileSystem>(fileSystem);
-                    services.AddSingleton(loader);
-                    services.AddSingleton(provider);
+                    services.AddSingleton<FileSystemRuntimeConfigLoader>(sp => loader);
+                    services.AddSingleton<RuntimeConfigProvider>(sp => provider);
                     services.AddSingleton(authorizationResolverCosmos);
                 });
             });
@@ -184,7 +184,26 @@ type PlanetAgain @model {
     [TestCleanup]
     public void CleanupAfterEachTest()
     {
-        TestHelper.UnsetAllDABEnvironmentVariables();
+        try
+        {
+            _client.Dispose();
+            DisposeApplicationFactory(_application);
+        }
+        finally
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+    }
+
+    protected static void DisposeApplicationFactory(WebApplicationFactory<Startup> application)
+    {
+        CosmosClientProvider cosmosClientProvider = application.Services.GetService<CosmosClientProvider>();
+        foreach (CosmosClient? cosmosClient in cosmosClientProvider.Clients.Values)
+        {
+            cosmosClient?.Dispose();
+        }
+
+        application.Dispose();
     }
 
     /// <summary>

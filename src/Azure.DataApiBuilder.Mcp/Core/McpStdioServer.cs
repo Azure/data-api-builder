@@ -6,7 +6,10 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Telemetry;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -25,14 +28,33 @@ namespace Azure.DataApiBuilder.Mcp.Core
     {
         private readonly McpToolRegistry _toolRegistry;
         private readonly IServiceProvider _serviceProvider;
+        private readonly McpStdoutWriter _stdoutWriter;
+        private readonly IMcpStdioToolListChangedNotifier? _toolListChangedNotifier;
+        private readonly TextReader? _inputReader;
         private readonly string _protocolVersion;
+        private readonly object _initializationLock = new();
+        private Task? _initializationTask;
 
         private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
 
-        public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider)
+        // Omit null-valued properties (e.g. SDK ContentBlock.Annotations, ContentBlock._meta) so
+        // strict MCP clients never see explicit JSON nulls for optional metadata fields.
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        };
+
+        public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider, TextReader? inputReader = null)
         {
             _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            _inputReader = inputReader;
+
+            // Resolve the shared stdout writer so JSON-RPC responses and
+            // notifications/message frames are serialized through one lock.
+            // Falls back to a fresh instance if DI didn't register one (defensive).
+            _stdoutWriter = _serviceProvider.GetService<McpStdoutWriter>() ?? new McpStdoutWriter();
+            _toolListChangedNotifier = _serviceProvider.GetService<IMcpStdioToolListChangedNotifier>();
 
             // Allow protocol version to be configured via IConfiguration, using centralized defaults.
             IConfiguration? configuration = _serviceProvider.GetService<IConfiguration>();
@@ -46,21 +68,21 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task RunAsync(CancellationToken cancellationToken)
         {
-            Console.Error.WriteLine("[MCP DEBUG] MCP stdio server started.");
+            // By default read via Console.In so the loop honors the configured
+            // Console.InputEncoding in stdio mode.
+            TextReader reader = _inputReader ?? Console.In;
+            bool initializeResponseWritten = false;
 
-            // Use UTF-8 WITHOUT BOM
-            UTF8Encoding utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
-
-            using Stream stdin = Console.OpenStandardInput();
-            using Stream stdout = Console.OpenStandardOutput();
-            using StreamReader reader = new(stdin, utf8NoBom);
-            using StreamWriter writer = new(stdout, utf8NoBom) { AutoFlush = true };
-
-            // Redirect Console.Out to use our writer
-            Console.SetOut(writer);
             while (!cancellationToken.IsCancellationRequested)
             {
                 string? line = await reader.ReadLineAsync(cancellationToken);
+
+                // EOF (stdin pipe closed) is a normal shutdown signal for stdio mode.
+                if (line is null)
+                {
+                    return;
+                }
+
                 if (string.IsNullOrWhiteSpace(line))
                 {
                     continue;
@@ -77,15 +99,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 {
                     doc = JsonDocument.Parse(line);
                 }
-                catch (JsonException jsonEx)
+                catch (JsonException)
                 {
-                    Console.Error.WriteLine($"[MCP DEBUG] JSON parse error: {jsonEx.Message}");
                     WriteError(id: null, code: McpStdioJsonRpcErrorCodes.PARSE_ERROR, message: "Parse error");
                     continue;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Console.Error.WriteLine($"[MCP DEBUG] Unexpected error parsing request: {ex.Message}");
                     WriteError(id: null, code: McpStdioJsonRpcErrorCodes.INTERNAL_ERROR, message: "Internal error");
                     continue;
                 }
@@ -113,14 +133,25 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         switch (method)
                         {
                             case "initialize":
-                                HandleInitialize(id);
+                                HandleInitialize(id, root);
+                                // This assignment is reached only after WriteResult succeeds.
+                                initializeResponseWritten = true;
                                 break;
 
                             case "notifications/initialized":
+                                // This notification completes the MCP handshake only after the
+                                // server successfully wrote its initialize response. Ignore an
+                                // out-of-order notification rather than enabling capabilities the
+                                // client has not negotiated.
+                                if (initializeResponseWritten)
+                                {
+                                    _toolListChangedNotifier?.MarkInitialized();
+                                }
+
                                 break;
 
                             case "tools/list":
-                                HandleListTools(id);
+                                await HandleListToolsAsync(id, cancellationToken);
                                 break;
 
                             case "tools/call":
@@ -129,6 +160,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                             case "ping":
                                 WriteResult(id, new { ok = true });
+                                break;
+
+                            case "logging/setLevel":
+                                HandleSetLogLevel(id, root);
                                 break;
 
                             case "shutdown":
@@ -154,49 +189,111 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="id">
         /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
         /// </param>
+        /// <param name="root">The incoming initialize request payload.</param>
         /// <remarks>
-        /// This method constructs and writes the MCP "initialize" response to STDOUT. It uses the protocol version defined by <c>PROTOCOL_VERSION</c>
-        /// and includes supported capabilities and server information. No notifications are sent here; the server waits for the client to send
-        /// "notifications/initialized" before sending any notifications.
+        /// This method constructs and writes the MCP "initialize" response to STDOUT. It negotiates the response protocol version from the
+        /// server-supported version and client-requested version, and includes supported capabilities and server information. No notifications
+        /// are sent here; the server waits for the client to send "notifications/initialized" before sending any notifications.
         /// </remarks>
-        private void HandleInitialize(JsonElement? id)
+        private void HandleInitialize(JsonElement? id, JsonElement root)
         {
+            string? clientRequestedProtocolVersion = GetClientProtocolVersion(root);
+            string negotiatedProtocolVersion =
+                McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(_protocolVersion, clientRequestedProtocolVersion);
+            bool supportsToolListChanged = _toolListChangedNotifier is not null;
+
             // Get the description from runtime config if available
-            string? instructions = null;
+            string? description = null;
             RuntimeConfigProvider? runtimeConfigProvider = _serviceProvider.GetService<RuntimeConfigProvider>();
             if (runtimeConfigProvider != null)
             {
                 try
                 {
                     RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-                    instructions = runtimeConfig.Runtime?.Mcp?.Description;
+                    description = runtimeConfig.Runtime?.Mcp?.Description;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    // Log to stderr for diagnostics and rethrow to avoid masking configuration errors
-                    Console.Error.WriteLine($"[MCP WARNING] Failed to retrieve MCP description from config: {ex.Message}");
+                    // Rethrow to avoid masking configuration errors
                     throw;
                 }
             }
 
-            // Create the initialize response
-            object result = new
+            bool shouldUseServerInfoDescription = McpProtocolDefaults.ShouldUseServerInfoDescription(negotiatedProtocolVersion);
+
+            // Create the initialize response - only include description/instructions if non-empty
+            object result;
+            if (!string.IsNullOrWhiteSpace(description) && shouldUseServerInfoDescription)
             {
-                protocolVersion = _protocolVersion,
-                capabilities = new
+                result = new
                 {
-                    tools = new { listChanged = true },
-                    logging = new { }
-                },
-                serverInfo = new
+                    protocolVersion = negotiatedProtocolVersion,
+                    capabilities = new
+                    {
+                        tools = new { listChanged = supportsToolListChanged },
+                        logging = new { }
+                    },
+                    serverInfo = new
+                    {
+                        name = McpProtocolDefaults.MCP_SERVER_NAME,
+                        version = McpProtocolDefaults.MCP_SERVER_VERSION,
+                        description = description
+                    }
+                };
+            }
+            else if (!string.IsNullOrWhiteSpace(description))
+            {
+                result = new
                 {
-                    name = McpProtocolDefaults.MCP_SERVER_NAME,
-                    version = McpProtocolDefaults.MCP_SERVER_VERSION
-                },
-                instructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null
-            };
+                    protocolVersion = negotiatedProtocolVersion,
+                    capabilities = new
+                    {
+                        tools = new { listChanged = supportsToolListChanged },
+                        logging = new { }
+                    },
+                    serverInfo = new
+                    {
+                        name = McpProtocolDefaults.MCP_SERVER_NAME,
+                        version = McpProtocolDefaults.MCP_SERVER_VERSION
+                    },
+                    instructions = description
+                };
+            }
+            else
+            {
+                result = new
+                {
+                    protocolVersion = negotiatedProtocolVersion,
+                    capabilities = new
+                    {
+                        tools = new { listChanged = supportsToolListChanged },
+                        logging = new { }
+                    },
+                    serverInfo = new
+                    {
+                        name = McpProtocolDefaults.MCP_SERVER_NAME,
+                        version = McpProtocolDefaults.MCP_SERVER_VERSION
+                    }
+                };
+            }
 
             WriteResult(id, result);
+        }
+
+        private static string? GetClientProtocolVersion(JsonElement root)
+        {
+            if (!root.TryGetProperty("params", out JsonElement paramsElement) || paramsElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            if (!paramsElement.TryGetProperty("protocolVersion", out JsonElement protocolVersionElement) ||
+                protocolVersionElement.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            return protocolVersionElement.GetString();
         }
 
         /// <summary>
@@ -205,18 +302,15 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="id">
         /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
         /// </param>
-        private void HandleListTools(JsonElement? id)
+        /// <param name="cancellationToken">Token used to cancel deferred tool initialization.</param>
+        private async Task HandleListToolsAsync(JsonElement? id, CancellationToken cancellationToken)
         {
-            List<object> toolsWire = new();
-            int count = 0;
+            await EnsureToolsInitializedAsync(cancellationToken);
 
-            // Tools are expected to be registered during application startup only.
-            // If this ever changes and tools can be added/removed at runtime while
-            // requests are being handled, we may need to introduce locking here or
-            // have the registry return a thread-safe snapshot.
-            foreach (Tool tool in _toolRegistry.GetAllTools())
+            List<object> toolsWire = new();
+
+            foreach (Tool tool in _toolRegistry.GetAdvertisedTools())
             {
-                count++;
                 toolsWire.Add(new
                 {
                     name = tool.Name,
@@ -226,6 +320,148 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             WriteResult(id, new { tools = toolsWire });
+        }
+
+        /// <summary>
+        /// Starts deferred MCP tool initialization once and returns the cached initialization task.
+        /// </summary>
+        /// <param name="cancellationToken">Token used to cancel initialization before it starts.</param>
+        /// <returns>The task representing the in-flight or completed tool initialization.</returns>
+        private Task EnsureToolsInitializedAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            lock (_initializationLock)
+            {
+                return _initializationTask ??= InitializeToolsAsync(cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// Initializes database metadata providers and publishes the initial MCP tool registry snapshot.
+        /// </summary>
+        /// <param name="cancellationToken">Token used to cancel metadata inference and registry refresh.</param>
+        private async Task InitializeToolsAsync(CancellationToken cancellationToken)
+        {
+            IMetadataProviderFactory metadataProviderFactory =
+                _serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+            await metadataProviderFactory.InitializeAsync(cancellationToken);
+
+            IMcpToolRegistryRefreshService? registryRefreshService =
+                _serviceProvider.GetService<IMcpToolRegistryRefreshService>();
+            registryRefreshService?.EnsureInitialized(cancellationToken);
+        }
+
+        /// <summary>
+        /// Handles the "logging/setLevel" JSON-RPC method by updating the runtime log level.
+        /// </summary>
+        /// <param name="id">The request identifier extracted from the incoming JSON-RPC request.</param>
+        /// <param name="root">The root JSON element of the incoming JSON-RPC request.</param>
+        /// <remarks>
+        /// Log level precedence (highest to lowest):
+        /// 1. MCP <c>logging/setLevel</c> (Agent) - always wins, overrides CLI and Config.
+        /// 2. CLI <c>--log-level</c> flag.
+        /// 3. Config <c>runtime.telemetry.log-level</c>.
+        /// 4. Default: <c>None</c> for MCP stdio mode (silent by default to keep stdout clean for JSON-RPC),
+        ///    <c>Error</c> in Production, <c>Debug</c> in Development.
+        ///
+        /// Per MCP spec the response is always success (empty result object) even when the input is
+        /// an unrecognized level — in that case no side effect runs and no state changes.
+        ///
+        /// Side effects performed in order on a valid request:
+        /// 1. Toggle <see cref="IMcpLogNotificationWriter.IsEnabled"/> based on the level
+        ///    (<c>"none"</c> disables, anything else enables). This is done BEFORE
+        ///    <see cref="ILogLevelController.UpdateFromMcp"/> so the audit log line that
+        ///    <c>UpdateFromMcp</c> emits is forwarded to the agent rather than dropped.
+        /// 2. Call <see cref="ILogLevelController.UpdateFromMcp"/>, which updates the level and
+        ///    flips <see cref="ILogLevelController.IsAgentOverriding"/> so subsequent runtime-config
+        ///    hot-reloads do not overwrite the agent's choice.
+        /// 3. Restore <see cref="Console.Error"/> to the real stderr stream when logging is enabled,
+        ///    in case startup redirected it to <see cref="TextWriter.Null"/> (default for
+        ///    <c>--mcp-stdio</c> or <c>--log-level none</c>).
+        /// </remarks>
+        private void HandleSetLogLevel(JsonElement? id, JsonElement root)
+        {
+            // Extract the level parameter from the request
+            string? level = null;
+            if (root.TryGetProperty("params", out JsonElement paramsEl) &&
+                paramsEl.TryGetProperty("level", out JsonElement levelEl) &&
+                levelEl.ValueKind == JsonValueKind.String)
+            {
+                level = levelEl.GetString();
+            }
+
+            if (string.IsNullOrWhiteSpace(level))
+            {
+                WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing or invalid 'level' parameter");
+                return;
+            }
+
+            // Get the ILogLevelController from service provider
+            ILogLevelController? logLevelController = _serviceProvider.GetService<ILogLevelController>();
+            if (logLevelController is null)
+            {
+                // Log level controller not available - still accept request per MCP spec
+                WriteResult(id, new { });
+                return;
+            }
+
+            // Validate the level BEFORE touching any side-effect (notification writer, stderr).
+            // "none" is the disable signal and is not a recognized MCP level; everything else
+            // must round-trip through McpLogLevelConverter so a typo can't silently turn the
+            // notification stream on while UpdateFromMcp ignores the bad value.
+            bool isDisableRequest = string.Equals(level, "none", StringComparison.OrdinalIgnoreCase);
+            bool isValidLevel = isDisableRequest || McpLogLevelConverter.TryConvertFromMcp(level, out _);
+            if (!isValidLevel)
+            {
+                // Unknown level - return success per MCP spec but make no state changes.
+                WriteResult(id, new { });
+                return;
+            }
+
+            bool isLoggingEnabled = !isDisableRequest;
+
+            // Enable or disable MCP log notifications based on the requested level BEFORE updating
+            // the level. Doing it in this order means the agent-override Information line emitted
+            // by UpdateFromMcp is forwarded to the agent (otherwise it would be dropped because
+            // the notification writer was still disabled at the moment of emission).
+            IMcpLogNotificationWriter? notificationWriter = _serviceProvider.GetService<IMcpLogNotificationWriter>();
+            if (notificationWriter != null)
+            {
+                notificationWriter.IsEnabled = isLoggingEnabled;
+            }
+
+            // Update the log level. Validation above guarantees this returns true for non-"none"
+            // values; for "none" it returns false (no LogLevel mapping) and we just keep
+            // notifications off without touching the current level.
+            bool updated = logLevelController.UpdateFromMcp(level);
+
+            // Restore stderr if the agent successfully turned logging on. When `--mcp-stdio` (or
+            // `--log-level none`) was the startup default, stderr was redirected to TextWriter.Null;
+            // re-enable it now so subsequent logs flow.
+            if (updated && isLoggingEnabled)
+            {
+                RestoreStderrIfNeeded();
+            }
+
+            // Always return success (empty result object) per MCP spec
+            WriteResult(id, new { });
+        }
+
+        /// <summary>
+        /// Restores Console.Error to the real stderr stream if it was redirected to TextWriter.Null.
+        /// This enables log output after MCP client sends logging/setLevel with a level other than "none".
+        /// </summary>
+        private static void RestoreStderrIfNeeded()
+        {
+            // Always restore stderr to the real stream when MCP enables logging.
+            // This is safe to call multiple times - we just re-wrap the standard error stream.
+            Stream stderr = Console.OpenStandardError();
+            StreamWriter stderrWriter = new(stderr, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false))
+            {
+                AutoFlush = true
+            };
+            Console.SetError(stderrWriter);
         }
 
         /// <summary>
@@ -259,14 +495,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             if (string.IsNullOrWhiteSpace(toolName))
             {
-                Console.Error.WriteLine("[MCP DEBUG] callTool → missing tool name.");
                 WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing tool name");
                 return;
             }
 
+            await EnsureToolsInitializedAsync(ct);
+
             if (!_toolRegistry.TryGetTool(toolName!, out IMcpTool? tool) || tool is null)
             {
-                Console.Error.WriteLine($"[MCP DEBUG] callTool → tool not found: {toolName}");
                 WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, $"Tool not found: {toolName}");
                 return;
             }
@@ -276,13 +512,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             {
                 if (@params.TryGetProperty("arguments", out JsonElement argsEl) && argsEl.ValueKind == JsonValueKind.Object)
                 {
-                    string rawArgs = argsEl.GetRawText();
-                    Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: {rawArgs}");
-                    argsDoc = JsonDocument.Parse(rawArgs);
-                }
-                else
-                {
-                    Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: <none>");
+                    argsDoc = JsonDocument.Parse(argsEl.GetRawText());
                 }
 
                 // Execute the tool with telemetry.
@@ -338,16 +568,40 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         tool, toolName!, argsDoc, _serviceProvider, ct);
                 }
 
-                // Normalize to MCP content blocks (array). We try to pass through if a 'Content' property exists,
-                // otherwise we wrap into a single text block.
-                object[] content = CoerceToMcpContentBlocks(callResult);
-
-                WriteResult(id, new { content });
+                await HandleCallToolAsync(id ?? default, callResult);
             }
             finally
             {
                 argsDoc?.Dispose();
             }
+        }
+
+        /// <summary>
+        /// Writes the JSON-RPC result for a completed tool call, propagating <see cref="CallToolResult.IsError"/>
+        /// to the wire so MCP clients can distinguish tool errors from successes.
+        /// Extracted as a separate overload so it can be exercised directly in unit tests.
+        /// </summary>
+        /// <param name="id">The request identifier used to correlate the response.</param>
+        /// <param name="callResult">The result returned by the tool execution.</param>
+        private Task HandleCallToolAsync(JsonElement id, CallToolResult callResult)
+        {
+            // Normalize to MCP content blocks (array). We try to pass through if a 'Content' property exists,
+            // otherwise we wrap into a single text block.
+            object[] content = CoerceToMcpContentBlocks(callResult);
+
+            // Propagate isError so MCP clients can distinguish tool errors from successes.
+            // _jsonOptions has WhenWritingNull, so a null isError is omitted from the wire.
+            bool? isError = callResult.IsError;
+            if (isError == true)
+            {
+                WriteResult(id, new { content, isError });
+            }
+            else
+            {
+                WriteResult(id, new { content });
+            }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -447,53 +701,54 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         /// <summary>
         /// Writes a JSON-RPC result response to the standard output.
+        /// Routed through <see cref="McpStdoutWriter"/> so the write is serialized
+        /// with notifications/message frames from the logging pipeline.
         /// </summary>
         /// <param name="id">The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.</param>
         /// <param name="resultObject">The result object to include in the response.</param>
-        private static void WriteResult(JsonElement? id, object resultObject)
+        private void WriteResult(JsonElement? id, object resultObject)
         {
             var response = new
             {
-                jsonrpc = "2.0",
+                jsonrpc = McpStdioJsonRpcErrorCodes.JSON_RPC_VERSION,
                 id = id.HasValue ? GetIdValue(id.Value) : null,
                 result = resultObject
             };
 
-            string json = JsonSerializer.Serialize(response);
-            Console.Out.WriteLine(json);
+            _stdoutWriter.WriteLine(JsonSerializer.Serialize(response, _jsonOptions));
         }
 
         /// <summary>
         /// Writes a JSON-RPC error response to the standard output.
+        /// Routed through <see cref="McpStdoutWriter"/> so the write is serialized
+        /// with notifications/message frames from the logging pipeline.
         /// </summary>
         /// <param name="id">The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.</param>
         /// <param name="code">The error code.</param>
         /// <param name="message">The error message.</param>
-        private static void WriteError(JsonElement? id, int code, string message)
+        private void WriteError(JsonElement? id, int code, string message)
         {
             var errorObj = new
             {
-                jsonrpc = "2.0",
+                jsonrpc = McpStdioJsonRpcErrorCodes.JSON_RPC_VERSION,
                 id = id.HasValue ? GetIdValue(id.Value) : null,
                 error = new { code, message }
             };
 
-            string json = JsonSerializer.Serialize(errorObj);
-            Console.Out.WriteLine(json);
+            _stdoutWriter.WriteLine(JsonSerializer.Serialize(errorObj));
         }
 
         /// <summary>
         /// Extracts the value of a JSON-RPC request identifier.
         /// </summary>
         /// <param name="id">The JSON element representing the request identifier.</param>
-        /// <returns>The extracted identifier value as an object, or null if the identifier is not a primitive type.</returns>
+        /// <returns>The string value or a cloned numeric element, or null if the identifier is not a supported primitive type.</returns>
         private static object? GetIdValue(JsonElement id)
         {
             return id.ValueKind switch
             {
                 JsonValueKind.String => id.GetString(),
-                JsonValueKind.Number => id.TryGetInt64(out long l) ? l :
-                                        id.TryGetDouble(out double d) ? d : null,
+                JsonValueKind.Number => id.Clone(),
                 _ => null
             };
         }

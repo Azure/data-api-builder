@@ -5,6 +5,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataApiBuilder.Core.Parsers
 {
@@ -14,17 +15,18 @@ namespace Azure.DataApiBuilder.Core.Parsers
     /// </summary>
     public class IntrospectionInterceptor : DefaultHttpRequestInterceptor
     {
-        private RuntimeConfigProvider _runtimeConfigProvider;
-
         /// <summary>
-        /// Constructor injects RuntimeConfigProvider to allow
-        /// HotChocolate to attempt to retrieve the runtime config
-        /// when evaluating GraphQL requests.
+        /// Parameterless constructor.
         /// </summary>
-        /// <param name="runtimeConfigProvider"></param>
-        public IntrospectionInterceptor(RuntimeConfigProvider runtimeConfigProvider)
+        /// <remarks>
+        /// Hot Chocolate v16 isolates schema services from the application's request services.
+        /// Resolving constructor-injected app singletons (e.g. <see cref="RuntimeConfigProvider"/>)
+        /// against the schema service provider therefore fails at executor session creation.
+        /// We instead resolve dependencies from <see cref="HttpContext.RequestServices"/> in
+        /// <see cref="OnCreateAsync"/>, where the application's request scope is in effect.
+        /// </remarks>
+        public IntrospectionInterceptor()
         {
-            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -51,7 +53,10 @@ namespace Azure.DataApiBuilder.Core.Parsers
             OperationRequestBuilder requestBuilder,
             CancellationToken cancellationToken)
         {
-            if (_runtimeConfigProvider.GetConfig().AllowIntrospection)
+            RuntimeConfigProvider runtimeConfigProvider =
+                context.RequestServices.GetRequiredService<RuntimeConfigProvider>();
+
+            if (runtimeConfigProvider.GetConfig().AllowIntrospection)
             {
                 requestBuilder.AllowIntrospection();
             }

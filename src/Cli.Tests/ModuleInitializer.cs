@@ -119,6 +119,14 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
         // Ignore DefaultDataSourceName as that's not serialized in our config file.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DefaultDataSourceName);
+        // Ignore IsRootConfig as that's a computed property for validation, not serialized.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRootConfig);
+        // Ignore IsChildConfig as that's a runtime flag for validation, not serialized.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsChildConfig);
+        // Ignore AutoentityResolutionCounts as that's populated at runtime during metadata initialization.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AutoentityResolutionCounts);
+        // Ignore ChildConfigs as that's populated at runtime during child config loading.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.ChildConfigs);
         // Ignore MaxResponseSizeMB as as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<HostOptions>(options => options.MaxResponseSizeMB);
         // Ignore UserProvidedMaxResponseSizeMB as that's not serialized in our config file.
@@ -129,6 +137,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.EnableLegacyDateTimeScalar);
         // Ignore UserProvidedPath as that's not serialized in our config file.
         VerifierSettings.IgnoreMember<McpRuntimeOptions>(options => options.UserProvidedPath);
+        // Ignore UserProvidedAllowedHosts as that's not serialized in our config file.
+        VerifierSettings.IgnoreMember<McpRuntimeOptions>(options => options.UserProvidedAllowedHosts);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.
         VerifyBase.DerivePathInfo(
             (sourceFile, projectDirectory, type, method) => new(

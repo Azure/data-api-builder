@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <summary>
         /// The current role of the user making the request (e.g., "anonymous", "authenticated").
         /// </summary>
-        [JsonPropertyName("currentRole")]
+        [JsonPropertyName("current-role")]
         public string? CurrentRole { get; set; }
 
         /// <summary>

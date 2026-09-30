@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         ///   "default_string_with_paranthesis": "()",
         ///   "default_function_string_with_paranthesis": "NOW()",
         ///   "default_integer": 100,
-        ///   "default_date_string": "1999-01-08T10:23:54.000Z"
+        ///   "default_date_string": "1999-01-08T10:23:54Z"
         /// }
         /// </summary>
         public virtual async Task InsertMutationWithDefaultBuiltInFunctions(string dbQuery)
@@ -95,7 +95,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             Assert.AreEqual("()", result.GetProperty("default_string_with_parenthesis").GetString());
             Assert.AreEqual("NOW()", result.GetProperty("default_function_string_with_parenthesis").GetString());
             Assert.AreEqual(100, result.GetProperty("default_integer").GetInt32());
-            Assert.AreEqual("1999-01-08T10:23:54.000Z", result.GetProperty("default_date_string").GetString());
+            // HC v16 DateTime scalar elides trailing zero fractional seconds in ISO-8601 output
+            // ("1999-01-08T10:23:54.000Z" → "1999-01-08T10:23:54Z").
+            Assert.AreEqual("1999-01-08T10:23:54Z", result.GetProperty("default_date_string").GetString());
         }
 
         /// <summary>

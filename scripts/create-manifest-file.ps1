@@ -21,7 +21,10 @@ if ($isReleaseBuild -eq 'true')
 }
 
 # Generating hash for DAB packages
-$dotnetTargetFrameworks = "net8.0"
+# TODO: Release-engineering - confirm the net10.0_{linux,win,osx}-x64 download
+# URLs and SHA hashes referenced downstream still resolve after the .NET 10
+# publish cycle runs. (Add a tracking issue number/link here once created.)
+$dotnetTargetFrameworks = "net10.0"
 $RIDs = "win-x64", "linux-x64", "osx-x64"
 [hashtable]$frameworkPlatformDownloadMetadata = @{}
 [hashtable]$frameworkPlatformFileHashMetadata = @{}
@@ -40,11 +43,17 @@ foreach ($targetFramework in $dotnetTargetFrameworks)
 }
 
 # Generating hash for nuget
-$nugetFileName = "Microsoft.DataApiBuilder.$DabVersion.nupkg"
-$nugetFilePath = "$BuildOutputDir/nupkg/$nugetFileName"
-$fileHashInfo = Get-FileHash $nugetFilePath
-$nuget_file_hash = $fileHashInfo.Hash
-$download_url_nuget = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$nugetFileName"
+$nugetCliFileName = "Microsoft.DataApiBuilder.$DabVersion.nupkg"
+$nugetCliFilePath = "$BuildOutputDir/nupkg/$nugetCliFileName"
+$fileCliHashInfo = Get-FileHash $nugetCliFilePath
+$nuget_cli_file_hash = $fileCliHashInfo.Hash
+$download_url_nuget_cli = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$nugetCliFileName"
+
+$nugetCoreFileName = "Microsoft.DataApiBuilder.Core.$DabVersion.nupkg"
+$nugetCoreFilePath = "$BuildOutputDir/nupkg/$nugetCoreFileName"
+$fileCoreHashInfo = Get-FileHash $nugetCoreFilePath
+$nuget_core_file_hash = $fileCoreHashInfo.Hash
+$download_url_nuget_core = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$nugetCoreFileName"
 
 # Creating new block to insert latest version 
 # String substitution requires hashtable to be wrapped in $( $hashtable['key'] ) to avoid parsing issues.
@@ -56,20 +65,24 @@ $latestBlock = @'
     "releaseDate": "${releaseDate}",
     "files": {
         "linux-x64":{
-            "url": "$($frameworkPlatformDownloadMetadata["net8.0_linux-x64"])",
-            "sha": "$($frameworkPlatformFileHashMetadata["net8.0_linux-x64"])"
+            "url": "$($frameworkPlatformDownloadMetadata["net10.0_linux-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net10.0_linux-x64"])"
         },
         "win-x64":{
-            "url": "$($frameworkPlatformDownloadMetadata["net8.0_win-x64"])",
-            "sha": "$($frameworkPlatformFileHashMetadata["net8.0_win-x64"])"
+            "url": "$($frameworkPlatformDownloadMetadata["net10.0_win-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net10.0_win-x64"])"
         },
         "osx-x64":{
-            "url": "$($frameworkPlatformDownloadMetadata["net8.0_osx-x64"])",
-            "sha": "$($frameworkPlatformFileHashMetadata["net8.0_osx-x64"])"
+            "url": "$($frameworkPlatformDownloadMetadata["net10.0_osx-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net10.0_osx-x64"])"
         },
         "nuget": {
-            "url": "${download_url_nuget}",
-            "sha": "${nuget_file_hash}"
+            "url": "${download_url_nuget_cli}",
+            "sha": "${nuget_cli_file_hash}"
+        },
+        "nuget-core": {
+            "url": "${download_url_nuget_core}",
+            "sha": "${nuget_core_file_hash}"
         }
     }
 }

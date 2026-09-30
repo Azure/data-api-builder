@@ -67,14 +67,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Init(parameters);
         }
 
-        /// <inheritdoc/>
-        public override string MakeDbConnectionParam(object? value, string? columnName = null, bool lengthOverride = false)
-        {
-            string encodedParamName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
-            Parameters.Add(encodedParamName, new(value));
-            return encodedParamName;
-        }
-
         private static IEnumerable<LabelledColumn> GenerateQueryColumns(SelectionSetNode selectionSet, DocumentNode document, string tableName)
         {
             foreach (ISelectionNode selectionNode in selectionSet.Selections)
@@ -117,14 +109,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         [MemberNotNull(nameof(OrderByColumns))]
         private void Init(IDictionary<string, object?> queryParams)
         {
-            ISelection selection = _context.Selection;
+            Selection selection = _context.Selection;
             ObjectType underlyingType = selection.Field.Type.NamedType<ObjectType>();
 
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
+            FieldNode selectionFieldNode = selection.RequireFieldNode();
             if (IsPaginated)
             {
-                FieldNode? fieldNode = ExtractQueryField(selection.SyntaxNode);
+                FieldNode? fieldNode = ExtractQueryField(selectionFieldNode);
 
                 if (fieldNode is not null)
                 {
@@ -139,7 +132,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                Columns.AddRange(GenerateQueryColumns(selection.SyntaxNode.SelectionSet!, _context.Operation.Document, SourceAlias));
+                Columns.AddRange(GenerateQueryColumns(selectionFieldNode.SelectionSet!, _context.Operation.Document, SourceAlias));
                 string typeName = GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingType.Directives, out string? modelName) ?
                     modelName :
                     underlyingType.Name;

@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
@@ -179,12 +180,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test that permission configuration validation fails when a database policy
-        /// is defined for the Create operation for mysql/postgresql and passes for mssql.
+        /// is defined for the Create operation for mysql and passes for mssql/postgresql.
         /// </summary>
         /// <param name="dbPolicy">Database policy.</param>
         /// <param name="errorExpected">Whether an error is expected.</param>
         [DataTestMethod]
-        [DataRow(DatabaseType.PostgreSQL, "1 eq @item.col1", true, DisplayName = "Database Policy defined for Create fails for PostgreSQL")]
+        [DataRow(DatabaseType.PostgreSQL, "1 eq @item.col1", false, DisplayName = "Database Policy defined for Create passes for PostgreSQL")]
         [DataRow(DatabaseType.PostgreSQL, null, false, DisplayName = "Database Policy set as null for Create passes on PostgreSQL.")]
         [DataRow(DatabaseType.PostgreSQL, "", false, DisplayName = "Database Policy left empty for Create passes for PostgreSQL.")]
         [DataRow(DatabaseType.PostgreSQL, " ", false, DisplayName = "Database Policy only whitespace for Create passes for PostgreSQL.")]
@@ -628,6 +629,95 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // No Exception is thrown as foreignKey Pair was found in the DB between
             // source and target entity.
             configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object);
+        }
+
+        /// <summary>
+        /// Verifies relationship validation can log explicit columns, infer either foreign-key direction, or fall back to database verification for direct and linking relationships.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(false, "explicit", DisplayName = "Direct relationship uses explicitly configured columns")]
+        [DataRow(false, "forward", DisplayName = "Direct relationship infers a forward foreign key")]
+        [DataRow(false, "reverse", DisplayName = "Direct relationship infers a reverse foreign key")]
+        [DataRow(false, "none", DisplayName = "Direct relationship falls back when no foreign key metadata exists")]
+        [DataRow(true, "explicit", DisplayName = "Linking relationship uses explicitly configured columns")]
+        [DataRow(true, "forward", DisplayName = "Linking relationship infers both forward foreign keys")]
+        [DataRow(true, "none", DisplayName = "Linking relationship falls back when no foreign key metadata exists")]
+        public void ValidateRelationships_LoggingResolvesConfiguredAndInferredColumns(bool useLinkingObject, string resolution)
+        {
+            string[] sourceFields = resolution == "explicit" ? new[] { "source_id" } : null;
+            string[] targetFields = resolution == "explicit" ? new[] { "target_id" } : null;
+            string[] linkingSourceFields = useLinkingObject && resolution == "explicit" ? new[] { "link_source_id" } : null;
+            string[] linkingTargetFields = useLinkingObject && resolution == "explicit" ? new[] { "link_target_id" } : null;
+            string linkingObjectName = useLinkingObject ? "dbo.LINKING_TABLE" : null;
+            EntityRelationship relationship = new(
+                Cardinality: Cardinality.One,
+                TargetEntity: "Target",
+                SourceFields: sourceFields,
+                TargetFields: targetFields,
+                LinkingObject: linkingObjectName,
+                LinkingSourceFields: linkingSourceFields,
+                LinkingTargetFields: linkingTargetFields);
+            Dictionary<string, Entity> entities = new()
+            {
+                ["Source"] = GetSampleEntityUsingSourceAndRelationshipMap(
+                    "SOURCE_TABLE",
+                    new Dictionary<string, EntityRelationship> { ["relationship"] = relationship },
+                    new EntityGraphQLOptions("Source", "Sources", true)),
+                ["Target"] = GetSampleEntityUsingSourceAndRelationshipMap(
+                    "TARGET_TABLE",
+                    relationshipMap: null,
+                    new EntityGraphQLOptions("Target", "Targets", true))
+            };
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType.MSSQL, string.Empty),
+                Runtime: new RuntimeOptions(new(), new(), new(), new(null, null)),
+                Entities: new RuntimeEntities(entities));
+
+            DatabaseTable sourceTable = new("dbo", "SOURCE_TABLE");
+            DatabaseTable targetTable = new("dbo", "TARGET_TABLE");
+            DatabaseTable linkingTable = new("dbo", "LINKING_TABLE");
+            RelationShipPair sourceTarget = new(sourceTable, targetTable);
+            RelationShipPair targetSource = new(targetTable, sourceTable);
+            RelationShipPair linkingSource = new(linkingTable, sourceTable);
+            RelationShipPair linkingTarget = new(linkingTable, targetTable);
+            Dictionary<RelationShipPair, ForeignKeyDefinition> foreignKeys = new();
+            if (resolution == "forward")
+            {
+                if (useLinkingObject)
+                {
+                    foreignKeys[linkingSource] = CreateForeignKey(linkingSource);
+                    foreignKeys[linkingTarget] = CreateForeignKey(linkingTarget);
+                }
+                else
+                {
+                    foreignKeys[sourceTarget] = CreateForeignKey(sourceTarget);
+                }
+            }
+            else if (resolution == "reverse")
+            {
+                foreignKeys[targetSource] = CreateForeignKey(targetSource);
+            }
+
+            Mock<ISqlMetadataProvider> metadataProvider = new();
+            metadataProvider.SetupGet(x => x.EntityToDatabaseObject).Returns(new Dictionary<string, DatabaseObject>
+            {
+                ["Source"] = sourceTable,
+                ["Target"] = targetTable
+            });
+            metadataProvider.SetupGet(x => x.PairToFkDefinition).Returns(foreignKeys);
+            metadataProvider.Setup(x => x.ParseSchemaAndDbTableName(linkingObjectName)).Returns(("dbo", "LINKING_TABLE"));
+            metadataProvider.Setup(x => x.VerifyForeignKeyExistsInDB(It.IsAny<DatabaseTable>(), It.IsAny<DatabaseTable>())).Returns(true);
+            string exposedField = string.Empty;
+            metadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), It.IsAny<string>(), out exposedField)).Returns(true);
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(metadataProvider.Object);
+
+            MockFileSystem fileSystem = new();
+            RuntimeConfigProvider provider = new(new FileSystemRuntimeConfigLoader(fileSystem));
+            RuntimeConfigValidator validator = new(provider, fileSystem, Mock.Of<ILogger<RuntimeConfigValidator>>());
+
+            validator.ValidateRelationships(runtimeConfig, metadataProviderFactory.Object);
         }
 
         /// <summary>
@@ -1258,7 +1348,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "Book", bookWithUpperCase }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType, "book");
         }
 
         /// <summary>
@@ -1301,7 +1391,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "executeBook", bookTable },
                 { "Book_by_pk", bookByPkStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType, "Book_by_pk");
         }
 
         /// <summary>
@@ -1345,7 +1435,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "ExecuteBooks", bookTable },
                 { "AddBook", addBookStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType, "AddBook");
         }
 
         /// <summary>
@@ -1383,7 +1473,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
         }
 
         /// <summary>
@@ -1426,7 +1516,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
         }
 
         /// <summary>
@@ -1464,7 +1554,45 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             entityCollection.Add("book_alt", book_alt);
             entityCollection.Add("book", book);
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType, "book");
+        }
+
+        /// <summary>
+        /// Validates that a detailed error is thrown when autoentities includes objects whose names
+        /// differ only by singular/plural form (e.g. dbo.Category and dbo.Categories), causing
+        /// DAB to generate conflicting GraphQL type and operation names.
+        ///
+        /// "dbo_Category" entity → singular: Category, plural: Categories
+        /// "dbo_Categories" entity → singular: Category, plural: Categories (after pluralization)
+        ///
+        /// Both entities generate the same pk query, list query, and mutation names.
+        /// </summary>
+        [TestMethod]
+        [DataRow(DatabaseType.MSSQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateAutoEntitiesWithSingularPluralNameCollisionGenerateDuplicateQueries(DatabaseType databaseType)
+        {
+            // Entity Name: dbo_Category
+            // Singular: Category (from entity name processed by autoentities)
+            // Plural: Categories (pluralized from singular)
+            Entity categoryEntity = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Category", "Categories");
+
+            // Entity Name: dbo_Categories
+            // Singular: Category (after singularization by autoentities)
+            // Plural: Categories
+            Entity categoriesEntity = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Category", "Categories");
+
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "dbo_Categories", categoriesEntity },
+                { "dbo_Category", categoryEntity }
+            };
+
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(
+                entityCollection,
+                "dbo_Category",
+                databaseType,
+                conflictingEntityName: "dbo_Categories");
         }
 
         /// <summary>
@@ -1611,124 +1739,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// queries with the same name.
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
-        /// <param name="entityName">Entity name to construct the expected exception message</param>
-        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName, DatabaseType databaseType)
+        /// <param name="entityName">The entity name expected to appear in the conflict message as the conflicting entity.</param>
+        /// <param name="databaseType">Database type used during validation.</param>
+        /// <param name="conflictingEntityName">The other entity name expected to appear in the conflict message.</param>
+        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(
+            SortedDictionary<string, Entity> entityCollection,
+            string entityName,
+            DatabaseType databaseType,
+            string conflictingEntityName)
         {
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
                action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(databaseType, new(entityCollection)));
 
-            Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
+            StringAssert.Contains(dabException.Message, "GraphQL naming conflict detected.");
+            StringAssert.Contains(dabException.Message, entityName);
+            StringAssert.Contains(dabException.Message, conflictingEntityName);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
             Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
-        }
-
-        /// <summary>
-        /// Method to create a sample entity with GraphQL enabled,
-        /// with given source and relationship Info.
-        /// Rest is disabled by default, unless specified otherwise.
-        /// </summary>
-        /// <param name="source">Database name of entity.</param>
-        /// <param name="relationshipMap">Dictionary containing {relationshipName, Relationship}</param>
-        private static Entity GetSampleEntityUsingSourceAndRelationshipMap(
-            string source,
-            Dictionary<string, EntityRelationship> relationshipMap,
-            EntityGraphQLOptions graphQLDetails,
-            EntityRestOptions restDetails = null
-            )
-        {
-            EntityAction actionForRole = new(
-                Action: EntityActionOperation.Create,
-                Fields: null,
-                Policy: null);
-
-            EntityPermission permissionForEntity = new(
-                Role: "anonymous",
-                Actions: new[] { actionForRole });
-
-            Entity sampleEntity = new(
-                Source: new(source, EntitySourceType.Table, null, null),
-                Fields: null,
-                Rest: restDetails ?? new(Enabled: false),
-                GraphQL: graphQLDetails,
-                Permissions: new[] { permissionForEntity },
-                Relationships: relationshipMap,
-                Mappings: null
-                );
-
-            return sampleEntity;
-        }
-
-        /// <summary>
-        /// Returns Dictionary containing pair of string and entity.
-        /// It creates two sample entities and forms relationship between them.
-        /// </summary>
-        /// <param name="sourceEntity">Name of the source entity.</param>
-        /// <param name="targetEntity">Name of the target entity.</param>
-        /// <param name="sourceFields">List of strings representing the source field names.</param>
-        /// <param name="targetFields">List of strings representing the target field names.</param>
-        /// <param name="linkingObject">Name of the linking object.</param>
-        /// <param name="linkingSourceFields">List of strings representing the linking source field names.</param>
-        /// <param name="linkingTargetFields">List of strings representing the linking target field names.</param>
-        private static Dictionary<string, Entity> GetSampleEntityMap(
-            string sourceEntity,
-            string targetEntity,
-            string[] sourceFields,
-            string[] targetFields,
-            string linkingObject,
-            string[] linkingSourceFields,
-            string[] linkingTargetFields
-        )
-        {
-            Dictionary<string, EntityRelationship> relationshipMap = new();
-
-            // Creating relationship between source and target entity.
-            EntityRelationship sampleRelationship = new(
-                Cardinality: Cardinality.One,
-                TargetEntity: targetEntity,
-                SourceFields: sourceFields,
-                TargetFields: targetFields,
-                LinkingObject: linkingObject,
-                LinkingSourceFields: linkingSourceFields,
-                LinkingTargetFields: linkingTargetFields
-            );
-
-            relationshipMap.Add("rname1", sampleRelationship);
-
-            Entity sampleEntity1 = GetSampleEntityUsingSourceAndRelationshipMap(
-                source: "TEST_SOURCE1",
-                relationshipMap: relationshipMap,
-                graphQLDetails: new("rname1", "rname1s", true)
-            );
-
-            sampleRelationship = new(
-                Cardinality: Cardinality.One,
-                TargetEntity: sourceEntity,
-                SourceFields: targetFields,
-                TargetFields: sourceFields,
-                LinkingObject: linkingObject,
-                LinkingSourceFields: linkingTargetFields,
-                LinkingTargetFields: linkingSourceFields
-            );
-
-            relationshipMap = new()
-            {
-                { "rname2", sampleRelationship }
-            };
-
-            Entity sampleEntity2 = GetSampleEntityUsingSourceAndRelationshipMap(
-                source: "TEST_SOURCE2",
-                relationshipMap: relationshipMap,
-                graphQLDetails: new("rname2", "rname2s", true)
-            );
-
-            Dictionary<string, Entity> entityMap = new()
-            {
-                { sourceEntity, sampleEntity1 },
-                { targetEntity, sampleEntity2 }
-            };
-
-            return entityMap;
         }
 
         /// <summary>
@@ -1790,6 +1818,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "GraphQL path prefix containing space at the start and underscore in between.")]
         [DataRow("/", null, ApiType.REST, false,
             DisplayName = "REST path containing only a forward slash.")]
+        [DataRow("/api/v2", null, ApiType.REST, false,
+            DisplayName = "REST path containing multiple segments.")]
+        [DataRow("/api/v2", null, ApiType.GraphQL, false,
+            DisplayName = "GraphQL path containing multiple segments.")]
+        [DataRow("/api/", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path containing a trailing slash.")]
+        [DataRow("/api//v2", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path containing an empty segment.")]
         public void ValidateApiURIsAreWellFormed(
             string apiPathPrefix,
             string expectedErrorMessage,
@@ -2564,6 +2600,56 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Regression test for validate-only mode losing operation ownership after an earlier conflict.
+        /// When an entity successfully registers some of its generated operation names but then fails on
+        /// a later name, the previously added names must still be attributed to that entity so that a
+        /// subsequent entity colliding on one of them reports the correct conflicting entity.
+        ///
+        /// Sequence:
+        /// - First:  singular "Alpha", plural "Shared" -> registers alpha_by_pk, shared, ...
+        /// - Second: singular "Beta",  plural "Shared" -> registers beta_by_pk, then collides on shared (owned by First).
+        /// - Third:  singular "Beta",  plural "Thirds" -> collides on beta_by_pk, which must be owned by Second.
+        ///
+        /// Because validate-only mode records exceptions instead of throwing, both conflicts are collected.
+        /// The conflict recorded for Third must identify Second (not just Third).
+        /// </summary>
+        [TestMethod]
+        public void ValidateOnlyMode_ConflictAfterPartialAdd_ReportsActualConflictingEntity()
+        {
+            Entity first = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Alpha", "Shared");
+            Entity second = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Beta", "Shared");
+            Entity third = GraphQLTestHelpers.GenerateEntityWithSingularPlural("Beta", "Thirds");
+
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "First", first },
+                { "Second", second },
+                { "Third", third }
+            };
+
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(
+                provider,
+                fileSystem,
+                new Mock<ILogger<RuntimeConfigValidator>>().Object,
+                isValidateOnly: true);
+
+            configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(DatabaseType.MySQL, new(entityCollection));
+
+            List<Exception> exceptions = configValidator.ConfigValidationExceptions;
+
+            // Two conflicts are expected: Second (vs First) and Third (vs Second).
+            Assert.AreEqual(expected: 2, actual: exceptions.Count);
+
+            // Regression assertion: the conflict recorded for Third must identify Second as the entity
+            // that first registered beta_by_pk, even though Second failed on a later operation (shared).
+            Exception thirdConflict = exceptions.Single(e => e.Message.Contains("Third"));
+            StringAssert.Contains(thirdConflict.Message, "Second");
+        }
+
+        /// <summary>
         /// Test to validate that user-delegated-auth with missing DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID,
         /// or DAB_OBO_CLIENT_SECRET throws an error.
         /// </summary>
@@ -2792,7 +2878,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// This test checks that the final config used by runtime engine doesn't lose the directory information
         /// if provided by the user.
         /// It also validates that if config file is provided by the user, it will be used directly irrespective of
-        /// environment variable being set or not. 
+        /// environment variable being set or not.
         /// When user doesn't provide a config file, we check if environment variable is set and if it is, we use
         /// the config file specified by the environment variable, else we use the default config file.
         /// <param name="userProvidedConfigFilePath"></param>
@@ -3040,12 +3126,758 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
+        /// <summary>
+        /// Validates that embeddings validation is skipped when embeddings are null or disabled.
+        /// No exception should be thrown.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, DisplayName = "Embeddings is null - validation skipped.")]
+        [DataRow(false, DisplayName = "Embeddings is disabled - validation skipped.")]
+        public void ValidateEmbeddingsOptions_SkipsValidation_WhenNullOrDisabled(bool isNull)
+        {
+            EmbeddingsOptions embeddingsOptions = isNull
+                ? null
+                : new EmbeddingsOptions(
+                    Provider: EmbeddingProviderType.OpenAI,
+                    BaseUrl: "",
+                    ApiKey: "",
+                    Enabled: false);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+            // Should not throw any exception.
+            configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+        }
+
+        /// <summary>
+        /// Validates that embeddings base-url is required and must be a valid HTTP or HTTPS URL.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, true, "Embeddings 'base-url' cannot be null or empty when embeddings are enabled.",
+            DisplayName = "Embeddings base-url is null.")]
+        [DataRow("", true, "Embeddings 'base-url' cannot be null or empty when embeddings are enabled.",
+            DisplayName = "Embeddings base-url is empty.")]
+        [DataRow("   ", true, "Embeddings 'base-url' cannot be null or empty when embeddings are enabled.",
+            DisplayName = "Embeddings base-url is whitespace.")]
+        [DataRow("not-a-url", true, "Embeddings 'base-url' must be a valid HTTP or HTTPS URL. Got: not-a-url",
+            DisplayName = "Embeddings base-url is not a valid URL.")]
+        [DataRow("ftp://example.com", true, "Embeddings 'base-url' must be a valid HTTP or HTTPS URL. Got: ftp://example.com",
+            DisplayName = "Embeddings base-url is FTP, not HTTP/HTTPS.")]
+        [DataRow("https://api.openai.com", false, null,
+            DisplayName = "Embeddings base-url is valid HTTPS URL.")]
+        [DataRow("http://localhost:8080", false, null,
+            DisplayName = "Embeddings base-url is valid HTTP URL.")]
+        public void ValidateEmbeddingsOptions_BaseUrl(string baseUrl, bool exceptionExpected, string expectedErrorMessage)
+        {
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: baseUrl,
+                ApiKey: "test-api-key",
+                Enabled: true);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
+                Assert.AreEqual(expectedErrorMessage, ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Validates that embeddings api-key is required when embeddings are enabled.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, true, DisplayName = "Embeddings api-key is null.")]
+        [DataRow("", true, DisplayName = "Embeddings api-key is empty.")]
+        [DataRow("   ", true, DisplayName = "Embeddings api-key is whitespace.")]
+        [DataRow("sk-valid-key", false, DisplayName = "Embeddings api-key is valid.")]
+        public void ValidateEmbeddingsOptions_ApiKey(string apiKey, bool exceptionExpected)
+        {
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: apiKey,
+                Enabled: true);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
+                Assert.AreEqual("Embeddings 'api-key' cannot be null or empty when embeddings are enabled.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Validates that for Azure OpenAI provider, model (deployment name) is required.
+        /// For OpenAI provider, model is not required.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(EmbeddingProviderType.AzureOpenAI, null, true,
+            DisplayName = "AzureOpenAI with null model fails.")]
+        [DataRow(EmbeddingProviderType.AzureOpenAI, "", true,
+            DisplayName = "AzureOpenAI with empty model fails.")]
+        [DataRow(EmbeddingProviderType.AzureOpenAI, "   ", true,
+            DisplayName = "AzureOpenAI with whitespace model fails.")]
+        [DataRow(EmbeddingProviderType.AzureOpenAI, "my-deployment", false,
+            DisplayName = "AzureOpenAI with valid model passes.")]
+        [DataRow(EmbeddingProviderType.OpenAI, null, false,
+            DisplayName = "OpenAI with null model passes.")]
+        [DataRow(EmbeddingProviderType.OpenAI, "", false,
+            DisplayName = "OpenAI with empty model passes.")]
+        public void ValidateEmbeddingsOptions_ModelRequiredForAzureOpenAI(
+            EmbeddingProviderType provider, string model, bool exceptionExpected)
+        {
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: provider,
+                BaseUrl: "https://myinstance.openai.azure.com",
+                ApiKey: "test-api-key",
+                Enabled: true,
+                Model: model);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
+                Assert.AreEqual("Embeddings 'model' (deployment name) is required when using the Azure OpenAI provider.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Validates that timeout-ms must be positive if provided.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(0, true, DisplayName = "Embeddings timeout-ms is zero.")]
+        [DataRow(-1, true, DisplayName = "Embeddings timeout-ms is negative.")]
+        [DataRow(-100, true, DisplayName = "Embeddings timeout-ms is large negative.")]
+        [DataRow(1, false, DisplayName = "Embeddings timeout-ms is 1 (valid).")]
+        [DataRow(30000, false, DisplayName = "Embeddings timeout-ms is 30000 (valid).")]
+        [DataRow(null, false, DisplayName = "Embeddings timeout-ms is null (valid, uses default).")]
+        public void ValidateEmbeddingsOptions_TimeoutMs(int? timeoutMs, bool exceptionExpected)
+        {
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "test-api-key",
+                Enabled: true,
+                TimeoutMs: timeoutMs);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
+                Assert.AreEqual($"Embeddings 'timeout-ms' must be a positive integer. Got: {timeoutMs}", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Validates that dimensions must be positive if provided.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(0, true, DisplayName = "Embeddings dimensions is zero.")]
+        [DataRow(-1, true, DisplayName = "Embeddings dimensions is negative.")]
+        [DataRow(-512, true, DisplayName = "Embeddings dimensions is large negative.")]
+        [DataRow(1, false, DisplayName = "Embeddings dimensions is 1 (valid).")]
+        [DataRow(1536, false, DisplayName = "Embeddings dimensions is 1536 (valid).")]
+        [DataRow(null, false, DisplayName = "Embeddings dimensions is null (valid, uses model default).")]
+        public void ValidateEmbeddingsOptions_Dimensions(int? dimensions, bool exceptionExpected)
+        {
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "test-api-key",
+                Enabled: true,
+                Dimensions: dimensions);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
+                Assert.AreEqual($"Embeddings 'dimensions' must be a positive integer. Got: {dimensions}", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Validates endpoint roles behavior:
+        /// - Production mode requires explicitly configured roles (even though null defaults to ['authenticated'])
+        /// - Development mode allows default roles  
+        /// - Empty roles array is not allowed in either mode
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(HostMode.Production, null, true,
+            DisplayName = "Production mode with null roles fails (requires explicit config).")]
+        [DataRow(HostMode.Production, new string[0], true,
+            DisplayName = "Production mode with empty roles fails.")]
+        [DataRow(HostMode.Production, new string[] { "authenticated" }, false,
+            DisplayName = "Production mode with explicit roles passes.")]
+        [DataRow(HostMode.Development, null, false,
+            DisplayName = "Development mode with null roles uses default ['authenticated'].")]
+        [DataRow(HostMode.Development, new string[0], true,
+            DisplayName = "Development mode with empty roles fails.")]
+        public void ValidateEmbeddingsOptions_EndpointRolesInProductionMode(
+            HostMode hostMode,
+            string[] roles,
+            bool exceptionExpected)
+        {
+            EmbeddingsEndpointOptions endpointOptions = new(
+                enabled: true,
+                roles: roles);
+
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "test-api-key",
+                Enabled: true,
+                Endpoint: endpointOptions);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null, Mode: hostMode),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
+
+                // Production with null gets caught first, empty array gets caught second
+                string expectedMessage = (hostMode == HostMode.Production && roles is null)
+                    ? "Embeddings endpoint 'roles' must be explicitly configured in production mode."
+                    : "Embeddings endpoint 'roles' cannot be empty when endpoint is enabled.";
+
+                Assert.AreEqual(expectedMessage, ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Validates that health check threshold-ms must be positive when health check is enabled.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(0, true, DisplayName = "Health check threshold-ms is zero.")]
+        [DataRow(-1, true, DisplayName = "Health check threshold-ms is negative.")]
+        [DataRow(-500, true, DisplayName = "Health check threshold-ms is large negative.")]
+        [DataRow(1, false, DisplayName = "Health check threshold-ms is 1 (valid).")]
+        [DataRow(5000, false, DisplayName = "Health check threshold-ms is 5000 (valid).")]
+        public void ValidateEmbeddingsOptions_HealthCheckThresholdMs(int thresholdMs, bool exceptionExpected)
+        {
+            EmbeddingsHealthCheckConfig healthConfig = new(
+                enabled: true,
+                thresholdMs: thresholdMs,
+                testText: "health check");
+
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "test-api-key",
+                Enabled: true,
+                Health: healthConfig);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
+                Assert.AreEqual($"Embeddings health check 'threshold-ms' must be a positive integer. Got: {thresholdMs}", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Validates that health check test-text cannot be null or empty when health check is enabled.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, false, DisplayName = "Health check test-text is null (uses default).")]
+        [DataRow("", true, DisplayName = "Health check test-text is empty.")]
+        [DataRow("   ", true, DisplayName = "Health check test-text is whitespace.")]
+        [DataRow("health check", false, DisplayName = "Health check test-text is valid.")]
+        public void ValidateEmbeddingsOptions_HealthCheckTestText(string testText, bool exceptionExpected)
+        {
+            EmbeddingsHealthCheckConfig healthConfig = new(
+                enabled: true,
+                thresholdMs: 5000,
+                testText: testText);
+
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "test-api-key",
+                Enabled: true,
+                Health: healthConfig);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
+                Assert.AreEqual("Embeddings health check 'test-text' cannot be null or empty when health check is enabled.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Validates that health check expected-dimensions must be positive if provided.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(0, true, DisplayName = "Health check expected-dimensions is zero.")]
+        [DataRow(-1, true, DisplayName = "Health check expected-dimensions is negative.")]
+        [DataRow(-256, true, DisplayName = "Health check expected-dimensions is large negative.")]
+        [DataRow(1, false, DisplayName = "Health check expected-dimensions is 1 (valid).")]
+        [DataRow(1536, false, DisplayName = "Health check expected-dimensions is 1536 (valid).")]
+        [DataRow(null, false, DisplayName = "Health check expected-dimensions is null (valid, skips validation).")]
+        public void ValidateEmbeddingsOptions_HealthCheckExpectedDimensions(int? expectedDimensions, bool exceptionExpected)
+        {
+            EmbeddingsHealthCheckConfig healthConfig = new(
+                enabled: true,
+                thresholdMs: 5000,
+                testText: "health check",
+                expectedDimensions: expectedDimensions);
+
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "test-api-key",
+                Enabled: true,
+                Health: healthConfig);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateEmbeddingsOptions(runtimeConfig));
+                Assert.AreEqual($"Embeddings health check 'expected-dimensions' must be a positive integer. Got: {expectedDimensions}", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Validates that a fully valid embeddings configuration passes all validation checks.
+        /// </summary>
+        [TestMethod]
+        public void ValidateEmbeddingsOptions_FullyValidConfig_Passes()
+        {
+            EmbeddingsEndpointOptions endpointOptions = new(
+                enabled: true,
+                roles: new[] { "authenticated" });
+
+            EmbeddingsHealthCheckConfig healthConfig = new(
+                enabled: true,
+                thresholdMs: 5000,
+                testText: "test embedding",
+                expectedDimensions: 1536);
+
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: EmbeddingProviderType.AzureOpenAI,
+                BaseUrl: "https://myinstance.openai.azure.com",
+                ApiKey: "my-api-key",
+                Enabled: true,
+                Model: "text-embedding-ada-002",
+                TimeoutMs: 15000,
+                Dimensions: 1536,
+                Endpoint: endpointOptions,
+                Health: healthConfig);
+
+            RuntimeCacheLevel2Options level2Options = new(
+                Enabled: true,
+                Provider: "redis",
+                ConnectionString: "localhost:6379");
+
+            RuntimeCacheOptions cacheOptions = new(Enabled: true, TtlSeconds: 5)
+            {
+                Level2 = level2Options
+            };
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Production),
+                    Cache: cacheOptions,
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            // Should not throw any exception.
+            configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+        }
+
+        /// <summary>
+        /// Validates that health check validation is skipped when health check is disabled.
+        /// Even invalid values should not cause an exception.
+        /// </summary>
+        [TestMethod]
+        public void ValidateEmbeddingsOptions_HealthCheckDisabled_SkipsValidation()
+        {
+            EmbeddingsHealthCheckConfig healthConfig = new(
+                enabled: false,
+                thresholdMs: -100,
+                testText: "",
+                expectedDimensions: -50);
+
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "test-api-key",
+                Enabled: true,
+                Health: healthConfig);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            // Should not throw any exception since health check is disabled.
+            configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+        }
+
+        /// <summary>
+        /// Validates that endpoint validation is skipped when endpoint is disabled.
+        /// Even invalid values should not cause an exception.
+        /// </summary>
+        [TestMethod]
+        public void ValidateEmbeddingsOptions_EndpointDisabled_SkipsValidation()
+        {
+            EmbeddingsEndpointOptions endpointOptions = new(
+                enabled: false,
+                roles: null);
+
+            EmbeddingsOptions embeddingsOptions = new(
+                Provider: EmbeddingProviderType.OpenAI,
+                BaseUrl: "https://api.openai.com",
+                ApiKey: "test-api-key",
+                Enabled: true,
+                Endpoint: endpointOptions);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(Path: "/api"),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Production),
+                    Embeddings: embeddingsOptions
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            // Should not throw even though the path conflicts with REST and roles are null in production mode,
+            // because the endpoint is disabled.
+            configValidator.ValidateEmbeddingsOptions(runtimeConfig);
+        }
+
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
         {
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
             return new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+        }
+
+        private static Entity GetSampleEntityUsingSourceAndRelationshipMap(
+            string source,
+            Dictionary<string, EntityRelationship> relationshipMap,
+            EntityGraphQLOptions graphQLDetails,
+            EntityRestOptions restDetails = null
+            )
+        {
+            EntityAction actionForRole = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: null);
+            EntityPermission permissionForEntity = new(
+                Role: "anonymous",
+                Actions: new[] { actionForRole });
+            Entity sampleEntity = new(
+                Source: new(source, EntitySourceType.Table, null, null),
+                Fields: null,
+                Rest: restDetails ?? new(Enabled: false),
+                GraphQL: graphQLDetails,
+                Permissions: new[] { permissionForEntity },
+                Relationships: relationshipMap,
+                Mappings: null
+                );
+            return sampleEntity;
+        }
+
+        /// <summary>
+        /// Returns Dictionary containing pair of string and entity.
+        /// It creates two sample entities and forms relationship between them.
+        /// </summary>
+        /// <param name="sourceEntity">Name of the source entity.</param>
+        /// <param name="targetEntity">Name of the target entity.</param>
+        /// <param name="sourceFields">List of strings representing the source field names.</param>
+        /// <param name="targetFields">List of strings representing the target field names.</param>
+        /// <param name="linkingObject">Name of the linking object.</param>
+        /// <param name="linkingSourceFields">List of strings representing the linking source field names.</param>
+        /// <param name="linkingTargetFields">List of strings representing the linking target field names.</param>
+        private static Dictionary<string, Entity> GetSampleEntityMap(
+            string sourceEntity,
+            string targetEntity,
+            string[] sourceFields,
+            string[] targetFields,
+            string linkingObject,
+            string[] linkingSourceFields,
+            string[] linkingTargetFields
+        )
+        {
+            Dictionary<string, EntityRelationship> relationshipMap = new();
+            // Creating relationship between source and target entity.
+            EntityRelationship sampleRelationship = new(
+                Cardinality: Cardinality.One,
+                TargetEntity: targetEntity,
+                SourceFields: sourceFields,
+                TargetFields: targetFields,
+                LinkingObject: linkingObject,
+                LinkingSourceFields: linkingSourceFields,
+                LinkingTargetFields: linkingTargetFields
+            );
+            relationshipMap.Add("rname1", sampleRelationship);
+            Entity sampleEntity1 = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCE1",
+                relationshipMap: relationshipMap,
+                graphQLDetails: new("rname1", "rname1s", true)
+            );
+            sampleRelationship = new(
+                Cardinality: Cardinality.One,
+                TargetEntity: sourceEntity,
+                SourceFields: targetFields,
+                TargetFields: sourceFields,
+                LinkingObject: linkingObject,
+                LinkingSourceFields: linkingTargetFields,
+                LinkingTargetFields: linkingSourceFields
+            );
+            relationshipMap = new()
+            {
+                { "rname2", sampleRelationship }
+            };
+            Entity sampleEntity2 = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCE2",
+                relationshipMap: relationshipMap,
+                graphQLDetails: new("rname2", "rname2s", true)
+            );
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { sourceEntity, sampleEntity1 },
+                { targetEntity, sampleEntity2 }
+            };
+            return entityMap;
+        }
+
+        private static ForeignKeyDefinition CreateForeignKey(RelationShipPair pair)
+        {
+            return new ForeignKeyDefinition
+            {
+                Pair = pair,
+                ReferencingColumns = new() { "referencing_id" },
+                ReferencedColumns = new() { "referenced_id" }
+            };
         }
     }
 }

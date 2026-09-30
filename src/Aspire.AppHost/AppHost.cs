@@ -25,7 +25,7 @@ switch (aspireDB)
         }
 
         var mssqlService = builder.AddProject<Projects.Azure_DataApiBuilder_Service>("mssql-service", "Development")
-            .WithArgs("-f", "net8.0")
+            .WithArgs("-f", "net10.0")
             .WithEndpoint(endpointName: "https", (e) => e.Port = 1234)
             .WithEndpoint(endpointName: "http", (e) => e.Port = 2345)
             .WithEnvironment("db-type", "mssql")
@@ -39,11 +39,11 @@ switch (aspireDB)
 
         if (sqlDbContainer is null)
         {
-            mssqlService.WithEnvironment("ConnectionStrings__Database", databaseConnectionString);
+            mssqlService.WithEnvironment("DAB_CONNSTRING", databaseConnectionString);
         }
         else
         {
-            mssqlService.WithEnvironment("ConnectionStrings__Database", sqlDbContainer)
+            mssqlService.WithEnvironment("DAB_CONNSTRING", sqlDbContainer)
                 .WaitFor(sqlDbContainer);
         }
 
@@ -65,7 +65,7 @@ switch (aspireDB)
         }
 
         var pgService = builder.AddProject<Projects.Azure_DataApiBuilder_Service>("pg-service", "Development")
-            .WithArgs("-f", "net8.0")
+            .WithArgs("-f", "net10.0")
             .WithEndpoint(endpointName: "https", (e) => e.Port = 1234)
             .WithEndpoint(endpointName: "http", (e) => e.Port = 2345)
             .WithEnvironment("db-type", "postgresql")
@@ -79,11 +79,11 @@ switch (aspireDB)
 
         if (postgresDB is null)
         {
-            pgService.WithEnvironment("ConnectionStrings__Database", databaseConnectionString);
+            pgService.WithEnvironment("DAB_CONNSTRING", databaseConnectionString);
         }
         else
         {
-            pgService.WithEnvironment("ConnectionStrings__Database", postgresDB)
+            pgService.WithEnvironment("DAB_CONNSTRING", postgresDB)
                 .WaitFor(postgresDB);
         }
 

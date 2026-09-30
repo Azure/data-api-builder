@@ -8,6 +8,7 @@ using System.IO;
 using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -239,9 +240,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 // Combine both the console and exception messages because they both
                 // may contain the connection string errors this function expects to exist.
+                if (sw is not null)
+                {
+                    await TestHelper.DelayTask(() => string.IsNullOrWhiteSpace(sw.ToString()));
+                }
+
                 string consoleMessages = sw is not null ? sw.ToString() : string.Empty;
                 string allErrorMessages = ex.Message + " " + consoleMessages;
-                Assert.IsTrue(allErrorMessages.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
+                Assert.IsTrue(allErrorMessages.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE),
+                    $"Current message does not contain the expected connection string error message: {allErrorMessages}");
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             }
@@ -481,6 +488,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     It.IsAny<IDictionary<string, DbConnectionParam>>(),
                     It.IsAny<Func<DbDataReader, List<string>, Task<JsonArray>>>(),
                     It.IsAny<string>(),
+                    It.IsAny<CancellationToken>(),
                     It.IsAny<HttpContext>(),
                     It.IsAny<List<string>>()))
                     .ReturnsAsync(invalidFieldJsonArray);
@@ -508,7 +516,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
-                Assert.IsTrue(ex.Message.Contains("returns a column without a name"));
+                Assert.IsTrue(
+                    ex.Message.Contains("returns a column without a name"),
+                    $"Unexpected validation exception: {ex.Message}");
             }
 
             TestHelper.UnsetAllDABEnvironmentVariables();
@@ -634,7 +644,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Act
             MsSqlMetadataProvider metadataProvider = (MsSqlMetadataProvider)_sqlMetadataProvider;
-            JsonArray resultArray = await metadataProvider.QueryAutoentitiesAsync(autoentity);
+            JsonArray resultArray = await metadataProvider.QueryAutoentitiesAsync("autoentity", autoentity);
 
             // Assert
             Assert.IsNotNull(resultArray);

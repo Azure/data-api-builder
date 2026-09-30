@@ -798,6 +798,7 @@ mutation {{
             JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new());
 
             // Validate results
+            Assert.AreEqual(JsonValueKind.Object, response.ValueKind, $"Patch failed: {response}");
             Assert.AreEqual(id, response.GetProperty("id").GetString());
             Assert.AreEqual(newName, response.GetProperty("name").GetString());
             Assert.AreEqual(id, response.GetProperty("stars")[0].GetProperty("id").GetString());
@@ -836,6 +837,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
 
             JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
             // Validate results
+            Assert.AreEqual(JsonValueKind.Object, response.ValueKind, $"Patch failed: {response}");
             Assert.AreEqual(id, response.GetProperty("id").GetString());
             Assert.AreEqual(newName, response.GetProperty("name").GetString());
             Assert.AreEqual("TestStar", response.GetProperty("stars")[0].GetProperty("id").GetString());

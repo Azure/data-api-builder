@@ -1,0 +1,24 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# Stages this job's raw Cobertura file(s) from $(Agent.TempDirectory) and publishes
+# them as a named pipeline artifact, so the unit pipeline's "Total Code Coverage" job
+# can download and union them. PublishCodeCoverageResults@1 only exposes an HTML report
+# artifact (not the raw XML), so the aggregation needs this separate raw-cobertura
+# artifact. Pass a unique artifactName per job so names don't collide within a run.
+parameters:
+  - name: artifactName
+    type: string
+
+steps:
+- task: CopyFiles@2
+  displayName: 'Stage raw coverage for aggregation'
+  inputs:
+    sourceFolder: '$(Agent.TempDirectory)'
+    contents: '**/*.cobertura.xml'
+    targetFolder: '$(Build.ArtifactStagingDirectory)/coverage'
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish coverage artifact for aggregation'
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)/coverage'
+    artifact: '${{ parameters.artifactName }}'

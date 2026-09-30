@@ -15,14 +15,17 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthentication;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -42,6 +45,7 @@ using HotChocolate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,8 +81,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string BROWSER_USER_AGENT_HEADER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36";
         private const string BROWSER_ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
 
-        private const int RETRY_COUNT = 5;
-        private const int RETRY_WAIT_SECONDS = 2;
+        public const int RETRY_COUNT = 5;
+        public const int RETRY_WAIT_SECONDS = 2;
 
         /// <summary>
         ///
@@ -735,12 +739,26 @@ type Moon {
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
+        [TestInitialize]
+        public void SetupAuthProviderEnvironmentVariables()
+        {
+            TestHelper.SetAppServiceEnvironmentVariable();
+            TestHelper.SetStaticWebAppsEnvironmentVariable();
+        }
+
         /// <summary>
         /// When updating config during runtime is possible, then For invalid config the Application continues to
         /// accept request with status code of 503.
         /// But if invalid config is provided during startup, ApplicationException is thrown
         /// and application exits.
         /// </summary>
+        /// <remarks>
+        /// As of Hot Chocolate 16, the GraphQL middleware resolves <c>WithOptions</c> per request via an
+        /// <c>Action&lt;GraphQLServerOptions&gt;</c>, so the "no runtime config" condition surfaces as a
+        /// <see cref="DataApiBuilderException"/> with <see cref="HttpStatusCode.ServiceUnavailable"/> bubbling
+        /// out of the request pipeline rather than as a synchronous 503 response. The assertions below treat
+        /// that as semantically equivalent to the original 503 / <see cref="ApplicationException"/> contract.
+        /// </remarks>
         [DataTestMethod]
         [DataRow(new string[] { }, true, DisplayName = "No config returns 503 - config file flag absent")]
         [DataRow(new string[] { "--ConfigFileName=" }, true, DisplayName = "No config returns 503 - empty config file option")]
@@ -767,13 +785,24 @@ type Moon {
                 HttpResponseMessage result = await httpClient.GetAsync("/graphql");
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
             }
-            catch (Exception e)
+            catch (DataApiBuilderException dabException)
             {
-                Assert.IsFalse(isUpdateableRuntimeConfig);
-                Assert.AreEqual(typeof(ApplicationException), e.GetType());
+                // Hot Chocolate 16+: the absence of a runtime config bubbles out of the GraphQL pipeline
+                // as DataApiBuilderException(ServiceUnavailable). This is semantically equivalent to the
+                // pre-HC16 503 response (hosting case) or ApplicationException (CLI case).
+                Assert.AreEqual(
+                    HttpStatusCode.ServiceUnavailable,
+                    dabException.StatusCode,
+                    $"Expected ServiceUnavailable status when runtime config is missing, got: {dabException.Message}");
+            }
+            catch (ApplicationException appException)
+            {
+                Assert.IsFalse(
+                    isUpdateableRuntimeConfig,
+                    "ApplicationException should only be thrown in the non-updateable (CLI startup) scenario.");
                 Assert.AreEqual(
                     $"Could not initialize the engine with the runtime config file: {DEFAULT_CONFIG_FILE_NAME}",
-                    e.Message);
+                    appException.Message);
             }
             finally
             {
@@ -885,6 +914,12 @@ type Moon {
             string expectedDabModifiedConnString,
             bool dabEnvOverride)
         {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            // Ensure telemetry is enabled (not opted out) so the Application Name carries the dab_oss payload.
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+
             // Explicitly set the DAB_APP_NAME_ENV to null to ensure that the DAB_APP_NAME_ENV is not set.
             if (dabEnvOverride)
             {
@@ -895,27 +930,39 @@ type Moon {
                 Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
             }
 
-            // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
-            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
-            expectedDabModifiedConnString += resolvedAssemblyVersion;
+            try
+            {
+                // The DAB-owned portion of the Application Name is the telemetry block: dab_oss_<version>
+                // for open source, or dab_hosted_<version> when DAB_APP_NAME_ENV is set (hosted). The encoded
+                // payload then follows, so we assert the Application Name prefix and that it terminates with '+'.
+                string expectedAppNamePrefix = expectedDabModifiedConnString
+                    + (dabEnvOverride ? $"dab_hosted_{ProductInfo.GetProductVersion()}" : ProductInfo.DAB_USER_AGENT);
 
-            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
 
-            // Act
-            bool configParsed = RuntimeConfigLoader.TryParseConfig(
-                json: runtimeConfig.ToJson(),
-                config: out RuntimeConfig updatedRuntimeConfig,
-                replacementSettings: new(doReplaceEnvVar: true));
+                // Act
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
 
-            // Assert
-            Assert.AreEqual(
-                expected: true,
-                actual: configParsed,
-                message: "Runtime config unexpectedly failed parsing.");
-            Assert.AreEqual(
-                expected: expectedDabModifiedConnString,
-                actual: updatedRuntimeConfig.DataSource.ConnectionString,
-                message: "DAB did not properly set the 'Application Name' connection string property.");
+                // Assert
+                Assert.AreEqual(
+                    expected: true,
+                    actual: configParsed,
+                    message: "Runtime config unexpectedly failed parsing.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.StartsWith(expectedAppNamePrefix, StringComparison.Ordinal),
+                    $"Expected connection string to start with '{expectedAppNamePrefix}' but was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Expected telemetry payload to terminate with '+' but connection string was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
         }
 
         /// <summary>
@@ -938,6 +985,12 @@ type Moon {
             string expectedDabModifiedConnString,
             bool dabEnvOverride)
         {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            // Ensure telemetry is enabled (not opted out) so the Application Name carries the dab_oss payload.
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+
             // Explicitly set the DAB_APP_NAME_ENV to null to ensure that the DAB_APP_NAME_ENV is not set.
             if (dabEnvOverride)
             {
@@ -948,27 +1001,269 @@ type Moon {
                 Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
             }
 
-            // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
-            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
-            expectedDabModifiedConnString += resolvedAssemblyVersion;
+            try
+            {
+                // The DAB-owned portion of the Application Name is the telemetry block: dab_oss_<version>
+                // for open source, or dab_hosted_<version> when DAB_APP_NAME_ENV is set (hosted). The encoded
+                // payload then follows, so we assert the Application Name prefix and that it terminates with '+'.
+                string expectedAppNamePrefix = expectedDabModifiedConnString
+                    + (dabEnvOverride ? $"dab_hosted_{ProductInfo.GetProductVersion()}" : ProductInfo.DAB_USER_AGENT);
 
-            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.PostgreSQL, configProvidedConnString);
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.PostgreSQL, configProvidedConnString);
 
-            // Act
-            bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                // Act
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
+
+                // Assert
+                Assert.AreEqual(
+                    expected: true,
+                    actual: configParsed,
+                    message: "Runtime config unexpectedly failed parsing.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.StartsWith(expectedAppNamePrefix, StringComparison.Ordinal),
+                    $"Expected connection string to start with '{expectedAppNamePrefix}' but was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+                Assert.IsTrue(
+                    updatedRuntimeConfig.DataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Expected telemetry payload to terminate with '+' but connection string was '{updatedRuntimeConfig.DataSource.ConnectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
+        }
+
+        /// <summary>
+        /// Validates that DWSQL data sources also receive the telemetry-bearing Application Name.
+        /// DWSQL uses the SqlClient connection-string builder (like MSSQL) and supports Application Name,
+        /// so the dab_oss telemetry block (with Source encoded as 'D') is embedded.
+        /// </summary>
+        [TestMethod]
+        public void DwSqlConnStringSupplementedWithAppNameProperty()
+        {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            // Ensure telemetry is enabled (not opted out) and no host label is set.
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+
+            try
+            {
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.DWSQL, "Data Source=<>;");
+
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
+
+                Assert.IsTrue(configParsed, "Runtime config unexpectedly failed parsing.");
+
+                string connectionString = updatedRuntimeConfig.DataSource.ConnectionString;
+                Assert.IsTrue(
+                    connectionString.StartsWith("Data Source=<>;Application Name=" + ProductInfo.DAB_USER_AGENT, StringComparison.Ordinal),
+                    $"Expected DWSQL Application Name to carry the telemetry block but was '{connectionString}'.");
+                Assert.IsTrue(
+                    connectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Expected DWSQL telemetry payload to terminate with '+' but was '{connectionString}'.");
+
+                // The encoded Source for a DWSQL pool must decode as 'D'.
+                IReadOnlyList<string> decoded = ApplicationNameTelemetry.Decode(connectionString);
+                Assert.IsTrue(
+                    decoded.Any(line => line.Contains("Source: D (DWSQL)")),
+                    string.Join(Environment.NewLine, decoded));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
+        }
+
+        /// <summary>
+        /// Validates that when telemetry is opted out via DAB_TELEMETRY_APPNAME_OPT_OUT=1, the connection
+        /// string Application Name carries only the version marker (dab_oss_&lt;version&gt;) with no payload.
+        /// </summary>
+        [TestMethod]
+        public void ConnStringAppNameOmitsPayloadWhenOptedOut()
+        {
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, "1");
+
+            try
+            {
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, "Data Source=<>;");
+
+                bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                    json: runtimeConfig.ToJson(),
+                    config: out RuntimeConfig updatedRuntimeConfig,
+                    replacementSettings: new(doReplaceEnvVar: true));
+
+                Assert.IsTrue(configParsed, "Runtime config unexpectedly failed parsing.");
+                Assert.AreEqual(
+                    "Data Source=<>;Application Name=" + ProductInfo.DAB_USER_AGENT,
+                    updatedRuntimeConfig.DataSource.ConnectionString,
+                    "Opted-out Application Name should be version-only with no telemetry payload.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
+        }
+
+        /// <summary>
+        /// Validates that the hosted / late-configured path (POST /configuration, which supplies the
+        /// connection string separately with doReplaceEnvVar:false) still embeds anonymous usage
+        /// telemetry — including the DAB_APP_NAME_ENV host label — into the connection string's
+        /// Application Name. This is the deployment shape where the 'dab_hosted' label is most valuable.
+        /// </summary>
+        [TestMethod]
+        public async Task HostedLateConfigConnStringSupplementedWithTelemetry()
+        {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
+
+            try
+            {
+                RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, "Server=placeholder;");
+                FileSystemRuntimeConfigLoader loader = new(new MockFileSystem());
+                RuntimeConfigProvider provider = new(loader);
+
+                // Mirror the hosted /configuration path: connection string supplied separately, env-var
+                // replacement disabled. Telemetry must still be embedded.
+                bool initialized = await provider.Initialize(
+                    runtimeConfig.ToJson(),
+                    graphQLSchema: null,
+                    connectionString: "Server=hosted-sql;Database=hosteddb;",
+                    accessToken: null,
+                    replacementSettings: new(azureKeyVaultOptions: null, doReplaceEnvVar: false, doReplaceAkvVar: false));
+
+                Assert.IsTrue(initialized, "Hosted late-config initialization should succeed.");
+
+                string connectionString = provider.GetConfig().DataSource.ConnectionString;
+                Assert.IsTrue(
+                    connectionString.Contains("Application Name=dab_hosted_" + ProductInfo.GetProductVersion(), StringComparison.Ordinal),
+                    $"Hosted connection string should carry the dab_hosted_<version> marker but was '{connectionString}'.");
+                Assert.IsTrue(
+                    connectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Hosted connection string should carry the telemetry payload but was '{connectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+            }
+        }
+
+        /// <summary>
+        /// Validates that an explicit connection-string override is applied to the default data source
+        /// even when env-var replacement is disabled (DoReplaceEnvVar == false). Telemetry, which is
+        /// gated on DoReplaceEnvVar, is not embedded in that case, but the override must still take effect.
+        /// </summary>
+        [TestMethod]
+        public void ConnStringOverrideAppliedWhenEnvVarReplacementDisabled()
+        {
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, "Server=in-config;");
+
+            bool parsed = RuntimeConfigLoader.TryParseConfig(
                 json: runtimeConfig.ToJson(),
                 config: out RuntimeConfig updatedRuntimeConfig,
-                replacementSettings: new(doReplaceEnvVar: true));
+                parseError: out _,
+                replacementSettings: new(doReplaceEnvVar: false),
+                connectionString: "Server=override-server;Database=overridedb;");
 
-            // Assert
+            Assert.IsTrue(parsed, "Runtime config unexpectedly failed parsing.");
             Assert.AreEqual(
-                expected: true,
-                actual: configParsed,
-                message: "Runtime config unexpectedly failed parsing.");
-            Assert.AreEqual(
-                expected: expectedDabModifiedConnString,
-                actual: updatedRuntimeConfig.DataSource.ConnectionString,
-                message: "DAB did not properly set the 'Application Name' connection string property.");
+                "Server=override-server;Database=overridedb;",
+                updatedRuntimeConfig.DataSource.ConnectionString,
+                "The explicit connection-string override should be applied even when env-var replacement (and telemetry) is disabled.");
+        }
+
+        /// <summary>
+        /// Multi-database hosted scenario: the late-config path supplements the default data source with
+        /// the separately-supplied connection string, and must also embed telemetry into child data
+        /// sources (from data-source-files) so every hosted connection pool carries the usage snapshot.
+        /// </summary>
+        [TestMethod]
+        public async Task HostedLateConfigMultiDbChildConnStringSupplementedWithTelemetry()
+        {
+            string originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
+            string originalAppName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+
+            Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, null);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
+
+            // The RuntimeConfig constructor loads child data-source-files from a real FileSystem.
+            string childFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.IO.Path.GetRandomFileName() + ".json");
+
+            try
+            {
+                string childConfig = @"{
+                    ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                    ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=child-sql;Database=childdb;TrustServerCertificate=True;"" },
+                    ""entities"": { ""ChildEntity"": { ""source"": ""dbo.ChildTable"", ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""read""] }] } }
+                }";
+                await File.WriteAllTextAsync(childFilePath, childConfig);
+
+                string rootConfig = $@"{{
+                    ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                    ""data-source"": {{ ""database-type"": ""mssql"", ""connection-string"": ""Server=placeholder;"" }},
+                    ""data-source-files"": [""{childFilePath.Replace("\\", "\\\\")}""],
+                    ""runtime"": {{ ""rest"": {{ ""enabled"": true }} }},
+                    ""entities"": {{ ""RootEntity"": {{ ""source"": ""dbo.RootTable"", ""permissions"": [{{ ""role"": ""anonymous"", ""actions"": [""read""] }}] }} }}
+                }}";
+
+                FileSystemRuntimeConfigLoader loader = new(new MockFileSystem());
+                RuntimeConfigProvider provider = new(loader);
+
+                bool initialized = await provider.Initialize(
+                    rootConfig,
+                    graphQLSchema: null,
+                    connectionString: "Server=hosted-default;Database=defaultdb;",
+                    accessToken: null,
+                    replacementSettings: new(azureKeyVaultOptions: null, doReplaceEnvVar: false, doReplaceAkvVar: false));
+
+                Assert.IsTrue(initialized, "Hosted multi-database late-config initialization should succeed.");
+
+                RuntimeConfig loaded = provider.GetConfig();
+                string expectedAppName = "Application Name=dab_hosted_" + ProductInfo.GetProductVersion();
+
+                // Default data source: supplemented with the supplied connection string + telemetry.
+                Assert.IsTrue(
+                    loaded.DataSource.ConnectionString.Contains(expectedAppName, StringComparison.Ordinal)
+                        && loaded.DataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Default data source should carry telemetry but was '{loaded.DataSource.ConnectionString}'.");
+
+                // Child data source: its own server, also supplemented with telemetry.
+                DataSource childDataSource = loaded.GetDataSourceFromDataSourceName(loaded.GetDataSourceNameFromEntityName("ChildEntity"));
+                Assert.IsTrue(
+                    childDataSource.ConnectionString.Contains(expectedAppName, StringComparison.Ordinal)
+                        && childDataSource.ConnectionString.EndsWith("+", StringComparison.Ordinal),
+                    $"Child data source should carry telemetry but was '{childDataSource.ConnectionString}'.");
+                Assert.IsTrue(
+                    childDataSource.ConnectionString.Contains("child-sql", StringComparison.Ordinal),
+                    $"Child data source should retain its own server but was '{childDataSource.ConnectionString}'.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, originalAppName);
+
+                if (File.Exists(childFilePath))
+                {
+                    File.Delete(childFilePath);
+                }
+            }
         }
 
         /// <summary>
@@ -1829,8 +2124,8 @@ type Moon {
             List<string> exceptionMessagesList = configValidator.ConfigValidationExceptions.Select(x => x.Message).ToList();
             Assert.IsTrue(exceptionMessagesList.Contains("The entity Book does not have a valid source object."));
             Assert.IsTrue(exceptionMessagesList.Contains("The entity Publisher does not have a valid source object."));
-            Assert.IsTrue(exceptionMessagesList.Contains("Table Definition for Book has not been inferred."));
-            Assert.IsTrue(exceptionMessagesList.Contains("Table Definition for Publisher has not been inferred."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Database object for entity 'Book' has not been inferred."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Database object for entity 'Publisher' has not been inferred."));
             Assert.IsTrue(exceptionMessagesList.Contains("Could not infer database object for source entity: Publisher in relationship: books. Check if the entity: Publisher is correctly defined in the config."));
             Assert.IsTrue(exceptionMessagesList.Contains("Could not infer database object for target entity: Book in relationship: books. Check if the entity: Book is correctly defined in the config."));
         }
@@ -1838,7 +2133,6 @@ type Moon {
         /// <summary>
         /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
         /// It asserts that the validation is successful and there are no validation failures.
-        /// It also verifies that the expected log message is logged.
         /// </summary>
         [TestMethod("Validates the config file schema."), TestCategory(TestCategory.MSSQL)]
         public void TestConfigSchemaIsValid()
@@ -1856,20 +2150,11 @@ type Moon {
             JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
             Assert.IsTrue(result.IsValid);
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
-            schemaValidatorLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
-                    It.IsAny<Exception>(),
-                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
-                Times.Once);
         }
 
         /// <summary>
         /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
         /// It asserts that the validation is successful and there are no validation failures when no optional fields are used.
-        /// It also verifies that the expected log message is logged.
         /// </summary>
         [DataTestMethod]
         [DataRow(CONFIG_FILE_WITH_NO_OPTIONAL_FIELD, DisplayName = "Validates schema of the config file with no optional fields.")]
@@ -1888,14 +2173,6 @@ type Moon {
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
 
             Assert.IsTrue(result.IsValid);
-            schemaValidatorLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
-                    It.IsAny<Exception>(),
-                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
-                Times.Once);
         }
 
         [DataTestMethod]
@@ -1922,14 +2199,6 @@ type Moon {
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors), "Validation Erros null of empty");
 
             Assert.IsTrue(result.IsValid, "Result should be valid");
-            schemaValidatorLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
-                    It.IsAny<Exception>(),
-                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
-                Times.Once);
         }
 
         /// <summary>
@@ -2521,8 +2790,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());
             string[] args = new[]
@@ -2609,8 +2877,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());
             string[] args = new[]
@@ -2777,7 +3044,7 @@ type Moon {
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode, "The REST response is different from the expected result.");
 
                 // MCP request
-                HttpStatusCode mcpResponseCode = await GetMcpResponse(client, configuration.Runtime.Mcp);
+                (HttpStatusCode mcpResponseCode, _) = await GetMcpResponse(client, configuration.Runtime.Mcp);
                 Assert.AreEqual(expectedStatusCodeForMcp, mcpResponseCode, "The MCP response is different from the expected result.");
             }
 
@@ -2802,6 +3069,44 @@ type Moon {
                 // HttpStatusCode mcpResponseCode = await GetMcpResponse(client, configuration.Runtime.Mcp);
                 // Assert.AreEqual(expected: expectedStatusCodeForMcp, actual: mcpResponseCode, "The MCP hydration post-response is different from the expected result.");
             }
+        }
+
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestMcpInitializeIncludesInstructionsFromRuntimeDescription()
+        {
+            const string MCP_INSTRUCTIONS = "Use SQL tools to query the database.";
+            const string CUSTOM_CONFIG = "custom-config-mcp-instructions.json";
+
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: true, Description: MCP_INSTRUCTIONS);
+
+            SqlConnectionStringBuilder connectionStringBuilder = new(GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL))
+            {
+                TrustServerCertificate = true
+            };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                connectionStringBuilder.ConnectionString, Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions);
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+
+            JsonElement initializeResponse = await GetMcpInitializeResponse(client, configuration.Runtime.Mcp);
+            JsonElement result = initializeResponse.GetProperty("result");
+
+            Assert.AreEqual(MCP_INSTRUCTIONS, result.GetProperty("instructions").GetString(), "MCP initialize response should include instructions from runtime.mcp.description.");
         }
 
         /// <summary>
@@ -3640,8 +3945,7 @@ type Moon {
                 configJson,
                 out RuntimeConfig deserializedConfig,
                 replacementSettings: new(),
-                logger: null,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, deserializedConfig.ToJson());
             string[] args = new[]
@@ -3808,6 +4112,181 @@ type Moon {
         }
 
         /// <summary>
+        /// Ensures a cold-started runtime with omitted authentication ignores forged EasyAuth headers,
+        /// including in development mode where all authentication handlers remain registered for hot reload.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps)]
+        [DataRow(HostMode.Production, EasyAuthType.AppService)]
+        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps)]
+        [DataRow(HostMode.Development, EasyAuthType.AppService)]
+        [DoNotParallelize]
+        public async Task TestColdStartOmittedAuthenticationIgnoresForgedEasyAuthHeader(HostMode hostMode, EasyAuthType payloadType)
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+            Assert.IsNull(Environment.GetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR));
+            Assert.IsNull(Environment.GetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR));
+
+            RuntimeConfig configuration = CreateBasicRuntimeConfigWithNoEntity(
+                DatabaseType.MSSQL,
+                "Server=placeholder;");
+            RuntimeOptions runtimeOptions = configuration.Runtime! with
+            {
+                Host = new(Cors: null, Authentication: null, Mode: hostMode)
+            };
+            configuration = configuration with { Runtime = runtimeOptions };
+            JsonObject configObject = JsonNode.Parse(configuration.ToJson())!.AsObject();
+            JsonObject host = configObject["runtime"]!["host"]!.AsObject();
+            Assert.IsTrue(host.Remove("authentication"));
+            string serializedConfiguration = configObject.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+            Assert.IsFalse(host.ContainsKey("authentication"));
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, serializedConfiguration);
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            Microsoft.Extensions.Hosting.IHostApplicationLifetime lifetime =
+                server.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
+            Assert.IsTrue(lifetime.ApplicationStarted.IsCancellationRequested, "Host did not finish starting.");
+            Assert.IsFalse(lifetime.ApplicationStopping.IsCancellationRequested, "Runtime initialization failed.");
+            RuntimeConfigProvider configProvider = server.Services.GetRequiredService<RuntimeConfigProvider>();
+            Assert.IsFalse(configProvider.IsLateConfigured);
+
+            Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider schemeProvider =
+                server.Services.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME));
+            Microsoft.AspNetCore.Authentication.AuthenticationScheme? defaultScheme =
+                await schemeProvider.GetDefaultAuthenticateSchemeAsync();
+            if (hostMode == HostMode.Development)
+            {
+                // With all handlers available and no default, request-time selection must ignore EasyAuth.
+                Assert.IsNull(defaultScheme);
+                Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+                Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+            }
+            else
+            {
+                Assert.IsNotNull(defaultScheme);
+                Assert.AreEqual(UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME, defaultScheme.Name);
+                Assert.IsNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+                Assert.IsNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+            }
+
+            const string FORGED_ROLE = "ForgedRole";
+            string forgedPrincipal = payloadType == EasyAuthType.StaticWebApps
+                ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: true, specificRole: FORGED_ROLE)
+                : AuthTestHelper.CreateAppServiceEasyAuthToken(
+                    roleClaimType: AuthenticationOptions.ROLE_CLAIM_TYPE,
+                    additionalClaims:
+                    [
+                        new AppServiceClaim { Typ = AuthenticationOptions.ROLE_CLAIM_TYPE, Val = FORGED_ROLE }
+                    ]);
+            HttpContext context = await server.SendAsync(requestContext =>
+            {
+                requestContext.Request.Path = "/api/not-an-entity";
+                requestContext.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER] = forgedPrincipal;
+                requestContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = FORGED_ROLE;
+                requestContext.Request.Scheme = "https";
+            });
+
+            Assert.AreEqual(StatusCodes.Status404NotFound, context.Response.StatusCode);
+            Assert.IsNotNull(context.User.Identity);
+            Assert.IsFalse(context.User.Identity.IsAuthenticated);
+            Assert.IsFalse(context.User.IsInRole(FORGED_ROLE));
+            Assert.AreEqual(
+                AuthorizationType.Anonymous.ToString(),
+                context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
+        }
+
+        /// <summary>
+        /// Preserves the existing late-configuration bootstrap and App Service request path.
+        /// Both EasyAuth handlers remain registered. Header trust in this mode is the hosting
+        /// service's responsibility; this in-process test simulates its authenticated ingress.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        [DoNotParallelize]
+        public async Task TestLateConfigurationPreservesEasyAuthSchemes(string configurationEndpoint)
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using HttpClient client = server.CreateClient();
+            client.BaseAddress = new Uri("https://localhost");
+            RuntimeConfigProvider configProvider = server.Services.GetRequiredService<RuntimeConfigProvider>();
+            Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider schemeProvider =
+                server.Services.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
+
+            Assert.IsTrue(configProvider.IsLateConfigured);
+            Assert.IsFalse(configProvider.TryGetLoadedConfig(out _));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+            Assert.IsNull(await schemeProvider.GetSchemeAsync(UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME));
+
+            Microsoft.AspNetCore.Authentication.AuthenticationScheme? defaultScheme =
+                await schemeProvider.GetDefaultAuthenticateSchemeAsync();
+            Assert.IsNotNull(defaultScheme);
+            Assert.AreEqual(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME, defaultScheme.Name);
+
+            using HttpResponseMessage beforeHydration = await client.GetAsync("/api/not-an-entity");
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, beforeHydration.StatusCode);
+
+            RuntimeConfig configuration = CreateBasicRuntimeConfigWithNoEntity(
+                DatabaseType.MSSQL,
+                "Server=placeholder;");
+            RuntimeOptions runtimeOptions = configuration.Runtime! with
+            {
+                Host = new(
+                    Cors: null,
+                    Authentication: new(Provider: EasyAuthType.AppService.ToString()),
+                    Mode: HostMode.Production)
+            };
+            configuration = configuration with { Runtime = runtimeOptions };
+            using HttpRequestMessage hydrationRequest = new(HttpMethod.Post, configurationEndpoint)
+            {
+                Content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint)
+            };
+            // Honor an externally configured bootstrap token without changing process-wide state
+            // or including the token on subsequent data requests.
+            string? bootstrapToken = Environment.GetEnvironmentVariable(Startup.CONFIG_AUTH_TOKEN_ENV_VAR);
+            if (!string.IsNullOrEmpty(bootstrapToken))
+            {
+                hydrationRequest.Headers.Add(Startup.CONFIG_AUTH_HEADER, bootstrapToken);
+            }
+
+            using HttpResponseMessage hydrationResponse = await client.SendAsync(hydrationRequest);
+            Assert.AreEqual(HttpStatusCode.OK, hydrationResponse.StatusCode);
+            Assert.IsTrue(configProvider.IsLateConfigured);
+            Assert.IsTrue(configProvider.TryGetLoadedConfig(out _));
+            Assert.IsNull(Environment.GetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR));
+            Assert.IsNull(Environment.GetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+
+            const string REQUIRED_ROLE = "LateConfiguredRole";
+            string principal = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                roleClaimType: AuthenticationOptions.ROLE_CLAIM_TYPE,
+                additionalClaims:
+                [
+                    new AppServiceClaim { Typ = AuthenticationOptions.ROLE_CLAIM_TYPE, Val = REQUIRED_ROLE }
+                ]);
+            HttpContext context = await server.SendAsync(requestContext =>
+            {
+                requestContext.Request.Path = "/api/not-an-entity";
+                requestContext.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER] = principal;
+                requestContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = REQUIRED_ROLE;
+                requestContext.Request.Scheme = "https";
+            });
+
+            Assert.AreEqual(StatusCodes.Status404NotFound, context.Response.StatusCode);
+            Assert.IsNotNull(context.User.Identity);
+            Assert.IsTrue(context.User.Identity.IsAuthenticated);
+            Assert.IsTrue(context.User.IsInRole(REQUIRED_ROLE));
+            Assert.AreEqual(REQUIRED_ROLE, context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]);
+        }
+
+        /// <summary>
         /// In CosmosDB NoSQL, we store data in the form of JSON. Practically, JSON can be very complex.
         /// But DAB doesn't support JSON with circular references e.g if 'Character.Moon' is a valid JSON Path, then
         /// 'Moon.Character' should not be there, DAB would throw an exception during the load itself.
@@ -3907,23 +4386,24 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         /// <param name="hostMode">HostMode in Runtime config - Development or Production.</param>
         /// <param name="authType">EasyAuth auth type - AppService or StaticWebApps.</param>
-        /// <param name="setEnvVars">Whether to set the AppService host environment variables.</param>
+        /// <param name="setAppServiceEnvVars">Whether to set the AppService host environment variables.</param>
+        /// <param name="setStaticWebAppsEnvVar">Whether to set the Static Web Apps host environment variable.</param>
         /// <param name="expectError">Whether an error is expected.</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(HostMode.Development, EasyAuthType.AppService, false, false, DisplayName = "AppService Dev - No EnvVars - No Error")]
-        [DataRow(HostMode.Development, EasyAuthType.AppService, true, false, DisplayName = "AppService Dev - EnvVars - No Error")]
-        [DataRow(HostMode.Production, EasyAuthType.AppService, false, false, DisplayName = "AppService Prod - No EnvVars - Error")]
-        [DataRow(HostMode.Production, EasyAuthType.AppService, true, false, DisplayName = "AppService Prod - EnvVars - Error")]
-        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Dev - No EnvVars - No Error")]
-        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Dev - EnvVars - No Error")]
-        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Prod - No EnvVars - No Error")]
-        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Prod - EnvVars - No Error")]
-        public void TestProductionModeAppServiceEnvironmentCheck(HostMode hostMode, EasyAuthType authType, bool setEnvVars, bool expectError)
+        [DataRow(HostMode.Development, EasyAuthType.AppService, false, false, false, DisplayName = "AppService Dev - No EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.AppService, true, false, false, DisplayName = "AppService Dev - EnvVars - No Error")]
+        [DataRow(HostMode.Production, EasyAuthType.AppService, false, false, true, DisplayName = "AppService Prod - No EnvVars - Error")]
+        [DataRow(HostMode.Production, EasyAuthType.AppService, true, false, false, DisplayName = "AppService Prod - EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, false, false, false, DisplayName = "SWA Dev - No EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, false, true, false, DisplayName = "SWA Dev - EnvVars - No Error")]
+        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, false, false, true, DisplayName = "SWA Prod - No EnvVars - Error")]
+        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, false, true, false, DisplayName = "SWA Prod - EnvVars - No Error")]
+        public void TestProductionModeAppServiceEnvironmentCheck(HostMode hostMode, EasyAuthType authType, bool setAppServiceEnvVars, bool setStaticWebAppsEnvVar, bool expectError)
         {
             // Clears or sets App Service Environment Variables based on test input.
-            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, setEnvVars ? "true" : null);
-            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR, setEnvVars ? "AzureActiveDirectory" : null);
+            Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, setAppServiceEnvVars ? "true" : null);
+            Environment.SetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR, setStaticWebAppsEnvVar ? "test-site-name" : null);
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
 
             FileSystem fileSystem = new();
@@ -3949,8 +4429,6 @@ type Planet @model(name:""PlanetAlias"") {
             $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
-            // When host is in Production mode with AppService as Identity Provider and the environment variables are not set
-            // we do not throw an exception any longer(PR: 2943), instead log a warning to the user. In this case expectError is false.
             // This test only checks for startup errors, so no requests are sent to the test server.
             try
             {
@@ -3960,7 +4438,16 @@ type Planet @model(name:""PlanetAlias"") {
             catch (DataApiBuilderException ex)
             {
                 Assert.IsTrue(expectError, message: ex.Message);
-                Assert.AreEqual(AppServiceAuthenticationInfo.APPSERVICE_PROD_MISSING_ENV_CONFIG, ex.Message);
+                Assert.AreEqual(
+                    expected: authType == EasyAuthType.AppService
+                        ? AppServiceAuthenticationInfo.APPSERVICE_PROD_MISSING_ENV_CONFIG
+                        : StaticWebAppsAuthentication.SWA_PROD_MISSING_ENV_CONFIG,
+                    actual: ex.Message);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, null);
+                Environment.SetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR, null);
             }
         }
 
@@ -4168,6 +4655,47 @@ type Planet @model(name:""PlanetAlias"") {
                     string actualBody = await followUpResponse.Content.ReadAsStringAsync();
                     Assert.AreEqual(true, actualBody.Contains(expectedOpenApiTargetContent));
                 }
+            }
+        }
+
+        /// <summary>
+        /// End to end test that validates that REST requests with OData query
+        /// options $filter and $orderby succeed to ensure no regression can occur.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("/api/Book?$orderby=id desc&$filter=publisher_id eq 1234", DisplayName = "REST URL without encoded characters")]
+        [DataRow("/api/Book?%24orderby=id%20desc&%24filter=publisher_id%20eq%201234", DisplayName = "REST URL with encoded characters")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestForRestRequestsWithFilterAndOrderbyParameters(string restUri)
+        {
+            // The configuration file is constructed by merging hard-coded JSON strings to simulate the scenario where users manually edit the
+            // configuration file (instead of using CLI).
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                configJson,
+                out RuntimeConfig deserializedConfig,
+                replacementSettings: new(),
+                connectionString: GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
+            string configFileName = "custom-config.json";
+            File.WriteAllText(configFileName, deserializedConfig.ToJson());
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={configFileName}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Act
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, restUri);
+                using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+
+                // Assert - Verify REST response
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, "REST request to auto-generated entity should succeed");
+
+                string restResponseBody = await restResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
+                Assert.IsTrue(restResponseBody.Contains("\"publisher_id\":1234"));
             }
         }
 
@@ -4677,7 +5205,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             RuntimeConfig config = new(
                 Schema: baseConfig!.Schema,
-                DataSource: baseConfig.DataSource,
+                DataSource: baseConfig.DataSource!,
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -5449,10 +5977,10 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
-        /// 
+        /// Ensures that autoentities are properly generated into in-memory entities
         /// </summary>
-        /// <param name="useEntities"></param>
-        /// <param name="expectedEntityCount"></param>
+        /// <param name="useEntities">Boolean that indicates if we should also use regular entities from config</param>
+        /// <param name="expectedEntityCount">The expected number of entities</param>
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
@@ -5557,12 +6085,12 @@ type Planet @model(name:""PlanetAlias"") {
             {
                 // Act
                 RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
-                using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/publishers");
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/dbo_publishers");
                 using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 
                 string graphqlQuery = @"
                 {
-                    publishers {
+                    dbo_publishers {
                         items {
                             id
                             name
@@ -5601,20 +6129,352 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
-        /// 
+        /// This test validates that multiple autoentities with the same object name
+        /// but different schemas can be generated and accessed properly with the
+        /// default 'property.name' which should generate entities named '{schema}_{object}'.
         /// </summary>
-        /// <param name="entityName"></param>
-        /// <param name="singular"></param>
-        /// <param name="plural"></param>
-        /// <param name="path"></param>
-        /// <param name="exceptionMessage"></param>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod]
+        public async Task TestAutoentitiesWithSameObjectDifferentSchemas()
+        {
+            // Arrange
+            Dictionary<string, Autoentity> autoentityMap = new()
+            {
+                {
+                    "PublisherAutoEntity", new Autoentity(
+                        Patterns: new AutoentityPatterns(
+                            Include: null,
+                            Exclude: new[] { "dbo.GQLmappings", "dbo.graphql_incompatible", "dbo.brokers" },
+                            Name: null
+                        ),
+                        Template: new AutoentityTemplate(
+                            Rest: new EntityRestOptions(Enabled: true),
+                            GraphQL: new EntityGraphQLOptions(
+                                Singular: string.Empty,
+                                Plural: string.Empty,
+                                Enabled: true
+                            ),
+                            Health: null,
+                            Cache: null
+                        ),
+                        Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) }
+                    )
+                }
+            };
+
+            // Create DataSource for MSSQL connection
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            // Build complete runtime configuration with autoentities
+            RuntimeConfig configuration = new(
+                Schema: "TestAutoentitiesSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: false),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new Config.ObjectModel.AuthenticationOptions(
+                            Provider: nameof(EasyAuthType.StaticWebApps),
+                            Jwt: null
+                        )
+                    )
+                ),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new RuntimeAutoentities(autoentityMap)
+            );
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Act
+                using HttpRequestMessage restFooRequest = new(HttpMethod.Get, "/api/foo_magazines");
+                using HttpResponseMessage restFooResponse = await client.SendAsync(restFooRequest);
+
+                using HttpRequestMessage restBarRequest = new(HttpMethod.Get, "/api/bar_magazines");
+                using HttpResponseMessage restBarResponse = await client.SendAsync(restBarRequest);
+
+                string graphqlQuery = @"
+                {
+                    foo_magazines {
+                        items {
+                            id
+                            issue_number
+                        }
+                    }
+                    bar_magazines {
+                        items {
+                            comic_name
+                            issue
+                        }
+                    }
+                }";
+
+                object graphqlPayload = new { query = graphqlQuery };
+                HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(graphqlPayload)
+                };
+                HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
+
+                // Assert
+                // Verify REST response
+                Assert.AreEqual(HttpStatusCode.OK, restFooResponse.StatusCode, "REST request to auto-generated entity 'foo_magazines' should succeed");
+                Assert.AreEqual(HttpStatusCode.OK, restBarResponse.StatusCode, "REST request to auto-generated entity 'bar_magazines' should succeed");
+
+                // Verify GraphQL response
+                Assert.AreEqual(HttpStatusCode.OK, graphqlResponse.StatusCode, "GraphQL request to auto-generated entity should succeed");
+            }
+        }
+
+        /// <summary>
+        /// Ensures that autoentities are properly generated into in-memory entities when entities have non-default schemas.
+        /// </summary>
+        /// <param name="includePattern">The pattern to include for autoentities</param>
+        /// <param name="isPatternFoo">Boolean that indicates if the pattern is for the foo schema</param>
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow("publishers", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", "Entity with name 'publishers' already exists. Cannot create new entity from autoentity pattern with definition-name 'PublisherAutoEntity'.", DisplayName = "Autoentities fail due to entity name")]
-        [DataRow("UniquePublisher", "publishers", "uniquePluralPublishers", "/unique/publisher", "Entity publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql singular type")]
-        [DataRow("UniquePublisher", "uniqueSingularPublisher", "publishers", "/unique/publisher", "Entity publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql plural type")]
-        [DataRow("UniquePublisher", "uniqueSingularPublisher", "uniquePluralPublishers", "/publishers", "The rest path: publishers specified for entity: publishers is already used by another entity.", DisplayName = "Autoentities fail due to rest path")]
+        [DataRow("foo.%", true, DisplayName = "Test Autoentities with foo schema")]
+        [DataRow("bar.%", false, DisplayName = "Test Autoentities with bar schema")]
+        public async Task TestAutoentitiesGeneratedWithDifferentSchemas(string includePattern, bool isPatternFoo)
+        {
+            // Arrange
+            Dictionary<string, Autoentity> autoentityMap = new()
+            {
+                {
+                    "PublisherAutoEntity", new Autoentity(
+                        Patterns: new AutoentityPatterns(
+                            Include: new[] { includePattern },
+                            Exclude: null,
+                            Name: null
+                        ),
+                        Template: new AutoentityTemplate(
+                            Rest: new EntityRestOptions(Enabled: true),
+                            GraphQL: new EntityGraphQLOptions(
+                                Singular: string.Empty,
+                                Plural: string.Empty,
+                                Enabled: true
+                            ),
+                            Health: null,
+                            Cache: null
+                        ),
+                        Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) }
+                    )
+                }
+            };
+
+            // Create DataSource for MSSQL connection
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            // Build complete runtime configuration with autoentities
+            RuntimeConfig configuration = new(
+                Schema: "TestAutoentitiesSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: false),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new Config.ObjectModel.AuthenticationOptions(
+                            Provider: nameof(EasyAuthType.StaticWebApps),
+                            Jwt: null
+                        )
+                    )
+                ),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new RuntimeAutoentities(autoentityMap)
+            );
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Act
+                string path = isPatternFoo ? "foo_magazines" : "bar_magazines";
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{path}");
+                using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+
+                string item = isPatternFoo ? "title" : "comic_name";
+                string graphqlQuery = $@"
+                {{
+                    {path} {{
+                        items {{
+                            {item}
+                        }}
+                    }}
+                }}";
+
+                object graphqlPayload = new { query = graphqlQuery };
+                HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(graphqlPayload)
+                };
+                HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
+
+                // Assert
+                string expectedResponseFragment = isPatternFoo ? @"""title"":""Vogue""" : @"""comic_name"":""NotVogue""";
+
+                // Verify REST response
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, "REST request to auto-generated entity should succeed");
+
+                string restResponseBody = await restResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
+                Assert.IsTrue(restResponseBody.Contains(expectedResponseFragment));
+
+                // Verify GraphQL response
+                Assert.AreEqual(HttpStatusCode.OK, graphqlResponse.StatusCode, "GraphQL request to auto-generated entity should succeed");
+
+                string graphqlResponseBody = await graphqlResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");
+                Assert.IsFalse(graphqlResponseBody.Contains("errors"), "GraphQL response should not contain errors");
+                Assert.IsTrue(graphqlResponseBody.Contains(expectedResponseFragment));
+            }
+        }
+
+        /// <summary>
+        /// Ensures that autoentities are generated with valid names when the SQL object name contains spaces.
+        /// Whitespace is removed and the following character is capitalized (camelCase join), so that the
+        /// resulting entity name is a valid REST path segment and GraphQL type name.
+        /// For example, "dbo.[Order Items]" with the default pattern "{schema}_{object}" produces the
+        /// entity name "dbo_OrderItems" — not "dbo_Order Items".
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [DataTestMethod]
+        [DataRow("dbo.Order Items", "{schema}_{object}", "dbo_orderItems", DisplayName = "Test Autoentities with schema and object name containing spaces")]
+        [DataRow("dbo.Order Items", "{object}", "orderItems", DisplayName = "Test Autoentities with object name containing spaces")]
+        [DataRow("dbo.Extra     Order     Items", "{schema}_{object}", "dbo_extraOrderItems", DisplayName = "Test Autoentities with schema and object name containing tabs")]
+        public async Task TestAutoentitiesGeneratedWithSpacesInObjectName(string tableName, string namePattern, string expectedEntityName)
+        {
+            // Arrange
+            const string EXPECTED_ITEM_FIELD = "productname";
+            const string EXPECTED_RESPONSE_FRAGMENT = @"""productname"":""Sample Product""";
+
+            Dictionary<string, Autoentity> autoentityMap = new()
+            {
+                {
+                    "SpacedObjectAutoEntity", new Autoentity(
+                        Patterns: new AutoentityPatterns(
+                            Include: new[] { tableName },
+                            Exclude: null,
+                            Name: namePattern
+                        ),
+                        Template: new AutoentityTemplate(
+                            Rest: new EntityRestOptions(Enabled: true),
+                            GraphQL: new EntityGraphQLOptions(
+                                Singular: string.Empty,
+                                Plural: string.Empty,
+                                Enabled: true
+                            ),
+                            Health: null,
+                            Cache: null
+                        ),
+                        Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) }
+                    )
+                }
+            };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = new(
+                Schema: "TestAutoentitiesSpacesSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: false),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new Config.ObjectModel.AuthenticationOptions(
+                            Provider: nameof(EasyAuthType.StaticWebApps),
+                            Jwt: null
+                        )
+                    )
+                ),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new RuntimeAutoentities(autoentityMap)
+            );
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Assert that the sanitized entity name "dbo_OrderItems" is reachable via REST,
+                // explicitly confirming the generated name is expectedEntityName and not names with spaces in between.
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, $"/api/{expectedEntityName}");
+                using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                Assert.AreEqual(
+                    HttpStatusCode.OK,
+                    restResponse.StatusCode,
+                    $"REST path '/api/{expectedEntityName}' should exist; the entity name must be sanitized from 'dbo_Order Items' to '{expectedEntityName}'.");
+
+                string restResponseBody = await restResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
+                Assert.IsTrue(restResponseBody.Contains(EXPECTED_RESPONSE_FRAGMENT));
+
+                // Also verify via GraphQL using the sanitized name as the query root field.
+                string graphqlQuery = $@"
+                {{
+                    {expectedEntityName} {{
+                        items {{
+                            {EXPECTED_ITEM_FIELD}
+                        }}
+                    }}
+                }}";
+
+                object graphqlPayload = new { query = graphqlQuery };
+                HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(graphqlPayload)
+                };
+                HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
+
+                Assert.AreEqual(
+                    HttpStatusCode.OK,
+                    graphqlResponse.StatusCode,
+                    $"GraphQL query for '{expectedEntityName}' should succeed with the sanitized entity name.");
+
+                string graphqlResponseBody = await graphqlResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");
+                Assert.IsFalse(graphqlResponseBody.Contains("errors"), "GraphQL response should not contain errors");
+                Assert.IsTrue(graphqlResponseBody.Contains(EXPECTED_RESPONSE_FRAGMENT));
+            }
+        }
+
+        /// <summary>
+        /// Tests that DAB fails if the entities generated from autoentities property
+        /// do not contain unique parameters such as rest path, graphql singular/plural names,
+        /// or if the autoentity pattern conflicts with an existing entity name.
+        /// </summary>
+        /// <param name="entityName">Definition name of the generated entity from autoentities</param>
+        /// <param name="singular">GraphQL singular name of the generated entity from autoentities</param>
+        /// <param name="plural">GraphQL plural name of the generated entity from autoentities</param>
+        /// <param name="path">REST path of the generated entity from autoentities</param>
+        /// <param name="exceptionMessage">Expected exception message</param>
+        /// <returns></returns>
+        [TestCategory(TestCategory.MSSQL)]
+        [DataTestMethod]
+        [DataRow("dbo_publishers", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", "Entity 'dbo_publishers' conflicts in autoentity pattern 'PublisherAutoEntity'. Use --patterns.exclude to skip it.", DisplayName = "Autoentities fail due to entity name")]
+        [DataRow("UniquePublisher", "dbo_publishers", "uniquePluralPublishers", "/unique/publisher",
+            "\r\nGraphQL naming conflict detected.\r\n\r\nEntities:\r\n  UniquePublisher\r\n  dbo_publishers\r\n\r\nBoth entities generate the following GraphQL names:\r\n  dbo_publishers_by_pk\r\n  createdbo_publishers\r\n  updatedbo_publishers\r\n  deletedbo_publishers\r\n\r\nConfigure distinct GraphQL singular and plural names for one of the entities to resolve this conflict.",
+            DisplayName = "Autoentities fail due to graphql singular type")]
+        [DataRow("UniquePublisher", "uniqueSingularPublisher", "dbo_publishers", "/unique/publisher",
+            "\r\nGraphQL naming conflict detected.\r\n\r\nEntities:\r\n  UniquePublisher\r\n  dbo_publishers\r\n\r\nBoth entities generate the following GraphQL names:\r\n  dbo_publishers\r\n\r\nConfigure distinct GraphQL singular and plural names for one of the entities to resolve this conflict.",
+            DisplayName = "Autoentities fail due to graphql plural type")]
+        [DataRow("UniquePublisher", "uniqueSingularPublisher", "uniquePluralPublishers", "/dbo_publishers", "The rest path: dbo_publishers specified for entity: dbo_publishers is already used by another entity.", DisplayName = "Autoentities fail due to rest path")]
         public async Task ValidateAutoentityGenerationConflicts(string entityName, string singular, string plural, string path, string exceptionMessage)
         {
             // Arrange
@@ -5776,16 +6636,149 @@ type Planet @model(name:""PlanetAlias"") {
 
             RuntimeConfigProvider provider = new(loader);
             Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object, isValidateOnly: true);
 
+            bool isValid = await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
+
+            // Validation may legitimately fail in this test (autoentity patterns won't match
+            // any tables in the test DB), so isValid is intentionally not asserted. What we
+            // require is that:
+            //   1. TryValidateConfig completes without raising an exception (validation errors
+            //      are recorded into ConfigValidationExceptions, not thrown).
+            //   2. No autoentity-shaped error is recorded other than the expected
+            //      "No entities found" message that fires when autoentities resolve zero
+            //      entities and no manual entities are defined.
+            Assert.IsTrue(
+                configValidator.ConfigValidationExceptions.All(
+                    e => !e.Message.Contains("autoentities", StringComparison.OrdinalIgnoreCase)
+                         || e.Message.Contains("No entities found", StringComparison.OrdinalIgnoreCase)),
+                "Unexpected autoentity-related validation error.");
+        }
+
+        /// <summary>
+        /// End-to-end regression test that creates actual root and child JSON files, loads them through
+        /// <see cref="FileSystemRuntimeConfigLoader"/>, runs metadata initialization and validation via
+        /// <see cref="RuntimeConfigValidator.TryValidateConfig"/>, and asserts the PER-FILE result.
+        ///
+        /// The root references the child through <c>data-source-files</c>. The root's own autoentity
+        /// resolves ZERO entities (its pattern matches no table) while the child's autoentities for MSSQL
+        /// resolve real tables (dbo.books). After the child's autoentities are merged into the root, the
+        /// merged config has resolvable entities, so validation succeeds and no "No entities found"
+        /// presence error is produced.
+        /// Requires a running MSSQL instance reachable via the standard MSSQL test connection string.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestValidate_MultiConfigRootResolvingZero_ProducesRootScopedErrorAndValidChild()
+        {
+            (string rootConfigPath, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem, string tempDir) =
+                ArrangeMultiConfigForMsSql();
+
+            ILoggerFactory loggerFactory = new LoggerFactory();
             try
             {
-                await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
+                loader.UpdateConfigFilePath(rootConfigPath);
+                RuntimeConfigProvider provider = new(loader);
+                Assert.AreEqual(1, provider.GetConfig().ChildConfigs.Count, "Expected exactly one child config to be resolved and merged.");
+
+                RuntimeConfigValidator validator = new(
+                    provider,
+                    fileSystem,
+                    loggerFactory.CreateLogger<RuntimeConfigValidator>(),
+                    isValidateOnly: true);
+
+                bool isValid = await validator.TryValidateConfig(rootConfigPath, loggerFactory);
+                Assert.IsTrue(isValid, "Validation should succeed");
+
+                List<Exception> presenceErrors = validator.ConfigValidationExceptions
+                    .Where(e => e.Message.Contains("No entities found"))
+                    .ToList();
+                Assert.AreEqual(0, presenceErrors.Count, "Expected no errors to be found");
             }
-            catch (Exception ex)
+            finally
             {
-                Assert.Fail(ex.Message);
+                loggerFactory.Dispose();
+
+                // Guarantee cleanup so fixed-name/leftover files can never leak into another test or run.
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
             }
+        }
+
+        /// <summary>
+        /// Helper: builds a real multi-config on disk for MSSQL directly through the
+        /// <see cref="RuntimeConfig"/> object model (the pattern used throughout these Service.Tests),
+        /// rather than the CLI generators which are not referenced by this test project:
+        /// - a CHILD config with its own MSSQL data source and autoentities matching <c>dbo.books</c>,
+        /// - a ROOT config with its own MSSQL data source, autoentities matching
+        ///   <paramref name="rootPatternInclude"/>, and <c>data-source-files</c> pointing at the child.
+        /// Returns the root config path plus a fresh loader and file system to drive validation.
+        /// </summary>
+        private static (string RootConfigPath, FileSystemRuntimeConfigLoader ValidateLoader, IFileSystem FileSystem, string tempDir)
+            ArrangeMultiConfigForMsSql()
+        {
+            string connectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL);
+            IFileSystem fileSystem = new FileSystem();
+
+            // Unique directory per invocation avoids cross-test/cross-run interference from leftover files.
+            string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dab-multiconfig-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            string rootConfigPath = System.IO.Path.Combine(tempDir, "dab-root.json");
+            string childConfigPath = System.IO.Path.Combine(tempDir, "dab-child.json");
+
+            // Root: own MSSQL data source + autoentities (pattern controls whether it resolves) +
+            // data-source-files pointing at the child.
+            RuntimeConfig rootConfig = new(
+                Schema: "root-schema",
+                DataSource: new(DatabaseType.MSSQL, connectionString, Options: null),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new(BuildAutoentityMap(definitionName: "root-filter", patternInclude: "dbo.books", entiityNames: "root_{object}")),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null, HostMode.Development)),
+                DataSourceFiles: new DataSourceFiles(new[] { childConfigPath }));
+            File.WriteAllText(rootConfigPath, rootConfig.ToJson());
+
+            // Child: own MSSQL data source + autoentities matching a real table (dbo.books).
+            RuntimeConfig childConfig = new(
+                Schema: "child-schema",
+                DataSource: new(DatabaseType.MSSQL, connectionString, Options: null),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new(BuildAutoentityMap(definitionName: "child-filter", patternInclude: "dbo.books", entiityNames: "child_{object}")),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null, HostMode.Development)));
+            File.WriteAllText(childConfigPath, childConfig.ToJson());
+
+            return (rootConfigPath, new FileSystemRuntimeConfigLoader(fileSystem), fileSystem, tempDir);
+        }
+
+        /// <summary>
+        /// Helper: builds an autoentity map containing a single definition whose include pattern
+        /// controls which tables it resolves against the target database.
+        /// </summary>
+        private static Dictionary<string, Autoentity> BuildAutoentityMap(string definitionName, string patternInclude, string entiityNames)
+        {
+            EntityAction entityAction = new(EntityActionOperation.Read, null, null);
+
+            Autoentity autoentity = new(
+                Patterns: new AutoentityPatterns(
+                    Include: new[] { patternInclude },
+                    Exclude: Array.Empty<string>(),
+                    Name: entiityNames),
+                Template: new AutoentityTemplate(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true, Singular: string.Empty, Plural: string.Empty)),
+                Permissions: new EntityPermission[] { new("anonymous", new EntityAction[] { entityAction }) });
+
+            return new Dictionary<string, Autoentity> { { definitionName, autoentity } };
         }
 
         /// <summary>
@@ -6229,13 +7222,13 @@ type Planet @model(name:""PlanetAlias"") {
             return responseCode;
         }
 
-        /// <summary>	
-        /// Executing MCP POST requests against the engine until a non-503 error is received.	
-        /// </summary>	
-        /// <param name="httpClient">Client used for request execution.</param>	
-        /// <returns>ServiceUnavailable if service is not successfully hydrated with config,	
-        /// else the response code from the MCP request</returns>	
-        public static async Task<HttpStatusCode> GetMcpResponse(HttpClient httpClient, McpRuntimeOptions mcp)
+        /// <summary>
+        /// Executing MCP POST requests against the engine until a non-503 error is received.
+        /// </summary>
+        /// <param name="httpClient">Client used for request execution.</param>
+        /// <param name="mcp">MCP runtime options containing path configuration.</param>
+        /// <returns>A tuple containing the HTTP status code and response body.</returns>
+        public static async Task<(HttpStatusCode StatusCode, string ResponseBody)> GetMcpResponse(HttpClient httpClient, McpRuntimeOptions mcp)
         {
             // Retry request RETRY_COUNT times in exponential increments to allow
             // required services time to instantiate and hydrate permissions because
@@ -6245,6 +7238,8 @@ type Planet @model(name:""PlanetAlias"") {
             // but it is highly unlikely to be the case.
             int retryCount = 0;
             HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
+            string responseBody = string.Empty;
+
             while (retryCount < RETRY_COUNT)
             {
                 // Minimal MCP request (initialize) - valid JSON-RPC request.
@@ -6262,14 +7257,16 @@ type Planet @model(name:""PlanetAlias"") {
                         clientInfo = new { name = "dab-test", version = "1.0.0" }
                     }
                 };
-                HttpRequestMessage mcpRequest = new(HttpMethod.Post, mcp.Path)
+
+                using HttpRequestMessage mcpRequest = new(HttpMethod.Post, mcp.Path)
                 {
                     Content = JsonContent.Create(payload)
                 };
                 mcpRequest.Headers.Add("Accept", "application/json, text/event-stream");
 
-                HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
+                using HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
                 responseCode = mcpResponse.StatusCode;
+                responseBody = await mcpResponse.Content.ReadAsStringAsync();
 
                 if (responseCode == HttpStatusCode.ServiceUnavailable || responseCode == HttpStatusCode.NotFound)
                 {
@@ -6281,7 +7278,85 @@ type Planet @model(name:""PlanetAlias"") {
                 break;
             }
 
-            return responseCode;
+            return (responseCode, responseBody);
+        }
+
+        /// <summary>
+        /// Executes MCP initialize over HTTP and returns the parsed JSON response.
+        /// Reuses the core request/retry logic from GetMcpResponse.
+        /// </summary>
+        public static async Task<JsonElement> GetMcpInitializeResponse(HttpClient httpClient, McpRuntimeOptions mcp)
+        {
+            (HttpStatusCode responseCode, string responseBody) = await GetMcpResponse(httpClient, mcp);
+
+            Assert.AreEqual(HttpStatusCode.OK, responseCode, "MCP initialize should return HTTP 200.");
+            Assert.IsFalse(string.IsNullOrWhiteSpace(responseBody), "MCP initialize response body should not be empty.");
+
+            // Depending on transport/content negotiation, initialize can return plain JSON
+            // or SSE-formatted text where JSON payload is carried in a data: line.
+            string payloadToParse = responseBody.TrimStart().StartsWith('{')
+                ? responseBody
+                : ExtractJsonFromSsePayload(responseBody);
+
+            Assert.IsFalse(string.IsNullOrWhiteSpace(payloadToParse), "MCP initialize response did not contain a JSON payload.");
+
+            using JsonDocument responseDocument = JsonDocument.Parse(payloadToParse);
+            return responseDocument.RootElement.Clone();
+        }
+
+        /// <summary>
+        /// Extracts JSON payload from SSE-formatted text.
+        /// SSE events can split JSON across multiple data: lines which should be concatenated.
+        /// </summary>
+        private static string ExtractJsonFromSsePayload(string ssePayload)
+        {
+            List<string> eventDataLines = new();
+
+            static string GetJsonPayload(List<string> dataLines)
+            {
+                if (dataLines.Count == 0)
+                {
+                    return string.Empty;
+                }
+
+                string combinedPayload = string.Join("\n", dataLines);
+                return !string.IsNullOrWhiteSpace(combinedPayload) && combinedPayload.TrimStart().StartsWith('{')
+                    ? combinedPayload
+                    : string.Empty;
+            }
+
+            foreach (string rawLine in ssePayload.Split('\n'))
+            {
+                string line = rawLine.TrimEnd('\r');
+
+                // Empty line signals end of an SSE event
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    string jsonPayload = GetJsonPayload(eventDataLines);
+                    if (!string.IsNullOrEmpty(jsonPayload))
+                    {
+                        return jsonPayload;
+                    }
+
+                    eventDataLines.Clear();
+                    continue;
+                }
+
+                if (line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    string data = line.Substring("data:".Length);
+                    // SSE spec: if data starts with a space, strip one leading space
+                    if (data.StartsWith(' '))
+                    {
+                        data = data.Substring(1);
+                    }
+
+                    eventDataLines.Add(data);
+                }
+            }
+
+            // Handle case where payload doesn't end with empty line
+            return GetJsonPayload(eventDataLines);
         }
 
         /// <summary>

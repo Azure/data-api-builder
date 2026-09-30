@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <NoWarn>NU1603;NU1605</NoWarn>
     <Nullable>enable</Nullable>
@@ -15,6 +15,9 @@
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="Aspire.Hosting.SqlServer" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <!-- Force the transitive MessagePack (via Aspire.Hosting/KubernetesClient) up to a
+         patched version to resolve NU1903 (GHSA-hv8m-jj95-wg3x). -->
+    <PackageReference Include="MessagePack" />
   </ItemGroup>
 
   <ItemGroup>

@@ -51,7 +51,7 @@ public record AutoentityPatterns
         }
         else
         {
-            this.Name = "{object}";
+            this.Name = "{schema}_{object}";
         }
     }
 

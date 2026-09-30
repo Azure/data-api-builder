@@ -442,7 +442,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string pkPredicates = JoinPredicateStrings(Build(structure.Predicates));
 
             string updateOperations = Build(structure.UpdateOperations, ", ");
-            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
+            // Data Warehouse logical keys are not necessarily enforced by a unique constraint. For an
+            // insert-capable upsert, take and hold an exclusive source-table lock before checking whether
+            // the key exists so concurrent requests cannot both choose INSERT. Update-only fallback queries
+            // cannot insert and therefore do not need this additional serialization.
+            string existenceCheckTable = structure.IsFallbackToUpdate
+                ? tableName
+                : $"{tableName} WITH (TABLOCKX, HOLDLOCK)";
+            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {existenceCheckTable} WHERE {pkPredicates}";
 
             // Query to get the number of records with a given PK.
             string prefixQuery = $"DECLARE @ROWS_TO_UPDATE int;" +
@@ -452,12 +459,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Final query to be executed for the given PUT/PATCH operation.
             StringBuilder upsertQuery = new(prefixQuery);
 
+            // Predicates to scope the UPDATE to the record(s) identified by the PK
+            // combined with any database policy defined for the update operation.
+            string updatePredicates = JoinPredicateStrings(pkPredicates, structure.GetDbPolicyForOperation(EntityActionOperation.Update));
+
             // Query to update record (if there exists one for given PK).
             StringBuilder updateQuery = new(
                 $"IF @ROWS_TO_UPDATE = 1 " +
                 $"BEGIN " +
                 $"UPDATE {tableName} " +
-                $"SET {updateOperations} ");
+                $"SET {updateOperations} " +
+                $"WHERE {updatePredicates} ");
 
             // End the IF block.
             updateQuery.Append("END ");

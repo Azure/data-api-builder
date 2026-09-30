@@ -80,7 +80,7 @@ public class AutoConfigTests
             definitionName: "test-def",
             templateRestEnabled: true,
             templateGraphqlEnabled: false,
-            templateMcpDmlTool: "true",
+            templateMcpDmlTools: "true",
             templateCacheEnabled: true,
             templateCacheTtlSeconds: 30,
             templateCacheLevel: "L1",
@@ -196,7 +196,7 @@ public class AutoConfigTests
 
         AutoConfigOptions options = new(
             definitionName: "test-def",
-            templateMcpDmlTool: "invalid-value",
+            templateMcpDmlTools: "invalid-value",
             permissions: new[] { "anonymous", "read" },
             config: TEST_RUNTIME_CONFIG_FILE
         );

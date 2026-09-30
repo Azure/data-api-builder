@@ -374,6 +374,65 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route, where the request body contains
+        /// all PK columns that match an existing row.
+        /// The engine should detect the PK in the body, route through the
+        /// upsert path, find the existing row, and perform an UPDATE (200 OK).
+        /// This is a regression test: previously, a keyless upsert with body PKs
+        /// always executed an INSERT, which would fail on a PK violation.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_KeylessWithPKInBody_ExistingRow_Test()
+        {
+            // id=1 exists in the magazines table with title='Vogue'.
+            // Sending a PATCH with the PK in the body should UPDATE the existing row.
+            string requestBody = @"
+            {
+                ""id"": 1,
+                ""title"": ""Updated Vogue""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integration_NonAutoGenPK_EntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_KeylessWithPKInBody_ExistingRow_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route, where the request body contains
+        /// all PK columns that do NOT match any existing row.
+        /// The engine should detect the PK in the body, route through the
+        /// upsert path, find no existing row, and perform an INSERT (201 Created).
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Insert_KeylessWithPKInBody_NewRow_Test()
+        {
+            string requestBody = @"
+            {
+                ""id"": " + STARTING_ID_FOR_TEST_INSERTS + @",
+                ""title"": ""Brand New Magazine""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integration_NonAutoGenPK_EntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_KeylessWithPKInBody_NewRow_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
         /// Tests successful execution of PATCH update requests on views
         /// when requests try to modify fields belonging to one base table
         /// in the view.
@@ -423,6 +482,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
+        /// Tests that a PATCH request with an invalid If-Match header value
+        /// (anything other than "*") returns a 400 Bad Request response
+        /// because ETags are not supported.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_InvalidIfMatchHeader_Returns400_Test()
+        {
+            Dictionary<string, StringValues> headerDictionary = new();
+            headerDictionary.Add("If-Match", "\"abc123\"");
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: string.Empty,
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    headers: new HeaderDictionary(headerDictionary),
+                    requestBody: requestBody,
+                    exceptionExpected: true,
+                    expectedErrorMessage: "Etags not supported, use '*'",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
 

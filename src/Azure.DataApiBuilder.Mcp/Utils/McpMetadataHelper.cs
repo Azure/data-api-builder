@@ -3,6 +3,8 @@
 
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions; // Added for DataApiBuilderException
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,11 +15,40 @@ namespace Azure.DataApiBuilder.Mcp.Utils
     /// </summary>
     public static class McpMetadataHelper
     {
+        /// <summary>
+        /// Convenience wrapper around <see cref="TryResolveMetadata"/> for callers that only need the
+        /// resolved <see cref="DatabaseObject"/>. Returns the database object on success, or <c>null</c>
+        /// when metadata cannot be resolved (with the failure reason surfaced via <paramref name="error"/>).
+        /// Callers are responsible for logging at the appropriate verbosity for their tool context.
+        /// </summary>
+        public static DatabaseObject? TryResolveDatabaseObject(
+            string entityName,
+            RuntimeConfig config,
+            IServiceProvider serviceProvider,
+            out string error,
+            CancellationToken cancellationToken = default)
+        {
+            if (TryResolveMetadata(
+                    entityName,
+                    config,
+                    serviceProvider,
+                    out _,
+                    out DatabaseObject dbObject,
+                    out _,
+                    out error,
+                    cancellationToken))
+            {
+                return dbObject;
+            }
+
+            return null;
+        }
+
         public static bool TryResolveMetadata(
             string entityName,
             RuntimeConfig config,
             IServiceProvider serviceProvider,
-            out Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider sqlMetadataProvider,
+            out ISqlMetadataProvider sqlMetadataProvider,
             out DatabaseObject dbObject,
             out string dataSourceName,
             out string error,
@@ -29,13 +60,58 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             dataSourceName = string.Empty;
             error = string.Empty;
 
-            if (string.IsNullOrWhiteSpace(entityName))
+            if (!TryValidateEntityName(entityName, out error))
             {
-                error = "Entity name cannot be null or empty.";
                 return false;
             }
 
-            var metadataProviderFactory = serviceProvider.GetRequiredService<Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory>();
+            // Use GetService (not GetRequiredService) so the helper honours its Try* contract.
+            IMetadataProviderFactory? metadataProviderFactory =
+                serviceProvider.GetService<IMetadataProviderFactory>();
+            if (metadataProviderFactory is null)
+            {
+                error = "Metadata provider factory is not registered.";
+                return false;
+            }
+
+            return TryResolveMetadata(
+                entityName,
+                config,
+                metadataProviderFactory,
+                out sqlMetadataProvider,
+                out dbObject,
+                out dataSourceName,
+                out error,
+                cancellationToken);
+        }
+
+        /// <summary>
+        /// Resolves database metadata using the exact runtime configuration and metadata-provider
+        /// generation supplied by the caller.
+        /// </summary>
+        public static bool TryResolveMetadata(
+            string entityName,
+            RuntimeConfig config,
+            IMetadataProviderFactory metadataProviderFactory,
+            out ISqlMetadataProvider sqlMetadataProvider,
+            out DatabaseObject dbObject,
+            out string dataSourceName,
+            out string error,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(config);
+            ArgumentNullException.ThrowIfNull(metadataProviderFactory);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            sqlMetadataProvider = default!;
+            dbObject = default!;
+            dataSourceName = string.Empty;
+            error = string.Empty;
+
+            if (!TryValidateEntityName(entityName, out error))
+            {
+                return false;
+            }
 
             // Resolve datasource name for the entity.
             try
@@ -78,11 +154,24 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             // Validate entity exists in metadata mapping.
             if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? temp) || temp is null)
             {
-                error = $"Entity '{entityName}' is not defined in the configuration.";
+                error = $"Database metadata for entity '{entityName}' was not available from " +
+                    $"data source '{dataSourceName}'.";
                 return false;
             }
 
             dbObject = temp;
+            return true;
+        }
+
+        private static bool TryValidateEntityName(string? entityName, out string error)
+        {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                error = "Entity name cannot be null or empty.";
+                return false;
+            }
+
+            error = string.Empty;
             return true;
         }
     }

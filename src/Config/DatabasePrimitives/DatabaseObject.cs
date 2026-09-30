@@ -133,7 +133,7 @@ public class StoredProcedureDefinition : SourceDefinition
 public class ParameterDefinition
 {
     public string Name { get; set; } = null!;
-    public bool? Required { get; set; } = false;
+    public bool? Required { get; set; }
     public string? Default { get; set; }
     public string? Description { get; set; }
     public Type SystemType { get; set; } = null!;
@@ -282,6 +282,17 @@ public class ColumnDefinition
     public object? DefaultValue { get; set; }
     public int? Length { get; set; }
 
+    /// <summary>
+    /// Indicates whether this column is a database array type (e.g., PostgreSQL int[], text[]).
+    /// </summary>
+    public bool IsArrayType { get; set; }
+
+    /// <summary>
+    /// The CLR type of the array element when <see cref="IsArrayType"/> is true.
+    /// For example, typeof(int) for an int[] column.
+    /// </summary>
+    public Type? ElementSystemType { get; set; }
+
     public ColumnDefinition() { }
 
     public ColumnDefinition(Type systemType)
@@ -396,8 +407,21 @@ public class ForeignKeyDefinition
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(
-                Pair, ReferencedColumns, ReferencingColumns);
+        HashCode hashCode = new();
+        hashCode.Add(Pair);
+        hashCode.Add(ReferencedColumns.Count);
+        foreach (string column in ReferencedColumns)
+        {
+            hashCode.Add(column, StringComparer.Ordinal);
+        }
+
+        hashCode.Add(ReferencingColumns.Count);
+        foreach (string column in ReferencingColumns)
+        {
+            hashCode.Add(column, StringComparer.Ordinal);
+        }
+
+        return hashCode.ToHashCode();
     }
 }
 

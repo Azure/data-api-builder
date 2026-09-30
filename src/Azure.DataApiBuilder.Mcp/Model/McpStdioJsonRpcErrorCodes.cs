@@ -8,6 +8,11 @@ namespace Azure.DataApiBuilder.Mcp.Model
     internal static class McpStdioJsonRpcErrorCodes
     {
         /// <summary>
+        /// JSON-RPC protocol version.
+        /// </summary>
+        public const string JSON_RPC_VERSION = "2.0";
+
+        /// <summary>
         /// Invalid JSON was received by the server.
         /// An error occurred on the server while parsing the JSON text.
         /// </summary>

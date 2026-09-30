@@ -36,7 +36,7 @@ Data API builder (DAB) is an open-source, no-code tool that creates secure, full
 
 |               | REST | GraphQL |     MCP     |
 | :-----------: | :--: | :-----: | :---------: |
-| **Supported** |  Yes |   Yes   | Coming soon |
+| **Supported** |  Yes |   Yes   | Yes |
 
 ## Getting started
 

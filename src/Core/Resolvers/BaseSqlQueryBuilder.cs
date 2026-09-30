@@ -194,6 +194,92 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Build the Group By Clause needed to append to the main query
+        /// </summary>
+        /// <param name="structure">Sql query structure to build query on</param>
+        /// <returns>SQL query with group-by clause</returns>
+        protected virtual string BuildGroupBy(SqlQueryStructure structure)
+        {
+            // Add GROUP BY clause if there are any group by columns
+            if (structure.GroupByMetadata.Fields.Any())
+            {
+                return $" GROUP BY {string.Join(", ", structure.GroupByMetadata.Fields.Values.Select(c => Build(c)))}";
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Build the Having clause needed to append to the main query
+        /// </summary>
+        /// <param name="structure">Sql query structure to build query on</param>
+        /// <returns>SQL query with having clause</returns>
+        protected virtual string BuildHaving(SqlQueryStructure structure)
+        {
+            if (structure.GroupByMetadata.Aggregations.Count > 0)
+            {
+                List<Predicate>? havingPredicates = structure.GroupByMetadata.Aggregations
+                      .SelectMany(aggregation => aggregation.HavingPredicates ?? new List<Predicate>())
+                      .ToList();
+
+                if (havingPredicates.Any())
+                {
+                    return $" HAVING {Build(havingPredicates)}";
+                }
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Build the aggregation columns needed to append to the main query
+        /// </summary>
+        /// <param name="structure">Sql query structure to build query on</param>
+        /// <returns>SQL query with aggregation columns</returns>
+        protected virtual string BuildAggregationColumns(SqlQueryStructure structure)
+        {
+            string aggregations = string.Empty;
+            if (structure.GroupByMetadata.Aggregations.Count > 0)
+            {
+                if (structure.Columns.Any())
+                {
+                    aggregations = $",{BuildAggregationColumns(structure.GroupByMetadata)}";
+                }
+                else
+                {
+                    aggregations = $"{BuildAggregationColumns(structure.GroupByMetadata)}";
+                }
+            }
+
+            return aggregations;
+        }
+
+        /// <summary>
+        /// Build the aggregation columns needed to append to the main query
+        /// </summary>
+        /// <param name="metadata">GroupByMetadata</param>
+        /// <returns>SQL query with aggregation columns</returns>
+        protected virtual string BuildAggregationColumns(GroupByMetadata metadata)
+        {
+            return string.Join(", ", metadata.Aggregations.Select(aggregation => Build(aggregation.Column, useAlias: true)));
+        }
+
+        /// <summary>
+        /// Build the Order By clause needed to append to the main query
+        /// </summary>
+        /// <param name="structure">Sql query structure to build query on</param>
+        /// <returns>SQL query with order-by clause</returns>
+        protected virtual string BuildOrderBy(SqlQueryStructure structure)
+        {
+            if (structure.OrderByColumns.Any())
+            {
+                return $" ORDER BY {Build(structure.OrderByColumns)}";
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>
         /// Build orderby column as
         /// {SourceAlias}.{ColumnName} {direction}
         /// If SourceAlias is null
@@ -447,7 +533,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // constraint columns - one inner join for the columns from the 'Referencing table'
             // and the other join for the columns from the 'Referenced Table'.
             string foreignKeyQuery = $@"
-SELECT 
+SELECT
     ReferentialConstraints.CONSTRAINT_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition))},
     ReferencingColumnUsage.TABLE_SCHEMA
         {QuoteIdentifier($"Referencing{nameof(DatabaseObject.SchemaName)}")},
@@ -457,9 +543,9 @@ SELECT
         {QuoteIdentifier($"Referenced{nameof(DatabaseObject.SchemaName)}")},
     ReferencedColumnUsage.TABLE_NAME {QuoteIdentifier($"Referenced{nameof(SourceDefinition)}")},
     ReferencedColumnUsage.COLUMN_NAME {QuoteIdentifier(nameof(ForeignKeyDefinition.ReferencedColumns))}
-FROM 
+FROM
     INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS ReferentialConstraints
-    INNER JOIN 
+    INNER JOIN
     INFORMATION_SCHEMA.KEY_COLUMN_USAGE ReferencingColumnUsage
         ON ReferentialConstraints.CONSTRAINT_CATALOG = ReferencingColumnUsage.CONSTRAINT_CATALOG
         AND ReferentialConstraints.CONSTRAINT_SCHEMA = ReferencingColumnUsage.CONSTRAINT_SCHEMA

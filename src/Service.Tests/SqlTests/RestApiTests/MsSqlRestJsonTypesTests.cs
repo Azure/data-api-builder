@@ -114,6 +114,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             Assert.AreEqual("éü😀", metadata.GetProperty("unicode").GetString());
         }
 
+        /// <summary>
+        /// GET /api/Profile?$filter=metadata ne null - Verify filtering a json column (treated as a
+        /// string) passes through to SQL: the 4 non-null rows match and the null row (id 5) does not.
+        /// </summary>
+        [TestMethod]
+        public async Task FilterJsonColumnIsNotNull_Succeeds()
+        {
+            HttpResponseMessage response = await HttpClient.GetAsync($"{JSON_TYPE_REST_PATH}?$filter=metadata%20ne%20null");
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, "Filtering a json column as a string should pass through and succeed.");
+
+            JsonElement items = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+                .RootElement.GetProperty("value");
+            Assert.AreEqual(4, items.GetArrayLength(), "Only the 4 rows with non-null metadata should match.");
+        }
+
         #endregion
 
         #region Write Tests
@@ -219,6 +234,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     new StringContent("{ \"metadata\": \"{\\\"tags\\\":[\\\"a\\\",\\\"b\\\",\\\"c\\\"]}\" }", Encoding.UTF8, "application/json"));
                 Assert.AreEqual(HttpStatusCode.OK, restore.StatusCode);
             }
+        }
+
+        /// <summary>
+        /// POST /api/Profile - Verify that supplying invalid JSON for the json column is rejected by
+        /// SQL Server and surfaced as HTTP 400 (a client input error), not a 500. DAB treats the value
+        /// as a normal string, so JSON validation happens at the database boundary.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("{ \"metadata\": \"{ not valid json\" }", DisplayName = "Unclosed / unquoted object")]
+        [DataRow("{ \"metadata\": \"{\\\"key\\\": }\" }", DisplayName = "Missing value")]
+        public async Task InsertMalformedJson_ReturnsBadRequest(string requestBody)
+        {
+            HttpResponseMessage response = await HttpClient.PostAsync(
+                JSON_TYPE_REST_PATH,
+                new StringContent(requestBody, Encoding.UTF8, "application/json"));
+
+            Assert.AreEqual(
+                HttpStatusCode.BadRequest,
+                response.StatusCode,
+                "SQL Server rejects invalid JSON for a native json column; DAB must surface it as HTTP 400.");
         }
 
         #endregion

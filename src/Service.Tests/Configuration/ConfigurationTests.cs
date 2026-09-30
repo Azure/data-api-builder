@@ -6679,6 +6679,7 @@ type Planet @model(name:""PlanetAlias"") {
             {
                 loader.UpdateConfigFilePath(rootConfigPath);
                 RuntimeConfigProvider provider = new(loader);
+                Assert.AreEqual(1, provider.GetConfig().ChildConfigs.Count, "Expected exactly one child config to be resolved and merged.");
 
                 RuntimeConfigValidator validator = new(
                     provider,
@@ -6740,7 +6741,7 @@ type Planet @model(name:""PlanetAlias"") {
                     GraphQL: new(),
                     Mcp: new(),
                     Host: new(null, null, HostMode.Development)),
-                DataSourceFiles: new DataSourceFiles(new[] { "dab-child.json" }));
+                DataSourceFiles: new DataSourceFiles(new[] { childConfigPath }));
             File.WriteAllText(rootConfigPath, rootConfig.ToJson());
 
             // Child: own MSSQL data source + autoentities matching a real table (dbo.books).

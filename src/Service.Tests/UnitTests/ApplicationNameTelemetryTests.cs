@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// The encoded string must start with the product user agent, be wrapped in '+', and contain
-        /// four positional sections: context, an empty reserved general section, runtime, and entity.
+        /// four positional sections: context, general, runtime, and entity.
         /// </summary>
         [TestMethod]
         public void EncodeTelemetryString_HasExpectedShape()
@@ -361,11 +361,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void Decode_FutureGeneralSettings_DoNotShiftKnownSections()
         {
-            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(BuildConfig(), Source(DatabaseType.MSSQL));
-            string telemetryWithGeneralSettings = telemetry.Replace("||", "|10|", StringComparison.Ordinal);
+            const string telemetryWithGeneralSettings = "dab_oss_1.2.3+XXSX|L1AC00Z|M|M+";
 
             IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode(telemetryWithGeneralSettings);
 
+            Assert.IsTrue(lines.Any(l => l.Contains("General > [position 7]: Z", StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
             Assert.IsTrue(lines.Any(l => l.Contains("Runtime > runtime.rest.enabled: M", StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
             Assert.IsTrue(lines.Any(l => l.Contains("Entity > entities.any.table: M", StringComparison.Ordinal)), string.Join(Environment.NewLine, lines));
         }
@@ -571,7 +571,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string payload = telemetry[(firstPlus + 1)..].TrimEnd('+');
             string[] parts = payload.Split('|');
             Assert.AreEqual(4, parts.Length, $"Telemetry payload should have four positional sections but was '{payload}'.");
-            Assert.AreEqual(string.Empty, parts[1], "The reserved general-settings section should be empty.");
+            Assert.AreEqual(6, parts[1].Length, "general width");
             return (parts[0], parts[2], parts[3]);
         }
     }

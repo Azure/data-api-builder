@@ -1,9 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data.Common;
 using System.Text;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
+using Microsoft.Data.SqlClient;
+using MySqlConnector;
+using Npgsql;
 
 namespace Azure.DataApiBuilder.Config.Telemetry;
 
@@ -13,9 +18,9 @@ namespace Azure.DataApiBuilder.Config.Telemetry;
 ///
 /// Format:
 /// <code>
-/// &lt;marker&gt;&lt;version&gt;+&lt;context&gt;||&lt;runtime&gt;|&lt;entity&gt;+
+/// &lt;marker&gt;&lt;version&gt;+&lt;context&gt;|&lt;general&gt;|&lt;runtime&gt;|&lt;entity&gt;+
 /// </code>
-/// Example: <c>dab_oss_1.2.3+XXSX||11111M10...|10111101M...+</c>
+/// Example: <c>dab_oss_1.2.3+XXSX|L1AC0M|11111M10...|10111101M...+</c>
 ///
 /// The block is self-delimiting: it always starts with a <c>dab_</c> marker (<c>dab_oss_</c> for open
 /// source or <c>dab_hosted_</c> when hosted) and ends
@@ -50,6 +55,19 @@ public static class ApplicationNameTelemetry
     /// </summary>
     public const string OPT_OUT_ENV_VAR = "DAB_TELEMETRY_APPNAME_OPT_OUT";
 
+    /// <summary>
+    /// Overrides best-effort hosting detection. Accepts L/Local, A/Azure, W/AWS, G/GCP, O/Other,
+    /// or M/Missing (case-insensitive). Invalid nonblank values encode as Missing.
+    /// </summary>
+    public const string HOSTING_ENVIRONMENT_ENV_VAR = "DAB_HOSTING_ENVIRONMENT";
+
+    /// <summary>
+    /// Overrides Azure service detection. Accepts C/ContainerApps, K/AKS, S/AppService, I/ACI,
+    /// O/Other, N/NotAzure, or M/Missing (case-insensitive; spaced names are also accepted).
+    /// A specific Azure service implies Azure unless HOSTING_ENVIRONMENT_ENV_VAR overrides it.
+    /// </summary>
+    public const string AZURE_HOSTING_SERVICE_ENV_VAR = "DAB_AZURE_HOSTING_SERVICE";
+
     /// <summary>Placeholder used for values that are unknown/not-applicable at the current scope.</summary>
     private const char NOT_APPLICABLE = 'X';
 
@@ -62,31 +80,47 @@ public static class ApplicationNameTelemetry
     private const char SECTION_SEPARATOR = '|';
     private const char PAYLOAD_DELIMITER = '+';
 
+    private static readonly Regex _unresolvedReference = new(
+        $"{DeserializationVariableReplacementSettings.OUTER_ENV_PATTERN}|{DeserializationVariableReplacementSettings.OUTER_AKV_PATTERN}",
+        RegexOptions.CultureInvariant,
+        TimeSpan.FromSeconds(1));
+
     /// <summary>Inputs available to a setting encoder.</summary>
-    private readonly record struct EncodeInputs(RuntimeConfig Config, DataSource? LiveDataSource);
+    private readonly record struct EncodeInputs(
+        RuntimeConfig Config,
+        DataSource? LiveDataSource,
+        ApplicationNameTelemetryEnvironment Environment);
 
     /// <summary>A single telemetry setting: its name, how to encode it, and how to describe a value.</summary>
     private sealed record Setting(string Name, Func<EncodeInputs, char> Encode, Func<char, string> Describe);
 
     /// <summary>
-    /// Produces the pure telemetry string (<c>&lt;marker&gt;&lt;version&gt;+&lt;context&gt;||&lt;runtime&gt;|&lt;entity&gt;+</c>),
+    /// Produces the pure telemetry string (<c>&lt;marker&gt;&lt;version&gt;+&lt;context&gt;|&lt;general&gt;|&lt;runtime&gt;|&lt;entity&gt;+</c>),
     /// where the marker is <c>dab_oss_</c> for open source or <c>dab_hosted_</c> when <c>DAB_APP_NAME_ENV</c>
     /// is set. Independent of the opt-out switch. Used by the CLI and as the telemetry-bearing portion of
-    /// the connection-string segment. The empty section after context reserves the general-settings
-    /// position for future use.
+    /// the connection-string segment. Host information is sampled without network calls each time
+    /// the token is computed, not per request or per logical connection open.
     /// </summary>
     /// <param name="config">The runtime config to encode.</param>
     /// <param name="liveDataSource">
     /// The data source whose connection is being opened, or <c>null</c> when there is no live
     /// connection context (e.g. the <c>dab appname --config</c> CLI command). When <c>null</c>, the
-    /// Source field is emitted as <c>X</c> and per–data-source flags (such as OBO) fall back to the
+    /// Source field is emitted as <c>X</c> and per-data-source flags (OBO and managed identity) fall back to the
     /// config's default data source.
     /// </param>
-    public static string EncodeTelemetryString(RuntimeConfig config, DataSource? liveDataSource = null)
+    public static string EncodeTelemetryString(RuntimeConfig config, DataSource? liveDataSource = null) =>
+        EncodeTelemetryString(config, liveDataSource, ApplicationNameTelemetryEnvironment.Capture());
+
+    /// <summary>Encodes a token from an immutable host snapshot, allowing deterministic offline tests.</summary>
+    internal static string EncodeTelemetryString(
+        RuntimeConfig config,
+        DataSource? liveDataSource,
+        ApplicationNameTelemetryEnvironment environment)
     {
-        EncodeInputs inputs = new(config, liveDataSource);
+        EncodeInputs inputs = new(config, liveDataSource, environment);
 
         string context = EncodeSection(_contextSettings, inputs);
+        string general = EncodeSection(_generalSettings, inputs);
         string runtime = EncodeSection(_runtimeSettings, inputs);
         string entity = EncodeSection(_entitySettings, inputs);
 
@@ -94,9 +128,7 @@ public static class ApplicationNameTelemetry
             .Append(ProductInfo.GetTelemetryApplicationNameBase())
             .Append(PAYLOAD_DELIMITER)
             .Append(context).Append(SECTION_SEPARATOR)
-            // General settings are not defined yet. Reserve their position so adding them later
-            // does not shift the runtime and entity sections or make the payload ambiguous.
-            .Append(SECTION_SEPARATOR)
+            .Append(general).Append(SECTION_SEPARATOR)
             .Append(runtime).Append(SECTION_SEPARATOR)
             .Append(entity)
             .Append(PAYLOAD_DELIMITER)
@@ -171,7 +203,7 @@ public static class ApplicationNameTelemetry
 
         string[] sections = payload.Split(SECTION_SEPARATOR);
         DecodeSection(lines, "Context", _contextSettings, sections, index: 0);
-        // Index 1 is the reserved general-settings section.
+        DecodeSection(lines, "General", _generalSettings, sections, index: 1);
         DecodeSection(lines, "Runtime", _runtimeSettings, sections, index: 2);
         DecodeSection(lines, "Entity", _entitySettings, sections, index: 3);
 
@@ -253,6 +285,85 @@ public static class ApplicationNameTelemetry
 
     /// <summary>Encodes a presence flag: <c>1</c>=present, <c>0</c>=absent.</summary>
     private static char Present(bool present) => present ? '1' : '0';
+
+    /// <summary>Counts loaded data sources, not file references (which may be missing or nested).</summary>
+    private static char EncodeMultipleDataSources(EncodeInputs inputs) => inputs.Config.ListAllDataSources().Take(2).Count() switch
+    {
+        0 => MISSING,
+        1 => '0',
+        _ => '1',
+    };
+
+    /// <summary>
+    /// Reports configured database authentication for this pool, not the presence of an identity in
+    /// the host. DefaultAzureCredential, externally supplied tokens, and workload identity do not
+    /// prove that managed identity was selected and remain Missing. No credentials are acquired.
+    /// </summary>
+    private static char EncodeManagedIdentity(EncodeInputs inputs)
+    {
+        DataSource? dataSource = inputs.LiveDataSource ?? inputs.Config.DataSource;
+        if (dataSource is null)
+        {
+            return MISSING;
+        }
+
+        string connectionString = dataSource.ConnectionString;
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return MISSING;
+        }
+
+        try
+        {
+            switch (dataSource.DatabaseType)
+            {
+                case DatabaseType.MSSQL:
+                case DatabaseType.DWSQL:
+                    SqlConnectionStringBuilder sql = new(connectionString);
+                    if (_unresolvedReference.IsMatch(sql.UserID) || _unresolvedReference.IsMatch(sql.Password))
+                    {
+                        return MISSING;
+                    }
+
+                    return sql.Authentication switch
+                    {
+                        // The same source token covers metadata/startup and OBO request pools. MI
+                        // metadata plus delegated-user requests is mixed, not proof of 0 or 1.
+                        SqlAuthenticationMethod.ActiveDirectoryManagedIdentity or SqlAuthenticationMethod.ActiveDirectoryMSI =>
+                            dataSource.IsUserDelegatedAuthEnabled ? MISSING : '1',
+                        SqlAuthenticationMethod.ActiveDirectoryDefault or SqlAuthenticationMethod.ActiveDirectoryWorkloadIdentity => MISSING,
+                        SqlAuthenticationMethod.NotSpecified => sql.IntegratedSecurity
+                            || !string.IsNullOrEmpty(sql.UserID) || !string.IsNullOrEmpty(sql.Password) ? '0' : MISSING,
+                        SqlAuthenticationMethod.SqlPassword or SqlAuthenticationMethod.ActiveDirectoryPassword
+                            or SqlAuthenticationMethod.ActiveDirectoryIntegrated or SqlAuthenticationMethod.ActiveDirectoryInteractive
+                            or SqlAuthenticationMethod.ActiveDirectoryServicePrincipal or SqlAuthenticationMethod.ActiveDirectoryDeviceCodeFlow => '0',
+                        _ => MISSING,
+                    };
+                case DatabaseType.PostgreSQL:
+                    NpgsqlConnectionStringBuilder postgres = new(connectionString);
+                    return EncodeExplicitCredential(postgres.Password);
+                case DatabaseType.MySQL:
+                    // Use the provider's alias/last-value-wins rules; checking Password and Pwd
+                    // independently can mistake a superseded password for the effective credential.
+                    MySqlConnectionStringBuilder mysql = new(connectionString);
+                    return EncodeExplicitCredential(mysql.Password);
+                case DatabaseType.CosmosDB_NoSQL:
+                    DbConnectionStringBuilder cosmos = new() { ConnectionString = connectionString };
+                    return EncodeExplicitCredential(cosmos.TryGetValue("AccountKey", out object? key) ? key as string : null);
+                default:
+                    return MISSING;
+            }
+        }
+        catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException or RegexMatchTimeoutException)
+        {
+            // Telemetry is not a connection-string validator. Offline inspection can encounter
+            // placeholders or invalid values; do not fail it or log secret-bearing parser errors.
+            return MISSING;
+        }
+    }
+
+    private static char EncodeExplicitCredential(string? value) =>
+        string.IsNullOrEmpty(value) || _unresolvedReference.IsMatch(value) ? MISSING : '0';
 
     /// <summary>Evaluates an "any entity matches" predicate, returning <c>M</c> when no entities exist.</summary>
     private static char AnyEntity(RuntimeConfig config, Func<Entity, bool> predicate)
@@ -360,6 +471,39 @@ public static class ApplicationNameTelemetry
     // Describers (value char -> human-readable meaning) used for decoding.
     // ---------------------------------------------------------------------------------------------
 
+    private static string DescribeOperatingSystem(char value) => value switch
+    {
+        'W' => "Windows",
+        'L' => "Linux",
+        'M' => "macOS",
+        'O' => "Other",
+        'U' => "Unknown",
+        _ => "unrecognized",
+    };
+
+    private static string DescribeHostingEnvironment(char value) => value switch
+    {
+        'L' => "Local",
+        'A' => "Azure",
+        'W' => "AWS",
+        'G' => "GCP",
+        'O' => "Other",
+        MISSING => "missing",
+        _ => "unrecognized",
+    };
+
+    private static string DescribeAzureHostingService(char value) => value switch
+    {
+        'C' => "Container Apps",
+        'K' => "AKS",
+        'S' => "App Service",
+        'I' => "ACI",
+        'O' => "Other",
+        'N' => "Not Azure",
+        MISSING => "missing",
+        _ => "unrecognized",
+    };
+
     private static string DescribeFlag(char value) => value switch
     {
         '1' => "enabled/yes",
@@ -440,6 +584,16 @@ public static class ApplicationNameTelemetry
         new Setting("Object", _ => NOT_APPLICABLE, DescribeObject),
         new Setting("Source", i => EncodeSource(i.LiveDataSource?.DatabaseType), DescribeSource),
         new Setting("Role", _ => NOT_APPLICABLE, DescribeRole),
+    };
+
+    private static readonly IReadOnlyList<Setting> _generalSettings = new[]
+    {
+        new Setting("operating-system", i => i.Environment.OperatingSystem, DescribeOperatingSystem),
+        new Setting("running-in-container", i => i.Environment.RunningInContainer, DescribeFlag),
+        new Setting("hosting-environment", i => i.Environment.HostingEnvironment, DescribeHostingEnvironment),
+        new Setting("azure-hosting-service", i => i.Environment.AzureHostingService, DescribeAzureHostingService),
+        new Setting("multiple-data-sources", EncodeMultipleDataSources, DescribeFlag),
+        new Setting("managed-identity", EncodeManagedIdentity, DescribeFlag),
     };
 
     private static readonly IReadOnlyList<Setting> _runtimeSettings = new[]

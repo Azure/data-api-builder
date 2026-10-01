@@ -5,7 +5,6 @@ using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
-using Azure.DataApiBuilder.Core.Configurations;
 using Cli.Constants;
 using CommandLine;
 using Microsoft.Extensions.Logging;
@@ -58,14 +57,15 @@ namespace Cli.Commands
             // We intentionally do NOT run full `validate` here — validation opens a database
             // connection, whereas encoding only needs the parsed runtime/entity settings.
             // Requiring a live database would defeat the purpose of this static inspection command.
-            if (!ConfigGenerator.TryGetConfigForRuntimeEngine(Config, loader, fileSystem, out _))
+            if (!ConfigGenerator.TryGetConfigForRuntimeEngine(Config, loader, fileSystem, out string configPath))
             {
                 logger.LogError("Could not determine the config file to use.");
                 return CliReturnCode.GENERAL_ERROR;
             }
 
-            RuntimeConfigProvider runtimeConfigProvider = new(loader);
-            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) || runtimeConfig is null)
+            // An inspection command must not use the runtime provider: that path resolves Key Vault
+            // references and creates file watchers. Keep unresolved credentials as Missing instead.
+            if (!AppNameConfigLoader.TryLoadConfig(configPath, fileSystem, out RuntimeConfig? runtimeConfig))
             {
                 logger.LogError("Failed to parse the config file.");
                 return CliReturnCode.GENERAL_ERROR;

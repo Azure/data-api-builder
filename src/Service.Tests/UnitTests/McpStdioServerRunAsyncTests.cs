@@ -4,9 +4,11 @@
 #nullable enable
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,11 +16,13 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Tests.Mcp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ModelContextProtocol.Protocol;
 using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
@@ -132,61 +136,157 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(shutdownResponse.RootElement.GetProperty("result").GetProperty("ok").GetBoolean());
         }
 
-        [TestMethod]
-        public async Task RunAsync_InitializeRespondsBeforeMetadataInferenceCompletes()
+        [DataTestMethod]
+        [DataRow(false, false)]
+        [DataRow(true, false)]
+        [DataRow(false, true)]
+        [DataRow(true, true)]
+        public async Task RunAsync_InitializeRespondsBeforeMetadataInferenceCompletes(bool telemetryEnabled, bool callToolFirst)
         {
-            const string INPUT =
+            string input =
                 "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}\n" +
                 "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":{}}\n" +
-                "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\",\"params\":{}}\n" +
+                (callToolFirst
+                    ? "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"read_records\"}}\n"
+                    : "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\",\"params\":{}}\n") +
                 "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\",\"params\":{}}\n" +
                 "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"shutdown\"}\n";
 
             SignalingTextWriter stdoutCapture = new();
             BlockingMetadataProviderFactory metadataProviderFactory = new();
+            CapturingExporter exporter = new();
+            using EngineTelemetrySession telemetry = EngineTelemetrySession.Create(() => exporter,
+                enableSyntheticCollection: telemetryEnabled, readEnvironmentVariable: _ => null,
+                showNotice: () => { }, resolveIdentity: _ => new(Guid.NewGuid(), "ephemeral"), startTimer: false);
             RuntimeConfig runtimeConfig = new(
                 Schema: RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK,
-                DataSource: null,
+                DataSource: new(DatabaseType.MSSQL, string.Empty),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()),
                 Runtime: new RuntimeOptions(
                     Rest: null,
                     GraphQL: null,
                     Mcp: new McpRuntimeOptions(),
                     Host: null));
-            RuntimeConfigProvider runtimeConfigProvider = new StubRuntimeConfigProvider(runtimeConfig);
+            using RuntimeConfigProvider runtimeConfigProvider = new StubRuntimeConfigProvider(runtimeConfig) { ProductTelemetry = telemetry };
+            TaskCompletionSource registryEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource releaseRegistry = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            Mock<IMcpToolRegistryRefreshService> refresh = new();
+            refresh.Setup(value => value.EnsureInitialized(It.IsAny<CancellationToken>())).Callback(() =>
+            {
+                registryEntered.TrySetResult();
+                releaseRegistry.Task.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
+            });
+            Mock<IMcpTool> tool = new();
+            tool.SetupGet(value => value.ToolType).Returns(McpEnums.ToolType.BuiltIn);
+            tool.Setup(value => value.GetToolMetadata()).Returns(new Tool { Name = "read_records" });
+            tool.Setup(value => value.IsEnabled(It.IsAny<RuntimeConfig>())).Returns(true);
+            tool.Setup(value => value.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CallToolResult { Content = [] });
+            McpToolRegistry registry = new();
+            registry.ReplaceAll([tool.Object], runtimeConfig);
 
-            ServiceProvider serviceProvider = new ServiceCollection()
+            using ServiceProvider serviceProvider = new ServiceCollection()
                 .AddSingleton(new McpStdoutWriter(stdoutCapture))
-                .AddSingleton<McpToolRegistry>()
+                .AddSingleton(registry)
+                .AddSingleton(telemetry)
+                .AddSingleton(refresh.Object)
                 .AddSingleton<IMetadataProviderFactory>(metadataProviderFactory)
                 .AddSingleton(runtimeConfigProvider)
                 .BuildServiceProvider();
             McpStdioServer server = new(
                 serviceProvider.GetRequiredService<McpToolRegistry>(),
                 serviceProvider,
-                new StringReader(INPUT));
+                new StringReader(input));
 
             Task runTask = server.RunAsync(CancellationToken.None);
-
-            string initializeResponse = await stdoutCapture.FirstLineWritten.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            await metadataProviderFactory.InitializationStarted.WaitAsync(TimeSpan.FromSeconds(5));
-
-            using (JsonDocument response = JsonDocument.Parse(initializeResponse))
+            try
             {
-                Assert.AreEqual(1, response.RootElement.GetProperty("id").GetInt32(),
-                    "Initialize must respond before metadata inference completes.");
+                string initializeResponse = await stdoutCapture.FirstLineWritten.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                await metadataProviderFactory.InitializationStarted.WaitAsync(TimeSpan.FromSeconds(5));
+
+                using (JsonDocument response = JsonDocument.Parse(initializeResponse))
+                {
+                    Assert.AreEqual(1, response.RootElement.GetProperty("id").GetInt32(),
+                        "Initialize must respond before metadata inference completes.");
+                }
+
+                Assert.AreEqual(1, stdoutCapture.LineCount,
+                    "Tool requests must wait until metadata inference and tool registration complete.");
+                Assert.IsFalse(telemetry.IsReady, "Protocol initialization alone must not report data-serving readiness.");
+                metadataProviderFactory.CompleteInitialization();
+                await registryEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.IsFalse(telemetry.IsReady, "Metadata alone is insufficient while tool registration is still pending.");
+                Assert.AreEqual(1, stdoutCapture.LineCount);
+            }
+            finally
+            {
+                metadataProviderFactory.CompleteInitialization();
+                releaseRegistry.TrySetResult();
+                await runTask.WaitAsync(TimeSpan.FromSeconds(10));
             }
 
-            Assert.AreEqual(1, stdoutCapture.LineCount,
-                "tools/list must wait until metadata inference and tool registration complete.");
-
-            metadataProviderFactory.CompleteInitialization();
-            await runTask.WaitAsync(TimeSpan.FromSeconds(5));
-
+            Assert.AreEqual(telemetryEnabled, telemetry.IsReady);
             Assert.AreEqual(4, stdoutCapture.LineCount,
-                "Expected initialize, two tools/list, and shutdown responses.");
+                "Expected initialize, two tool requests, and shutdown responses.");
             Assert.AreEqual(1, metadataProviderFactory.InitializeAsyncCallCount,
                 "Metadata inference must run exactly once.");
+            refresh.Verify(value => value.EnsureInitialized(It.IsAny<CancellationToken>()), Times.Once);
+            tool.Verify(value => value.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()),
+                callToolFirst ? Times.Once() : Times.Never());
+            await telemetry.StopAsync();
+            Assert.AreEqual(telemetryEnabled ? 1 : 0, exporter.Records.Count(record => record.Name == "dab.engine.ready"));
+            Assert.AreEqual(telemetryEnabled && callToolFirst ? 1 : 0,
+                exporter.Records.Count(record => record.Name == "dab.engine.first_successful_request"));
+        }
+
+        [TestMethod]
+        public async Task RunAsync_CancelingDeferredMetadataReportsFailureWithoutReadiness()
+        {
+            CapturingExporter exporter = new();
+            using EngineTelemetrySession telemetry = EngineTelemetrySession.Create(() => exporter, enableSyntheticCollection: true,
+                readEnvironmentVariable: _ => null, showNotice: () => { }, startTimer: false);
+            RuntimeConfig config = new(null, new(DatabaseType.MSSQL, string.Empty), new(new Dictionary<string, Entity>()));
+            using RuntimeConfigProvider provider = new StubRuntimeConfigProvider(config) { ProductTelemetry = telemetry };
+            BlockingMetadataProviderFactory metadata = new();
+            Mock<IMcpToolRegistryRefreshService> refresh = new();
+            using StringWriter output = new();
+            using ServiceProvider services = new ServiceCollection()
+                .AddSingleton(new McpStdoutWriter(output))
+                .AddSingleton(provider)
+                .AddSingleton(telemetry)
+                .AddSingleton<IMetadataProviderFactory>(metadata)
+                .AddSingleton(refresh.Object)
+                .BuildServiceProvider();
+            using StringReader input = new("""
+                {"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+                {"jsonrpc":"2.0","id":2,"method":"tools/list"}
+                """);
+            McpStdioServer server = new(new McpToolRegistry(), services, input);
+            using CancellationTokenSource stopping = new();
+            Task running = server.RunAsync(stopping.Token);
+            try
+            {
+                await metadata.InitializationStarted.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.IsFalse(telemetry.IsReady);
+                stopping.Cancel();
+                await running.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                stopping.Cancel();
+                metadata.CompleteInitialization();
+                await running.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+
+            await telemetry.StopAsync();
+            Assert.AreEqual(1, metadata.InitializeAsyncCallCount);
+            refresh.Verify(value => value.EnsureInitialized(It.IsAny<CancellationToken>()), Times.Never);
+            Assert.AreEqual("metadata", exporter.Records.Single(record => record.Name == "dab.engine.startup_failed").Properties["failure_stage"]);
+            Assert.IsFalse(exporter.Records.Any(record => record.Name == "dab.engine.ready"));
+            string[] responses = output.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+            Assert.AreEqual(2, responses.Length);
+            StringAssert.Contains(responses[0], "protocolVersion");
+            StringAssert.Contains(responses[1], "Internal error");
         }
 
         private static (McpStdioServer server, StringWriter stdoutCapture) CreateServerWithCapturedOutput(
@@ -233,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             private readonly RuntimeConfig _runtimeConfig;
 
-            public StubRuntimeConfigProvider(RuntimeConfig runtimeConfig) : base(new StubRuntimeConfigLoader())
+            public StubRuntimeConfigProvider(RuntimeConfig runtimeConfig) : base(new StubRuntimeConfigLoader { RuntimeConfig = runtimeConfig })
             {
                 _runtimeConfig = runtimeConfig;
             }
@@ -256,6 +356,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 return RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK;
             }
+        }
+
+        private sealed class CapturingExporter : IEngineTelemetryExporter
+        {
+            internal ConcurrentQueue<EngineTelemetryEvent> Records { get; } = new();
+
+            public ValueTask<bool> ExportAsync(EngineTelemetryEvent record, CancellationToken cancellationToken)
+            {
+                Records.Enqueue(record);
+                return ValueTask.FromResult(true);
+            }
+
+            public void Dispose() { }
         }
     }
 }

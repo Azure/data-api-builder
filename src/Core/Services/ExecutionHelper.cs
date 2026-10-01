@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
@@ -55,6 +56,21 @@ namespace Azure.DataApiBuilder.Service.Services
         /// The middleware context.
         /// </param>
         public async ValueTask ExecuteQueryAsync(IMiddlewareContext context)
+        {
+            using EngineTelemetryMeasurementScope? operation = BeginTelemetryOperation(context, EngineTelemetryOperation.Read);
+            try
+            {
+                await ExecuteQueryCoreAsync(context);
+                operation?.Complete(GetTelemetryOutcome(context));
+            }
+            catch (OperationCanceledException)
+            {
+                operation?.Complete(EngineTelemetryOutcome.Canceled);
+                throw;
+            }
+        }
+
+        private async ValueTask ExecuteQueryCoreAsync(IMiddlewareContext context)
         {
             using Activity? activity = StartQueryActivity(context);
 
@@ -102,6 +118,21 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </param>
         public async ValueTask ExecuteMutateAsync(IMiddlewareContext context)
         {
+            using EngineTelemetryMeasurementScope? operation = BeginTelemetryOperation(context, EngineTelemetryOperation.Write);
+            try
+            {
+                await ExecuteMutateCoreAsync(context);
+                operation?.Complete(GetTelemetryOutcome(context));
+            }
+            catch (OperationCanceledException)
+            {
+                operation?.Complete(EngineTelemetryOutcome.Canceled);
+                throw;
+            }
+        }
+
+        private async ValueTask ExecuteMutateCoreAsync(IMiddlewareContext context)
+        {
             using Activity? activity = StartQueryActivity(context);
 
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
@@ -141,6 +172,56 @@ namespace Azure.DataApiBuilder.Service.Services
                 SetContextResult(context, result.Item1);
                 SetNewMetadata(context, result.Item2);
             }
+        }
+
+        private EngineTelemetryMeasurementScope? BeginTelemetryOperation(IMiddlewareContext context, EngineTelemetryOperation operation)
+        {
+            EngineTelemetrySession? session = _runtimeConfigProvider.ProductTelemetry;
+            if (session?.IsEnabled != true)
+            {
+                return null;
+            }
+
+            // Introspection is not a data operation, even in a request that also selects data.
+            if (context.Selection.Field.Name.StartsWith("__", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            string? entityName = null;
+            try
+            {
+                // Use the same model directive/pagination mapping as query execution, not the
+                // exposed field name or alias. Names are used locally, never emitted or retained here.
+                entityName = GraphQLUtils.GetEntityNameFromContext(context);
+                if (_runtimeConfigProvider.TryGetLoadedConfig(out RuntimeConfig? config) &&
+                    config.Entities.TryGetValue(entityName, out Entity? entity) &&
+                    entity?.Source?.Type is EntitySourceType.StoredProcedure)
+                {
+                    operation = EngineTelemetryOperation.Execute;
+                }
+            }
+            catch (Exception)
+            {
+                // An unmappable field still runs through the original execution/validation path.
+                // Telemetry must not introduce a new failure or expose mapping exception details.
+            }
+
+            return session.BeginOperation(entityName, operation);
+        }
+
+        private static EngineTelemetryOutcome GetTelemetryOutcome(IMiddlewareContext context)
+        {
+            // This is the root action outcome only. Errors during subsequent child-field
+            // completion/serialization are classified by the request-level GraphQL adapter.
+            if (!context.HasErrors)
+            {
+                return EngineTelemetryOutcome.Success;
+            }
+
+            return context.Result is null or JsonElement { ValueKind: JsonValueKind.Null or JsonValueKind.Undefined }
+                ? EngineTelemetryOutcome.Failure
+                : EngineTelemetryOutcome.PartialFailure;
         }
 
         /// <summary>

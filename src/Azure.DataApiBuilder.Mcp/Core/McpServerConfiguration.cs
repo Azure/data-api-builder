@@ -76,13 +76,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     }
 
                     return await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                        tool, toolName, arguments, request.Services, ct);
+                        tool, toolName, arguments, request.Services, ct, sdkResponseItems: request.Items);
                 }
                 finally
                 {
                     arguments?.Dispose();
                 }
             })
+            .WithMessageFilters(filters => filters.AddOutgoingFilter(McpProductResponseCompletion.Filter))
             .WithHttpTransport();
 
             // Configure underlying MCP server options

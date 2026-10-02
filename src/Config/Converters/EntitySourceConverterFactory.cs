@@ -65,7 +65,7 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
                 List<ParameterMetadata> paramList = [];
                 foreach (JsonProperty prop in parametersElement.EnumerateObject())
                 {
-                    string? defaultValue = GetClrValue(prop.Value)?.ToString();
+                    string? defaultValue = GetClrValue(prop.Value, _replacementSettings)?.ToString();
                     paramList.Add(new ParameterMetadata
                     {
                         Name = prop.Name,
@@ -112,16 +112,23 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
             }
         }
 
-        private static object GetClrValue(JsonElement element)
+        private static object GetClrValue(JsonElement element, DeserializationVariableReplacementSettings? replacementSettings)
         {
             return element.ValueKind switch
             {
-                JsonValueKind.String => element.GetString() ?? string.Empty,
+                JsonValueKind.String => DeserializeStringValue(element, replacementSettings) ?? string.Empty,
                 JsonValueKind.Number => GetNumberValue(element),
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,
                 _ => element.ToString()
             };
+        }
+
+        private static string? DeserializeStringValue(JsonElement element, DeserializationVariableReplacementSettings? replacementSettings)
+        {
+            Utf8JsonReader reader = new(JsonSerializer.SerializeToUtf8Bytes(element.GetString()));
+            reader.Read();
+            return reader.DeserializeString(replacementSettings);
         }
 
         /// <summary>

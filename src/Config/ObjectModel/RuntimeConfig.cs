@@ -81,27 +81,22 @@ public record RuntimeConfig
     /// </summary>
     [JsonIgnore]
     public bool IsRequestBodyStrict =>
-        Runtime is null ||
-        Runtime.Rest is null ||
-        Runtime.Rest.RequestBodyStrict;
+        Runtime?.Rest?.RequestBodyStrict ?? true;
 
     /// <summary>
     /// Retrieves the value of runtime.graphql.enabled property if present, default is true.
     /// </summary>
     [JsonIgnore]
-    public bool IsGraphQLEnabled => Runtime is null ||
-        Runtime.GraphQL is null ||
-        Runtime.GraphQL.Enabled;
+    public bool IsGraphQLEnabled =>
+        Runtime?.GraphQL?.Enabled ?? true;
 
     /// <summary>
     /// Retrieves the value of runtime.rest.enabled property if present, default is true if its not cosmosdb.
     /// </summary>
     [JsonIgnore]
     public bool IsRestEnabled =>
-        (Runtime is null ||
-         Runtime.Rest is null ||
-         Runtime.Rest.Enabled) &&
-         DataSource?.DatabaseType != DatabaseType.CosmosDB_NoSQL;
+        (Runtime?.Rest?.Enabled ?? true) &&
+        DataSource?.DatabaseType != DatabaseType.CosmosDB_NoSQL;
 
     /// <summary>
     /// Retrieves the value of runtime.mcp.enabled property if present, default is true.
@@ -161,7 +156,7 @@ public record RuntimeConfig
             }
             else
             {
-                return Runtime.Rest.Path;
+                return Runtime.Rest.Path ?? RestRuntimeOptions.DEFAULT_PATH;
             }
         }
     }
@@ -180,7 +175,7 @@ public record RuntimeConfig
             }
             else
             {
-                return Runtime.GraphQL.Path;
+                return Runtime.GraphQL.Path ?? GraphQLRuntimeOptions.DEFAULT_PATH;
             }
         }
     }
@@ -212,9 +207,7 @@ public record RuntimeConfig
     {
         get
         {
-            return Runtime is null ||
-                Runtime.GraphQL is null ||
-                Runtime.GraphQL.AllowIntrospection;
+            return Runtime?.GraphQL?.AllowIntrospection ?? true;
         }
     }
 

@@ -161,6 +161,27 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(dwSqlQuery.Contains("TABLOCKX", StringComparison.Ordinal), $"Update-only Data Warehouse SQL query should not acquire an insert serialization lock. Query: {dwSqlQuery}");
         }
 
+        /// <summary>
+        /// SQL Server needs an explicit ESCAPE clause for the backslash-escaped LIKE patterns that string
+        /// functions in database policies produce, for mutations as well as reads.
+        /// </summary>
+        [TestMethod]
+        public void MsSqlUpsertAddsEscapeClauseToLikeInDatabasePolicy()
+        {
+            SqlUpsertQueryStructure structure = CreateUpsertStructure(DatabaseType.MSSQL, useCompositePrimaryKey: false);
+            structure.DbPolicyPredicatesForOperations[EntityActionOperation.Update] = "([title] LIKE @param8)";
+            structure.DbPolicyPredicatesForOperations[EntityActionOperation.Create] = "([title] LIKE @param9)";
+
+            string query = new MsSqlQueryBuilder().Build(structure);
+
+            Assert.IsTrue(
+                query.Contains(@"([title] LIKE @param8 ESCAPE '\')", StringComparison.Ordinal),
+                $"Expected the update policy LIKE to carry an ESCAPE clause. Query: {query}");
+            Assert.IsTrue(
+                query.Contains(@"([title] LIKE @param9 ESCAPE '\')", StringComparison.Ordinal),
+                $"Expected the create policy LIKE to carry an ESCAPE clause. Query: {query}");
+        }
+
         private static void AssertAppearsBefore(string query, string first, string second)
         {
             int firstIndex = query.IndexOf(first, StringComparison.Ordinal);

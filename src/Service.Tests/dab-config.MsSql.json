@@ -2042,6 +2042,58 @@
         }
       ]
     },
+    "XmlProfile": {
+      "source": {
+        "object": "xml_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "XmlProfile",
+          "plural": "XmlProfiles"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        }
+      ]
+    },
     "stocks_price": {
       "source": {
         "object": "stocks_price",

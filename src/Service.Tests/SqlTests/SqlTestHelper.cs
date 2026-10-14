@@ -13,6 +13,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -42,6 +43,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             {
                 Entities = new(runtimeConfig.Entities.ToDictionary(item => item.Key, item => item.Value with { Relationships = null }))
             };
+        }
+
+        /// <summary>
+        /// Asserts that the given string is well-formed XML and returns its root element.
+        /// Shared by the REST and GraphQL xml-column tests.
+        /// </summary>
+        public static XElement AssertIsValidXml(string xml)
+        {
+            try
+            {
+                return XDocument.Parse(xml).Root!;
+            }
+            catch (System.Xml.XmlException ex)
+            {
+                Assert.Fail($"Expected a valid XML value but parsing failed: {ex.Message}. Value was: {xml}");
+                return null!;
+            }
+        }
+
+        /// <summary>
+        /// Asserts <paramref name="content"/> is well-formed XML carrying no leftover JSON backslash-escaping,
+        /// and that its root element's <c>id</c> attribute equals <paramref name="expectedId"/>. Returns the root.
+        /// Shared by the REST and GraphQL xml-column tests.
+        /// </summary>
+        public static XElement AssertXmlWithId(string content, string expectedId)
+        {
+            XElement root = AssertIsValidXml(content);
+            Assert.IsFalse(content.Contains('\\'), "The parsed XML value must not contain backslash escaping.");
+            Assert.AreEqual(expectedId, root.Attribute("id")!.Value);
+            return root;
         }
 
         /// <summary>

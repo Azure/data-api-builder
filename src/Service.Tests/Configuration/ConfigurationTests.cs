@@ -742,8 +742,24 @@ type Moon {
         [TestInitialize]
         public void SetupAuthProviderEnvironmentVariables()
         {
+            // Other integration fixtures can leave a database environment selected. Reset
+            // before each test as well as after it, so late-config hosts start unconfigured.
+            TestHelper.UnsetAllDABEnvironmentVariables();
             TestHelper.SetAppServiceEnvironmentVariable();
             TestHelper.SetStaticWebAppsEnvironmentVariable();
+        }
+
+        [DataTestMethod]
+        [DataRow(RUNTIME_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT)]
+        [DataRow(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT)]
+        [DataRow(RUNTIME_ENV_CONNECTION_STRING, "Server=synthetic.invalid;Database=unused;")]
+        public void TestSetupDoesNotInheritDatabaseSelectionFromEarlierFixtures(string variable, string value)
+        {
+            Environment.SetEnvironmentVariable(variable, value);
+
+            SetupAuthProviderEnvironmentVariables();
+
+            Assert.IsNull(Environment.GetEnvironmentVariable(variable));
         }
 
         /// <summary>

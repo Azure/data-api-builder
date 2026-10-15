@@ -8,7 +8,9 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Cli.Commands;
+using Cli.Telemetry;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -342,6 +344,16 @@ namespace Cli
             string? userProvidedConfigFile,
             out string runtimeConfigFile,
             LogBuffer? logBuffer = null)
+            => TryGetConfigFileBasedOnCliPrecedence(loader, userProvidedConfigFile, out runtimeConfigFile, logBuffer, telemetry: null);
+
+        // The loader does not expose its IFileSystem. Callers observe the successful selection
+        // with their own filesystem, after any merge, rather than guessing a canonical root here.
+        internal static bool TryGetConfigFileBasedOnCliPrecedence(
+            FileSystemRuntimeConfigLoader loader,
+            string? userProvidedConfigFile,
+            out string runtimeConfigFile,
+            LogBuffer? logBuffer,
+            CliTelemetrySession? telemetry)
         {
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
@@ -374,7 +386,13 @@ namespace Cli
                 runtimeConfigFile = loader.GetFileNameForEnvironment(null, considerOverrides: false);
             }
 
-            return !string.IsNullOrEmpty(runtimeConfigFile);
+            bool found = !string.IsNullOrEmpty(runtimeConfigFile);
+            if (!found)
+            {
+                telemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
+            }
+
+            return found;
         }
 
         /// <summary>
@@ -612,20 +630,36 @@ namespace Cli
         /// This method will write all the json string in the given file.
         /// </summary>
         public static bool WriteRuntimeConfigToFile(string file, RuntimeConfig runtimeConfig, IFileSystem fileSystem)
+            => WriteRuntimeConfigToFile(file, runtimeConfig, fileSystem, telemetry: null);
+
+        internal static bool WriteRuntimeConfigToFile(string file, RuntimeConfig runtimeConfig, IFileSystem fileSystem,
+            CliTelemetrySession? telemetry)
         {
             try
             {
                 string jsonContent = runtimeConfig.ToJson();
-                return WriteJsonToFile(file, jsonContent, fileSystem);
+                bool written = WriteJsonToFile(file, jsonContent, fileSystem, telemetry);
+                if (written)
+                {
+                    // A proposed provider change is not configured until its write succeeds.
+                    CliTelemetryHosting.ObserveConfigurationDetails(telemetry, fileSystem, file, runtimeConfig, jsonContent);
+                }
+
+                return written;
             }
             catch (Exception e)
             {
+                CliTelemetryHosting.MarkException(telemetry, e);
                 _logger.LogError("Failed to generate the config file, operation failed with exception: {e}.", e);
                 return false;
             }
         }
 
         public static bool WriteJsonToFile(string file, string jsonContent, IFileSystem fileSystem)
+            => WriteJsonToFile(file, jsonContent, fileSystem, telemetry: null);
+
+        internal static bool WriteJsonToFile(string file, string jsonContent, IFileSystem fileSystem,
+            CliTelemetrySession? telemetry)
         {
             try
             {
@@ -633,6 +667,7 @@ namespace Cli
             }
             catch (Exception e)
             {
+                CliTelemetryHosting.MarkException(telemetry, e, CliTelemetryFailureCategory.Storage);
                 _logger.LogError("Failed to generate the config file, operation failed with exception:{e}.", e);
                 return false;
             }

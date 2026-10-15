@@ -3,6 +3,8 @@
   <PropertyGroup>
     <TargetFrameworks>net10.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
+    <!-- SDK opt-outs must precede testhost startup; product code never changes host environment. -->
+    <RunSettingsFilePath Condition="'$(RunSettingsFilePath)' == ''">$(MSBuildThisFileDirectory)telemetry.runsettings</RunSettingsFilePath>
     <!--
       Nullable=annotations permits nullable reference type syntax (e.g. `string?`)
       everywhere without emitting CS8632, while keeping nullable flow-analysis

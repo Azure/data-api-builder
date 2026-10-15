@@ -6656,6 +6656,132 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// End-to-end regression test that creates actual root and child JSON files, loads them through
+        /// <see cref="FileSystemRuntimeConfigLoader"/>, runs metadata initialization and validation via
+        /// <see cref="RuntimeConfigValidator.TryValidateConfig"/>, and asserts the PER-FILE result.
+        ///
+        /// The root references the child through <c>data-source-files</c>. The root's own autoentity
+        /// resolves ZERO entities (its pattern matches no table) while the child's autoentities for MSSQL
+        /// resolve real tables (dbo.books). After the child's autoentities are merged into the root, the
+        /// merged config has resolvable entities, so validation succeeds and no "No entities found"
+        /// presence error is produced.
+        /// Requires a running MSSQL instance reachable via the standard MSSQL test connection string.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestValidate_MultiConfigRootResolvingZero_ProducesRootScopedErrorAndValidChild()
+        {
+            (string rootConfigPath, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem, string tempDir) =
+                ArrangeMultiConfigForMsSql();
+
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            try
+            {
+                loader.UpdateConfigFilePath(rootConfigPath);
+                RuntimeConfigProvider provider = new(loader);
+                Assert.AreEqual(1, provider.GetConfig().ChildConfigs.Count, "Expected exactly one child config to be resolved and merged.");
+
+                RuntimeConfigValidator validator = new(
+                    provider,
+                    fileSystem,
+                    loggerFactory.CreateLogger<RuntimeConfigValidator>(),
+                    isValidateOnly: true);
+
+                bool isValid = await validator.TryValidateConfig(rootConfigPath, loggerFactory);
+                Assert.IsTrue(isValid, "Validation should succeed");
+
+                List<Exception> presenceErrors = validator.ConfigValidationExceptions
+                    .Where(e => e.Message.Contains("No entities found"))
+                    .ToList();
+                Assert.AreEqual(0, presenceErrors.Count, "Expected no errors to be found");
+            }
+            finally
+            {
+                loggerFactory.Dispose();
+
+                // Guarantee cleanup so fixed-name/leftover files can never leak into another test or run.
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper: builds a real multi-config on disk for MSSQL directly through the
+        /// <see cref="RuntimeConfig"/> object model (the pattern used throughout these Service.Tests),
+        /// rather than the CLI generators which are not referenced by this test project:
+        /// - a CHILD config with its own MSSQL data source and autoentities matching <c>dbo.books</c>,
+        /// - a ROOT config with its own MSSQL data source, autoentities matching
+        ///   <paramref name="rootPatternInclude"/>, and <c>data-source-files</c> pointing at the child.
+        /// Returns the root config path plus a fresh loader and file system to drive validation.
+        /// </summary>
+        private static (string RootConfigPath, FileSystemRuntimeConfigLoader ValidateLoader, IFileSystem FileSystem, string tempDir)
+            ArrangeMultiConfigForMsSql()
+        {
+            string connectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL);
+            IFileSystem fileSystem = new FileSystem();
+
+            // Unique directory per invocation avoids cross-test/cross-run interference from leftover files.
+            string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dab-multiconfig-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            string rootConfigPath = System.IO.Path.Combine(tempDir, "dab-root.json");
+            string childConfigPath = System.IO.Path.Combine(tempDir, "dab-child.json");
+
+            // Root: own MSSQL data source + autoentities (pattern controls whether it resolves) +
+            // data-source-files pointing at the child.
+            RuntimeConfig rootConfig = new(
+                Schema: "root-schema",
+                DataSource: new(DatabaseType.MSSQL, connectionString, Options: null),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new(BuildAutoentityMap(definitionName: "root-filter", patternInclude: "dbo.books", entiityNames: "root_{object}")),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null, HostMode.Development)),
+                DataSourceFiles: new DataSourceFiles(new[] { childConfigPath }));
+            File.WriteAllText(rootConfigPath, rootConfig.ToJson());
+
+            // Child: own MSSQL data source + autoentities matching a real table (dbo.books).
+            RuntimeConfig childConfig = new(
+                Schema: "child-schema",
+                DataSource: new(DatabaseType.MSSQL, connectionString, Options: null),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new(BuildAutoentityMap(definitionName: "child-filter", patternInclude: "dbo.books", entiityNames: "child_{object}")),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null, HostMode.Development)));
+            File.WriteAllText(childConfigPath, childConfig.ToJson());
+
+            return (rootConfigPath, new FileSystemRuntimeConfigLoader(fileSystem), fileSystem, tempDir);
+        }
+
+        /// <summary>
+        /// Helper: builds an autoentity map containing a single definition whose include pattern
+        /// controls which tables it resolves against the target database.
+        /// </summary>
+        private static Dictionary<string, Autoentity> BuildAutoentityMap(string definitionName, string patternInclude, string entiityNames)
+        {
+            EntityAction entityAction = new(EntityActionOperation.Read, null, null);
+
+            Autoentity autoentity = new(
+                Patterns: new AutoentityPatterns(
+                    Include: new[] { patternInclude },
+                    Exclude: Array.Empty<string>(),
+                    Name: entiityNames),
+                Template: new AutoentityTemplate(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true, Singular: string.Empty, Plural: string.Empty)),
+                Permissions: new EntityPermission[] { new("anonymous", new EntityAction[] { entityAction }) });
+
+            return new Dictionary<string, Autoentity> { { definitionName, autoentity } };
+        }
+
+        /// <summary>
         /// Tests the behavior of GraphQL queries in non-hosted mode when the depth limit is explicitly set to -1 or null.
         /// Setting the depth limit to -1 is intended to disable the depth limit check, allowing queries of any depth.
         /// Using null as default value of dab which also disables the depth limit check.

@@ -75,6 +75,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             return root;
         }
 
+        public static void AssertXmlContent(JsonElement record, string expectedXml)
+        {
+          JsonElement content = record.GetProperty("content");
+          if (expectedXml is null)
+          {
+            Assert.AreEqual(JsonValueKind.Null, content.ValueKind);
+            return;
+          }
+
+          Assert.AreEqual(JsonValueKind.String, content.ValueKind);
+          Assert.IsTrue(XNode.DeepEquals(AssertIsValidXml(expectedXml), AssertIsValidXml(content.GetString()!)),
+            "JSON-decoded XML must preserve elements, text, and quoted attributes.");
+        }
+
         /// <summary>
         /// Converts strings to JSON objects and does a deep compare
         /// </summary>

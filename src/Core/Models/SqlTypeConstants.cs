@@ -42,7 +42,7 @@ public static class SqlTypeConstants
         { "varbinary", true },            // SqlDbType.VarBinary
         { "varchar", true },              // SqlDbType.VarChar
         { "sql_variant", false },         // SqlDbType.Variant (unsupported)
-        { "xml", false },                 // SqlDbType.Xml (unsupported)
+        { "xml", true },                  // SqlDbType.Xml
         { "date", true },                 // SqlDbType.Date
         { "time", true },                 // SqlDbType.Time
         { "datetime2", true },            // SqlDbType.DateTime2

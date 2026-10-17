@@ -1666,6 +1666,57 @@ fragment p on book { id }
             Assert.AreEqual(1, response.GetProperty("id").GetInt32());
         }
 
+        /// <summary>
+        /// Fields listed after a fragment spread in the same selection set must still be
+        /// resolved. Previously AddGraphQLFields returned after expanding a fragment,
+        /// which dropped trailing scalar and relationship fields.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryWithFragmentFollowedByTrailingFields()
+        {
+            string query = @"
+query {
+    book_by_pk(id: 1) {
+        ...bookFields
+        title
+        publishers { name }
+    }
+}
+
+fragment bookFields on book { id }
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
+
+            Assert.AreEqual(1, response.GetProperty("id").GetInt32());
+            Assert.AreEqual("Awesome book", response.GetProperty("title").GetString());
+            Assert.AreEqual("Big Company", response.GetProperty("publishers").GetProperty("name").GetString());
+        }
+
+        /// <summary>
+        /// Fields listed after an inline fragment in the same selection set must still be
+        /// resolved. Previously AddGraphQLFields returned after expanding an inline fragment.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryWithInlineFragmentFollowedByTrailingFields()
+        {
+            string query = @"
+query {
+    book_by_pk(id: 1) {
+        ... on book { id }
+        title
+        publishers { name }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
+
+            Assert.AreEqual(1, response.GetProperty("id").GetInt32());
+            Assert.AreEqual("Awesome book", response.GetProperty("title").GetString());
+            Assert.AreEqual("Big Company", response.GetProperty("publishers").GetProperty("name").GetString());
+        }
+
         [TestMethod]
         public async Task GraphQLQueryWithMultipleOfTheSameFieldReturnsFieldOnce()
         {

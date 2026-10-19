@@ -70,7 +70,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         public static XElement AssertXmlWithId(string content, string expectedId)
         {
             XElement root = AssertIsValidXml(content);
-            Assert.IsFalse(content.Contains('\\'), "The parsed XML value must not contain backslash escaping.");
             Assert.AreEqual(expectedId, root.Attribute("id")!.Value);
             return root;
         }

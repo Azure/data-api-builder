@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
@@ -135,9 +136,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
             catch (OperationCanceledException) when (args.CancellationToken.IsCancellationRequested)
             {
                 // Host shutdown canceled this generation before publication.
+                TelemetryFailureContext.Current?.RecordFailure(TelemetryFailureStage.Serving);
             }
             catch (Exception ex)
             {
+                // Retain the serving snapshot and continue the ordered reload as before, but
+                // do not let its outer telemetry observer accept this failed generation.
+                TelemetryFailureContext.Current?.RecordFailure(TelemetryFailureStage.Serving);
                 _logger.LogError(
                     ex,
                     "Failed to refresh the MCP tool registry after a runtime configuration change. " +

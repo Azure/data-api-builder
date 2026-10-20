@@ -82,13 +82,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             Assert.IsTrue(root.TryGetProperty("value", out JsonElement valueWrapper), "Response should contain 'value' property.");
 
-            JsonElement records = valueWrapper.ValueKind == JsonValueKind.Object
-                ? valueWrapper.GetProperty("value")
-                : valueWrapper;
-
-            Assert.AreEqual(JsonValueKind.Array, records.ValueKind);
-            Assert.IsTrue(records.GetArrayLength() > 0, "Expected at least one book record.");
-            Assert.AreEqual(1, records[0].GetProperty("id").GetInt32());
+            Assert.AreEqual(JsonValueKind.Array, valueWrapper.ValueKind);
+            Assert.IsTrue(valueWrapper.GetArrayLength() > 0, "Expected at least one book record.");
+            Assert.AreEqual(1, valueWrapper[0].GetProperty("id").GetInt32());
         }
 
         /// <summary>

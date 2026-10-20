@@ -355,6 +355,122 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.ThrowsException<NotSupportedException>(() => emptyValues.Add("@claim", "value"));
         }
 
+        /// <summary>
+        /// Verifies a delimited contains policy folds the claim and delimiters into one bound
+        /// parameter: a LIKE pattern for SQL and a CONTAINS search value for Cosmos DB.
+        /// </summary>
+        [TestMethod]
+        public void DelimitedContainsClaim_IsBoundAsSingleParameterAcrossSqlAndCosmos()
+        {
+            const string policy = "contains(@item.textCol, concat(concat('|', @claims.value), '|'))";
+            (AuthorizationResolver resolver, DefaultHttpContext context) = CreateAuthorizationContext(
+                policy,
+                new Claim("value", "123456", ClaimValueTypes.String));
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
+
+            TestSqlQueryStructure sqlStructure = new(metadataProvider.Object, resolver);
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                OPERATION,
+                sqlStructure,
+                context,
+                resolver,
+                metadataProvider.Object);
+
+            Assert.AreEqual("([textCol] LIKE @param0)", sqlStructure.GetDbPolicyForOperation(OPERATION));
+            AssertParameterValues(sqlStructure, "%|123456|%");
+            Assert.AreEqual(-1, sqlStructure.Parameters["@param0"].Length);
+
+            FilterClause filterClause = ResolveFilterClause(resolver, context, metadataProvider.Object);
+            TestQueryStructure cosmosStructure = new(metadataProvider.Object, resolver);
+            string cosmosPredicate = filterClause.Expression.Accept(
+                new ODataASTCosmosVisitor("c", cosmosStructure));
+
+            Assert.AreEqual("CONTAINS(c.textCol, @param0)", cosmosPredicate);
+            AssertParameterValues(cosmosStructure, "|123456|");
+        }
+
+        /// <summary>
+        /// Verifies LIKE wildcards and quotes in a claim are escaped and stay inside the bound
+        /// parameter for each supported string function.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("contains", "%50\\%\\_\\[x\\]' or 1 eq 1%", DisplayName = "contains")]
+        [DataRow("startswith", "50\\%\\_\\[x\\]' or 1 eq 1%", DisplayName = "startswith")]
+        [DataRow("endswith", "%50\\%\\_\\[x\\]' or 1 eq 1", DisplayName = "endswith")]
+        public void StringFunctionClaim_EscapesLikeWildcards(string function, string expectedPattern)
+        {
+            (AuthorizationResolver resolver, DefaultHttpContext context) = CreateAuthorizationContext(
+                $"{function}(@item.textCol, @claims.value)",
+                new Claim("value", "50%_[x]' or 1 eq 1", ClaimValueTypes.String));
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
+
+            TestSqlQueryStructure sqlStructure = new(metadataProvider.Object, resolver);
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                OPERATION,
+                sqlStructure,
+                context,
+                resolver,
+                metadataProvider.Object);
+
+            Assert.AreEqual("([textCol] LIKE @param0)", sqlStructure.GetDbPolicyForOperation(OPERATION));
+            AssertParameterValues(sqlStructure, expectedPattern);
+        }
+
+        /// <summary>
+        /// Verifies a string function combined with a comparison is not rewritten as a comparison
+        /// to Boolean true.
+        /// </summary>
+        [TestMethod]
+        public void ContainsClaim_CombinedWithComparison_RemainsPredicate()
+        {
+            const string policy = "@item.intCol ne 6 and contains(@item.textCol, @claims.value)";
+            (AuthorizationResolver resolver, DefaultHttpContext context) = CreateAuthorizationContext(
+                policy,
+                new Claim("value", "abc", ClaimValueTypes.String));
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
+
+            TestSqlQueryStructure sqlStructure = new(metadataProvider.Object, resolver);
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                OPERATION,
+                sqlStructure,
+                context,
+                resolver,
+                metadataProvider.Object);
+
+            Assert.AreEqual(
+                "(([intCol] != @param0) AND ([textCol] LIKE @param1))",
+                sqlStructure.GetDbPolicyForOperation(OPERATION));
+            AssertParameterValues(sqlStructure, 6, "%abc%");
+        }
+
+        /// <summary>
+        /// Verifies unsupported string function shapes fail closed before any parameter is collected.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("contains(@claims.value, 'x')", "value", DisplayName = "Claim as searched value")]
+        [DataRow("contains(@item.textCol, @item.textCol)", "value", DisplayName = "Field as search value")]
+        [DataRow("contains(@item.textCol, @claims.value)", null, DisplayName = "Null claim")]
+        [DataRow("tolower(@item.textCol) eq @claims.value", "value", DisplayName = "Unsupported function")]
+        [DataRow("contains(@item.textCol, @claims.value) eq true", "value", DisplayName = "Function compared to a value")]
+        public void UnsupportedStringFunctionPolicy_FailsClosed(string policy, string? claimValue)
+        {
+            Claim claim = claimValue is null
+                ? new Claim("value", "null", JsonClaimValueTypes.JsonNull)
+                : new Claim("value", claimValue, ClaimValueTypes.String);
+            (AuthorizationResolver resolver, DefaultHttpContext context) = CreateAuthorizationContext(policy, claim);
+            Mock<ISqlMetadataProvider> metadataProvider = CreateMetadataProvider();
+            TestSqlQueryStructure sqlStructure = new(metadataProvider.Object, resolver);
+
+            Assert.ThrowsException<DataApiBuilderException>(() =>
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                    OPERATION,
+                    sqlStructure,
+                    context,
+                    resolver,
+                    metadataProvider.Object));
+            Assert.AreEqual(0, sqlStructure.Parameters.Count);
+        }
+
         private static FilterClause ResolveFilterClause(
             AuthorizationResolver resolver,
             DefaultHttpContext context,

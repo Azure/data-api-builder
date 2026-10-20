@@ -22,6 +22,7 @@
       <PackageReference Include="Serilog.Sinks.File" />
       <PackageReference Include="System.IO.Abstractions" />
       <PackageReference Include="System.Drawing.Common" />
+      <PackageReference Include="System.Security.Cryptography.Pkcs" />
       <PackageReference Include="Microsoft.Data.SqlClient" />
       <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
       <PackageReference Include="System.IdentityModel.Tokens.Jwt" />

@@ -18,6 +18,7 @@
     <!-- Force the transitive MessagePack (via Aspire.Hosting/KubernetesClient) up to a
          patched version to resolve NU1903 (GHSA-hv8m-jj95-wg3x). -->
     <PackageReference Include="MessagePack" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
   </ItemGroup>
 
   <ItemGroup>

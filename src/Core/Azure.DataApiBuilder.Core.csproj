@@ -36,6 +36,8 @@
     <PackageReference Include="Microsoft.IdentityModel.Validators" />
     <PackageReference Include="Microsoft.Azure.Cosmos" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
+    <!-- Repeated from Config so the packed Core library still depends on the patched Pkcs when project references are privatized. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="Microsoft.OData.Core" />

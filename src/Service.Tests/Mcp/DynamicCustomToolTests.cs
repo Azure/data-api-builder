@@ -555,6 +555,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         [TestMethod]
+        public async Task ExecuteAsync_EngineValueEnvelope_IsUnwrapped()
+        {
+            using JsonDocument queryDocument = JsonDocument.Parse("{\"value\":[{\"id\":1}]}");
+            CallToolResult result = await ExecuteCustomToolAsync(
+                dbParameters: new(),
+                userParameters: null,
+                queryOutcome: new OkObjectResult(queryDocument));
+
+            AssertSuccess(result, "The DAB response envelope should be removed from the stored procedure result.");
+            using JsonDocument response = JsonDocument.Parse(GetFirstText(result));
+            JsonElement value = response.RootElement.GetProperty("value");
+            Assert.AreEqual(JsonValueKind.Array, value.ValueKind);
+            Assert.AreEqual(1, value.GetArrayLength());
+            Assert.AreEqual(1, value[0].GetProperty("id").GetInt32());
+        }
+
+        [TestMethod]
         public async Task ExecuteAsync_PocoResult_IsSerialized()
         {
             CallToolResult result = await ExecuteCustomToolAsync(

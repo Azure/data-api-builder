@@ -570,7 +570,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             using JsonDocument response = JsonDocument.Parse(GetFirstText(result));
             JsonElement value = response.RootElement.GetProperty("value");
             Assert.AreEqual(JsonValueKind.Array, value.ValueKind);
-            Assert.AreEqual(rows.RootElement.GetRawText(), value.GetRawText(), "Rows should be unchanged after removing only the engine envelope.");
+            Assert.AreEqual(JsonSerializer.Serialize(rows.RootElement), JsonSerializer.Serialize(value), "Rows should be unchanged after removing only the engine envelope.");
         }
 
         [TestMethod]

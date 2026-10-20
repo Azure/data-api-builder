@@ -554,21 +554,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(JsonValueKind.Array, response.RootElement.GetProperty("value").ValueKind);
         }
 
-        [TestMethod]
-        public async Task ExecuteAsync_EngineValueEnvelope_IsUnwrapped()
+        [DataTestMethod]
+        [DataRow("[]", DisplayName = "Empty result")]
+        [DataRow("[{\"id\":1},{\"id\":2}]", DisplayName = "Multiple rows")]
+        [DataRow("[{\"id\":1,\"value\":[\"first\",{\"nested\":\"second\"}]}]", DisplayName = "Array-valued value column")]
+        public async Task ExecuteAsync_EngineResponse_RemovesOnlyOuterEnvelope(string rowsJson)
         {
-            using JsonDocument queryDocument = JsonDocument.Parse("{\"value\":[{\"id\":1}]}");
+            using JsonDocument rows = JsonDocument.Parse(rowsJson);
             CallToolResult result = await ExecuteCustomToolAsync(
                 dbParameters: new(),
                 userParameters: null,
-                queryOutcome: new OkObjectResult(queryDocument));
+                queryOutcome: SqlResponseHelpers.OkResponse(rows.RootElement.Clone()));
 
             AssertSuccess(result, "The DAB response envelope should be removed from the stored procedure result.");
             using JsonDocument response = JsonDocument.Parse(GetFirstText(result));
             JsonElement value = response.RootElement.GetProperty("value");
             Assert.AreEqual(JsonValueKind.Array, value.ValueKind);
-            Assert.AreEqual(1, value.GetArrayLength());
-            Assert.AreEqual(1, value[0].GetProperty("id").GetInt32());
+            Assert.AreEqual(rows.RootElement.GetRawText(), value.GetRawText(), "Rows should be unchanged after removing only the engine envelope.");
         }
 
         [TestMethod]

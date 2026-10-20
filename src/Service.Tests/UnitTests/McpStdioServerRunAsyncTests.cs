@@ -234,9 +234,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             tool.Verify(value => value.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()),
                 callToolFirst ? Times.Once() : Times.Never());
             await telemetry.StopAsync();
-            Assert.AreEqual(telemetryEnabled ? 1 : 0, exporter.Records.Count(record => record.Name == "dab.engine.ready"));
+            Assert.AreEqual(telemetryEnabled ? 1 : 0, exporter.Records.Count(record => record.Name == "dab/engine.ready"));
             Assert.AreEqual(telemetryEnabled && callToolFirst ? 1 : 0,
-                exporter.Records.Count(record => record.Name == "dab.engine.first_successful_request"));
+                exporter.Records.Count(record => record.Name == "dab/engine.first_successful_request"));
         }
 
         [TestMethod]
@@ -281,8 +281,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             await telemetry.StopAsync();
             Assert.AreEqual(1, metadata.InitializeAsyncCallCount);
             refresh.Verify(value => value.EnsureInitialized(It.IsAny<CancellationToken>()), Times.Never);
-            Assert.AreEqual("metadata", exporter.Records.Single(record => record.Name == "dab.engine.startup_failed").Properties["failure_stage"]);
-            Assert.IsFalse(exporter.Records.Any(record => record.Name == "dab.engine.ready"));
+            Assert.AreEqual("metadata", exporter.Records.Single(record => record.Name == "dab/engine.startup_failed").Properties["failure_stage"]);
+            Assert.IsFalse(exporter.Records.Any(record => record.Name == "dab/engine.ready"));
             string[] responses = output.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
             Assert.AreEqual(2, responses.Length);
             StringAssert.Contains(responses[0], "protocolVersion");

@@ -330,7 +330,7 @@ public class EngineTelemetryEmbeddingTests
     }
 
     private static long Sum(IEnumerable<EngineTelemetryEvent> records, string family, string counter) => records
-        .Where(record => record.Name == "dab.engine.usage_summary"
+        .Where(record => record.Name == "dab/engine.usage_summary"
             && record.Properties.TryGetValue("family", out string? value) && value == family)
         .Sum(record => long.Parse(record.Properties[counter], CultureInfo.InvariantCulture));
 

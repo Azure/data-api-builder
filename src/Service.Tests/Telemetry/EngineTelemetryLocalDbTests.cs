@@ -54,11 +54,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
     [DoNotParallelize]
     public class EngineTelemetryLocalDbTests
     {
-        private const string READY = "dab.engine.ready";
-        private const string FIRST_SERVED = "dab.engine.first_request_served";
-        private const string FIRST_SUCCESS = "dab.engine.first_successful_request";
-        private const string SUMMARY = "dab.engine.usage_summary";
-        private const string STOPPED = "dab.engine.stopped";
+        private const string READY = "dab/engine.ready";
+        private const string FIRST_SERVED = "dab/engine.first_request_served";
+        private const string FIRST_SUCCESS = "dab/engine.first_successful_request";
+        private const string SUMMARY = "dab/engine.usage_summary";
+        private const string STOPPED = "dab/engine.stopped";
         private const string PRIVATE_ROLE = "LOCALDB_PRIVATE_ROLE_65cd20";
         private const string PRIVATE_VALUE = "LOCALDB_PRIVATE_VALUE_65cd20";
         private const string PRIVATE_FIELD = "LOCALDB_PRIVATE_MISSING_FIELD_65cd20";
@@ -354,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     // Advance only the telemetry clock, not the cache's expiration clock.
                     clock.Advance(TimeSpan.FromHours(6));
                     session.Tick();
-                    await exporter.WaitForAsync("dab.engine.heartbeat");
+                    await exporter.WaitForAsync("dab/engine.heartbeat");
                     // These requests are isolated in a new measurement window. Both must
                     // count as successful usage even though neither executes a SQL command.
                     for (int attempt = 0; attempt < 2; attempt++)
@@ -372,7 +372,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 {
                     clock.Advance(TimeSpan.FromHours(6));
                     session.Tick();
-                    await exporter.WaitForAsync("dab.engine.heartbeat");
+                    await exporter.WaitForAsync("dab/engine.heartbeat");
                     await AssertConcurrentUpsertsAsync(client, completions, connectionString, restEntityPath);
                 }
 
@@ -684,7 +684,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
                 // RunMcpStdioHost has awaited StopAsync and drained the in-memory exporter.
                 EngineTelemetryEvent[] records = exporter.Records.ToArray();
-                EngineTelemetryEvent started = OnlyEvent(records, "dab.engine.process_started");
+                EngineTelemetryEvent started = OnlyEvent(records, "dab/engine.process_started");
                 EngineTelemetryEvent ready = OnlyEvent(records, READY);
                 EngineTelemetryEvent served = OnlyEvent(records, FIRST_SERVED);
                 EngineTelemetryEvent success = OnlyEvent(records, FIRST_SUCCESS);
@@ -705,7 +705,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 Assert.AreEqual(1, identityResolutions);
                 Assert.IsTrue(records.Where(record => record != started).All(record =>
                     record.Properties["dab_api_id"] == apiId.ToString("D") && record.Properties["dab_api_id_stability"] == "ephemeral"));
-                Assert.IsFalse(records.Any(record => record.Name == "dab.engine.startup_failed"));
+                Assert.IsFalse(records.Any(record => record.Name == "dab/engine.startup_failed"));
                 Assert.IsFalse(Summaries(records, "collection_loss").Any());
 
                 EngineTelemetryEvent[] requests = Summaries(records, "request").ToArray();
@@ -926,7 +926,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private static void AssertUsage(EngineTelemetryEvent[] records, int embeddingRequests = 0, int additionalGraphQLReads = 0,
             int additionalRestWrites = 0)
         {
-            EngineTelemetryEvent started = OnlyEvent(records, "dab.engine.process_started");
+            EngineTelemetryEvent started = OnlyEvent(records, "dab/engine.process_started");
             EngineTelemetryEvent ready = OnlyEvent(records, READY);
             EngineTelemetryEvent served = OnlyEvent(records, FIRST_SERVED);
             EngineTelemetryEvent success = OnlyEvent(records, FIRST_SUCCESS);

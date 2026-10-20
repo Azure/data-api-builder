@@ -112,13 +112,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             await exporter.Summary.Task.WaitAsync(TimeSpan.FromSeconds(2));
             await client.DisposeAsync();
             await session.StopAsync(timeout.Token);
-            EngineTelemetryEvent[] requests = exporter.Records.Where(record => record.Name == "dab.engine.usage_summary" &&
+            EngineTelemetryEvent[] requests = exporter.Records.Where(record => record.Name == "dab/engine.usage_summary" &&
                 record.Properties["family"] == "request").ToArray();
             Assert.AreEqual(2L, requests.Sum(record => long.Parse(record.Properties["count"], CultureInfo.InvariantCulture)));
             Assert.AreEqual(2L, requests.Sum(record => long.Parse(record.Properties["success"], CultureInfo.InvariantCulture)));
             Assert.AreEqual(0L, requests.Sum(record => long.Parse(record.Properties["canceled"], CultureInfo.InvariantCulture)));
             Assert.IsTrue(requests.All(record => record.Properties["api"] == "mcp" && record.Properties["transport"] == "http"));
-            Assert.AreEqual(1, exporter.Records.Count(record => record.Name == "dab.engine.first_successful_request"));
+            Assert.AreEqual(1, exporter.Records.Count(record => record.Name == "dab/engine.first_successful_request"));
             await host.StopAsync(timeout.Token);
         }
 
@@ -209,11 +209,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             await client.DisposeAsync();
             await host.StopAsync(deadline.Token);
             await session.StopAsync();
-            EngineTelemetryEvent request = exporter.Records.Single(record => record.Name == "dab.engine.usage_summary" &&
+            EngineTelemetryEvent request = exporter.Records.Single(record => record.Name == "dab/engine.usage_summary" &&
                 record.Properties["family"] == "request");
             Assert.AreEqual("1", request.Properties["count"]);
             Assert.AreEqual("1", request.Properties["canceled"]);
-            Assert.IsFalse(exporter.Records.Any(record => record.Name == "dab.engine.first_successful_request"));
+            Assert.IsFalse(exporter.Records.Any(record => record.Name == "dab/engine.first_successful_request"));
         }
 
         [DataTestMethod]
@@ -278,7 +278,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.IsTrue(request.IsCompleted);
             Assert.AreEqual(0, response.Context.Items.Count, "The SDK context must not retain a completed product scope.");
             await session.StopAsync();
-            EngineTelemetryEvent summary = exporter.Records.Single(record => record.Name == "dab.engine.usage_summary" &&
+            EngineTelemetryEvent summary = exporter.Records.Single(record => record.Name == "dab/engine.usage_summary" &&
                 record.Properties["family"] == "request");
             Assert.AreEqual("1", summary.Properties[expectedOutcome]);
             Assert.AreEqual("1", summary.Properties["count"]);
@@ -326,7 +326,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             public ValueTask<bool> ExportAsync(EngineTelemetryEvent record, CancellationToken cancellationToken)
             {
                 Records.Enqueue(record);
-                if (record.Name == "dab.engine.usage_summary" && record.Properties["family"] == "request")
+                if (record.Name == "dab/engine.usage_summary" && record.Properties["family"] == "request")
                 {
                     Summary.TrySetResult();
                 }

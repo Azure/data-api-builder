@@ -58,11 +58,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
     {
         private const string SENTINEL = "RELOAD_PRIVATE_FAILURE_62dfea";
         private const string CONNECTION_STRING = "Server=engine-telemetry.invalid;Database=unused;Integrated Security=true;Connect Timeout=1;";
-        private const string PROCESS_STARTED = "dab.engine.process_started";
-        private const string READY = "dab.engine.ready";
-        private const string CHANGED = "dab.engine.configuration_changed";
-        private const string REJECTED = "dab.engine.configuration_change_failed";
-        private const string STOPPED = "dab.engine.stopped";
+        private const string PROCESS_STARTED = "dab/engine.process_started";
+        private const string READY = "dab/engine.ready";
+        private const string CHANGED = "dab/engine.configuration_changed";
+        private const string REJECTED = "dab/engine.configuration_change_failed";
+        private const string STOPPED = "dab/engine.stopped";
         private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(10);
         private static readonly Guid _apiId = new("d6915f03-fc48-4ab8-8a09-906d9a2d7b46");
         private static readonly string[] _reloadEvents =
@@ -151,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 metadata.Verify(factory => factory.InitializeAsync(It.IsAny<CancellationToken>()), boundary == "validation" ? Times.Never() : Times.Once());
                 Assert.IsFalse(session.IsReady);
                 EngineTelemetryEvent[] records = await DrainAsync(session, exporter);
-                EngineTelemetryEvent failure = records.Single(record => record.Name == "dab.engine.startup_failed");
+                EngineTelemetryEvent failure = records.Single(record => record.Name == "dab/engine.startup_failed");
                 Assert.AreEqual(expectedStage, failure.Properties["failure_stage"]);
                 Assert.AreEqual("initialization", failure.Properties["failure_category"]);
                 Assert.IsFalse(records.Any(record => record.Name == READY || record.Name == CHANGED));
@@ -414,7 +414,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual("configuration", rejection.Properties["failure_category"]);
             Assert.AreEqual(0L, rejection.ConfigurationEpoch);
             Assert.AreEqual(1L, records.Single(record => record.Name == READY).ConfigurationEpoch);
-            Assert.IsFalse(records.Any(record => record.Name == "dab.engine.startup_failed"));
+            Assert.IsFalse(records.Any(record => record.Name == "dab/engine.startup_failed"));
         }
 
         [DataTestMethod]

@@ -576,7 +576,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             CollectionAssert.AreEqual(roles, context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToArray());
             await response.CompleteAsync();
             await session.StopAsync();
-            EngineTelemetryEvent request = records.Single(record => record.Name == "dab.engine.usage_summary" &&
+            EngineTelemetryEvent request = records.Single(record => record.Name == "dab/engine.usage_summary" &&
                 record.Properties["family"] == "request");
             Assert.AreEqual(((EngineTelemetryRole)expected).ToString().ToLowerInvariant(), request.Properties["role_class"]);
             Assert.AreEqual("1", request.Properties["success"]);

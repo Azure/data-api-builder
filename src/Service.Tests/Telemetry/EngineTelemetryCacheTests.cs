@@ -517,7 +517,7 @@ public class EngineTelemetryCacheTests
     }
 
     private static IEnumerable<EngineTelemetryEvent> Summaries(IEnumerable<EngineTelemetryEvent> records, string family) => records
-        .Where(record => record.Name == "dab.engine.usage_summary"
+        .Where(record => record.Name == "dab/engine.usage_summary"
             && record.Properties.TryGetValue("family", out string? value) && value == family);
 
     private static long Sum(IEnumerable<EngineTelemetryEvent> records, string family, string counter = "count") =>
@@ -645,7 +645,7 @@ public class EngineTelemetryCacheTests
             EngineTelemetryEvent[] records = _exporter.Events.ToArray();
             if (_enabled)
             {
-                Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.stopped"));
+                Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.stopped"));
                 Assert.IsTrue(records.All(record => record.Properties["sender_dropped_events"] == "0"));
             }
 

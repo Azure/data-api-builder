@@ -45,9 +45,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
     {
         private const string SENTINEL = "MCP_PRIVATE_INPUT_31ae82";
         private const string ENTITY = SENTINEL + "_entity";
-        private const string FIRST_SERVED = "dab.engine.first_request_served";
-        private const string FIRST_SUCCESS = "dab.engine.first_successful_request";
-        private const string SUMMARY = "dab.engine.usage_summary";
+        private const string FIRST_SERVED = "dab/engine.first_request_served";
+        private const string FIRST_SUCCESS = "dab/engine.first_successful_request";
+        private const string SUMMARY = "dab/engine.usage_summary";
         private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(10);
         private static readonly Guid _apiId = new("cb11c0e5-b94b-455a-9ab6-712130f51af1");
 
@@ -192,7 +192,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             EngineTelemetryEvent[] records = await fixture.StopAsync();
             AssertNoRequestTelemetry(records);
             AssertFamilies(records);
-            CollectionAssert.AreEqual(new[] { "dab.engine.process_started", "dab.engine.ready", "dab.engine.stopped" },
+            CollectionAssert.AreEqual(new[] { "dab/engine.process_started", "dab/engine.ready", "dab/engine.stopped" },
                 records.Select(record => record.Name).ToArray());
         }
 
@@ -294,11 +294,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual(2L, success.ConfigurationEpoch);
             Assert.IsTrue(served.Sequence < success.Sequence);
             Assert.IsTrue(new[] { served, success }.All(record => record.Properties["api"] == "mcp" && record.Properties["transport"] == "stdio"));
-            Assert.AreEqual(1L, records.Single(record => record.Name == "dab.engine.ready").ConfigurationEpoch);
-            EngineTelemetryEvent changed = records.Single(record => record.Name == "dab.engine.configuration_changed");
+            Assert.AreEqual(1L, records.Single(record => record.Name == "dab/engine.ready").ConfigurationEpoch);
+            EngineTelemetryEvent changed = records.Single(record => record.Name == "dab/engine.configuration_changed");
             Assert.AreEqual(2L, changed.ConfigurationEpoch);
             Assert.AreEqual("hot_reload", changed.Properties["configuration_delivery"]);
-            Assert.AreEqual(2L, records.Single(record => record.Name == "dab.engine.stopped").ConfigurationEpoch);
+            Assert.AreEqual(2L, records.Single(record => record.Name == "dab/engine.stopped").ConfigurationEpoch);
             AssertFamilies(records, "operation", "request");
         }
 
@@ -716,8 +716,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 await Session.StopAsync().WaitAsync(_timeout);
                 await Exporter.Stopped.Task.WaitAsync(_timeout);
                 EngineTelemetryEvent[] records = Exporter.Records.ToArray();
-                Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.ready"));
-                Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.stopped"));
+                Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.ready"));
+                Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.stopped"));
                 Assert.AreEqual(1, Volatile.Read(ref _identityResolutions));
                 Assert.AreNotEqual(Guid.Empty, records[0].SessionId);
                 Assert.AreEqual(1, records.Select(record => record.SessionId).Distinct().Count());
@@ -726,8 +726,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     records.Select(record => record.Sequence).ToArray());
                 Assert.IsTrue(records.All(record => record.IsSynthetic && record.Properties["execution_mode"] == "mcp_stdio"
                     && record.Properties["sender_dropped_events"] == "0"));
-                Assert.IsFalse(records.Single(record => record.Name == "dab.engine.process_started").Properties.ContainsKey("dab_api_id"));
-                Assert.IsTrue(records.Where(record => record.Name != "dab.engine.process_started")
+                Assert.IsFalse(records.Single(record => record.Name == "dab/engine.process_started").Properties.ContainsKey("dab_api_id"));
+                Assert.IsTrue(records.Where(record => record.Name != "dab/engine.process_started")
                     .All(record => record.Properties["dab_api_id"] == _apiId.ToString("D") && record.Properties["dab_api_id_stability"] == "ephemeral"));
                 Assert.AreEqual(0, Summaries(records, "http_outcome").Length);
                 Assert.IsFalse(JsonSerializer.Serialize(records).Contains(SENTINEL, StringComparison.Ordinal),
@@ -763,11 +763,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 Records.Enqueue(record);
-                if (record.Name == "dab.engine.heartbeat")
+                if (record.Name == "dab/engine.heartbeat")
                 {
                     Heartbeats.Writer.TryWrite(record);
                 }
-                else if (record.Name == "dab.engine.stopped")
+                else if (record.Name == "dab/engine.stopped")
                 {
                     Stopped.TrySetResult();
                 }

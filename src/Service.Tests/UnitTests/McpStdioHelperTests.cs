@@ -268,14 +268,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(1, stdio.RunAsyncCallCount);
             Assert.AreEqual(0, metadata.InitializeAsyncCallCount);
             Assert.AreEqual(1, host.DisposeCallCount);
-            Assert.AreEqual(ready ? 0 : 1, exporter.Events.Count(record => record.Name == "dab.engine.startup_failed"),
+            Assert.AreEqual(ready ? 0 : 1, exporter.Events.Count(record => record.Name == "dab/engine.startup_failed"),
                 "The failure must be recorded before the helper stops and disables its session.");
             if (!ready)
             {
-                Assert.AreEqual("serving", exporter.Events.Single(record => record.Name == "dab.engine.startup_failed").Properties["failure_stage"]);
+                Assert.AreEqual("serving", exporter.Events.Single(record => record.Name == "dab/engine.startup_failed").Properties["failure_stage"]);
             }
 
-            Assert.AreEqual("dab.engine.stopped", exporter.Events.Last().Name);
+            Assert.AreEqual("dab/engine.stopped", exporter.Events.Last().Name);
         }
 
         [DataTestMethod]
@@ -315,7 +315,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Console.SetError(originalError);
             }
 
-            EngineTelemetryEvent failure = exporter.Events.Single(record => record.Name == "dab.engine.startup_failed");
+            EngineTelemetryEvent failure = exporter.Events.Single(record => record.Name == "dab/engine.startup_failed");
             Assert.AreEqual(expectedStage, failure.Properties["failure_stage"]);
             Assert.AreEqual("initialization", failure.Properties["failure_category"]);
             Assert.AreEqual(1, metadata.InitializeAsyncCallCount);
@@ -326,7 +326,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             StringAssert.Contains(responses[2], "Internal error");
             StringAssert.Contains(responses[3], "\"ok\":true");
             Assert.AreEqual(string.Empty, capture.ToString());
-            Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab.engine.ready"));
+            Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab/engine.ready"));
             Assert.IsFalse(failure.Properties.Values.Any(value => value.Contains("synthetic private failure", StringComparison.Ordinal)));
         }
 
@@ -353,7 +353,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(0, metadata.InitializeAsyncCallCount);
             Assert.AreEqual(0, ((TestMcpToolRegistryRefreshService)services.GetRequiredService<IMcpToolRegistryRefreshService>()).EnsureInitializedCallCount);
             Assert.AreEqual(3, output.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Length);
-            CollectionAssert.AreEqual(new[] { "dab.engine.process_started", "dab.engine.stopped" },
+            CollectionAssert.AreEqual(new[] { "dab/engine.process_started", "dab/engine.stopped" },
                 exporter.Events.Select(record => record.Name).ToArray());
             Assert.AreEqual(0, host.StartAsyncCallCount);
             Assert.AreEqual(1, host.DisposeCallCount);
@@ -404,8 +404,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(0, metadata.InitializeAsyncCallCount);
             Assert.AreEqual(1, host.DisposeCallCount);
-            Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab.engine.ready"));
-            EngineTelemetryEvent failure = exporter.Events.Single(record => record.Name == "dab.engine.startup_failed");
+            Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab/engine.ready"));
+            EngineTelemetryEvent failure = exporter.Events.Single(record => record.Name == "dab/engine.startup_failed");
             Assert.AreEqual("serving", failure.Properties["failure_stage"]);
             Assert.IsTrue(loader.ShutdownResourcesDisposed);
         }

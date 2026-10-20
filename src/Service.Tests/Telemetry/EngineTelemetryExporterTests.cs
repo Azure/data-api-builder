@@ -40,6 +40,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private const string CONNECTION_STRING = "InstrumentationKey=" + KEY + ";IngestionEndpoint=https://synthetic.invalid/";
         private static readonly TimeSpan _testTimeout = TimeSpan.FromSeconds(10);
 
+        public TestContext TestContext { get; set; } = null!;
+
         [TestInitialize]
         public void RequireOfflineSdkTestEnvironment()
         {
@@ -72,9 +74,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 Assert.AreEqual(enabled ? 1 : 0, factories);
                 if (enabled)
                 {
-                    CollectionAssert.AreEqual(new[] { "dab.engine.process_started", "dab.engine.startup_failed", "dab.engine.stopped" },
+                    CollectionAssert.AreEqual(new[] { "dab/engine.process_started", "dab/engine.startup_failed", "dab/engine.stopped" },
                         exporter.Records.Select(record => record.Name).ToArray());
-                    Assert.AreEqual("configuration", exporter.Records.Single(record => record.Name == "dab.engine.startup_failed").Properties["failure_stage"]);
+                    Assert.AreEqual("configuration", exporter.Records.Single(record => record.Name == "dab/engine.startup_failed").Properties["failure_stage"]);
                     Assert.IsTrue(exporter.Records.All(record => record.IsSynthetic && record.ConfigurationEpoch == 0));
                 }
                 else
@@ -195,7 +197,61 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual(9, properties.EnumerateObject().Count());
             Assert.AreEqual(record.EventId.ToString("D"), properties.GetProperty("dab_event_id").GetString());
             Assert.AreEqual(record.OccurredAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture), properties.GetProperty("dab_occurred_at").GetString());
-            Assert.AreEqual("2", properties.GetProperty("count").GetString());
+            Assert.AreEqual("2", properties.GetProperty("dab_count").GetString());
+            AssertSentContract(envelope, "dab/engine.");
+        }
+
+        [DataTestMethod]
+        [DataRow("dab/engine.usage_summary", "dab/engine.")]
+        [DataRow("dab/cli.command_completed", "dab/cli.")]
+        public async Task ActualSdkPreservesSharedPropertyValuesAndPrefixesKeysExactlyOnce(string name, string prefix)
+        {
+            const string json = "{\"runtime.rest.effective\":\"enabled\",\"option_config\":[true,1,\"dab_version\"]}";
+            EngineTelemetryEvent record = CreateEvent() with
+            {
+                Name = name,
+                Properties = CreateEvent().Properties
+                    .Add("runtime.rest.effective", "enabled")
+                    .Add("option_config", json)
+                    .Add("dab_version", "1.2.3")
+                    .Add("dab_api_id", "f6bb4a71-742a-445b-bca0-d4aa56659c28")
+                    .Add("dab_api_id_stability", "ephemeral")
+                    .Add(new string('x', 146), "maximum-length")
+            };
+            RecordingHandler handler = new();
+            using EngineTelemetryApplicationInsightsExporter exporter = CreateExporter(handler);
+            Assert.IsTrue(await exporter.ExportAsync(record, CancellationToken.None));
+            using JsonDocument body = JsonDocument.Parse(handler.Requests.Single().Body);
+            AssertSentContract(body.RootElement, prefix);
+            Assert.AreEqual(name, body.RootElement.GetProperty("data").GetProperty("baseData").GetProperty("name").GetString());
+            JsonElement properties = EventProperties(body);
+            Assert.AreEqual(record.Properties.Count + 7, properties.EnumerateObject().Count());
+            foreach ((string key, string value) in record.Properties)
+            {
+                string expectedKey = key.StartsWith("dab_", StringComparison.Ordinal) ? key : "dab_" + key;
+                Assert.AreEqual(value, properties.GetProperty(expectedKey).GetString(), expectedKey);
+            }
+
+            Assert.AreEqual(json, properties.GetProperty("dab_option_config").GetString());
+            Assert.IsFalse(properties.EnumerateObject().Any(property => property.Name.StartsWith("dab_dab_", StringComparison.Ordinal)));
+        }
+
+        [DataTestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task InvalidPrefixedKeysNeverReachTheTransport(bool collision)
+        {
+            EngineTelemetryEvent record = CreateEvent() with
+            {
+                Properties = collision
+                    ? ImmutableDictionary<string, string>.Empty.Add("count", "1").Add("dab_count", "2")
+                    : ImmutableDictionary<string, string>.Empty.Add(new string('x', 147), "value")
+            };
+            RecordingHandler handler = new();
+            using EngineTelemetryApplicationInsightsExporter exporter = CreateExporter(handler);
+
+            Assert.IsFalse(await exporter.ExportAsync(record, CancellationToken.None));
+            Assert.AreEqual(0, handler.Requests.Count, "Do not truncate names, silently overwrite values or send ambiguous properties.");
         }
 
         [TestMethod]
@@ -244,19 +300,103 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             {
                 using JsonDocument body = JsonDocument.Parse(request.Body);
                 return body.RootElement.Clone();
-            }).Single(envelope => envelope.GetProperty("data").GetProperty("baseData").GetProperty("name").GetString() == "dab.engine.ready");
+            }).Single(envelope => envelope.GetProperty("data").GetProperty("baseData").GetProperty("name").GetString() == "dab/engine.ready");
             JsonElement properties = ready.GetProperty("data").GetProperty("baseData").GetProperty("properties");
             foreach ((string key, string value) in snapshot)
             {
-                Assert.IsTrue(properties.TryGetProperty(key, out JsonElement actual), "SDK discarded snapshot property " + key);
+                Assert.IsTrue(properties.TryGetProperty("dab_" + key, out JsonElement actual), "SDK discarded snapshot property " + key);
                 Assert.AreEqual(value, actual.GetString(), key);
             }
 
             Assert.AreEqual("true", properties.GetProperty("dab_is_synthetic").GetString());
             Assert.AreEqual("1", properties.GetProperty("dab_config_epoch").GetString());
             Assert.IsTrue(properties.TryGetProperty("dab_event_id", out _));
-            Assert.IsTrue(properties.TryGetProperty("startup_ms", out _));
+            Assert.IsTrue(properties.TryGetProperty("dab_startup_ms", out _));
             Assert.IsTrue(EngineTelemetrySdkTransportHandler.HasOnlyApprovedEnvelopeTags(ready.GetRawText()));
+            AssertSentContract(ready, "dab/engine.");
+        }
+
+        [TestMethod]
+        public async Task AllEngineEventNamesAndPropertiesSatisfyTheActualWireContract()
+        {
+            RecordingHandler failedHandler = new();
+            using (EngineTelemetrySession failed = EngineTelemetrySession.Create(
+                () => CreateExporter(failedHandler), enableSyntheticCollection: true,
+                readEnvironmentVariable: _ => null, showNotice: () => { }, startTimer: false))
+            {
+                failed.StartupFailed();
+                await failed.StopAsync().WaitAsync(_testTimeout);
+            }
+
+            RecordingHandler handler = new();
+            WireTestTimeProvider clock = new();
+            RuntimeConfig config = new(null, new(DatabaseType.MSSQL, string.Empty), new(new Dictionary<string, Entity>()));
+            using (EngineTelemetrySession session = EngineTelemetrySession.Create(
+                () => CreateExporter(handler), enableSyntheticCollection: true, clock: clock,
+                readEnvironmentVariable: _ => null, showNotice: () => { },
+                resolveIdentity: _ => new(Guid.NewGuid(), "ephemeral"), startTimer: false))
+            {
+                session.AcceptConfiguration(config);
+                session.MarkHostReady();
+                using (EngineTelemetryRequestScope request = session.BeginRequest(
+                    EngineTelemetryApi.Rest, EngineTelemetryTransport.Http, EngineTelemetryRole.Anonymous))
+                {
+                    using (EngineTelemetryMeasurementScope? operation = session.BeginOperation(null, EngineTelemetryOperation.Read))
+                    {
+                        Assert.IsNotNull(operation);
+                        operation.Complete(EngineTelemetryOutcome.Success);
+                    }
+
+                    using (EngineTelemetryMeasurementScope? attempt = session.BeginDatabaseAttempt(DatabaseType.MSSQL))
+                    {
+                        Assert.IsNotNull(attempt);
+                        attempt.Complete(EngineTelemetryOutcome.Success);
+                    }
+
+                    using (EngineTelemetryMeasurementScope? embedding = session.BeginEmbedding())
+                    {
+                        Assert.IsNotNull(embedding);
+                        embedding.Complete(EngineTelemetryOutcome.Success);
+                    }
+
+                    session.RecordCacheLookup(EngineTelemetryCacheLayer.Level1, EngineTelemetryCacheResult.Miss);
+                    request.Complete(EngineTelemetryOutcome.Success, 200);
+                }
+
+                session.AcceptConfiguration(config with { }, "hot_reload");
+                session.ConfigurationChangeFailed(TelemetryFailureStage.Validation);
+                clock.Advance(TimeSpan.FromMinutes(10));
+                session.Tick();
+                await session.StopAsync().WaitAsync(_testTimeout);
+            }
+
+            JsonElement[] envelopes = failedHandler.Requests.Concat(handler.Requests).Select(request =>
+            {
+                using JsonDocument body = JsonDocument.Parse(request.Body);
+                return body.RootElement.Clone();
+            }).ToArray();
+            CollectionAssert.AreEquivalent(new[]
+            {
+                "dab/engine.process_started", "dab/engine.ready", "dab/engine.startup_failed",
+                "dab/engine.configuration_changed", "dab/engine.configuration_change_failed",
+                "dab/engine.first_request_served", "dab/engine.first_successful_request",
+                "dab/engine.heartbeat", "dab/engine.usage_summary", "dab/engine.stopped"
+            }, envelopes.Select(envelope => envelope.GetProperty("data").GetProperty("baseData").GetProperty("name").GetString())
+                .Distinct(StringComparer.Ordinal).ToArray());
+            foreach (JsonElement envelope in envelopes)
+            {
+                AssertSentContract(envelope, "dab/engine.");
+            }
+
+            JsonElement example = envelopes.First(envelope => envelope.GetProperty("data").GetProperty("baseData")
+                .GetProperty("name").GetString() == "dab/engine.process_started").GetProperty("data").GetProperty("baseData");
+            // A safe example of actual SDK output: no destination, envelope key or values.
+            TestContext.WriteLine(JsonSerializer.Serialize(new
+            {
+                eventName = example.GetProperty("name").GetString(),
+                propertyKeys = example.GetProperty("properties").EnumerateObject()
+                    .Select(property => property.Name).OrderBy(name => name, StringComparer.Ordinal).ToArray()
+            }));
         }
 
         [DataTestMethod]
@@ -599,7 +739,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 using JsonDocument body = JsonDocument.Parse(request.Body);
                 return body.RootElement.GetProperty("data").GetProperty("baseData").GetProperty("name").GetString()!;
             }).ToArray();
-            CollectionAssert.AreEqual(new[] { "dab.engine.process_started", "dab.engine.startup_failed", "dab.engine.stopped" }, names);
+            CollectionAssert.AreEqual(new[] { "dab/engine.process_started", "dab/engine.startup_failed", "dab/engine.stopped" }, names);
         }
 
         private static EngineTelemetryApplicationInsightsExporter CreateExporter(RecordingHandler handler, string? connectionString = null)
@@ -613,10 +753,33 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private static EngineTelemetryEvent CreateEvent() => new(
             Guid.NewGuid(), Guid.NewGuid(), 17,
             new DateTimeOffset(2026, 9, 21, 10, 11, 12, TimeSpan.FromMinutes(330)).AddTicks(3456789),
-            4, "dab.engine.usage_summary", ImmutableDictionary<string, string>.Empty.Add("api", "rest").Add("count", "2"));
+            4, "dab/engine.usage_summary", ImmutableDictionary<string, string>.Empty.Add("api", "rest").Add("count", "2"));
 
         private static JsonElement EventProperties(JsonDocument body)
             => body.RootElement.GetProperty("data").GetProperty("baseData").GetProperty("properties");
+
+        private static void AssertSentContract(JsonElement envelope, string eventPrefix)
+        {
+            JsonElement data = envelope.GetProperty("data").GetProperty("baseData");
+            string? name = data.GetProperty("name").GetString();
+            Assert.IsTrue(name?.StartsWith(eventPrefix, StringComparison.Ordinal) == true);
+            JsonElement properties = data.GetProperty("properties");
+            string[] keys = properties.EnumerateObject().Select(property => property.Name).ToArray();
+            Assert.IsTrue(keys.All(key => key.StartsWith("dab_", StringComparison.Ordinal)), "Every custom property is product-prefixed on the wire.");
+            Assert.AreEqual(keys.Length, keys.Distinct(StringComparer.Ordinal).Count(), "The serialized JSON must not contain duplicate property names.");
+            Assert.IsTrue(keys.All(key => key.Length <= 150), "The prefix counts toward the ingestion limit.");
+            Assert.AreEqual("true", properties.GetProperty("dab_is_synthetic").GetString());
+            Assert.IsTrue(EngineTelemetrySdkTransportHandler.HasOnlyApprovedEnvelopeTags(envelope.GetRawText()));
+        }
+
+        private sealed class WireTestTimeProvider : TimeProvider
+        {
+            private DateTimeOffset _now = new(2026, 10, 20, 0, 0, 0, TimeSpan.Zero);
+            public override DateTimeOffset GetUtcNow() => _now;
+            public override long GetTimestamp() => _now.Ticks;
+            public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+            internal void Advance(TimeSpan duration) => _now += duration;
+        }
 
         private static HttpResponseMessage AcceptedResponse() => new(HttpStatusCode.OK)
         {

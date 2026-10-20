@@ -34,9 +34,80 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual("1", fields["dab_schema_version"]);
             Assert.AreEqual("true", fields["dab_is_synthetic"]);
             Assert.AreEqual(record.OccurredAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture), fields["dab_occurred_at"]);
-            Assert.AreEqual("mcp", fields["api"]);
-            Assert.AreEqual("3", fields["count"]);
+            Assert.AreEqual("mcp", fields["dab_api"]);
+            Assert.AreEqual("3", fields["dab_count"]);
             CollectionAssert.AreEqual(attributes, ApplicationInsightsEventAttributes.Create(record));
+        }
+
+        [DataTestMethod]
+        [DataRow("dab/engine.usage_summary")]
+        [DataRow("dab/cli.command_completed")]
+        public void SharedConversionPrefixesKeysOnceWithoutChangingValues(string name)
+        {
+            const string json = "{\"runtime.rest.effective\":\"enabled\",\"option_config\":true,\"items\":[1,2]}";
+            EngineTelemetryEvent record = CreateEvent() with
+            {
+                Name = name,
+                Properties = CreateEvent().Properties
+                    .Add("runtime.rest.effective", "enabled")
+                    .Add("option_config", json)
+                    .Add("dab_api_id", "f6bb4a71-742a-445b-bca0-d4aa56659c28")
+                    .Add("dab_api_id_stability", "ephemeral")
+                    .Add("dab_version", "1.2.3")
+            };
+            ImmutableDictionary<string, string> original = record.Properties;
+            Dictionary<string, object?> fields = ApplicationInsightsEventAttributes.Create(record)
+                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+
+            foreach ((string key, string value) in original)
+            {
+                string expectedKey = key.StartsWith("dab_", StringComparison.Ordinal) ? key : "dab_" + key;
+                Assert.AreEqual(value, fields[expectedKey], expectedKey);
+            }
+
+            Assert.AreEqual(name, fields[ApplicationInsightsEventAttributes.EVENT_NAME_ATTRIBUTE]);
+            Assert.AreEqual(json, fields["dab_option_config"], "JSON property names and values are not rewritten.");
+            Assert.IsFalse(fields.Keys.Any(key => key.StartsWith("dab_dab_", StringComparison.Ordinal)));
+            Assert.AreSame(original, record.Properties, "The source contract remains immutable and unprefixed.");
+            Assert.AreEqual("enabled", record.Properties["runtime.rest.effective"]);
+        }
+
+        [DataTestMethod]
+        [DataRow(false, 146, true)]
+        [DataRow(false, 147, false)]
+        [DataRow(true, 150, true)]
+        [DataRow(true, 151, false)]
+        public void PropertyLengthLimitAppliesAfterPrefixing(bool alreadyPrefixed, int inputLength, bool accepted)
+        {
+            string key = alreadyPrefixed ? "dab_" + new string('x', inputLength - 4) : new string('x', inputLength);
+            EngineTelemetryEvent record = CreateEvent() with { Properties = ImmutableDictionary<string, string>.Empty.Add(key, "value") };
+            if (!accepted)
+            {
+                Assert.ThrowsException<ArgumentException>(() => ApplicationInsightsEventAttributes.Create(record));
+                return;
+            }
+
+            string expectedKey = alreadyPrefixed ? key : "dab_" + key;
+            KeyValuePair<string, object?> property = ApplicationInsightsEventAttributes.Create(record).Single(pair => pair.Key == expectedKey);
+            Assert.AreEqual(150, property.Key.Length);
+            Assert.AreEqual("value", property.Value);
+        }
+
+        [DataTestMethod]
+        [DataRow("count")]
+        [DataRow("runtime.rest.effective")]
+        [DataRow("option_config")]
+        [DataRow("event_id")]
+        public void CollidingPrefixedPropertiesAreRejectedWithoutOverwritingValues(string key)
+        {
+            EngineTelemetryEvent record = CreateEvent() with
+            {
+                Properties = ImmutableDictionary<string, string>.Empty.Add(key, "original").Add("dab_" + key, "prefixed")
+            };
+
+            Assert.ThrowsException<ArgumentException>(() => ApplicationInsightsEventAttributes.Create(record));
+            Assert.AreEqual("original", record.Properties[key]);
+            Assert.AreEqual("prefixed", record.Properties["dab_" + key]);
         }
 
         [TestMethod]
@@ -102,6 +173,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private static EngineTelemetryEvent CreateEvent() => new(
             Guid.NewGuid(), Guid.NewGuid(), 17,
             new DateTimeOffset(2026, 9, 21, 10, 11, 12, TimeSpan.FromMinutes(330)).AddTicks(3456789),
-            4, "dab.engine.usage_summary", ImmutableDictionary<string, string>.Empty.Add("api", "mcp").Add("count", "3"));
+            4, "dab/engine.usage_summary", ImmutableDictionary<string, string>.Empty.Add("api", "mcp").Add("count", "3"));
     }
 }

@@ -52,41 +52,119 @@ SDK 1.9.0 shares transmitters by connection string and caches some process confi
 - The umbrella opt-out also prevents the DAB-added database Application Name segment, including its version marker. Recognizable existing DAB segments are removed at configuration load while customer prefixes are retained. Ambiguous/truncated customer text is not destructively guessed. The legacy `DAB_TELEMETRY_APPNAME_OPT_OUT` used alone retains its previous version-only behavior.
 - Cosmos DB clients also omit DAB's additional Application Name/user-agent suffix under the umbrella opt-out; the Cosmos SDK's own identification is unchanged.
 
+The shared engine/CLI notice below is a **draft pending CELA review**. Its text does not change the synthetic-only gate or the per-enabled-run notice timing:
+
+```text
+Telemetry
+---------
+Data API builder collects usage data to help Microsoft improve the product. It does not include your data, queries, names or connection strings. To opt out, set the DAB_TELEMETRY_OPT_OUT environment variable to 1 or true.
+Learn more: https://github.com/Azure/data-api-builder/blob/dev/aaronburtle/engine-telemetry-phase1/docs/telemetry.md
+Microsoft Privacy Statement: https://go.microsoft.com/fwlink/?LinkId=521839
+```
+
 ## Collected fields
 
-All events include schema version, random event ID, engine session ID, sequence, UTC occurrence time, configuration epoch and `dab_is_synthetic=true`. Event retries preserve those values. Available API identity includes `dab_api_id` and `dab_api_id_stability` (`newly_saved`, `reused`, `ephemeral`). No CLI identity or fabricated launch linkage is added.
+All custom property keys **as sent** start with `dab_`. The shared exporter adds the prefix once; already-prefixed keys are unchanged. Dots remain part of the name, for example `dab_runtime.rest.effective`. Only the top-level key changes: property values, including JSON strings and their nested keys, are not rewritten. The shared mapping also turns a CLI `option_<name>` key into `dab_option_<name>`; this does not add CLI fields to engine events. Names must remain unique after prefixing and fit the 150-character ingestion limit, or the event is rejected rather than truncated.
+
+All events include the metadata below. Event retries preserve those values. Available API identity includes `dab_api_id` and `dab_api_id_stability` (`newly_saved`, `reused`, `ephemeral`). No CLI identity or fabricated launch linkage is added.
+
+| Sent property | Meaning |
+| --- | --- |
+| `dab_schema_version` | Event schema version, currently `1`. |
+| `dab_event_id` | Random event UUID, retained across delivery retries. |
+| `dab_process_session_id` | Random engine-run UUID. |
+| `dab_sequence` | Sequence within that run. |
+| `dab_occurred_at` | UTC occurrence time. |
+| `dab_config_epoch` | Accepted configuration epoch, or `0` before acceptance. |
+| `dab_is_synthetic` | Always `true` in this validation phase. |
+| `dab_api_id`, `dab_api_id_stability` | Available after identity resolution for accepted configuration. |
+| `dab_sender_dropped_events` | Sender loss count observed when the event is created. |
 
 Context includes DAB version; coarse OS family/version; process architecture; normalized .NET version; execution mode; categorical launcher/hosting/container detection; and distribution/channel/packaging labels. Known CLI/service entry assemblies select a categorical launcher; other entry points remain unknown. Distribution/channel/packaging remain `unknown` without reliable build provenance; synthetic opt-in does not prove source packaging. No network discovery or raw environment value is recorded.
 
+| Context | Sent properties |
+| --- | --- |
+| Product/runtime | `dab_version`, `dab_os_family`, `dab_os_version`, `dab_architecture`, `dab_dotnet_version` |
+| Execution/hosting | `dab_execution_mode`, `dab_launcher`, `dab_hosting`, `dab_container` |
+| Build provenance | `dab_distribution`, `dab_release_channel`, `dab_packaging` |
+
 Hosting is a best-effort observation captured once per enabled run, not platform attestation. Only nonblank presence of these documented built-in signals is considered:
 
-| `hosting` category | Required signals |
+| `dab_hosting` category | Required signals |
 | --- | --- |
 | `azure_container_apps` | Both `CONTAINER_APP_NAME` and `CONTAINER_APP_REVISION`, or both `CONTAINER_APP_JOB_NAME` and `CONTAINER_APP_JOB_EXECUTION_NAME` ([Container Apps built-ins](https://learn.microsoft.com/azure/container-apps/environment-variables#built-in-environment-variables)). |
 | `kubernetes` | Both `KUBERNETES_SERVICE_HOST` and `KUBERNETES_SERVICE_PORT_HTTPS`, with no nonblank Container Apps marker above ([Kubernetes in-pod signals](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/#directly-accessing-the-rest-api)). |
 | `generic_container` | `DOTNET_RUNNING_IN_CONTAINER=true` without sufficient evidence for a specific platform. |
 | `unknown` | Insufficient evidence, or an explicit `DOTNET_RUNNING_IN_CONTAINER=false` conflicting with platform inference. |
 
-Complete Container Apps evidence takes precedence over Kubernetes evidence. Partial Container Apps evidence blocks a Kubernetes-specific inference; the generic/unknown fallback remains. `container` independently reflects the parsed .NET flag (`enabled`, `disabled` or `unknown`), so hosting can be known when that flag is absent. No names, revisions, job identifiers, addresses or ports are retained or exported. Disabled sessions do not inspect hosting signals; reloads do not refresh them.
+Complete Container Apps evidence takes precedence over Kubernetes evidence. Partial Container Apps evidence blocks a Kubernetes-specific inference; the generic/unknown fallback remains. `dab_container` independently reflects the parsed .NET flag (`enabled`, `disabled` or `unknown`), so hosting can be known when that flag is absent. No names, revisions, job identifiers, addresses or ports are retained or exported. Disabled sessions do not inspect hosting signals; reloads do not refresh them.
 
-Configuration events contain `snapshot_schema=configuration-v1`, configuration delivery, source-provider categories and bucketed counts/limits. Fixed feature families are:
+Configuration events contain `dab_snapshot_schema=configuration-v1`, `dab_configuration_delivery`, source-provider categories and bucketed counts/limits. The fixed configuration snapshot has 82 properties. Paired fields distinguish original-input configuration from effective behavior:
 
-| Family | Settings |
+| Configured key as sent | Effective key as sent |
 | --- | --- |
-| API/runtime | `runtime.rest`, `runtime.graphql`, `runtime.mcp`, `runtime.health`, `runtime.cache`, `runtime.cache.l2`, `runtime.rest.strict_body`, `runtime.graphql.multiple_create` |
-| Integrations | `integrations.key_vault`, `integrations.autoentities`, `integrations.multiple_source_files`, `runtime.embeddings`, `runtime.embeddings.endpoint`, endpoint presence |
-| Authentication | `authentication.provider`, `host.mode`, `data_sources.obo`, `data_sources.session_context` |
-| Customer observability enablement only | `customer_telemetry.open_telemetry`, `customer_telemetry.application_insights`, `customer_telemetry.log_analytics`, `customer_telemetry.file` |
-| Entity capabilities | Any table/view/procedure/document, cache, REST/GraphQL/MCP exposure, custom roles, policies, descriptions, relationships and parameter embeddings |
-| Scale/limits | Source/entity count, distinct provider count, page sizes, response bytes, cache TTL and modeled query timeouts |
+| `dab_runtime.rest.configured` | `dab_runtime.rest.effective` |
+| `dab_runtime.graphql.configured` | `dab_runtime.graphql.effective` |
+| `dab_runtime.mcp.configured` | `dab_runtime.mcp.effective` |
+| `dab_runtime.health.configured` | `dab_runtime.health.effective` |
+| `dab_runtime.cache.configured` | `dab_runtime.cache.effective` |
+| `dab_runtime.cache.l2.configured` | `dab_runtime.cache.l2.effective` |
+| `dab_runtime.rest.strict_body.configured` | `dab_runtime.rest.strict_body.effective` |
+| `dab_runtime.graphql.multiple_create.configured` | `dab_runtime.graphql.multiple_create.effective` |
+| `dab_integrations.key_vault.configured` | `dab_integrations.key_vault.effective` |
+| `dab_integrations.autoentities.configured` | `dab_integrations.autoentities.effective` |
+| `dab_integrations.multiple_source_files.configured` | `dab_integrations.multiple_source_files.effective` |
+| `dab_runtime.embeddings.configured` | `dab_runtime.embeddings.effective` |
+| `dab_runtime.embeddings.endpoint.configured` | `dab_runtime.embeddings.endpoint.effective` |
+| `dab_customer_telemetry.open_telemetry.configured` | `dab_customer_telemetry.open_telemetry.effective` |
+| `dab_customer_telemetry.application_insights.configured` | `dab_customer_telemetry.application_insights.effective` |
+| `dab_customer_telemetry.log_analytics.configured` | `dab_customer_telemetry.log_analytics.effective` |
+| `dab_customer_telemetry.file.configured` | `dab_customer_telemetry.file.effective` |
+| `dab_authentication.provider.configured` | `dab_authentication.provider.effective` |
+| `dab_host.mode.configured` | `dab_host.mode.effective` |
+| `dab_data_sources.obo.configured` | `dab_data_sources.obo.effective` |
+| `dab_data_sources.session_context.configured` | `dab_data_sources.session_context.effective` |
+| `dab_entities.any.cache.configured` | `dab_entities.any.cache.effective` |
+| `dab_entities.any.rest.configured` | `dab_entities.any.rest.effective` |
+| `dab_entities.any.graphql.configured` | `dab_entities.any.graphql.effective` |
+| `dab_entities.any.mcp_dml.configured` | `dab_entities.any.mcp_dml.effective` |
+| `dab_entities.any.mcp_custom_tool.configured` | `dab_entities.any.mcp_custom_tool.effective` |
+| `dab_limits.default_page_size.configured` | `dab_limits.default_page_size.effective` |
+| `dab_limits.max_page_size.configured` | `dab_limits.max_page_size.effective` |
+| `dab_limits.max_response_bytes.configured` | `dab_limits.max_response_bytes.effective` |
+| `dab_limits.cache_ttl_seconds.configured` | `dab_limits.cache_ttl_seconds.effective` |
+| `dab_limits.query_timeout_seconds.configured` | `dab_limits.query_timeout_seconds.effective` |
+| `dab_limits.mcp_aggregate_query_timeout_seconds.configured` | `dab_limits.mcp_aggregate_query_timeout_seconds.effective` |
+
+| Other snapshot fields | Sent properties |
+| --- | --- |
+| Schema | `dab_snapshot_schema` |
+| Endpoint presence | `dab_runtime.embeddings.endpoint_present` |
+| Source/entity scale | `dab_scale.data_source_count`, `dab_data_sources.types`, `dab_data_sources.distinct_type_count`, `dab_scale.entity_count` |
+| Object capabilities | `dab_entities.any.table`, `dab_entities.any.view`, `dab_entities.any.stored_procedure`, `dab_entities.any.persisted_document`, `dab_entities.any.parameter_embeddings` |
+| Authorization/capabilities | `dab_entities.any.custom_roles`, `dab_entities.any.request_policy`, `dab_entities.any.database_policy`, `dab_entities.any.policies`, `dab_entities.any.descriptions`, `dab_entities.any.relationships` |
+| Response enforcement | `dab_limits.max_response_enforced` |
 
 Where applicable, `.configured` and `.effective` are separate. States are `enabled`, `disabled`, `missing`, `unsupported`, `unknown` and `not_applicable`. Original-input presence is captured as fixed-size, value-free metadata only during loads authorized by an enabled engine session, including nested source files. Ambient test mode alone does not enable capture in a CLI or disabled embedded host. Lost provenance is not reconstructed by serializing defaults. No customer entity/role names or values are retained in that metadata. Unsupported capabilities remain unsupported even when there are zero entities.
 
 ## Events and usage
 
-Events are `dab.engine.process_started`, `ready`, `startup_failed`, `configuration_changed`, `configuration_change_failed`, `first_request_served`, `first_successful_request`, `heartbeat`, `usage_summary` and `stopped`, all under the `dab.engine.` prefix.
+Events are `dab/engine.process_started`, `ready`, `startup_failed`, `configuration_changed`, `configuration_change_failed`, `first_request_served`, `first_successful_request`, `heartbeat`, `usage_summary` and `stopped`, all under the `dab/engine.` prefix.
 
-Both failure events include a closed `failure_stage`: `parsing`, `validation`, `metadata`, `serving`, `configuration`, `initialization` or `unknown`. It identifies the failing boundary, not exception text or a customer-supplied value. `failure_category` remains `initialization` for startup failures and `configuration` for rejected changes. Rejections retain the prior telemetry epoch and do not stop collection; the engine's existing configuration acceptance and retry rules are unchanged. Concurrent initialization handlers preserve the first observed failure within that attempt, not a later successful stage. An unclassified handler rejection uses `initialization` rather than guessing a cause.
+| Event-specific fields | Sent properties |
+| --- | --- |
+| Configuration acceptance | `dab_configuration_delivery`; ready also includes `dab_startup_ms` |
+| Startup/configuration failure | `dab_failure_stage`, `dab_failure_category` |
+| First-served/first-success milestones | `dab_api`, `dab_transport`, `dab_outcome`, `dab_since_ready_ms` |
+| Heartbeat | `dab_run_state`, `dab_uptime` |
+| Graceful stop | `dab_reason`, `dab_uptime` |
+| Usage window/dimensions | `dab_window_start`, `dab_window_end`, `dab_final`, `dab_family`, `dab_api`, `dab_transport`, `dab_role_class`, `dab_operation`, `dab_provider`, `dab_object_type`, `dab_cache_layer`, `dab_cache_result`, `dab_http_status_class` |
+| Usage counts/outcomes | `dab_count`, `dab_capped`, `dab_unknown`, `dab_success`, `dab_failure`, `dab_partial_failure`, `dab_canceled` |
+| Request latency | `dab_latency_schema`, `dab_latency_bounds_ms`, `dab_latency_buckets`, `dab_timed_count`, `dab_latency_complete` |
+| Measurement coverage | `dab_database_attempt_coverage`, `dab_cache_coverage` |
+| Collection loss | `dab_series_capacity_drops`, `dab_counter_capacity_drops`, `dab_clock_regression_drops`, `dab_dropped_windows`, `dab_dropped_measurements`, `dab_capped` |
+
+Both failure events include a closed `dab_failure_stage`: `parsing`, `validation`, `metadata`, `serving`, `configuration`, `initialization` or `unknown`. It identifies the failing boundary, not exception text or a customer-supplied value. `dab_failure_category` remains `initialization` for startup failures and `configuration` for rejected changes. Rejections retain the prior telemetry epoch and do not stop collection; the engine's existing configuration acceptance and retry rules are unchanged. Concurrent initialization handlers preserve the first observed failure within that attempt, not a later successful stage. An unclassified handler rejection uses `initialization` rather than guessing a cause.
 
 The mapped embedding HTTP endpoint is included as REST request traffic even when its path is outside the entity REST prefix. Its embedding-service invocations form the separate embedding measurement family; cache-served invocations count without inventing a database attempt. Cache lookups include the dedicated embedding cache when enabled, without double-counting the default-cache fallback. This identification uses endpoint metadata, not request/response contents. Valid REST entity routes are not excluded merely because their names resemble documentation or static assets.
 
@@ -104,7 +182,7 @@ Six-hour windows align to UTC 00:00/06:00/12:00/18:00. Work retains its captured
 
 ### Coverage limits
 
-- Actual SQL command executions, including observed retries, are counted. Cosmos SDK-internal physical retries are not available through the supported public hooks used here; `database_attempt_coverage=sql_commands_only` must not be interpreted as zero Cosmos attempts.
+- Actual SQL command executions, including observed retries, are counted. Cosmos SDK-internal physical retries are not available through the supported public hooks used here; `dab_database_attempt_coverage=sql_commands_only` must not be interpreted as zero Cosmos attempts.
 - Cache measurements observe actual L1/L2 events with a live eligible request context. Background/unattributed activity is not invented; coverage is labeled accordingly.
 - Full backend ingestion, deployed destination policy and sender isolation in arbitrary embedded hosts are separate acceptance gates. Local tests do not prove cloud receipt.
 

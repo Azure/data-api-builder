@@ -168,8 +168,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 await process.WaitForExitAsync(deadline.Token).WaitAsync(_timeout, deadline.Token);
                 Assert.AreEqual(0, process.ExitCode, "The real engine must shut down cleanly.");
                 Assert.IsNull(await process.StandardOutput.ReadLineAsync(deadline.Token), "Only protocol responses may reach stdout.");
-                Assert.IsTrue((await stderr).Contains("DAB synthetic product telemetry is enabled", StringComparison.Ordinal),
-                    "The enabled test process must issue its disclosure on stderr.");
+                string noticeOutput = (await stderr).ReplaceLineEndings("\n");
+                Assert.AreEqual(1, noticeOutput.Split(ProductTelemetryPolicy.NOTICE_TEXT, StringSplitOptions.None).Length - 1,
+                    "The enabled test process must issue the complete shared disclosure once on stderr.");
 
                 using JsonDocument identity = JsonDocument.Parse(await File.ReadAllTextAsync(configPath + ".dab-telemetry.json", deadline.Token));
                 Guid apiId = identity.RootElement.GetProperty("apiId").GetGuid();

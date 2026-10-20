@@ -45,7 +45,7 @@ public class EngineTelemetryFailureStageTests
         session.ConfigurationChangeFailed((TelemetryFailureStage)stage);
         Assert.IsTrue(session.IsReady);
         await session.StopAsync();
-        EngineTelemetryEvent failure = exporter.Events.Single(record => record.Name == "dab.engine.configuration_change_failed");
+        EngineTelemetryEvent failure = exporter.Events.Single(record => record.Name == "dab/engine.configuration_change_failed");
         Assert.AreEqual(expected, failure.Properties["failure_stage"]);
         Assert.AreEqual("configuration", failure.Properties["failure_category"]);
         Assert.AreEqual(1L, failure.ConfigurationEpoch);
@@ -109,7 +109,7 @@ public class EngineTelemetryFailureStageTests
             Assert.AreEqual(behavior == "synchronous_throw" ? 0 : 1, laterCalls);
             Assert.IsNull(TelemetryFailureContext.Current);
             await session.StopAsync();
-            Assert.AreEqual(enabled ? 1 : 0, exporter.Events.Count(record => record.Name == "dab.engine.configuration_change_failed"));
+            Assert.AreEqual(enabled ? 1 : 0, exporter.Events.Count(record => record.Name == "dab/engine.configuration_change_failed"));
             return (errorType, initialization.Status);
         }
     }
@@ -132,10 +132,10 @@ public class EngineTelemetryFailureStageTests
         session.MarkHostReady();
         Assert.IsFalse(session.IsReady);
         await session.StopAsync();
-        EngineTelemetryEvent[] failures = exporter.Events.Where(record => record.Name == "dab.engine.configuration_change_failed").ToArray();
+        EngineTelemetryEvent[] failures = exporter.Events.Where(record => record.Name == "dab/engine.configuration_change_failed").ToArray();
         CollectionAssert.AreEqual(new[] { "initialization", "parsing" }, failures.Select(record => record.Properties["failure_stage"]).ToArray());
         Assert.IsTrue(failures.All(record => record.ConfigurationEpoch == 0));
-        Assert.IsFalse(exporter.Events.Any(record => record.Name is "dab.engine.ready" or "dab.engine.configuration_changed"));
+        Assert.IsFalse(exporter.Events.Any(record => record.Name is "dab/engine.ready" or "dab/engine.configuration_changed"));
     }
 
     [TestMethod]
@@ -271,10 +271,10 @@ public class EngineTelemetryFailureStageTests
         CollectionAssert.AreEqual(new[] { false, false }, await Task.WhenAll(first, second).WaitAsync(_timeout));
         Assert.IsNull(TelemetryFailureContext.Current);
         await session.StopAsync();
-        EngineTelemetryEvent[] failures = exporter.Events.Where(record => record.Name == "dab.engine.configuration_change_failed").ToArray();
+        EngineTelemetryEvent[] failures = exporter.Events.Where(record => record.Name == "dab/engine.configuration_change_failed").ToArray();
         CollectionAssert.AreEquivalent(new[] { "metadata", "validation" }, failures.Select(record => record.Properties["failure_stage"]).ToArray());
         Assert.IsTrue(failures.All(record => record.ConfigurationEpoch == 0));
-        Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab.engine.ready"));
+        Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab/engine.ready"));
     }
 
     [TestMethod]
@@ -365,8 +365,8 @@ public class EngineTelemetryFailureStageTests
         Assert.IsTrue(session.IsReady, "A handled failure in a different disabled provider is not this attempt's failure.");
         Assert.IsNull(TelemetryFailureContext.Current);
         await session.StopAsync();
-        Assert.AreEqual(1, exporter.Events.Count(record => record.Name == "dab.engine.ready"));
-        Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab.engine.configuration_change_failed"));
+        Assert.AreEqual(1, exporter.Events.Count(record => record.Name == "dab/engine.ready"));
+        Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab/engine.configuration_change_failed"));
 
         static Task<bool> Initialize(RuntimeConfigProvider provider, bool versionTwo, string configuration) => versionTwo
             ? provider.Initialize(configuration, schema: null, accessToken: null)

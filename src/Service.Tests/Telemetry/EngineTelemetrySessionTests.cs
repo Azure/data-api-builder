@@ -30,13 +30,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
     {
         private const string SENTINEL = "SESSION_PRIVATE_SENTINEL_73ef9";
         private const string ENTITY = SENTINEL + "_entity";
-        private const string PROCESS_STARTED = "dab.engine.process_started";
-        private const string READY = "dab.engine.ready";
-        private const string CONFIGURATION_CHANGED = "dab.engine.configuration_changed";
-        private const string FIRST_SERVED = "dab.engine.first_request_served";
-        private const string FIRST_SUCCESS = "dab.engine.first_successful_request";
-        private const string SUMMARY = "dab.engine.usage_summary";
-        private const string STOPPED = "dab.engine.stopped";
+        private const string PROCESS_STARTED = "dab/engine.process_started";
+        private const string READY = "dab/engine.ready";
+        private const string CONFIGURATION_CHANGED = "dab/engine.configuration_changed";
+        private const string FIRST_SERVED = "dab/engine.first_request_served";
+        private const string FIRST_SUCCESS = "dab/engine.first_successful_request";
+        private const string SUMMARY = "dab/engine.usage_summary";
+        private const string STOPPED = "dab/engine.stopped";
 
         private static readonly DateTimeOffset _start = new(2026, 9, 21, 12, 0, 0, TimeSpan.Zero);
         private static readonly TimeSpan _testTimeout = TimeSpan.FromSeconds(10);
@@ -351,7 +351,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             session.AcceptConfiguration(CreateConfig(DatabaseType.MySQL), "hot_reload");
             EngineTelemetryEvent[] records = await DrainAsync(session, exporter);
-            EngineTelemetryEvent[] failures = records.Where(record => record.Name == "dab.engine.configuration_change_failed").ToArray();
+            EngineTelemetryEvent[] failures = records.Where(record => record.Name == "dab/engine.configuration_change_failed").ToArray();
 
             Assert.AreEqual(3, failures.Length);
             Assert.AreEqual(0L, failures[0].ConfigurationEpoch, "Rejected late configuration is nonterminal even before the first accepted epoch.");
@@ -386,11 +386,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             session.Tick();
             EngineTelemetryEvent[] records = await DrainAsync(session, exporter);
 
-            EngineTelemetryEvent failed = Event(records, "dab.engine.startup_failed");
+            EngineTelemetryEvent failed = Event(records, "dab/engine.startup_failed");
             Assert.AreEqual(0L, failed.ConfigurationEpoch);
             Assert.AreEqual(expectedStage, failed.Properties["failure_stage"]);
             Assert.AreEqual("initialization", failed.Properties["failure_category"]);
-            Assert.AreEqual("startup_failed", Event(records, "dab.engine.heartbeat").Properties["run_state"]);
+            Assert.AreEqual("startup_failed", Event(records, "dab/engine.heartbeat").Properties["run_state"]);
             Assert.AreEqual(0, records.Count(record => record.Name == READY || record.Name == SUMMARY));
             AssertNoPrivateValues(records);
         }
@@ -415,7 +415,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             clock.Advance(TimeSpan.FromMinutes(10));
             timer.Fire();
             EngineTelemetryEvent[] records = await DrainAsync(session, exporter);
-            EngineTelemetryEvent[] heartbeats = records.Where(record => record.Name == "dab.engine.heartbeat").ToArray();
+            EngineTelemetryEvent[] heartbeats = records.Where(record => record.Name == "dab/engine.heartbeat").ToArray();
 
             Assert.AreEqual(2, heartbeats.Length);
             CollectionAssert.AreEqual(new[] { "initializing", "ready" }, heartbeats.Select(record => record.Properties["run_state"]).ToArray());

@@ -15,6 +15,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         internal const string EVENT_NAME_ATTRIBUTE = "microsoft.custom_event.name";
         internal const string CLIENT_IP_ATTRIBUTE = "microsoft.client.ip";
         internal const string SUPPRESSED_IP = "0.0.0.0";
+        private const string PROPERTY_PREFIX = "dab_";
         private const int MAX_PROPERTIES = 128;
         private const int MAX_PROPERTY_NAME_LENGTH = 150;
         private const int MAX_PROPERTY_VALUE_LENGTH = 8192;
@@ -46,7 +47,13 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                     continue;
                 }
 
-                attributes.Add(key, value);
+                // Prefix only the top-level custom property name. Values (including JSON)
+                // and already-prefixed identifiers are part of the unchanged shared contract.
+                string propertyName = key.StartsWith(PROPERTY_PREFIX, StringComparison.Ordinal) ? key : PROPERTY_PREFIX + key;
+                if (propertyName.Length > MAX_PROPERTY_NAME_LENGTH || !attributes.TryAdd(propertyName, value))
+                {
+                    throw new ArgumentException("Product telemetry property name exceeds the ingestion contract or collides after prefixing.", nameof(record));
+                }
             }
 
             attributes[EVENT_NAME_ATTRIBUTE] = record.Name;

@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             request.Complete(EngineTelemetryOutcome.Success, 200);
             await session.StopAsync();
 
-            EngineTelemetryEvent[] attempts = exporter.Records.Where(record => record.Name == "dab.engine.usage_summary" &&
+            EngineTelemetryEvent[] attempts = exporter.Records.Where(record => record.Name == "dab/engine.usage_summary" &&
                 record.Properties["family"] == "database_attempt").ToArray();
             Assert.AreEqual(1, attempts.Length, "Replacing source IDs must not discard an actual command execution.");
             Assert.AreEqual(1L, attempts[0].ConfigurationEpoch);
@@ -186,7 +186,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             }
 
             await session.StopAsync();
-            EngineTelemetryEvent[] attempts = exporter.Records.Where(record => record.Name == "dab.engine.usage_summary" &&
+            EngineTelemetryEvent[] attempts = exporter.Records.Where(record => record.Name == "dab/engine.usage_summary" &&
                 record.Properties["family"] == "database_attempt").ToArray();
             Assert.AreEqual(boundary == "connection" ? 0 : 1, executions);
             Assert.AreEqual(executions, attempts.Length);

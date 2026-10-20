@@ -57,8 +57,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             EngineTelemetryEvent[] records = await fixture.StopAsync();
             AssertRequests(records, success: 1);
-            Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.first_request_served"));
-            Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.first_successful_request"));
+            Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.first_request_served"));
+            Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.first_successful_request"));
             Assert.AreEqual(0, Summaries(records, "http_outcome").Length);
         }
 
@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             EngineTelemetryEvent[] records = await fixture.StopAsync();
             AssertRequests(records, partialFailure: 1);
-            Assert.AreEqual(0, records.Count(record => record.Name == "dab.engine.first_successful_request"));
+            Assert.AreEqual(0, records.Count(record => record.Name == "dab/engine.first_successful_request"));
         }
 
         [TestMethod]
@@ -113,7 +113,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             EngineTelemetryEvent[] records = await fixture.StopAsync();
             AssertRequests(records);
-            Assert.AreEqual(0, records.Count(record => record.Name == "dab.engine.first_request_served"));
+            Assert.AreEqual(0, records.Count(record => record.Name == "dab/engine.first_request_served"));
         }
 
         [DataTestMethod]
@@ -152,7 +152,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             EngineTelemetryEvent[] records = await fixture.StopAsync();
             AssertRequests(records, success: 1, partialFailure: 1, transport: http ? "http" : "in_process");
-            Assert.AreEqual(1, records.Count(value => value.Name == "dab.engine.first_successful_request"));
+            Assert.AreEqual(1, records.Count(value => value.Name == "dab/engine.first_successful_request"));
         }
 
         [TestMethod]
@@ -221,7 +221,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             EngineTelemetryEvent[] records = await fixture.StopAsync();
             AssertRequests(records);
             Assert.AreEqual(0, Summaries(records, "http_outcome").Length);
-            Assert.IsFalse(records.Any(record => record.Name is "dab.engine.first_request_served" or "dab.engine.first_successful_request"));
+            Assert.IsFalse(records.Any(record => record.Name is "dab/engine.first_request_served" or "dab/engine.first_successful_request"));
         }
 
         [TestMethod]
@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             EngineTelemetryEvent[] records = await fixture.StopAsync();
             AssertRequests(records, success: 1);
             Assert.AreEqual(0, Summaries(records, "database_attempt").Length);
-            Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.first_successful_request"));
+            Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.first_successful_request"));
         }
 
         [TestMethod]
@@ -284,7 +284,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             EngineTelemetryEvent[] records = await fixture.StopAsync();
             AssertRequests(records, canceled: 1, transport: "http");
             AssertHttpOutcomes(records, 1, "unknown");
-            Assert.IsFalse(records.Any(record => record.Name == "dab.engine.first_successful_request"));
+            Assert.IsFalse(records.Any(record => record.Name == "dab/engine.first_successful_request"));
         }
 
         [TestMethod]
@@ -352,8 +352,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             await result.DisposeAsync();
             EngineTelemetryEvent[] records = await fixture.StopAsync();
             AssertRequests(records, unknown: 2);
-            Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.first_request_served"));
-            Assert.IsFalse(records.Any(record => record.Name == "dab.engine.first_successful_request"));
+            Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.first_request_served"));
+            Assert.IsFalse(records.Any(record => record.Name == "dab/engine.first_successful_request"));
         }
 
         [DataTestMethod]
@@ -459,8 +459,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             EngineTelemetryEvent[] records = await fixture.StopAsync();
             AssertRequests(records, success: 2, partialFailure: 1, transport: http ? "http" : "in_process", role: "custom");
             Assert.IsFalse(original.IsCompleted);
-            Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.first_request_served"));
-            Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.first_successful_request"));
+            Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.first_request_served"));
+            Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.first_successful_request"));
             if (http)
             {
                 AssertHttpOutcomes(records, 3, "success");
@@ -525,7 +525,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             CollectionAssert.AreEqual(new long[] { 0, 0, 0, 0, 0, 0, 3, 0, 0, 0 },
                 JsonSerializer.Deserialize<long[]>(oldEpoch.Properties["latency_buckets"])!,
                 "Each fork must retain the pre-reload start, yielding a 1,000 ms duration rather than zero.");
-            Assert.AreEqual(2L, records.Single(record => record.Name == "dab.engine.configuration_changed").ConfigurationEpoch);
+            Assert.AreEqual(2L, records.Single(record => record.Name == "dab/engine.configuration_changed").ConfigurationEpoch);
         }
 
         [TestMethod]
@@ -547,7 +547,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             AssertRequests(records, canceled: 3, transport: "http", role: "custom");
             AssertHttpOutcomes(records, 3, "unknown");
             Assert.IsFalse(ObservedRequest(fixture).IsCompleted);
-            Assert.AreEqual(0, records.Count(record => record.Name == "dab.engine.first_successful_request"));
+            Assert.AreEqual(0, records.Count(record => record.Name == "dab/engine.first_successful_request"));
         }
 
         private static async Task AssertSelectionsMatchExecutorAsync(string document, bool first, bool second)
@@ -633,7 +633,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private static long Counter(EngineTelemetryEvent record, string name) => long.Parse(record.Properties[name], CultureInfo.InvariantCulture);
 
         private static EngineTelemetryEvent[] Summaries(IEnumerable<EngineTelemetryEvent> records, string family, long? epoch = null) => records
-            .Where(record => record.Name == "dab.engine.usage_summary" && record.Properties["family"] == family
+            .Where(record => record.Name == "dab/engine.usage_summary" && record.Properties["family"] == family
                 && (epoch is null || record.ConfigurationEpoch == epoch)).ToArray();
 
         private static RuntimeConfig CreateConfig(DatabaseType databaseType = DatabaseType.MSSQL) => new(
@@ -721,7 +721,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 EngineTelemetryEvent[] records = Exporter.Records.ToArray();
                 Assert.AreEqual(0, Summaries(records, "request").Length);
                 Assert.AreEqual(0, Summaries(records, "http_outcome").Length);
-                Assert.AreEqual(0, records.Count(record => record.Name == "dab.engine.first_request_served"));
+                Assert.AreEqual(0, records.Count(record => record.Name == "dab/engine.first_request_served"));
             }
 
             internal async Task<EngineTelemetryEvent[]> StopAsync()
@@ -730,8 +730,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 Assert.IsTrue(Session.IsReady);
                 await Session.StopAsync();
                 EngineTelemetryEvent[] records = Exporter.Records.ToArray();
-                Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.ready"));
-                Assert.AreEqual(1, records.Count(record => record.Name == "dab.engine.stopped"));
+                Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.ready"));
+                Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.stopped"));
                 return records;
             }
 
@@ -752,7 +752,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 Records.Enqueue(record);
-                if (record.Name == "dab.engine.heartbeat")
+                if (record.Name == "dab/engine.heartbeat")
                 {
                     Heartbeat.TrySetResult();
                 }

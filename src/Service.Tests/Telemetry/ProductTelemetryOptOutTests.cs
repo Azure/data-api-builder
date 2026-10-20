@@ -33,6 +33,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private string? _originalAppNameOptOut;
         private string? _originalHostLabel;
 
+        [TestMethod]
+        public void SharedNoticeMatchesTheDraftAndUsesTheSingleProductOptOut()
+        {
+            const string expected = "Telemetry\n"
+                + "---------\n"
+                + "Data API builder collects usage data to help Microsoft improve the product. It does not include your data, queries, names or connection strings. To opt out, set the DAB_TELEMETRY_OPT_OUT environment variable to 1 or true.\n"
+                + "Learn more: https://github.com/Azure/data-api-builder/blob/dev/aaronburtle/engine-telemetry-phase1/docs/telemetry.md\n"
+                + "Microsoft Privacy Statement: https://go.microsoft.com/fwlink/?LinkId=521839";
+            Assert.AreEqual(expected, ProductTelemetryPolicy.NOTICE_TEXT);
+            Assert.AreEqual(1, ProductTelemetryPolicy.NOTICE_TEXT.Split(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, StringSplitOptions.None).Length - 1);
+        }
+
         [TestInitialize]
         public void SaveAndClearEnvironment()
         {

@@ -17,6 +17,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
     /// </summary>
     internal sealed class EngineTelemetrySession : IProductTelemetryControl, IDisposable
     {
+        private const string EVENT_NAME_PREFIX = "dab/engine.";
         private readonly object _sync = new();
         private readonly TimeProvider _clock;
         private readonly EngineTelemetryAggregator _aggregator;
@@ -72,7 +73,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 _context = EngineTelemetryContext.Create(executionMode, readEnvironmentVariable);
                 _delivery = new EngineTelemetryDelivery(exporterFactory);
                 _enabled = true;
-                Emit("dab.engine.process_started", 0, ImmutableDictionary<string, string>.Empty);
+                Emit("process_started", 0, ImmutableDictionary<string, string>.Empty);
                 if (startTimer)
                 {
                     if (ExecutionContext.IsFlowSuppressed())
@@ -180,7 +181,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                     _snapshot = snapshot;
                     if (_ready)
                     {
-                        Emit("dab.engine.configuration_changed", _configuration.Epoch, snapshot);
+                        Emit("configuration_changed", _configuration.Epoch, snapshot);
                     }
                     else
                     {
@@ -211,7 +212,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             {
                 if (_enabled)
                 {
-                    Emit("dab.engine.configuration_change_failed", _configuration.Epoch,
+                    Emit("configuration_change_failed", _configuration.Epoch,
                         ImmutableDictionary<string, string>.Empty
                             .Add("failure_stage", Wire(stage))
                             .Add("failure_category", "configuration"));
@@ -226,7 +227,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 if (_enabled && !_ready && !_startupFailed)
                 {
                     _startupFailed = true;
-                    Emit("dab.engine.startup_failed", _configuration.Epoch, ImmutableDictionary<string, string>.Empty
+                    Emit("startup_failed", _configuration.Epoch, ImmutableDictionary<string, string>.Empty
                         .Add("failure_stage", Wire(stage))
                         .Add("failure_category", "initialization"));
                 }
@@ -359,13 +360,13 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 if (!_firstServed)
                 {
                     _firstServed = true;
-                    Emit("dab.engine.first_request_served", request.Configuration.Epoch, milestone);
+                    Emit("first_request_served", request.Configuration.Epoch, milestone);
                 }
 
                 if (!_firstSuccess && outcome == EngineTelemetryOutcome.Success)
                 {
                     _firstSuccess = true;
-                    Emit("dab.engine.first_successful_request", request.Configuration.Epoch, milestone);
+                    Emit("first_successful_request", request.Configuration.Epoch, milestone);
                 }
             }
         }
@@ -394,7 +395,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                     if (_clock.GetElapsedTime(_lastHeartbeat, now) >= TimeSpan.FromMinutes(10))
                     {
                         _lastHeartbeat = now;
-                        Emit("dab.engine.heartbeat", _configuration.Epoch, ImmutableDictionary<string, string>.Empty
+                        Emit("heartbeat", _configuration.Epoch, ImmutableDictionary<string, string>.Empty
                             .Add("run_state", _ready ? "ready" : _startupFailed ? "startup_failed" : "initializing")
                             .Add("uptime", UptimeBucket(_clock.GetElapsedTime(_started, now))));
                     }
@@ -431,7 +432,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                 _timer?.Dispose();
                 _timer = null;
                 EmitSummaries(_aggregator.Complete());
-                Emit("dab.engine.stopped", _configuration.Epoch, ImmutableDictionary<string, string>.Empty
+                Emit("stopped", _configuration.Epoch, ImmutableDictionary<string, string>.Empty
                     .Add("reason", "graceful_shutdown")
                     .Add("uptime", UptimeBucket(_clock.GetElapsedTime(_started, _clock.GetTimestamp()))));
                 _enabled = false;
@@ -479,7 +480,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
 
             _ready = true;
             _readyAt = _clock.GetTimestamp();
-            Emit("dab.engine.ready", _configuration.Epoch, _snapshot.Add("startup_ms", Milliseconds(_clock.GetElapsedTime(_started, _readyAt))));
+            Emit("ready", _configuration.Epoch, _snapshot.Add("startup_ms", Milliseconds(_clock.GetElapsedTime(_started, _readyAt))));
         }
 
         private void EmitSummaries(EngineTelemetryDrain drain)
@@ -526,12 +527,12 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
                         data.Add("latency_complete", histogram.IsComplete ? "true" : "false");
                     }
 
-                    Emit("dab.engine.usage_summary", series.ConfigurationEpoch, data.ToImmutable());
+                    Emit("usage_summary", series.ConfigurationEpoch, data.ToImmutable());
                 }
 
                 if (window.SeriesCapacityDrops > 0 || window.CounterCapacityDrops > 0 || window.ClockRegressionDrops > 0)
                 {
-                    Emit("dab.engine.usage_summary", 0, ImmutableDictionary<string, string>.Empty.Add("family", "collection_loss")
+                    Emit("usage_summary", 0, ImmutableDictionary<string, string>.Empty.Add("family", "collection_loss")
                         .Add("window_start", window.Start.ToString("O", CultureInfo.InvariantCulture))
                         .Add("window_end", window.End.ToString("O", CultureInfo.InvariantCulture))
                         .Add("series_capacity_drops", Number(window.SeriesCapacityDrops))
@@ -543,7 +544,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
 
             if (drain.DroppedWindows > 0)
             {
-                Emit("dab.engine.usage_summary", 0, ImmutableDictionary<string, string>.Empty.Add("family", "collection_loss")
+                Emit("usage_summary", 0, ImmutableDictionary<string, string>.Empty.Add("family", "collection_loss")
                     .Add("dropped_windows", Number(drain.DroppedWindows))
                     .Add("dropped_measurements", Number(drain.DroppedMeasurements))
                     .Add("capped", drain.LossCountsCapped ? "true" : "false"));
@@ -565,7 +566,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             }
 
             properties = properties.Add("sender_dropped_events", Number(_delivery?.DroppedEvents ?? 0));
-            _delivery?.TryEnqueue(new(Guid.NewGuid(), _sessionId, ++_sequence, _clock.GetUtcNow().ToUniversalTime(), epoch, name, properties));
+            _delivery?.TryEnqueue(new(Guid.NewGuid(), _sessionId, ++_sequence, _clock.GetUtcNow().ToUniversalTime(), epoch, EVENT_NAME_PREFIX + name, properties));
         }
 
         public static EngineTelemetryRole ClassifyRole(string? role, bool authenticated = false) => role switch
@@ -589,7 +590,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         private static void ShowNotice()
         {
             using StreamWriter writer = new(Console.OpenStandardError(), new System.Text.UTF8Encoding(false), leaveOpen: true);
-            writer.WriteLine("DAB synthetic product telemetry is enabled for validation: categorical configuration and aggregate usage are sent to the selected test destination. Disable with DAB_TELEMETRY_OPT_OUT=1. Fields: docs/telemetry.md (product repository). No request content is collected.");
+            writer.WriteLine(ProductTelemetryPolicy.NOTICE_TEXT);
         }
     }
 

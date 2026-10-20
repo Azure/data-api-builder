@@ -174,7 +174,7 @@ public class EngineTelemetryContextTests
         Assert.AreEqual(reads.Count, reads.Distinct().Count(), "Immutable run context must not reread platform signals on reload or shutdown.");
         if (enabled && !optOut)
         {
-            foreach (string name in new[] { "dab.engine.ready", "dab.engine.configuration_changed", "dab.engine.stopped" })
+            foreach (string name in new[] { "dab/engine.ready", "dab/engine.configuration_changed", "dab/engine.stopped" })
             {
                 Assert.AreEqual(1, exporter.Events.Count(record => record.Name == name), "The lifecycle path must actually run.");
             }

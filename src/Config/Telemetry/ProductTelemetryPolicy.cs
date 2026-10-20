@@ -19,7 +19,7 @@ public static class ProductTelemetryPolicy
     public const string NOTICE_TEXT = "Telemetry\n"
         + "---------\n"
         + "Data API builder collects usage data to help Microsoft improve the product. It does not include your data, queries, names or connection strings. To opt out, set the DAB_TELEMETRY_OPT_OUT environment variable to 1 or true.\n"
-        + "Learn more: https://github.com/Azure/data-api-builder/blob/dev/aaronburtle/engine-telemetry-phase1/docs/telemetry.md\n"
+        + "Learn more: https://github.com/Azure/data-api-builder/blob/main/docs/telemetry.md\n"
         + "Microsoft Privacy Statement: https://go.microsoft.com/fwlink/?LinkId=521839";
 
     /// <summary>

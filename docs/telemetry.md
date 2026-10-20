@@ -58,7 +58,7 @@ The shared engine/CLI notice below is a **draft pending CELA review**. Its text 
 Telemetry
 ---------
 Data API builder collects usage data to help Microsoft improve the product. It does not include your data, queries, names or connection strings. To opt out, set the DAB_TELEMETRY_OPT_OUT environment variable to 1 or true.
-Learn more: https://github.com/Azure/data-api-builder/blob/dev/aaronburtle/engine-telemetry-phase1/docs/telemetry.md
+Learn more: https://github.com/Azure/data-api-builder/blob/main/docs/telemetry.md
 Microsoft Privacy Statement: https://go.microsoft.com/fwlink/?LinkId=521839
 ```
 

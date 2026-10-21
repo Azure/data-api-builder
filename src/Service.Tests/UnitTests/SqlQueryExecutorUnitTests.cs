@@ -443,6 +443,60 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// A database error that SqlClient hides behind HasRows (no row is ever returned) must surface
+        /// as an exception instead of an empty result. A genuinely empty result must still return null.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [DataRow(true, DisplayName = "Error surfaced when advancing the reader")]
+        [DataRow(false, DisplayName = "Genuinely empty result returns null")]
+        public async Task TestGetJsonResultAsyncSurfacesErrorHiddenByHasRows(bool readerFails)
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            RuntimeConfigProvider provider = new(new FileSystemRuntimeConfigLoader(new FileSystem())) { IsLateConfigured = true };
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            MsSqlQueryExecutor queryExecutor = new(
+                provider,
+                new StubDbExceptionParser(provider),
+                queryExecutorLogger.Object,
+                httpContextAccessor.Object,
+                handler: null,
+                oboTokenProvider: null);
+
+            Mock<DbDataReader> reader = new();
+            reader.Setup(r => r.HasRows).Returns(false);
+            if (readerFails)
+            {
+                reader.Setup(r => r.ReadAsync(It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(new Mock<DbException>().Object);
+            }
+            else
+            {
+                reader.Setup(r => r.ReadAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            }
+
+            if (readerFails)
+            {
+                DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
+                    () => queryExecutor.GetJsonResultAsync<System.Text.Json.JsonDocument>(reader.Object));
+                Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+            }
+            else
+            {
+                Assert.IsNull(await queryExecutor.GetJsonResultAsync<System.Text.Json.JsonDocument>(reader.Object));
+            }
+        }
+
+        private class StubDbExceptionParser : DbExceptionParser
+        {
+            public StubDbExceptionParser(RuntimeConfigProvider provider) : base(provider) { }
+
+            public override bool IsTransientException(DbException e) => false;
+
+            public override HttpStatusCode GetHttpStatusCodeForException(DbException e) => HttpStatusCode.InternalServerError;
+        }
+
+        /// <summary>
         /// Test to validate that when a query is executed the httpcontext object is updated with time correctly when multiple threads are accessing it.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]

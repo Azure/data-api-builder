@@ -84,6 +84,18 @@ namespace Azure.DataApiBuilder.Core.Services
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();
         }
 
+        /// <summary>
+        /// Resolves the metadata provider for an entity by looking up its configured data source.
+        /// </summary>
+        /// <param name="runtimeConfig">Runtime configuration containing entity-to-data-source mappings.</param>
+        /// <param name="entityName">The entity name to resolve.</param>
+        /// <returns>The metadata provider for the entity's data source.</returns>
+        /// <exception cref="DataApiBuilderException">Thrown when the entity is not found in configuration.</exception>
+        private ISqlMetadataProvider GetEntityMetadataProvider(RuntimeConfig runtimeConfig, string entityName)
+        {
+            string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+            return _metadataProviderFactory.GetMetadataProvider(dataSourceName);
+        }
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             args.CancellationToken.ThrowIfCancellationRequested();
@@ -199,7 +211,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             OpenApiComponents components = new()
             {
-                Schemas = CreateComponentSchemas(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, role, isRequestBodyStrict: runtimeConfig.IsRequestBodyStrict)
+                Schemas = CreateComponentSchemas(runtimeConfig, role, isRequestBodyStrict: runtimeConfig.IsRequestBodyStrict)
             };
 
             // Store tags in a dictionary keyed by normalized REST path to ensure we can
@@ -236,7 +248,11 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     new() { Url = url }
                 },
-                Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, globalTagsDict, role, isRequestBodyStrict: runtimeConfig.IsRequestBodyStrict),
+<<<<<<< HEAD
+                Paths = BuildPaths(runtimeConfig, globalTagsDict, role, runtimeConfig.IsRequestBodyStrict),
+=======
+                Paths = BuildPaths(runtimeConfig, globalTagsDict, role, isRequestBodyStrict: runtimeConfig.IsRequestBodyStrict),
+>>>>>>> b8af66daa10568c50397314a8d18a9e49f4c78cd
                 Components = components,
                 Tags = globalTagsDict.Values.ToList()
             };
@@ -300,20 +316,17 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </example>
         /// <param name="globalTags">Dictionary of global tags keyed by normalized REST path for reuse.</param>
         /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
+        /// <param name="isRequestBodyStrict">Indicates whether the request body should be strictly validated.</param>
         /// <returns>All possible paths in the DAB engine's REST API endpoint.</returns>
-        private OpenApiPaths BuildPaths(RuntimeEntities entities, string defaultDataSourceName, Dictionary<string, OpenApiTag> globalTags, string? role = null, bool isRequestBodyStrict = true)
+        private OpenApiPaths BuildPaths(RuntimeConfig runtimeConfig, Dictionary<string, OpenApiTag> globalTags, string? role = null, bool isRequestBodyStrict = true)
         {
             OpenApiPaths pathsCollection = new();
 
-            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
-            foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
+            // Iterate through configured entities (not just default datasource's entities)
+            foreach (KeyValuePair<string, Entity> entityKvp in runtimeConfig.Entities)
             {
-                string entityName = entityDbMetadataMap.Key;
-                if (!entities.TryGetValue(entityName, out Entity? entity) || entity is null)
-                {
-                    // This can happen for linking entities which are not present in runtime config.
-                    continue;
-                }
+                string entityName = entityKvp.Key;
+                Entity entity = entityKvp.Value;
 
                 // Entities which disable their REST endpoint must not be included in
                 // the OpenAPI description document.
@@ -322,21 +335,39 @@ namespace Azure.DataApiBuilder.Core.Services
                     continue;
                 }
 
-                string entityRestPath = GetEntityRestPath(entity.Rest, entityName);
-                string entityBasePathComponent = $"/{entityRestPath}";
-
-                DatabaseObject dbObject = entityDbMetadataMap.Value;
-                SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
-
-                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject, role);
-
                 // Skip entities with no available operations before looking up the tag.
                 // This prevents noisy warnings for entities that are legitimately excluded from
                 // the global tags dictionary due to role-based permission filtering.
-                if (!configuredRestOperations.ContainsValue(true))
+                if (!HasAnyAvailableOperations(entity, role))
                 {
                     continue;
                 }
+
+                // Resolve the metadata provider for this specific entity's data source
+                ISqlMetadataProvider metadataProvider;
+                try
+                {
+                    metadataProvider = GetEntityMetadataProvider(runtimeConfig, entityName);
+                }
+                catch (DataApiBuilderException ex)
+                {
+                    _logger.LogError(ex, "Failed to resolve metadata provider for entity '{EntityName}'. Entity will be excluded from OpenAPI document.", entityName);
+                    continue;
+                }
+
+                // Verify entity exists in this data source's metadata
+                if (!metadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
+                {
+                    _logger.LogWarning("Entity '{EntityName}' not found in metadata for its configured data source. Entity will be excluded from OpenAPI document.", entityName);
+                    continue;
+                }
+
+                string entityRestPath = GetEntityRestPath(entity.Rest, entityName);
+                string entityBasePathComponent = $"/{entityRestPath}";
+
+                SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
+
+                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject, role);
 
                 // Reuse the existing tag from the global tags dictionary instead of creating a new instance.
                 // This ensures Swagger UI displays only one group per entity by using the same object reference.
@@ -1293,25 +1324,36 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
         /// <param name="isRequestBodyStrict">When true, generates separate request body schemas that disallow extra fields.</param>
         /// <returns>Collection of schemas for entities defined in the runtime configuration.</returns>
-        private Dictionary<string, OpenApiSchema> CreateComponentSchemas(RuntimeEntities entities, string defaultDataSourceName, string? role = null, bool isRequestBodyStrict = true)
+        private Dictionary<string, OpenApiSchema> CreateComponentSchemas(RuntimeConfig runtimeConfig, string? role = null, bool isRequestBodyStrict = true)
         {
             Dictionary<string, OpenApiSchema> schemas = new();
-            // for rest scenario we need the default datasource name.
-            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
 
-            foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
+            foreach (KeyValuePair<string, Entity> entityKvp in runtimeConfig.Entities)
             {
+                string entityName = entityKvp.Key;
+                Entity entity = entityKvp.Value;
+
                 // Entities which disable their REST endpoint must not be included in
                 // the OpenAPI description document.
-                string entityName = entityDbMetadataMap.Key;
-                DatabaseObject dbObject = entityDbMetadataMap.Value;
-
-                if (!entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled || !HasAnyAvailableOperations(entity, role))
+                if (!entity.Rest.Enabled || !HasAnyAvailableOperations(entity, role))
                 {
-                    // Don't create component schemas for:
-                    // 1. Linking entity: The entity will be null when we are dealing with a linking entity, which is not exposed in the config.
-                    // 2. Entity for which REST endpoint is disabled.
-                    // 3. Entity with no available operations based on permissions.
+                    continue;
+                }
+
+                ISqlMetadataProvider metadataProvider;
+                try
+                {
+                    metadataProvider = GetEntityMetadataProvider(runtimeConfig, entityName);
+                }
+                catch (DataApiBuilderException ex)
+                {
+                    _logger.LogError(ex, "Failed to resolve metadata provider for entity '{EntityName}'. Entity will be excluded from OpenAPI document.", entityName);
+                    continue;
+                }
+
+                if (!metadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
+                {
+                    _logger.LogWarning("Entity '{EntityName}' not found in metadata for its configured data source. Entity will be excluded from OpenAPI document.", entityName);
                     continue;
                 }
 
@@ -1340,14 +1382,14 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Response body schema whose properties map to the stored procedure's first result set columns
                     // as described by sys.dm_exec_describe_first_result_set. 
                     // Response schemas don't need additionalProperties restriction
-                    schemas.Add(entityName + SP_RESPONSE_SUFFIX, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities, isRequestBodySchema: false));
+                    schemas.Add(entityName + SP_RESPONSE_SUFFIX, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, runtimeConfig.Entities, isRequestBodySchema: false));
                 }
                 else
                 {
                     // Create component schema for FULL entity with all primary key columns (included auto-generated)
                     // which will typically represent the response body of a request or a stored procedure's request body.
                     // Response schemas don't need additionalProperties restriction
-                    schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities, isRequestBodySchema: false));
+                    schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, runtimeConfig.Entities, isRequestBodySchema: false));
 
                     // Only generate request body schemas if mutation operations are available
                     if (isRequestBodyStrict && (hasPostOperation || hasPutPatchOperation))
@@ -1371,7 +1413,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         }
 
                         // Request body schema for POST - apply additionalProperties based on strict mode
-                        schemas.Add($"{entityName}_NoAutoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities, isRequestBodySchema: true, isRequestBodyStrict: isRequestBodyStrict));
+                        schemas.Add($"{entityName}_NoAutoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, runtimeConfig.Entities, isRequestBodySchema: true, isRequestBodyStrict: isRequestBodyStrict));
 
                         // Create an entity's request body component schema excluding all primary keys
                         // by removing the tracked non-autogenerated primary key column names and removing them from
@@ -1388,7 +1430,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         }
 
                         // Request body schema for PUT/PATCH - apply additionalProperties based on strict mode
-                        schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities, isRequestBodySchema: true, isRequestBodyStrict: isRequestBodyStrict));
+                        schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, runtimeConfig.Entities, isRequestBodySchema: true, isRequestBodyStrict: isRequestBodyStrict));
                     }
                 }
             }

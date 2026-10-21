@@ -520,9 +520,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 case JsonValueKind.Number:
                 {
-                    if (element.TryGetDouble(out double value))
+                    // Prefer exact integer types so values beyond IEEE-754 double
+                    // precision (e.g. 19-digit BIGINTs) survive cursor round-trip
+                    // and parse with ParseParamAsSystemType. Use decimal only for
+                    // integral values outside Int64; keep fractional numbers as double.
+                    if (element.TryGetInt64(out long longValue))
                     {
-                        scalarVariable = value;
+                        scalarVariable = longValue;
+                    }
+                    else if (element.TryGetDecimal(out decimal decimalValue) &&
+                        decimalValue == decimal.Truncate(decimalValue))
+                    {
+                        scalarVariable = decimalValue;
+                    }
+                    else if (element.TryGetDouble(out double doubleValue))
+                    {
+                        scalarVariable = doubleValue;
                     }
 
                     break;

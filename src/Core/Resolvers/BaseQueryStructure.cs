@@ -102,7 +102,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (!string.IsNullOrEmpty(entityName))
             {
                 EntityName = entityName;
-                DatabaseObject = MetadataProvider.EntityToDatabaseObject[entityName];
+                if (!MetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Database object metadata not found for the entity {entityName}.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
+                DatabaseObject = databaseObject;
             }
             else
             {

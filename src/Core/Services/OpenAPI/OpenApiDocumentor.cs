@@ -248,7 +248,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     new() { Url = url }
                 },
-                Paths = BuildPaths(runtimeConfig, globalTagsDict, role),
+                Paths = BuildPaths(runtimeConfig, globalTagsDict, role, runtimeConfig.IsRequestBodyStrict),
                 Components = components,
                 Tags = globalTagsDict.Values.ToList()
             };

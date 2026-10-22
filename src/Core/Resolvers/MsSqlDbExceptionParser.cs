@@ -36,6 +36,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "13608", "13609", "13610", "13611", "13612", "13613", "13614"
             });
 
+            // XML parsing/validation errors (SQL Server message range 9400-9480). Malformed XML supplied
+            // for an xml column is a client input error, mapped to HTTP 400 (mirrors the json handling above).
+            for (int xmlParsingErrorCode = 9400; xmlParsingErrorCode <= 9480; xmlParsingErrorCode++)
+            {
+                BadRequestExceptionCodes.Add(xmlParsingErrorCode.ToString());
+            }
+
             TransientExceptionCodes.UnionWith(new List<string>
             {
                 // Transient error codes compiled from:
@@ -95,9 +102,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             int errorCode = ((SqlException)e).Number;
             // MSSQL 201 - Procedure or function '%.*ls' expects parameter '%.*ls', which was not supplied.
-            // SQL Server 2025+ JSON validation errors are also client input errors.
+            // XML parsing errors (9400-9480) and SQL Server 2025+ JSON validation errors (13608-13614)
+            // are also client input errors.
             // Pending revisions of error code classifications, this is a temporary fix to determine substatus code.
-            if (errorCode is 201 or 13608 or 13609 or 13610 or 13611 or 13612 or 13613 or 13614)
+            if (errorCode is 201 or (>= 9400 and <= 9480) or (>= 13608 and <= 13614))
             {
                 return DataApiBuilderException.SubStatusCodes.DatabaseInputError;
             }

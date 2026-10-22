@@ -699,7 +699,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     N'geometry',
                                     N'hierarchyid',
                                     N'sql_variant',
-                                    N'xml',
                                     N'rowversion'
                                 )
                         ) THEN 1
@@ -744,7 +743,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     N'geometry',
                                     N'hierarchyid',
                                     N'sql_variant',
-                                    N'xml',
                                     N'rowversion'
                                 )
                         )

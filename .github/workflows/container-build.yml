@@ -1,0 +1,74 @@
+name: Container build
+
+on:
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .github/workflows/container-build.yml
+      - scripts/publish-container.sh
+      - src/**
+      - schemas/**
+      - Nuget.config
+      - global.json
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .github/workflows/container-build.yml
+      - scripts/publish-container.sh
+      - src/**
+      - schemas/**
+      - Nuget.config
+      - global.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [runtime, runtime-nonroot]
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+        include:
+          - runner: ubuntu-24.04
+            platform: linux/amd64
+            arch: x64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Check publishing script syntax
+        run: bash -n scripts/publish-container.sh
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: dab:container-test
+      - name: Check runtime and application architecture
+        env:
+          ARCH: ${{ matrix.arch }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          docker run --rm --entrypoint sh dab:container-test -ec '
+            dotnet --info
+            test -s /App/dab-config.json
+            grep -F "\"name\": \".NETCoreApp,Version=v10.0/linux-$1\"" \
+              /App/Azure.DataApiBuilder.Service.deps.json
+            if [ "$2" = runtime-nonroot ]; then
+              test "$(id -u)" = "$APP_UID"
+              touch /App/logs/container-test
+            else
+              test "$(id -u)" = 0
+            fi
+          ' sh "$ARCH" "$TARGET"

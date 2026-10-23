@@ -822,7 +822,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <param name="operation">Operation the policy applies to.</param>
     /// <param name="configuredPolicy">The non-empty policy text configured in runtime config.</param>
     /// <exception cref="DataApiBuilderException">Thrown outside development mode to fail the request.</exception>
-    private void AuditDatabasePolicyFailOpen(
+    public void AuditDatabasePolicyFailOpen(
         string entityName,
         string roleName,
         EntityActionOperation operation,

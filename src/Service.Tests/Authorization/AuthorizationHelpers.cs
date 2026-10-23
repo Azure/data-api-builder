@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO.Abstractions.TestingHelpers;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -33,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// </summary>
         /// <param name="runtimeConfig">Configuration with Authorization metadata</param>
         /// <returns>AuthorizationResolver object</returns>
-        public static AuthorizationResolver InitAuthorizationResolver(RuntimeConfig runtimeConfig)
+        public static AuthorizationResolver InitAuthorizationResolver(RuntimeConfig runtimeConfig, ILogger<IAuthorizationResolver>? logger = null)
         {
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new(runtimeConfig.ToJson()));
@@ -41,7 +42,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(loader);
             Mock<ISqlMetadataProvider> metadataProvider = new();
-            Mock<ILogger<AuthorizationResolver>> logger = new();
             SourceDefinition sampleTable = CreateSampleTable();
             metadataProvider.Setup(x => x.GetSourceDefinition(TEST_ENTITY)).Returns(sampleTable);
             metadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.MSSQL);
@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             string dataSourceName = runtimeConfigProvider.GetConfig().DefaultDataSourceName;
             metadataProviderFactory.Setup(x => x.GetMetadataProvider(dataSourceName)).Returns(metadataProvider.Object);
 
-            return new AuthorizationResolver(runtimeConfigProvider, metadataProviderFactory.Object);
+            return new AuthorizationResolver(runtimeConfigProvider, metadataProviderFactory.Object, logger);
         }
 
         /// <summary>

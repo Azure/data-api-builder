@@ -122,6 +122,129 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that "dab configure --runtime.graphql.cost.*" adds and updates the GraphQL cost options.
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureGraphQLCostOptions()
+        {
+            // Arrange
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
+            Assert.IsNull(config.Runtime!.GraphQL!.Cost);
+
+            // Act: add the options
+            ConfigureOptions options = new(
+                runtimeGraphQLCostEnabled: true,
+                runtimeGraphQLCostMaxFieldCost: 5000,
+                runtimeGraphQLCostMaxTypeCost: 7000,
+                config: TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(_fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE), out config));
+            Assert.AreEqual(new GraphQLCostOptions(true, 5000, 7000), config.Runtime?.GraphQL?.Cost);
+
+            // Act: update one value and disable enforcement. Unspecified values are left untouched.
+            options = new(
+                runtimeGraphQLCostEnabled: false,
+                runtimeGraphQLCostMaxFieldCost: 6000,
+                config: TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(_fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE), out config));
+            Assert.AreEqual(new GraphQLCostOptions(false, 6000, 7000), config.Runtime?.GraphQL?.Cost);
+        }
+
+        /// <summary>
+        /// Tests every combination of the cost options on a config without a cost section.
+        /// 'enabled' is only true when it is explicitly set to true.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, null, null, true, null, null)]
+        [DataRow(false, null, null, false, null, null)]
+        [DataRow(null, 5000, null, false, 5000, null)]
+        [DataRow(null, null, 7000, false, null, 7000)]
+        [DataRow(null, 5000, 7000, false, 5000, 7000)]
+        [DataRow(true, 5000, null, true, 5000, null)]
+        [DataRow(true, null, 7000, true, null, 7000)]
+        [DataRow(true, 5000, 7000, true, 5000, 7000)]
+        [DataRow(false, 5000, 7000, false, 5000, 7000)]
+        public void TestConfigureGraphQLCostCombinations(
+            bool? enabled,
+            int? maxFieldCost,
+            int? maxTypeCost,
+            bool expectedEnabled,
+            int? expectedMaxFieldCost,
+            int? expectedMaxTypeCost)
+        {
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            ConfigureOptions options = new(
+                runtimeGraphQLCostEnabled: enabled,
+                runtimeGraphQLCostMaxFieldCost: maxFieldCost,
+                runtimeGraphQLCostMaxTypeCost: maxTypeCost,
+                config: TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(_fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE), out RuntimeConfig? config));
+            Assert.AreEqual(new GraphQLCostOptions(expectedEnabled, expectedMaxFieldCost, expectedMaxTypeCost), config.Runtime?.GraphQL?.Cost);
+        }
+
+        /// <summary>
+        /// Tests that setting one cost option on a config that already has a cost section
+        /// changes only that option and keeps the other values.
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureGraphQLCostKeepsExistingValues()
+        {
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            ConfigureOptions options = new(
+                runtimeGraphQLCostMaxFieldCost: 5000,
+                runtimeGraphQLCostMaxTypeCost: 7000,
+                config: TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Only enabled
+            options = new(runtimeGraphQLCostEnabled: true, config: TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(_fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE), out RuntimeConfig? config));
+            Assert.AreEqual(new GraphQLCostOptions(true, 5000, 7000), config.Runtime?.GraphQL?.Cost);
+
+            // Only max-type-cost
+            options = new(runtimeGraphQLCostMaxTypeCost: 8000, config: TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(_fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE), out config));
+            Assert.AreEqual(new GraphQLCostOptions(true, 5000, 8000), config.Runtime?.GraphQL?.Cost);
+
+            // Only max-field-cost
+            options = new(runtimeGraphQLCostMaxFieldCost: 6000, config: TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(_fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE), out config));
+            Assert.AreEqual(new GraphQLCostOptions(true, 6000, 8000), config.Runtime?.GraphQL?.Cost);
+        }
+
+        /// <summary>
+        /// Tests that invalid cost limits are rejected and do not modify the config.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(0)]
+        [DataRow(-1)]
+        public void TestConfigureGraphQLCostOptionsRejectsInvalidLimits(int invalidLimit)
+        {
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            ConfigureOptions options = new(runtimeGraphQLCostMaxFieldCost: invalidLimit, config: TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsFalse(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            options = new(runtimeGraphQLCostMaxTypeCost: invalidLimit, config: TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsFalse(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            Assert.AreEqual(INITIAL_CONFIG, _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE));
+        }
+
+        /// <summary>
         /// Tests that running the "configure --azure-key-vault" commands on a config without AKV properties results
         /// in a valid config being generated.
         [TestMethod]

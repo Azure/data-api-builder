@@ -61,6 +61,8 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                 GraphQLRuntimeOptions graphQLRuntimeOptions = new();
                 MultipleMutationOptionsConverter multipleMutationOptionsConverter = options.GetConverter(typeof(MultipleMutationOptions)) as MultipleMutationOptionsConverter ??
                                             throw new JsonException("Failed to get multiple mutation options converter");
+                GraphQLCostOptionsConverter costOptionsConverter = options.GetConverter(typeof(GraphQLCostOptions)) as GraphQLCostOptionsConverter ??
+                                            throw new JsonException("Failed to get GraphQL cost options converter");
 
                 while (reader.Read())
                 {
@@ -167,6 +169,10 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
 
                             break;
 
+                        case "cost":
+                            graphQLRuntimeOptions = graphQLRuntimeOptions with { Cost = costOptionsConverter.Read(ref reader, typeToConvert, options) };
+                            break;
+
                         default:
                             throw new JsonException($"Unexpected property {propertyName}");
                     }
@@ -195,6 +201,14 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                 {
                     writer.WriteNumber("depth-limit", value.DepthLimit.Value);
                 }
+            }
+
+            if (value.Cost is not null)
+            {
+                GraphQLCostOptionsConverter costOptionsConverter = options.GetConverter(typeof(GraphQLCostOptions)) as GraphQLCostOptionsConverter ??
+                                            throw new JsonException("Failed to get GraphQL cost options converter");
+
+                costOptionsConverter.Write(writer, value.Cost, options);
             }
 
             if (value.MultipleMutationOptions is not null)

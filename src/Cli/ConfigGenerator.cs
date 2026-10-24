@@ -955,11 +955,14 @@ namespace Cli
                 }
             }
 
-            // GraphQL: Enabled, Path, Allow-Introspection and Multiple-Mutations.Create.Enabled
+            // GraphQL: Enabled, Path, Allow-Introspection, Multiple-Mutations.Create.Enabled and Cost (Enabled, Max-Field-Cost, Max-Type-Cost)
             if (options.RuntimeGraphQLEnabled != null ||
                 options.RuntimeGraphQLPath != null ||
                 options.RuntimeGraphQLAllowIntrospection != null ||
-                options.RuntimeGraphQLMultipleMutationsCreateEnabled != null)
+                options.RuntimeGraphQLMultipleMutationsCreateEnabled != null ||
+                options.RuntimeGraphQLCostEnabled != null ||
+                options.RuntimeGraphQLCostMaxFieldCost != null ||
+                options.RuntimeGraphQLCostMaxTypeCost != null)
             {
                 GraphQLRuntimeOptions? updatedGraphQLOptions = runtimeConfig?.Runtime?.GraphQL ?? new();
                 bool status = TryUpdateConfiguredGraphQLValues(options, ref updatedGraphQLOptions);
@@ -1347,6 +1350,46 @@ namespace Cli
                     MultipleCreateOptions multipleCreateOptions = new(enabled: (bool)updatedValue);
                     updatedGraphQLOptions = updatedGraphQLOptions! with { MultipleMutationOptions = new(multipleCreateOptions) };
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Multiple-Mutations.Create.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.GraphQL.Cost.Enabled, Max-Field-Cost and Max-Type-Cost
+                if (options?.RuntimeGraphQLCostEnabled != null ||
+                    options?.RuntimeGraphQLCostMaxFieldCost != null ||
+                    options?.RuntimeGraphQLCostMaxTypeCost != null)
+                {
+                    GraphQLCostOptions costOptions = updatedGraphQLOptions!.Cost ?? new();
+
+                    if (options.RuntimeGraphQLCostEnabled != null)
+                    {
+                        costOptions = costOptions with { Enabled = options.RuntimeGraphQLCostEnabled.Value };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Cost.Enabled as '{updatedValue}'", options.RuntimeGraphQLCostEnabled);
+                    }
+
+                    if (options.RuntimeGraphQLCostMaxFieldCost != null)
+                    {
+                        if (options.RuntimeGraphQLCostMaxFieldCost < 1)
+                        {
+                            _logger.LogError("Failed to update Runtime.GraphQL.Cost.Max-Field-Cost as '{updatedValue}'. Specify a value between 1 and {max}.", options.RuntimeGraphQLCostMaxFieldCost, int.MaxValue);
+                            return false;
+                        }
+
+                        costOptions = costOptions with { MaxFieldCost = options.RuntimeGraphQLCostMaxFieldCost };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Cost.Max-Field-Cost as '{updatedValue}'", options.RuntimeGraphQLCostMaxFieldCost);
+                    }
+
+                    if (options.RuntimeGraphQLCostMaxTypeCost != null)
+                    {
+                        if (options.RuntimeGraphQLCostMaxTypeCost < 1)
+                        {
+                            _logger.LogError("Failed to update Runtime.GraphQL.Cost.Max-Type-Cost as '{updatedValue}'. Specify a value between 1 and {max}.", options.RuntimeGraphQLCostMaxTypeCost, int.MaxValue);
+                            return false;
+                        }
+
+                        costOptions = costOptions with { MaxTypeCost = options.RuntimeGraphQLCostMaxTypeCost };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Cost.Max-Type-Cost as '{updatedValue}'", options.RuntimeGraphQLCostMaxTypeCost);
+                    }
+
+                    updatedGraphQLOptions = updatedGraphQLOptions! with { Cost = costOptions };
                 }
 
                 return true;

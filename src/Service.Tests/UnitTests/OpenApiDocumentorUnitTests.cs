@@ -276,7 +276,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     ["Review"] = "reviews-ds"
                 });
 
-            RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
+            Mock<Azure.DataApiBuilder.Config.RuntimeConfigLoader> mockLoader = new(null, null);
+            mockLoader.Object.RuntimeConfig = config;
+            RuntimeConfigProvider configProvider = new(mockLoader.Object);
             RuntimeConfig loadedConfig = configProvider.GetConfig();
 
             Mock<ISqlMetadataProvider> defaultMetadataProvider = CreateMetadataProvider(defaultDbObjects);

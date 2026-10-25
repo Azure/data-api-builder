@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Telemetry;
@@ -120,20 +121,48 @@ public class OpenTelemetryTests
         TracerProvider tracerProvider = server.Services.GetRequiredService<TracerProvider>();
 
         // Act
-        Task<HttpListenerContext> requestTask = collector.GetContextAsync();
         using (TelemetryTracesHelper.DABActivitySource.StartActivity("TestActivity"))
         {
         }
 
-        _ = Task.Run(() => tracerProvider.ForceFlush());
+        Task<bool> flushTask = Task.Run(() => tracerProvider.ForceFlush());
 
         // Assert
-        Task completedTask = await Task.WhenAny(requestTask, Task.Delay(TimeSpan.FromSeconds(30)));
-        Assert.AreSame(requestTask, completedTask, "OTLP exporter did not send data over HTTP.");
-        HttpListenerContext context = await requestTask;
-        Assert.AreEqual("application/x-protobuf", context.Request.ContentType);
-        context.Response.StatusCode = 200;
-        context.Response.Close();
+        // Logs and metrics share the collector, so keep answering requests until the trace export arrives.
+        Task timeout = Task.Delay(TimeSpan.FromSeconds(30));
+        bool traceReceived = false;
+        while (!traceReceived)
+        {
+            Task<HttpListenerContext> requestTask = collector.GetContextAsync();
+            Assert.AreSame(requestTask, await Task.WhenAny(requestTask, timeout), "OTLP exporter did not send the trace over HTTP.");
+            HttpListenerContext context = await requestTask;
+            using MemoryStream body = new();
+            await context.Request.InputStream.CopyToAsync(body);
+            traceReceived = context.Request.Url!.AbsolutePath == "/v1/traces"
+                && Encoding.UTF8.GetString(body.ToArray()).Contains("TestActivity");
+            if (traceReceived)
+            {
+                Assert.AreEqual("application/x-protobuf", context.Request.ContentType);
+            }
+
+            context.Response.StatusCode = 200;
+            context.Response.Close();
+        }
+
+        Assert.IsTrue(await flushTask, "TracerProvider flush did not succeed.");
+    }
+
+    /// <summary>
+    /// Tests that the signal path is appended to the OTLP endpoint only for HttpProtobuf, keeping any path prefix.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("http://localhost:4318", OtlpExportProtocol.HttpProtobuf, "http://localhost:4318/v1/traces")]
+    [DataRow("http://localhost:4318/otel/", OtlpExportProtocol.HttpProtobuf, "http://localhost:4318/otel/v1/traces")]
+    [DataRow("http://localhost:4317", OtlpExportProtocol.Grpc, "http://localhost:4317/")]
+    [DataRow("http://localhost:4317", null, "http://localhost:4317/")]
+    public void TestGetOtlpSignalEndpoint(string endpoint, OtlpExportProtocol? protocol, string expected)
+    {
+        Assert.AreEqual(new Uri(expected), Startup.GetOtlpSignalEndpoint(new Uri(endpoint), protocol, "v1/traces"));
     }
 
     /// <summary>

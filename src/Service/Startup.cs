@@ -169,7 +169,7 @@ namespace Azure.DataApiBuilder.Service
                     logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
                     .AddOtlpExporter(configure =>
                     {
-                        configure.Endpoint = otlpEndpoint;
+                        configure.Endpoint = GetOtlpSignalEndpoint(otlpEndpoint, runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol, "v1/logs");
                         configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                         configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol ?? OtlpExportProtocol.Grpc;
                     });
@@ -183,7 +183,7 @@ namespace Azure.DataApiBuilder.Service
                         // .AddFusionCacheInstrumentation()
                         .AddOtlpExporter(configure =>
                         {
-                            configure.Endpoint = otlpEndpoint;
+                            configure.Endpoint = GetOtlpSignalEndpoint(otlpEndpoint, runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol, "v1/metrics");
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                             configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol ?? OtlpExportProtocol.Grpc;
                         })
@@ -200,7 +200,7 @@ namespace Azure.DataApiBuilder.Service
                     .AddHotChocolateInstrumentation()
                     .AddOtlpExporter(configure =>
                     {
-                        configure.Endpoint = otlpEndpoint;
+                        configure.Endpoint = GetOtlpSignalEndpoint(otlpEndpoint, runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol, "v1/traces");
                         configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                         configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol ?? OtlpExportProtocol.Grpc;
                     })
@@ -1660,6 +1660,25 @@ namespace Azure.DataApiBuilder.Service
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.CustomTableName)
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DcrImmutableId)
                 && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DceEndpoint);
+        }
+
+        /// <summary>
+        /// Returns the OTLP endpoint for a signal. With HttpProtobuf the exporter uses an explicitly set
+        /// endpoint as-is, so the signal path (e.g. v1/traces) is appended to the configured base URL.
+        /// </summary>
+        /// <param name="endpoint">The configured OTLP endpoint.</param>
+        /// <param name="protocol">The configured OTLP export protocol.</param>
+        /// <param name="signalPath">The OTLP/HTTP signal path: v1/logs, v1/metrics or v1/traces.</param>
+        internal static Uri GetOtlpSignalEndpoint(Uri endpoint, OtlpExportProtocol? protocol, string signalPath)
+        {
+            if (protocol != OtlpExportProtocol.HttpProtobuf)
+            {
+                return endpoint;
+            }
+
+            UriBuilder builder = new(endpoint);
+            builder.Path = builder.Path.TrimEnd('/') + "/" + signalPath;
+            return builder.Uri;
         }
 
         /// <summary>

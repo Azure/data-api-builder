@@ -259,11 +259,13 @@
                 "max-field-cost": {
                   "type": [ "integer", "null" ],
                   "minimum": 1,
+                  "maximum": 2147483647,
                   "description": "Maximum allowed field cost of a GraphQL request, an estimate of the work needed to execute it. Default: the GraphQL engine default."
                 },
                 "max-type-cost": {
                   "type": [ "integer", "null" ],
                   "minimum": 1,
+                  "maximum": 2147483647,
                   "description": "Maximum allowed type cost of a GraphQL request, an estimate of the amount of data it returns. Default: the GraphQL engine default."
                 }
               }

@@ -41,9 +41,9 @@ namespace Azure.DataApiBuilder.Config.Converters
                     switch (propertyName)
                     {
                         case "enabled":
-                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False || reader.TokenType is JsonTokenType.String)
                             {
-                                costOptions = costOptions with { Enabled = reader.GetBoolean() };
+                                costOptions = costOptions with { Enabled = JsonSerializer.Deserialize<bool>(ref reader, options) };
                             }
                             else
                             {

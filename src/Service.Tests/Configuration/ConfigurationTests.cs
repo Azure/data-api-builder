@@ -6044,6 +6044,47 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// Validates that GraphQL cost limits are enforced when the runtime config is supplied after startup
+        /// (POST /configuration), not only when it is read from a file at startup.
+        /// The low maximum of 1 is below the cost of any request, so it is rejected whenever enforcement is enabled.
+        /// </summary>
+        /// <param name="configurationEndpoint">The endpoint used to supply the runtime config.</param>
+        [TestCategory(TestCategory.MSSQL)]
+        [DataTestMethod]
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        [DoNotParallelize]
+        public async Task TestGraphQLCostLimitsAreEnforcedWhenConfiguredAfterStartup(string configurationEndpoint)
+        {
+            // Arrange
+            TestHelper.UnsetAllDABEnvironmentVariables();
+
+            GraphQLRuntimeOptions graphqlOptions = new(Cost: new(Enabled: true, MaxFieldCost: 1));
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new(), mcpOptions: new());
+
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using HttpClient client = server.CreateClient();
+
+            // Act
+            HttpResponseMessage configurationResponse = await client.PostAsync(
+                configurationEndpoint,
+                GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint));
+            Assert.AreEqual(HttpStatusCode.OK, configurationResponse.StatusCode, await configurationResponse.Content.ReadAsStringAsync());
+
+            HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+            {
+                Content = JsonContent.Create(new { query = "{ books { items { id } } }" })
+            };
+            HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+            string body = await graphQLResponse.Content.ReadAsStringAsync();
+
+            // Assert
+            StringAssert.Contains(body, "HC0047", body);
+        }
+
+        /// <summary>
         /// Ensures that autoentities are properly generated into in-memory entities
         /// </summary>
         /// <param name="useEntities">Boolean that indicates if we should also use regular entities from config</param>

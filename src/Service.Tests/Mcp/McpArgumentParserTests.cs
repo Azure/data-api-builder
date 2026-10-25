@@ -3,7 +3,10 @@
 
 using System.Collections.Generic;
 using System.Text.Json;
+using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Mcp.Utils;
+using HotChocolate.Language;
+using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Mcp
@@ -16,6 +19,28 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
     public class McpArgumentParserTests
     {
         private static JsonElement Parse(string json) => JsonDocument.Parse(json).RootElement;
+
+        /// <summary>
+        /// The MCP 'filter' argument is not URL-encoded, so characters such as '+' and '%'
+        /// must reach the OData parser as literals instead of being URL-decoded (#3869).
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("G+1", DisplayName = "Plus sign is not decoded to a space")]
+        [DataRow("G%2B1", DisplayName = "Percent-encoded sequence is not decoded")]
+        [DataRow("2026-09-15T00:00:00+02:00", DisplayName = "Positive offset is preserved")]
+        [DataRow("50% & more", DisplayName = "Percent, ampersand and spaces are preserved")]
+        public void BuildFilterQueryString_PreservesLiteralCharacters(string value)
+        {
+            ODataParser parser = new();
+            parser.BuildModel(Utf8GraphQLParser.Parse("type Planet @model(name: \"Planet\") { id: ID name: String }"));
+
+            FilterClause filterClause = parser.GetFilterClause(
+                McpArgumentParser.BuildFilterQueryString($"name eq '{value}'"),
+                resourcePath: "Planet");
+
+            BinaryOperatorNode comparison = (BinaryOperatorNode)filterClause.Expression;
+            Assert.AreEqual(value, ((ConstantNode)comparison.Right).Value);
+        }
 
         [TestMethod]
         public void TryParseEntity_ValidEntity_ReturnsTrue()

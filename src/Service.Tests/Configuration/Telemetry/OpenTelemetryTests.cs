@@ -3,7 +3,11 @@
 
 using System;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -86,6 +90,50 @@ public class OpenTelemetryTests
         // If tracerProvider and meterProvider are not null, OTEL is enabled
         Assert.IsNotNull(tracerProvider, "TracerProvider should be registered.");
         Assert.IsNotNull(meterProvider, "MeterProvider should be registered.");
+    }
+
+    /// <summary>
+    /// Tests that the OTLP exporter honors the httpprotobuf exporter-protocol from the config
+    /// by checking that exported traces reach a local HTTP endpoint as protobuf.
+    /// </summary>
+    [TestMethod]
+    public async Task TestOpenTelemetryExporterUsesHttpProtobufProtocol()
+    {
+        // Arrange
+        TcpListener portFinder = new(IPAddress.Loopback, 0);
+        portFinder.Start();
+        int port = ((IPEndPoint)portFinder.LocalEndpoint).Port;
+        portFinder.Stop();
+
+        string otelEndpoint = $"http://localhost:{port}/";
+        using HttpListener collector = new();
+        collector.Prefixes.Add(otelEndpoint);
+        collector.Start();
+
+        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, otelEndpoint, "key=key", OtlpExportProtocol.HttpProtobuf);
+
+        string[] args = new[]
+        {
+            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
+        };
+        using TestServer server = new(Program.CreateWebHostBuilder(args));
+        TracerProvider tracerProvider = server.Services.GetRequiredService<TracerProvider>();
+
+        // Act
+        Task<HttpListenerContext> requestTask = collector.GetContextAsync();
+        using (TelemetryTracesHelper.DABActivitySource.StartActivity("TestActivity"))
+        {
+        }
+
+        _ = Task.Run(() => tracerProvider.ForceFlush());
+
+        // Assert
+        Task completedTask = await Task.WhenAny(requestTask, Task.Delay(TimeSpan.FromSeconds(30)));
+        Assert.AreSame(requestTask, completedTask, "OTLP exporter did not send data over HTTP.");
+        HttpListenerContext context = await requestTask;
+        Assert.AreEqual("application/x-protobuf", context.Request.ContentType);
+        context.Response.StatusCode = 200;
+        context.Response.Close();
     }
 
     /// <summary>

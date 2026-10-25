@@ -171,7 +171,7 @@ namespace Azure.DataApiBuilder.Service
                     {
                         configure.Endpoint = otlpEndpoint;
                         configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                        configure.Protocol = OtlpExportProtocol.Grpc;
+                        configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol ?? OtlpExportProtocol.Grpc;
                     });
 
                 })
@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service
                         {
                             configure.Endpoint = otlpEndpoint;
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = OtlpExportProtocol.Grpc;
+                            configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol ?? OtlpExportProtocol.Grpc;
                         })
                         .AddMeter(TelemetryMetricsHelper.MeterName)
                         .AddMeter(EmbeddingTelemetryHelper.MeterName);
@@ -202,7 +202,7 @@ namespace Azure.DataApiBuilder.Service
                     {
                         configure.Endpoint = otlpEndpoint;
                         configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                        configure.Protocol = OtlpExportProtocol.Grpc;
+                        configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol ?? OtlpExportProtocol.Grpc;
                     })
                     .AddSource(TelemetryTracesHelper.DABActivitySource.Name);
                 });

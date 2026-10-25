@@ -426,7 +426,7 @@ namespace Azure.DataApiBuilder.Service
                             {
                                 configure.Endpoint = otlpEndpoint;
                                 configure.Headers = Startup.OpenTelemetryOptions.Headers;
-                                configure.Protocol = OtlpExportProtocol.Grpc;
+                                configure.Protocol = Startup.OpenTelemetryOptions.ExporterProtocol ?? OtlpExportProtocol.Grpc;
                             });
                         });
                     }

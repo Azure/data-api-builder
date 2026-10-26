@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Humanizer;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -67,6 +69,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestBootstrapTests
                 exceptionExpected: true,
                 expectedErrorMessage: "Divide by zero error encountered.",
                 isExpectedErrorMsgSubstr: true,
+                expectedStatusCode: HttpStatusCode.InternalServerError,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString());
+        }
+
+        /// <summary>
+        /// In production mode the database error must still be returned as an error (not an empty result),
+        /// but with the generic message instead of the raw database error text.
+        /// </summary>
+        [TestMethod]
+        public async Task RestReadSurfacesSanitizedDatabaseErrorInProductionMode()
+        {
+            // Recreate the fixture in production mode; the tables created by TestInitialize are dropped first.
+            await TestCleanup();
+            await InitializeTestFixture(
+                customQueries: new List<string> { CREATE_TABLES_QUERY },
+                customEntities: new List<string[]>
+                {
+                    new[] { FAILING_TABLE, FAILING_TABLE, string.Empty },
+                    new[] { EMPTY_TABLE, EMPTY_TABLE, string.Empty }
+                },
+                hostMode: HostMode.Production);
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: FAILING_TABLE,
+                sqlQuery: string.Empty,
+                exceptionExpected: true,
+                expectedErrorMessage: DbExceptionParser.GENERIC_DB_EXCEPTION_MESSAGE,
                 expectedStatusCode: HttpStatusCode.InternalServerError,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString());
         }

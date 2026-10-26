@@ -463,12 +463,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 handler: null,
                 oboTokenProvider: null);
 
+            DbException dbException = new Mock<DbException>().Object;
             Mock<DbDataReader> reader = new();
             reader.Setup(r => r.HasRows).Returns(false);
             if (readerFails)
             {
-                reader.Setup(r => r.ReadAsync(It.IsAny<CancellationToken>()))
-                    .ThrowsAsync(new Mock<DbException>().Object);
+                reader.Setup(r => r.ReadAsync(It.IsAny<CancellationToken>())).ThrowsAsync(dbException);
             }
             else
             {
@@ -480,10 +480,29 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
                     () => queryExecutor.GetJsonResultAsync<System.Text.Json.JsonDocument>(reader.Object));
                 Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed, ex.SubStatusCode);
+
+                // The original database exception must be logged at error level.
+                queryExecutorLogger.Verify(
+                    l => l.Log(
+                        LogLevel.Error,
+                        It.IsAny<EventId>(),
+                        It.IsAny<It.IsAnyType>(),
+                        dbException,
+                        It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                    Times.Once);
             }
             else
             {
                 Assert.IsNull(await queryExecutor.GetJsonResultAsync<System.Text.Json.JsonDocument>(reader.Object));
+                queryExecutorLogger.Verify(
+                    l => l.Log(
+                        LogLevel.Error,
+                        It.IsAny<EventId>(),
+                        It.IsAny<It.IsAnyType>(),
+                        It.IsAny<Exception>(),
+                        It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                    Times.Never);
             }
         }
 

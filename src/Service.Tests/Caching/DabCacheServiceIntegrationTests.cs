@@ -711,7 +711,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                 mockQueryFactory.Object,
                 mockLogger.Object,
                 dataSourceName,
-                isValidateOnly);
+                isValidateOnly,
+                null);
             mockSqlMetadataProvider
                 .Setup(s => s.EntityToDatabaseObject)
                 .Returns(entityToDatabaseObject);

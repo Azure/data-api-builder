@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -28,13 +29,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
     /// <summary>
     /// Dynamic custom MCP tool generated from stored procedure entity configuration.
     /// Each custom tool represents a single stored procedure exposed as a dedicated MCP tool.
-    /// 
-    /// Note: The entity configuration is captured at tool construction time. If the RuntimeConfig
-    /// is hot-reloaded, GetToolMetadata() will return cached metadata (name, description, parameters)
-    /// from the original configuration. This is acceptable because:
-    /// 1. MCP clients typically call tools/list once at startup
-    /// 2. ExecuteAsync always validates against the current runtime configuration
-    /// 3. Cached metadata improves performance for repeated metadata requests
+    /// A new instance is created for each MCP registry generation so its cached metadata remains
+    /// aligned with the runtime configuration used to advertise it.
     /// </summary>
     public class DynamicCustomTool : IMcpTool
     {
@@ -50,6 +46,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             EntityName = entityName ?? throw new ArgumentNullException(nameof(entityName));
             _entity = entity ?? throw new ArgumentNullException(nameof(entity));
+            ToolName = ConvertToToolName(entityName);
 
             // Validate that this is a stored procedure
             if (_entity.Source.Type != EntitySourceType.StoredProcedure)
@@ -65,6 +62,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         public ToolType ToolType { get; } = ToolType.Custom;
 
+        /// <summary>
+        /// Returns true because <see cref="CustomMcpToolFactory"/> creates an instance only when
+        /// the source entity has <c>mcp.custom-tool</c> enabled for the candidate configuration.
+        /// Each registry generation recreates that membership, so an extant dynamic tool is
+        /// enabled by construction. Execution still revalidates enablement against current state.
+        /// </summary>
         public bool IsEnabled(RuntimeConfig config) => true;
 
         /// <summary>
@@ -73,16 +76,38 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public string EntityName { get; }
 
         /// <summary>
-        /// Initializes the tool's input schema using DB metadata from the service provider.
-        /// Called after DI initialization to enrich the tool schema with DB-discovered parameters
-        /// and type information that aren't available at construction time.
-        /// Falls back silently to config-based schema if DB metadata is unavailable.
+        /// Gets the normalized MCP tool name without materializing the complete metadata schema.
         /// </summary>
-        /// <param name="serviceProvider">The application service provider with initialized metadata providers.</param>
-        public void InitializeMetadata(IServiceProvider serviceProvider)
+        internal string ToolName { get; }
+
+        /// <summary>
+        /// Initializes the input schema using an explicit configuration and metadata-provider
+        /// generation. Falls back to config-based metadata when database metadata is unavailable.
+        /// </summary>
+        public bool InitializeMetadata(
+            RuntimeConfig config,
+            IMetadataProviderFactory metadataProviderFactory)
         {
-            ArgumentNullException.ThrowIfNull(serviceProvider);
-            _cachedInputSchema = BuildInputSchemaFromDbMetadata(serviceProvider);
+            return InitializeMetadata(config, metadataProviderFactory, out _);
+        }
+
+        /// <summary>
+        /// Initializes the input schema using an explicit configuration and metadata-provider
+        /// generation and reports why configuration metadata was used when database enrichment
+        /// is unavailable.
+        /// </summary>
+        public bool InitializeMetadata(
+            RuntimeConfig config,
+            IMetadataProviderFactory metadataProviderFactory,
+            out string fallbackReason)
+        {
+            ArgumentNullException.ThrowIfNull(config);
+            ArgumentNullException.ThrowIfNull(metadataProviderFactory);
+            _cachedInputSchema = BuildInputSchemaFromDbMetadata(
+                config,
+                metadataProviderFactory,
+                out fallbackReason);
+            return _cachedInputSchema.HasValue;
         }
 
         /// <summary>
@@ -90,15 +115,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         public Tool GetToolMetadata()
         {
-            string toolName = ConvertToToolName(EntityName);
-            string description = _entity.Description ?? $"Executes the {toolName} stored procedure";
+            string description = _entity.Description ?? $"Executes the {ToolName} stored procedure";
 
             // Build input schema based on parameters
             JsonElement inputSchema = BuildInputSchema();
 
             return new Tool
             {
-                Name = toolName,
+                Name = ToolName,
                 Description = description,
                 InputSchema = inputSchema
             };
@@ -113,7 +137,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             CancellationToken cancellationToken = default)
         {
             ILogger<DynamicCustomTool>? logger = serviceProvider.GetService<ILogger<DynamicCustomTool>>();
-            string toolName = GetToolMetadata().Name;
+            string toolName = ToolName;
 
             try
             {
@@ -259,6 +283,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     cancellationToken.ThrowIfCancellationRequested();
                     queryResult = await queryEngine.ExecuteAsync(context, dataSourceName).ConfigureAwait(false);
                 }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
                 catch (DataApiBuilderException dabEx)
                 {
                     logger?.LogError(dabEx, "Error executing custom tool {ToolName} for entity {Entity}", toolName, EntityName);
@@ -322,32 +350,31 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// Builds the input schema from DB metadata (StoredProcedureDefinition.Parameters).
         /// Returns null if metadata cannot be resolved (caller should fall back to config-based schema).
         /// </summary>
-        private JsonElement? BuildInputSchemaFromDbMetadata(IServiceProvider serviceProvider)
+        private JsonElement? BuildInputSchemaFromDbMetadata(
+            RuntimeConfig config,
+            IMetadataProviderFactory metadataProviderFactory,
+            out string fallbackReason)
         {
-            RuntimeConfigProvider? configProvider = serviceProvider.GetService<RuntimeConfigProvider>();
-            if (configProvider is null)
-            {
-                return null;
-            }
-
-            RuntimeConfig config = configProvider.GetConfig();
-
             if (!McpMetadataHelper.TryResolveMetadata(
                     EntityName,
                     config,
-                    serviceProvider,
+                    metadataProviderFactory,
                     out _,
                     out DatabaseObject dbObject,
                     out _,
-                    out _))
+                    out fallbackReason))
             {
                 return null;
             }
 
             if (dbObject is not DatabaseStoredProcedure storedProcedure)
             {
+                fallbackReason =
+                    $"Database object '{dbObject.FullName}' for entity '{EntityName}' is not a stored procedure.";
                 return null;
             }
+
+            fallbackReason = string.Empty;
 
             StoredProcedureDefinition spDefinition = storedProcedure.StoredProcedureDefinition;
             if (spDefinition.Parameters is null || spDefinition.Parameters.Count == 0)

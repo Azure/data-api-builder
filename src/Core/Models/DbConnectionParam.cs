@@ -35,4 +35,9 @@ public class DbConnectionParam
 
     // Nullable integer parameter representing length. nullable for back compatibility and for where its not needed
     public int? Length { get; set; }
+
+    /// <summary>
+    /// Whether the database should infer this parameter's native type from its SQL context.
+    /// </summary>
+    public bool UseDatabaseTypeInference { get; set; }
 }

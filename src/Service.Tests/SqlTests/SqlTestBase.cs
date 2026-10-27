@@ -80,17 +80,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="customQueries">Test specific queries to be executed on database.</param>
         /// <param name="customEntities">Test specific entities to be added to database.</param>
         /// <param name="isRestBodyStrict">When false, allows extraneous fields in REST request body.</param>
+        /// <param name="hostMode">When specified, overrides the host mode of the test config.</param>
         /// <returns></returns>
         protected async static Task InitializeTestFixture(
             List<string> customQueries = null,
             List<string[]> customEntities = null,
             bool isRestBodyStrict = true,
-            string connectionStringOptions = null)
+            string connectionStringOptions = null,
+            HostMode? hostMode = null)
         {
             TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
 
             // Get the base config file from disk
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+
+            if (hostMode is not null)
+            {
+                runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime with { Host = runtimeConfig.Runtime.Host with { Mode = hostMode.Value } } };
+            }
 
             // Append additional connection-string options for the test fixture (e.g. "UseAffectedRows=true"),
             // when specified. This allows tests to exercise connection-string dependent behavior.

@@ -7,6 +7,20 @@ using Azure.DataApiBuilder.Config.Utilities;
 namespace Azure.DataApiBuilder.Config;
 
 /// <summary>
+/// Internal lifecycle contract that allows event delivery to stop independently from potentially
+/// blocking disposal of the underlying operating-system watcher.
+/// </summary>
+internal interface IConfigFileWatcher : IDisposable
+{
+    event EventHandler? NewFileContentsDetected;
+
+    /// <summary>
+    /// Disables new file-system events and detaches the underlying change callback.
+    /// </summary>
+    void StopWatching();
+}
+
+/// <summary>
 /// This class is responsible for monitoring the config file from the
 /// local file system. This watcher maintains a file hash to only emit
 /// one event for each file change occurrence. Because .NET may raise >1
@@ -20,9 +34,11 @@ namespace Azure.DataApiBuilder.Config;
 /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher.onchanged#remarks"/>
 /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher.notifyfilter"/>
 /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/change-tokens#:~:text=exponential%20back%2Doff.-,Utilities/Utilities.cs%3A,-C%23"/>
-public class ConfigFileWatcher : IDisposable
+public class ConfigFileWatcher : IConfigFileWatcher
 {
+    private readonly object _lifecycleLock = new();
     private bool _disposed;
+    private bool _stopped;
 
     /// <summary>
     /// Watches a specific file for modifications and alerts
@@ -93,12 +109,18 @@ public class ConfigFileWatcher : IDisposable
     {
         try
         {
-            if (_fileWatcher is not null)
+            IFileSystemWatcher? fileWatcher;
+            lock (_lifecycleLock)
+            {
+                fileWatcher = _stopped ? null : _fileWatcher;
+            }
+
+            if (fileWatcher is not null)
             {
                 // Multiple file change notifications may be raised for a single file change.
                 // Use file hashes to ensure that HotReload operation is only executed when a net-new
                 // runtime config is detected.
-                byte[] updatedRuntimeConfigFileHash = FileUtilities.ComputeHash(_fileWatcher.FileSystem, filePath: Path.Combine(WatchedDirectory, WatchedFile));
+                byte[] updatedRuntimeConfigFileHash = FileUtilities.ComputeHash(fileWatcher.FileSystem, filePath: Path.Combine(WatchedDirectory, WatchedFile));
                 if (!_runtimeConfigHash.SequenceEqual(updatedRuntimeConfigFileHash))
                 {
                     _runtimeConfigHash = updatedRuntimeConfigFileHash;
@@ -129,18 +151,43 @@ public class ConfigFileWatcher : IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (_disposed)
+        IFileSystemWatcher? fileWatcher;
+        lock (_lifecycleLock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            StopWatchingCore();
+            fileWatcher = _fileWatcher;
+            _fileWatcher = null;
+        }
+
+        fileWatcher?.Dispose();
+    }
+
+    void IConfigFileWatcher.StopWatching()
+    {
+        lock (_lifecycleLock)
+        {
+            StopWatchingCore();
+        }
+    }
+
+    private void StopWatchingCore()
+    {
+        if (_stopped)
         {
             return;
         }
 
-        _disposed = true;
-
+        _stopped = true;
         if (_fileWatcher is not null)
         {
             _fileWatcher.EnableRaisingEvents = false;
             _fileWatcher.Changed -= OnConfigFileChange;
-            _fileWatcher.Dispose();
         }
     }
 }

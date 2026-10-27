@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
     {
         private readonly object _lock = new();
         private TextWriter? _writer;
-        private bool _disposed;
+        private int _disposed;
 
         /// <summary>
         /// Production constructor. The underlying stdout stream is opened
@@ -51,9 +51,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         public void WriteLine(string line)
         {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
+
             lock (_lock)
             {
-                if (_disposed)
+                if (Volatile.Read(ref _disposed) != 0)
                 {
                     return;
                 }
@@ -65,16 +70,29 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         public void Dispose()
         {
-            lock (_lock)
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
             {
-                if (_disposed)
-                {
-                    return;
-                }
+                return;
+            }
 
-                _disposed = true;
+            // Stdout can block indefinitely when the MCP client stops reading. Never make host
+            // disposal wait behind an in-flight notification write. Marking this instance as
+            // disposed prevents new writes; if the writer lock is available, release its
+            // resources immediately. Otherwise the process-owned stdout stream is left for the
+            // operating system to reclaim when the blocked process exits.
+            if (!Monitor.TryEnter(_lock))
+            {
+                return;
+            }
+
+            try
+            {
                 _writer?.Dispose();
                 _writer = null;
+            }
+            finally
+            {
+                Monitor.Exit(_lock);
             }
         }
 

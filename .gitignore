@@ -36,6 +36,7 @@ dab-config*.json
 
 # Local-Only files
 .env
+/docs/design/McpToolRegistryHotReload.md
 
 # Verify test files
 *.received.*

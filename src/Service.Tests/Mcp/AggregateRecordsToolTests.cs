@@ -495,6 +495,66 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         #endregion
 
+        #region Input Validation Tests - Orderby Shape (Issue #3810)
+
+        /// <summary>
+        /// Wrong JSON types must return a tool-specific argument error, regardless of grouping.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("[\"desc\"]")]
+        [DataRow("[\"title desc\"]")]
+        [DataRow("[]")]
+        [DataRow("[null]")]
+        [DataRow("{}")]
+        [DataRow("123")]
+        [DataRow("true")]
+        [DataRow("false")]
+        public async Task AggregateRecords_InvalidOrderbyShape_ReturnsActionableInvalidArguments(string orderby)
+        {
+            foreach (string grouping in new[] { string.Empty, ",\"groupby\":[]", ",\"groupby\":[\"title\"]" })
+            {
+                string json = $"{{\"entity\":\"Book\",\"function\":\"count\",\"orderby\":{orderby}{grouping}}}";
+                CallToolResult result = await ExecuteToolAsync(CreateDefaultServiceProvider(), json);
+
+                string message = AssertErrorResult(result, "InvalidArguments");
+                StringAssert.Contains(message, "'orderby'");
+                StringAssert.Contains(message, "string");
+                StringAssert.Contains(message, "'asc'");
+                StringAssert.Contains(message, "'desc'");
+                StringAssert.Contains(message, "\"desc\"");
+            }
+        }
+
+        /// <summary>
+        /// Preserve existing optional/null/blank handling, normalization, and the grouped descending default.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, "desc")]
+        [DataRow("null", "desc")]
+        [DataRow("\"\"", "desc")]
+        [DataRow("\"   \"", "desc")]
+        [DataRow("\"asc\"", "asc")]
+        [DataRow("\"desc\"", "desc")]
+        [DataRow("\" ASC \"", "asc")]
+        [DataRow("\" DeSc \"", "desc")]
+        public void AggregateRecords_ValidOrderby_PreservesDirectionAndDefault(string? orderby, string expectedDirection)
+        {
+            string orderbyProperty = orderby is null ? string.Empty : $",\"orderby\":{orderby}";
+            using JsonDocument arguments = JsonDocument.Parse(
+                $"{{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"]{orderbyProperty}}}");
+            object?[] parameters = { arguments, CreateConfig(), "aggregate_records", null, null };
+
+            CallToolResult? error = InvokePrivateWithMutableArguments<CallToolResult?>(
+                "TryParseAndValidateArguments", parameters);
+
+            Assert.IsNull(error);
+            AggregateRecordsTool.AggregateArguments parsed = (AggregateRecordsTool.AggregateArguments)parameters[3]!;
+            Assert.AreEqual(expectedDirection, parsed.Orderby);
+            CollectionAssert.AreEqual(new[] { "title" }, parsed.Groupby);
+        }
+
+        #endregion
+
         #region Input Validation Tests - Orderby Without Groupby (Issue #3279)
 
         /// <summary>
@@ -517,17 +577,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             CallToolResult result = await ExecuteToolAsync(sp, json);
 
-            // The tool may fail at metadata resolution (no real DB), but must NOT fail with InvalidArguments.
-            // If the tool succeeds, that's also acceptable — the test is focused on input validation.
-            if (result.IsError != true)
-            {
-                return;
-            }
-
-            JsonElement content = ParseContent(result);
-            string errorType = content.GetProperty("error").GetProperty("type").GetString()!;
-            Assert.AreNotEqual("InvalidArguments", errorType,
-                $"orderby without groupby must not be rejected as InvalidArguments. Got error type: {errorType}");
+            // The provider intentionally has no metadata factory. Require that exact boundary,
+            // rather than allowing an UnexpectedError to pass this compatibility test.
+            AssertErrorResult(result, "EntityNotFound");
         }
 
         /// <summary>

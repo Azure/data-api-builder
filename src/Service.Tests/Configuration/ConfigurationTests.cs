@@ -15,6 +15,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -24,6 +25,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthentication;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -43,6 +45,7 @@ using HotChocolate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
@@ -4109,6 +4112,181 @@ type Moon {
         }
 
         /// <summary>
+        /// Ensures a cold-started runtime with omitted authentication ignores forged EasyAuth headers,
+        /// including in development mode where all authentication handlers remain registered for hot reload.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps)]
+        [DataRow(HostMode.Production, EasyAuthType.AppService)]
+        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps)]
+        [DataRow(HostMode.Development, EasyAuthType.AppService)]
+        [DoNotParallelize]
+        public async Task TestColdStartOmittedAuthenticationIgnoresForgedEasyAuthHeader(HostMode hostMode, EasyAuthType payloadType)
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+            Assert.IsNull(Environment.GetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR));
+            Assert.IsNull(Environment.GetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR));
+
+            RuntimeConfig configuration = CreateBasicRuntimeConfigWithNoEntity(
+                DatabaseType.MSSQL,
+                "Server=placeholder;");
+            RuntimeOptions runtimeOptions = configuration.Runtime! with
+            {
+                Host = new(Cors: null, Authentication: null, Mode: hostMode)
+            };
+            configuration = configuration with { Runtime = runtimeOptions };
+            JsonObject configObject = JsonNode.Parse(configuration.ToJson())!.AsObject();
+            JsonObject host = configObject["runtime"]!["host"]!.AsObject();
+            Assert.IsTrue(host.Remove("authentication"));
+            string serializedConfiguration = configObject.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+            Assert.IsFalse(host.ContainsKey("authentication"));
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, serializedConfiguration);
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            Microsoft.Extensions.Hosting.IHostApplicationLifetime lifetime =
+                server.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
+            Assert.IsTrue(lifetime.ApplicationStarted.IsCancellationRequested, "Host did not finish starting.");
+            Assert.IsFalse(lifetime.ApplicationStopping.IsCancellationRequested, "Runtime initialization failed.");
+            RuntimeConfigProvider configProvider = server.Services.GetRequiredService<RuntimeConfigProvider>();
+            Assert.IsFalse(configProvider.IsLateConfigured);
+
+            Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider schemeProvider =
+                server.Services.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME));
+            Microsoft.AspNetCore.Authentication.AuthenticationScheme? defaultScheme =
+                await schemeProvider.GetDefaultAuthenticateSchemeAsync();
+            if (hostMode == HostMode.Development)
+            {
+                // With all handlers available and no default, request-time selection must ignore EasyAuth.
+                Assert.IsNull(defaultScheme);
+                Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+                Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+            }
+            else
+            {
+                Assert.IsNotNull(defaultScheme);
+                Assert.AreEqual(UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME, defaultScheme.Name);
+                Assert.IsNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+                Assert.IsNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+            }
+
+            const string FORGED_ROLE = "ForgedRole";
+            string forgedPrincipal = payloadType == EasyAuthType.StaticWebApps
+                ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: true, specificRole: FORGED_ROLE)
+                : AuthTestHelper.CreateAppServiceEasyAuthToken(
+                    roleClaimType: AuthenticationOptions.ROLE_CLAIM_TYPE,
+                    additionalClaims:
+                    [
+                        new AppServiceClaim { Typ = AuthenticationOptions.ROLE_CLAIM_TYPE, Val = FORGED_ROLE }
+                    ]);
+            HttpContext context = await server.SendAsync(requestContext =>
+            {
+                requestContext.Request.Path = "/api/not-an-entity";
+                requestContext.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER] = forgedPrincipal;
+                requestContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = FORGED_ROLE;
+                requestContext.Request.Scheme = "https";
+            });
+
+            Assert.AreEqual(StatusCodes.Status404NotFound, context.Response.StatusCode);
+            Assert.IsNotNull(context.User.Identity);
+            Assert.IsFalse(context.User.Identity.IsAuthenticated);
+            Assert.IsFalse(context.User.IsInRole(FORGED_ROLE));
+            Assert.AreEqual(
+                AuthorizationType.Anonymous.ToString(),
+                context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
+        }
+
+        /// <summary>
+        /// Preserves the existing late-configuration bootstrap and App Service request path.
+        /// Both EasyAuth handlers remain registered. Header trust in this mode is the hosting
+        /// service's responsibility; this in-process test simulates its authenticated ingress.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        [DoNotParallelize]
+        public async Task TestLateConfigurationPreservesEasyAuthSchemes(string configurationEndpoint)
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using HttpClient client = server.CreateClient();
+            client.BaseAddress = new Uri("https://localhost");
+            RuntimeConfigProvider configProvider = server.Services.GetRequiredService<RuntimeConfigProvider>();
+            Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider schemeProvider =
+                server.Services.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
+
+            Assert.IsTrue(configProvider.IsLateConfigured);
+            Assert.IsFalse(configProvider.TryGetLoadedConfig(out _));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+            Assert.IsNull(await schemeProvider.GetSchemeAsync(UnauthenticatedAuthenticationDefaults.AUTHENTICATIONSCHEME));
+
+            Microsoft.AspNetCore.Authentication.AuthenticationScheme? defaultScheme =
+                await schemeProvider.GetDefaultAuthenticateSchemeAsync();
+            Assert.IsNotNull(defaultScheme);
+            Assert.AreEqual(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME, defaultScheme.Name);
+
+            using HttpResponseMessage beforeHydration = await client.GetAsync("/api/not-an-entity");
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, beforeHydration.StatusCode);
+
+            RuntimeConfig configuration = CreateBasicRuntimeConfigWithNoEntity(
+                DatabaseType.MSSQL,
+                "Server=placeholder;");
+            RuntimeOptions runtimeOptions = configuration.Runtime! with
+            {
+                Host = new(
+                    Cors: null,
+                    Authentication: new(Provider: EasyAuthType.AppService.ToString()),
+                    Mode: HostMode.Production)
+            };
+            configuration = configuration with { Runtime = runtimeOptions };
+            using HttpRequestMessage hydrationRequest = new(HttpMethod.Post, configurationEndpoint)
+            {
+                Content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint)
+            };
+            // Honor an externally configured bootstrap token without changing process-wide state
+            // or including the token on subsequent data requests.
+            string? bootstrapToken = Environment.GetEnvironmentVariable(Startup.CONFIG_AUTH_TOKEN_ENV_VAR);
+            if (!string.IsNullOrEmpty(bootstrapToken))
+            {
+                hydrationRequest.Headers.Add(Startup.CONFIG_AUTH_HEADER, bootstrapToken);
+            }
+
+            using HttpResponseMessage hydrationResponse = await client.SendAsync(hydrationRequest);
+            Assert.AreEqual(HttpStatusCode.OK, hydrationResponse.StatusCode);
+            Assert.IsTrue(configProvider.IsLateConfigured);
+            Assert.IsTrue(configProvider.TryGetLoadedConfig(out _));
+            Assert.IsNull(Environment.GetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR));
+            Assert.IsNull(Environment.GetEnvironmentVariable(StaticWebAppsAuthentication.WEBSITE_SITE_NAME_ENVVAR));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME));
+            Assert.IsNotNull(await schemeProvider.GetSchemeAsync(EasyAuthAuthenticationDefaults.SWAAUTHSCHEME));
+
+            const string REQUIRED_ROLE = "LateConfiguredRole";
+            string principal = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                roleClaimType: AuthenticationOptions.ROLE_CLAIM_TYPE,
+                additionalClaims:
+                [
+                    new AppServiceClaim { Typ = AuthenticationOptions.ROLE_CLAIM_TYPE, Val = REQUIRED_ROLE }
+                ]);
+            HttpContext context = await server.SendAsync(requestContext =>
+            {
+                requestContext.Request.Path = "/api/not-an-entity";
+                requestContext.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER] = principal;
+                requestContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = REQUIRED_ROLE;
+                requestContext.Request.Scheme = "https";
+            });
+
+            Assert.AreEqual(StatusCodes.Status404NotFound, context.Response.StatusCode);
+            Assert.IsNotNull(context.User.Identity);
+            Assert.IsTrue(context.User.Identity.IsAuthenticated);
+            Assert.IsTrue(context.User.IsInRole(REQUIRED_ROLE));
+            Assert.AreEqual(REQUIRED_ROLE, context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]);
+        }
+
+        /// <summary>
         /// In CosmosDB NoSQL, we store data in the form of JSON. Practically, JSON can be very complex.
         /// But DAB doesn't support JSON with circular references e.g if 'Character.Moon' is a valid JSON Path, then
         /// 'Moon.Character' should not be there, DAB would throw an exception during the load itself.
@@ -4251,8 +4429,6 @@ type Planet @model(name:""PlanetAlias"") {
             $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
-            // When host is in Production mode with AppService as Identity Provider and the environment variables are not set
-            // we do not throw an exception any longer(PR: 2943), instead log a warning to the user. In this case expectError is false.
             // This test only checks for startup errors, so no requests are sent to the test server.
             try
             {
@@ -6477,6 +6653,132 @@ type Planet @model(name:""PlanetAlias"") {
                     e => !e.Message.Contains("autoentities", StringComparison.OrdinalIgnoreCase)
                          || e.Message.Contains("No entities found", StringComparison.OrdinalIgnoreCase)),
                 "Unexpected autoentity-related validation error.");
+        }
+
+        /// <summary>
+        /// End-to-end regression test that creates actual root and child JSON files, loads them through
+        /// <see cref="FileSystemRuntimeConfigLoader"/>, runs metadata initialization and validation via
+        /// <see cref="RuntimeConfigValidator.TryValidateConfig"/>, and asserts the PER-FILE result.
+        ///
+        /// The root references the child through <c>data-source-files</c>. The root's own autoentity
+        /// resolves ZERO entities (its pattern matches no table) while the child's autoentities for MSSQL
+        /// resolve real tables (dbo.books). After the child's autoentities are merged into the root, the
+        /// merged config has resolvable entities, so validation succeeds and no "No entities found"
+        /// presence error is produced.
+        /// Requires a running MSSQL instance reachable via the standard MSSQL test connection string.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestValidate_MultiConfigRootResolvingZero_ProducesRootScopedErrorAndValidChild()
+        {
+            (string rootConfigPath, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem, string tempDir) =
+                ArrangeMultiConfigForMsSql();
+
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            try
+            {
+                loader.UpdateConfigFilePath(rootConfigPath);
+                RuntimeConfigProvider provider = new(loader);
+                Assert.AreEqual(1, provider.GetConfig().ChildConfigs.Count, "Expected exactly one child config to be resolved and merged.");
+
+                RuntimeConfigValidator validator = new(
+                    provider,
+                    fileSystem,
+                    loggerFactory.CreateLogger<RuntimeConfigValidator>(),
+                    isValidateOnly: true);
+
+                bool isValid = await validator.TryValidateConfig(rootConfigPath, loggerFactory);
+                Assert.IsTrue(isValid, "Validation should succeed");
+
+                List<Exception> presenceErrors = validator.ConfigValidationExceptions
+                    .Where(e => e.Message.Contains("No entities found"))
+                    .ToList();
+                Assert.AreEqual(0, presenceErrors.Count, "Expected no errors to be found");
+            }
+            finally
+            {
+                loggerFactory.Dispose();
+
+                // Guarantee cleanup so fixed-name/leftover files can never leak into another test or run.
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper: builds a real multi-config on disk for MSSQL directly through the
+        /// <see cref="RuntimeConfig"/> object model (the pattern used throughout these Service.Tests),
+        /// rather than the CLI generators which are not referenced by this test project:
+        /// - a CHILD config with its own MSSQL data source and autoentities matching <c>dbo.books</c>,
+        /// - a ROOT config with its own MSSQL data source, autoentities matching
+        ///   <paramref name="rootPatternInclude"/>, and <c>data-source-files</c> pointing at the child.
+        /// Returns the root config path plus a fresh loader and file system to drive validation.
+        /// </summary>
+        private static (string RootConfigPath, FileSystemRuntimeConfigLoader ValidateLoader, IFileSystem FileSystem, string tempDir)
+            ArrangeMultiConfigForMsSql()
+        {
+            string connectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL);
+            IFileSystem fileSystem = new FileSystem();
+
+            // Unique directory per invocation avoids cross-test/cross-run interference from leftover files.
+            string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dab-multiconfig-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            string rootConfigPath = System.IO.Path.Combine(tempDir, "dab-root.json");
+            string childConfigPath = System.IO.Path.Combine(tempDir, "dab-child.json");
+
+            // Root: own MSSQL data source + autoentities (pattern controls whether it resolves) +
+            // data-source-files pointing at the child.
+            RuntimeConfig rootConfig = new(
+                Schema: "root-schema",
+                DataSource: new(DatabaseType.MSSQL, connectionString, Options: null),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new(BuildAutoentityMap(definitionName: "root-filter", patternInclude: "dbo.books", entiityNames: "root_{object}")),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null, HostMode.Development)),
+                DataSourceFiles: new DataSourceFiles(new[] { childConfigPath }));
+            File.WriteAllText(rootConfigPath, rootConfig.ToJson());
+
+            // Child: own MSSQL data source + autoentities matching a real table (dbo.books).
+            RuntimeConfig childConfig = new(
+                Schema: "child-schema",
+                DataSource: new(DatabaseType.MSSQL, connectionString, Options: null),
+                Entities: new(new Dictionary<string, Entity>()),
+                Autoentities: new(BuildAutoentityMap(definitionName: "child-filter", patternInclude: "dbo.books", entiityNames: "child_{object}")),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null, HostMode.Development)));
+            File.WriteAllText(childConfigPath, childConfig.ToJson());
+
+            return (rootConfigPath, new FileSystemRuntimeConfigLoader(fileSystem), fileSystem, tempDir);
+        }
+
+        /// <summary>
+        /// Helper: builds an autoentity map containing a single definition whose include pattern
+        /// controls which tables it resolves against the target database.
+        /// </summary>
+        private static Dictionary<string, Autoentity> BuildAutoentityMap(string definitionName, string patternInclude, string entiityNames)
+        {
+            EntityAction entityAction = new(EntityActionOperation.Read, null, null);
+
+            Autoentity autoentity = new(
+                Patterns: new AutoentityPatterns(
+                    Include: new[] { patternInclude },
+                    Exclude: Array.Empty<string>(),
+                    Name: entiityNames),
+                Template: new AutoentityTemplate(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true, Singular: string.Empty, Plural: string.Empty)),
+                Permissions: new EntityPermission[] { new("anonymous", new EntityAction[] { entityAction }) });
+
+            return new Dictionary<string, Autoentity> { { definitionName, autoentity } };
         }
 
         /// <summary>

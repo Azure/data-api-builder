@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -121,7 +122,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Entity entity = configProvider.GetConfig().Entities[entityName];
 
             DynamicCustomTool tool = new(entityName, entity);
-            tool.InitializeMetadata(serviceProvider);
+            tool.InitializeMetadata(
+                configProvider.GetConfig(),
+                serviceProvider.GetRequiredService<IMetadataProviderFactory>());
 
             JsonElement properties = tool.GetToolMetadata().InputSchema.GetProperty("properties");
 
@@ -142,7 +145,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Entity entity = configProvider.GetConfig().Entities["GetBooks"];
 
             DynamicCustomTool tool = new("GetBooks", entity);
-            tool.InitializeMetadata(serviceProvider);
+            tool.InitializeMetadata(
+                configProvider.GetConfig(),
+                serviceProvider.GetRequiredService<IMetadataProviderFactory>());
 
             JsonElement properties = tool.GetToolMetadata().InputSchema.GetProperty("properties");
 
@@ -168,7 +173,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Entity entity = configProvider.GetConfig().Entities[entityName];
 
             DynamicCustomTool tool = new(entityName, entity);
-            tool.InitializeMetadata(serviceProvider);
+            tool.InitializeMetadata(
+                configProvider.GetConfig(),
+                serviceProvider.GetRequiredService<IMetadataProviderFactory>());
 
             JsonElement properties = tool.GetToolMetadata().InputSchema.GetProperty("properties");
             string description = properties.GetProperty(paramName).GetProperty("description").GetString()!;
@@ -188,7 +195,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Entity entity = configProvider.GetConfig().Entities["GetBook"];
 
             DynamicCustomTool tool = new("GetBook", entity);
-            tool.InitializeMetadata(serviceProvider);
+            tool.InitializeMetadata(
+                configProvider.GetConfig(),
+                serviceProvider.GetRequiredService<IMetadataProviderFactory>());
 
             JsonElement schema = tool.GetToolMetadata().InputSchema;
 
@@ -216,7 +225,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Entity entity = configProvider.GetConfig().Entities["InsertBook"];
 
             DynamicCustomTool tool = new("InsertBook", entity);
-            tool.InitializeMetadata(serviceProvider);
+            tool.InitializeMetadata(
+                configProvider.GetConfig(),
+                serviceProvider.GetRequiredService<IMetadataProviderFactory>());
 
             JsonElement schema = tool.GetToolMetadata().InputSchema;
 
@@ -246,7 +257,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Entity entity = configProvider.GetConfig().Entities["GetBooks"];
 
             DynamicCustomTool tool = new("GetBooks", entity);
-            tool.InitializeMetadata(serviceProvider);
+            tool.InitializeMetadata(
+                configProvider.GetConfig(),
+                serviceProvider.GetRequiredService<IMetadataProviderFactory>());
 
             JsonElement schema = tool.GetToolMetadata().InputSchema;
 

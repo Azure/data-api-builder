@@ -5,10 +5,10 @@
 $PSDefaultParameterValues['*:Encoding'] = 'utf8';
 
 # This script can be invoked with either 0 or 1 argument.
-# The argument represents the database type. Valid arguments are MsSql, MySql, PostgreSql and Cosmos
+# The argument represents the database type. Valid arguments are listed in $allowedDbTypes.
 # When invoked with a database type, config file for that database type will be generated.
 # When invoked without any arguments, config files for all the database types will be generated.
-$allowedDbTypes = @("mssql", "mysql", "postgresql", "cosmosdb_nosql", "dwsql");
+$allowedDbTypes = @("mssql", "mysql", "postgresql", "cosmosdb_nosql", "dwsql", "oracle");
 $databaseTypes = @();
 if($args.Count -eq 0){
     $databaseTypes = $allowedDbTypes
@@ -16,7 +16,7 @@ if($args.Count -eq 0){
 elseif($args.Count -eq 1){
     $databaseType = $args[0];
     if(!($allowedDbTypes -contains $databaseType)){
-        throw "Valid arguments are mssql, mysql, postgresql, cosmosdb_nosql or dwsql";
+        throw "Valid arguments are mssql, mysql, postgresql, cosmosdb_nosql, dwsql or oracle";
     }
     $databaseTypes += $databaseType;
 }
@@ -51,6 +51,10 @@ foreach($databaseType in $databaseTypes){
     elseif($databaseType -eq "dwsql"){
         $commandFile = "dwsql-commands.txt";
         $configFile = "dab-config.DwSql.json";
+    }
+    elseif($databaseType -eq "oracle"){
+        $commandFile = "oracle-commands.txt";
+        $configFile = "dab-config.Oracle.json";
     }
     else{
         $commandFile = "cosmosdb_nosql-commands.txt";

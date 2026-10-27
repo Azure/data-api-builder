@@ -228,7 +228,7 @@ namespace Cli.Commands
             RuntimeEmbeddingsCacheLevel2ConnectionString = runtimeEmbeddingsCacheLevel2ConnectionString;
         }
 
-        [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: mssql, postgresql, cosmosdb_nosql, mysql, dwsql.")]
+        [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: mssql, postgresql, cosmosdb_nosql, mysql, dwsql, oracle.")]
         public string? DataSourceDatabaseType { get; }
 
         [Option("data-source.connection-string", Required = false, HelpText = "Connection string for the data source.")]

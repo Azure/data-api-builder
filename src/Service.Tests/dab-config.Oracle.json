@@ -1,0 +1,37 @@
+{
+  "$schema": "../../schemas/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "oracle",
+    "connection-string": "@env('DAB_ORACLE_TEST_CONNECTION_STRING')"
+  },
+  "runtime": {
+    "rest": { "enabled": true, "path": "/api" },
+    "graphql": { "enabled": true, "path": "/graphql" },
+    "host": {
+      "mode": "development",
+      "authentication": { "provider": "AppService" }
+    }
+  },
+  "entities": {
+    "Book": {
+      "source": { "object": "BOOKS", "type": "table" },
+      "rest": { "path": "/Book" },
+      "graphql": { "type": { "singular": "Book", "plural": "Books" } },
+      "mappings": { "ID": "id", "TITLE": "title", "PUBLISHER_ID": "publisher_id" },
+      "permissions": [ { "role": "anonymous", "actions": [ "*" ] } ],
+      "relationships": {
+        "publisher": { "cardinality": "one", "target.entity": "Publisher" }
+      }
+    },
+    "Publisher": {
+      "source": { "object": "PUBLISHERS", "type": "table" },
+      "rest": { "path": "/Publisher" },
+      "graphql": { "type": { "singular": "Publisher", "plural": "Publishers" } },
+      "mappings": { "ID": "id", "NAME": "name" },
+      "permissions": [ { "role": "anonymous", "actions": [ "read" ] } ],
+      "relationships": {
+        "books": { "cardinality": "many", "target.entity": "Book" }
+      }
+    }
+  }
+}

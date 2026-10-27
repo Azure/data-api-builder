@@ -66,6 +66,28 @@ Tests can then be run using the following commands:
 
 Alternatively, you can execute the tests from Visual Studio.
 
+#### Running Oracle tests
+
+With Docker running in Linux-container mode and PowerShell 7 installed, run from the repository root:
+
+```powershell
+./scripts/run-oracle-tests.ps1
+```
+
+This creates a disposable Oracle XE 21c database with generated temporary credentials, runs the `Oracle` integration and `OracleUnit` provider tests, and removes the container afterwards. Credentials are passed through process environment variables and are not written into configuration files. The Oracle SQL targets 19c-compatible features; this container run validates XE 21c, not a separate 19c installation.
+
+To use an existing Oracle database, set `DAB_ORACLE_TEST_CONNECTION_STRING` to a **dedicated test user/schema** with `CREATE SESSION`, `CREATE TABLE`, and a tablespace quota, then run:
+
+```powershell
+dotnet test src/Service.Tests/Azure.DataApiBuilder.Service.Tests.csproj --filter 'TestCategory=Oracle'
+```
+
+`dab-config.Oracle.json` reads the connection string through `@env`. The shared `SqlTestBase` fixture applies `DatabaseSchema-Oracle.sql` before each test, recreating `BOOKS`, `PUBLISHERS`, and `DAB_ORACLE_BOOKS`. Do not point these tests at an application database. Missing configuration fails the Oracle test run rather than skipping it.
+
+Sample CLI commands for this schema are in `config-generators/oracle-commands.txt`. After building the CLI, regenerate `src/Service.Tests/dab-config.Oracle.json` with `./config-generators/config-generator.ps1 oracle` (PowerShell) or `bash config-generators/config-generator.sh oracle` (Bash). These commands retain the environment-variable reference and do not need database credentials.
+
+Oracle tests use the shared REST/GraphQL request and database-result helpers. MCP aggregation tests use `McpToolTestBase`, the Oracle schema, and the real authorization handler. The Oracle job in `.pipelines/unittest-pipelines.yml` runs the same disposable-database script and publishes test results and coverage; the ordinary unit job excludes `TestCategory=Oracle`.
+
 #### Running CosmosDB tests
 
 To run the CosmosDB tests locally you will need to run either the CosmosDB emulator (Windows or cross-platform) or a CosmosDB instance in Azure. You will also need to set the connection string in `dab-config.CosmosDb_NoSql.json`. Since there is no schema for CosmosDB, the tests will create the database and collection for the test run.

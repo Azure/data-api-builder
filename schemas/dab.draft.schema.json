@@ -22,6 +22,7 @@
           "enum": [
             "mssql",
             "postgresql",
+            "oracle",
             "mysql",
             "cosmosdb_nosql",
             "dwsql"
@@ -148,7 +149,7 @@
           "if": {
             "properties": {
               "database-type": {
-                "enum": ["mysql", "postgresql", "cosmosdb_postgresql"]
+                "enum": ["mysql", "postgresql", "cosmosdb_postgresql", "oracle"]
               }
             }
           },

@@ -410,7 +410,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             try
             {
                 await conn.OpenAsync(cancellationToken);
-                DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
+                using DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
                 TResult? result = default(TResult);
                 try
                 {
@@ -501,7 +501,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             try
             {
                 conn.Open();
-                DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
+                using DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
 
                 try
                 {

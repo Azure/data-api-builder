@@ -1,0 +1,7 @@
+init --config "dab-config.Oracle.json" --database-type oracle --connection-string "@env('DAB_ORACLE_TEST_CONNECTION_STRING')" --host-mode Development --auth.provider AppService --rest.enabled true --graphql.enabled true --mcp.enabled true
+add Publisher --config "dab-config.Oracle.json" --source PUBLISHERS --source.type table --permissions "anonymous:read" --rest Publisher --graphql "Publisher:Publishers"
+add Book --config "dab-config.Oracle.json" --source BOOKS --source.type table --permissions "anonymous:create,read,update,delete" --rest Book --graphql "Book:Books"
+update Publisher --config "dab-config.Oracle.json" --map "ID:id,NAME:name"
+update Book --config "dab-config.Oracle.json" --map "ID:id,TITLE:title,PUBLISHER_ID:publisher_id"
+update Book --config "dab-config.Oracle.json" --relationship publisher --cardinality one --target.entity Publisher
+update Publisher --config "dab-config.Oracle.json" --relationship books --cardinality many --target.entity Book

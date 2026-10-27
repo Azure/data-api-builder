@@ -73,6 +73,7 @@
         -->
         <PackageVersion Include="Newtonsoft.Json.Schema" Version="3.0.14" />
         <PackageVersion Include="Npgsql" Version="8.0.3" />
+        <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.26.301" />
         <PackageVersion Include="Polly" Version="7.2.3" />
         <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.2" />
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />

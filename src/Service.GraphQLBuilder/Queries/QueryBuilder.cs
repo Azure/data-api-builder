@@ -37,6 +37,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             DatabaseType.MSSQL,
             DatabaseType.DWSQL,
             DatabaseType.PostgreSQL,
+            DatabaseType.Oracle,
         };
 
         /// <summary>

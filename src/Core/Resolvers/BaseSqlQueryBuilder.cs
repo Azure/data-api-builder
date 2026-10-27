@@ -461,7 +461,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Write the join in sql
         /// INNER JOIN {TableName} AS {SourceAlias} ON {JoinPredicates}
         /// </summary>
-        protected string Build(SqlJoinStructure join)
+        protected virtual string Build(SqlJoinStructure join)
         {
             if (join is null)
             {

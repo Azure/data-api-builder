@@ -202,6 +202,7 @@ namespace Cli
                     break;
                 case DatabaseType.MySQL:
                 case DatabaseType.PostgreSQL:
+                case DatabaseType.Oracle:
                 case DatabaseType.CosmosDB_PostgreSQL:
                     break;
                 default:

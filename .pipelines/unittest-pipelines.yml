@@ -25,6 +25,8 @@ variables:
 - template: templates/variables.yml
 
 jobs:
+- template: templates/oracle-test-job.yml
+
 - job: build
   displayName: 'Build and Unit Tests'
   pool:
@@ -39,7 +41,9 @@ jobs:
 # combined report. Best-effort (continueOnError) so it never blocks unit CI.
 - job: total_code_coverage
   displayName: 'Total Code Coverage (rolling dashboard)'
-  dependsOn: build
+  dependsOn:
+  - build
+  - oracle
   condition: succeededOrFailed()
   continueOnError: true
   pool:
@@ -56,6 +60,15 @@ jobs:
       artifact: 'coverage-unit'
       patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/unit'
+
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download Oracle coverage (current run)'
+    continueOnError: true
+    inputs:
+      source: 'current'
+      artifact: 'coverage-oracle'
+      patterns: '**/*.cobertura.xml'
+      path: '$(Pipeline.Workspace)/db/oracle'
 
   # DB coverage: each pipeline's numeric definition ID (Azure DevOps pipeline URL
   # ...?definitionId=NN). Mapping: DwSql=1, MsSql=2, MySql=3, PgSql=4, Cosmos=6.
@@ -123,7 +136,7 @@ jobs:
     continueOnError: true
     inputs:
       filePath: 'scripts/merge-coverage.ps1'
-      arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml" -ExpectedSources unit,mssql,pg,mysql,dwsql,cosmos'
+      arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml" -ExpectedSources unit,mssql,pg,mysql,dwsql,cosmos,oracle'
       pwsh: true
 
   - task: PublishCodeCoverageResults@2

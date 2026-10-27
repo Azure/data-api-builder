@@ -1,0 +1,53 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+jobs:
+- job: oracle
+  displayName: Oracle provider and engine integration tests
+  timeoutInMinutes: 30
+  pool:
+    vmImage: ubuntu-latest
+  steps:
+  - task: NuGetAuthenticate@1
+    displayName: NuGet Authenticate
+
+  - task: UseDotNet@2
+    displayName: Setup .NET SDK
+    inputs:
+      packageType: sdk
+      useGlobalJson: true
+
+  - task: DotNetCoreCLI@2
+    displayName: Restore Oracle test project
+    inputs:
+      command: restore
+      projects: src/Service.Tests/Azure.DataApiBuilder.Service.Tests.csproj
+      feedsToUse: config
+      nugetConfigPath: Nuget.config
+
+  - task: PowerShell@2
+    displayName: Run Oracle tests in a disposable database
+    inputs:
+      pwsh: true
+      filePath: scripts/run-oracle-tests.ps1
+      arguments: '-Configuration Release -NoRestore -ResultsDirectory "$(Agent.TempDirectory)/oracle-results"'
+
+  - task: PublishTestResults@2
+    displayName: Publish Oracle test results
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFormat: VSTest
+      testResultsFiles: '$(Agent.TempDirectory)/oracle-results/**/*.trx'
+      failTaskOnFailedTests: true
+      failTaskOnMissingResultsFile: true
+      testRunTitle: Oracle
+
+  - task: PublishCodeCoverageResults@2
+    displayName: Publish Oracle coverage
+    condition: succeededOrFailed()
+    inputs:
+      summaryFileLocation: '$(Agent.TempDirectory)/oracle-results/**/coverage.cobertura.xml'
+
+  - template: publish-coverage-artifact.yml
+    parameters:
+      artifactName: coverage-oracle

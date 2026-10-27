@@ -10,5 +10,6 @@ public enum DatabaseType
     MSSQL,
     PostgreSQL,
     CosmosDB_PostgreSQL,
-    DWSQL
+    DWSQL,
+    Oracle
 }

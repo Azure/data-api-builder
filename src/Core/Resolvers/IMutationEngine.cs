@@ -30,8 +30,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Executes the mutation query and returns result as JSON object asynchronously.
         /// </summary>
         /// <param name="context">context of REST mutation request.</param>
+        /// <param name="dataSourceName">Data source the entity belongs to. When empty, the default data source is used.</param>
         /// <returns>IActionResult</returns>
-        public Task<IActionResult?> ExecuteAsync(RestRequestContext context);
+        public Task<IActionResult?> ExecuteAsync(RestRequestContext context, string dataSourceName = "");
 
         /// <summary>
         /// Executes the stored procedure as a mutation query and returns result as JSON asynchronously.

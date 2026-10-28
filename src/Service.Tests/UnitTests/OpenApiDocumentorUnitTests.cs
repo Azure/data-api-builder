@@ -245,6 +245,71 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [TestMethod]
+        public void CreateDocument_UsesEntitySpecificDataSourceMetadataForSchemas()
+        {
+            Entity bookEntity = CreateTableEntity("Book");
+            Entity reviewEntity = CreateTableEntity("Review");
+
+            Dictionary<string, Entity> entities = new()
+            {
+                ["Book"] = bookEntity,
+                ["Review"] = reviewEntity
+            };
+
+            Dictionary<string, DatabaseObject> defaultDbObjects = CreateBookMetadata();
+            Dictionary<string, DatabaseObject> reviewDbObjects = CreateReviewMetadata();
+
+            RuntimeConfig config = new(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType.MSSQL, string.Empty, Options: null),
+                Runtime: new RuntimeOptions(new(), new(), new(), new(null, null)),
+                Entities: new RuntimeEntities(entities),
+                DefaultDataSourceName: "books-ds",
+                DataSourceNameToDataSource: new Dictionary<string, DataSource>
+                {
+                    ["books-ds"] = new DataSource(DatabaseType.MSSQL, string.Empty, Options: null),
+                    ["reviews-ds"] = new DataSource(DatabaseType.MSSQL, string.Empty, Options: null)
+                },
+                EntityNameToDataSourceName: new Dictionary<string, string>
+                {
+                    ["Book"] = "books-ds",
+                    ["Review"] = "reviews-ds"
+                });
+
+            Mock<Azure.DataApiBuilder.Config.RuntimeConfigLoader> mockLoader = new(null, null);
+            mockLoader.Object.RuntimeConfig = config;
+            RuntimeConfigProvider configProvider = new(mockLoader.Object);
+            RuntimeConfig loadedConfig = configProvider.GetConfig();
+
+            Mock<ISqlMetadataProvider> defaultMetadataProvider = CreateMetadataProvider(defaultDbObjects);
+            Mock<ISqlMetadataProvider> reviewMetadataProvider = CreateMetadataProvider(reviewDbObjects);
+            Mock<IMetadataProviderFactory> mockFactory = new();
+            mockFactory.Setup(x => x.GetMetadataProvider(loadedConfig.GetDataSourceNameFromEntityName("Book"))).Returns(defaultMetadataProvider.Object);
+            mockFactory.Setup(x => x.GetMetadataProvider(loadedConfig.GetDataSourceNameFromEntityName("Review"))).Returns(reviewMetadataProvider.Object);
+
+            OpenApiDocumentor documentor = new(
+                mockFactory.Object,
+                configProvider,
+                handler: null,
+                logger: NullLogger<OpenApiDocumentor>.Instance);
+
+            documentor.CreateDocument();
+
+            Assert.IsTrue(documentor.TryGetDocument(out string? document));
+            using JsonDocument doc = JsonDocument.Parse(document!);
+            JsonElement schemas = doc.RootElement.GetProperty("components").GetProperty("schemas");
+
+            Assert.IsTrue(schemas.TryGetProperty("Book", out JsonElement bookSchema));
+            Assert.IsTrue(bookSchema.TryGetProperty("properties", out JsonElement bookProperties));
+            Assert.IsTrue(bookProperties.TryGetProperty("title", out _));
+
+            Assert.IsTrue(schemas.TryGetProperty("Review", out JsonElement reviewSchema));
+            Assert.IsTrue(reviewSchema.TryGetProperty("properties", out JsonElement reviewProperties));
+            Assert.IsTrue(reviewProperties.TryGetProperty("review_id", out _));
+            Assert.IsTrue(reviewProperties.TryGetProperty("content", out _));
+        }
+
+        [TestMethod]
         public void CreateDocument_ViewEntity_GeneratesPaths()
         {
             ViewDefinition sourceDefinition = new() { PrimaryKey = new List<string> { "id" } };
@@ -422,6 +487,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Mcp: null);
         }
 
+        private static Entity CreateTableEntity(string entityName)
+        {
+            return new Entity(
+                Source: new(entityName.ToLowerInvariant(), EntitySourceType.Table, null, null),
+                GraphQL: new(entityName, entityName + "s"),
+                Fields: null,
+                Rest: new(Enabled: true),
+                Permissions: new[]
+                {
+                    new EntityPermission(Role: "anonymous", Actions: new[]
+                    {
+                        new EntityAction(Action: EntityActionOperation.All, Fields: null, Policy: null)
+                    })
+                },
+                Mappings: null,
+                Relationships: null,
+                Mcp: null);
+        }
+
         /// <summary>
         /// Builds a Book table database object with an auto-generated integer primary key
         /// and a couple of scalar columns.
@@ -443,6 +527,56 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             };
 
             return new Dictionary<string, DatabaseObject> { [ENTITY_NAME] = dbTable };
+        }
+
+        /// <summary>
+        /// Builds a Review table database object with a distinct schema shape to prove
+        /// the OpenAPI document uses the correct entity-specific metadata provider.
+        /// </summary>
+        private static Dictionary<string, DatabaseObject> CreateReviewMetadata()
+        {
+            SourceDefinition sourceDefinition = new()
+            {
+                PrimaryKey = new List<string> { "review_id" }
+            };
+            sourceDefinition.Columns.Add("review_id", new ColumnDefinition { SystemType = typeof(int), IsAutoGenerated = true });
+            sourceDefinition.Columns.Add("content", new ColumnDefinition { SystemType = typeof(string) });
+
+            DatabaseTable dbTable = new(schemaName: "dbo", tableName: "reviews")
+            {
+                SourceType = EntitySourceType.Table,
+                TableDefinition = sourceDefinition
+            };
+
+            return new Dictionary<string, DatabaseObject> { ["Review"] = dbTable };
+        }
+
+        private static Mock<ISqlMetadataProvider> CreateMetadataProvider(Dictionary<string, DatabaseObject> dbObjects)
+        {
+            Mock<ISqlMetadataProvider> mockMetadataProvider = new();
+            mockMetadataProvider.Setup(x => x.EntityToDatabaseObject).Returns(dbObjects);
+            mockMetadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.MSSQL);
+
+            foreach (KeyValuePair<string, DatabaseObject> entry in dbObjects)
+            {
+                DatabaseObject dbObject = entry.Value;
+                mockMetadataProvider.Setup(x => x.GetSourceDefinition(entry.Key)).Returns(dbObject.SourceDefinition);
+            }
+
+            IEnumerable<string> columns = dbObjects.Values.SelectMany(dbObject => dbObject.SourceDefinition.Columns.Keys).Distinct();
+            foreach (string column in columns)
+            {
+                string exposedName = column;
+                string backingName = column;
+                mockMetadataProvider
+                    .Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), column, out exposedName))
+                    .Returns(true);
+                mockMetadataProvider
+                    .Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), column, out backingName))
+                    .Returns(true);
+            }
+
+            return mockMetadataProvider;
         }
 
         private static OpenApiDocumentor CreateDocumentor(

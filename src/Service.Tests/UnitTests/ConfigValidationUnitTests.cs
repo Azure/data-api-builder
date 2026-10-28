@@ -38,6 +38,87 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     public class ConfigValidationUnitTests
     {
         /// <summary>
+        /// Duplicate role names on an entity are rejected during startup and CLI validation.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("jerry", EntityActionOperation.All, false)]
+        [DataRow("jerry", EntityActionOperation.Read, false)]
+        [DataRow("JERRY", EntityActionOperation.All, false)]
+        [DataRow("anonymous", EntityActionOperation.All, false)]
+        [DataRow("authenticated", EntityActionOperation.All, false)]
+        [DataRow("jerry", EntityActionOperation.All, true)]
+        [DataRow("JERRY", EntityActionOperation.Read, true)]
+        public void DuplicateRoleNamesAreRejected(string duplicateRole, EntityActionOperation operation, bool isValidateOnly)
+        {
+            string role = duplicateRole.ToLowerInvariant();
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(roleName: role);
+            Entity entity = runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY];
+            runtimeConfig = runtimeConfig with
+            {
+                Entities = new(new Dictionary<string, Entity>
+                {
+                    [AuthorizationHelpers.TEST_ENTITY] = entity with
+                    {
+                        Permissions = new EntityPermission[]
+                        {
+                            new("anotherRole", new EntityAction[] { new(EntityActionOperation.Read, null, null) }),
+                            new(role, new EntityAction[] { new(EntityActionOperation.All, null, null) }),
+                            new(duplicateRole, new EntityAction[] { new(operation, null, null) })
+                        }
+                    }
+                })
+            };
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator(isValidateOnly);
+            DataApiBuilderException ex;
+            if (isValidateOnly)
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                Assert.AreEqual(1, configValidator.ConfigValidationExceptions.Count);
+                ex = (DataApiBuilderException)configValidator.ConfigValidationExceptions[0];
+            }
+            else
+            {
+                ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            }
+
+            Assert.AreEqual($"Duplicate role '{duplicateRole}' defined for entity '{AuthorizationHelpers.TEST_ENTITY}'. Role names must be unique per entity.", ex.Message);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+        }
+
+        /// <summary>
+        /// Distinct roles on an entity and the same role on different entities remain valid.
+        /// </summary>
+        [TestMethod]
+        public void UniqueRoleNamesPerEntityAreAllowed()
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(roleName: "jerry");
+            Entity entity = runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY];
+            entity = entity with
+            {
+                Permissions = new EntityPermission[]
+                {
+                    entity.Permissions[0],
+                    new("anonymous", new EntityAction[] { new(EntityActionOperation.Read, null, null) })
+                }
+            };
+            runtimeConfig = runtimeConfig with
+            {
+                Entities = new(new Dictionary<string, Entity>
+                {
+                    [AuthorizationHelpers.TEST_ENTITY] = entity,
+                    ["AnotherEntity"] = entity
+                })
+            };
+            Assert.IsTrue(runtimeConfig.TryAddEntityNameToDataSourceName("AnotherEntity"));
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+            configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            Assert.AreEqual(0, configValidator.ConfigValidationExceptions.Count);
+        }
+
+        /// <summary>
         /// Test method to validate that an appropriate exception is thrown when database policy tries to reference a field
         /// which is not accessible.
         /// </summary>
@@ -3772,12 +3853,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             configValidator.ValidateEmbeddingsOptions(runtimeConfig);
         }
 
-        private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
+        private static RuntimeConfigValidator InitializeRuntimeConfigValidator(bool isValidateOnly = false)
         {
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
-            return new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            return new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object, isValidateOnly);
         }
 
         private static Entity GetSampleEntityUsingSourceAndRelationshipMap(
@@ -3881,4 +3962,3 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
     }
 }
-

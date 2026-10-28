@@ -24,6 +24,8 @@ update VectorOwner --config "dab-config.MsSql.json" --relationship vectors --tar
 update VectorType --config "dab-config.MsSql.json" --relationship owner --target.entity VectorOwner --cardinality one --relationship.fields "owner_id:id"
 add Profile --config "dab-config.MsSql.json" --source profiles --rest true --graphql true --permissions "anonymous:create,read,delete,update"
 update Profile --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update"
+add XmlProfile --config "dab-config.MsSql.json" --source xml_profiles --rest true --graphql true --permissions "anonymous:create,read,delete,update"
+update XmlProfile --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update"
 add stocks_price --config "dab-config.MsSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete"
 update stocks_price --config "dab-config.MsSql.json" --permissions "anonymous:read"
 update stocks_price --config "dab-config.MsSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"

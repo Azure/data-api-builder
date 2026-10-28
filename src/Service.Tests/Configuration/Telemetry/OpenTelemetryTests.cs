@@ -3,7 +3,12 @@
 
 using System;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -86,6 +91,78 @@ public class OpenTelemetryTests
         // If tracerProvider and meterProvider are not null, OTEL is enabled
         Assert.IsNotNull(tracerProvider, "TracerProvider should be registered.");
         Assert.IsNotNull(meterProvider, "MeterProvider should be registered.");
+    }
+
+    /// <summary>
+    /// Tests that the OTLP exporter honors the httpprotobuf exporter-protocol from the config
+    /// by checking that exported traces reach a local HTTP endpoint as protobuf.
+    /// </summary>
+    [TestMethod]
+    public async Task TestOpenTelemetryExporterUsesHttpProtobufProtocol()
+    {
+        // Arrange
+        TcpListener portFinder = new(IPAddress.Loopback, 0);
+        portFinder.Start();
+        int port = ((IPEndPoint)portFinder.LocalEndpoint).Port;
+        portFinder.Stop();
+
+        string otelEndpoint = $"http://localhost:{port}/";
+        using HttpListener collector = new();
+        collector.Prefixes.Add(otelEndpoint);
+        collector.Start();
+
+        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, otelEndpoint, "key=key", OtlpExportProtocol.HttpProtobuf);
+
+        string[] args = new[]
+        {
+            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
+        };
+        using TestServer server = new(Program.CreateWebHostBuilder(args));
+        TracerProvider tracerProvider = server.Services.GetRequiredService<TracerProvider>();
+
+        // Act
+        using (TelemetryTracesHelper.DABActivitySource.StartActivity("TestActivity"))
+        {
+        }
+
+        Task<bool> flushTask = Task.Run(() => tracerProvider.ForceFlush());
+
+        // Assert
+        // Logs and metrics share the collector, so keep answering requests until the trace export arrives.
+        Task timeout = Task.Delay(TimeSpan.FromSeconds(30));
+        bool traceReceived = false;
+        while (!traceReceived)
+        {
+            Task<HttpListenerContext> requestTask = collector.GetContextAsync();
+            Assert.AreSame(requestTask, await Task.WhenAny(requestTask, timeout), "OTLP exporter did not send the trace over HTTP.");
+            HttpListenerContext context = await requestTask;
+            using MemoryStream body = new();
+            await context.Request.InputStream.CopyToAsync(body);
+            traceReceived = context.Request.Url!.AbsolutePath == "/v1/traces"
+                && Encoding.UTF8.GetString(body.ToArray()).Contains("TestActivity");
+            if (traceReceived)
+            {
+                Assert.AreEqual("application/x-protobuf", context.Request.ContentType);
+            }
+
+            context.Response.StatusCode = 200;
+            context.Response.Close();
+        }
+
+        Assert.IsTrue(await flushTask, "TracerProvider flush did not succeed.");
+    }
+
+    /// <summary>
+    /// Tests that the signal path is appended to the OTLP endpoint only for HttpProtobuf, keeping any path prefix.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("http://localhost:4318", OtlpExportProtocol.HttpProtobuf, "http://localhost:4318/v1/traces")]
+    [DataRow("http://localhost:4318/otel/", OtlpExportProtocol.HttpProtobuf, "http://localhost:4318/otel/v1/traces")]
+    [DataRow("http://localhost:4317", OtlpExportProtocol.Grpc, "http://localhost:4317/")]
+    [DataRow("http://localhost:4317", null, "http://localhost:4317/")]
+    public void TestGetOtlpSignalEndpoint(string endpoint, OtlpExportProtocol? protocol, string expected)
+    {
+        Assert.AreEqual(new Uri(expected), Startup.GetOtlpSignalEndpoint(new Uri(endpoint), protocol, "v1/traces"));
     }
 
     /// <summary>

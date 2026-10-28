@@ -1353,9 +1353,18 @@ public class RuntimeConfigValidator : IConfigValidator
         foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
         {
             HashSet<EntityActionOperation> totalSupportedOperationsFromAllRoles = new();
+            HashSet<string> roleNames = new(StringComparer.OrdinalIgnoreCase);
             foreach (EntityPermission permissionSetting in entity.Permissions)
             {
                 string roleName = permissionSetting.Role;
+                if (!roleNames.Add(roleName))
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Duplicate role '{roleName}' defined for entity '{entityName}'. Role names must be unique per entity.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
                 EntityAction[] actions = permissionSetting.Actions;
                 List<EntityActionOperation> operationsList = new();
                 foreach (EntityAction action in actions)

@@ -324,6 +324,112 @@ public class OracleIntegrationTests : SqlTestBase
         Assert.AreEqual(0, count.RootElement.GetProperty("count").GetInt32());
     }
 
+    public static IEnumerable<object[]> SpecialCharacterStringFilterCases()
+    {
+        (string Literal, string NearMiss)[] values =
+        {
+            ("%", "X"),
+            ("_", "X"),
+            (@"\", ""),
+            (@"\\", @"\"),
+            ("[", "x"),
+            ("]", "x"),
+            (@"\[%_]\", "[XY]"),
+            ("O'Reilly_100%", "O'ReillyX100")
+        };
+        foreach (string operation in new[] { "contains", "notContains", "startsWith", "endsWith" })
+        {
+            foreach ((string literal, string nearMiss) in values)
+            {
+                yield return new object[] { operation, literal, nearMiss };
+            }
+        }
+    }
+
+    [DataTestMethod]
+    [DynamicData(nameof(SpecialCharacterStringFilterCases), DynamicDataSourceType.Method)]
+    public async Task GraphQLStringFiltersTreatSpecialCharactersLiterally(string operation, string literal, string nearMiss)
+    {
+        await SetBookTitlesAsync($"before{literal}after", $"{literal}after", $"before{literal}", $"before{nearMiss}after");
+        int[] expected = operation switch
+        {
+            "contains" => new[] { 1, 2, 3 },
+            "notContains" => new[] { 4 },
+            "startsWith" => new[] { 2 },
+            "endsWith" => new[] { 3 },
+            _ => throw new ArgumentOutOfRangeException(nameof(operation))
+        };
+
+        await AssertStringFilterIdsAsync(operation, literal, expected);
+    }
+
+    [DataTestMethod]
+    [DataRow("contains")]
+    [DataRow("notContains")]
+    [DataRow("startsWith")]
+    [DataRow("endsWith")]
+    public async Task GraphQLStringFiltersWithEmptySearchExcludeNulls(string operation)
+    {
+        await ExecuteSql("ALTER TABLE BOOKS MODIFY TITLE NULL");
+        await SetBookTitlesAsync("plain", "100%_", @"[x]\", null);
+
+        await AssertStringFilterIdsAsync(operation, "", operation == "notContains" ? Array.Empty<int>() : new[] { 1, 2, 3 });
+    }
+
+    [DataTestMethod]
+    [DataRow("eq")]
+    [DataRow("neq")]
+    public async Task GraphQLStringEqualityPreservesSpecialCharacters(string operation)
+    {
+        const string literal = @"O'Reilly_[100%]\";
+        await SetBookTitlesAsync(literal, "O'ReillyX100", $"before{literal}");
+
+        await AssertStringFilterIdsAsync(operation, literal, operation == "eq" ? new[] { 1 } : new[] { 2, 3 });
+    }
+
+    [TestMethod]
+    public async Task GraphQLStringFiltersEscapeLiteralsAndNestedPredicates()
+    {
+        const string literal = @"\[%_]\";
+        await SetBookTitlesAsync($"before{literal}after", "other", "beforeXYafter");
+        JsonElement books = await ExecuteGraphQLRequestAsync(
+            $"{{ books(filter: {{ or: [{{ title: {{ contains: {JsonSerializer.Serialize(literal)} }} }}, {{ title: {{ eq: \"other\" }} }}] }}, orderBy: {{ id: ASC }}) {{ items {{ id }} }} }}",
+            "books", isAuthenticated: false);
+        CollectionAssert.AreEqual(new[] { 1, 2 }, books.GetProperty("items").EnumerateArray().Select(row => row.GetProperty("id").GetInt32()).ToArray());
+
+        JsonElement publishers = await ExecuteGraphQLRequestAsync(
+            "query($value: String!) { publishers(filter: { books: { title: { contains: $value } } }) { items { id } } }",
+            "publishers", isAuthenticated: false, variables: new() { ["value"] = literal });
+        CollectionAssert.AreEqual(new[] { 1234 }, publishers.GetProperty("items").EnumerateArray().Select(row => row.GetProperty("id").GetInt32()).ToArray());
+    }
+
+    private async Task AssertStringFilterIdsAsync(string operation, string value, int[] expected)
+    {
+        JsonElement result = await ExecuteGraphQLRequestAsync(
+            $"query($value: String!) {{ books(filter: {{ title: {{ {operation}: $value }} }}, orderBy: {{ id: ASC }}) {{ items {{ id }} }} }}",
+            "books", isAuthenticated: false, variables: new() { ["value"] = value });
+        CollectionAssert.AreEqual(expected, result.GetProperty("items").EnumerateArray().Select(row => row.GetProperty("id").GetInt32()).ToArray(),
+            $"Unexpected matches for {operation}({JsonSerializer.Serialize(value)}).");
+    }
+
+    private async Task SetBookTitlesAsync(params string?[] titles)
+    {
+        await ExecuteSql("DELETE FROM BOOKS");
+        using OracleConnection connection = new(_connectionString);
+        await connection.OpenAsync();
+        using OracleCommand command = connection.CreateCommand();
+        command.BindByName = true;
+        command.CommandText = "INSERT INTO BOOKS (ID, TITLE, PUBLISHER_ID) VALUES (:id, :title, 1234)";
+        command.Parameters.Add("id", OracleDbType.Int32);
+        command.Parameters.Add("title", OracleDbType.Varchar2);
+        for (int i = 0; i < titles.Length; i++)
+        {
+            command.Parameters["id"].Value = i + 1;
+            command.Parameters["title"].Value = (object?)titles[i] ?? DBNull.Value;
+            await command.ExecuteNonQueryAsync();
+        }
+    }
+
     private async Task ExecuteSql(string sql)
     {
         using OracleConnection connection = new(_connectionString);

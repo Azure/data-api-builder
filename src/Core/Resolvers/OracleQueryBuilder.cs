@@ -30,6 +30,19 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     protected override string Build(SqlJoinStructure join) =>
         $" INNER JOIN {Table(join.DbObject)} {QuoteIdentifier(join.TableAlias)} ON {Build(join.Predicates)}";
 
+    protected override string Build(Predicate? predicate)
+    {
+        if (predicate is { Op: PredicateOperation.LIKE or PredicateOperation.NOT_LIKE })
+        {
+            // Oracle has no implicit LIKE escape character. Render the clause as part
+            // of the predicate so it also applies inside parentheses and subqueries.
+            string sql = $"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)} ESCAPE '\\'";
+            return predicate.AddParenthesis ? $"({sql})" : sql;
+        }
+
+        return base.Build(predicate);
+    }
+
     protected override string Build(KeysetPaginationPredicate? predicate)
     {
         if (predicate is null)

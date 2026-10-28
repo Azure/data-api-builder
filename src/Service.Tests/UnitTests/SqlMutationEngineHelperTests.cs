@@ -11,8 +11,10 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Transactions;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -477,6 +479,105 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 await Assert.ThrowsExceptionAsync<NotSupportedException>(async () => await task);
             }
+        }
+
+        /// <summary>
+        /// Verifies REST mutations use metadata for the entity's datasource rather than the root datasource.
+        /// </summary>
+        [TestMethod]
+        public async Task ExecuteRestMutation_UsesEntityDataSource()
+        {
+            const string rootDataSourceName = "root";
+            const string linkedDataSourceName = "linked";
+            const string entityName = "LinkedEntity";
+
+            Entity entity = new(
+                Source: new EntitySource("dbo.LinkedTable", EntitySourceType.Table, null, null),
+                GraphQL: null,
+                Fields: null,
+                Rest: null,
+                Permissions: Array.Empty<EntityPermission>(),
+                Mappings: null,
+                Relationships: null,
+                Mcp: null);
+            RuntimeConfig runtimeConfig = new(
+                Schema: string.Empty,
+                DataSource: new DataSource(DatabaseType.MSSQL, string.Empty),
+                Runtime: new RuntimeOptions(null, null, null, null),
+                Entities: new RuntimeEntities(new Dictionary<string, Entity> { [entityName] = entity }),
+                DefaultDataSourceName: rootDataSourceName,
+                DataSourceNameToDataSource: new Dictionary<string, DataSource>
+                {
+                    [rootDataSourceName] = new(DatabaseType.MSSQL, string.Empty),
+                    [linkedDataSourceName] = new(DatabaseType.MSSQL, string.Empty)
+                },
+                EntityNameToDataSourceName: new Dictionary<string, string>
+                {
+                    [entityName] = linkedDataSourceName
+                });
+            Mock<RuntimeConfigLoader> configLoader = new(null, null);
+            configLoader.Object.RuntimeConfig = runtimeConfig;
+            RuntimeConfigProvider runtimeConfigProvider = new(configLoader.Object);
+
+            Mock<ISqlMetadataProvider> rootMetadataProvider = new();
+            rootMetadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.MSSQL);
+            rootMetadataProvider.SetupGet(x => x.EntityToDatabaseObject).Returns(new Dictionary<string, DatabaseObject>());
+
+            Mock<ISqlMetadataProvider> linkedMetadataProvider = new();
+            linkedMetadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.MSSQL);
+            linkedMetadataProvider.Setup(x => x.GetSourceDefinition(entityName)).Returns(new SourceDefinition());
+            linkedMetadataProvider.SetupGet(x => x.EntityToDatabaseObject)
+                .Returns(new Dictionary<string, DatabaseObject>
+                {
+                    [entityName] = new DatabaseTable("dbo", "LinkedTable")
+                });
+
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            metadataProviderFactory.Setup(x => x.GetMetadataProvider(rootDataSourceName)).Returns(rootMetadataProvider.Object);
+            metadataProviderFactory.Setup(x => x.GetMetadataProvider(linkedDataSourceName)).Returns(linkedMetadataProvider.Object);
+
+            Mock<IQueryBuilder> queryBuilder = new();
+            queryBuilder.Setup(x => x.Build(It.IsAny<SqlDeleteStructure>())).Returns("DELETE");
+            Mock<IQueryExecutor> queryExecutor = new();
+            queryExecutor.Setup(x => x.ExecuteQueryAsync<Dictionary<string, object>>(
+                    It.IsAny<string>(),
+                    It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<DbDataReader, List<string>?, Task<Dictionary<string, object>>>>(),
+                    It.IsAny<string>(),
+                    It.IsAny<HttpContext?>(),
+                    It.IsAny<List<string>?>()))
+                .ReturnsAsync(new Dictionary<string, object> { [nameof(DbDataReader.RecordsAffected)] = 1 });
+            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
+            queryManagerFactory.Setup(x => x.GetQueryBuilder(DatabaseType.MSSQL)).Returns(queryBuilder.Object);
+            queryManagerFactory.Setup(x => x.GetQueryExecutor(DatabaseType.MSSQL)).Returns(queryExecutor.Object);
+
+            Mock<IHttpContextAccessor> accessor = new();
+            DefaultHttpContext httpContext = new();
+            httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = "anonymous";
+            accessor.Setup(x => x.HttpContext).Returns(httpContext);
+            Mock<IAuthorizationResolver> authorization = new();
+            authorization.Setup(x => x.ResolveDBPolicy(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<EntityActionOperation>(),
+                    It.IsAny<HttpContext>()))
+                .Returns(ResolvedDatabasePolicy.Empty);
+
+            SqlMutationEngine engine = new(
+                queryManagerFactory.Object,
+                metadataProviderFactory.Object,
+                Mock.Of<IQueryEngineFactory>(),
+                authorization.Object,
+                null!,
+                accessor.Object,
+                runtimeConfigProvider);
+
+            IActionResult? result = await engine.ExecuteAsync(
+                new DeleteRequestContext(entityName, new DatabaseTable("dbo", "LinkedTable"), isList: false));
+
+            Assert.IsInstanceOfType<NoContentResult>(result);
+            metadataProviderFactory.Verify(x => x.GetMetadataProvider(linkedDataSourceName), Times.Once);
+            metadataProviderFactory.Verify(x => x.GetMetadataProvider(rootDataSourceName), Times.Never);
         }
 
         /// <summary>

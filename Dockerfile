@@ -1,11 +1,13 @@
 # Version values referenced from https://hub.docker.com/_/microsoft-dotnet-aspnet
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0-azurelinux3.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-azurelinux3.0 AS build
 
+ARG TARGETARCH
 
 WORKDIR /src
 COPY [".", "./"]
-RUN dotnet build "./src/Service/Azure.DataApiBuilder.Service.csproj" -c Docker -o /out -r linux-x64
+RUN dotnet publish "./src/Service/Azure.DataApiBuilder.Service.csproj" \
+    -c Docker -o /out -a "$TARGETARCH" --self-contained false -p:UseAppHost=false
 
 # ---------------------------------------------------------------------------
 # Common runtime base.

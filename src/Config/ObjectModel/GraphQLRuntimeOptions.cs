@@ -13,7 +13,8 @@ public record GraphQLRuntimeOptions(bool Enabled = true,
                                     MultipleMutationOptions? MultipleMutationOptions = null,
                                     bool EnableAggregation = true,
                                     FeatureFlags? FeatureFlags = null,
-                                    bool EnableLegacyDateTimeScalar = true)
+                                    bool EnableLegacyDateTimeScalar = true,
+                                    GraphQLCostOptions? Cost = null)
 {
     public const string DEFAULT_PATH = "/graphql";
 

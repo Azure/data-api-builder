@@ -64,6 +64,97 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             StringAssert.Contains(serialized, "\"depth-limit\": null");
         }
 
+        [TestMethod]
+        public void GraphQLRuntimeOptions_CostOptionsRoundTrip()
+        {
+            const string Json = """
+                {
+                  "cost": { "enabled": true, "max-field-cost": 5000, "max-type-cost": 7000 }
+                }
+                """;
+
+            GraphQLRuntimeOptions? value = JsonSerializer.Deserialize<GraphQLRuntimeOptions>(Json, Options);
+            string serialized = JsonSerializer.Serialize(value, Options);
+
+            Assert.IsNotNull(value?.Cost);
+            Assert.IsTrue(value.Cost.Enabled);
+            Assert.AreEqual(5000, value.Cost.MaxFieldCost);
+            Assert.AreEqual(7000, value.Cost.MaxTypeCost);
+            StringAssert.Contains(serialized, "\"max-field-cost\": 5000");
+
+            GraphQLRuntimeOptions? roundTripped = JsonSerializer.Deserialize<GraphQLRuntimeOptions>(serialized, Options);
+            Assert.AreEqual(value.Cost, roundTripped?.Cost);
+        }
+
+        [DataTestMethod]
+        [DataRow("{}")]
+        [DataRow("{\"cost\":null}")]
+        public void GraphQLRuntimeOptions_CostOptionsAbsentByDefault(string json)
+        {
+            GraphQLRuntimeOptions? value = JsonSerializer.Deserialize<GraphQLRuntimeOptions>(json, Options);
+            string serialized = JsonSerializer.Serialize(value, Options);
+
+            Assert.IsNotNull(value);
+            Assert.IsNull(value.Cost);
+            Assert.IsFalse(serialized.Contains("\"cost\""));
+        }
+
+        /// <summary>
+        /// Every combination of the cost properties deserializes to the expected values, defaults 'enabled' to false,
+        /// and survives a write and read round trip.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("{\"cost\":{}}", false, null, null)]
+        [DataRow("{\"cost\":{\"enabled\":true}}", true, null, null)]
+        [DataRow("{\"cost\":{\"enabled\":false}}", false, null, null)]
+        [DataRow("{\"cost\":{\"max-field-cost\":5000}}", false, 5000, null)]
+        [DataRow("{\"cost\":{\"max-type-cost\":7000}}", false, null, 7000)]
+        [DataRow("{\"cost\":{\"max-field-cost\":5000,\"max-type-cost\":7000}}", false, 5000, 7000)]
+        [DataRow("{\"cost\":{\"enabled\":true,\"max-field-cost\":5000}}", true, 5000, null)]
+        [DataRow("{\"cost\":{\"enabled\":true,\"max-type-cost\":7000}}", true, null, 7000)]
+        [DataRow("{\"cost\":{\"enabled\":false,\"max-field-cost\":5000,\"max-type-cost\":7000}}", false, 5000, 7000)]
+        [DataRow("{\"cost\":{\"max-field-cost\":null,\"max-type-cost\":null}}", false, null, null)]
+        public void GraphQLRuntimeOptions_CostCombinationsDeserialize(string json, bool expectedEnabled, int? expectedMaxFieldCost, int? expectedMaxTypeCost)
+        {
+            GraphQLRuntimeOptions? value = JsonSerializer.Deserialize<GraphQLRuntimeOptions>(json, Options);
+
+            Assert.IsNotNull(value?.Cost);
+            Assert.AreEqual(expectedEnabled, value.Cost.Enabled);
+            Assert.AreEqual(expectedMaxFieldCost, value.Cost.MaxFieldCost);
+            Assert.AreEqual(expectedMaxTypeCost, value.Cost.MaxTypeCost);
+
+            string serialized = JsonSerializer.Serialize(value, Options);
+            GraphQLRuntimeOptions? roundTripped = JsonSerializer.Deserialize<GraphQLRuntimeOptions>(serialized, Options);
+            Assert.AreEqual(value.Cost, roundTripped?.Cost);
+        }
+
+        /// <summary>
+        /// Configuring a maximum without 'enabled' does not enforce it: 'enabled' defaults to false and is always written.
+        /// </summary>
+        [TestMethod]
+        public void GraphQLRuntimeOptions_CostMaximumsDoNotEnableCostLimits()
+        {
+            GraphQLRuntimeOptions? value = JsonSerializer.Deserialize<GraphQLRuntimeOptions>("{\"cost\":{\"max-field-cost\":5000}}", Options);
+            string serialized = JsonSerializer.Serialize(value, Options);
+
+            Assert.IsNotNull(value?.Cost);
+            Assert.IsFalse(value.Cost.Enabled);
+            Assert.AreEqual(5000, value.Cost.MaxFieldCost);
+            StringAssert.Contains(serialized, "\"enabled\": false");
+        }
+
+        [DataTestMethod]
+        [DataRow("{\"cost\":{\"max-field-cost\":0}}")]
+        [DataRow("{\"cost\":{\"max-field-cost\":-1}}")]
+        [DataRow("{\"cost\":{\"max-type-cost\":\"high\"}}")]
+        [DataRow("{\"cost\":{\"enabled\":1}}")]
+        [DataRow("{\"cost\":{\"unknown\":true}}")]
+        [DataRow("{\"cost\":5}")]
+        public void GraphQLRuntimeOptions_InvalidCostValuesThrow(string json)
+        {
+            Assert.ThrowsException<JsonException>(() => JsonSerializer.Deserialize<GraphQLRuntimeOptions>(json, Options));
+        }
+
         [DataTestMethod]
         [DataRow("true", true)]
         [DataRow("false", false)]

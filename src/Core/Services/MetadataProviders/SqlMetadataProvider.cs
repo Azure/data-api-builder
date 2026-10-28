@@ -488,7 +488,7 @@ namespace Azure.DataApiBuilder.Core.Services
             StoredProcedureDefinition storedProcedureDefinition,
             CancellationToken cancellationToken)
         {
-            using ConnectionT conn = new();
+            using ConnectionT conn = CreateConnection();
             conn.ConnectionString = ConnectionString;
             DataTable procedureMetadata;
             string[] procedureRestrictions = new string[NUMBER_OF_RESTRICTIONS];
@@ -1854,6 +1854,11 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
+        /// Creates a connection with provider-specific session initialization, before its connection string is set.
+        /// </summary>
+        protected virtual ConnectionT CreateConnection() => new();
+
+        /// <summary>
         /// This method attempts to open a database connection using the provided connection string.
         /// If the connection fails to open, it catches the exception and throws a DataApiBuilderException.
         /// It is specifically used to validate the connection string provided in the runtime configuration
@@ -1862,7 +1867,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private async Task ValidateDatabaseConnection(
             CancellationToken cancellationToken)
         {
-            using ConnectionT conn = new();
+            using ConnectionT conn = CreateConnection();
             conn.ConnectionString = ConnectionString;
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(
                 conn,
@@ -1892,12 +1897,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Using a data adapter, obtains the schema of the given table name
         /// and adds the corresponding DataTable to the entities data set.
         /// </summary>
-        private async Task<DataTable> FillSchemaForTableAsync(
+        protected virtual async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,
             string tableName,
             CancellationToken cancellationToken)
         {
-            using ConnectionT conn = new();
+            using ConnectionT conn = CreateConnection();
             // If connection string is set to empty string
             // we throw here to avoid having to sort out
             // complicated db specific exception messages.
@@ -2034,7 +2039,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string tableName,
             CancellationToken cancellationToken)
         {
-            using ConnectionT conn = new();
+            using ConnectionT conn = CreateConnection();
             conn.ConnectionString = ConnectionString;
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(
                 conn,

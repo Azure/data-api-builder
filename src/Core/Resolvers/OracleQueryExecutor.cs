@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Product;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Oracle.ManagedDataAccess.Client;
@@ -34,6 +35,36 @@ public class OracleQueryExecutor : QueryExecutor<OracleConnection>
                 ConnectionStringBuilders.Add(name, new OracleConnectionStringBuilder(source.ConnectionString));
             }
         }
+    }
+
+    /// <inheritdoc />
+    public override OracleConnection CreateConnection(string dataSourceName)
+        => ConfigureConnection(base.CreateConnection(dataSourceName));
+
+    /// <summary>
+    /// Oracle uses a session module instead of an Application Name connection-string keyword.
+    /// Reapply it on every open because closing a pooled connection clears the session tag.
+    /// </summary>
+    internal static OracleConnection ConfigureConnection(OracleConnection connection)
+    {
+        connection.StateChange += (sender, change) =>
+        {
+            if (change.CurrentState == ConnectionState.Open)
+            {
+                string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
+                if (string.IsNullOrWhiteSpace(applicationName))
+                {
+                    applicationName = ProductInfo.DAB_USER_AGENT;
+                }
+
+                // MODULE is limited to 48 bytes. Do not split a multi-byte character.
+                Span<byte> buffer = stackalloc byte[48];
+                Encoding.UTF8.GetEncoder().Convert(applicationName.AsSpan(), buffer, true,
+                    out _, out int bytesUsed, out _);
+                connection.ModuleName = Encoding.UTF8.GetString(buffer[..bytesUsed]);
+            }
+        };
+        return connection;
     }
 
     /// <inheritdoc />

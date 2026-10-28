@@ -87,7 +87,7 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     /// Builds an aggregation query with ordering and optional offset pagination inside
     /// the JSON aggregation. Grouping columns break ties between equal aggregate values.
     /// </summary>
-    public string BuildAggregation(SqlQueryStructure structure, bool descending, int? offset = null, int? limit = null)
+    public string BuildAggregation(SqlQueryStructure structure, bool descending, int? offset = null, long? limit = null)
     {
         List<string> order = new();
         if (structure.GroupByMetadata.Fields.Count > 0)
@@ -125,10 +125,6 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
             else
             {
                 value = Build((Column)column);
-                if (structure.GetColumnSystemType(column.ColumnName) == typeof(byte[]))
-                {
-                    throw new NotSupportedException("Oracle binary columns are not supported by SQL/JSON queries. Expose a view that converts them to text.");
-                }
             }
 
             members.Add($"'{EscapeLiteral(column.Label)}' VALUE {value}");

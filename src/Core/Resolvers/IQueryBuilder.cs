@@ -18,6 +18,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string Build(SqlQueryStructure structure);
 
         /// <summary>
+        /// Builds an aggregation query, ordering grouped results by their aggregate values
+        /// and optionally applying offset pagination. The limit includes any lookahead row.
+        /// </summary>
+        public string BuildAggregation(SqlQueryStructure structure, bool descending, int? offset = null, long? limit = null)
+            => throw new NotSupportedException($"{GetType().Name} does not support aggregation pagination.");
+
+        /// <summary>
         /// Builds the query specific to the target database for the given
         /// SqlInsertStructure object which holds the major components of the
         /// query.

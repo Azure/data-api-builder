@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -23,6 +24,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Oracle.ManagedDataAccess.Client;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.Sql.SchemaConverter;
 using HealthCheckUtilities = Azure.DataApiBuilder.Service.HealthCheck.Utilities;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
@@ -200,6 +202,68 @@ public class OracleProviderTests
     public void IdentifierQuotingEscapesEmbeddedDoubleQuotes()
     {
         Assert.AreEqual("\"a\"\"b\"", new OracleQueryBuilder().QuoteIdentifier("a\"b"));
+    }
+
+    [DataTestMethod]
+    [DataRow(DatabaseType.Oracle, 2L)]
+    [DataRow(DatabaseType.Oracle, 2147483647L)]
+    [DataRow(DatabaseType.Oracle, 2147483648L)]
+    [DataRow(DatabaseType.MSSQL, 2L)]
+    [DataRow(DatabaseType.MSSQL, 2147483647L)]
+    [DataRow(DatabaseType.MSSQL, 2147483648L)]
+    [DataRow(DatabaseType.DWSQL, 2L)]
+    [DataRow(DatabaseType.DWSQL, 2147483647L)]
+    [DataRow(DatabaseType.DWSQL, 2147483648L)]
+    public void AggregationUsesProviderInterfaceAndPreservesLargeLimits(DatabaseType databaseType, long limit)
+    {
+        SqlQueryStructure query = CreateGroupedQuery();
+        int originalParameterCount = query.Parameters.Count;
+        IQueryBuilder builder = CreateAggregationBuilder(databaseType);
+        string sql = builder.BuildAggregation(query, descending: true, offset: 4, limit: limit);
+
+        System.Text.RegularExpressions.Match pagination = Regex.Match(sql, @"OFFSET (@param\d+) ROWS FETCH NEXT (@param\d+) ROWS ONLY");
+        Assert.IsTrue(pagination.Success, sql);
+        StringAssert.Contains(sql, "ORDER BY count(");
+        Assert.IsFalse(sql.Contains("SELECT TOP", StringComparison.Ordinal));
+        Assert.AreEqual(originalParameterCount + 2, query.Parameters.Count);
+        Assert.AreEqual(4, query.Parameters[pagination.Groups[1].Value].Value);
+        Assert.AreEqual(limit, query.Parameters[pagination.Groups[2].Value].Value);
+    }
+
+    [DataTestMethod]
+    [DataRow(DatabaseType.Oracle, 0L, 0)]
+    [DataRow(DatabaseType.Oracle, -1L, 0)]
+    [DataRow(DatabaseType.Oracle, 1L, -1)]
+    [DataRow(DatabaseType.MSSQL, 0L, 0)]
+    [DataRow(DatabaseType.MSSQL, -1L, 0)]
+    [DataRow(DatabaseType.MSSQL, 1L, -1)]
+    [DataRow(DatabaseType.DWSQL, 0L, 0)]
+    [DataRow(DatabaseType.DWSQL, -1L, 0)]
+    [DataRow(DatabaseType.DWSQL, 1L, -1)]
+    public void AggregationRejectsInvalidPagination(DatabaseType databaseType, long limit, int offset)
+    {
+        IQueryBuilder builder = CreateAggregationBuilder(databaseType);
+        Assert.ThrowsException<ArgumentOutOfRangeException>(() => builder.BuildAggregation(CreateGroupedQuery(), false, offset, limit));
+    }
+
+    private static IQueryBuilder CreateAggregationBuilder(DatabaseType databaseType) => databaseType switch
+    {
+        DatabaseType.Oracle => new OracleQueryBuilder(),
+        DatabaseType.MSSQL => new MsSqlQueryBuilder(),
+        DatabaseType.DWSQL => new DwSqlQueryBuilder(),
+        _ => throw new ArgumentOutOfRangeException(nameof(databaseType))
+    };
+
+    private static SqlQueryStructure CreateGroupedQuery()
+    {
+        OracleTestFixture fixture = new();
+        SqlQueryStructure query = fixture.Read();
+        query.Columns.RemoveAll(column => column.ColumnName != "ID");
+        query.OrderByColumns.Clear();
+        query.GroupByMetadata.Fields.Add("ID", new("DAB", OracleTestFixture.TABLE, "ID", query.SourceAlias));
+        query.GroupByMetadata.Aggregations.Add(new(new("DAB", OracleTestFixture.TABLE, "ID", AggregationType.count, "count_id", false, query.SourceAlias)));
+        query.GroupByMetadata.RequestedAggregations = true;
+        return query;
     }
 
     [DataTestMethod]

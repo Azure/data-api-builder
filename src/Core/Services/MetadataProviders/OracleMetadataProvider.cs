@@ -6,6 +6,7 @@ using System.Data.Common;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Microsoft.Extensions.Logging;
 using Oracle.ManagedDataAccess.Client;
@@ -28,6 +29,10 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
     {
     }
 
+    /// <inheritdoc />
+    protected override OracleConnection CreateConnection()
+        => OracleQueryExecutor.ConfigureConnection(new OracleConnection());
+
     public override string GetDefaultSchemaName()
     {
         string user = new OracleConnectionStringBuilder(ConnectionString).UserID;
@@ -43,13 +48,17 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
 
     protected override async Task<DataTable> GetColumnsAsync(string schemaName, string tableName, CancellationToken cancellationToken)
     {
-        using OracleConnection connection = new(ConnectionString);
+        using OracleConnection connection = CreateConnection();
+        connection.ConnectionString = ConnectionString;
         await connection.OpenAsync(cancellationToken);
         using OracleCommand command = connection.CreateCommand();
         command.BindByName = true;
         // DATA_DEFAULT is LONG on 19c; keep it last for sequential readers.
-        command.CommandText = "SELECT COLUMN_NAME, DATA_TYPE, DATA_PRECISION, DATA_SCALE, IDENTITY_COLUMN, DATA_DEFAULT AS COLUMN_DEFAULT " +
-            "FROM ALL_TAB_COLUMNS WHERE OWNER = :owner AND TABLE_NAME = :table_name ORDER BY COLUMN_ID";
+        command.CommandText = "SELECT c.COLUMN_NAME, c.DATA_TYPE, c.DATA_PRECISION, c.DATA_SCALE, c.IDENTITY_COLUMN, " +
+            "i.GENERATION_TYPE, c.DATA_DEFAULT AS COLUMN_DEFAULT " +
+            "FROM ALL_TAB_COLUMNS c LEFT JOIN ALL_TAB_IDENTITY_COLS i " +
+            "ON i.OWNER = c.OWNER AND i.TABLE_NAME = c.TABLE_NAME AND i.COLUMN_NAME = c.COLUMN_NAME " +
+            "WHERE c.OWNER = :owner AND c.TABLE_NAME = :table_name ORDER BY c.COLUMN_ID";
         command.Parameters.Add("owner", OracleDbType.Varchar2).Value = schemaName;
         command.Parameters.Add("table_name", OracleDbType.Varchar2).Value = tableName;
         command.InitialLONGFetchSize = -1;
@@ -60,6 +69,36 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
         return columns;
     }
 
+    protected override async Task<DataTable> FillSchemaForTableAsync(string schemaName, string tableName, CancellationToken cancellationToken)
+    {
+        DataTable table = await base.FillSchemaForTableAsync(schemaName, tableName, cancellationToken);
+        if (table.PrimaryKey.Length == 0)
+        {
+            // The Oracle adapter can omit keys on BY DEFAULT ON NULL identities.
+            // Recover the actual key, in constraint order, from the catalog.
+            using OracleConnection connection = CreateConnection();
+            connection.ConnectionString = ConnectionString;
+            await connection.OpenAsync(cancellationToken);
+            using OracleCommand command = connection.CreateCommand();
+            command.BindByName = true;
+            command.CommandText = "SELECT col.COLUMN_NAME FROM ALL_CONSTRAINTS con " +
+                "JOIN ALL_CONS_COLUMNS col ON col.OWNER = con.OWNER AND col.CONSTRAINT_NAME = con.CONSTRAINT_NAME " +
+                "WHERE con.OWNER = :owner AND con.TABLE_NAME = :table_name AND con.CONSTRAINT_TYPE = 'P' ORDER BY col.POSITION";
+            command.Parameters.Add("owner", OracleDbType.Varchar2).Value = schemaName;
+            command.Parameters.Add("table_name", OracleDbType.Varchar2).Value = tableName;
+            using DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+            List<DataColumn> key = new();
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                key.Add(table.Columns[reader.GetString(0)]!);
+            }
+
+            table.PrimaryKey = key.ToArray();
+        }
+
+        return table;
+    }
+
     protected override void PopulateColumnDefinitionWithHasDefaultAndDbType(SourceDefinition sourceDefinition, DataTable allColumnsInTable)
     {
         base.PopulateColumnDefinitionWithHasDefaultAndDbType(sourceDefinition, allColumnsInTable);
@@ -67,10 +106,17 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
         {
             if (sourceDefinition.Columns.TryGetValue((string)row["COLUMN_NAME"], out ColumnDefinition? column))
             {
+                if (column.SystemType == typeof(byte[]))
+                {
+                    throw new NotSupportedException($"Oracle binary column '{row["COLUMN_NAME"]}' ({row["DATA_TYPE"]}) is not supported. Expose a view that converts it to text.");
+                }
+
                 if (string.Equals(row["IDENTITY_COLUMN"].ToString(), "YES", StringComparison.Ordinal))
                 {
                     column.IsAutoGenerated = true;
-                    column.IsReadOnly = true;
+                    // Override the adapter's auto-increment/read-only flag: BY DEFAULT
+                    // (including ON NULL) identities permit explicit values.
+                    column.IsReadOnly = string.Equals(row["GENERATION_TYPE"].ToString(), "ALWAYS", StringComparison.Ordinal);
                 }
             }
         }

@@ -194,6 +194,23 @@ public class AggregateRecordsToolOracleIntegrationTests : McpToolTestBase
         Assert.AreEqual(JsonValueKind.Null, result.GetProperty("endCursor").ValueKind);
     }
 
+    [DataTestMethod]
+    [DataRow(int.MaxValue - 1)]
+    [DataRow(int.MaxValue)]
+    public async Task LargePageSizeReturnsAllGroupsWithoutOverflow(int first)
+    {
+        JsonElement result = await SuccessAsync(new()
+        {
+            ["function"] = "count",
+            ["groupby"] = new[] { "publisher_id" },
+            ["orderby"] = "desc",
+            ["first"] = first
+        });
+        CollectionAssert.AreEqual(new[] { 1234, 2345 }, result.GetProperty("items").EnumerateArray().Select(row => row.GetProperty("publisher_id").GetInt32()).ToArray());
+        Assert.IsFalse(result.GetProperty("hasNextPage").GetBoolean());
+        Assert.AreEqual("Mg==", result.GetProperty("endCursor").GetString());
+    }
+
     [TestMethod]
     public async Task DatabasePolicyRestrictsRowsBeforeAggregation()
     {

@@ -21,12 +21,16 @@ pr:
     - '*.md'
     - templates/**
 
+parameters:
+- name: oracleCoveragePipelineId
+  displayName: Oracle pipeline definition ID for rolling coverage (optional)
+  type: string
+  default: ''
+
 variables:
 - template: templates/variables.yml
 
 jobs:
-- template: templates/oracle-test-job.yml
-
 - job: build
   displayName: 'Build and Unit Tests'
   pool:
@@ -41,9 +45,7 @@ jobs:
 # combined report. Best-effort (continueOnError) so it never blocks unit CI.
 - job: total_code_coverage
   displayName: 'Total Code Coverage (rolling dashboard)'
-  dependsOn:
-  - build
-  - oracle
+  dependsOn: build
   condition: succeededOrFailed()
   continueOnError: true
   pool:
@@ -60,15 +62,6 @@ jobs:
       artifact: 'coverage-unit'
       patterns: '**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/unit'
-
-  - task: DownloadPipelineArtifact@2
-    displayName: 'Download Oracle coverage (current run)'
-    continueOnError: true
-    inputs:
-      source: 'current'
-      artifact: 'coverage-oracle'
-      patterns: '**/*.cobertura.xml'
-      path: '$(Pipeline.Workspace)/db/oracle'
 
   # DB coverage: each pipeline's numeric definition ID (Azure DevOps pipeline URL
   # ...?definitionId=NN). Mapping: DwSql=1, MsSql=2, MySql=3, PgSql=4, Cosmos=6.
@@ -129,6 +122,20 @@ jobs:
       patterns: 'coverage-*/**/*.cobertura.xml'
       path: '$(Pipeline.Workspace)/db/cosmos'
 
+  # Set the parameter's default after registering oracle-pipelines.yml in Azure
+  # DevOps. Until then, Oracle still publishes coverage in its own pipeline.
+  - ${{ if ne(parameters.oracleCoveragePipelineId, '') }}:
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download Oracle coverage (latest)'
+      continueOnError: true
+      inputs:
+        source: 'specific'
+        project: '$(System.TeamProject)'
+        pipeline: '${{ parameters.oracleCoveragePipelineId }}'
+        runVersion: 'latest'
+        patterns: 'coverage-*/**/*.cobertura.xml'
+        path: '$(Pipeline.Workspace)/db/oracle'
+
   # Union-merge every downloaded cobertura and emit ONE combined Cobertura.xml
   # (test projects excluded). Dependency-free - no ReportGenerator extension.
   - task: PowerShell@2
@@ -136,7 +143,10 @@ jobs:
     continueOnError: true
     inputs:
       filePath: 'scripts/merge-coverage.ps1'
-      arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml" -ExpectedSources unit,mssql,pg,mysql,dwsql,cosmos,oracle'
+      ${{ if ne(parameters.oracleCoveragePipelineId, '') }}:
+        arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml" -ExpectedSources unit,mssql,pg,mysql,dwsql,cosmos,oracle'
+      ${{ else }}:
+        arguments: '-Path "$(Pipeline.Workspace)" -OutFile "$(Build.ArtifactStagingDirectory)/merged/Cobertura.xml" -ExpectedSources unit,mssql,pg,mysql,dwsql,cosmos'
       pwsh: true
 
   - task: PublishCodeCoverageResults@2

@@ -1,6 +1,26 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+trigger:
+  batch: true
+  branches:
+    include:
+    - main
+    - gh-readonly-queue/main
+    - release/*
+
+pr:
+  branches:
+    include:
+    - main
+    - release/*
+  paths:
+    exclude:
+    - samples/**
+    - docs/**
+    - '*.md'
+    - templates/**
+
 jobs:
 - job: oracle
   displayName: Oracle provider and engine integration tests
@@ -48,6 +68,6 @@ jobs:
     inputs:
       summaryFileLocation: '$(Agent.TempDirectory)/oracle-results/**/coverage.cobertura.xml'
 
-  - template: publish-coverage-artifact.yml
+  - template: templates/publish-coverage-artifact.yml
     parameters:
       artifactName: coverage-oracle

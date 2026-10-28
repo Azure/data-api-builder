@@ -21,8 +21,18 @@ public class OracleDbExceptionParser : DbExceptionParser
     {
     }
 
-    // A failed connection can have an ambiguous commit outcome. Do not retry it automatically.
-    public override bool IsTransientException(DbException e) => e is OracleException { Number: 60 or 8177 };
+    // QueryExecutor applies its bounded retry policy to connection-open failures. Errors from
+    // command execution are translated separately, so a lost response does not replay a mutation.
+    public override bool IsTransientException(DbException e) => e is OracleException
+    {
+        Number:
+            60 or 8177 or // Deadlock / serialization conflict.
+            1033 or 1034 or 1089 or 1090 or // Database starting, unavailable or shutting down.
+            3113 or 3114 or 3135 or // Broken connection.
+            12170 or 12535 or // Connection timeout.
+            12514 or 12516 or 12518 or 12519 or 12520 or 12528 or // Service/handler temporarily unavailable.
+            12537 or 12541 or 12543 // Connection closed, listener unavailable or host unreachable.
+    };
 
     public override HttpStatusCode GetHttpStatusCodeForException(DbException e) => e is OracleException oracle
         ? GetStatusCode(oracle.Number)

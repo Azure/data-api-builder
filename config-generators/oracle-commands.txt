@@ -5,3 +5,5 @@ update Publisher --config "dab-config.Oracle.json" --map "ID:id,NAME:name"
 update Book --config "dab-config.Oracle.json" --map "ID:id,TITLE:title,PUBLISHER_ID:publisher_id"
 update Book --config "dab-config.Oracle.json" --relationship publisher --cardinality one --target.entity Publisher
 update Publisher --config "dab-config.Oracle.json" --relationship books --cardinality many --target.entity Book
+add ScalarSample --config "dab-config.Oracle.json" --source DAB_ORACLE_SCALARS --source.type table --permissions "anonymous:create,read,update,delete" --rest ScalarSample --graphql "ScalarSample:ScalarSamples"
+update ScalarSample --config "dab-config.Oracle.json" --map "ID:id,DATE_VALUE:date_value,TIMESTAMP_VALUE:timestamp_value,OFFSET_VALUE:offset_value,DOUBLE_VALUE:double_value,CHAR_VALUE:char_value,FLAG_VALUE:flag_value"

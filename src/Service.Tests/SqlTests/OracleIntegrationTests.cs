@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
@@ -19,6 +20,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.UnitTests;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -67,6 +69,55 @@ public class OracleIntegrationTests : SqlTestBase
         await ResetDbStateAsync();
     }
 
+    [DataTestMethod]
+    [DataRow(false, null, null)]
+    [DataRow(true, null, null)]
+    [DataRow(false, "", null)]
+    [DataRow(true, "", null)]
+    [DataRow(false, "oracle-test-app", "oracle-test-app")]
+    [DataRow(true, "oracle-test-app", "oracle-test-app")]
+    [DataRow(false, "123456789012345678901234567890123456789012345678", "123456789012345678901234567890123456789012345678")]
+    [DataRow(true, "1234567890123456789012345678901234567890123456789", "123456789012345678901234567890123456789012345678")]
+    [DataRow(false, "12345678901234567890123456789012345678901234567é", "12345678901234567890123456789012345678901234567")]
+    [DataRow(true, "12345678901234567890123456789012345678901234567é", "12345678901234567890123456789012345678901234567")]
+    public async Task ConnectionsExposeApplicationNameAfterEveryOpen(bool asynchronous, string applicationName, string expected)
+    {
+        string previousName = Environment.GetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV);
+        try
+        {
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, applicationName);
+            OracleMetadataConnectionProbe metadata = CreateMetadataProvider();
+            foreach (string source in new[] { "executor", "metadata" })
+            {
+                using OracleConnection connection = source == "executor"
+                    ? _fixture.Executor.CreateConnection(_fixture.SourceName)
+                    : metadata.CreateTestConnection();
+                connection.ConnectionString = _connectionString;
+                for (int opening = 0; opening < 2; opening++)
+                {
+                    if (asynchronous)
+                    {
+                        await connection.OpenAsync();
+                    }
+                    else
+                    {
+                        connection.Open();
+                    }
+
+                    using OracleCommand command = connection.CreateCommand();
+                    command.CommandText = "SELECT SYS_CONTEXT('USERENV', 'MODULE') FROM DUAL";
+                    object actual = asynchronous ? await command.ExecuteScalarAsync() : command.ExecuteScalar();
+                    Assert.AreEqual(expected ?? ProductInfo.DAB_USER_AGENT, actual, $"{source}, opening {opening}");
+                    connection.Close();
+                }
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, previousName);
+        }
+    }
+
     [TestMethod]
     public async Task CrudReturnsRowsAndClobJsonBeyondFourKilobytes()
     {
@@ -91,6 +142,153 @@ public class OracleIntegrationTests : SqlTestBase
         Assert.AreEqual(1, deletion["RecordsAffected"]);
         using JsonDocument empty = await Read(_fixture.Read());
         Assert.AreEqual(0, empty.RootElement.GetArrayLength());
+    }
+
+    [DataTestMethod]
+    [DataRow("sql-json")]
+    [DataRow("rest")]
+    [DataRow("graphql")]
+    public async Task ScalarSerializationPreservesTypesValuesAndNulls(string surface)
+    {
+        JsonElement rows = await ReadScalarSamplesAsync(surface);
+        Assert.AreEqual(3, rows.GetArrayLength());
+        JsonElement first = rows[0];
+        Assert.AreEqual(1, first.GetProperty("id").GetInt32());
+        AssertWallClock(first.GetProperty("date_value"), new DateTime(2024, 2, 29, 23, 59, 58));
+        AssertWallClock(first.GetProperty("timestamp_value"), new DateTime(2024, 2, 29, 23, 59, 58).AddTicks(1234560));
+        AssertOffsetTimestamp(first.GetProperty("offset_value"), new DateTimeOffset(2024, 2, 29, 23, 59, 58, TimeSpan.FromMinutes(345)).AddTicks(6543210));
+        Assert.AreEqual(JsonValueKind.Number, first.GetProperty("double_value").ValueKind);
+        Assert.AreEqual(1.25, first.GetProperty("double_value").GetDouble());
+        Assert.AreEqual("A\"\\     ", first.GetProperty("char_value").GetString());
+        Assert.AreEqual(JsonValueKind.Number, first.GetProperty("flag_value").ValueKind);
+        Assert.AreEqual(1, first.GetProperty("flag_value").GetInt32());
+
+        JsonElement second = rows[1];
+        Assert.AreEqual(2, second.GetProperty("id").GetInt32());
+        AssertWallClock(second.GetProperty("date_value"), new DateTime(2000, 1, 1, 0, 0, 1));
+        AssertWallClock(second.GetProperty("timestamp_value"), new DateTime(2000, 1, 1, 0, 0, 1).AddTicks(10));
+        AssertOffsetTimestamp(second.GetProperty("offset_value"), new DateTimeOffset(2000, 1, 1, 0, 0, 1, TimeSpan.FromHours(-7)).AddTicks(10));
+        Assert.AreEqual(JsonValueKind.Number, second.GetProperty("double_value").ValueKind);
+        Assert.AreEqual(-double.MaxValue, second.GetProperty("double_value").GetDouble());
+        Assert.AreEqual("ABCDEFGH", second.GetProperty("char_value").GetString());
+        Assert.AreEqual(JsonValueKind.Number, second.GetProperty("flag_value").ValueKind);
+        Assert.AreEqual(0, second.GetProperty("flag_value").GetInt32());
+
+        JsonElement empty = rows[2];
+        Assert.AreEqual(3, empty.GetProperty("id").GetInt32());
+        foreach (string field in new[] { "date_value", "timestamp_value", "offset_value", "double_value", "char_value", "flag_value" })
+        {
+            Assert.AreEqual(JsonValueKind.Null, empty.GetProperty(field).ValueKind, $"{surface}: {field} must remain null.");
+        }
+    }
+
+    [DataTestMethod]
+    [DataRow("sql-json", 0.0)]
+    [DataRow("rest", 0.0)]
+    [DataRow("graphql", 0.0)]
+    [DataRow("sql-json", double.Epsilon)]
+    [DataRow("rest", double.Epsilon)]
+    [DataRow("graphql", double.Epsilon)]
+    public async Task BinaryDoubleSerializationPreservesZeroAndSubnormalValues(string surface, double value)
+    {
+        using OracleConnection connection = new(_connectionString);
+        await connection.OpenAsync();
+        using OracleCommand command = connection.CreateCommand();
+        command.CommandText = "UPDATE DAB_ORACLE_SCALARS SET DOUBLE_VALUE = :value WHERE ID = 1";
+        command.Parameters.Add("value", OracleDbType.BinaryDouble).Value = value;
+        Assert.AreEqual(1, await command.ExecuteNonQueryAsync());
+        JsonElement actual = (await ReadScalarSamplesAsync(surface))[0].GetProperty("double_value");
+        Assert.AreEqual(JsonValueKind.Number, actual.ValueKind);
+        Assert.AreEqual(value, actual.GetDouble());
+    }
+
+    [DataTestMethod]
+    [DataRow("sql-json")]
+    [DataRow("rest")]
+    [DataRow("graphql")]
+    public async Task EmptyOracleCharSerializesAsNull(string surface)
+    {
+        await ExecuteSql("UPDATE DAB_ORACLE_SCALARS SET CHAR_VALUE = '' WHERE ID = 1");
+        Assert.AreEqual(JsonValueKind.Null, (await ReadScalarSamplesAsync(surface))[0].GetProperty("char_value").ValueKind);
+    }
+
+    [DataTestMethod]
+    [DataRow("sql-json", "BINARY_DOUBLE_INFINITY", "Inf")]
+    [DataRow("rest", "BINARY_DOUBLE_INFINITY", "Inf")]
+    [DataRow("graphql", "BINARY_DOUBLE_INFINITY", "Inf")]
+    [DataRow("sql-json", "-BINARY_DOUBLE_INFINITY", "-Inf")]
+    [DataRow("rest", "-BINARY_DOUBLE_INFINITY", "-Inf")]
+    [DataRow("graphql", "-BINARY_DOUBLE_INFINITY", "-Inf")]
+    [DataRow("sql-json", "BINARY_DOUBLE_NAN", "Nan")]
+    [DataRow("rest", "BINARY_DOUBLE_NAN", "Nan")]
+    [DataRow("graphql", "BINARY_DOUBLE_NAN", "Nan")]
+    public async Task NonFiniteBinaryDoublesHaveExplicitApiBehavior(string surface, string sqlValue, string expected)
+    {
+        // Oracle emits JSON strings for non-finite numbers; GraphQL Float cannot represent them.
+        await ExecuteSql($"UPDATE DAB_ORACLE_SCALARS SET DOUBLE_VALUE = {sqlValue} WHERE ID = 1");
+        if (surface == "graphql")
+        {
+            using HttpResponseMessage response = await HttpClient.PostAsJsonAsync("graphql", new
+            {
+                query = "{ scalarSamples(orderBy: { id: ASC }) { items { id double_value } } }"
+            });
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            using JsonDocument body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            JsonElement errors = body.RootElement.GetProperty("errors");
+            Assert.AreEqual(1, errors.GetArrayLength());
+            StringAssert.Contains(errors[0].GetProperty("message").GetString(), "double_value");
+            StringAssert.Contains(errors[0].GetProperty("message").GetString(), "Float");
+            Assert.AreEqual(JsonValueKind.Null, body.RootElement.GetProperty("data").GetProperty("scalarSamples").GetProperty("items")[0].GetProperty("double_value").ValueKind);
+        }
+        else
+        {
+            JsonElement actual = (await ReadScalarSamplesAsync(surface))[0].GetProperty("double_value");
+            Assert.AreEqual(JsonValueKind.String, actual.ValueKind);
+            Assert.AreEqual(expected, actual.GetString());
+        }
+    }
+
+    private static void AssertWallClock(JsonElement value, DateTime expected)
+    {
+        Assert.AreEqual(JsonValueKind.String, value.ValueKind);
+        DateTime actual = DateTime.Parse(value.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+        Assert.AreEqual(expected.Ticks, actual.Ticks, "Date/time fields must preserve wall-clock time and fractional seconds.");
+    }
+
+    private static void AssertOffsetTimestamp(JsonElement value, DateTimeOffset expected)
+    {
+        Assert.AreEqual(JsonValueKind.String, value.ValueKind);
+        DateTimeOffset actual = DateTimeOffset.Parse(value.GetString(), CultureInfo.InvariantCulture);
+        Assert.AreEqual(expected.UtcTicks, actual.UtcTicks, "The timestamp's instant must be preserved.");
+        Assert.AreEqual(expected.Offset, actual.Offset, "The stored time-zone offset must be preserved.");
+    }
+
+    private async Task<JsonElement> ReadScalarSamplesAsync(string surface)
+    {
+        if (surface == "graphql")
+        {
+            JsonElement result = await ExecuteGraphQLRequestAsync(
+                "{ scalarSamples(orderBy: { id: ASC }) { items { id date_value timestamp_value offset_value double_value char_value flag_value } } }",
+                "scalarSamples", isAuthenticated: false);
+            return result.GetProperty("items");
+        }
+
+        if (surface == "rest")
+        {
+            using JsonDocument result = JsonDocument.Parse(await HttpClient.GetStringAsync("api/ScalarSample?$orderby=id"));
+            return result.RootElement.GetProperty("value").Clone();
+        }
+
+        // Use the production builder and discovered metadata, not a hand-written JSON projection.
+        FindRequestContext context = new("ScalarSample", _sqlMetadataProvider.EntityToDatabaseObject["ScalarSample"], true)
+        {
+            First = 10,
+            FieldsToBeReturned = new() { "id", "date_value", "timestamp_value", "offset_value", "double_value", "char_value", "flag_value" }
+        };
+        SqlQueryStructure query = new(context, _sqlMetadataProvider, _fixture.Authorization.Object, _fixture.Config, _fixture.Filter, _fixture.Http.HttpContext);
+        using JsonDocument json = await _fixture.Executor.ExecuteQueryAsync(_fixture.Builder.Build(query), query.Parameters,
+            _fixture.Executor.GetJsonResultAsync<JsonDocument>, dataSourceName: _fixture.SourceName);
+        return json.RootElement.Clone();
     }
 
     [TestMethod]
@@ -169,6 +367,103 @@ public class OracleIntegrationTests : SqlTestBase
     [TestMethod]
     public async Task MetadataDiscoversPrimaryKeyIdentityDefaultsAndClob()
     {
+        OracleMetadataProvider metadata = CreateMetadataProvider();
+        await metadata.InitializeAsync();
+        SourceDefinition definition = metadata.GetSourceDefinition(OracleTestFixture.ENTITY);
+        CollectionAssert.AreEqual(new[] { "ID" }, definition.PrimaryKey.ToArray());
+        Assert.IsTrue(definition.Columns["ID"].IsAutoGenerated);
+        Assert.IsFalse(definition.Columns["ID"].IsReadOnly);
+        Assert.IsTrue(definition.Columns["TITLE"].HasDefault);
+        Assert.AreEqual(typeof(string), definition.Columns["TITLE"].SystemType);
+        Assert.IsTrue(definition.Columns["DOUBLED_ID"].IsReadOnly);
+    }
+
+    [DataTestMethod]
+    [DataRow("RAW(16)")]
+    [DataRow("BLOB")]
+    [DataRow("LONG RAW")]
+    public async Task BinaryColumnsAreRejectedDuringMetadataInitialization(string sqlType)
+    {
+        await ExecuteSql($"DROP TABLE {_tableName} PURGE");
+        await ExecuteSql($"CREATE TABLE {_tableName} (ID NUMBER PRIMARY KEY, PAYLOAD {sqlType})");
+        OracleMetadataProvider metadata = CreateMetadataProvider();
+        NotSupportedException error = await Assert.ThrowsExceptionAsync<NotSupportedException>(() => metadata.InitializeAsync());
+        StringAssert.Contains(error.Message, "PAYLOAD");
+        StringAssert.Contains(error.Message, "binary");
+        StringAssert.Contains(error.Message, "view");
+    }
+
+    [DataTestMethod]
+    [DataRow("ALWAYS", true)]
+    [DataRow("BY DEFAULT", false)]
+    [DataRow("BY DEFAULT ON NULL", false)]
+    public async Task IdentityMetadataRespectsGenerationType(string generationType, bool readOnly)
+    {
+        await ExecuteSql($"DROP TABLE {_tableName} PURGE");
+        await ExecuteSql($"CREATE TABLE {_tableName} (ID NUMBER GENERATED {generationType} AS IDENTITY PRIMARY KEY, TITLE CLOB, DOUBLED_ID GENERATED ALWAYS AS (ID * 2))");
+        OracleMetadataProvider metadata = CreateMetadataProvider();
+        await metadata.InitializeAsync();
+        SourceDefinition definition = metadata.GetSourceDefinition(OracleTestFixture.ENTITY);
+        CollectionAssert.AreEqual(new[] { "ID" }, definition.PrimaryKey.ToArray());
+        ColumnDefinition identity = definition.Columns["ID"];
+        Assert.IsTrue(identity.IsAutoGenerated);
+        Assert.AreEqual(readOnly, identity.IsReadOnly);
+        Assert.IsTrue(metadata.GetSourceDefinition(OracleTestFixture.ENTITY).Columns["DOUBLED_ID"].IsReadOnly);
+    }
+
+    [DataTestMethod]
+    [DataRow("BY DEFAULT")]
+    [DataRow("BY DEFAULT ON NULL")]
+    public async Task DefaultIdentityAcceptsExplicitAndGeneratedIdsThroughApis(string generationType)
+    {
+        await ExecuteSql($"ALTER TABLE BOOKS MODIFY ID GENERATED {generationType} AS IDENTITY");
+        using HttpResponseMessage explicitId = await HttpClient.PostAsJsonAsync("api/Book", new { id = 42, title = "Explicit", publisher_id = 1234 });
+        Assert.AreEqual(HttpStatusCode.Created, explicitId.StatusCode, await explicitId.Content.ReadAsStringAsync());
+        using JsonDocument explicitBody = JsonDocument.Parse(await explicitId.Content.ReadAsStringAsync());
+        Assert.AreEqual(42, explicitBody.RootElement.GetProperty("value")[0].GetProperty("id").GetInt32());
+
+        using HttpResponseMessage generatedId = await HttpClient.PostAsJsonAsync("api/Book", new { title = "Generated", publisher_id = 1234 });
+        Assert.AreEqual(HttpStatusCode.Created, generatedId.StatusCode, await generatedId.Content.ReadAsStringAsync());
+        using JsonDocument generatedBody = JsonDocument.Parse(await generatedId.Content.ReadAsStringAsync());
+        // ON NULL evaluates the sequence default even for the preceding explicit-ID insert.
+        int expectedGeneratedId = generationType == "BY DEFAULT ON NULL" ? 1001 : 1000;
+        Assert.AreEqual(expectedGeneratedId, generatedBody.RootElement.GetProperty("value")[0].GetProperty("id").GetInt32());
+
+        JsonElement graphQL = await ExecuteGraphQLRequestAsync(
+            "mutation { createBook(item: { id: 43, title: \"Explicit GraphQL\", publisher_id: 1234 }) { id } }",
+            "createBook", isAuthenticated: false);
+        Assert.AreEqual(43, graphQL.GetProperty("id").GetInt32());
+        using JsonDocument persisted = JsonDocument.Parse(await GetDatabaseResultAsync($"SELECT JSON_OBJECT('count' VALUE COUNT(*)) FROM BOOKS WHERE ID IN (42, 43, {expectedGeneratedId})"));
+        Assert.AreEqual(3, persisted.RootElement.GetProperty("count").GetInt32());
+    }
+
+    [TestMethod]
+    public async Task IdentityMetadataPreservesCompositePrimaryKeyOrder()
+    {
+        await ExecuteSql($"DROP TABLE {_tableName} PURGE");
+        await ExecuteSql($"CREATE TABLE {_tableName} (ID NUMBER GENERATED BY DEFAULT ON NULL AS IDENTITY, TENANT_ID NUMBER, PRIMARY KEY (TENANT_ID, ID))");
+        OracleMetadataProvider metadata = CreateMetadataProvider();
+        await metadata.InitializeAsync();
+        SourceDefinition definition = metadata.GetSourceDefinition(OracleTestFixture.ENTITY);
+        CollectionAssert.AreEqual(new[] { "TENANT_ID", "ID" }, definition.PrimaryKey.ToArray());
+        Assert.IsFalse(definition.Columns["ID"].IsReadOnly);
+    }
+
+    [TestMethod]
+    public async Task MetadataWithoutPrimaryKeyStillFailsInitialization()
+    {
+        await ExecuteSql($"DROP TABLE {_tableName} PURGE");
+        await ExecuteSql($"CREATE TABLE {_tableName} (ID NUMBER, TITLE VARCHAR2(100))");
+        OracleMetadataProvider metadata = CreateMetadataProvider();
+        DataApiBuilderException error = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() => metadata.InitializeAsync());
+        StringAssert.Contains(error.Message, "Primary key not configured");
+    }
+
+    private OracleMetadataConnectionProbe CreateMetadataProvider()
+    {
+        // These tests alter the same table between metadata initializations. Discard
+        // pooled Oracle schema/statement caches so the adapter sees the new definition.
+        OracleConnection.ClearAllPools();
         Entity entity = new(new(_tableName, EntitySourceType.Table, null, null), new("Book", "Books"), null, new(),
             new[] { new EntityPermission("anonymous", new[] { new EntityAction(EntityActionOperation.All, null, null) }) }, null, null);
         RuntimeConfig config = new(Schema: string.Empty, DataSource: new(DatabaseType.Oracle, _connectionString),
@@ -176,15 +471,17 @@ public class OracleIntegrationTests : SqlTestBase
         RuntimeConfigProvider provider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
         RuntimeConfigValidator validator = new(provider, new MockFileSystem(), NullLogger<RuntimeConfigValidator>.Instance);
         QueryManagerFactory factory = new(provider, NullLogger<IQueryExecutor>.Instance, _fixture.Http, null);
-        OracleMetadataProvider metadata = new(provider, validator, factory, NullLogger<ISqlMetadataProvider>.Instance, provider.GetConfig().DefaultDataSourceName);
-        await metadata.InitializeAsync();
-        SourceDefinition definition = metadata.GetSourceDefinition(OracleTestFixture.ENTITY);
-        CollectionAssert.AreEqual(new[] { "ID" }, definition.PrimaryKey.ToArray());
-        Assert.IsTrue(definition.Columns["ID"].IsAutoGenerated);
-        Assert.IsTrue(definition.Columns["ID"].IsReadOnly);
-        Assert.IsTrue(definition.Columns["TITLE"].HasDefault);
-        Assert.AreEqual(typeof(string), definition.Columns["TITLE"].SystemType);
-        Assert.IsTrue(definition.Columns["DOUBLED_ID"].IsReadOnly);
+        return new(provider, validator, factory);
+    }
+
+    private sealed class OracleMetadataConnectionProbe : OracleMetadataProvider
+    {
+        public OracleMetadataConnectionProbe(RuntimeConfigProvider provider, RuntimeConfigValidator validator, QueryManagerFactory factory)
+            : base(provider, validator, factory, NullLogger<ISqlMetadataProvider>.Instance, provider.GetConfig().DefaultDataSourceName)
+        {
+        }
+
+        public OracleConnection CreateTestConnection() => CreateConnection();
     }
 
     [TestMethod]

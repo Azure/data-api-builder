@@ -13,6 +13,13 @@
     }
   },
   "entities": {
+    "ScalarSample": {
+      "source": { "object": "DAB_ORACLE_SCALARS", "type": "table" },
+      "rest": { "path": "/ScalarSample" },
+      "graphql": { "type": { "singular": "ScalarSample", "plural": "ScalarSamples" } },
+      "mappings": { "ID": "id", "DATE_VALUE": "date_value", "TIMESTAMP_VALUE": "timestamp_value", "OFFSET_VALUE": "offset_value", "DOUBLE_VALUE": "double_value", "CHAR_VALUE": "char_value", "FLAG_VALUE": "flag_value" },
+      "permissions": [ { "role": "anonymous", "actions": [ "*" ] } ]
+    },
     "Book": {
       "source": { "object": "BOOKS", "type": "table" },
       "rest": { "path": "/Book" },

@@ -244,10 +244,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 // 5. Validate database type support
                 DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
-                if (databaseType != DatabaseType.MSSQL && databaseType != DatabaseType.DWSQL)
+                if (databaseType is not (DatabaseType.MSSQL or DatabaseType.DWSQL or DatabaseType.Oracle))
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "UnsupportedDatabase",
-                        $"Aggregation is not supported for database type '{databaseType}'. Aggregation is only available for Azure SQL, SQL Server, and SQL Data Warehouse.", logger);
+                        $"Aggregation is not supported for database type '{databaseType}'. Aggregation is only available for Azure SQL, SQL Server, SQL Data Warehouse, and Oracle.", logger);
                 }
 
                 // 6. Build SQL query structure with aggregation, groupby, having
@@ -270,10 +270,23 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IQueryBuilder queryBuilder = queryManagerFactory.GetQueryBuilder(databaseType);
                 IQueryExecutor queryExecutor = queryManagerFactory.GetQueryExecutor(databaseType);
 
-                string sql = queryBuilder.Build(structure);
-                if (args.Groupby.Count > 0)
+                string sql;
+                if (queryBuilder is OracleQueryBuilder oracleQueryBuilder)
                 {
-                    sql = ApplyOrderByAndPagination(sql, args, structure, queryBuilder, backingField!);
+                    // Oracle orders and paginates inside its SQL/JSON query.
+                    sql = oracleQueryBuilder.BuildAggregation(
+                        structure,
+                        descending: args.Orderby.Equals("desc", StringComparison.OrdinalIgnoreCase),
+                        offset: args.First.HasValue ? DecodeCursorOffset(args.After) : null,
+                        limit: args.First.HasValue ? args.First.Value + 1 : null);
+                }
+                else
+                {
+                    sql = queryBuilder.Build(structure);
+                    if (args.Groupby.Count > 0)
+                    {
+                        sql = ApplyOrderByAndPagination(sql, args, structure, queryBuilder, backingField!);
+                    }
                 }
 
                 // 8. Execute query and return results

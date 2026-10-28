@@ -955,6 +955,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 ? $"{args.Function.ToUpperInvariant()}(DISTINCT {quotedCol})"
                 : $"{args.Function.ToUpperInvariant()}({quotedCol})";
             string orderByClause = $" ORDER BY {orderByAggExpr} {direction}";
+            string paginationClause = string.Empty;
 
             if (args.First.HasValue)
             {
@@ -967,37 +968,24 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 string limitParam = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
                 structure.Parameters.Add(limitParam, new DbConnectionParam(fetchCount));
 
-                string paginationClause = $" OFFSET {offsetParam} ROWS FETCH NEXT {limitParam} ROWS ONLY";
+                paginationClause = $" OFFSET {offsetParam} ROWS FETCH NEXT {limitParam} ROWS ONLY";
 
                 // Remove TOP N from the SELECT clause (TOP conflicts with OFFSET/FETCH)
                 sql = Regex.Replace(sql, @"SELECT TOP \d+", "SELECT");
-
-                // Insert ORDER BY + pagination before FOR JSON PATH
-                int jsonPathIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
-                if (jsonPathIdx > 0)
-                {
-                    sql = sql.Insert(jsonPathIdx, orderByClause + paginationClause);
-                }
-                else
-                {
-                    sql += orderByClause + paginationClause;
-                }
             }
-            else
+
+            int insertionIndex = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
+            if (insertionIndex < 0 && queryBuilder is DwSqlQueryBuilder)
             {
-                // Without pagination: insert ORDER BY before FOR JSON PATH
-                int jsonPathIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
-                if (jsonPathIdx > 0)
-                {
-                    sql = sql.Insert(jsonPathIdx, orderByClause);
-                }
-                else
-                {
-                    sql += orderByClause;
-                }
+                // STRING_AGG wraps the grouped SELECT. Order and page inside that
+                // derived table, where the projected aggregation alias is in scope.
+                insertionIndex = sql.LastIndexOf($") AS {queryBuilder.QuoteIdentifier(structure.SourceAlias)}", StringComparison.Ordinal);
+                orderByClause = $" ORDER BY {queryBuilder.QuoteIdentifier(ComputeAlias(args.Function, args.Field))} {direction}";
             }
 
-            return sql;
+            return insertionIndex > 0
+                ? sql.Insert(insertionIndex, orderByClause + paginationClause)
+                : sql + orderByClause + paginationClause;
         }
 
         #endregion

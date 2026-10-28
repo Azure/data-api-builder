@@ -1,0 +1,77 @@
+# CLI telemetry implementation
+
+## Boundaries
+
+This implementation adds CLI collection to the existing engine telemetry foundation, preserving the supported Azure Monitor exporter dependency, destination gate, privacy guard, API identity format and finite delivery behavior. Production collection remains off. The public [field and validation guide](../../../telemetry.md) defines the emitted contract.
+
+| Boundary | Owner |
+| --- | --- |
+| Enablement | `ProductTelemetryBootstrap` checks umbrella veto, synthetic opt-in, both SDK-statistics opt-outs and explicit valid product routing before identity/notice/sender work. |
+| Invocation | CLI `Main` owns one `CliTelemetrySession`; the internal `Execute` wrapper completes it once around the real parse and handler. Public `Execute` does not implicitly create a CLI session. |
+| Grammar | `CliTelemetryCommand` uses an explicit reviewed command/option allowlist and the pinned parser's token rules. The actual parse determines control requests and success/failure. No raw argument survives inspection. |
+| Installation | `CliTelemetryInstallationStore` safely persists a per-user-profile random UUID. Only the atomic publication winner records first-run initialization. Unavailable storage omits identity, not useful command telemetry. |
+| Configuration | Shared `EngineTelemetryIdentityStore.Lookup` cannot create state. Successful `init` calls `Resolve` only after writing. Later commands observe the exact root already selected by their normal work; no extra configuration discovery. |
+| Provider category | `CliTelemetryDatabaseTypeFormatter` projects a closed enum from the already loaded or successfully written model. No raw option values, connection strings, configuration serialization, additional loads or identity I/O are used. |
+| Command configuration context | `CliTelemetryConfigurationSnapshot` prepares a bounded model and reuses `EngineTelemetrySnapshotFactory` for the configured/effective vocabulary. Only an immutable categorical JSON string is retained in the command event; no engine epoch or separate event is invented. |
+| Handoff | `ProductTelemetryLaunchContext` carries separate parent/engine session IDs, available installation/API identities, and a closed launch source. It contains no path, arguments, callbacks or mutable global state. |
+| Delivery | CLI and engine use the same generic bounded delivery algorithm and lease a serialized, process-owned SDK sender by normalized destination. No second ingestion protocol or customer logger is used. |
+
+## Sent-name alignment
+
+Sent event families are `dab/cli.*` and `dab/engine.*`. The shared exporter adds `dab_` exactly once to top-level custom property keys. Command fields are therefore `dab_command`, `dab_subcommand`, `dab_control`, `dab_outcome`, `dab_failure_category`, `dab_duration_ms`, `dab_database_type`, `dab_option_*` and `dab_configuration_context`; the launch source is `dab_launch_source`. Context follows the same mapping, including `dab_os_family`, `dab_os_version`, `dab_architecture` and `dab_dotnet_version`. Existing `dab_` IDs and `dab_version` remain unchanged. Dots are preserved. Keys must be unique after prefixing and fit the 150-character ingestion limit; a collision or overlong key rejects the event rather than truncating it. Values and nested JSON keys are not rewritten. The public guide inventories all 82 top-level engine snapshot properties and the engine event-specific sent keys separately from CLI context.
+
+The shared notice is reproduced verbatim in [Enablement, notice and reset](../../../telemetry.md#enablement-notice-and-reset) as a **draft pending CELA review**, with the same synthetic-only gate and stderr timing. The [privacy-inventory rename ledger](../../../telemetry.md#privacy-inventory-rename-ledger) records the naming/notice-only scope: no added telemetry fields, IDs or values, no bucket or duration changes, and no change to enablement, environment-selected routing, SDK prerequisites or the umbrella opt-out. No production/privacy approval or new live batch is implied.
+
+## Ordering and lifecycle
+
+1. Gate collection before profile state, notice and sender work. Show the notice on stderr before any send.
+2. Initialize/reuse installation state. Emit `dab/cli.first_run` only for newly saved state.
+3. Parse once and dispatch with an explicit invocation-owned session. Capture only approved option presence, never resolved defaults or values.
+4. After successful configuration creation, allocate/reuse its API sidecar before `dab/cli.command`. Failed writes allocate none. Read-only/other commands perform lookup only.
+5. At actual engine handoff, emit `dab/cli.engine_launch` and pass the selected engine ID before `dab/engine.process_started`. Same-run ephemeral API identity is preserved without claiming cross-invocation continuity.
+6. Record command completion when the handler returns or an exception/cancellation is observed. Preserve return codes, output and thrown exceptions. A typed engine-startup-failure observation distinguishes the web host's legacy normal return after `StopApplication` from actual successful initialization. Export carries a typed terminal result separately from recoverable attempt failures: no schema is a telemetry failure even when the legacy exit code is zero, while a successful retry is still success.
+7. Gracefully drain only the owning queue, bounded to two seconds. Explicit disable discards without a final send.
+
+With deferred MCP stdio initialization, an early handshake is not engine readiness. The first tool list/call initializes metadata and publishes the registry; only successful completion accepts the serving model and marks telemetry ready. Failures remain cached protocol errors and produce one startup-failure observation; normal shutdown still preserves its exit code. Protocol-only sessions emit neither readiness nor data-use milestones.
+
+Asynchronous export helpers own one-shot launch reservations. Reserving creates no identity, event, worker or sender. Actual preflight-approved handoff may occur after ordinary command completion/disposal, using its original parent session and a later sequence. It owns a separate capacity-one queue; neither export nor the engine waits for telemetry. Explicit disable revokes all such reservations. Cancellation before the helper runs, or failed preflight, never emits intent. No nested `start` command event is manufactured. Existing export serving/retry/cancellation semantics are unchanged.
+
+The accepted configuration uses the actual CLI-selected root, including a generated merged root. There is no hash, child-source identity, or automatic join between independent root sidecars. Ambiguous command targets omit API linkage. The engine rechecks root consistency when accepting configuration; direct starts remain unlinked.
+
+All CLI events carry `dab_database_type` using the closed vocabulary in the public field guide. First-run precedes configuration work and remains `unknown`. Command classification observes the normally loaded model; a successful write replaces it with the saved provider, while rejected candidates and failed writes leave the loaded category unchanged. In particular, a provider-changing `configure` record clone must use its actual root `DataSource`, not the stale default entry in its internal merged map. Distinct known source providers yield `multiple`; identical providers do not. Only matching already loaded child records count as complete evidence, with a shared 256-node traversal budget. Unknown or ambiguous evidence is never repaired by additional discovery.
+
+Each actual launch supplies its own preflight provider explicitly and snapshots it into the launch event. This remains true for an export helper after parent completion or normal stop/disposal: it cannot reuse mutable command state. The provider category does not extend the five-field engine bridge or add fields to engine events. The category describes configuration, not observed database usage, and does not replace option-presence flags.
+
+Command failure-rate breakdowns cannot depend on a later engine snapshot or an API-sidecar identity. `dab_configuration_context` therefore accompanies every `dab/cli.command` outcome, using the same applicable configuration dimensions as engine snapshots. The one-property JSON representation still has 83 fixed nested keys and an 8,192-character limit, preserving the existing 128-property envelope and all 96 option-presence slots. Inside this JSON, the 82 snapshot keys retain their original unprefixed names, plus `observation`: `snapshot_schema=cli-configuration-v1` and `observation=loaded|saved|unknown` distinguish this evidence from an accepted engine configuration. Feature keys such as `runtime.rest.effective` also stay unprefixed; only the outer custom property is renamed. In Application Insights, read it with `parse_json(tostring(customDimensions.dab_configuration_context))["runtime.rest.effective"]`. No raw config serialization feeds this property.
+
+Normal CLI dispatch establishes a scoped, default-off presence-capture permission. Existing config parsing can reuse the original bytes already read; child loaders inherit permission and an explicit engine policy overrides it. A disabled CLI cannot inherit an unrelated enabled scope. Capture caps (1 MiB characters/4,096 entities) lose optional provenance, never reject input or add discovery. Successful writes supply the already written JSON only for fresh structural presence, avoiding stale `with`-clone provenance; failed writes retain the loaded context. Projection checks matching loaded children and copies bounded dictionaries before using shared engine logic (256 configuration/source nodes, 256 references, depth 32, 4,096 model nodes). Unavailable input/projection remains explicitly unknown. Counts, enum values and configured/effective state semantics are the existing engine categories, not invented CLI defaults.
+
+The session stores provider and configuration context together under versioned observation ownership. Projection runs outside the session lock; completion, disable and newer observations cannot wait for or be overwritten by an older projection. Only immutable closed categories enter delivery. First-run and launch events have no command configuration context, and a late helper cannot modify an already completed command.
+
+Both identity stores share atomic Linux no-replace publication through `renameat2(RENAME_NOREPLACE)`, retaining Windows no-overwrite moves. Unsupported Linux publication never falls back to a check-then-replacing rename. The public service host-builder signature remains unchanged; its telemetry-aware helper is named `CreateHostBuilderCore` so ASP.NET's name-only discovery remains unambiguous.
+
+## Requirements mapping
+
+| Requirement | Implementation / evidence |
+| --- | --- |
+| First run and repeat use | Strict versioned profile state, safe concurrent publication, random identity reuse/reset and unavailable-state tests. |
+| One command event | Single real-parser wrapper; completion idempotence, help/version, unknown input, typed failures, cancellation and original-output parity tests. |
+| No argument values | Fixed grammar registry; sentinel tests for aliases, assignments, option-looking values, malformed input and positional parameters. |
+| Configured database-provider category | Typed closed projection; all six providers, mixed/identical sources, incomplete evidence, provider-changing writes, failure/disable boundaries, deferred launch snapshots, SDK serialization and enabled/disabled CLI file-I/O parity tests. |
+| Command diagnostic breakdowns | Configuration context is included even on validation failures with no API ID or engine launch. Duplicate-entity regression, endpoint/cache/auth/host/entity-bucket contrasts, MCP/relationship/policy categories, missing/null/saved provenance, bounded traversal, scope isolation, immutable races and full SDK envelope tests. |
+| Installation/API separation | Profile state and compatible API sidecars are separate. Successful creation, lookup-only later commands and multiple/merged-root cases are tested. |
+| Sequential launch/usage linkage | Explicit handoff before the engine's first event. Real CLI web/stdio workflows exercise metadata, serving, first success, failure and shutdown; launch intent is not readiness. |
+| Export lifetime | Real helper/introspection and delayed-preflight tests verify one command, correct source, no premature `start` completion, and independent sender ownership. |
+| Privacy and routing | Common product gate, SDK fake-HTTP envelopes, constant source-IP suppression, ambient enrichment rejection, no customer destination fallback or process-global SDK mutation. |
+| Bounded reliability | Main queue 256, three attempts, one-second SDK attempt, two-second drain; at most 16 launch reservations, eight retained destinations, no event spool. |
+| Current main compatibility | Retains ordered MCP metadata/authorization/registry publication, reload serialization, notifications and shutdown. Swallowed registry failures do not claim accepted telemetry epochs. |
+
+The phase-1 refinements are deliberate: synthetic validation rather than production activation, per-profile rather than hardware identity, and creation-time API identity after successful `init`. Public documentation and tests describe those semantics without treating random IDs as anonymous or copied state as evidence of distinct installations.
+
+## Validation limits
+
+- `CliTelemetry` covers parser/handler behavior and shared offline lifecycle, persistence, delivery and SDK serialization. Platform capability skips are not evidence of that platform's behavior.
+- `CliTelemetryLocalDb` exercises real `Program.Execute` through service bootstrap with owned LocalDB data, real REST/MCP tools and GraphQL introspection. It substitutes only the sender, installation identity and local transports/lifetime controls.
+- Existing `EngineTelemetry`, `EngineTelemetryLocalDb` and current-main MCP hot-reload tests remain separate regression suites.
+- Local fake-HTTP tests do not prove Application Insights receipt or stored enrichment. Any live validation must use the selected private test destination, exact built artifacts and synthetic activity. No production collection or live cloud test is implied by this implementation.
+- SDK-cached cloud-role/component overrides deliberately prevent delivery rather than leak values. Foreign same-destination exporters and arbitrary embedded coexistence remain unsupported in this validation phase.

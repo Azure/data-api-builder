@@ -242,6 +242,41 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(12.5d, InvokeParseParamAsSystemType(score!.ToString()!, typeof(double)));
         }
 
+        /// <summary>
+        /// Int64 boundaries resolve to exact longs.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(long.MinValue, DisplayName = "long.MinValue")]
+        [DataRow(long.MaxValue, DisplayName = "long.MaxValue")]
+        public void TryResolveJsonElementToScalarVariable_PreservesInt64Bounds(long expected)
+        {
+            using JsonDocument document = JsonDocument.Parse($"{{\"id\":{expected}}}");
+
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(
+                document.RootElement.GetProperty("id"),
+                out object? scalar));
+            Assert.AreEqual(expected, scalar);
+        }
+
+        /// <summary>
+        /// Tiny nonzero fractions must stay doubles and must not round to zero,
+        /// otherwise ORDER BY pagination boundaries shift.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("1e-30", 1e-30, DisplayName = "positive tiny fraction")]
+        [DataRow("-1e-30", -1e-30, DisplayName = "negative tiny fraction")]
+        public void TryResolveJsonElementToScalarVariable_KeepsTinyFractionsAsDouble(string json, double expected)
+        {
+            using JsonDocument document = JsonDocument.Parse($"{{\"score\":{json}}}");
+
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(
+                document.RootElement.GetProperty("score"),
+                out object? scalar));
+            Assert.IsInstanceOfType(scalar, typeof(double));
+            Assert.AreEqual(expected, (double)scalar!);
+            Assert.AreNotEqual(0d, (double)scalar!);
+        }
+
         [TestMethod]
         public void MakeCursorFromJsonElement_GroupByOmitsPrimaryKeys()
         {

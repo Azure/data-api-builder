@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -187,6 +189,94 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             StringAssert.Contains(decoded, "\"Direction\":1");
         }
 
+        /// <summary>
+        /// Integers larger than 2^53 must survive cursor encode/decode as the exact BIGINT.
+        /// <see cref="SqlPaginationUtil.TryResolveJsonElementToScalarVariable"/> used to store every
+        /// JSON number as a double, so the next-page $after token no longer parsed as Int64.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(5123692796229827916L, DisplayName = "19-digit BIGINT beyond IEEE-754 integer precision")]
+        [DataRow(9007199254740993L, DisplayName = "2^53 + 1")]
+        public void MakeCursorFromJsonElement_PreservesExactIntegerPrimaryKey(long expected)
+        {
+            using JsonDocument document = JsonDocument.Parse($"{{\"id\":{expected}}}");
+
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(
+                document.RootElement.GetProperty("id"),
+                out object? scalar));
+            Assert.AreEqual(expected, scalar);
+
+            string cursor = SqlPaginationUtil.MakeCursorFromJsonElement(
+                document.RootElement,
+                new List<string> { "id" },
+                orderByColumns: null,
+                entityName: "Entity");
+            string decoded = SqlPaginationUtil.Base64Decode(cursor);
+
+            using JsonDocument cursorDocument = JsonDocument.Parse(decoded);
+            string fieldValueText = cursorDocument.RootElement[0].GetProperty("FieldValue").GetRawText();
+
+            object parsed = InvokeParseParamAsSystemType(fieldValueText, typeof(long));
+            Assert.AreEqual(expected, parsed);
+        }
+
+        /// <summary>
+        /// Ordinary ints and floats still resolve to long/double so existing cursor and filter
+        /// parsing through <see cref="BaseSqlQueryStructure"/> is unchanged.
+        /// </summary>
+        [TestMethod]
+        public void TryResolveJsonElementToScalarVariable_PreservesNormalIntAndFloat()
+        {
+            using JsonDocument document = JsonDocument.Parse("{\"id\":7,\"score\":12.5}");
+
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(
+                document.RootElement.GetProperty("id"),
+                out object? id));
+            Assert.AreEqual(7L, id);
+            Assert.AreEqual(7, InvokeParseParamAsSystemType(id!.ToString()!, typeof(int)));
+
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(
+                document.RootElement.GetProperty("score"),
+                out object? score));
+            Assert.AreEqual(12.5d, score);
+            Assert.AreEqual(12.5d, InvokeParseParamAsSystemType(score!.ToString()!, typeof(double)));
+        }
+
+        /// <summary>
+        /// Int64 boundaries resolve to exact longs.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(long.MinValue, DisplayName = "long.MinValue")]
+        [DataRow(long.MaxValue, DisplayName = "long.MaxValue")]
+        public void TryResolveJsonElementToScalarVariable_PreservesInt64Bounds(long expected)
+        {
+            using JsonDocument document = JsonDocument.Parse($"{{\"id\":{expected}}}");
+
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(
+                document.RootElement.GetProperty("id"),
+                out object? scalar));
+            Assert.AreEqual(expected, scalar);
+        }
+
+        /// <summary>
+        /// Tiny nonzero fractions must stay doubles and must not round to zero,
+        /// otherwise ORDER BY pagination boundaries shift.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("1e-30", 1e-30, DisplayName = "positive tiny fraction")]
+        [DataRow("-1e-30", -1e-30, DisplayName = "negative tiny fraction")]
+        public void TryResolveJsonElementToScalarVariable_KeepsTinyFractionsAsDouble(string json, double expected)
+        {
+            using JsonDocument document = JsonDocument.Parse($"{{\"score\":{json}}}");
+
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(
+                document.RootElement.GetProperty("score"),
+                out object? scalar));
+            Assert.IsInstanceOfType(scalar, typeof(double));
+            Assert.AreEqual(expected, (double)scalar!);
+            Assert.AreNotEqual(0d, (double)scalar!);
+        }
+
         [TestMethod]
         public void MakeCursorFromJsonElement_GroupByOmitsPrimaryKeys()
         {
@@ -256,6 +346,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             StringAssert.Contains(result, "$first=10");
             Assert.IsFalse(result.Contains("ignored"));
             Assert.IsFalse(result.Contains("filter"));
+        }
+
+        private static object InvokeParseParamAsSystemType(string value, Type targetType)
+        {
+            MethodInfo method = typeof(BaseSqlQueryStructure).GetMethod(
+                "ParseParamAsSystemType",
+                BindingFlags.Static | BindingFlags.NonPublic)!;
+            return method.Invoke(null, new object[] { value, targetType })!;
         }
     }
 }

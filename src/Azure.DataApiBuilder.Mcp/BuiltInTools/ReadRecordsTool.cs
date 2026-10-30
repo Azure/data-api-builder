@@ -232,7 +232,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!string.IsNullOrWhiteSpace(filter))
                 {
-                    string filterQueryString = $"?{RequestParser.FILTER_URL}={filter}";
+                    string filterQueryString = McpArgumentParser.BuildFilterQueryString(filter);
                     context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
                 }
 

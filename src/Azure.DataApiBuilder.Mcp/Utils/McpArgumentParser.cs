@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure.DataApiBuilder.Core.Parsers;
 
 namespace Azure.DataApiBuilder.Mcp.Utils
 {
@@ -10,6 +11,16 @@ namespace Azure.DataApiBuilder.Mcp.Utils
     /// </summary>
     public static class McpArgumentParser
     {
+        /// <summary>
+        /// Builds the "?$filter=" query string handed to the OData parser from an MCP 'filter' argument.
+        /// The OData parser URL-decodes its input, but the MCP argument is a plain JSON string,
+        /// so it is escaped first to keep characters such as '+' and '%' literal.
+        /// </summary>
+        public static string BuildFilterQueryString(string filter)
+        {
+            return $"?{RequestParser.FILTER_URL}={Uri.EscapeDataString(filter)}";
+        }
+
         /// <summary>
         /// Parses only the entity name from arguments.
         /// </summary>

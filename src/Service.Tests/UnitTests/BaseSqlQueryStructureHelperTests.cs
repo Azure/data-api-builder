@@ -7,6 +7,7 @@ using System.Reflection;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -195,6 +196,68 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(1, structure.Predicates.Count);
             Assert.AreEqual(expectedSourceColumn, structure.Predicates[0].Left!.AsColumn()!.ColumnName);
             Assert.AreEqual("id", structure.Predicates[0].Right.AsColumn()!.ColumnName);
+        }
+
+        /// <summary>
+        /// Regression test for #2223: when an entity has two relationships to the same target entity
+        /// through different linking objects, only the requested relationship's linking object is joined.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("author", "book_authors", "author_id", DisplayName = "First relationship joins only its own linking object")]
+        [DataRow("editor", "book_editors", "editor_id", DisplayName = "Second relationship joins only its own linking object")]
+        public void AddJoinPredicatesForRelationship_MultipleLinkingObjectsToSameTarget_UsesOnlyRequestedRelationship(
+            string relationshipName,
+            string expectedLinkingTable,
+            string expectedLinkingTargetColumn)
+        {
+            (TestSqlQueryStructure structure, Mock<ISqlMetadataProvider> metadata) = CreateStructure(EntitySourceType.Table, false);
+            DatabaseTable relatedTable = new("dbo", "authors") { TableDefinition = new SourceDefinition() };
+            metadata.SetupGet(x => x.EntityToDatabaseObject).Returns(new Dictionary<string, DatabaseObject>
+            {
+                ["Book"] = structure.DatabaseObject,
+                ["Author"] = relatedTable
+            });
+            metadata.Setup(x => x.GetSourceDefinition("Author")).Returns(relatedTable.TableDefinition);
+
+            ForeignKeyDefinition CreateFk(string name, DatabaseTable linkingTable, DatabaseTable referencedTable, string linkingColumn) => new()
+            {
+                SourceEntityName = "Book",
+                RelationshipName = name,
+                ReferencingEntityRole = RelationshipRole.Linking,
+                ReferencedEntityRole = referencedTable == relatedTable ? RelationshipRole.Target : RelationshipRole.Source,
+                Pair = new(name, linkingTable, referencedTable),
+                ReferencingColumns = new() { linkingColumn },
+                ReferencedColumns = new() { "id" }
+            };
+
+            DatabaseTable bookAuthors = new("dbo", "book_authors");
+            DatabaseTable bookEditors = new("dbo", "book_editors");
+            RelationshipMetadata relationshipMetadata = new();
+            relationshipMetadata.TargetEntityToFkDefinitionMap["Author"] = new()
+            {
+                CreateFk("author", bookAuthors, (DatabaseTable)structure.DatabaseObject, "book_id"),
+                CreateFk("author", bookAuthors, relatedTable, "author_id"),
+                CreateFk("editor", bookEditors, (DatabaseTable)structure.DatabaseObject, "book_id"),
+                CreateFk("editor", bookEditors, relatedTable, "editor_id")
+            };
+            structure.DatabaseObject.SourceDefinition.SourceEntityRelationshipMap["Book"] = relationshipMetadata;
+
+            structure.AddJoinPredicatesForRelationship(
+                new EntityRelationshipKey("Book", relationshipName), "Author", "table1", structure);
+
+            Assert.AreEqual(1, structure.Joins.Count);
+            SqlJoinStructure join = structure.Joins[0];
+            Assert.AreEqual(expectedLinkingTable, join.DbObject.Name);
+            Assert.AreEqual(1, join.Predicates.Count);
+            Assert.AreEqual(expectedLinkingTargetColumn, join.Predicates[0].Left!.AsColumn()!.ColumnName);
+            Assert.AreEqual("table1", join.Predicates[0].Right.AsColumn()!.TableAlias);
+
+            // The linking object's correlation to the parent entity is kept.
+            Assert.AreEqual(1, structure.Predicates.Count);
+            Column linkingSourceColumn = structure.Predicates[0].Left!.AsColumn()!;
+            Assert.AreEqual("book_id", linkingSourceColumn.ColumnName);
+            Assert.AreEqual(join.TableAlias, linkingSourceColumn.TableAlias);
+            Assert.AreEqual(structure.SourceAlias, structure.Predicates[0].Right.AsColumn()!.TableAlias);
         }
 
         [TestMethod]

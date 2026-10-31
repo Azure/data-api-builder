@@ -147,7 +147,54 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             metadata.Setup(x => x.GetSourceDefinition("Author")).Returns(relatedTable.TableDefinition);
 
             Assert.ThrowsException<DataApiBuilderException>(() =>
-                structure.AddJoinPredicatesForRelatedEntity("Author", "table1", structure));
+                structure.AddJoinPredicatesForRelatedEntity("Author", "author", "table1", structure));
+        }
+
+        /// <summary>
+        /// Regression test for #3849: when an entity has two relationships to the same target entity,
+        /// only the foreign key of the requested relationship is used for the join.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("author", "author_id", DisplayName = "First relationship uses only its own source field")]
+        [DataRow("editor", "editor_id", DisplayName = "Second relationship uses only its own source field")]
+        public void AddJoinPredicatesForRelationship_MultipleRelationshipsToSameTarget_UsesOnlyRequestedRelationship(
+            string relationshipName,
+            string expectedSourceColumn)
+        {
+            (TestSqlQueryStructure structure, Mock<ISqlMetadataProvider> metadata) = CreateStructure(EntitySourceType.Table, false);
+            DatabaseTable relatedTable = new("dbo", "authors") { TableDefinition = new SourceDefinition() };
+            metadata.SetupGet(x => x.EntityToDatabaseObject).Returns(new Dictionary<string, DatabaseObject>
+            {
+                ["Book"] = structure.DatabaseObject,
+                ["Author"] = relatedTable
+            });
+            metadata.Setup(x => x.GetSourceDefinition("Author")).Returns(relatedTable.TableDefinition);
+
+            ForeignKeyDefinition CreateFk(string name, string sourceColumn) => new()
+            {
+                SourceEntityName = "Book",
+                RelationshipName = name,
+                ReferencingEntityRole = RelationshipRole.Source,
+                ReferencedEntityRole = RelationshipRole.Target,
+                Pair = new(name, (DatabaseTable)structure.DatabaseObject, relatedTable),
+                ReferencingColumns = new() { sourceColumn },
+                ReferencedColumns = new() { "id" }
+            };
+
+            RelationshipMetadata relationshipMetadata = new();
+            relationshipMetadata.TargetEntityToFkDefinitionMap["Author"] = new()
+            {
+                CreateFk("author", "author_id"),
+                CreateFk("editor", "editor_id")
+            };
+            structure.DatabaseObject.SourceDefinition.SourceEntityRelationshipMap["Book"] = relationshipMetadata;
+
+            structure.AddJoinPredicatesForRelationship(
+                new EntityRelationshipKey("Book", relationshipName), "Author", "table1", structure);
+
+            Assert.AreEqual(1, structure.Predicates.Count);
+            Assert.AreEqual(expectedSourceColumn, structure.Predicates[0].Left!.AsColumn()!.ColumnName);
+            Assert.AreEqual("id", structure.Predicates[0].Right.AsColumn()!.ColumnName);
         }
 
         [TestMethod]

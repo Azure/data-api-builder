@@ -197,6 +197,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 AddJoinPredicatesForRelatedEntity(
                     targetEntityName: targetEntityName,
+                    relationshipName: fkLookupKey.RelationshipName,
                     relatedSourceAlias: subqueryTargetTableAlias,
                     subQuery: subQuery);
             }
@@ -254,10 +255,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
         /// </summary>
         /// <param name="targetEntityName">Entity name as in config file for the related entity.</param>
+        /// <param name="relationshipName">Name of the relationship, as in config file, between this entity and the related entity.</param>
         /// <param name="relatedSourceAlias">The alias assigned for the underlying source of this related entity.</param>
         /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
         public void AddJoinPredicatesForRelatedEntity(
             string targetEntityName,
+            string relationshipName,
             string relatedSourceAlias,
             BaseSqlQueryStructure subQuery)
         {
@@ -285,6 +288,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // before adding the predicates.
                 foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
                 {
+                    // This entity may define multiple relationships to the same target entity,
+                    // so skip the fk definitions belonging to its other relationships.
+                    if (foreignKeyDefinition.SourceEntityName == EntityName
+                        && foreignKeyDefinition.RelationshipName != relationshipName)
+                    {
+                        continue;
+                    }
+
                     // First identify which side of the relationship, this fk definition
                     // is looking at.
                     if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(DatabaseObject))

@@ -1036,8 +1036,8 @@ public class RuntimeConfigLoaderTests
         try
         {
             Console.SetOut(writer);
-            FileSystemRuntimeConfigLoader loader = new(new FileSystem(), handler: null, baseConfigFilePath: CONFIG_FILE_NAME);
-            RuntimeConfigProvider provider = new(loader);
+            using FileSystemRuntimeConfigLoader loader = new(new FileSystem(), handler: null, baseConfigFilePath: CONFIG_FILE_NAME);
+            using RuntimeConfigProvider provider = new(loader);
             provider.GetConfig();
             loader.IsNewConfigDetected = true;
 

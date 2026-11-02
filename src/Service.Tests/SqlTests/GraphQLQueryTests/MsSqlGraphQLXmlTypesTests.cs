@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string graphQLQueryName = "xmlProfiles";
             string graphQLQuery = @"{
-                xmlProfiles(orderBy: { id: ASC }) {
+                xmlProfiles(filter: { id: { gte: 1, lte: 4 } }, orderBy: { id: ASC }) {
                     items {
                         id
                         content
@@ -116,13 +116,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement created = await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false);
 
             int newId = created.GetProperty("id").GetInt32();
-            AssertXmlWithId(ContentOf(created), "200");
-
-            // Confirm the value was persisted by reading it back.
-            JsonElement readBack = await GetRecordByPkAsync(newId);
-            AssertXmlWithId(ContentOf(readBack), "200");
-
-            await DeleteXmlProfileAsync(newId);
+            try
+            {
+                AssertXmlWithId(ContentOf(created), "200");
+                JsonElement readBack = await GetRecordByPkAsync(newId);
+                Assert.AreEqual(ContentOf(created), ContentOf(readBack));
+                AssertXmlWithId(ContentOf(readBack), "200");
+            }
+            finally
+            {
+                await DeleteXmlProfileAsync(newId);
+            }
         }
 
         /// <summary>
@@ -142,12 +146,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement created = await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false);
 
             int newId = created.GetProperty("id").GetInt32();
-            Assert.AreEqual(JsonValueKind.Null, created.GetProperty("content").ValueKind);
-
-            JsonElement readBack = await GetRecordByPkAsync(newId);
-            Assert.AreEqual(JsonValueKind.Null, readBack.GetProperty("content").ValueKind);
-
-            await DeleteXmlProfileAsync(newId);
+            try
+            {
+                Assert.AreEqual(JsonValueKind.Null, created.GetProperty("content").ValueKind);
+                JsonElement readBack = await GetRecordByPkAsync(newId);
+                Assert.AreEqual(JsonValueKind.Null, readBack.GetProperty("content").ValueKind);
+            }
+            finally
+            {
+                await DeleteXmlProfileAsync(newId);
+            }
         }
 
         /// <summary>
@@ -157,9 +165,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task UpdateXmlType()
         {
+            JsonElement created = await ExecuteGraphQLRequestAsync(
+                "mutation { createXmlProfile(item: { content: \"<fixture/>\" }) { id } }",
+                "createXmlProfile", isAuthenticated: false);
+            int id = created.GetProperty("id").GetInt32();
             string updateMutationName = "updateXmlProfile";
             string updateMutation = @"mutation {
-                updateXmlProfile(id: 1, item: { content: ""<order id=\""999\""><item>Updated</item></order>"" }) {
+                updateXmlProfile(id: " + id + @", item: { content: ""<order id=\""999\""><item>Updated</item></order>"" }) {
                     id
                     content
                 }
@@ -168,22 +180,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             try
             {
                 JsonElement updated = await ExecuteGraphQLRequestAsync(updateMutation, updateMutationName, isAuthenticated: false);
-                Assert.AreEqual(1, updated.GetProperty("id").GetInt32());
+                Assert.AreEqual(id, updated.GetProperty("id").GetInt32());
                 AssertXmlWithId(ContentOf(updated), "999");
 
-                JsonElement readBack = await GetRecordByPkAsync(1);
+                JsonElement readBack = await GetRecordByPkAsync(id);
+                Assert.AreEqual(ContentOf(updated), ContentOf(readBack));
                 AssertXmlWithId(ContentOf(readBack), "999");
             }
             finally
             {
-                // Restore original value so shared row 1 is left intact for other tests.
-                string restoreMutation = @"mutation {
-                    updateXmlProfile(id: 1, item: { content: ""<order id=\""100\""><item>Book</item><qty>2</qty></order>"" }) {
-                        id
-                        content
-                    }
-                }";
-                await ExecuteGraphQLRequestAsync(restoreMutation, updateMutationName, isAuthenticated: false);
+                await DeleteXmlProfileAsync(id);
             }
         }
 
@@ -204,10 +210,41 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             JsonElement result = await ExecuteGraphQLRequestAsync(createMutation, createMutationName, isAuthenticated: false, expectsError: true);
 
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: "DatabaseInputError");
         }
 
         #endregion
+
+        [DataTestMethod]
+        [DataRow("<order id=\"200\"><item/></order>", false)]
+        [DataRow("<order><item></order>", true)]
+        public async Task StoredProcedureXmlParameterAndResult(string xml, bool expectsError)
+        {
+            string query = "{ executeEchoXml(doc: " + JsonSerializer.Serialize(xml) + ") { content } }";
+            JsonElement result = await ExecuteGraphQLRequestAsync(query, "executeEchoXml",
+                isAuthenticated: false, expectsError: expectsError);
+            if (expectsError)
+            {
+                TestForErrorInGraphQLResponse(result.ToString(), statusCode: "DatabaseInputError");
+            }
+            else
+            {
+                Assert.AreEqual(1, result.GetArrayLength());
+                AssertXmlContent(result[0], xml, "content");
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow("filter: { content: { eq: \"<order/>\" } }")]
+        [DataRow("filter: { content: { contains: \"order\" } }")]
+        [DataRow("orderBy: { content: ASC }")]
+        public async Task UnsupportedXmlOperationsReturnInputError(string arguments)
+        {
+            JsonElement result = await ExecuteGraphQLRequestAsync(
+                "{ xmlProfiles(" + arguments + ") { items { id } } }", "xmlProfiles",
+                isAuthenticated: false, expectsError: true);
+            TestForErrorInGraphQLResponse(result.ToString(), statusCode: "DatabaseInputError");
+        }
 
         #region Helpers
 

@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             JsonElement records = await ReadXmlAsync($"id eq {id}");
             Assert.AreEqual(1, records.GetArrayLength());
-            AssertXmlContent(records[0], expectedXml);
+            AssertXmlContent(records[0], expectedXml, "content");
         }
 
         /// <summary>Verifies an MCP collection returns valid XML strings.</summary>
@@ -80,8 +80,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             int id = created.GetProperty("id").GetInt32();
             try
             {
-                AssertXmlContent(created, xml);
-                AssertXmlContent((await ReadXmlAsync($"id eq {id}"))[0], xml);
+                AssertXmlContent(created, xml, "content");
+                AssertXmlContent((await ReadXmlAsync($"id eq {id}"))[0], xml, "content");
             }
             finally
             {
@@ -105,8 +105,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             {
                 CallToolResult result = await UpdateXmlAsync(id, xml);
                 AssertSuccess(result, "Updating XML content should succeed.");
-                AssertXmlContent(ParseResultRoot(result).GetProperty("result"), xml);
-                AssertXmlContent((await ReadXmlAsync($"id eq {id}"))[0], xml);
+                AssertXmlContent(ParseResultRoot(result).GetProperty("result"), xml, "content");
+                AssertXmlContent((await ReadXmlAsync($"id eq {id}"))[0], xml, "content");
             }
             finally
             {
@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow("<order id=unquoted></order>", DisplayName = "Reject XML creation with an unquoted attribute")]
         public async Task CreateMalformedXml_ReturnsError(string xml)
         {
-            AssertError(await CreateXmlAsync(xml));
+            AssertError(await CreateXmlAsync(xml), "DatabaseInputError");
         }
 
         /// <summary>Verifies rejected malformed XML updates leave the stored content unchanged.</summary>
@@ -134,8 +134,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             int id = GetRecordsArray(ParseResultRoot(created))[0].GetProperty("id").GetInt32();
             try
             {
-                AssertError(await UpdateXmlAsync(id, xml));
-                AssertXmlContent((await ReadXmlAsync($"id eq {id}"))[0], ORIGINAL_XML);
+                AssertError(await UpdateXmlAsync(id, xml), "DatabaseInputError");
+                AssertXmlContent((await ReadXmlAsync($"id eq {id}"))[0], ORIGINAL_XML, "content");
             }
             finally
             {

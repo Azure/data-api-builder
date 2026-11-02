@@ -83,6 +83,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(9413, DisplayName = "XML parsing error code 9413 (string literal expected) maps to 400")]
         [DataRow(9436, DisplayName = "XML parsing error code 9436 (end tag mismatch) maps to 400")]
         [DataRow(9480, DisplayName = "XML parsing error code 9480 (unsupported xml) maps to 400")]
+        [DataRow(6335)]
+        [DataRow(6359)]
+        [DataRow(6908)]
+        [DataRow(6926)]
+        [DataRow(305)]
+        [DataRow(8116)]
+        [DataRow(8117)]
         public void TestClientInputErrorsMapToBadRequest(int number)
         {
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(CreateMockConfigProvider());
@@ -95,6 +102,36 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(
                 DataApiBuilderException.SubStatusCodes.DatabaseInputError,
                 dbExceptionParser.GetResultSubStatusCodeForException(sqlException));
+        }
+
+        [DataTestMethod]
+        [DataRow(6335)]
+        [DataRow(6359)]
+        [DataRow(6908)]
+        [DataRow(6926)]
+        [DataRow(9413)]
+        [DataRow(9436)]
+        public void XmlErrorsHaveSafeProductionMessage(int number)
+        {
+            MsSqlDbExceptionParser parser = new(CreateMockConfigProvider(HostMode.Production));
+            Assert.AreEqual("Invalid XML value supplied for an xml field.",
+                parser.GetMessage(SqlTestHelper.CreateSqlException(number, "Sensitive database details")));
+        }
+
+        [DataTestMethod]
+        [DataRow(HostMode.Production)]
+        [DataRow(HostMode.Development)]
+        public void XmlEncodingErrorExplainsDeclarationFix(HostMode hostMode)
+        {
+            MsSqlDbExceptionParser parser = new(CreateMockConfigProvider(hostMode));
+            DbException exception = SqlTestHelper.CreateSqlException(9402, "Sensitive database details");
+            string guidance = "XML encoding declaration conflicts with UTF-16 input. Omit the XML encoding declaration or use encoding=\"utf-16\".";
+
+            Assert.AreEqual(hostMode == HostMode.Development ? $"{exception.Message} {guidance}" : guidance,
+                parser.Parse(exception).Message);
+            Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, parser.GetHttpStatusCodeForException(exception));
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.DatabaseInputError,
+                parser.GetResultSubStatusCodeForException(exception));
         }
 
         /// <summary>

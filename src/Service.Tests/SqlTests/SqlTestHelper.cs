@@ -70,22 +70,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         public static XElement AssertXmlWithId(string content, string expectedId)
         {
             XElement root = AssertIsValidXml(content);
-            Assert.AreEqual(expectedId, root.Attribute("id")!.Value);
+            XAttribute id = root.Attribute("id");
+            Assert.IsNotNull(id, "Expected the XML root to have an id attribute.");
+            Assert.AreEqual(expectedId, id.Value);
             return root;
         }
 
-        public static void AssertXmlContent(JsonElement record, string expectedXml)
+        /// <summary>
+        /// Asserts that a JSON field contains the expected XML content or null.
+        /// </summary>
+        public static void AssertXmlContent(JsonElement record, string expectedXml, string fieldName)
         {
-          JsonElement content = record.GetProperty("content");
-          if (expectedXml is null)
-          {
-            Assert.AreEqual(JsonValueKind.Null, content.ValueKind);
-            return;
-          }
+            JsonElement content = record.GetProperty(fieldName);
+            if (expectedXml is null)
+            {
+                Assert.AreEqual(JsonValueKind.Null, content.ValueKind);
+                return;
+            }
 
-          Assert.AreEqual(JsonValueKind.String, content.ValueKind);
-          Assert.IsTrue(XNode.DeepEquals(AssertIsValidXml(expectedXml), AssertIsValidXml(content.GetString()!)),
-            "JSON-decoded XML must preserve elements, text, and quoted attributes.");
+            Assert.AreEqual(JsonValueKind.String, content.ValueKind);
+            Assert.IsTrue(XNode.DeepEquals(AssertIsValidXml(expectedXml), AssertIsValidXml(content.GetString()!)),
+                "JSON-decoded XML must preserve elements, text, and quoted attributes.");
         }
 
         /// <summary>

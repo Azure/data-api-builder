@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -43,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public async Task GetXmlTypeList()
         {
-            HttpResponseMessage response = await HttpClient.GetAsync(XML_TYPE_REST_PATH);
+            HttpResponseMessage response = await HttpClient.GetAsync($"{XML_TYPE_REST_PATH}?$filter=id%20ge%201%20and%20id%20le%204");
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
             JsonElement items = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
@@ -107,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public async Task FilterXmlColumnIsNotNull_Succeeds()
         {
-            HttpResponseMessage response = await HttpClient.GetAsync($"{XML_TYPE_REST_PATH}?$filter=content%20ne%20null");
+            HttpResponseMessage response = await HttpClient.GetAsync($"{XML_TYPE_REST_PATH}?$filter=id%20ge%201%20and%20id%20le%204%20and%20content%20ne%20null");
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, "Filtering an xml column as a string should pass through and succeed.");
 
             JsonElement items = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
@@ -125,26 +126,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         /// </summary>
         [DataTestMethod]
         [DataRow("<order id=\"200\"><item>Pen</item></order>", "200", false, DisplayName = "Insert xml with quoted attribute")]
+        [DataRow("<order id='200'><item></item><qty /></order>", "200", false, DisplayName = "XML serialization is consistent between create and read")]
         [DataRow(null, null, true, DisplayName = "Insert null xml")]
         public async Task InsertXmlType(string xml, string expectedId, bool expectNull)
         {
             HttpResponseMessage postResponse = await HttpClient.PostAsync(XML_TYPE_REST_PATH, XmlBody(xml));
             Assert.AreEqual(HttpStatusCode.Created, postResponse.StatusCode);
 
-            int newId = JsonDocument.Parse(await postResponse.Content.ReadAsStringAsync())
-                .RootElement.GetProperty("value")[0].GetProperty("id").GetInt32();
+            JsonElement created = JsonDocument.Parse(await postResponse.Content.ReadAsStringAsync())
+                .RootElement.GetProperty("value")[0];
+            int newId = created.GetProperty("id").GetInt32();
 
-            JsonElement readBack = await GetRecordByIdAsync(newId);
-            if (expectNull)
+            try
             {
-                Assert.AreEqual(JsonValueKind.Null, readBack.GetProperty("content").ValueKind);
+                JsonElement readBack = await GetRecordByIdAsync(newId);
+                Assert.AreEqual(created.GetProperty("content").ToString(), readBack.GetProperty("content").ToString());
+                if (expectNull)
+                {
+                    Assert.AreEqual(JsonValueKind.Null, readBack.GetProperty("content").ValueKind);
+                }
+                else
+                {
+                    AssertXmlWithId(GetContentString(readBack), expectedId);
+                }
             }
-            else
+            finally
             {
-                AssertXmlWithId(GetContentString(readBack), expectedId);
+                await DeleteXmlProfile(newId);
             }
-
-            await DeleteXmlProfile(newId);
         }
 
         /// <summary>
@@ -153,17 +162,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public async Task PutXmlType_Update()
         {
+            int id = await CreateXmlProfileAsync();
             try
             {
-                HttpResponseMessage response = await PutXmlAsync(1, "<order id=\"999\"><item>Updated</item></order>");
+                HttpResponseMessage response = await PutXmlAsync(id, "<order id=\"999\"><item>Updated</item></order>");
                 Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                AssertXmlWithId(GetContentString(await GetRecordByIdAsync(1)), "999");
+                JsonElement updated = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("value")[0];
+                JsonElement readBack = await GetRecordByIdAsync(id);
+                Assert.AreEqual(GetContentString(updated), GetContentString(readBack));
+                AssertXmlWithId(GetContentString(readBack), "999");
             }
             finally
             {
-                // Restore original value so shared row 1 is left intact for other tests.
-                HttpResponseMessage restore = await PutXmlAsync(1, "<order id=\"100\"><item>Book</item><qty>2</qty></order>");
-                Assert.AreEqual(HttpStatusCode.OK, restore.StatusCode);
+                await DeleteXmlProfile(id);
             }
         }
 
@@ -173,19 +184,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public async Task PatchXmlType_Update()
         {
+            int id = await CreateXmlProfileAsync();
             try
             {
                 HttpResponseMessage response = await HttpClient.PatchAsync(
-                    $"{XML_TYPE_REST_PATH}/id/1",
+                    $"{XML_TYPE_REST_PATH}/id/{id}",
                     XmlBody("<order id=\"555\"><item>Patched</item></order>"));
                 Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                AssertXmlWithId(GetContentString(await GetRecordByIdAsync(1)), "555");
+                JsonElement updated = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("value")[0];
+                JsonElement readBack = await GetRecordByIdAsync(id);
+                Assert.AreEqual(GetContentString(updated), GetContentString(readBack));
+                AssertXmlWithId(GetContentString(readBack), "555");
             }
             finally
             {
-                // Restore original value so shared row 1 is left intact for other tests.
-                HttpResponseMessage restore = await PutXmlAsync(1, "<order id=\"100\"><item>Book</item><qty>2</qty></order>");
-                Assert.AreEqual(HttpStatusCode.OK, restore.StatusCode);
+                await DeleteXmlProfile(id);
             }
         }
 
@@ -195,17 +208,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [TestMethod]
         public async Task PatchXmlType_ToNull()
         {
+            int id = await CreateXmlProfileAsync();
             try
             {
-                HttpResponseMessage response = await HttpClient.PatchAsync($"{XML_TYPE_REST_PATH}/id/2", XmlBody(null));
+                HttpResponseMessage response = await HttpClient.PatchAsync($"{XML_TYPE_REST_PATH}/id/{id}", XmlBody(null));
                 Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(JsonValueKind.Null, (await GetRecordByIdAsync(2)).GetProperty("content").ValueKind);
+                Assert.AreEqual(JsonValueKind.Null, (await GetRecordByIdAsync(id)).GetProperty("content").ValueKind);
             }
             finally
             {
-                // Restore original value so shared row 2 is left intact for other tests.
-                HttpResponseMessage restore = await PutXmlAsync(2, "<config><setting enabled=\"true\" name=\"cache\"/></config>");
-                Assert.AreEqual(HttpStatusCode.OK, restore.StatusCode);
+                await DeleteXmlProfile(id);
             }
         }
 
@@ -217,6 +229,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         [DataTestMethod]
         [DataRow("<order><item>Book</order>", DisplayName = "Mismatched closing tag")]
         [DataRow("<order id=unquoted></order>", DisplayName = "Unquoted attribute")]
+        [DataRow("<!DOCTYPE order [<!ELEMENT order ANY>]><order/>", DisplayName = "Inline DTD")]
+        [DataRow("<?xml version=\"1.0\" encoding=\"utf-8\"?><order/>", DisplayName = "UTF-8 declaration on UTF-16 input")]
         public async Task InsertMalformedXml_ReturnsBadRequest(string xml)
         {
             HttpResponseMessage response = await HttpClient.PostAsync(XML_TYPE_REST_PATH, XmlBody(xml));
@@ -229,7 +243,46 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
 
         #endregion
 
+        [DataTestMethod]
+        [DataRow("<order id=\"200\"><item/></order>", HttpStatusCode.OK)]
+        [DataRow("<order><item></order>", HttpStatusCode.BadRequest)]
+        public async Task StoredProcedureXmlParameterAndResult(string xml, HttpStatusCode expectedStatus)
+        {
+            HttpResponseMessage response = await HttpClient.GetAsync($"api/EchoXml?doc={Uri.EscapeDataString(xml)}");
+            Assert.AreEqual(expectedStatus, response.StatusCode);
+            if (expectedStatus == HttpStatusCode.OK)
+            {
+                JsonElement record = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+                    .RootElement.GetProperty("value")[0];
+                AssertXmlContent(record, xml, "content");
+            }
+            else
+            {
+                JsonElement error = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+                    .RootElement.GetProperty("error");
+                Assert.AreEqual("DatabaseInputError", error.GetProperty("code").GetString());
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow("$filter=content%20eq%20%27%3Corder%2F%3E%27")]
+        [DataRow("$filter=contains(content,%27order%27)")]
+        [DataRow("$orderby=content")]
+        public async Task UnsupportedXmlOperationsReturnBadRequest(string query)
+        {
+            HttpResponseMessage response = await HttpClient.GetAsync($"{XML_TYPE_REST_PATH}?{query}");
+            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
         #region Helpers
+
+        private static async Task<int> CreateXmlProfileAsync()
+        {
+            HttpResponseMessage response = await HttpClient.PostAsync(XML_TYPE_REST_PATH, XmlBody("<fixture/>"));
+            Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+            return JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+                .RootElement.GetProperty("value")[0].GetProperty("id").GetInt32();
+        }
 
         /// <summary>
         /// DELETE /api/XmlProfile/id/{id} - Verify a record can be deleted.

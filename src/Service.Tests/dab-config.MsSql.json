@@ -3238,6 +3238,36 @@
         }
       }
     },
+    "EchoXml": {
+      "source": {
+        "object": "echo_xml",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "query",
+        "type": {
+          "singular": "EchoXml",
+          "plural": "EchoXml"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
     "GetBooks": {
       "source": {
         "object": "get_books",

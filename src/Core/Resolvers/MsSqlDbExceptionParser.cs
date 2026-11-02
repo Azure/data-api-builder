@@ -22,6 +22,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 "157", "158", "169",
                 "201", // Procedure or function '%.*ls' expects parameter '%.*ls', which was not supplied.
+                "305", "8116", "8117",
                 "404", "412", "414", "415",
                 "489", "513", "515", "544", "545", "547",
                 "550", "611", "681", "1060", "4005", "4006",
@@ -36,12 +37,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "13608", "13609", "13610", "13611", "13612", "13613", "13614"
             });
 
-            // XML parsing/validation errors (SQL Server message range 9400-9480). Malformed XML supplied
+            // XML parsing errors (SQL Server message range 9400-9480). Malformed XML supplied
             // for an xml column is a client input error, mapped to HTTP 400 (mirrors the json handling above).
             for (int xmlParsingErrorCode = 9400; xmlParsingErrorCode <= 9480; xmlParsingErrorCode++)
             {
                 BadRequestExceptionCodes.Add(xmlParsingErrorCode.ToString());
+                _errorMessages.Add(xmlParsingErrorCode, "Invalid XML value supplied for an xml field.");
             }
+
+            foreach (int xmlInputErrorCode in new[] { 6335, 6359, 6908, 6926 })
+            {
+                BadRequestExceptionCodes.Add(xmlInputErrorCode.ToString());
+                _errorMessages.Add(xmlInputErrorCode, "Invalid XML value supplied for an xml field.");
+            }
+
+            _errorMessages[9402] = "XML encoding declaration conflicts with UTF-16 input. Omit the XML encoding declaration or use encoding=\"utf-16\".";
 
             TransientExceptionCodes.UnionWith(new List<string>
             {
@@ -105,7 +115,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // XML parsing errors (9400-9480) and SQL Server 2025+ JSON validation errors (13608-13614)
             // are also client input errors.
             // Pending revisions of error code classifications, this is a temporary fix to determine substatus code.
-            if (errorCode is 201 or (>= 9400 and <= 9480) or (>= 13608 and <= 13614))
+            if (errorCode is 201 or 305 or 8116 or 8117 or 6335 or 6359 or 6908 or 6926 or (>= 9400 and <= 9480) or (>= 13608 and <= 13614))
             {
                 return DataApiBuilderException.SubStatusCodes.DatabaseInputError;
             }
@@ -125,12 +135,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>Error message returned to client.</returns>
         public override string GetMessage(DbException e)
         {
+            int errorCode = ((SqlException)e).Number;
             if (_developerMode)
             {
-                return e.Message;
+                return errorCode == 9402 ? $"{e.Message} {_errorMessages[errorCode]}" : e.Message;
             }
 
-            int errorCode = ((SqlException)e).Number;
             return _errorMessages.ContainsKey(errorCode) ? _errorMessages[errorCode] : GENERIC_DB_EXCEPTION_MESSAGE;
         }
     }

@@ -929,12 +929,7 @@
             Role: test_role_with_excluded_fields_on_mutation,
             Actions: [
               {
-                Action: Update,
-                Fields: {
-                  Exclude: [
-                    publisher_id
-                  ]
-                }
+                Action: Read
               },
               {
                 Action: Create,
@@ -945,7 +940,12 @@
                 }
               },
               {
-                Action: Read
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    publisher_id
+                  ]
+                }
               },
               {
                 Action: Delete
@@ -1640,12 +1640,7 @@
             Role: test_role_with_excluded_fields_on_mutation,
             Actions: [
               {
-                Action: Update,
-                Fields: {
-                  Exclude: [
-                    username
-                  ]
-                }
+                Action: Read
               },
               {
                 Action: Create,
@@ -1656,7 +1651,12 @@
                 }
               },
               {
-                Action: Read
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    username
+                  ]
+                }
               },
               {
                 Action: Delete
@@ -1919,6 +1919,58 @@
         GraphQL: {
           Singular: Profile,
           Plural: Profiles,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Update
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Update
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      XmlProfile: {
+        Source: {
+          Object: xml_profiles,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: XmlProfile,
+          Plural: XmlProfiles,
           Enabled: true
         },
         Rest: {
@@ -3054,6 +3106,36 @@
             ]
           }
         }
+      }
+    },
+    {
+      EchoXml: {
+        Source: {
+          Object: echo_xml,
+          Type: stored-procedure
+        },
+        GraphQL: {
+          Singular: EchoXml,
+          Plural: EchoXml,
+          Enabled: true,
+          Operation: Query
+        },
+        Rest: {
+          Methods: [
+            Get
+          ],
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Execute
+              }
+            ]
+          }
+        ]
       }
     },
     {

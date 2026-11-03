@@ -249,16 +249,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         public async Task StoredProcedureXmlParameterAndResult(string xml, HttpStatusCode expectedStatus)
         {
             HttpResponseMessage response = await HttpClient.GetAsync($"api/EchoXml?doc={Uri.EscapeDataString(xml)}");
-            Assert.AreEqual(expectedStatus, response.StatusCode);
+            string responseBody = await response.Content.ReadAsStringAsync();
+            Assert.AreEqual(expectedStatus, response.StatusCode, responseBody);
             if (expectedStatus == HttpStatusCode.OK)
             {
-                JsonElement record = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+                JsonElement record = JsonDocument.Parse(responseBody)
                     .RootElement.GetProperty("value")[0];
                 AssertXmlContent(record, xml, "content");
             }
             else
             {
-                JsonElement error = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
+                JsonElement error = JsonDocument.Parse(responseBody)
                     .RootElement.GetProperty("error");
                 Assert.AreEqual("DatabaseInputError", error.GetProperty("code").GetString());
             }

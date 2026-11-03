@@ -23,6 +23,8 @@
       <PackageReference Include="System.IO.Abstractions" />
       <PackageReference Include="System.Drawing.Common" />
       <PackageReference Include="Microsoft.Data.SqlClient" />
+      <!-- Override the vulnerable Pkcs pulled in by Microsoft.Data.SqlClient (see Directory.Packages.props). -->
+      <PackageReference Include="System.Security.Cryptography.Pkcs" />
       <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
       <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
       <PackageReference Include="Humanizer" />

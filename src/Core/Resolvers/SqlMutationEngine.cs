@@ -467,8 +467,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>IActionResult</returns>
         public async Task<IActionResult?> ExecuteAsync(RestRequestContext context)
         {
-            // for REST API scenarios, use the default datasource
-            string dataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(context.EntityName);
 
             Dictionary<string, object?> parameters = PrepareParameters(context);
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);

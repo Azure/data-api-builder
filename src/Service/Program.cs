@@ -424,9 +424,9 @@ namespace Azure.DataApiBuilder.Service
                             logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Startup.OpenTelemetryOptions.ServiceName!));
                             logging.AddOtlpExporter(configure =>
                             {
-                                configure.Endpoint = otlpEndpoint;
+                                configure.Endpoint = Startup.GetOtlpSignalEndpoint(otlpEndpoint, Startup.OpenTelemetryOptions.ExporterProtocol, "v1/logs");
                                 configure.Headers = Startup.OpenTelemetryOptions.Headers;
-                                configure.Protocol = OtlpExportProtocol.Grpc;
+                                configure.Protocol = Startup.OpenTelemetryOptions.ExporterProtocol ?? OtlpExportProtocol.Grpc;
                             });
                         });
                     }

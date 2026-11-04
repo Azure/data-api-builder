@@ -103,6 +103,30 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         }
 
         /// <summary>
+        /// Normalizes a stored procedure result to an array, unwrapping the DAB response envelope when present.
+        /// </summary>
+        public static JsonElement NormalizeStoredProcedureResult(object value)
+        {
+            JsonElement result = value switch
+            {
+                JsonDocument document => document.RootElement,
+                JsonElement element => element,
+                _ => JsonSerializer.SerializeToElement(value)
+            };
+
+            if (result.ValueKind == JsonValueKind.Object &&
+                result.TryGetProperty("value", out JsonElement valueArray) &&
+                valueArray.ValueKind == JsonValueKind.Array)
+            {
+                return valueArray.Clone();
+            }
+
+            return result.ValueKind == JsonValueKind.Array
+                ? result.Clone()
+                : JsonSerializer.SerializeToElement(new[] { result });
+        }
+
+        /// <summary>
         /// Extracts value from a JsonElement.
         /// </summary>
         public static object? GetJsonValue(JsonElement element)

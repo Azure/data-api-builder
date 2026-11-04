@@ -383,7 +383,8 @@ public class RuntimeConfigProvider : IDisposable
         {
             Console.WriteLine("Validating hot-reloaded configuration file.");
             IFileSystem fileSystem = new FileSystem();
-            ILoggerFactory loggerFactory = new LoggerFactory();
+            // Use a console logger so the specific validation errors are surfaced to the user instead of being discarded.
+            using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
             ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(this, fileSystem, logger, true);
 

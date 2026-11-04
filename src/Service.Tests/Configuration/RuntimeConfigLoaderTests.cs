@@ -12,7 +12,9 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Product;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -1004,5 +1006,49 @@ public class RuntimeConfigLoaderTests
         FileSystemRuntimeConfigLoader loader = new(fs);
         Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig config), "Config should load successfully.");
         return config;
+    }
+
+    /// <summary>
+    /// When hot-reload validation fails, the specific validation errors must be written to the console
+    /// rather than only the generic "Failed validation of configuration file." message.
+    /// Regression test for https://github.com/Azure/data-api-builder/issues/2666
+    /// </summary>
+    [TestMethod]
+    public void HotReloadValidationFailure_LogsSpecificValidationErrors()
+    {
+        const string CONFIG_FILE_NAME = "hot-reload-validation-errors.dab-config.json";
+        File.WriteAllText(CONFIG_FILE_NAME, @"
+        {
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""Server=127.0.0.1,1;Database=test;Connect Timeout=1;""
+            },
+            ""runtime"": {
+                ""rest"": { ""path"": ""/api"" },
+                ""graphql"": { ""path"": ""/api"" },
+                ""host"": { ""mode"": ""development"" }
+            },
+            ""entities"": {}
+        }");
+
+        TextWriter originalOut = Console.Out;
+        StringWriter writer = new();
+        try
+        {
+            Console.SetOut(writer);
+            using FileSystemRuntimeConfigLoader loader = new(new FileSystem(), handler: null, baseConfigFilePath: CONFIG_FILE_NAME);
+            using RuntimeConfigProvider provider = new(loader);
+            provider.GetConfig();
+            loader.IsNewConfigDetected = true;
+
+            Assert.ThrowsException<DataApiBuilderException>(provider.ValidateConfig);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            File.Delete(CONFIG_FILE_NAME);
+        }
+
+        StringAssert.Contains(writer.ToString(), "Conflicting path configuration between GraphQL, REST, and MCP.");
     }
 }

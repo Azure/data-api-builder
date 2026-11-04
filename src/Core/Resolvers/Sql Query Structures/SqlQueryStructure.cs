@@ -775,14 +775,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         .First();
 
                     AddGraphQLFields(fragmentDocumentNode.SelectionSet.Selections, runtimeConfigProvider);
-                    return;
+                    continue;
                 }
 
                 if (node.Kind == SyntaxKind.InlineFragment)
                 {
                     InlineFragmentNode inlineFragment = (InlineFragmentNode)node;
                     AddGraphQLFields(inlineFragment.SelectionSet.Selections, runtimeConfigProvider);
-                    return;
+                    continue;
                 }
 
                 if (node.Kind != SyntaxKind.Field)

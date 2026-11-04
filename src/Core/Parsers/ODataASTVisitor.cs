@@ -34,6 +34,8 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <returns>String concatenation of (left op right).</returns>
         public override string Visit(BinaryOperatorNode nodeIn)
         {
+            ODataStringFunctionHelper.ThrowIfFunctionIsCompared(nodeIn);
+
             // In order traversal but add parens to maintain order of logical operations
             string left = nodeIn.Left.Accept(this);
             string right = nodeIn.Right.Accept(this);
@@ -107,6 +109,23 @@ namespace Azure.DataApiBuilder.Core.Parsers
         {
             // call accept on source to keep traversing AST.
             return nodeIn.Source.Accept(this);
+        }
+
+        /// <summary>
+        /// Represents visiting a SingleValueFunctionCallNode for the string functions
+        /// contains, startswith and endswith. These are translated to a LIKE predicate whose
+        /// pattern is a single parameter, with LIKE wildcards in the search value escaped.
+        /// </summary>
+        /// <param name="nodeIn">The node visited.</param>
+        /// <returns>String representing the LIKE predicate.</returns>
+        public override string Visit(SingleValueFunctionCallNode nodeIn)
+        {
+            (SingleValuePropertyAccessNode field, string value) = ODataStringFunctionHelper.GetFieldAndValue(nodeIn);
+            string column = field.Accept(this);
+            _metadataProvider.TryGetBackingColumn(_struct.EntityName, field.Property.Name, out string? backingColumnName);
+            string pattern = ODataStringFunctionHelper.GetLikePattern(nodeIn.Name, value);
+            string param = _struct.MakeDbConnectionParam(pattern, backingColumnName, lengthOverride: true);
+            return $"({column} LIKE {param})";
         }
 
         ///<summary>

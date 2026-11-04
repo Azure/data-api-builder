@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
 
             // Predicates by virtue of database policy for Create action.
-            string dbPolicypredicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
+            string dbPolicypredicates = AddEscapeToLikeClauses(JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create)));
 
             // Columns whose values are provided in the request body - to be inserted into the record.
             string insertColumns = Build(structure.InsertColumns);
@@ -217,9 +217,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             SourceDefinition sourceDefinition = structure.GetUnderlyingSourceDefinition();
             bool isUpdateTriggerEnabled = sourceDefinition.IsUpdateDMLTriggerEnabled;
             string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
-            string predicates = JoinPredicateStrings(
+            string predicates = AddEscapeToLikeClauses(JoinPredicateStrings(
                                    structure.GetDbPolicyForOperation(EntityActionOperation.Update),
-                                   Build(structure.Predicates));
+                                   Build(structure.Predicates)));
             string columnsToBeReturned =
                 MakeOutputColumns(structure.OutputColumns, isUpdateTriggerEnabled ? string.Empty : OutputQualifier.Inserted.ToString());
 
@@ -254,9 +254,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string Build(SqlDeleteStructure structure)
         {
-            string predicates = JoinPredicateStrings(
+            string predicates = AddEscapeToLikeClauses(JoinPredicateStrings(
                        structure.GetDbPolicyForOperation(EntityActionOperation.Delete),
-                       Build(structure.Predicates));
+                       Build(structure.Predicates)));
 
             return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"WHERE {predicates} ";
@@ -280,7 +280,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string pkPredicates = JoinPredicateStrings(Build(structure.Predicates));
 
             // Predicates by virtue of PK + database policy.
-            string updatePredicates = JoinPredicateStrings(pkPredicates, structure.GetDbPolicyForOperation(EntityActionOperation.Update));
+            string updatePredicates = AddEscapeToLikeClauses(JoinPredicateStrings(pkPredicates, structure.GetDbPolicyForOperation(EntityActionOperation.Update)));
 
             string updateOperations = Build(structure.UpdateOperations, ", ");
             string columnsToBeReturned =
@@ -338,7 +338,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string insertColumns = Build(structure.InsertColumns);
 
                 // Predicates added by virtue of database policy for create operation.
-                string createPredicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
+                string createPredicates = AddEscapeToLikeClauses(JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create)));
 
                 // Query to insert record (if there exists none for given PK).
                 StringBuilder insertQuery = new($"INSERT INTO {tableName} ({insertColumns}) ");

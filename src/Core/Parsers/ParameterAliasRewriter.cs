@@ -58,6 +58,15 @@ internal sealed class ParameterAliasRewriter
             ParameterAliasNode aliasNode => RewriteAlias(aliasNode, isPredicate),
             ConstantNode constantNode => NormalizeBooleanPredicate(constantNode, isPredicate),
             SingleValuePropertyAccessNode propertyNode => NormalizeBooleanPredicate(propertyNode, isPredicate),
+            SingleValueFunctionCallNode functionNode => new SingleValueFunctionCallNode(
+                functionNode.Name,
+                functionNode.Parameters
+                    .Select(parameter => parameter is SingleValueNode valueNode
+                        ? RewriteNode(valueNode, isPredicate: false)
+                        : throw new ODataException(
+                            $"Database policy function argument '{parameter.Kind}' is not supported for typed claim binding."))
+                    .ToList(),
+                functionNode.TypeReference),
             _ => throw new ODataException(
                 $"Database policy expression node '{node.Kind}' is not supported for typed claim binding.")
         };
@@ -129,6 +138,7 @@ internal sealed class ParameterAliasRewriter
         {
             BinaryOperatorNode => true,
             UnaryOperatorNode => true,
+            SingleValueFunctionCallNode => true,
             ConvertNode convertNode => IsPredicateExpression(convertNode.Source),
             _ => false
         };

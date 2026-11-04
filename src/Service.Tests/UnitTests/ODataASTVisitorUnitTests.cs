@@ -70,6 +70,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("uuid_types eq 9A19103F-16F7-4668-BE54-9A1E7A4F7556", "([uuid_types] = @param1)", DisplayName = "Equate uuid(guid) types.")]
         [DataRow("time_types eq 10:23:54.9999999", "([time_types] = @param1)", DisplayName = "Equate time types.")]
         [DataRow("time_types eq null", "([time_types] IS NULL)", DisplayName = "Equate time types for null.")]
+        [DataRow("contains(string_types, 'he_l%o')", "([string_types] LIKE @param1)", DisplayName = "Contains string.")]
+        [DataRow("startswith(string_types, 'he')", "([string_types] LIKE @param1)", DisplayName = "Startswith string.")]
+        [DataRow("endswith(string_types, 'lo')", "([string_types] LIKE @param1)", DisplayName = "Endswith string.")]
+        [DataRow("contains(string_types, concat('|', concat('he', '|')))", "([string_types] LIKE @param1)",
+            DisplayName = "Contains concatenated string.")]
         [TestMethod]
         public void VisitorLeftFieldRightConstantFilterTest(string filterExp, string expectedPredicate)
         {

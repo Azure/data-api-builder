@@ -45,6 +45,8 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <returns>String concatenation of (left op right).</returns>
         public override string Visit(BinaryOperatorNode nodeIn)
         {
+            ODataStringFunctionHelper.ThrowIfFunctionIsCompared(nodeIn);
+
             string left = nodeIn.Left.Accept(this);
             string right = nodeIn.Right.Accept(this);
 
@@ -111,6 +113,20 @@ namespace Azure.DataApiBuilder.Core.Parsers
         public override string Visit(ConvertNode nodeIn)
         {
             return nodeIn.Source.Accept(this);
+        }
+
+        /// <summary>
+        /// Represents visiting a SingleValueFunctionCallNode for the string functions
+        /// contains, startswith and endswith, which map to the Cosmos DB functions of the same name.
+        /// </summary>
+        /// <param name="nodeIn">The node visited.</param>
+        /// <returns>String representing the function call.</returns>
+        public override string Visit(SingleValueFunctionCallNode nodeIn)
+        {
+            (SingleValuePropertyAccessNode field, string value) = ODataStringFunctionHelper.GetFieldAndValue(nodeIn);
+            string column = field.Accept(this);
+            string param = _queryStructure.MakeDbConnectionParam(value);
+            return $"{nodeIn.Name.ToUpperInvariant()}({column}, {param})";
         }
 
         /// <summary>

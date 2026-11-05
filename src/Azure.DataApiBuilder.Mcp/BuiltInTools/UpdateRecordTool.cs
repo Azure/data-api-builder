@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -274,6 +275,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             catch (ArgumentException argEx)
             {
                 return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argEx.Message, logger);
+            }
+            catch (DataApiBuilderException ex) when (ex.SubStatusCode == DataApiBuilderException.SubStatusCodes.DatabaseInputError)
+            {
+                return McpResponseBuilder.BuildErrorResult(toolName, nameof(DataApiBuilderException.SubStatusCodes.DatabaseInputError), ex.Message, logger);
             }
             catch (Exception ex)
             {

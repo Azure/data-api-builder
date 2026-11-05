@@ -18,8 +18,10 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -391,6 +393,51 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             reader.Setup(x => x["value"]).Returns(42);
             reader.Setup(x => x.GetFieldType(0)).Returns(typeof(int));
             return reader;
+        }
+
+        [DataTestMethod]
+        [DataRow(true, HostMode.Production, 9402)]
+        [DataRow(false, HostMode.Production, 9402)]
+        [DataRow(true, HostMode.Development, 9402)]
+        [DataRow(false, HostMode.Development, 9402)]
+        [DataRow(true, HostMode.Production, 9413)]
+        [DataRow(false, HostMode.Development, 9413)]
+        public async Task Read_LogsXmlEncodingGuidanceOnlyForEncodingErrors(bool useAsync, HostMode hostMode, int number)
+        {
+            RuntimeConfig config = new(
+                Schema: string.Empty,
+                DataSource: new(DatabaseType.MSSQL, string.Empty),
+                Entities: new(new Dictionary<string, Entity>()),
+                Runtime: new(Rest: new(), GraphQL: new(), Mcp: new(), Host: new(null, null, hostMode)));
+            RuntimeConfigProvider provider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
+            Mock<ILogger<IQueryExecutor>> logger = new();
+            QueryExecutor<SqlConnection> executor = new(new MsSqlDbExceptionParser(provider),
+                logger.Object, provider, new HttpContextAccessor(), handler: null);
+            SqlException exception = SqlTestHelper.CreateSqlException(number, "Original SQL diagnostic");
+            Mock<DbDataReader> reader = new();
+            reader.Setup(instance => instance.Read()).Throws(exception);
+            reader.Setup(instance => instance.ReadAsync(It.IsAny<System.Threading.CancellationToken>())).ThrowsAsync(exception);
+
+            if (useAsync)
+            {
+                await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() => executor.ReadAsync(reader.Object));
+            }
+            else
+            {
+                Assert.ThrowsException<DataApiBuilderException>(() => executor.Read(reader.Object));
+            }
+
+            string logMessage = logger.Invocations.Single(invocation => invocation.Method.Name == nameof(ILogger.Log))
+                .Arguments[2].ToString()!;
+            if (number == 9402)
+            {
+                StringAssert.Contains(logMessage, "Omit the XML encoding declaration or use encoding=\"utf-16\".");
+            }
+            else
+            {
+                StringAssert.Contains(logMessage, exception.Message);
+                Assert.IsFalse(logMessage.Contains("utf-16", StringComparison.Ordinal));
+            }
         }
 
         private static MsSqlQueryExecutor CreateExecutor(bool maxResponseSizeEnabled = false)

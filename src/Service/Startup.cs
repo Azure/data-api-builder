@@ -193,6 +193,9 @@ namespace Azure.DataApiBuilder.Service
                 .WithTracing(tracing =>
                 {
                     tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                    // Creates a server span for every inbound HTTP request (REST, GraphQL, MCP, health)
+                    // and continues the incoming W3C traceparent, so DAB spans are parented correctly.
+                    .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     // TODO: should we also add FusionCache traces?
                     // To do so we just need to add the package ZiggyCreatures.FusionCache.OpenTelemetry and call

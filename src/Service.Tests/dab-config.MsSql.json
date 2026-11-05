@@ -957,7 +957,12 @@
           "role": "test_role_with_excluded_fields_on_mutation",
           "actions": [
             {
-              "action": "read"
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
             },
             {
               "action": "create",
@@ -968,12 +973,7 @@
               }
             },
             {
-              "action": "update",
-              "fields": {
-                "exclude": [
-                  "publisher_id"
-                ]
-              }
+              "action": "read"
             },
             {
               "action": "delete"
@@ -1726,7 +1726,12 @@
           "role": "test_role_with_excluded_fields_on_mutation",
           "actions": [
             {
-              "action": "read"
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "username"
+                ]
+              }
             },
             {
               "action": "create",
@@ -1737,12 +1742,7 @@
               }
             },
             {
-              "action": "update",
-              "fields": {
-                "exclude": [
-                  "username"
-                ]
-              }
+              "action": "read"
             },
             {
               "action": "delete"

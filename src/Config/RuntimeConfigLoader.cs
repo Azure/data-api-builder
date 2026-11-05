@@ -394,6 +394,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new CompressionOptionsConverterFactory());
         options.Converters.Add(new MultipleCreateOptionsConverter());
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
+        options.Converters.Add(new GraphQLCostOptionsConverter());
         options.Converters.Add(new DataSourceConverterFactory(replacementSettings));
         options.Converters.Add(new HostOptionsConvertorFactory());
         options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replacementSettings));

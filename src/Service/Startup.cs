@@ -776,6 +776,28 @@ namespace Azure.DataApiBuilder.Service
                 server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: graphQLRuntimeOptions.DepthLimit.Value, skipIntrospectionFields: true);
             }
 
+            // Hot Chocolate enforces default cost limits unless configured otherwise.
+            // DAB only enforces cost limits when runtime.graphql.cost.enabled is true. Maximums that are not configured
+            // keep the Hot Chocolate defaults.
+            // The settings are read when the executor is created, on the first GraphQL request, and not captured here:
+            // when the runtime config is supplied after startup (POST /configuration) it is not loaded yet at this point.
+            server = server.ModifyCostOptions(options =>
+            {
+                GraphQLCostOptions? costOptions = _configProvider is not null && _configProvider.TryGetConfig(out RuntimeConfig? loadedConfig)
+                    ? loadedConfig.Runtime?.GraphQL?.Cost
+                    : null;
+                options.EnforceCostLimits = costOptions?.Enabled ?? false;
+                if (costOptions?.MaxFieldCost is int maxFieldCost)
+                {
+                    options.MaxFieldCost = maxFieldCost;
+                }
+
+                if (costOptions?.MaxTypeCost is int maxTypeCost)
+                {
+                    options.MaxTypeCost = maxTypeCost;
+                }
+            });
+
             server.AddErrorFilter(error =>
             {
                 if (error.Exception is not null)

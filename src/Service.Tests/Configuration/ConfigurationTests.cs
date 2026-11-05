@@ -5977,6 +5977,114 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// Validates that GraphQL cost limits (runtime.graphql.cost) are only enforced when explicitly enabled.
+        /// A maximum on its own must not be enforced, and no cost configuration must not enforce any limit.
+        /// The low maximum of 1 is below the cost of any request, so it is rejected whenever enforcement is enabled.
+        /// </summary>
+        /// <param name="costEnabled">Value of runtime.graphql.cost.enabled. Null when the cost section is not configured.</param>
+        /// <param name="maxFieldCost">Value of runtime.graphql.cost.max-field-cost.</param>
+        /// <param name="maxTypeCost">Value of runtime.graphql.cost.max-type-cost.</param>
+        /// <param name="expectRejected">Whether the request is expected to be rejected for exceeding the cost limit.</param>
+        [TestCategory(TestCategory.MSSQL)]
+        [DataTestMethod]
+        [DataRow(true, 1, null, true, DisplayName = "Cost limits enabled with a low max field cost: request is rejected.")]
+        [DataRow(true, 1000000, null, false, DisplayName = "Cost limits enabled with a high max field cost: request is allowed.")]
+        [DataRow(true, null, 1, true, DisplayName = "Cost limits enabled with a low max type cost: request is rejected.")]
+        [DataRow(true, null, 1000000, false, DisplayName = "Cost limits enabled with a high max type cost: request is allowed.")]
+        [DataRow(true, 1, 1000000, true, DisplayName = "Cost limits enabled with a low max field cost and a high max type cost: request is rejected.")]
+        [DataRow(true, 1000000, 1, true, DisplayName = "Cost limits enabled with a high max field cost and a low max type cost: request is rejected.")]
+        [DataRow(true, null, null, false, DisplayName = "Cost limits enabled without maximums: the default limits apply and the request is allowed.")]
+        [DataRow(false, 1, 1, false, DisplayName = "Cost limits disabled with low maximums: request is allowed.")]
+        [DataRow(false, null, null, false, DisplayName = "Cost limits disabled without maximums: request is allowed.")]
+        [DataRow(null, null, null, false, DisplayName = "Cost limits not configured: request is allowed.")]
+        public async Task TestGraphQLCostLimitsAreOnlyEnforcedWhenEnabled(bool? costEnabled, int? maxFieldCost, int? maxTypeCost, bool expectRejected)
+        {
+            // Arrange
+            GraphQLCostOptions costOptions = costEnabled is null ? null : new(Enabled: costEnabled.Value, MaxFieldCost: maxFieldCost, MaxTypeCost: maxTypeCost);
+            GraphQLRuntimeOptions graphqlOptions = new(Cost: costOptions);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new(), mcpOptions: new());
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = "{ books { items { id } } }";
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                // Act
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+
+                // Assert
+                if (expectRejected)
+                {
+                    StringAssert.Contains(body, "HC0047", body);
+                }
+                else
+                {
+                    Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode, body);
+                    Assert.IsFalse(body.Contains("HC0047"), body);
+                    Assert.IsFalse(body.Contains("\"errors\""), body);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Validates that GraphQL cost limits are enforced when the runtime config is supplied after startup
+        /// (POST /configuration), not only when it is read from a file at startup.
+        /// The low maximum of 1 is below the cost of any request, so it is rejected whenever enforcement is enabled.
+        /// </summary>
+        /// <param name="configurationEndpoint">The endpoint used to supply the runtime config.</param>
+        [TestCategory(TestCategory.MSSQL)]
+        [DataTestMethod]
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        [DoNotParallelize]
+        public async Task TestGraphQLCostLimitsAreEnforcedWhenConfiguredAfterStartup(string configurationEndpoint)
+        {
+            // Arrange
+            TestHelper.UnsetAllDABEnvironmentVariables();
+
+            GraphQLRuntimeOptions graphqlOptions = new(Cost: new(Enabled: true, MaxFieldCost: 1));
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new(), mcpOptions: new());
+
+            using TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
+            using HttpClient client = server.CreateClient();
+
+            // Act
+            HttpResponseMessage configurationResponse = await client.PostAsync(
+                configurationEndpoint,
+                GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint));
+            Assert.AreEqual(HttpStatusCode.OK, configurationResponse.StatusCode, await configurationResponse.Content.ReadAsStringAsync());
+
+            HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+            {
+                Content = JsonContent.Create(new { query = "{ books { items { id } } }" })
+            };
+            HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+            string body = await graphQLResponse.Content.ReadAsStringAsync();
+
+            // Assert
+            StringAssert.Contains(body, "HC0047", body);
+        }
+
+        /// <summary>
         /// Ensures that autoentities are properly generated into in-memory entities
         /// </summary>
         /// <param name="useEntities">Boolean that indicates if we should also use regular entities from config</param>

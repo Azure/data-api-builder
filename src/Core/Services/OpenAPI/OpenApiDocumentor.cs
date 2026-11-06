@@ -230,7 +230,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 Info = new OpenApiInfo
                 {
                     Version = ProductInfo.GetProductVersion(),
-                    Title = title
+                    Title = title,
+                    Description = runtimeConfig.Runtime?.Mcp?.Description
                 },
                 Servers = new List<OpenApiServer>
                 {

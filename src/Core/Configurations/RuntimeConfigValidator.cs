@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
@@ -464,54 +465,79 @@ public class RuntimeConfigValidator : IConfigValidator
         string configFilePath,
         ILoggerFactory loggerFactory)
     {
-        RuntimeConfig? runtimeConfig;
-
-        if (!_runtimeConfigProvider.TryGetConfig(out runtimeConfig))
+        TelemetryFailureStage stage = TelemetryFailureStage.Parsing;
+        try
         {
-            _logger.LogInformation("Failed to parse the config file");
-            return false;
-        }
+            RuntimeConfig? runtimeConfig;
 
-        JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
-        ValidateConfigProperties();
-        ValidatePermissionsInConfig(runtimeConfig);
-
-        ValidateRelationshipConfigCorrectness(runtimeConfig);
-
-        // This function initializes the metadata providers which in turn validates the connectivity to the
-        // database and also validates all the REST and GraphQL paths as well as the permissions of the entities
-        // that are created from the 'Entities' and 'Autoentities' configuration, including the relationships defined in the config against the database metadata.
-        // Any exceptions caught during this process are added to the ConfigValidationExceptions list and logged at the end of this function.
-        await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
-
-        // Validate entity configuration (root vs non-root rules, entity counts) after autoentity resolution.
-        // Only run when there are no connection string errors, since autoentity resolution requires DB access.
-        if (!ConfigValidationExceptions.Any(x => x.Message.StartsWith(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
-        {
-            // Re-read the config since autoentity resolution may have added new entities.
-            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? updatedConfig) && updatedConfig is not null)
+            if (!_runtimeConfigProvider.TryGetConfig(out runtimeConfig))
             {
-                runtimeConfig = updatedConfig;
+                TelemetryFailureContext.Current?.RecordFailure(stage);
+                _logger.LogInformation("Failed to parse the config file");
+                return false;
             }
 
-            ValidateDataSourceAndEntityPresence(runtimeConfig);
-        }
+            stage = TelemetryFailureStage.Validation;
+            JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
+            ValidateConfigProperties();
+            ValidatePermissionsInConfig(runtimeConfig);
 
-        if (validationResult.IsValid && !ConfigValidationExceptions.Any())
-        {
-            return true;
-        }
-        else
-        {
-            if (!validationResult.IsValid)
+            ValidateRelationshipConfigCorrectness(runtimeConfig);
+            if (!validationResult.IsValid || ConfigValidationExceptions.Count > 0)
             {
-                // log schema validation errors
-                _logger.LogError(validationResult.ErrorMessage);
+                TelemetryFailureContext.Current?.RecordFailure(stage);
             }
 
-            // log config validation errors
-            LogConfigValidationExceptions();
-            return false;
+            // This function initializes the metadata providers which in turn validates the connectivity to the
+            // database and also validates all the REST and GraphQL paths as well as the permissions of the entities
+            // that are created from the 'Entities' and 'Autoentities' configuration, including the relationships defined in the config against the database metadata.
+            // Any exceptions caught during this process are added to the ConfigValidationExceptions list and logged at the end of this function.
+            stage = TelemetryFailureStage.Metadata;
+            int priorErrors = ConfigValidationExceptions.Count;
+            await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
+            if (ConfigValidationExceptions.Count > priorErrors)
+            {
+                // Validate-only metadata reports collected errors as well as thrown failures.
+                // Do not let subsequent successful checks erase the failing boundary.
+                TelemetryFailureContext.Current?.RecordFailure(stage);
+            }
+
+            // Validate entity configuration (root vs non-root rules, entity counts) after autoentity resolution.
+            // Only run when there are no connection string errors, since autoentity resolution requires DB access.
+            stage = TelemetryFailureStage.Validation;
+            if (!ConfigValidationExceptions.Any(x => x.Message.StartsWith(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
+            {
+                // Re-read the config since autoentity resolution may have added new entities.
+                if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? updatedConfig) && updatedConfig is not null)
+                {
+                    runtimeConfig = updatedConfig;
+                }
+
+                ValidateDataSourceAndEntityPresence(runtimeConfig);
+            }
+
+            if (validationResult.IsValid && !ConfigValidationExceptions.Any())
+            {
+                return true;
+            }
+            else
+            {
+                TelemetryFailureContext.Current?.RecordFailure(stage);
+                if (!validationResult.IsValid)
+                {
+                    // log schema validation errors
+                    _logger.LogError(validationResult.ErrorMessage);
+                }
+
+                // log config validation errors
+                LogConfigValidationExceptions();
+                return false;
+            }
+        }
+        catch (Exception)
+        {
+            TelemetryFailureContext.Current?.RecordFailure(stage);
+            throw;
         }
     }
 

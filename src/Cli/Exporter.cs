@@ -6,7 +6,9 @@ using System.Runtime.CompilerServices;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Generator;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Cli.Commands;
+using Cli.Telemetry;
 using HotChocolate.Utilities.Introspection;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
@@ -36,20 +38,28 @@ namespace Cli
         /// <returns>Returns 0 if the export is successful, otherwise returns -1.</returns>
         public static bool Export(ExportOptions options, ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
+            options.TerminalTelemetryResult = null;
+
             // Attempt to locate the runtime configuration file based on CLI options
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader: loader, userProvidedConfigFile: options.Config, runtimeConfigFile: out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader: loader, userProvidedConfigFile: options.Config, runtimeConfigFile: out string runtimeConfigFile,
+                logBuffer: null, telemetry: options.ProductTelemetry))
             {
                 logger.LogError("Failed to find the config file provided, check your options and try again.");
                 return false;
             }
 
+            CliTelemetryHosting.ObserveConfiguration(options.ProductTelemetry, fileSystem, runtimeConfigFile);
+
             // Load the runtime configuration from the file
             DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
             if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 logger.LogError("Failed to read the config file: {0}.", runtimeConfigFile);
                 return false;
             }
+
+            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             // Do not retry if schema generation logic is running
             int retryCount = options.Generate ? COSMOS_DB_RETRY_COUNT : DAB_SERVICE_RETRY_COUNT;
@@ -63,27 +73,40 @@ namespace Cli
                 {
                     try
                     {
-                        ExportGraphQL(options, runtimeConfig, fileSystem, loader, logger).Wait();
+                        Task<CliTelemetryCommandResult> export = ExportGraphQL(options, runtimeConfig, fileSystem, loader, logger);
+                        export.Wait();
+                        if (options.ProductTelemetry is { IsEnabled: true })
+                        {
+                            // This attempt terminates the retry loop. A normal return can mean
+                            // no schema, but keep the existing successful return/diagnostics.
+                            options.TerminalTelemetryResult = export.Result;
+                        }
+
                         isSuccess = true;
                         break;
                     }
-                    catch
+                    catch (Exception exception)
                     {
+                        CliTelemetryHosting.MarkException(options.ProductTelemetry, exception);
                         tries++;
                     }
                 }
 
                 if (tries == retryCount)
                 {
+                    options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ExecutionFailure, CliTelemetryFailureCategory.Execution);
                     logger.LogError("Failed to export GraphQL schema.");
                 }
             }
             else
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Arguments);
                 logger.LogError("Exporting GraphQL schema is not enabled. You need to pass --graphql.");
             }
 
-            _cancellationTokenSource.Cancel();
+            // Tests may own a source for this invocation. The default intentionally retains
+            // the existing static cancellation behavior; this is not a lifecycle fix.
+            (options.ExportCancellationTokenSource ?? _cancellationTokenSource).Cancel();
             return isSuccess;
         }
 
@@ -95,8 +118,8 @@ namespace Cli
         /// <param name="fileSystem">The file system abstraction for handling file operations.</param>
         /// <param name="loader">The loader for runtime configuration files.</param>
         /// <param name="logger">The logger instance for logging information and errors.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        private static async Task ExportGraphQL(
+        /// <returns>The terminal observation if this attempt returns normally; thrown failures remain retryable.</returns>
+        private static async Task<CliTelemetryCommandResult> ExportGraphQL(
             ExportOptions options,
             RuntimeConfig runtimeConfig,
             IFileSystem fileSystem,
@@ -117,27 +140,79 @@ namespace Cli
                     config: options.Config!,
                     mcpStdio: false,
                     mcpRole: null,
-                    logLevelLegacy: null);
-
-                Task dabService = Task.Run(() =>
+                    logLevelLegacy: null)
                 {
-                    _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader, fileSystem);
-                }, _cancellationToken);
+                    ProductTelemetry = options.ProductTelemetry,
+                    ProductTelemetryLaunchSource = CliTelemetryLaunchSource.ExportGraphQL,
+                    EngineLauncher = options.EngineLauncher
+                };
 
-                Exporter exporter = new();
+                // Reserve while the top-level invocation is live, but do not create a launch
+                // identity/event until the helper passes its own preflight. Export does not wait.
+                CliTelemetryLaunchReservation? reservation = options.ProductTelemetry?.ReserveEngineLaunch(CliTelemetryLaunchSource.ExportGraphQL);
+                startOptions.ProductTelemetryLaunchReservation = reservation;
+                Task dabService;
+                try
+                {
+                    dabService = Task.Run(() =>
+                    {
+                        try
+                        {
+                            _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader, fileSystem);
+                        }
+                        catch (Exception exception)
+                        {
+                            CliTelemetryHosting.MarkException(startOptions.ProductTelemetry, exception, CliTelemetryFailureCategory.Initialization);
+                            throw;
+                        }
+                    }, options.ExportCancellationTokenSource?.Token ?? _cancellationToken);
+                }
+                catch
+                {
+                    reservation?.Dispose();
+                    throw;
+                }
+
+                if (reservation is not null)
+                {
+                    // Cleanup belongs to the helper, NOT export's return/failure path. This
+                    // also releases a ticket if Task.Run is canceled before its delegate runs.
+                    _ = ReleaseLaunchReservationAsync(dabService, reservation);
+                }
+
+                Exporter exporter = options.ExporterFactory?.Invoke() ?? new();
                 schemaText = exporter.ExportGraphQLFromDabService(runtimeConfig, logger);
             }
 
             if (string.IsNullOrEmpty(schemaText))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ExecutionFailure, CliTelemetryFailureCategory.Execution);
                 logger.LogError("Generated GraphQL schema is empty. Please ensure data is available to generate the schema.");
-                return;
+                return new(CliTelemetryOutcome.ExecutionFailure, CliTelemetryFailureCategory.Execution);
             }
 
             // Write the schema content to a file
             WriteSchemaFile(options, fileSystem, schemaText, logger);
 
             logger.LogInformation("Schema file exported successfully at {0}", options.OutputDirectory);
+            return new(CliTelemetryOutcome.Success, CliTelemetryFailureCategory.None);
+        }
+
+        private static async Task ReleaseLaunchReservationAsync(Task helper, CliTelemetryLaunchReservation reservation)
+        {
+            try
+            {
+                await helper.ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // Observe telemetry-owned cleanup without changing export's existing result,
+                // retries, cancellation, serving lifetime or exception reporting.
+            }
+            finally
+            {
+                reservation.Dispose();
+            }
         }
 
         /// <summary>
@@ -220,6 +295,7 @@ namespace Cli
             }
             catch (Exception e)
             {
+                CliTelemetryHosting.MarkException(options.ProductTelemetry, e);
                 logger.LogError("Failed to generate schema from Azure Cosmos DB database: {0}", e.Message);
                 logger.LogDebug(e.StackTrace);
                 return string.Empty;
@@ -238,19 +314,28 @@ namespace Cli
 
             if (string.IsNullOrEmpty(content))
             {
+                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ExecutionFailure, CliTelemetryFailureCategory.Execution);
                 logger.LogError("There is nothing to write");
                 return;
             }
 
-            // Ensure the output directory exists
-            if (!fileSystem.Directory.Exists(options.OutputDirectory))
+            try
             {
-                fileSystem.Directory.CreateDirectory(options.OutputDirectory);
-            }
+                // Ensure the output directory exists
+                if (!fileSystem.Directory.Exists(options.OutputDirectory))
+                {
+                    fileSystem.Directory.CreateDirectory(options.OutputDirectory);
+                }
 
-            // Construct the path for the schema file and write the content to it
-            string outputPath = fileSystem.Path.Combine(options.OutputDirectory, options.GraphQLSchemaFile);
-            fileSystem.File.WriteAllText(outputPath, content);
+                // Construct the path for the schema file and write the content to it
+                string outputPath = fileSystem.Path.Combine(options.OutputDirectory, options.GraphQLSchemaFile);
+                fileSystem.File.WriteAllText(outputPath, content);
+            }
+            catch (Exception exception)
+            {
+                CliTelemetryHosting.MarkException(options.ProductTelemetry, exception, CliTelemetryFailureCategory.Storage);
+                throw;
+            }
         }
     }
 }

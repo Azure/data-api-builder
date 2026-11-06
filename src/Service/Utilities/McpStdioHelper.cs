@@ -8,7 +8,10 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Telemetry;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -99,12 +102,26 @@ namespace Azure.DataApiBuilder.Service.Utilities
                 IMcpStdioServer stdio =
                     host.Services.GetRequiredService<IMcpStdioServer>();
 
+                // Stdio never starts the HTTP host. Observe caches, but do not infer readiness
+                // from opening the protocol loop or completing the early initialize handshake.
+                // McpStdioServer owns readiness/failure at its deferred tool initialization.
+                host.Services.GetService<EngineTelemetryHosting>()?.StartAsync(default).GetAwaiter().GetResult();
+
                 stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
 
                 return true;
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException)
             {
+                // Record pre-ready cancellation before finally stops/disables the session.
+                // StartupFailed is a no-op once ready; normal loop cancellation is not a
+                // startup failure. Preserve propagation to Program's existing handler.
+                host.Services.GetService<EngineTelemetrySession>()?.StartupFailed(TelemetryFailureStage.Serving);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                host.Services.GetService<EngineTelemetrySession>()?.StartupFailed(TelemetryFailureStage.Serving);
                 // Mirrors Startup.PerformOnConfigChangeAsync: report and return false instead of letting
                 // the exception escape a method whose contract is a bool, and Program.Main turns that
                 // false into ExitCode -1. Cancellation is left to Program.StartEngine's own handler.
@@ -154,6 +171,7 @@ namespace Azure.DataApiBuilder.Service.Utilities
                     }
                 }
 
+                host.Services.GetService<EngineTelemetrySession>()?.StopAsync().GetAwaiter().GetResult();
                 host.Dispose();
             }
         }

@@ -4,10 +4,12 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Telemetry;
 using Azure.DataApiBuilder.Mcp.Utils;
@@ -343,13 +345,47 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="cancellationToken">Token used to cancel metadata inference and registry refresh.</param>
         private async Task InitializeToolsAsync(CancellationToken cancellationToken)
         {
-            IMetadataProviderFactory metadataProviderFactory =
-                _serviceProvider.GetRequiredService<IMetadataProviderFactory>();
-            await metadataProviderFactory.InitializeAsync(cancellationToken);
+            EngineTelemetrySession? productTelemetry = _serviceProvider.GetService<EngineTelemetrySession>();
+            TelemetryFailureStage stage = TelemetryFailureStage.Metadata;
+            try
+            {
+                IMetadataProviderFactory metadataProviderFactory =
+                    _serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+                await metadataProviderFactory.InitializeAsync(cancellationToken);
 
-            IMcpToolRegistryRefreshService? registryRefreshService =
-                _serviceProvider.GetService<IMcpToolRegistryRefreshService>();
-            registryRefreshService?.EnsureInitialized(cancellationToken);
+                stage = TelemetryFailureStage.Serving;
+                IMcpToolRegistryRefreshService? registryRefreshService =
+                    _serviceProvider.GetService<IMcpToolRegistryRefreshService>();
+                registryRefreshService?.EnsureInitialized(cancellationToken);
+            }
+            catch (Exception)
+            {
+                // The cached initialization task can fault after initialize has already been
+                // acknowledged. Record the actual boundary before RunAsync translates it to a
+                // protocol error, retaining main's task, retry and exception semantics.
+                productTelemetry?.StartupFailed(stage);
+                throw;
+            }
+
+            if (productTelemetry?.IsEnabled == true)
+            {
+                try
+                {
+                    RuntimeConfigProvider? configuration = _serviceProvider.GetService<RuntimeConfigProvider>();
+                    if (configuration?.TryGetLoadedConfig(out RuntimeConfig? config) == true)
+                    {
+                        // Metadata can expand autoentities. Observe the final loaded model only
+                        // after registry publication, before the first list/call is allowed through.
+                        productTelemetry.AcceptConfiguration(config, "startup", configuration.ConfigFilePath);
+                        productTelemetry.MarkHostReady();
+                    }
+                }
+                catch (Exception)
+                {
+                    // Optional observation is not a tool-initialization dependency.
+                    productTelemetry.Disable();
+                }
+            }
         }
 
         /// <summary>
@@ -521,7 +557,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 // helpers that read IHttpContextAccessor will see the role. We also ensure the
                 // Simulator authentication handler can authenticate the user by flowing the
                 // Authorization header commonly used in tests/simulator scenarios.
-                CallToolResult callResult;
                 IConfiguration? configuration = _serviceProvider.GetService<IConfiguration>();
                 string? stdioRole = configuration?.GetValue<string>("MCP:Role");
                 if (!string.IsNullOrWhiteSpace(stdioRole))
@@ -550,8 +585,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     try
                     {
                         // Execute the tool with the scoped service provider so any scoped services resolve correctly.
-                        callResult = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                            tool, toolName!, argsDoc, scopedProvider, ct);
+                        // Product completion must follow the successful stdout write, not just tool execution.
+                        await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                            tool, toolName!, argsDoc, scopedProvider, ct,
+                            writeStdioResponse: result => HandleCallToolAsync(id ?? default, result));
                     }
                     finally
                     {
@@ -564,11 +601,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
                 else
                 {
-                    callResult = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                        tool, toolName!, argsDoc, _serviceProvider, ct);
+                    await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                        tool, toolName!, argsDoc, _serviceProvider, ct,
+                        writeStdioResponse: result => HandleCallToolAsync(id ?? default, result));
                 }
-
-                await HandleCallToolAsync(id ?? default, callResult);
             }
             finally
             {

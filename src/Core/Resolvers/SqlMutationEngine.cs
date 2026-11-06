@@ -464,11 +464,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Executes the REST mutation query and returns IActionResult asynchronously.
         /// </summary>
         /// <param name="context">context of REST mutation request.</param>
+        /// <param name="dataSourceName">Data source the entity belongs to. When empty, the default data source is used.</param>
         /// <returns>IActionResult</returns>
-        public async Task<IActionResult?> ExecuteAsync(RestRequestContext context)
+        public async Task<IActionResult?> ExecuteAsync(RestRequestContext context, string dataSourceName = "")
         {
-            // for REST API scenarios, use the default datasource
-            string dataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+            // Resolve the data source the entity actually belongs to. Falls back to the
+            // default data source only when the caller did not supply one.
+            dataSourceName = GetValidatedDataSourceName(dataSourceName);
 
             Dictionary<string, object?> parameters = PrepareParameters(context);
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);

@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Core.Services
             return context switch
             {
                 StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context, dataSourceName),
-                _ => mutationEngine.ExecuteAsync(context)
+                _ => mutationEngine.ExecuteAsync(context, dataSourceName)
             };
         }
 

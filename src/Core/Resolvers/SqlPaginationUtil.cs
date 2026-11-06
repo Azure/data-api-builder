@@ -520,9 +520,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 case JsonValueKind.Number:
                 {
-                    if (element.TryGetDouble(out double value))
+                    // Prefer Int64 so values beyond IEEE-754 double precision
+                    // (e.g. 19-digit BIGINTs) survive the cursor round-trip.
+                    // Everything else keeps the existing double behavior.
+                    if (element.TryGetInt64(out long longValue))
                     {
-                        scalarVariable = value;
+                        scalarVariable = longValue;
+                    }
+                    else if (element.TryGetDouble(out double doubleValue))
+                    {
+                        scalarVariable = doubleValue;
                     }
 
                     break;

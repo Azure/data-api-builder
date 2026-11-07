@@ -49,6 +49,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
+        /// The filter argument is a plain OData expression rather than part of a URL,
+        /// so a percent sign must reach the database as written instead of being URL-decoded.
+        /// </summary>
+        [TestMethod]
+        public async Task Aggregate_FilterWithUrlSpecialCharacters_IsNotUrlDecoded()
+        {
+            CallToolResult result = await ExecuteAggregateAsync(
+                "Book", "count", "*", filter: "title eq 'SOME%CONN'");
+
+            AssertSuccess(result, "COUNT with a percent sign in the filter should succeed.");
+            JsonElement resultArray = ParseResultRoot(result).GetProperty("result");
+            Assert.AreEqual(1, resultArray[0].GetProperty("count").GetInt32());
+        }
+
+        /// <summary>
         /// Counts records with an OData filter (publisher_id eq 1234).
         /// </summary>
         [TestMethod]

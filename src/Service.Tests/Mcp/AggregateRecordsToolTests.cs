@@ -349,6 +349,79 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(paginate ? 2 : 0, structure.Parameters.Count);
         }
 
+        [DataTestMethod]
+        [DataRow("sum", false)]
+        [DataRow("avg", false)]
+        [DataRow("min", false)]
+        [DataRow("max", false)]
+        [DataRow("count", false)]
+        [DataRow("sum", true)]
+        [DataRow("avg", true)]
+        [DataRow("min", true)]
+        [DataRow("max", true)]
+        [DataRow("count", true)]
+        public void ApplyOrderByAndPagination_DwSqlOrdersInsideGroupedQuery(string function, bool useJsonFunctions)
+        {
+            foreach (bool paginate in new[] { false, true })
+            {
+                foreach (bool distinct in new[] { false, true })
+                {
+                    foreach (string direction in new[] { "asc", "desc" })
+                    {
+                        SqlQueryStructure structure = CreateUninitializedQueryStructure();
+                        structure.IsListQuery = true;
+                        ViewDefinition definition = new();
+                        definition.Columns.Add("book_category", new ColumnDefinition { SystemType = typeof(string) });
+                        definition.Columns.Add("book_price", new ColumnDefinition { SystemType = typeof(decimal) });
+                        DatabaseView view = new("dbo", "books") { ViewDefinition = definition };
+                        Mock<ISqlMetadataProvider> metadata = new();
+                        metadata.Setup(x => x.GetSourceDefinition("Book")).Returns(definition);
+                        metadata.Setup(x => x.TryGetBackingColumn("Book", "category", out It.Ref<string?>.IsAny))
+                            .Returns((string _, string _, out string? backing) =>
+                            {
+                                backing = "book_category";
+                                return true;
+                            });
+                        SetBackingField(structure, "EntityName", "Book");
+                        SetBackingField(structure, "MetadataProvider", metadata.Object);
+                        SetBackingField(structure, "DatabaseObject", view);
+                        SetBackingField(structure, "JoinQueries", new Dictionary<string, SqlQueryStructure>());
+                        SetBackingField(structure, "Joins", new List<SqlJoinStructure>());
+                        SetBackingField(structure, "Predicates", new List<Predicate>());
+                        SetBackingField(structure, "FilterPredicates", string.Empty);
+                        SetBackingField(structure, "DbPolicyPredicatesForOperations", new Dictionary<EntityActionOperation, string?>());
+                        SetBackingField(structure, "PaginationMetadata", new PaginationMetadata(structure));
+                        typeof(SqlQueryStructure).GetField("_limit", BindingFlags.Instance | BindingFlags.NonPublic)!
+                            .SetValue(structure, (uint?)10);
+                        string field = function == "count" ? "*" : "price";
+                        AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(
+                            function: function, field: field, isCountStar: field == "*",
+                            distinct: distinct, orderby: direction,
+                            first: paginate ? 9 : null, groupby: new() { "category" })
+                            with { UserProvidedOrderby = direction == "asc" };
+                        string alias = AggregateRecordsTool.ComputeAlias(function, field);
+                        InvokePrivate<object?>("BuildAggregationStructure",
+                            args, structure, view, "book_price", alias, "Book", metadata.Object);
+                        DwSqlQueryBuilder builder = new(enableNto1JoinOpt: useJsonFunctions);
+
+                        string sql = InvokePrivate<string>("ApplyOrderByAndPagination",
+                            builder.Build(structure), args, structure, builder, "book_price");
+
+                        string order = useJsonFunctions
+                            ? $"{function.ToUpperInvariant()}({(distinct ? "DISTINCT " : string.Empty)}[table0].[book_price])"
+                            : $"[{alias}]";
+                        string paging = paginate ? " OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY" : string.Empty;
+                        string suffix = useJsonFunctions ? " FOR JSON PATH, INCLUDE_NULL_VALUES" : ") AS [table0]";
+                        StringAssert.EndsWith(sql, $" ORDER BY {order} {direction.ToUpperInvariant()}{paging}{suffix}");
+                        StringAssert.Contains(sql, "GROUP BY [table0].[book_category]");
+                        StringAssert.Contains(sql, $" AS [{alias}]");
+                        Assert.AreEqual(!paginate, sql.Contains("SELECT TOP 10"));
+                        Assert.AreEqual(paginate ? 2 : 0, structure.Parameters.Count);
+                    }
+                }
+            }
+        }
+
         #endregion
 
         #region Configuration Tests

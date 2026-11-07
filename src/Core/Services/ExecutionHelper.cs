@@ -623,8 +623,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// pure resolver context.
         /// e.g. when Context.Path is "/books/items[0]/authors", this function gets
         /// the pagination metadata for authors, which is stored in the global middleware
-        /// context under key: "books_PURE_RESOLVER_CTX::1", where "books" is the parent object
-        /// and depth of "1" implicitly represents the path "/books/items". When "/books/items"
+        /// context under key: "books_PURE_RESOLVER_CTX::1::items", where "books" is the parent object
+        /// and depth of "1" with suffix "items" represents the path "/books/items". When "/books/items"
         /// is processed by the pure resolver, the available pagination metadata maps to the object
         /// type that enumerated in "items"
         /// </summary>
@@ -647,8 +647,8 @@ namespace Azure.DataApiBuilder.Service.Services
                 // The PaginationMetadata fetched has subquery metadata for "authors" from path "/books/items/authors"
                 string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Parent.Depth();
 
-                // Include relationship path suffix (for example, "addresses" or "phoneNumbers") so
-                // we look up the same key that SetNewMetadataChildren stored
+                // Include relationship path suffix (for example, "addresses::items" or "phoneNumbers::items")
+                // so we look up the same key that SetNewMetadataChildren stored
                 // ("::depth::relationshipPath").
                 string relationshipPath = GetRelationshipPathSuffix(context.Path.Parent.Parent);
                 if (!string.IsNullOrEmpty(relationshipPath))
@@ -676,10 +676,10 @@ namespace Azure.DataApiBuilder.Service.Services
                 // 
                 // To handle arbitrary nesting depths with sibling relationships, we need to include
                 // the relationship field path in the key. For example:
-                // - /entity/items[0]/rel1/nested uses key ::3::rel1
-                // - /entity/items[0]/rel2/nested uses key ::3::rel2
-                // - /entity/items[0]/rel1/nested/deeper uses key ::4::rel1::nested
-                // - /entity/items[0]/rel1/nested2/deeper uses key ::4::rel1::nested2
+                // - /entity/items[0]/rel1/nested uses key ::3::items::rel1
+                // - /entity/items[0]/rel2/nested uses key ::3::items::rel2
+                // - /entity/items[0]/rel1/nested/deeper uses key ::4::items::rel1::nested
+                // - /entity/items[0]/rel1/nested2/deeper uses key ::4::items::rel1::nested2
                 string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Depth();
                 string relationshipPath = GetRelationshipPathSuffix(context.Path.Parent);
                 if (!string.IsNullOrEmpty(relationshipPath))
@@ -719,42 +719,33 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Builds a suffix representing the relationship path from the IndexerPathSegment (items[n])
-        /// up to (but not including) the current path segment. This is used to create unique metadata
-        /// keys for sibling relationships at any nesting depth.
+        /// Builds a suffix representing the field path below the root field, up to and including the
+        /// given path segment. List indexes are left out because pagination metadata is the same for
+        /// every item of a list. This is used to create unique metadata keys for sibling relationships
+        /// at any nesting depth, regardless of whether a list or a single object (e.g. a _by_pk query)
+        /// is at the root of the query.
         /// </summary>
         /// <param name="path">The path to build the suffix for</param>
         /// <returns>
-        /// A string like "rel1" for /entity/items[0]/rel1,
-        /// or "rel1::nested" for /entity/items[0]/rel1/nested,
-        /// or empty string if no IndexerPathSegment is found in the path ancestry.
+        /// A string like "items::rel1" for /entity/items[0]/rel1,
+        /// or "rel1::items::nested" for /entity_by_pk/rel1/items[0]/nested,
+        /// or empty string for the root field /entity.
         /// </returns>
         private static string GetRelationshipPathSuffix(HotChocolate.Path path)
         {
             List<string> pathParts = new();
-            HotChocolate.Path? current = path;
+            HotChocolate.Path current = path;
 
-            // Walk up the path collecting relationship field names until we hit an IndexerPathSegment
-            while (current is not null && !current.IsRoot)
+            // Walk up the path collecting field names, leaving out the root field since
+            // the metadata key already starts with its name.
+            while (!current.IsRoot && !current.Parent.IsRoot)
             {
-                if (current is IndexerPathSegment)
-                {
-                    // We've reached items[n], stop here
-                    break;
-                }
-
                 if (current is NamePathSegment nameSegment)
                 {
                     pathParts.Add(nameSegment.Name);
                 }
 
                 current = current.Parent;
-            }
-
-            // If we didn't find an IndexerPathSegment, return empty (this handles root-level queries)
-            if (current is not IndexerPathSegment)
-            {
-                return string.Empty;
             }
 
             // Reverse because we walked up the tree, but we want the path from root to leaf
@@ -811,8 +802,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // For relationship fields at any depth, include the relationship path suffix to distinguish
             // between sibling relationships. This handles arbitrary nesting depths.
-            // e.g., "/entity/items[0]/rel1" gets key ::3::rel1
-            // e.g., "/entity/items[0]/rel1/nested" gets key ::4::rel1::nested
+            // e.g., "/entity/items[0]/rel1" gets key ::3::items::rel1
+            // e.g., "/entity/items[0]/rel1/nested" gets key ::4::items::rel1::nested
             string relationshipPath = GetRelationshipPathSuffix(context.Path);
             if (!string.IsNullOrEmpty(relationshipPath))
             {

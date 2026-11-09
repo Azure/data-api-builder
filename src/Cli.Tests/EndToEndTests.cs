@@ -1076,7 +1076,10 @@ public class EndToEndTests
 
     /// <summary>
     /// Validates that `dab start` correctly sets <see cref="Startup.IsCliOverriding"/>
-    /// based on whether the --log-level CLI flag is provided, without running the host.
+    /// based on whether the --log-level CLI flag is provided.
+    ///
+    /// When the --log-level flag is provided, IsCliOverriding should be true.
+    /// When the --log-level flag is omitted (log level comes from the config file), IsCliOverriding should be false.
     /// </summary>
     /// <param name="cliLogLevel">The --log-level CLI flag value, or null to omit the flag.</param>
     /// <param name="expectedIsOverridden">Expected value of Startup.IsCliOverriding.</param>

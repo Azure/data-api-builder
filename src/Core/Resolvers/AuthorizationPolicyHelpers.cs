@@ -189,6 +189,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     resourcePath: (entityDBObject is not null) ? $"{entityName}.{entityDBObject.FullName}" : entityName,
                     sqlMetadataProvider);
 
+                if (filterClause is null && !string.IsNullOrWhiteSpace(dbQueryPolicy.Policy))
+                {
+                    string configuredPolicy = authorizationResolver.GetDBPolicyForRequest(entityName, clientRoleHeader, elementalOperation);
+                    if (!string.IsNullOrWhiteSpace(configuredPolicy))
+                    {
+                        authorizationResolver.AuditDatabasePolicyFailOpen(entityName, clientRoleHeader, elementalOperation, configuredPolicy);
+                    }
+                }
+
                 postProcessCallback(filterClause, elementalOperation);
             }
 

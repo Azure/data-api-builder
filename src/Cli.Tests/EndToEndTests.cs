@@ -1074,18 +1074,16 @@ public class EndToEndTests
         Assert.IsTrue(string.IsNullOrEmpty(engineStdOut), $"Expected no output at LogLevel {logLevelOption}, but got: {engineStdOut}");
     }
 
+    /// <summary>
     /// Validates that `dab start` correctly sets <see cref="Startup.IsCliOverriding"/>
-    /// based on whether the --log-level CLI flag is provided.
-    ///
-    /// When the --log-level flag is provided, IsCliOverriding should be true.
-    /// When the --log-level flag is omitted (log level comes from the config file), IsCliOverriding should be false.
+    /// based on whether the --log-level CLI flag is provided, without running the host.
     /// </summary>
     /// <param name="cliLogLevel">The --log-level CLI flag value, or null to omit the flag.</param>
     /// <param name="expectedIsOverridden">Expected value of Startup.IsCliOverriding.</param>
     [DataTestMethod]
     [DataRow(null, false, DisplayName = "IsCliOverriding is false")]
     [DataRow(LogLevel.Error, true, DisplayName = "IsCliOverriding is true")]
-    public async Task TestStartCommandResolvesLogLevelFromConfigOrFlag(
+    public void TestStartCommandResolvesLogLevelFromConfigOrFlag(
         LogLevel? cliLogLevel,
         bool expectedIsOverridden)
     {
@@ -1132,21 +1130,17 @@ public class EndToEndTests
         string configWithLogLevel = AddPropertiesToJson(baseConfig, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, configWithLogLevel);
 
-        StartOptions options = new(
-            verbose: false,
-            logLevel: cliLogLevel,
-            isHttpsRedirectionDisabled: false,
-            mcpStdio: false,
-            mcpRole: null,
-            logLevelLegacy: null,
-            config: TEST_RUNTIME_CONFIG_FILE);
+        // Mirrors the args `dab start` passes to the engine: --log-level only when given on the CLI.
+        List<string> engineArgs = new() { "--ConfigFileName", TEST_RUNTIME_CONFIG_FILE };
+        if (cliLogLevel is not null)
+        {
+            engineArgs.Add("--log-level");
+            engineArgs.Add(cliLogLevel.Value.ToString());
+        }
 
-        // Run TryStartEngineWithOptions on a background task because StartEngine blocks until the host shuts down.
-        Task engineTask = Task.Run(() =>
-            TryStartEngineWithOptions(options, _runtimeConfigLoader!, _fileSystem!));
-
-        // Wait for the engine to finish loading the config.
-        await Task.Delay(TimeSpan.FromSeconds(5));
+        // Seed the opposite value so a stale static from another test cannot satisfy the assertion.
+        Startup.IsCliOverriding = !expectedIsOverridden;
+        Azure.DataApiBuilder.Service.Program.InitializeLogLevel(engineArgs.ToArray(), runMcpStdio: false);
 
         Assert.AreEqual(expectedIsOverridden, Startup.IsCliOverriding);
     }

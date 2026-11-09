@@ -98,9 +98,7 @@ namespace Azure.DataApiBuilder.Service
                 // Initialize log level EARLY, before building the host.
                 // This ensures logging filters are effective during the entire host build process.
                 // For MCP mode, we also read the config file early to check for log level override.
-                LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding, out bool isLogLevelLegacy);
-
-                LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverriding, isConfigOverriding, isLogLevelLegacy);
+                LogLevel initialLogLevel = InitializeLogLevel(args, runMcpStdio);
 
                 // For MCP stdio mode, redirect Console.Out to keep stdout clean for JSON-RPC.
                 // MCP SDK uses Console.OpenStandardOutput() which gets the real stdout, unaffected by this redirect.
@@ -144,6 +142,15 @@ namespace Azure.DataApiBuilder.Service
                 Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
                 return false;
             }
+        }
+
+        internal static LogLevel InitializeLogLevel(string[] args, bool runMcpStdio)
+        {
+            LogLevel initialLogLevel = GetLogLevelFromCommandLineArgsOrConfig(args, runMcpStdio, out bool isCliOverriding, out bool isConfigOverriding, out bool isLogLevelLegacy);
+            LogLevelProvider.SetInitialLogLevel(initialLogLevel, isCliOverriding, isConfigOverriding, isLogLevelLegacy);
+            Startup.MinimumLogLevel = LogLevelProvider.CurrentLogLevel;
+            Startup.IsCliOverriding = LogLevelProvider.IsCliOverriding;
+            return initialLogLevel;
         }
 
         // Compatibility overload used by external callers that do not pass the runMcpStdio flag.

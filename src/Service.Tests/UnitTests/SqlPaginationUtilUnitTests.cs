@@ -219,6 +219,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 document.RootElement,
                 new List<string> { "id" },
                 orderByColumns: null,
+                CreateAuthorizationResolver(),
+                "reader",
                 entityName: "Entity");
             string decoded = SqlPaginationUtil.Base64Decode(cursor);
 

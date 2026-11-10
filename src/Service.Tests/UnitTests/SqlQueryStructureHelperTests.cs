@@ -4,9 +4,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
@@ -15,6 +20,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -243,6 +249,82 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsInstanceOfType<DataApiBuilderException>(exception.InnerException);
         }
 
+        [DataTestMethod]
+        [DataRow(false, true, true)]
+        [DataRow(true, true, true)]
+        [DataRow(false, false, true)]
+        [DataRow(true, false, true)]
+        [DataRow(false, false, false)]
+        [DataRow(true, false, false)]
+        public void GraphQLPagination_AuthorizesCursorForBothResponseShapes(bool useJsonElement, bool keyAllowed, bool hasNextPage)
+        {
+            SqlQueryStructure structure = CreateStructure();
+            SetAutoProperty(structure, "EntityName", "Book");
+            SetAutoProperty(structure, "DatabaseObject", new DatabaseTable("dbo", "books"));
+            SetAutoProperty(structure, "OrderByColumns", new List<OrderByColumn>());
+            typeof(SqlQueryStructure).GetField("_limit", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(structure, 2u);
+
+            Mock<ISqlMetadataProvider> metadata = new();
+            metadata.Setup(m => m.GetSourceDefinition("Book")).Returns(new SourceDefinition { PrimaryKey = new List<string> { "id" } });
+            string exposedName = "id";
+            metadata.Setup(m => m.TryGetExposedColumnName("Book", "id", out exposedName)).Returns(true);
+            SetAutoProperty(structure, "MetadataProvider", metadata.Object);
+
+            Mock<IMiddlewareContext> context = new();
+            context.SetupGet(c => c.ContextData).Returns(new Dictionary<string, object?>
+            {
+                [AuthorizationResolver.CLIENT_ROLE_HEADER] = new StringValues("restricted")
+            });
+            typeof(SqlQueryStructure).GetField("_ctx", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(structure, context.Object);
+            Mock<IAuthorizationResolver> resolver = new(MockBehavior.Strict);
+            resolver.Setup(r => r.AreColumnsAllowedForOperation(
+                "Book", "restricted", EntityActionOperation.Read,
+                It.Is<IEnumerable<string>>(columns => columns.SequenceEqual(new[] { "id" }))))
+                .Returns(keyAllowed);
+            SetAutoProperty(structure, "AuthorizationResolver", resolver.Object);
+            structure.PaginationMetadata.IsPaginated = true;
+            structure.PaginationMetadata.RequestedEndCursor = true;
+            structure.PaginationMetadata.RequestedHasNextPage = true;
+
+            using JsonDocument input = JsonDocument.Parse(hasNextPage ? "[{\"id\":1},{\"id\":2}]" : "[{\"id\":1}]");
+            JsonElement CreateConnection()
+            {
+                if (useJsonElement)
+                {
+                    return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(input.RootElement, structure.PaginationMetadata);
+                }
+
+                using JsonDocument result = SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(input, structure.PaginationMetadata);
+                return result.RootElement.Clone();
+            }
+
+            if (hasNextPage && !keyAllowed)
+            {
+                DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() => CreateConnection());
+                Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.PAGINATION_FIELD_AUTHZ_FAILURE, exception.Message);
+                resolver.VerifyAll();
+            }
+            else
+            {
+                JsonElement result = CreateConnection();
+                Assert.AreEqual(hasNextPage, result.GetProperty("hasNextPage").GetBoolean());
+                if (hasNextPage)
+                {
+                    using JsonDocument cursor = JsonDocument.Parse(SqlPaginationUtil.Base64Decode(result.GetProperty("endCursor").GetString()!));
+                    Assert.AreEqual(1, cursor.RootElement[0].GetProperty("FieldValue").GetInt32());
+                    resolver.VerifyAll();
+                }
+                else
+                {
+                    Assert.IsFalse(result.TryGetProperty("endCursor", out _));
+                    resolver.VerifyNoOtherCalls();
+                }
+            }
+        }
+
         private static SqlQueryStructure CreateStructure()
         {
             SqlQueryStructure structure = (SqlQueryStructure)RuntimeHelpers.GetUninitializedObject(typeof(SqlQueryStructure));
@@ -273,8 +355,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         private static void SetAutoProperty<T>(SqlQueryStructure structure, string propertyName, T value, Type? declaringType = null)
         {
-            Type type = declaringType ?? typeof(SqlQueryStructure);
-            type.GetField($"<{propertyName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
+            Type lookupType = declaringType ?? typeof(SqlQueryStructure);
+            lookupType.GetProperty(propertyName)!.DeclaringType!
+                .GetField($"<{propertyName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .SetValue(structure, value);
         }
 

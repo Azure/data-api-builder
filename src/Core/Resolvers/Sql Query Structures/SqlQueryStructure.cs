@@ -3,6 +3,7 @@
 
 using System.Data;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -1118,6 +1119,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 return 1;
             }
+        }
+
+        internal string CreatePaginationCursor(JsonElement element, bool isGroupByQuery)
+        {
+            if (_ctx is null)
+            {
+                throw new InvalidOperationException("GraphQL context is required to authorize a pagination cursor.");
+            }
+
+            return SqlPaginationUtil.MakeCursorFromJsonElement(
+                element,
+                PrimaryKey(),
+                OrderByColumns,
+                AuthorizationResolver,
+                Authorization.AuthorizationResolver.GetRoleOfGraphQLRequest(_ctx),
+                EntityName,
+                DatabaseObject.SchemaName,
+                DatabaseObject.Name,
+                MetadataProvider,
+                isGroupByQuery);
         }
 
         /// <summary>

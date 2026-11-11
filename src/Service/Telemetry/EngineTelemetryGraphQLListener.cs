@@ -261,7 +261,9 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                     bool anyData = false;
                     for (int index = 0; index < eligibility.Length; index++)
                     {
-                        ulong includeFlags = operation.CreateIncludeFlags(_context.VariableValues[index]);
+                        // Preserve every condition word; the ulong overload cannot classify
+                        // operations with more than 64 conditional selections in HC 16.7.
+                        ConditionFlags includeFlags = operation.CreateIncludeConditionFlags(_context.VariableValues[index]);
                         foreach (Selection selection in operation.RootSelectionSet.Selections)
                         {
                             if (!selection.Field.IsIntrospectionField && selection.IsIncluded(includeFlags))

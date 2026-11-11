@@ -172,6 +172,84 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         }
 
         [DataTestMethod]
+        [DataRow(64, false)]
+        [DataRow(64, true)]
+        [DataRow(128, false)]
+        [DataRow(128, true)]
+        public async Task WideConditionFlagsRemainVariableAndResultLocal(int precedingConditions, bool http)
+        {
+            // Put all data selections beyond the first condition word. Truncating flags to
+            // ulong must not silently discard successful usage or misclassify excluded peers.
+            string declarations = string.Join(", ", Enumerable.Range(0, precedingConditions)
+                .Select(index => $"$condition{index}: Boolean!"));
+            string discovery = string.Join(" ", Enumerable.Range(0, precedingConditions)
+                .Select(index => $"discovery{index}: __typename @include(if: $condition{index})"));
+            string document = $"query Wide({declarations}, $take: Boolean!, $fail: Boolean!) "
+                + $"{{ __typename {discovery} ...Data @include(if: $take) }} "
+                + $"fragment Data on Query {{ echo(value: \"{SENTINEL}\") fail @include(if: $fail) }}";
+            await using Fixture fixture = new();
+
+            // Warm the same operation cache with excluded data, then vary both high-bit flags.
+            await using (IExecutionResult warmup = await fixture.ExecuteAsync(OperationRequestBuilder.New()
+                .SetDocument(document).SetVariableValues(Variables(take: false, fail: false))))
+            {
+                Assert.AreEqual(0, warmup.ExpectOperationResult().Errors.Count);
+            }
+
+            (DefaultHttpContext context, ResponseCallbacks response) = CreateHttpContext();
+            IReadOnlyDictionary<string, object?>[] variables =
+            [
+                Variables(take: false, fail: false),
+                Variables(take: true, fail: false),
+                Variables(take: false, fail: true),
+                Variables(take: true, fail: true)
+            ];
+            OperationRequestBuilder builder = OperationRequestBuilder.New().SetDocument(document).SetVariableValues(variables);
+            if (http)
+            {
+                builder.SetGlobalState(nameof(HttpContext), context);
+            }
+
+            await using (IExecutionResult result = await fixture.ExecuteAsync(builder))
+            {
+                OperationResultBatch batch = result.ExpectOperationResultBatch();
+                Assert.AreEqual(4, batch.Results.Count);
+                CollectionAssert.AreEqual(new int?[] { 0, 1, 2, 3 },
+                    batch.Results.Select(value => value.ExpectOperationResult().VariableIndex).ToArray());
+                CollectionAssert.AreEqual(new[] { 0, 0, 0, 1 },
+                    batch.Results.Select(value => value.ExpectOperationResult().Errors.Count).ToArray());
+            }
+
+            await using (IExecutionResult excluded = await fixture.ExecuteAsync(OperationRequestBuilder.New()
+                .SetDocument(document).SetVariableValues(Variables(take: false, fail: true))))
+            {
+                Assert.AreEqual(0, excluded.ExpectOperationResult().Errors.Count);
+            }
+
+            Assert.AreEqual(2, fixture.ResolverRequests.Count);
+            Assert.IsTrue(fixture.ResolverRequests.All(request => request is { IsEligible: true }));
+            if (http)
+            {
+                Assert.AreEqual(2, response.Count, "Only the effective data members may register HTTP completion.");
+                await fixture.AssertNoRequestTelemetryAsync();
+                await response.CompleteAsync();
+            }
+
+            EngineTelemetryEvent[] records = await fixture.StopAsync();
+            AssertRequests(records, success: 1, partialFailure: 1, transport: http ? "http" : "in_process");
+            Assert.AreEqual(1, records.Count(record => record.Name == "dab/engine.first_successful_request"));
+
+            Dictionary<string, object?> Variables(bool take, bool fail)
+            {
+                Dictionary<string, object?> values = Enumerable.Range(0, precedingConditions)
+                    .ToDictionary(index => $"condition{index}", _ => (object?)false);
+                values.Add("take", take);
+                values.Add("fail", fail);
+                return values;
+            }
+        }
+
+        [DataTestMethod]
         [DataRow(false, false)]
         [DataRow(true, false)]
         [DataRow(false, true)]

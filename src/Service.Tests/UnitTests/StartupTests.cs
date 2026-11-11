@@ -3,7 +3,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using StackExchange.Redis;
@@ -11,8 +16,203 @@ using StackExchange.Redis;
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     [TestClass]
+    [DoNotParallelize]
     public class StartupTests
     {
+        private const string OBO_TEST_CLIENT_ID = "11111111-1111-1111-1111-111111111111";
+        private const string OBO_TEST_TENANT_ID = "22222222-2222-2222-2222-222222222222";
+        private const string OBO_TEST_MANAGED_IDENTITY_CLIENT_ID = "33333333-3333-3333-3333-333333333333";
+
+        [DataTestMethod]
+        [DataRow("test-client-secret", null, DisplayName = "Existing secret configuration")]
+        [DataRow("test-client-secret", "", DisplayName = "Secret with empty identity")]
+        [DataRow("test-client-secret", " \t", DisplayName = "Secret with whitespace identity")]
+        [DataRow(null, OBO_TEST_MANAGED_IDENTITY_CLIENT_ID, DisplayName = "Federation without a client secret")]
+        [DataRow("", OBO_TEST_MANAGED_IDENTITY_CLIENT_ID, DisplayName = "Federation with empty secret")]
+        [DataRow(" \t", OBO_TEST_MANAGED_IDENTITY_CLIENT_ID, DisplayName = "Federation with whitespace secret")]
+        public void RegisterOboServices_ValidCredentials_RegistersSingletons(
+            string? clientSecret,
+            string? managedIdentityClientId)
+        {
+            WithOboEnvironment(clientSecret, managedIdentityClientId, () =>
+            {
+                ServiceCollection services = new();
+                services.AddLogging();
+                services.AddFusionCache();
+
+                Startup.RegisterOboServices(services, CreateOboRuntimeConfig(enabled: true));
+                using ServiceProvider provider = services.BuildServiceProvider();
+
+                IMsalClientWrapper msalClient = provider.GetRequiredService<IMsalClientWrapper>();
+                IOboTokenProvider tokenProvider = provider.GetRequiredService<IOboTokenProvider>();
+                Assert.IsInstanceOfType<MsalClientWrapper>(msalClient);
+                Assert.IsInstanceOfType<OboSqlTokenProvider>(tokenProvider);
+                Assert.AreSame(msalClient, provider.GetRequiredService<IMsalClientWrapper>());
+                Assert.AreSame(tokenProvider, provider.GetRequiredService<IOboTokenProvider>());
+            });
+        }
+
+        [DataTestMethod]
+        [DataRow(null, null, DisplayName = "Neither credential")]
+        [DataRow(null, "", DisplayName = "Missing secret and empty identity")]
+        [DataRow(null, " \t", DisplayName = "Missing secret and whitespace identity")]
+        [DataRow("", null, DisplayName = "Empty secret and missing identity")]
+        [DataRow("", "", DisplayName = "Both credentials empty")]
+        [DataRow("", " \t", DisplayName = "Empty secret and whitespace identity")]
+        [DataRow(" \t", null, DisplayName = "Whitespace secret and missing identity")]
+        [DataRow(" \t", "", DisplayName = "Whitespace secret and empty identity")]
+        [DataRow(" \t", " \t", DisplayName = "Both credentials whitespace")]
+        [DataRow("test-client-secret", OBO_TEST_MANAGED_IDENTITY_CLIENT_ID, DisplayName = "Conflicting credentials")]
+        public void RegisterOboServices_InvalidCredentials_FailsInsteadOfDisablingObo(
+            string? clientSecret,
+            string? managedIdentityClientId)
+        {
+            WithOboEnvironment(clientSecret, managedIdentityClientId, () =>
+            {
+                ServiceCollection services = new();
+                DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
+                    () => Startup.RegisterOboServices(services, CreateOboRuntimeConfig(enabled: true)));
+
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, exception.SubStatusCode);
+                Assert.IsFalse(exception.Message.Contains("test-client-secret", StringComparison.Ordinal));
+                Assert.AreEqual(0, services.Count);
+            });
+        }
+
+        [DataTestMethod]
+        [DataRow("test-client-secret", null, UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR)]
+        [DataRow("test-client-secret", null, UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR)]
+        [DataRow(null, OBO_TEST_MANAGED_IDENTITY_CLIENT_ID, UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR)]
+        [DataRow(null, OBO_TEST_MANAGED_IDENTITY_CLIENT_ID, UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR)]
+        public void RegisterOboServices_MissingCommonCredentials_FailsStartup(
+            string? clientSecret,
+            string? managedIdentityClientId,
+            string variableName)
+        {
+            WithOboEnvironment(clientSecret, managedIdentityClientId, () =>
+            {
+                foreach (string? missingValue in new[] { null, "", " \t" })
+                {
+                    Environment.SetEnvironmentVariable(variableName, missingValue);
+                    ServiceCollection services = new();
+                    DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
+                        () => Startup.RegisterOboServices(services, CreateOboRuntimeConfig(enabled: true)));
+
+                    Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, exception.SubStatusCode);
+                    StringAssert.Contains(exception.Message, variableName);
+                    Assert.AreEqual(0, services.Count);
+                }
+            });
+        }
+
+        [DataTestMethod]
+        [DataRow(null, null)]
+        [DataRow(" \t", " \t")]
+        [DataRow("test-client-secret", OBO_TEST_MANAGED_IDENTITY_CLIENT_ID)]
+        public void RegisterOboServices_OboDisabled_IgnoresCredentialSettings(
+            string? clientSecret,
+            string? managedIdentityClientId)
+        {
+            WithOboEnvironment(clientSecret, managedIdentityClientId, () =>
+            {
+                ServiceCollection services = new();
+                Startup.RegisterOboServices(services, runtimeConfig: null);
+                Startup.RegisterOboServices(services, CreateOboRuntimeConfig(enabled: null));
+                Startup.RegisterOboServices(services, CreateOboRuntimeConfig(enabled: false));
+
+                Assert.AreEqual(0, services.Count);
+            });
+        }
+
+        [TestMethod]
+        public void RegisterOboServices_EnabledSecondaryDataSource_RegistersProvider()
+        {
+            WithOboEnvironment(null, OBO_TEST_MANAGED_IDENTITY_CLIENT_ID, () =>
+            {
+                RuntimeConfig defaultConfig = CreateOboRuntimeConfig(enabled: false);
+                RuntimeConfig delegatedConfig = CreateOboRuntimeConfig(enabled: true);
+                RuntimeConfig runtimeConfig = new(
+                    Schema: defaultConfig.Schema,
+                    DataSource: defaultConfig.DataSource,
+                    Runtime: defaultConfig.Runtime,
+                    Entities: defaultConfig.Entities,
+                    DefaultDataSourceName: "default",
+                    DataSourceNameToDataSource: new()
+                    {
+                        ["default"] = defaultConfig.DataSource,
+                        ["delegated"] = delegatedConfig.DataSource
+                    },
+                    EntityNameToDataSourceName: new());
+                ServiceCollection services = new();
+                services.AddLogging();
+                services.AddFusionCache();
+                Startup.RegisterOboServices(services, runtimeConfig);
+                using ServiceProvider provider = services.BuildServiceProvider();
+
+                Assert.IsNotNull(provider.GetRequiredService<IOboTokenProvider>());
+            });
+        }
+
+        private static RuntimeConfig CreateOboRuntimeConfig(bool? enabled)
+        {
+            DataSource dataSource = new(DatabaseType.MSSQL, "Server=localhost;Database=test;", Options: null)
+            {
+                UserDelegatedAuth = enabled.HasValue
+                    ? new UserDelegatedAuthOptions(
+                        Enabled: enabled.Value,
+                        Provider: "EntraId",
+                        DatabaseAudience: "https://database.windows.net")
+                    : null
+            };
+            return new RuntimeConfig(
+                Schema: "UnitTestSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null),
+                    Cache: new(Enabled: false)),
+                Entities: new(new Dictionary<string, Entity>()));
+        }
+
+        private static void WithOboEnvironment(
+            string? clientSecret,
+            string? managedIdentityClientId,
+            Action action)
+        {
+            Dictionary<string, string?> settings = new()
+            {
+                [UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR] = OBO_TEST_CLIENT_ID,
+                [UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR] = OBO_TEST_TENANT_ID,
+                [UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR] = clientSecret,
+                [UserDelegatedAuthOptions.DAB_OBO_MANAGED_IDENTITY_CLIENT_ID_ENV_VAR] = managedIdentityClientId
+            };
+            Dictionary<string, string?> originalValues = new();
+            foreach (string name in settings.Keys)
+            {
+                originalValues.Add(name, Environment.GetEnvironmentVariable(name));
+            }
+
+            try
+            {
+                foreach ((string name, string? value) in settings)
+                {
+                    Environment.SetEnvironmentVariable(name, value);
+                }
+
+                action();
+            }
+            finally
+            {
+                foreach ((string name, string? value) in originalValues)
+                {
+                    Environment.SetEnvironmentVariable(name, value);
+                }
+            }
+        }
+
         [DataTestMethod]
         [DataRow("localhost:6379", false, DisplayName = "Localhost endpoint without password should NOT use Entra auth.")]
         [DataRow("127.0.0.1:6379", false, DisplayName = "IPv4 loopback without password should NOT use Entra auth.")]

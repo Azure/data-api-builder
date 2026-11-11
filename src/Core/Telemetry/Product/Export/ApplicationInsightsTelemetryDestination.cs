@@ -1,12 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 
-namespace Azure.DataApiBuilder.Service.Telemetry
+namespace Azure.DataApiBuilder.Core.Telemetry.Product
 {
     /// <summary>
     /// Validated routing for the product's Application Insights instance. Never reads customer

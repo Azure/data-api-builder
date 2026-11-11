@@ -1,13 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Net.Http;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace Azure.DataApiBuilder.Service.Telemetry
+namespace Azure.DataApiBuilder.Core.Telemetry.Product
 {
     /// <summary>
     /// Public HttpClient boundary for the SDK: links worker cancellation and rejects unexpected

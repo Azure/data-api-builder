@@ -41,6 +41,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
         private const int MAX_LAUNCHES = 16;
         private const int MAX_OPTIONS = 96;
         private const int MAX_OPTION_KEY_LENGTH = 100;
+        private const int ORDINARY_FLUSH_TIMEOUT_MS = 250;
         private readonly object _sync = new();
         private readonly TimeProvider? _clock;
         private readonly long _started;
@@ -94,8 +95,10 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
             _lookupIdentity = lookupIdentity;
             _exporterFactory = exporterFactory;
             SessionId = Guid.NewGuid();
+            // Only the ordinary queue is joined by command shutdown. Reserved helpers retain
+            // their independent drain budget and never extend this invocation's wait.
             _delivery = new(() => exporterFactory(), capacity: 256, maxAttempts: 3,
-                flushTimeout: TimeSpan.FromSeconds(2), timeProvider: clock);
+                flushTimeout: TimeSpan.FromMilliseconds(ORDINARY_FLUSH_TIMEOUT_MS), timeProvider: clock);
             _enabled = true;
         }
 

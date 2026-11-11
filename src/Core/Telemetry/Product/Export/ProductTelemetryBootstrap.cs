@@ -1,11 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Config.Telemetry;
 
-namespace Azure.DataApiBuilder.Service.Telemetry
+namespace Azure.DataApiBuilder.Core.Telemetry.Product
 {
     /// <summary>Shared, read-only preflight. Never initializes an SDK sender or contacts a destination.</summary>
     internal static class ProductTelemetryBootstrap

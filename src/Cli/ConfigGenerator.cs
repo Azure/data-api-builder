@@ -379,15 +379,12 @@ namespace Cli
                 return false;
             }
 
-            CliTelemetryHosting.ObserveConfiguration(options.ProductTelemetry, fileSystem, runtimeConfigFile);
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
-                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
-
-            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             if (runtimeConfig.DataSource is null)
             {
@@ -648,15 +645,12 @@ namespace Cli
                 return false;
             }
 
-            CliTelemetryHosting.ObserveConfiguration(options.ProductTelemetry, fileSystem, runtimeConfigFile);
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
-                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
-
-            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             const string ROLE_ANONYMOUS = "anonymous";
             const string ROLE_AUTHENTICATED = "authenticated";
@@ -705,15 +699,12 @@ namespace Cli
                 return false;
             }
 
-            CliTelemetryHosting.ObserveConfiguration(options.ProductTelemetry, fileSystem, runtimeConfigFile);
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
-                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
-
-            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             if (runtimeConfig.DataSource is null)
             {
@@ -2283,15 +2274,12 @@ namespace Cli
                 return false;
             }
 
-            CliTelemetryHosting.ObserveConfiguration(options.ProductTelemetry, fileSystem, runtimeConfigFile);
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
-                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
-
-            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             if (runtimeConfig.DataSource is null)
             {
@@ -3237,7 +3225,7 @@ namespace Cli
             try
             {
                 Action? startupFailureObserved = options.ProductTelemetry is { } parent ? parent.ObserveEngineStartupFailure : null;
-                bool started = options.EngineLauncher is { } engineLauncher
+                bool started = options.Dependencies.EngineLauncher is { } engineLauncher
                     ? engineLauncher(engineArgs, launchContext, startupFailureObserved)
                     : launchContext is null
                         ? Azure.DataApiBuilder.Service.Program.StartEngine(engineArgs)
@@ -3585,15 +3573,12 @@ namespace Cli
                 return false;
             }
 
-            CliTelemetryHosting.ObserveConfiguration(options.ProductTelemetry, fileSystem, runtimeConfigFile);
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
-                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
-
-            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             if (runtimeConfig.Runtime is null)
             {
@@ -3666,15 +3651,12 @@ namespace Cli
                 return false;
             }
 
-            CliTelemetryHosting.ObserveConfiguration(options.ProductTelemetry, fileSystem, runtimeConfigFile);
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig))
             {
-                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
-
-            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             // Get existing autoentities or create new collection
             Dictionary<string, Autoentity> autoEntitiesDictionary = runtimeConfig.Autoentities?.Autoentities != null
@@ -3951,17 +3933,14 @@ namespace Cli
                 return false;
             }
 
-            CliTelemetryHosting.ObserveConfiguration(options.ProductTelemetry, fileSystem, runtimeConfigFile);
             // Load config with env var replacement so the connection string is fully resolved.
             DeserializationVariableReplacementSettings replacementSettings = new(doReplaceEnvVar: true);
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
             {
-                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
-
-            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             if (runtimeConfig.DataSource?.DatabaseType != DatabaseType.MSSQL)
             {

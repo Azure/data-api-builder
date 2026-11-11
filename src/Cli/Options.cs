@@ -29,13 +29,7 @@ namespace Cli
 
         internal CliTelemetryLaunchReservation? ProductTelemetryLaunchReservation { get; set; }
 
-        // Per-invocation test dependencies, deliberately separate from the immutable telemetry
-        // launch context. Null preserves the real service, exporter and legacy cancellation path.
-        internal Func<string[], ProductTelemetryLaunchContext?, Action?, bool>? EngineLauncher { get; set; }
-
-        internal Func<Exporter>? ExporterFactory { get; set; }
-
-        // Caller-owned; Exporter cancels but does not dispose this optional source.
-        internal CancellationTokenSource? ExportCancellationTokenSource { get; set; }
+        // An immutable default cannot retain overrides from another invocation.
+        internal CliInvocationDependencies Dependencies { get; set; } = CliInvocationDependencies.Default;
     }
 }

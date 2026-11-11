@@ -500,7 +500,7 @@ namespace Cli.Tests.Telemetry
 
             Task<int> command = engine.ExecuteAsync(cli,
                 ["export", "--graphql", "--config", fixture.ConfigPath, "--output", outputDirectory],
-                () => exporter, exportCancellation);
+                new(ExporterFactory: () => exporter, ExportCancellationTokenSource: exportCancellation));
 
             Assert.AreEqual(CliReturnCode.SUCCESS, await command.WaitAsync(_startupTimeout));
             await AssertBootstrapLinkAsync(fixture, cli, engine, CliTelemetryLaunchSource.ExportGraphQL);
@@ -581,12 +581,13 @@ namespace Cli.Tests.Telemetry
             Task<int> command = Task.Run(() => Program.Execute(
                 ["export", "--graphql", "--config", fixture.ConfigPath, "--output", IOPath.Combine(fixture.DirectoryPath, "export")],
                 NullLogger.Instance, fileSystem.Object, loader, cli,
-                engineLauncher: (_, context, _) =>
-                {
-                    Interlocked.Increment(ref launches);
-                    launched.TrySetResult(context);
-                    return true;
-                }, exporterFactory: () => exporter, exportCancellationTokenSource: exportCancellation));
+                new CliInvocationDependencies(
+                    EngineLauncher: (_, context, _) =>
+                    {
+                        Interlocked.Increment(ref launches);
+                        launched.TrySetResult(context);
+                        return true;
+                    }, ExporterFactory: () => exporter, ExportCancellationTokenSource: exportCancellation)));
 
             try
             {
@@ -939,12 +940,10 @@ namespace Cli.Tests.Telemetry
             }
 
             public int Execute(string[] args, CliTelemetrySession? session = null,
-                Func<string[], ProductTelemetryLaunchContext?, Action?, bool>? launcher = null,
-                Func<Exporter>? exporterFactory = null, CancellationTokenSource? exportCancellation = null)
+                CliInvocationDependencies? dependencies = null)
             {
                 using FileSystemRuntimeConfigLoader loader = CreateLoader(FileSystem);
-                return Program.Execute(args, NullLogger.Instance, FileSystem, loader, session,
-                    launcher, exporterFactory, exportCancellation);
+                return Program.Execute(args, NullLogger.Instance, FileSystem, loader, session, dependencies);
             }
 
             public async Task InitializeConfigurationAsync(string source = "dbo.Books")
@@ -1069,10 +1068,11 @@ namespace Cli.Tests.Telemetry
             }
 
             public Task<int> ExecuteAsync(CliTelemetrySession cli, string[] args,
-                Func<Exporter>? exporterFactory = null, CancellationTokenSource? exportCancellation = null)
+                CliInvocationDependencies? dependencies = null)
             {
-                _exportCancellation = exportCancellation;
-                return _command = Task.Run(() => _fixture.Execute(args, cli, Launch, exporterFactory, exportCancellation));
+                _exportCancellation = dependencies?.ExportCancellationTokenSource;
+                CliInvocationDependencies invocation = (dependencies ?? CliInvocationDependencies.Default) with { EngineLauncher = Launch };
+                return _command = Task.Run(() => _fixture.Execute(args, cli, invocation));
             }
 
             private bool Launch(string[] args, ProductTelemetryLaunchContext? context, Action? startupFailureObserved)
@@ -1085,7 +1085,7 @@ namespace Cli.Tests.Telemetry
                 {
                     // This is the real service overload: it creates the session at the normal
                     // boundary and calls StartEngineCore. Do not build/start a replacement host.
-                    result = EngineProgram.StartEngine(args, context, CreateSession, ConfigureHost, startupFailureObserved);
+                    result = EngineProgram.StartEngine(args, context, new EngineLaunchDependencies(CreateSession, ConfigureHost), startupFailureObserved);
                     return result;
                 }
                 finally

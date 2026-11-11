@@ -4,7 +4,7 @@
 #nullable enable
 
 using System;
-using Azure.DataApiBuilder.Service.Telemetry;
+using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Telemetry

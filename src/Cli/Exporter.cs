@@ -48,18 +48,14 @@ namespace Cli
                 return false;
             }
 
-            CliTelemetryHosting.ObserveConfiguration(options.ProductTelemetry, fileSystem, runtimeConfigFile);
-
             // Load the runtime configuration from the file
             DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
+            if (!CliTelemetryHosting.TryLoadConfiguration(loader, fileSystem, runtimeConfigFile,
+                options.ProductTelemetry, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
             {
-                options.ProductTelemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
                 logger.LogError("Failed to read the config file: {0}.", runtimeConfigFile);
                 return false;
             }
-
-            CliTelemetryHosting.ObserveConfigurationDetails(options.ProductTelemetry, fileSystem, runtimeConfigFile, runtimeConfig);
 
             // Do not retry if schema generation logic is running
             int retryCount = options.Generate ? COSMOS_DB_RETRY_COUNT : DAB_SERVICE_RETRY_COUNT;
@@ -106,7 +102,7 @@ namespace Cli
 
             // Tests may own a source for this invocation. The default intentionally retains
             // the existing static cancellation behavior; this is not a lifecycle fix.
-            (options.ExportCancellationTokenSource ?? _cancellationTokenSource).Cancel();
+            (options.Dependencies.ExportCancellationTokenSource ?? _cancellationTokenSource).Cancel();
             return isSuccess;
         }
 
@@ -144,7 +140,7 @@ namespace Cli
                 {
                     ProductTelemetry = options.ProductTelemetry,
                     ProductTelemetryLaunchSource = CliTelemetryLaunchSource.ExportGraphQL,
-                    EngineLauncher = options.EngineLauncher
+                    Dependencies = options.Dependencies
                 };
 
                 // Reserve while the top-level invocation is live, but do not create a launch
@@ -165,7 +161,7 @@ namespace Cli
                             CliTelemetryHosting.MarkException(startOptions.ProductTelemetry, exception, CliTelemetryFailureCategory.Initialization);
                             throw;
                         }
-                    }, options.ExportCancellationTokenSource?.Token ?? _cancellationToken);
+                    }, options.Dependencies.ExportCancellationTokenSource?.Token ?? _cancellationToken);
                 }
                 catch
                 {
@@ -175,12 +171,13 @@ namespace Cli
 
                 if (reservation is not null)
                 {
-                    // Cleanup belongs to the helper, NOT export's return/failure path. This
-                    // also releases a ticket if Task.Run is canceled before its delegate runs.
+                    // Reservations survive Complete -> normal StopAsync -> Dispose; the ordinary
+                    // CLI drain does not own them. Helper cleanup releases the ticket, including
+                    // canceled, unstarted helpers that must not emit a launch event.
                     _ = ReleaseLaunchReservationAsync(dabService, reservation);
                 }
 
-                Exporter exporter = options.ExporterFactory?.Invoke() ?? new();
+                Exporter exporter = options.Dependencies.ExporterFactory?.Invoke() ?? new();
                 schemaText = exporter.ExportGraphQLFromDabService(runtimeConfig, logger);
             }
 

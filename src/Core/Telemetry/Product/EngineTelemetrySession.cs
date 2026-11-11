@@ -68,12 +68,17 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
 
             try
             {
-                // No notice/sender/identity work occurs on the disabled path. Failure to show
-                // the required notice fails closed, without using the customer's logging sinks.
-                (showNotice ?? ShowNotice)();
                 bool linked = launchContext is { EngineSessionId: var engineId, ParentCliSessionId: var parentId }
                     && engineId != Guid.Empty && parentId != Guid.Empty && engineId != parentId
                     && Enum.IsDefined(launchContext.Source);
+                // A valid internal CLI bridge means the parent already showed this invocation's
+                // notice. Direct engines and invalid links still require their own disclosure;
+                // failure to show it fails closed, without using the customer's logging sinks.
+                if (!linked)
+                {
+                    (showNotice ?? ShowNotice)();
+                }
+
                 _sessionId = linked ? launchContext!.EngineSessionId : Guid.NewGuid();
                 HealthProbeToken = Guid.NewGuid().ToString("N");
                 _started = clock.GetTimestamp();

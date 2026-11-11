@@ -1,11 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Threading;
-using Azure.DataApiBuilder.Core.Telemetry.Product;
 using OpenTelemetry;
 
-namespace Azure.DataApiBuilder.Service.Telemetry
+namespace Azure.DataApiBuilder.Core.Telemetry.Product
 {
     /// <summary>One worker-owned SDK call; neither an event queue nor a process-wide context.</summary>
     internal sealed class EngineTelemetryExportAttempt(IProductTelemetryEvent record, CancellationToken token)

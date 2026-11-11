@@ -1,12 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Telemetry;
+using Cli.Constants;
 
 namespace Cli.Telemetry
 {
@@ -32,6 +34,26 @@ namespace Cli.Telemetry
             }
 
             return CliTelemetrySession.Create();
+        }
+
+        /// <summary>
+        /// Observe the selected root and the model from the command's one ordinary load.
+        /// Keep diagnostics, exception handling, capture scope and replacement policy with the
+        /// caller/loader; never discover another config, reread it or substitute a cached model.
+        /// </summary>
+        internal static bool TryLoadConfiguration(FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem,
+            string path, CliTelemetrySession? telemetry, [NotNullWhen(true)] out RuntimeConfig? config,
+            DeserializationVariableReplacementSettings? replacementSettings = null)
+        {
+            ObserveConfiguration(telemetry, fileSystem, path);
+            if (!loader.TryLoadConfig(path, out config, replacementSettings: replacementSettings))
+            {
+                telemetry?.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
+                return false;
+            }
+
+            ObserveConfigurationDetails(telemetry, fileSystem, path, config);
+            return true;
         }
 
         internal static void ObserveConfiguration(CliTelemetrySession? telemetry, IFileSystem fileSystem, string path)
@@ -98,15 +120,40 @@ namespace Cli.Telemetry
             }
         }
 
-        /// <summary>Classify by exception type only; never retain an exception or its diagnostic text.</summary>
-        internal static void MarkException(CliTelemetrySession? telemetry, Exception exception,
-            CliTelemetryFailureCategory category = CliTelemetryFailureCategory.Execution)
+        /// <summary>Classify completion without changing the command's legacy return code.</summary>
+        internal static CliTelemetryCommandResult ClassifyReturnCode(int returnCode, CliTelemetrySession? telemetry = null,
+            CliTelemetryCommandResult? terminalResult = null, bool isStartCommand = false)
         {
-            if (telemetry is not { IsEnabled: true })
+            if (terminalResult is CliTelemetryCommandResult terminal)
             {
-                return;
+                // A terminal export result distinguishes no schema from a successful retry;
+                // neither inherits an earlier recoverable attempt's failure category.
+                return terminal;
             }
 
+            if (isStartCommand && telemetry?.HasEngineStartupFailed == true)
+            {
+                // Failed initialization can stop the host normally with a legacy zero exit.
+                return new(CliTelemetryOutcome.ExecutionFailure, CliTelemetryFailureCategory.Initialization);
+            }
+
+            if (returnCode == CliReturnCode.SUCCESS)
+            {
+                return new(CliTelemetryOutcome.Success, CliTelemetryFailureCategory.None);
+            }
+
+            // A bool/exit code cannot recover the cause of a newly added false branch. Without
+            // a typed first-failure hint, Unknown is honest, not success or an invented cause.
+            // Do not use default(CliTelemetryCommandResult): the enum's default is Success.
+            return telemetry is { HasFailure: true }
+                ? new(telemetry.FailureOutcome, telemetry.FailureCategory)
+                : new(CliTelemetryOutcome.Unknown, CliTelemetryFailureCategory.Unknown);
+        }
+
+        /// <summary>Classify by exception type only; never retain an exception or its diagnostic text.</summary>
+        internal static CliTelemetryCommandResult ClassifyException(Exception exception,
+            CliTelemetryFailureCategory category = CliTelemetryFailureCategory.Execution)
+        {
             // Existing synchronous Task.Wait/Result call sites can wrap a single cancellation
             // or I/O failure. Inspect the type without changing the exception the caller sees.
             while (exception is AggregateException aggregate && aggregate.InnerExceptions.Count == 1)
@@ -114,19 +161,25 @@ namespace Cli.Telemetry
                 exception = aggregate.InnerExceptions[0];
             }
 
-            if (exception is OperationCanceledException)
+            return exception switch
             {
-                telemetry.MarkFailure(CliTelemetryOutcome.Canceled, CliTelemetryFailureCategory.Canceled);
-            }
-            else if (category == CliTelemetryFailureCategory.Execution
-                && exception is DataApiBuilderException { SubStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError })
+                OperationCanceledException => new(CliTelemetryOutcome.Canceled, CliTelemetryFailureCategory.Canceled),
+                DataApiBuilderException { SubStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError }
+                    when category == CliTelemetryFailureCategory.Execution
+                    => new(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration),
+                IOException or UnauthorizedAccessException
+                    => new(CliTelemetryOutcome.ExecutionFailure, CliTelemetryFailureCategory.Storage),
+                _ => new(CliTelemetryOutcome.ExecutionFailure, category)
+            };
+        }
+
+        internal static void MarkException(CliTelemetrySession? telemetry, Exception exception,
+            CliTelemetryFailureCategory category = CliTelemetryFailureCategory.Execution)
+        {
+            if (telemetry is { IsEnabled: true })
             {
-                telemetry.MarkFailure(CliTelemetryOutcome.ValidationFailure, CliTelemetryFailureCategory.Configuration);
-            }
-            else
-            {
-                telemetry.MarkFailure(CliTelemetryOutcome.ExecutionFailure,
-                    exception is IOException or UnauthorizedAccessException ? CliTelemetryFailureCategory.Storage : category);
+                CliTelemetryCommandResult failure = ClassifyException(exception, category);
+                telemetry.MarkFailure(failure.Outcome, failure.FailureCategory);
             }
         }
     }

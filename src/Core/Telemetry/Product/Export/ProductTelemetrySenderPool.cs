@@ -1,13 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Azure.DataApiBuilder.Core.Telemetry.Product;
-
-namespace Azure.DataApiBuilder.Service.Telemetry
+namespace Azure.DataApiBuilder.Core.Telemetry.Product
 {
     /// <summary>
     /// Bounded, process-owned senders. Each destination has one adapter, private logger and SDK

@@ -101,8 +101,7 @@ namespace Cli
         /// </summary>
         internal static int Execute(string[] args, ILogger cliLogger, IFileSystem fileSystem,
             FileSystemRuntimeConfigLoader loader, CliTelemetrySession? telemetry,
-            Func<string[], ProductTelemetryLaunchContext?, Action?, bool>? engineLauncher = null,
-            Func<Exporter>? exporterFactory = null, CancellationTokenSource? exportCancellationTokenSource = null)
+            CliInvocationDependencies? dependencies = null)
         {
             CliTelemetryCommand? command = null;
             if (telemetry is { IsEnabled: true })
@@ -118,8 +117,7 @@ namespace Cli
                 }
             }
 
-            CliTelemetryOutcome outcome = CliTelemetryOutcome.Unknown;
-            CliTelemetryFailureCategory failureCategory = CliTelemetryFailureCategory.Unknown;
+            CliTelemetryCommandResult completion = new(CliTelemetryOutcome.Unknown, CliTelemetryFailureCategory.Unknown);
             CliTelemetryCommandResult? terminalResult = null;
             try
             {
@@ -156,67 +154,42 @@ namespace Cli
 
                             if (control == "none")
                             {
-                                telemetry?.MarkFailure(CliTelemetryOutcome.ParseFailure, CliTelemetryFailureCategory.Arguments);
+                                completion = new(CliTelemetryOutcome.ParseFailure, CliTelemetryFailureCategory.Arguments);
+                                telemetry?.MarkFailure(completion.Outcome, completion.FailureCategory);
                             }
 
                             return DabCliParserErrorHandler.ProcessErrorsAndReturnExitCode(parseErrors);
                         });
 
-                if (terminalResult is CliTelemetryCommandResult terminal)
-                {
-                    // A final export observation distinguishes no schema from a successful
-                    // retry without changing the legacy exit code or consulting earlier errors.
-                    outcome = terminal.Outcome;
-                    failureCategory = terminal.FailureCategory;
-                }
-                else if (command?.Name == "start" && telemetry?.HasEngineStartupFailed == true)
-                {
-                    // The web host can return normally after StopApplication during failed
-                    // initialization. Keep that legacy exit code but report the observed failure.
-                    outcome = CliTelemetryOutcome.ExecutionFailure;
-                    failureCategory = CliTelemetryFailureCategory.Initialization;
-                }
-                else if (result == CliReturnCode.SUCCESS)
-                {
-                    // Recovered attempts are not failed commands. For start, this runs only
-                    // after the actual engine lifetime has returned to its handler.
-                    outcome = CliTelemetryOutcome.Success;
-                    failureCategory = CliTelemetryFailureCategory.None;
-                }
-                else
-                {
-                    UseFirstFailure();
-                }
+                completion = CliTelemetryHosting.ClassifyReturnCode(result, telemetry, terminalResult,
+                    isStartCommand: command?.Name == "start");
 
                 return result;
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException exception)
             {
-                outcome = CliTelemetryOutcome.Canceled;
-                failureCategory = CliTelemetryFailureCategory.Canceled;
-                telemetry?.MarkFailure(outcome, failureCategory);
+                completion = CliTelemetryHosting.ClassifyException(exception);
+                telemetry?.MarkFailure(completion.Outcome, completion.FailureCategory);
                 throw;
             }
             catch (Exception exception)
             {
                 CliTelemetryHosting.MarkException(telemetry, exception);
-                UseFirstFailure();
+                completion = CliTelemetryHosting.ClassifyReturnCode(CliReturnCode.GENERAL_ERROR, telemetry);
                 throw;
             }
             finally
             {
                 if (command is not null)
                 {
-                    telemetry?.Complete(command.Name, command.Control, command.Options, outcome, failureCategory);
+                    telemetry?.Complete(command.Name, command.Control, command.Options, completion.Outcome, completion.FailureCategory);
                 }
             }
 
             int Invoke(Options options, Func<int> handler)
             {
                 options.ProductTelemetry = telemetry;
-                options.EngineLauncher = engineLauncher;
-                options.ExporterFactory = exporterFactory;
-                options.ExportCancellationTokenSource = exportCancellationTokenSource;
+                options.Dependencies = dependencies ?? CliInvocationDependencies.Default;
                 using IDisposable? capture = CliTelemetryHosting.BeginConfigurationCapture(telemetry);
                 int result = handler();
                 if (options is ExportOptions exportOptions)
@@ -232,15 +205,6 @@ namespace Cli
                 }
 
                 return result;
-            }
-
-            void UseFirstFailure()
-            {
-                if (telemetry is { HasFailure: true })
-                {
-                    outcome = telemetry.FailureOutcome;
-                    failureCategory = telemetry.FailureCategory;
-                }
             }
         }
     }

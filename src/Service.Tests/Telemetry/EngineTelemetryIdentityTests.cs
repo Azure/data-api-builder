@@ -598,15 +598,58 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             EngineTelemetryIdentity[] identities = await Task.WhenAll(creators).WaitAsync(TimeSpan.FromSeconds(30));
 
-            Assert.AreEqual(1, identities.Count(identity => identity.Stability == "newly_saved"));
-            Assert.AreEqual(11, identities.Count(identity => identity.Stability == "reused"));
-            Assert.AreEqual(1, identities.Select(identity => identity.ApiId).Distinct().Count());
-            AssertRandomGuid(identities[0].ApiId);
+            // Read the persisted winner before any post-contention call can create state.
+            // The sidecar schema and privacy fields remain exactly version + random apiId.
             byte[] winnerBytes = File.ReadAllBytes(files.SidecarPath);
-            EngineTelemetryIdentity subsequent = ResolveEnabled(files.ConfigPath);
-            Assert.AreEqual("reused", subsequent.Stability);
-            Assert.AreEqual(identities[0].ApiId, subsequent.ApiId);
-            CollectionAssert.AreEqual(winnerBytes, File.ReadAllBytes(files.SidecarPath));
+            Assert.IsTrue(winnerBytes.Length is > 0 and <= 1024);
+            using JsonDocument document = JsonDocument.Parse(winnerBytes);
+            CollectionAssert.AreEquivalent(new[] { "version", "apiId" },
+                document.RootElement.EnumerateObject().Select(property => property.Name).ToArray());
+            Assert.AreEqual(1, document.RootElement.GetProperty("version").GetInt32());
+            string? winnerText = document.RootElement.GetProperty("apiId").GetString();
+            Assert.IsNotNull(winnerText);
+            Assert.AreEqual(36, winnerText.Length);
+            Assert.IsTrue(Guid.TryParseExact(winnerText, "D", out Guid winner));
+            AssertRandomGuid(winner);
+
+            if (OperatingSystem.IsWindows())
+            {
+                // Match TelemetryIdentityPublicationTests: its deterministic DELETE-handle
+                // control proves that strict reads can encounter ERROR_SHARING_VIOLATION
+                // during publication. Preserve fail-closed storage, not retry for availability.
+                Assert.IsTrue(identities.Count(identity => identity.Stability == "newly_saved") <= 1);
+            }
+            else
+            {
+                Assert.AreEqual(1, identities.Count(identity => identity.Stability == "newly_saved"));
+                Assert.AreEqual(11, identities.Count(identity => identity.Stability == "reused"));
+                Assert.AreEqual(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(files.SidecarPath));
+            }
+
+            foreach (EngineTelemetryIdentity identity in identities)
+            {
+                if (identity.Stability is "newly_saved" or "reused")
+                {
+                    Assert.AreEqual(winner, identity.ApiId, "Every persisted result must match the one saved winner.");
+                }
+                else
+                {
+                    Assert.IsTrue(OperatingSystem.IsWindows(), "Linux creators must all return the persisted winner.");
+                    AssertEphemeral(identity);
+                    Assert.AreNotEqual(winner, identity.ApiId, "A fallback must not claim saved identity evidence.");
+                }
+            }
+
+            // After all competing handles close, every caller must reuse the same immutable
+            // winner, including callers that received ephemeral IDs during Windows contention.
+            for (int caller = 0; caller < identities.Length; caller++)
+            {
+                EngineTelemetryIdentity subsequent = ResolveEnabled(files.ConfigPath);
+                Assert.AreEqual("reused", subsequent.Stability);
+                Assert.AreEqual(winner, subsequent.ApiId);
+                CollectionAssert.AreEqual(winnerBytes, File.ReadAllBytes(files.SidecarPath));
+            }
+
             CollectionAssert.AreEquivalent(new[] { files.ConfigPath, files.SidecarPath }, Directory.GetFiles(files.DirectoryPath));
         }
 

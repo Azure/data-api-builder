@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
-using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Telemetry
@@ -54,9 +53,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         public async Task LaunchHandoffPrecedesFirstEngineEventAndStartupFailure(int source, string wireSource, string executionMode)
         {
             using OfflineSender sender = new();
-            using CliTelemetrySession cli = sender.CreateCli(installation: new(_installationId, "newly_saved"));
+            int cliNotices = 0;
+            int engineNotices = 0;
+            using CliTelemetrySession cli = sender.CreateCli(installation: new(_installationId, "newly_saved"),
+                showNotice: () => cliNotices++);
             ProductTelemetryLaunchContext launch = BeginLaunch(cli, _root, (CliTelemetryLaunchSource)source);
-            using EngineTelemetrySession engine = sender.CreateEngine(launch, _root, executionMode);
+            using EngineTelemetrySession engine = sender.CreateEngine(launch, _root, executionMode, showNotice: () =>
+            {
+                engineNotices++;
+                throw new IOException("The linked engine must not require a second notice sink.");
+            });
+            Assert.IsTrue(engine.IsEnabled);
+            Assert.AreEqual(1, cliNotices);
+            Assert.AreEqual(0, engineNotices);
 
             engine.StartupFailed(TelemetryFailureStage.Configuration);
             engine.StartupFailed(TelemetryFailureStage.Parsing);
@@ -295,9 +304,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         public async Task DirectEngineHasNoCliLinkageEvenWhileCliLaunchExists(string executionMode)
         {
             using OfflineSender sender = new();
-            using CliTelemetrySession cli = sender.CreateCli();
+            int cliNotices = 0;
+            int engineNotices = 0;
+            using CliTelemetrySession cli = sender.CreateCli(showNotice: () => cliNotices++);
             ProductTelemetryLaunchContext unrelated = BeginLaunch(cli, _root, CliTelemetryLaunchSource.StartWeb);
-            using EngineTelemetrySession engine = sender.CreateEngine(launch: null, _otherRoot, executionMode);
+            using EngineTelemetrySession engine = sender.CreateEngine(launch: null, _otherRoot, executionMode,
+                showNotice: () => engineNotices++);
+            Assert.AreEqual(1, cliNotices);
+            Assert.AreEqual(1, engineNotices, "An unrelated CLI notice cannot disclose this direct engine's collection.");
             engine.AcceptConfiguration(CreateConfig(), configPath: _otherRoot);
             engine.MarkHostReady();
             Assert.IsTrue(engine.IsReady);
@@ -360,7 +374,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         public async Task InvalidLaunchHeaderIsIgnoredInsteadOfBecomingEventProperties(string invalidField)
         {
             using OfflineSender sender = new();
-            using CliTelemetrySession cli = sender.CreateCli();
+            int cliNotices = 0;
+            int engineNotices = 0;
+            using CliTelemetrySession cli = sender.CreateCli(showNotice: () => cliNotices++);
             ProductTelemetryLaunchContext original = BeginLaunch(cli, _root, CliTelemetryLaunchSource.StartWeb);
             ProductTelemetryLaunchContext invalid = invalidField switch
             {
@@ -370,7 +386,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 "negative_source" => original with { Source = (CliTelemetryLaunchSource)(-1) },
                 _ => original with { Source = (CliTelemetryLaunchSource)int.MaxValue }
             };
-            using EngineTelemetrySession engine = sender.CreateEngine(invalid, _root, executionMode: SENTINEL);
+            using EngineTelemetrySession engine = sender.CreateEngine(invalid, _root, executionMode: SENTINEL,
+                showNotice: () => engineNotices++);
+            Assert.AreEqual(1, cliNotices);
+            Assert.AreEqual(1, engineNotices, "Every invalid header must require the engine's own disclosure.");
             Assert.IsTrue(engine.IsEnabled, "Invalid optional linkage must not prevent independent engine telemetry.");
             engine.AcceptConfiguration(CreateConfig(), configPath: _root);
             engine.MarkHostReady();
@@ -392,6 +411,54 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             AssertApiIdentity(engineEvents[1], _otherApiId, "reused");
             AssertApiIdentity(engineEvents[2], _otherApiId, "reused");
             CollectionAssert.AreEqual(new[] { _root }, sender.EngineIdentityPaths.ToArray());
+            AssertEnvelopes(sender.Events);
+        }
+
+        [DataTestMethod]
+        [DataRow("null")]
+        [DataRow("empty_engine")]
+        [DataRow("empty_parent")]
+        [DataRow("same_session")]
+        [DataRow("negative_source")]
+        [DataRow("unknown_source")]
+        public async Task UnlinkedOrInvalidEngineCannotCollectWhenItsOwnNoticeFails(string invalidField)
+        {
+            using OfflineSender sender = new();
+            int cliNotices = 0;
+            int engineNotices = 0;
+            using CliTelemetrySession cli = sender.CreateCli(showNotice: () => cliNotices++);
+            ProductTelemetryLaunchContext original = BeginLaunch(cli, _root, CliTelemetryLaunchSource.StartWeb);
+            ProductTelemetryLaunchContext? launch = invalidField switch
+            {
+                "null" => null,
+                "empty_engine" => original with { EngineSessionId = Guid.Empty },
+                "empty_parent" => original with { ParentCliSessionId = Guid.Empty },
+                "same_session" => original with { EngineSessionId = original.ParentCliSessionId },
+                "negative_source" => original with { Source = (CliTelemetryLaunchSource)(-1) },
+                _ => original with { Source = (CliTelemetryLaunchSource)int.MaxValue }
+            };
+            using EngineTelemetrySession engine = sender.CreateEngine(launch, _root, showNotice: () =>
+            {
+                engineNotices++;
+                throw new IOException("The required engine notice is unavailable.");
+            });
+            Assert.AreEqual(1, cliNotices);
+            Assert.AreEqual(1, engineNotices);
+            Assert.IsFalse(engine.IsEnabled, "Invalid linkage cannot borrow the CLI's already-shown notice.");
+            Assert.IsNull(engine.HealthProbeToken);
+            engine.AcceptConfiguration(CreateConfig(), configPath: _root);
+            engine.MarkHostReady();
+            engine.StartupFailed(TelemetryFailureStage.Configuration);
+            engine.Tick();
+            Complete(cli, "start");
+            await DrainAsync(cli, engine);
+
+            Assert.IsFalse(engine.IsReady);
+            Assert.AreEqual(0, sender.EngineSenderAcquisitions);
+            Assert.AreEqual(0, sender.EngineIdentityPaths.Count);
+            Assert.AreEqual(0, sender.Events.OfType<EngineTelemetryEvent>().Count());
+            CollectionAssert.AreEqual(new[] { LAUNCH, COMMAND }, sender.Events.Select(record => record.Name).ToArray());
+            Assert.AreEqual(1, sender.CliSenderAcquisitions, "The disclosed parent must still deliver normally.");
             AssertEnvelopes(sender.Events);
         }
 
@@ -952,9 +1019,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             internal CliTelemetrySession CreateCli(CliTelemetryInstallation? installation = null,
                 Func<string?, EngineTelemetryIdentity>? createIdentity = null,
-                Func<string?, EngineTelemetryIdentity?>? lookupIdentity = null)
+                Func<string?, EngineTelemetryIdentity?>? lookupIdentity = null, Action? showNotice = null)
                 => CliTelemetrySession.Create(AcquireCliSender, enableSyntheticCollection: true,
-                    readEnvironmentVariable: _ => null, showNotice: () => { },
+                    readEnvironmentVariable: _ => null, showNotice: showNotice ?? (() => { }),
                     resolveInstallation: () => installation ?? new(_installationId, "reused"),
                     createIdentity: path =>
                     {
@@ -968,10 +1035,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     });
 
             internal EngineTelemetrySession CreateEngine(ProductTelemetryLaunchContext? launch, string? configPath,
-                string executionMode = "web", bool enabled = true)
+                string executionMode = "web", bool enabled = true, Action? showNotice = null)
                 => EngineTelemetrySession.Create(AcquireEngineSender, enableSyntheticCollection: enabled,
                     configPath: configPath, executionMode: executionMode,
-                    readEnvironmentVariable: _ => null, showNotice: () => { },
+                    readEnvironmentVariable: _ => null, showNotice: showNotice ?? (() => { }),
                     resolveIdentity: path =>
                     {
                         EngineIdentityPaths.Enqueue(path);

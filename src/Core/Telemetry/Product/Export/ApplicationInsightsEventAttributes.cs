@@ -1,13 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using Azure.DataApiBuilder.Core.Telemetry.Product;
 
-namespace Azure.DataApiBuilder.Service.Telemetry
+namespace Azure.DataApiBuilder.Core.Telemetry.Product
 {
     /// <summary>Maps the immutable product contract to the SDK's custom-event attributes.</summary>
     internal static class ApplicationInsightsEventAttributes

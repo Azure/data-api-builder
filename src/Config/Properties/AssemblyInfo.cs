@@ -8,4 +8,3 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Microsoft.DataApiBuilder.Core")]
 [assembly: InternalsVisibleTo("Microsoft.DataApiBuilder.Mcp")]
 [assembly: InternalsVisibleTo("Microsoft.DataApiBuilder")]
-[assembly: InternalsVisibleTo("Cli.Tests")]

@@ -16,7 +16,6 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
-using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Telemetry
@@ -736,6 +735,72 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             Assert.AreEqual(1, factory.Attempts.Count);
             Assert.AreEqual(0, factory.Records.Count, "Cancellation abandons the attempt without a final event.");
+        }
+
+        [TestMethod]
+        public async Task Ordinary250MillisecondDeadlineDoesNotShortenReservedTwoSecondDrain()
+        {
+            ManualClock clock = new();
+            TaskCompletionSource commandEntered = Signal();
+            TaskCompletionSource launchEntered = Signal();
+            TaskCompletionSource release = Signal();
+            RecordingFactory factory = new(async (record, _) =>
+            {
+                (record.Name == COMMAND ? commandEntered : launchEntered).TrySetResult();
+                await release.Task.ConfigureAwait(false); // Both independent workers ignore cancellation.
+                return true;
+            });
+            using CliTelemetrySession cli = CreateCli(factory.Acquire, clock);
+            using CliTelemetryLaunchReservation reservation = Reserve(cli);
+            using CliTelemetryLaunchReservation survivor = Reserve(cli);
+            try
+            {
+                Complete(cli);
+                await commandEntered.Task.WaitAsync(_timeout);
+                Assert.IsNotNull(reservation.Begin(ROOT));
+                await launchEntered.Task.WaitAsync(_timeout);
+                ManualTimer reservedDeadline = await clock.NextTimerAsync(TimeSpan.FromSeconds(2));
+                Task stop = cli.StopAsync();
+                ManualTimer ordinaryDeadline = await clock.NextTimerAsync(TimeSpan.FromMilliseconds(250));
+                Assert.AreEqual(2, clock.TimerCount);
+
+                clock.Advance(TimeSpan.FromMilliseconds(250));
+                ordinaryDeadline.Fire();
+                await stop.WaitAsync(_timeout);
+                cli.Dispose();
+                Assert.IsFalse(cli.IsEnabled);
+                Assert.IsTrue(factory.Attempts.Single(attempt => attempt.Record.Name == COMMAND).Token.IsCancellationRequested);
+                Assert.IsFalse(factory.Attempts.Single(attempt => attempt.Record.Name == LAUNCH).Token.IsCancellationRequested,
+                    "The command deadline and normal Dispose have no authority to revoke a reserved helper.");
+                Assert.IsTrue(survivor.IsAvailable);
+                Assert.AreEqual(1, PendingDeliveries(cli).Length);
+                Assert.IsTrue(factory.Senders.All(sender => sender.DisposeCalls == 0));
+                Assert.AreSame(stop, cli.StopAsync());
+                Assert.AreEqual(2, clock.TimerCount);
+
+                clock.Advance(TimeSpan.FromMilliseconds(1750));
+                reservedDeadline.Fire();
+                await WaitForDeferredDrainAsync(cli);
+                Assert.IsTrue(factory.Attempts.Single(attempt => attempt.Record.Name == LAUNCH).Token.IsCancellationRequested);
+                Assert.IsTrue(factory.Senders.All(sender => sender.DisposeCalls == 0), "Only each gated worker owns its exporter disposal.");
+                Assert.IsTrue(survivor.IsAvailable, "A helper timeout must not revoke other reservations.");
+                Assert.AreEqual(0, factory.Records.Count);
+            }
+            finally
+            {
+                release.TrySetResult();
+                cli.Disable();
+                await WaitForDeferredDrainAsync(cli);
+                foreach (RecordingExporter sender in factory.Senders)
+                {
+                    await sender.Disposed.Task.WaitAsync(_timeout);
+                }
+            }
+
+            Assert.AreEqual(2, factory.Senders.Count);
+            Assert.AreEqual(2, factory.Attempts.Count);
+            Assert.AreEqual(0, factory.Records.Count);
+            Assert.IsTrue(factory.Senders.All(sender => sender.DisposeCalls == 1));
         }
 
         [TestMethod]

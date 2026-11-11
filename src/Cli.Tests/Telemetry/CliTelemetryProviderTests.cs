@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Cli.Constants;
+using CommandLine;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cli.Tests.Telemetry
@@ -418,6 +419,92 @@ namespace Cli.Tests.Telemetry
             Assert.AreEqual(0, result.Writes.Length);
         }
 
+        [TestMethod]
+        public void RealParserOptionsShareOnlyTheImmutableDependencyDefault()
+        {
+            using Parser parser = new(settings => settings.CaseInsensitiveEnumValues = true);
+            Options first = Parse(["start", "--config", ROOT]);
+            Options second = Parse(["export", "--graphql", "--output", "output", "--config", ROOT]);
+            Assert.AreNotSame(first, second);
+            Assert.AreSame(CliInvocationDependencies.Default, first.Dependencies);
+            Assert.AreSame(first.Dependencies, second.Dependencies);
+
+            using CancellationTokenSource cancellation = new();
+            first.Dependencies = first.Dependencies with
+            {
+                EngineLauncher = (_, _, _) => false,
+                ExporterFactory = () => throw new AssertFailedException("Only this invocation owns the override."),
+                ExportCancellationTokenSource = cancellation
+            };
+
+            Options later = Parse(["start", "--config", ROOT]);
+            Assert.AreNotSame(first.Dependencies, second.Dependencies);
+            Assert.AreSame(CliInvocationDependencies.Default, later.Dependencies);
+            Assert.IsNull(second.Dependencies.EngineLauncher);
+            Assert.IsNull(second.Dependencies.ExporterFactory);
+            Assert.IsNull(second.Dependencies.ExportCancellationTokenSource);
+            Assert.AreSame(cancellation, first.Dependencies.ExportCancellationTokenSource);
+
+            Options Parse(string[] args) => parser.ParseArguments<StartOptions, ExportOptions>(args).MapResult(
+                (StartOptions options) => (Options)options,
+                (ExportOptions options) => options,
+                _ => throw new AssertFailedException("The real parser must create the requested command options."));
+        }
+
+        [TestMethod]
+        public void RealStartHandlersUseOnlyTheirOwnInvocationDependencies()
+        {
+            FileFixture fixture = new(Configuration("mssql", "Server=unused.invalid;Database=synthetic;Integrated Security=true"));
+            using CancellationTokenSource cancellation = new();
+            cancellation.Cancel();
+            int firstLaunches = 0;
+            int secondLaunches = 0;
+            CliInvocationDependencies first = CliInvocationDependencies.Default with
+            {
+                EngineLauncher = (_, context, _) =>
+                {
+                    firstLaunches++;
+                    Assert.IsNull(context);
+                    return false;
+                },
+                ExporterFactory = () => throw new AssertFailedException("Start must not use the export dependency."),
+                ExportCancellationTokenSource = cancellation
+            };
+            CliInvocationDependencies second = CliInvocationDependencies.Default with
+            {
+                EngineLauncher = (_, context, _) =>
+                {
+                    secondLaunches++;
+                    Assert.IsNull(context);
+                    return true;
+                }
+            };
+            string[] args = ["start", "--config", ROOT, "--log-level", "None"];
+            using (FileSystemRuntimeConfigLoader loader = new(fixture.FileSystem, isCliLoader: true,
+                logger: NullLogger<FileSystemRuntimeConfigLoader>.Instance))
+            {
+                Assert.AreEqual(CliReturnCode.GENERAL_ERROR,
+                    Program.Execute(args, NullLogger.Instance, fixture.FileSystem, loader, telemetry: null, first));
+            }
+
+            UseQuietLoggers();
+            using (FileSystemRuntimeConfigLoader loader = new(fixture.FileSystem, isCliLoader: true,
+                logger: NullLogger<FileSystemRuntimeConfigLoader>.Instance))
+            {
+                Assert.AreEqual(CliReturnCode.SUCCESS,
+                    Program.Execute(args, NullLogger.Instance, fixture.FileSystem, loader, telemetry: null, second));
+            }
+
+            Assert.AreEqual(1, firstLaunches, "The second invocation must not retain the first launch override.");
+            Assert.AreEqual(1, secondLaunches, "Both real start handlers must reach the preflight-approved handoff.");
+            Assert.IsNull(second.ExporterFactory);
+            Assert.IsNull(second.ExportCancellationTokenSource);
+            Assert.IsNull(CliInvocationDependencies.Default.EngineLauncher);
+            Assert.IsNull(CliInvocationDependencies.Default.ExporterFactory);
+            Assert.IsNull(CliInvocationDependencies.Default.ExportCancellationTokenSource);
+            Assert.IsTrue(cancellation.Token.IsCancellationRequested, "A start must not dispose or use the export scheduling source.");
+        }
+
         [DataTestMethod]
         [DataRow(false)]
         [DataRow(true)]
@@ -452,13 +539,13 @@ namespace Cli.Tests.Telemetry
                 ProductTelemetry = session,
                 ProductTelemetryLaunchSource = CliTelemetryLaunchSource.ExportGraphQL,
                 ProductTelemetryLaunchReservation = reservation,
-                EngineLauncher = (_, context, _) =>
+                Dependencies = new(EngineLauncher: (_, context, _) =>
                 {
                     launches++;
                     Assert.IsNotNull(context);
                     Assert.AreEqual(CliTelemetryLaunchSource.ExportGraphQL, context.Source);
                     return true;
-                }
+                })
             };
 
             Assert.IsTrue(ConfigGenerator.TryStartEngineWithOptions(helper, loader, fixture.FileSystem));
@@ -592,14 +679,15 @@ namespace Cli.Tests.Telemetry
             cancellation.Cancel();
 
             int exitCode = Program.Execute(args, NullLogger.Instance, fixture.FileSystem, loader, enabled ? session : null,
-                engineLauncher: (_, context, _) =>
-                {
-                    engineLaunches++;
-                    Assert.AreEqual(enabled, context is not null);
-                    return true;
-                },
-                exporterFactory: () => throw new AssertFailedException("These cases must not attempt HTTP schema discovery."),
-                exportCancellationTokenSource: cancellation);
+                new CliInvocationDependencies(
+                    EngineLauncher: (_, context, _) =>
+                    {
+                        engineLaunches++;
+                        Assert.AreEqual(enabled, context is not null);
+                        return true;
+                    },
+                    ExporterFactory: () => throw new AssertFailedException("These cases must not attempt HTTP schema discovery."),
+                    ExportCancellationTokenSource: cancellation));
             Assert.IsFalse(TelemetryConfigurationPresence.IsCaptureEnabled(), "The invocation must restore its scoped capture policy.");
             await session.StopAsync().WaitAsync(TimeSpan.FromSeconds(5));
             CliTelemetryEvent[] events = exporter.Events.ToArray();

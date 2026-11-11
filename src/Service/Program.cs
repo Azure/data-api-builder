@@ -96,14 +96,13 @@ namespace Azure.DataApiBuilder.Service
         // Only the CLI's actual preflight-approved handoff supplies linkage. No process-global
         // markers are used, and the original public service entry points remain independent.
         internal static bool StartEngine(string[] args, ProductTelemetryLaunchContext? launchContext, Action? startupFailureObserved = null)
-            => StartEngine(args, launchContext, (stdio, context, path) => EngineTelemetryHosting.CreateStandalone(stdio, context, path),
+            => StartEngine(args, launchContext, EngineLaunchDependencies.Default,
                 startupFailureObserved: startupFailureObserved);
 
         // Instance-scoped validation seam: tests exercise this same bootstrap and serving loop
         // with an offline sender and local host transport, never a mutable static factory.
         internal static bool StartEngine(string[] args, ProductTelemetryLaunchContext? launchContext,
-            Func<bool, ProductTelemetryLaunchContext?, string?, EngineTelemetrySession> sessionFactory,
-            Func<IHostBuilder, IHostBuilder>? configureHost = null, Action? startupFailureObserved = null)
+            EngineLaunchDependencies dependencies, Action? startupFailureObserved = null)
         {
             bool stdio = McpStdioHelper.ShouldRunMcpStdio(args, out string? role);
             string? configPath = null;
@@ -119,10 +118,10 @@ namespace Azure.DataApiBuilder.Service
                 }
             }
 
-            using EngineTelemetrySession productTelemetry = sessionFactory(stdio, launchContext, configPath);
+            using EngineTelemetrySession productTelemetry = dependencies.SessionFactory(stdio, launchContext, configPath);
             try
             {
-                return StartEngineCore(args, stdio, role, productTelemetry, validateUrls: false, configureHost);
+                return StartEngineCore(args, stdio, role, productTelemetry, validateUrls: false, dependencies.ConfigureHost);
             }
             finally
             {
@@ -179,7 +178,9 @@ namespace Azure.DataApiBuilder.Service
                 }
 
                 IHostBuilder hostBuilder = CreateHostBuilderCore(args, runMcpStdio, mcpRole, productTelemetry);
-                using IHost host = (configureHost is null ? hostBuilder : configureHost(hostBuilder)).Build();
+                // Each runner owns host disposal: web Run/RunAsync disposes in its finally;
+                // the stdio helper drains the config loader and telemetry before disposing.
+                IHost host = (configureHost is null ? hostBuilder : configureHost(hostBuilder)).Build();
 
                 if (runMcpStdio)
                 {

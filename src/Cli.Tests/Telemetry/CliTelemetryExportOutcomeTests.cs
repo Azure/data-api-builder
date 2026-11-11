@@ -95,6 +95,17 @@ namespace Cli.Tests.Telemetry
             AssertCommand(observed, outcome, category);
         }
 
+        [TestMethod]
+        public async Task CanceledInvocationSourceRemainsCallerOwnedAndUnstartedHelpersEmitNoLaunch()
+        {
+            ExportRun result = await RunAsync("valid-schema", enabled: true);
+
+            Assert.AreEqual(CliReturnCode.SUCCESS, result.ExitCode);
+            Assert.AreEqual(SCHEMA, result.Schema);
+            CollectionAssert.AreEqual(new[] { false }, result.DiscoveryAttempts);
+            AssertCommand(result, "success", "none");
+        }
+
         private static async Task<ExportRun> RunAsync(string scenario, bool enabled)
         {
             MockFileSystem files = new();
@@ -170,13 +181,24 @@ namespace Cli.Tests.Telemetry
                 Console.SetOut(stdout);
                 Console.SetError(stderr);
                 exitCode = Program.Execute(args.ToArray(), logger, fileSystem.Object, loader, enabled ? telemetry : null,
-                    engineLauncher: (_, _, _) => { Interlocked.Increment(ref engineLaunches); return false; },
-                    exporterFactory: () => exporter, exportCancellationTokenSource: cancellation);
+                    new CliInvocationDependencies(
+                        EngineLauncher: (_, _, _) => { Interlocked.Increment(ref engineLaunches); return false; },
+                        ExporterFactory: () => exporter, ExportCancellationTokenSource: cancellation));
             }
             finally
             {
                 Console.SetOut(originalOut);
                 Console.SetError(originalError);
+            }
+
+            // Export may cancel this invocation's scheduling source, but only the caller
+            // disposes it. Token retrieval/registration and Cancel would fail after disposal.
+            Assert.IsTrue(cancellation.Token.IsCancellationRequested);
+            bool callbackRan = false;
+            using (cancellation.Token.Register(() => callbackRan = true))
+            {
+                Assert.IsTrue(callbackRan);
+                cancellation.Cancel();
             }
 
             await telemetry.StopAsync().WaitAsync(TimeSpan.FromSeconds(5));

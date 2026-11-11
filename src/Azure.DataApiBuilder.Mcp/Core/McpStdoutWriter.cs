@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // disposed prevents new writes; if the writer lock is available, release its
             // resources immediately. Otherwise the process-owned stdout stream is left for the
             // operating system to reclaim when the blocked process exits.
-            if (!Monitor.TryEnter(_lock))
+            if (!System.Threading.Monitor.TryEnter(_lock))
             {
                 return;
             }
@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
             finally
             {
-                Monitor.Exit(_lock);
+                System.Threading.Monitor.Exit(_lock);
             }
         }
 

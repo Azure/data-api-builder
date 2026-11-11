@@ -149,30 +149,38 @@ namespace Azure.DataApiBuilder.Service.Utilities
             }
             finally
             {
-                FileSystemRuntimeConfigLoader? configLoader =
-                    host.Services.GetService<FileSystemRuntimeConfigLoader>();
-                if (configLoader is not null)
+                try
                 {
-                    TimeSpan shutdownTimeout = host.Services
-                        .GetService<IOptions<HostOptions>>()?
-                        .Value.ShutdownTimeout ?? new HostOptions().ShutdownTimeout;
-                    using CancellationTokenSource shutdownCancellation = new(shutdownTimeout);
-                    try
+                    FileSystemRuntimeConfigLoader? configLoader =
+                        host.Services.GetService<FileSystemRuntimeConfigLoader>();
+                    if (configLoader is not null)
                     {
-                        configLoader
-                            .StopAsync(shutdownCancellation.Token)
-                            .GetAwaiter()
-                            .GetResult();
+                        TimeSpan shutdownTimeout = host.Services
+                            .GetService<IOptions<HostOptions>>()?
+                            .Value.ShutdownTimeout ?? new HostOptions().ShutdownTimeout;
+                        using CancellationTokenSource shutdownCancellation = new(shutdownTimeout);
+                        try
+                        {
+                            configLoader
+                                .StopAsync(shutdownCancellation.Token)
+                                .GetAwaiter()
+                                .GetResult();
+                        }
+                        catch (OperationCanceledException)
+                            when (shutdownCancellation.IsCancellationRequested)
+                        {
+                            // Match Generic Host shutdown semantics: cancellation bounds the drain.
+                        }
                     }
-                    catch (OperationCanceledException)
-                        when (shutdownCancellation.IsCancellationRequested)
-                    {
-                        // Match Generic Host shutdown semantics: cancellation bounds the drain.
-                    }
-                }
 
-                host.Services.GetService<EngineTelemetrySession>()?.StopAsync().GetAwaiter().GetResult();
-                host.Dispose();
+                    host.Services.GetService<EngineTelemetrySession>()?.StopAsync().GetAwaiter().GetResult();
+                }
+                finally
+                {
+                    // This runner owns the host even if service resolution or a shutdown hook
+                    // fails. StartEngineCore must not add a second disposal owner.
+                    host.Dispose();
+                }
             }
         }
     }

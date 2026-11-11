@@ -38,7 +38,8 @@ dab-config*.json
 .env
 /docs/design/McpToolRegistryHotReload.md
 
-# Internal telemetry design drafts (keep local copies out of publication)
+# Local-only, unreviewed telemetry requirements/design drafts (not for publication)
+# Intentionally published maintainer implementation notes are not covered by these exclusions.
 /docs/design/engine-telemetry-functional-spec.md
 /docs/design/engine-telemetry-implementation-handoff.md
 /docs/design/engine-telemetry-requirements-review.md

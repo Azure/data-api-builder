@@ -26,6 +26,10 @@ This package is designed for ASP.NET Core applications that expose MCP endpoints
 
 Use it to register DAB MCP services in dependency injection and map DAB MCP endpoints in your app's hosting pipeline.
 
+Use DAB packages and assemblies from the **same release**. MCP integration relies on coordinated DAB contracts; public type visibility does not guarantee binary compatibility when assemblies from different releases are mixed.
+
+The MCP package declares an exact Core package dependency, including prerelease versions. Do not override that constraint with a different direct Core reference or suppress NuGet's `NU1608` version-constraint warning. Manually replacing bundled assemblies is not a supported compatibility path.
+
 Current distribution scope is internal Azure Artifacts feeds.
 
 ## Resources

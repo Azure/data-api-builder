@@ -393,6 +393,46 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         }
 
         [TestMethod]
+        public async Task DefaultNoticeIsWrittenOnceForCliAndLinkedWebEngine()
+        {
+            await AssertDefaultNoticeInAnIsolatedProcessAsync(
+                nameof(DefaultNoticeIsWrittenOnceForCliAndLinkedWebEngine),
+                () => ExerciseCliAndEngineDefaultNoticeAsync(CliTelemetryLaunchSource.StartWeb), expectedNotices: 1);
+        }
+
+        [TestMethod]
+        public async Task DefaultNoticeIsWrittenOnceForCliAndLinkedStdioEngine()
+        {
+            await AssertDefaultNoticeInAnIsolatedProcessAsync(
+                nameof(DefaultNoticeIsWrittenOnceForCliAndLinkedStdioEngine),
+                () => ExerciseCliAndEngineDefaultNoticeAsync(CliTelemetryLaunchSource.StartStdio), expectedNotices: 1);
+        }
+
+        [TestMethod]
+        public async Task DefaultNoticeIsWrittenOnceForCliAndLinkedExportEngine()
+        {
+            await AssertDefaultNoticeInAnIsolatedProcessAsync(
+                nameof(DefaultNoticeIsWrittenOnceForCliAndLinkedExportEngine),
+                () => ExerciseCliAndEngineDefaultNoticeAsync(CliTelemetryLaunchSource.ExportGraphQL), expectedNotices: 1);
+        }
+
+        [TestMethod]
+        public async Task DefaultNoticeIsWrittenForUnlinkedEngineAfterCliNotice()
+        {
+            await AssertDefaultNoticeInAnIsolatedProcessAsync(
+                nameof(DefaultNoticeIsWrittenForUnlinkedEngineAfterCliNotice),
+                () => ExerciseCliAndEngineDefaultNoticeAsync(CliTelemetryLaunchSource.StartWeb, "null"), expectedNotices: 2);
+        }
+
+        [TestMethod]
+        public async Task DefaultNoticeIsWrittenForInvalidEngineLinkAfterCliNotice()
+        {
+            await AssertDefaultNoticeInAnIsolatedProcessAsync(
+                nameof(DefaultNoticeIsWrittenForInvalidEngineLinkAfterCliNotice),
+                () => ExerciseCliAndEngineDefaultNoticeAsync(CliTelemetryLaunchSource.StartWeb, "invalid"), expectedNotices: 2);
+        }
+
+        [TestMethod]
         public async Task DefaultDisabledMissingFactoryAndOptedOutSessionsDoNotWriteARealNotice()
         {
             await AssertDefaultNoticeInAnIsolatedProcessAsync(
@@ -1153,49 +1193,96 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual(1, exporter.DisposeCalls);
         }
 
-        [TestMethod]
-        public async Task GracefulStopSharesOneTwoSecondDeadlineEvenIfTheExporterNeverHonorsCancellation()
+        [DataTestMethod]
+        [DataRow("factory")]
+        [DataRow("export")]
+        [DataRow("dispose")]
+        public async Task GracefulStopSharesOne250MillisecondDeadlineForStalledWorker(string stalledOperation)
         {
             ManualTimeProvider clock = new();
             TaskCompletionSource entered = Signal();
             TaskCompletionSource release = Signal();
+            int factories = 0;
             CapturingExporter exporter = new(async (_, _) =>
             {
-                entered.TrySetResult();
-                await release.Task.ConfigureAwait(false);
+                if (stalledOperation == "export")
+                {
+                    entered.TrySetResult();
+                    await release.Task.ConfigureAwait(false); // Deliberately ignore cancellation.
+                }
+
                 return true;
+            }, dispose: () =>
+            {
+                if (stalledOperation == "dispose")
+                {
+                    entered.TrySetResult();
+                    release.Task.WaitAsync(_testTimeout).GetAwaiter().GetResult();
+                }
             });
-            using CliTelemetrySession session = CreateSession(exporter, clock);
+            using CliTelemetrySession session = CliTelemetrySession.Create(() =>
+            {
+                Interlocked.Increment(ref factories);
+                if (stalledOperation == "factory")
+                {
+                    entered.TrySetResult();
+                    release.Task.WaitAsync(_testTimeout).GetAwaiter().GetResult();
+                }
+
+                return exporter;
+            }, true, clock, readEnvironmentVariable: _ => null, showNotice: () => { },
+                resolveInstallation: () => new(_installationId, "reused"));
+            using CancellationTokenSource laterCaller = new();
             try
             {
-                Assert.IsNotNull(session.BeginEngineLaunch(ROOT, CliTelemetryLaunchSource.StartWeb));
-                await entered.Task.WaitAsync(_testTimeout);
+                session.Complete("start", "none", _noOptions, CliTelemetryOutcome.Success);
                 Task firstStop = session.StopAsync();
-                Assert.AreSame(firstStop, session.StopAsync());
+                await entered.Task.WaitAsync(_testTimeout);
                 ManualTimer deadline = await clock.NextTimerAsync();
-                Assert.AreEqual(TimeSpan.FromSeconds(2), deadline.DueTime);
+                Assert.AreEqual(TimeSpan.FromMilliseconds(250), deadline.DueTime);
+                Assert.AreSame(firstStop, session.StopAsync());
                 Assert.IsFalse(firstStop.IsCompleted);
-                deadline.Fire();
-                await firstStop.WaitAsync(_testTimeout);
 
-                Assert.IsTrue(exporter.Tokens.Single().IsCancellationRequested);
-                Assert.IsFalse(exporter.Disposed.Task.IsCompleted, "The stop deadline must not wait for stuck exporter cleanup.");
+                clock.Advance(TimeSpan.FromMilliseconds(249));
+                Task laterStop = session.StopAsync(laterCaller.Token);
+                Assert.AreSame(firstStop, session.StopAsync());
+                Assert.IsFalse(laterStop.IsCompleted);
+                Assert.AreEqual(1, clock.TimerCount, "Later callers must not get a fresh relative deadline.");
+
+                clock.Advance(TimeSpan.FromMilliseconds(1));
+                deadline.Fire();
+                await Task.WhenAll(firstStop, laterStop).WaitAsync(_testTimeout);
+
+                if (stalledOperation == "export")
+                {
+                    Assert.IsTrue(exporter.Tokens.Single().IsCancellationRequested);
+                }
+
+                Assert.IsFalse(exporter.Disposed.Task.IsCompleted, "Stop must return while the worker is still gated.");
+                Assert.AreEqual(stalledOperation == "dispose" ? 1 : 0, exporter.DisposeCalls);
+                Assert.IsFalse(session.IsEnabled);
                 Assert.IsNull(session.BeginEngineLaunch(ROOT, CliTelemetryLaunchSource.StartWeb));
-                Assert.AreEqual(1, clock.TimestampCalls);
+                clock.Advance(TimeSpan.FromSeconds(2));
+                Assert.AreSame(firstStop, session.StopAsync(), "Even a completed stop retains the original shared task.");
+                Assert.AreEqual(1, clock.TimerCount);
             }
             finally
             {
                 release.TrySetResult();
+                session.Disable();
                 await exporter.Disposed.Task.WaitAsync(_testTimeout);
             }
 
-            Assert.AreEqual(1, exporter.Attempts.Count);
-            Assert.AreEqual(0, exporter.Records.Count);
+            Assert.AreEqual(1, factories);
+            Assert.AreEqual(stalledOperation == "factory" ? 0 : 1, exporter.Attempts.Count);
+            Assert.AreEqual(stalledOperation == "dispose" ? 1 : 0, exporter.Records.Count);
+            Assert.AreEqual(1, exporter.DisposeCalls);
         }
 
         [TestMethod]
-        public async Task LaterStopCallerCanCancelThePendingGracefulDrain()
+        public async Task GracefulStopDeliversBeforeIts250MillisecondDeadline()
         {
+            ManualTimeProvider clock = new();
             TaskCompletionSource entered = Signal();
             TaskCompletionSource release = Signal();
             CapturingExporter exporter = new(async (_, token) =>
@@ -1204,24 +1291,168 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 await release.Task.WaitAsync(token).ConfigureAwait(false);
                 return true;
             });
-            using CliTelemetrySession session = CreateSession(exporter);
+            using CliTelemetrySession session = CreateSession(exporter, clock);
+            try
+            {
+                session.Complete("validate", "none", _noOptions, CliTelemetryOutcome.Success);
+                await entered.Task.WaitAsync(_testTimeout);
+                Task stop = session.StopAsync();
+                ManualTimer deadline = await clock.NextTimerAsync();
+                Assert.AreEqual(TimeSpan.FromMilliseconds(250), deadline.DueTime);
+                Assert.IsFalse(stop.IsCompleted);
+
+                clock.Advance(TimeSpan.FromMilliseconds(249));
+                release.TrySetResult();
+                await stop.WaitAsync(_testTimeout);
+                Assert.IsTrue(exporter.Disposed.Task.IsCompleted);
+                Assert.AreEqual(1, exporter.DisposeCalls);
+                Assert.AreEqual(COMMAND, exporter.Records.Single().Name);
+                Assert.AreEqual(1, exporter.Attempts.Count);
+                Assert.IsFalse(exporter.Tokens.Single().IsCancellationRequested);
+                await deadline.Disposed.Task.WaitAsync(_testTimeout);
+                Assert.IsTrue(deadline.IsFinished, "A successful drain must dispose its deadline timer.");
+
+                clock.Advance(TimeSpan.FromMilliseconds(1));
+                deadline.Fire(); // The completed drain must have disposed its timer.
+                Assert.AreSame(stop, session.StopAsync());
+                Assert.AreEqual(1, clock.TimerCount);
+                Assert.IsFalse(exporter.Tokens.Single().IsCancellationRequested);
+                AssertEnvelope(exporter.Records.ToArray(), session.SessionId);
+            }
+            finally
+            {
+                release.TrySetResult();
+                session.Disable();
+                await exporter.Disposed.Task.WaitAsync(_testTimeout);
+            }
+        }
+
+        [TestMethod]
+        public async Task LaterStopCallerCanCancelThePendingGracefulDrain()
+        {
+            ManualTimeProvider clock = new();
+            TaskCompletionSource entered = Signal();
+            TaskCompletionSource release = Signal();
+            CapturingExporter exporter = new(async (_, token) =>
+            {
+                entered.TrySetResult();
+                await release.Task.WaitAsync(token).ConfigureAwait(false);
+                return true;
+            });
+            using CliTelemetrySession session = CreateSession(exporter, clock);
             try
             {
                 session.Complete("start", "none", _noOptions, CliTelemetryOutcome.Success);
                 await entered.Task.WaitAsync(_testTimeout);
                 Task firstStop = session.StopAsync();
+                ManualTimer deadline = await clock.NextTimerAsync();
+                Assert.AreEqual(TimeSpan.FromMilliseconds(250), deadline.DueTime);
+                clock.Advance(TimeSpan.FromMilliseconds(249));
                 using CancellationTokenSource cancellation = new();
                 Task secondStop = session.StopAsync(cancellation.Token);
+                Assert.AreEqual(1, clock.TimerCount);
                 cancellation.Cancel();
                 await secondStop.WaitAsync(_testTimeout);
                 await firstStop.WaitAsync(_testTimeout);
                 Assert.IsTrue(exporter.Tokens.Single().IsCancellationRequested);
+                Assert.IsTrue(exporter.Disposed.Task.IsCompleted);
+                await deadline.Disposed.Task.WaitAsync(_testTimeout);
+                Assert.IsTrue(deadline.IsFinished);
                 Assert.AreEqual(0, exporter.Records.Count);
+                Assert.AreSame(firstStop, session.StopAsync());
+                Assert.AreEqual(1, clock.TimerCount, "Cancellation must finish the existing drain without a replacement timer.");
             }
             finally
             {
                 release.TrySetResult();
+                session.Disable();
+                await exporter.Disposed.Task.WaitAsync(_testTimeout);
             }
+        }
+
+        [DataTestMethod]
+        [DataRow("disable")]
+        [DataRow("deadline")]
+        [DataRow("later_stop")]
+        public async Task DisableAndStopDoNotWaitForStalledCancellationCallbacks(string close)
+        {
+            ManualTimeProvider clock = new();
+            TaskCompletionSource exportEntered = Signal();
+            TaskCompletionSource releaseExport = Signal();
+            TaskCompletionSource callbackEntered = Signal();
+            TaskCompletionSource releaseCallback = Signal();
+            TaskCompletionSource callbackExited = Signal();
+            CapturingExporter exporter = new(async (_, token) =>
+            {
+                using CancellationTokenRegistration registration = token.Register(() =>
+                {
+                    callbackEntered.TrySetResult();
+                    try
+                    {
+                        releaseCallback.Task.WaitAsync(_testTimeout).GetAwaiter().GetResult();
+                    }
+                    finally
+                    {
+                        callbackExited.TrySetResult();
+                    }
+                });
+                exportEntered.TrySetResult();
+                await releaseExport.Task.ConfigureAwait(false); // Neither callback nor export cooperates.
+                return true;
+            });
+            using CliTelemetrySession session = CreateSession(exporter, clock);
+            using CancellationTokenSource cancellation = new();
+            try
+            {
+                session.Complete("start", "none", _noOptions, CliTelemetryOutcome.Success);
+                await exportEntered.Task.WaitAsync(_testTimeout);
+                Task stop = session.StopAsync();
+                ManualTimer deadline = await clock.NextTimerAsync();
+                Assert.AreEqual(TimeSpan.FromMilliseconds(250), deadline.DueTime);
+                if (close == "deadline")
+                {
+                    clock.Advance(TimeSpan.FromMilliseconds(250));
+                    deadline.Fire();
+                    await stop.WaitAsync(_testTimeout);
+                }
+                else if (close == "disable")
+                {
+                    await Task.Run(session.Disable).WaitAsync(_testTimeout);
+                }
+                else
+                {
+                    Task laterStop = session.StopAsync(cancellation.Token);
+                    cancellation.Cancel();
+                    await laterStop.WaitAsync(_testTimeout);
+                }
+
+                await callbackEntered.Task.WaitAsync(_testTimeout);
+                Assert.IsTrue(exporter.Tokens.Single().IsCancellationRequested);
+                Assert.IsFalse(callbackExited.Task.IsCompleted, "The caller must not join arbitrary cancellation callbacks.");
+                Assert.IsFalse(exporter.Disposed.Task.IsCompleted, "The worker still owns the blocked exporter.");
+                if (close != "deadline")
+                {
+                    Assert.IsFalse(stop.IsCompleted, "Cancellation must not wait for or complete a noncooperative worker.");
+                    clock.Advance(TimeSpan.FromMilliseconds(250));
+                    deadline.Fire();
+                }
+
+                await stop.WaitAsync(_testTimeout);
+                Assert.AreSame(stop, session.StopAsync());
+                Assert.AreEqual(1, clock.TimerCount);
+            }
+            finally
+            {
+                releaseCallback.TrySetResult();
+                releaseExport.TrySetResult();
+                session.Disable();
+                await exporter.Disposed.Task.WaitAsync(_testTimeout);
+            }
+
+            Assert.IsTrue(callbackExited.Task.IsCompleted);
+            Assert.AreEqual(1, exporter.Attempts.Count);
+            Assert.AreEqual(0, exporter.Records.Count);
+            Assert.AreEqual(1, exporter.DisposeCalls);
         }
 
         [DataTestMethod]
@@ -1299,6 +1530,54 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             }
 
             Assert.AreEqual(2, installations);
+        }
+
+        private static async Task ExerciseCliAndEngineDefaultNoticeAsync(CliTelemetryLaunchSource source, string linkage = "valid")
+        {
+            CapturingExporter cliExporter = new();
+            EngineNoticeExporter engineExporter = new();
+            // One real CLI invocation and its actual handoff, not two independent CLI sessions.
+            // Both producers use their default native-stderr notice and only offline senders.
+            using CliTelemetrySession cli = CliTelemetrySession.Create(() => cliExporter, true, new ManualTimeProvider(),
+                readEnvironmentVariable: _ => null, resolveInstallation: () => new(_installationId, "reused"),
+                createIdentity: _ => new(_apiId, "ephemeral"), lookupIdentity: _ => null);
+            Assert.IsTrue(cli.IsEnabled);
+            ProductTelemetryLaunchContext? launch = cli.BeginEngineLaunch(ROOT, source);
+            Assert.IsNotNull(launch);
+            ProductTelemetryLaunchContext? engineLaunch = linkage switch
+            {
+                "valid" => launch,
+                "null" => null,
+                "invalid" => launch with { EngineSessionId = launch.ParentCliSessionId },
+                _ => throw new ArgumentOutOfRangeException(nameof(linkage))
+            };
+            using EngineTelemetrySession engine = EngineTelemetrySession.Create(() => engineExporter,
+                enableSyntheticCollection: true, configPath: ROOT,
+                executionMode: source == CliTelemetryLaunchSource.StartStdio ? "mcp_stdio" : "web",
+                readEnvironmentVariable: _ => null, resolveIdentity: _ => new(_apiId, "ephemeral"),
+                startTimer: false, launchContext: engineLaunch);
+            Assert.IsTrue(engine.IsEnabled, "Notice deduplication must not disable the linked engine.");
+            cli.Complete(source == CliTelemetryLaunchSource.ExportGraphQL ? "export" : "start", "none", _noOptions, CliTelemetryOutcome.Success);
+            await Task.WhenAll(cli.StopAsync(), engine.StopAsync()).WaitAsync(_testTimeout);
+
+            CollectionAssert.AreEqual(new[] { LAUNCH, COMMAND }, cliExporter.Records.Select(record => record.Name).ToArray());
+            EngineTelemetryEvent[] engineRecords = engineExporter.Records.ToArray();
+            CollectionAssert.AreEqual(new[] { "dab/engine.process_started", "dab/engine.stopped" },
+                engineRecords.Select(record => record.Name).ToArray());
+            foreach (EngineTelemetryEvent record in engineRecords)
+            {
+                if (linkage == "valid")
+                {
+                    Assert.AreEqual(launch.EngineSessionId, record.SessionId);
+                    Assert.AreEqual(cli.SessionId.ToString("D"), record.Properties["dab_parent_cli_session_id"]);
+                }
+                else
+                {
+                    Assert.AreNotEqual(launch.EngineSessionId, record.SessionId);
+                    Assert.AreNotEqual(cli.SessionId, record.SessionId);
+                    Assert.IsFalse(record.Properties.ContainsKey("dab_parent_cli_session_id"));
+                }
+            }
         }
 
         private static async Task AssertDefaultNoticeInAnIsolatedProcessAsync(string testName, Func<Task> worker, int expectedNotices)
@@ -1601,11 +1880,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private sealed class CapturingExporter : IProductTelemetryExporter<IProductTelemetryEvent>
         {
             private readonly Func<CliTelemetryEvent, CancellationToken, ValueTask<bool>>? _export;
+            private readonly Action? _dispose;
             private int _disposeCalls;
 
-            public CapturingExporter(Func<CliTelemetryEvent, CancellationToken, ValueTask<bool>>? export = null)
+            public CapturingExporter(Func<CliTelemetryEvent, CancellationToken, ValueTask<bool>>? export = null, Action? dispose = null)
             {
                 _export = export;
+                _dispose = dispose;
             }
 
             public ConcurrentQueue<CliTelemetryEvent> Attempts { get; } = new();
@@ -1633,8 +1914,29 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             public void Dispose()
             {
                 Interlocked.Increment(ref _disposeCalls);
-                Disposed.TrySetResult();
+                try
+                {
+                    _dispose?.Invoke();
+                }
+                finally
+                {
+                    Disposed.TrySetResult();
+                }
             }
+        }
+
+        private sealed class EngineNoticeExporter : IEngineTelemetryExporter
+        {
+            internal ConcurrentQueue<EngineTelemetryEvent> Records { get; } = new();
+
+            public ValueTask<bool> ExportAsync(EngineTelemetryEvent record, CancellationToken cancellationToken)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Records.Enqueue(record);
+                return ValueTask.FromResult(true);
+            }
+
+            public void Dispose() { }
         }
 
         /// <summary>Monotonic/UTC clocks and one-shot timer barriers, with no sleeps or timer threads.</summary>
@@ -1645,10 +1947,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             private long _elapsedTicks;
             private long _wallOffset;
             private int _timestampCalls;
+            private int _timerCount;
 
             public bool ThrowTimestamp { get; set; }
             public bool ThrowUtc { get; set; }
             public int TimestampCalls => Volatile.Read(ref _timestampCalls);
+            public int TimerCount => Volatile.Read(ref _timerCount);
             public override long TimestampFrequency => TimeSpan.TicksPerSecond;
 
             public override long GetTimestamp()
@@ -1672,6 +1976,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 }
 
                 ManualTimer timer = new(callback, state, dueTime);
+                Interlocked.Increment(ref _timerCount);
                 _timers.Writer.TryWrite(timer);
                 return timer;
             }
@@ -1693,6 +1998,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             }
 
             public TimeSpan DueTime { get; }
+            public bool IsFinished => Volatile.Read(ref _finished) != 0;
+            public TaskCompletionSource Disposed { get; } = Signal();
 
             public bool Change(TimeSpan dueTime, TimeSpan period) => false;
 
@@ -1704,7 +2011,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 }
             }
 
-            public void Dispose() => Interlocked.Exchange(ref _finished, 1);
+            public void Dispose()
+            {
+                Interlocked.Exchange(ref _finished, 1);
+                Disposed.TrySetResult();
+            }
 
             public ValueTask DisposeAsync()
             {

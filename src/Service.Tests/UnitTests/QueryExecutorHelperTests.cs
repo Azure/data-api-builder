@@ -429,13 +429,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             string logMessage = logger.Invocations.Single(invocation => invocation.Method.Name == nameof(ILogger.Log))
                 .Arguments[2].ToString()!;
+            StringAssert.Contains(logMessage, exception.Message);
             if (number == 9402)
             {
                 StringAssert.Contains(logMessage, "Omit the XML encoding declaration or use encoding=\"utf-16\".");
             }
             else
             {
-                StringAssert.Contains(logMessage, exception.Message);
                 Assert.IsFalse(logMessage.Contains("utf-16", StringComparison.Ordinal));
             }
         }

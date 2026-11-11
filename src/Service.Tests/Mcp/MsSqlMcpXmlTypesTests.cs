@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -8,6 +11,10 @@ using static Azure.DataApiBuilder.Service.Tests.SqlTests.SqlTestHelper;
 
 namespace Azure.DataApiBuilder.Service.Tests.Mcp
 {
+    /// <summary>
+    /// Tests for SQL Server <c>xml</c> column support via the MCP read/create/update/delete tools,
+    /// complementing the REST and GraphQL xml coverage.
+    /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlMcpXmlTypesTests : McpToolTestBase
     {

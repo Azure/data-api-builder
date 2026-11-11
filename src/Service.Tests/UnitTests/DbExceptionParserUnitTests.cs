@@ -83,13 +83,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(9413, DisplayName = "XML parsing error code 9413 (string literal expected) maps to 400")]
         [DataRow(9436, DisplayName = "XML parsing error code 9436 (end tag mismatch) maps to 400")]
         [DataRow(9480, DisplayName = "XML parsing error code 9480 (unsupported xml) maps to 400")]
-        [DataRow(6335)]
-        [DataRow(6359)]
-        [DataRow(6908)]
-        [DataRow(6926)]
-        [DataRow(305)]
-        [DataRow(8116)]
-        [DataRow(8117)]
+        [DataRow(6335, DisplayName = "XML data type error code 6335 maps to 400")]
+        [DataRow(6359, DisplayName = "XML data type error code 6359 maps to 400")]
+        [DataRow(6908, DisplayName = "XML data type error code 6908 maps to 400")]
+        [DataRow(6926, DisplayName = "XML data type error code 6926 maps to 400")]
+        [DataRow(305, DisplayName = "Unsupported xml comparison error code 305 maps to 400")]
+        [DataRow(8116, DisplayName = "Invalid argument data type error code 8116 maps to 400")]
+        [DataRow(8117, DisplayName = "Invalid operand data type error code 8117 maps to 400")]
         public void TestClientInputErrorsMapToBadRequest(int number)
         {
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(CreateMockConfigProvider());
@@ -104,13 +104,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 dbExceptionParser.GetResultSubStatusCodeForException(sqlException));
         }
 
+        /// <summary>
+        /// Validates that XML input errors return a safe, XML-specific message in production mode.
+        /// </summary>
+        /// <param name="number">SQL error code populated in SqlException.Number.</param>
         [DataTestMethod]
-        [DataRow(6335)]
-        [DataRow(6359)]
-        [DataRow(6908)]
-        [DataRow(6926)]
-        [DataRow(9413)]
-        [DataRow(9436)]
+        [DataRow(6335, DisplayName = "XML data type error code 6335 has a safe production message")]
+        [DataRow(6359, DisplayName = "XML data type error code 6359 has a safe production message")]
+        [DataRow(6908, DisplayName = "XML data type error code 6908 has a safe production message")]
+        [DataRow(6926, DisplayName = "XML data type error code 6926 has a safe production message")]
+        [DataRow(9413, DisplayName = "XML parsing error code 9413 has a safe production message")]
+        [DataRow(9436, DisplayName = "XML parsing error code 9436 has a safe production message")]
         public void XmlErrorsHaveSafeProductionMessage(int number)
         {
             MsSqlDbExceptionParser parser = new(CreateMockConfigProvider(HostMode.Production));
@@ -118,16 +122,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 parser.GetMessage(SqlTestHelper.CreateSqlException(number, "Sensitive database details")));
         }
 
+        /// <summary>
+        /// Validates that XML encoding error 9402 returns the encoding-declaration guidance, appended to
+        /// the SQL Server message in development mode, and is classified as a client input error.
+        /// </summary>
+        /// <param name="hostMode">Host mode used to build the parser.</param>
         [DataTestMethod]
-        [DataRow(HostMode.Production)]
-        [DataRow(HostMode.Development)]
+        [DataRow(HostMode.Production, DisplayName = "XML encoding error 9402 returns only guidance in production")]
+        [DataRow(HostMode.Development, DisplayName = "XML encoding error 9402 appends guidance in development")]
         public void XmlEncodingErrorExplainsDeclarationFix(HostMode hostMode)
         {
             MsSqlDbExceptionParser parser = new(CreateMockConfigProvider(hostMode));
             DbException exception = SqlTestHelper.CreateSqlException(9402, "Sensitive database details");
             string guidance = "XML encoding declaration conflicts with UTF-16 input. Omit the XML encoding declaration or use encoding=\"utf-16\".";
 
-            Assert.AreEqual(hostMode == HostMode.Development ? $"{exception.Message} {guidance}" : guidance,
+            Assert.AreEqual(hostMode == HostMode.Development ? $"{exception.Message}. {guidance}" : guidance,
                 parser.Parse(exception).Message);
             Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, parser.GetHttpStatusCodeForException(exception));
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.DatabaseInputError,

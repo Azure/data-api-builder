@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
-        /// PUT /api/XmlProfile/id/1 - Verify a full update replaces the XML payload, then restore it.
+        /// PUT /api/XmlProfile/id/{id} - Verify a full update replaces the XML payload of a fixture row created by the test.
         /// </summary>
         [TestMethod]
         public async Task PutXmlType_Update()
@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
-        /// PATCH /api/XmlProfile/id/1 - Verify a partial update sets a new XML payload, then restore it.
+        /// PATCH /api/XmlProfile/id/{id} - Verify a partial update sets a new XML payload on a fixture row created by the test.
         /// </summary>
         [TestMethod]
         public async Task PatchXmlType_Update()
@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         }
 
         /// <summary>
-        /// PATCH /api/XmlProfile/id/2 - Verify content can be cleared to null.
+        /// PATCH /api/XmlProfile/id/{id} - Verify content of a fixture row created by the test can be cleared to null.
         /// </summary>
         [TestMethod]
         public async Task PatchXmlType_ToNull()
@@ -241,11 +241,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 "SQL Server rejects malformed XML for an xml column; DAB must surface it as HTTP 400.");
         }
 
-        #endregion
-
+        /// <summary>
+        /// GET /api/EchoXml?doc= - Verify a stored procedure xml parameter round-trips as an xml result,
+        /// and malformed XML is rejected with HTTP 400 and a DatabaseInputError code.
+        /// </summary>
         [DataTestMethod]
-        [DataRow("<order id=\"200\"><item/></order>", HttpStatusCode.OK)]
-        [DataRow("<order><item></order>", HttpStatusCode.BadRequest)]
+        [DataRow("<order id=\"200\"><item/></order>", HttpStatusCode.OK, DisplayName = "Valid xml parameter round-trips")]
+        [DataRow("<order><item></order>", HttpStatusCode.BadRequest, DisplayName = "Malformed xml parameter returns 400")]
         public async Task StoredProcedureXmlParameterAndResult(string xml, HttpStatusCode expectedStatus)
         {
             HttpResponseMessage response = await HttpClient.GetAsync($"api/EchoXml?doc={Uri.EscapeDataString(xml)}");
@@ -265,15 +267,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             }
         }
 
+        /// <summary>
+        /// Verify equality/contains filters and ordering on an xml column are rejected with HTTP 400.
+        /// </summary>
         [DataTestMethod]
-        [DataRow("$filter=content%20eq%20%27%3Corder%2F%3E%27")]
-        [DataRow("$filter=contains(content,%27order%27)")]
-        [DataRow("$orderby=content")]
+        [DataRow("$filter=content%20eq%20%27%3Corder%2F%3E%27", DisplayName = "Equality filter on xml column")]
+        [DataRow("$filter=contains(content,%27order%27)", DisplayName = "Contains filter on xml column")]
+        [DataRow("$orderby=content", DisplayName = "Order by xml column")]
         public async Task UnsupportedXmlOperationsReturnBadRequest(string query)
         {
             HttpResponseMessage response = await HttpClient.GetAsync($"{XML_TYPE_REST_PATH}?{query}");
             Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
         }
+
+        #endregion
 
         #region Helpers
 

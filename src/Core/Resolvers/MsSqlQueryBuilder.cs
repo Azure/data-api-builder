@@ -421,6 +421,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// qualifier Inserted return
         /// Inserted.ColumnName1 AS {Label1}, Inserted.ColumnName2 AS {Label2},
         /// Inserted.ColumnName3 AS {Label3}
+        /// xml columns are wrapped as CAST(Inserted.ColumnName AS NVARCHAR(MAX)) AS {Label}.
         /// </summary>
         private string MakeOutputColumns(List<LabelledColumn> columns, string columnPrefix, SourceDefinition sourceDefinition)
         {
@@ -429,10 +430,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (sourceDefinition.Columns.TryGetValue(column.ColumnName, out ColumnDefinition? definition)
                     && definition.SqlDbType == SqlDbType.Xml)
                 {
-                    string qualifiedColumn = string.IsNullOrEmpty(columnPrefix)
-                        ? QuoteIdentifier(column.ColumnName)
-                        : $"{columnPrefix}.{QuoteIdentifier(column.ColumnName)}";
-                    return $"CAST({qualifiedColumn} AS NVARCHAR(MAX)) AS {QuoteIdentifier(column.Label)}";
+                    return $"CAST({QualifyColumn(column, columnPrefix)} AS NVARCHAR(MAX)) AS {QuoteIdentifier(column.Label)}";
                 }
 
                 return Build(column, columnPrefix);
@@ -445,12 +443,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private string Build(LabelledColumn column, string columnPrefix)
         {
-            if (string.IsNullOrEmpty(columnPrefix))
-            {
-                return $"{QuoteIdentifier(column.ColumnName)} AS {QuoteIdentifier(column.Label)}";
-            }
+            return $"{QualifyColumn(column, columnPrefix)} AS {QuoteIdentifier(column.Label)}";
+        }
 
-            return $"{columnPrefix}.{QuoteIdentifier(column.ColumnName)} AS {QuoteIdentifier(column.Label)}";
+        private string QualifyColumn(LabelledColumn column, string columnPrefix)
+        {
+            return string.IsNullOrEmpty(columnPrefix)
+                ? QuoteIdentifier(column.ColumnName)
+                : $"{columnPrefix}.{QuoteIdentifier(column.ColumnName)}";
         }
 
         /// <summary>

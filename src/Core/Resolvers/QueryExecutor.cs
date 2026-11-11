@@ -13,7 +13,6 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.SqlClient;
 using Microsoft.Data.SqlTypes;
 using Microsoft.Extensions.Logging;
 using Polly;
@@ -435,7 +434,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         exception: e,
                         message: "{correlationId} Query execution error due to:\n{errorMessage}",
                         correlationId,
-                        e is SqlException { Number: 9402 } ? DbExceptionParser.GetMessage(e) : e.Message);
+                        DbExceptionParser.GetLogMessage(e));
                     throw DbExceptionParser.Parse(e);
                 }
 
@@ -524,7 +523,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         exception: e,
                         message: "{correlationId} Query execution error due to:\n{errorMessage}",
                         correlationId,
-                        e is SqlException { Number: 9402 } ? DbExceptionParser.GetMessage(e) : e.Message);
+                        DbExceptionParser.GetLogMessage(e));
                     throw DbExceptionParser.Parse(e);
                 }
             }
@@ -588,7 +587,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 QueryExecutorLogger.LogError(
                     exception: e,
                     message: "Query execution error due to:\n{errorMessage}",
-                    e is SqlException { Number: 9402 } ? DbExceptionParser.GetMessage(e) : e.Message);
+                    DbExceptionParser.GetLogMessage(e));
                 throw DbExceptionParser.Parse(e);
             }
         }
@@ -605,7 +604,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 QueryExecutorLogger.LogError(
                     exception: e,
                     message: "Query execution error due to:\n{errorMessage}",
-                    e is SqlException { Number: 9402 } ? DbExceptionParser.GetMessage(e) : e.Message);
+                    DbExceptionParser.GetLogMessage(e));
                 throw DbExceptionParser.Parse(e);
             }
         }

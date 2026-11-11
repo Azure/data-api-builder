@@ -159,8 +159,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Update an existing record's xml value via an update mutation and verify the new value is
-        /// persisted, then restore the original value.
+        /// Update the xml value of a fixture row created by the test via an update mutation and verify
+        /// the new value is persisted. The fixture row is deleted afterwards.
         /// </summary>
         [TestMethod]
         public async Task UpdateXmlType()
@@ -213,11 +213,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: "DatabaseInputError");
         }
 
-        #endregion
-
+        /// <summary>
+        /// Execute a stored procedure with an xml parameter and verify valid XML round-trips as the xml
+        /// result, while malformed XML fails with a DatabaseInputError.
+        /// </summary>
         [DataTestMethod]
-        [DataRow("<order id=\"200\"><item/></order>", false)]
-        [DataRow("<order><item></order>", true)]
+        [DataRow("<order id=\"200\"><item/></order>", false, DisplayName = "Valid xml parameter round-trips")]
+        [DataRow("<order><item></order>", true, DisplayName = "Malformed xml parameter returns DatabaseInputError")]
         public async Task StoredProcedureXmlParameterAndResult(string xml, bool expectsError)
         {
             string query = "{ executeEchoXml(doc: " + JsonSerializer.Serialize(xml) + ") { content } }";
@@ -234,10 +236,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }
         }
 
+        /// <summary>
+        /// Verify equality/contains filters and ordering on an xml field are rejected with a DatabaseInputError.
+        /// </summary>
         [DataTestMethod]
-        [DataRow("filter: { content: { eq: \"<order/>\" } }")]
-        [DataRow("filter: { content: { contains: \"order\" } }")]
-        [DataRow("orderBy: { content: ASC }")]
+        [DataRow("filter: { content: { eq: \"<order/>\" } }", DisplayName = "Equality filter on xml field")]
+        [DataRow("filter: { content: { contains: \"order\" } }", DisplayName = "Contains filter on xml field")]
+        [DataRow("orderBy: { content: ASC }", DisplayName = "Order by xml field")]
         public async Task UnsupportedXmlOperationsReturnInputError(string arguments)
         {
             JsonElement result = await ExecuteGraphQLRequestAsync(
@@ -245,6 +250,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 isAuthenticated: false, expectsError: true);
             TestForErrorInGraphQLResponse(result.ToString(), statusCode: "DatabaseInputError");
         }
+
+        #endregion
 
         #region Helpers
 

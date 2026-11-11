@@ -7,7 +7,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -21,7 +20,6 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
-using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
@@ -619,65 +617,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     return Task.FromResult(result);
                 });
 
+            using McpTelemetryHelper.ProductRequestCompletion completion = McpTelemetryHelper.BeginStdioRequest(tool.Object, "read_records", services);
             Assert.AreSame(result, await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                tool.Object, "read_records", null, services, CancellationToken.None, _ => Task.CompletedTask));
+                tool.Object, "read_records", null, services, CancellationToken.None, stdioCompletion: completion));
+            Assert.IsFalse(observed!.IsCompleted, "Tool execution alone is not response delivery.");
+            completion.Complete();
 
             Assert.IsNotNull(observed);
             Assert.AreEqual((EngineTelemetryRole)expected, observed.Role);
             Assert.AreEqual(EngineTelemetryTransport.Stdio, observed.Transport);
             Assert.IsTrue(observed.IsCompleted);
             accessor.VerifyGet(value => value.HttpContext, Times.Never);
-        }
-
-        [TestMethod]
-        public async Task McpStdioWrapperWaitsForWriterAndLeavesCustomerSpanAtToolExecutionBoundary()
-        {
-            // Initialize the source before registering a callback that observes it. Reading
-            // the static field inside ShouldListenTo can re-enter its type initializer.
-            ActivitySource dabSource = TelemetryTracesHelper.DABActivitySource;
-            using ActivityListener listener = new()
-            {
-                ShouldListenTo = source => ReferenceEquals(source, dabSource),
-                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded
-            };
-            ActivitySource.AddActivityListener(listener);
-            TaskCompletionSource writerEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            TaskCompletionSource writerReleased = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            Activity? toolActivity = null;
-            CallToolResult expected = new() { Content = new List<ContentBlock>() };
-            Mock<IMcpTool> tool = CreateTool(expected);
-            tool.Setup(t => t.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()))
-                .Returns(() =>
-                {
-                    toolActivity = Activity.Current;
-                    return Task.FromResult(expected);
-                });
-            using ServiceProvider provider = new ServiceCollection().BuildServiceProvider();
-            Task<CallToolResult> executing = McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                tool.Object, "read_records", null, provider, CancellationToken.None,
-                async result =>
-                {
-                    Assert.AreSame(expected, result);
-                    Assert.IsNotNull(toolActivity);
-                    Assert.IsTrue(toolActivity.IsStopped, "A product completion hook must not extend the customer's tool activity.");
-                    writerEntered.SetResult();
-                    await writerReleased.Task;
-                });
-
-            await writerEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.IsFalse(executing.IsCompleted);
-            writerReleased.SetResult();
-            Assert.AreSame(expected, await executing);
-        }
-
-        [TestMethod]
-        public async Task McpStdioWriterFailurePropagatesAndDoesNotReturnAServedResult()
-        {
-            Mock<IMcpTool> tool = CreateTool(new CallToolResult { Content = new List<ContentBlock>() });
-            using ServiceProvider provider = new ServiceCollection().BuildServiceProvider();
-            await Assert.ThrowsExceptionAsync<IOException>(() => McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                tool.Object, "read_records", null, provider, CancellationToken.None,
-                _ => throw new IOException("synthetic broken response pipe")));
         }
 
         [TestMethod]

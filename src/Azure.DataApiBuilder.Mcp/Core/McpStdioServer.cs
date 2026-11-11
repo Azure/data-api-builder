@@ -597,10 +597,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     try
                     {
                         // Execute the tool with the scoped service provider so any scoped services resolve correctly.
-                        // Product completion must follow the successful stdout write, not just tool execution.
-                        await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                            tool, toolName!, argsDoc, scopedProvider, ct,
-                            writeStdioResponse: result => HandleCallToolAsync(id ?? default, result));
+                        await ExecuteAndWriteToolResponseAsync(id, tool, toolName!, argsDoc, scopedProvider, ct);
                     }
                     finally
                     {
@@ -613,14 +610,39 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
                 else
                 {
-                    await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                        tool, toolName!, argsDoc, _serviceProvider, ct,
-                        writeStdioResponse: result => HandleCallToolAsync(id ?? default, result));
+                    await ExecuteAndWriteToolResponseAsync(id, tool, toolName!, argsDoc, _serviceProvider, ct);
                 }
             }
             finally
             {
                 argsDoc?.Dispose();
+            }
+        }
+
+        private async Task ExecuteAndWriteToolResponseAsync(JsonElement? id, IMcpTool tool, string toolName,
+            JsonDocument? arguments, IServiceProvider services, CancellationToken cancellationToken)
+        {
+            using McpTelemetryHelper.ProductRequestCompletion completion = McpTelemetryHelper.BeginStdioRequest(tool, toolName, services);
+            try
+            {
+                CallToolResult result = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                    tool, toolName, arguments, services, cancellationToken, stdioCompletion: completion);
+
+                // Protocol ownership stays here regardless of telemetry enablement/eligibility.
+                // Keep the request and DI scopes alive until stdout serialization/write/flush returns.
+                await HandleCallToolAsync(id ?? default, result);
+                completion.Complete();
+            }
+            catch (OperationCanceledException)
+            {
+                completion.Fail(EngineTelemetryOutcome.Canceled);
+                throw;
+            }
+            catch (Exception)
+            {
+                completion.Fail(cancellationToken.IsCancellationRequested
+                    ? EngineTelemetryOutcome.Canceled : EngineTelemetryOutcome.Failure);
+                throw;
             }
         }
 

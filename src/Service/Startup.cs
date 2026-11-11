@@ -135,22 +135,24 @@ namespace Azure.DataApiBuilder.Service
                 null);
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, _hotReloadEventHandler, configFileName, connectionString);
-            ProductTelemetry ??= EngineTelemetrySession.Create(); // Embedded/default hosts never opt in through ambient environment alone.
-            services.AddSingleton(ProductTelemetry);
-            services.AddSingleton<IProductTelemetryControl>(ProductTelemetry);
+            // Capture one owner for all registrations/callbacks, even if the startup property
+            // is replaced later. Embedded/default hosts never opt in through ambient environment alone.
+            EngineTelemetrySession productTelemetry = ProductTelemetry ??= EngineTelemetrySession.Create();
+            services.AddSingleton(productTelemetry);
+            services.AddSingleton<IProductTelemetryControl>(productTelemetry);
             services.AddSingleton<EngineTelemetryHosting>();
             services.AddHostedService(sp => sp.GetRequiredService<EngineTelemetryHosting>());
-            RuntimeConfigProvider configProvider = new(configLoader) { ProductTelemetry = ProductTelemetry };
+            RuntimeConfigProvider configProvider = new(configLoader) { ProductTelemetry = productTelemetry };
             _configProvider = configProvider;
             configLoader.TelemetryReloadCompleted = (acceptedConfig, accepted, failureStage) =>
             {
                 if (accepted && acceptedConfig is not null)
                 {
-                    ProductTelemetry.AcceptConfiguration(acceptedConfig, "hot_reload", configLoader.ConfigFilePath);
+                    productTelemetry.AcceptConfiguration(acceptedConfig, "hot_reload", configLoader.ConfigFilePath);
                 }
                 else
                 {
-                    ProductTelemetry?.ConfigurationChangeFailed(failureStage);
+                    productTelemetry.ConfigurationChangeFailed(failureStage);
                 }
             };
 
@@ -236,6 +238,8 @@ namespace Azure.DataApiBuilder.Service
                 services.AddSingleton(sp =>
                 {
                     AzureLogAnalyticsOptions options = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
+                    // Azure.Identity's former no-argument call also selected SystemAssigned.
+                    // Name it explicitly because the optional-client-ID overload is obsolete.
                     ManagedIdentityCredential credential = new(ManagedIdentityId.SystemAssigned);
                     LogsIngestionClient logsIngestionClient = new(new Uri(options.Auth!.DceEndpoint!), credential);
                     return new AzureLogAnalyticsFlusherService(options, CustomLogCollector, logsIngestionClient, _logger);
@@ -517,7 +521,7 @@ namespace Azure.DataApiBuilder.Service
                         IHttpClientFactory httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
                         HttpClient httpClient = httpClientFactory.CreateClient(nameof(EmbeddingService));
 
-                        return new EmbeddingService(httpClient, embeddingsOptions, logger, cache) { ProductTelemetry = ProductTelemetry };
+                        return new EmbeddingService(httpClient, embeddingsOptions, logger, cache) { ProductTelemetry = productTelemetry };
                     });
 
                     _logger.LogInformation(
@@ -564,9 +568,11 @@ namespace Azure.DataApiBuilder.Service
                 {
                     options.FactoryErrorsLogLevel = LogLevel.Debug;
                     options.EventHandlingErrorsLogLevel = LogLevel.Debug;
-                    // Product counters must observe each layer before its request scope closes.
-                    // This only affects deliberately enabled validation runs; handlers do no I/O.
-                    if (ProductTelemetry?.IsEnabled == true)
+                    // Synthetic-only trade-off: synchronous dispatch keeps layer counters inside
+                    // the request scope, but applies to ALL handlers on this cache, not just ours.
+                    // Third-party handlers therefore add their work/latency to the caller. Do not
+                    // use this validation setting as evidence of production performance parity.
+                    if (productTelemetry.IsEnabled)
                     {
                         options.EnableSyncEventHandlersExecution = true;
                     }
@@ -1745,6 +1751,7 @@ namespace Azure.DataApiBuilder.Service
             EmbeddingsOptions embeddingsOptions,
             bool runtimeConfigAvailable)
         {
+            EngineTelemetrySession? productTelemetry = ProductTelemetry;
             if (!embeddingsOptions.IsCachingEnabled)
             {
                 _logger.LogInformation("Embeddings caching is disabled");
@@ -1759,7 +1766,9 @@ namespace Azure.DataApiBuilder.Service
                 {
                     options.FactoryErrorsLogLevel = LogLevel.Debug;
                     options.EventHandlingErrorsLogLevel = LogLevel.Debug;
-                    if (ProductTelemetry?.IsEnabled == true)
+                    // Same synthetic-only trade-off as the default cache: ALL subscribers
+                    // execute on the caller, including any unrelated embedding-cache handlers.
+                    if (productTelemetry?.IsEnabled == true)
                     {
                         options.EnableSyncEventHandlersExecution = true;
                     }

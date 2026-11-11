@@ -14,15 +14,23 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
+using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Mcp.Model;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ModelContextProtocol.Protocol;
+using Moq;
 using static Azure.DataApiBuilder.Config.Telemetry.TelemetryConfigurationPresence;
+using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
 namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 {
     /// <summary>
-    /// Pure capture/projection tests plus isolated loader gate tests. All configurations are
-    /// synthetic; no files, hosts, database connections, exporters, or telemetry identities are used.
+    /// Pure capture/projection tests, isolated loader gates, and configuration-generation regressions.
+    /// All configurations are synthetic; no real files, hosts, database connections, or telemetry
+    /// destinations are used.
     /// </summary>
     [TestClass]
     [TestCategory("EngineTelemetry")]
@@ -360,6 +368,94 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.IsNull(Parse("""{ "telemetry-presence": { "Settings": { "runtime.rest.enabled": "Present" } } }""").TelemetryPresence);
         }
 
+        [DataTestMethod]
+        [DataRow(false, false)]
+        [DataRow(true, false)]
+        [DataRow(true, true)]
+        public void McpInitializationUsesConfigurationReferenceIdentity(bool capturePresence, bool recapturePresence)
+        {
+            (RuntimeConfig config, RuntimeConfig clone) = CreateGenerations(capturePresence, recapturePresence);
+            Mock<RuntimeConfigLoader> loader = new(null, null);
+            loader.Object.RuntimeConfig = config;
+            using RuntimeConfigProvider provider = new(loader.Object);
+            Mock<IMcpTool> tool = CreateTool();
+            McpToolRegistry registry = new();
+            McpToolRegistryRefreshService service = CreateRefreshService(provider, tool.Object, registry);
+
+            service.EnsureInitialized();
+            service.EnsureInitialized();
+            tool.Verify(value => value.GetToolMetadata(), Times.Once);
+            Assert.AreEqual("synthetic_tool", registry.GetAdvertisedTools().Single().Name);
+
+            loader.Object.EditRuntimeConfig(clone);
+            Assert.AreSame(clone, provider.GetConfig(), "The loader/provider must publish the replacement, not coalesce equal records.");
+            service.EnsureInitialized();
+            service.EnsureInitialized();
+            tool.Verify(value => value.GetToolMetadata(), Times.Exactly(2));
+
+            loader.Object.EditRuntimeConfig(config);
+            service.EnsureInitialized();
+            tool.Verify(value => value.GetToolMetadata(), Times.Exactly(3));
+        }
+
+        [DataTestMethod]
+        [DataRow(false, false)]
+        [DataRow(true, false)]
+        [DataRow(true, true)]
+        public void McpRefreshDiscardsCandidateWhenAnEquivalentReplacementBecomesCurrent(bool capturePresence, bool recapturePresence)
+        {
+            (RuntimeConfig config, RuntimeConfig clone) = CreateGenerations(capturePresence, recapturePresence);
+            Mock<RuntimeConfigLoader> loader = new(null, null);
+            loader.Object.RuntimeConfig = config;
+            using RuntimeConfigProvider provider = new(loader.Object);
+            Mock<IMcpTool> tool = CreateTool(() => loader.Object.EditRuntimeConfig(clone));
+            McpToolRegistry registry = new();
+            McpToolRegistryRefreshService service = CreateRefreshService(provider, tool.Object, registry);
+
+            // Deterministically change generation while the first candidate is being built.
+            // A record-equality stale guard would wrongly publish the value-equal control rows.
+            service.EnsureInitialized();
+            Assert.AreSame(clone, provider.GetConfig());
+            Assert.AreEqual(0, registry.GetAdvertisedTools().Count);
+
+            service.EnsureInitialized();
+            service.EnsureInitialized();
+            tool.Verify(value => value.GetToolMetadata(), Times.Exactly(2));
+            Assert.AreEqual("synthetic_tool", registry.GetAdvertisedTools().Single().Name);
+        }
+
+        [DataTestMethod]
+        [DataRow(false, false)]
+        [DataRow(true, false)]
+        [DataRow(true, true)]
+        public void TelemetryEpochsUseConfigurationReferencesAndRetainOneIdentity(bool capturePresence, bool recapturePresence)
+        {
+            (RuntimeConfig config, RuntimeConfig clone) = CreateGenerations(capturePresence, recapturePresence);
+            int identityResolutions = 0;
+            using EngineTelemetrySession session = EngineTelemetrySession.Create(
+                () => new DiscardingExporter(), enableSyntheticCollection: true,
+                readEnvironmentVariable: _ => null, showNotice: () => { }, startTimer: false,
+                resolveIdentity: _ =>
+                {
+                    identityResolutions++;
+                    return new(Guid.Parse("94834698-e79a-41c8-bfd5-e4e1a507e960"), "ephemeral");
+                });
+            Assert.IsTrue(session.IsEnabled);
+            session.MarkHostReady();
+
+            session.AcceptConfiguration(config);
+            AssertAcceptedGeneration(session, config, 1);
+            session.AcceptConfiguration(config, "hot_reload");
+            AssertAcceptedGeneration(session, config, 1);
+            session.AcceptConfiguration(clone, "hot_reload");
+            AssertAcceptedGeneration(session, clone, 2);
+            session.AcceptConfiguration(clone, "hot_reload");
+            AssertAcceptedGeneration(session, clone, 2);
+            session.AcceptConfiguration(config, "hot_reload");
+            AssertAcceptedGeneration(session, config, 3);
+            Assert.AreEqual(1, identityResolutions);
+        }
+
         [TestMethod]
         public void ExplicitTransientInputTakesPrecedenceOverRetainedPresence()
         {
@@ -518,6 +614,70 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig("{}", out RuntimeConfig? independent));
             Assert.IsNull(independent.TelemetryPresence);
+        }
+
+        // Exercise current generation consumers, not a claim that presence is excluded from
+        // RuntimeConfig's synthesized equality. Identical input is recaptured independently
+        // without imposing a new equality contract on those distinct provenance objects.
+        private static (RuntimeConfig Config, RuntimeConfig Clone) CreateGenerations(bool capturePresence, bool recapturePresence)
+        {
+            const string json = "{}";
+            RuntimeConfig config = capturePresence ? WithPresence(json) : Parse(json);
+            RuntimeConfig clone = config with
+            {
+                TelemetryPresence = recapturePresence
+                    ? TryCapture(json, config, enabled: true)
+                    : config.TelemetryPresence
+            };
+            Assert.AreNotSame(config, clone);
+            Assert.AreEqual(config.ToJson(), clone.ToJson());
+            if (recapturePresence)
+            {
+                Assert.IsNotNull(clone.TelemetryPresence);
+                Assert.AreNotSame(config.TelemetryPresence, clone.TelemetryPresence);
+                CollectionAssert.AreEquivalent(config.TelemetryPresence!.Settings.ToArray(), clone.TelemetryPresence.Settings.ToArray());
+                CollectionAssert.AreEquivalent(config.TelemetryPresence.Entities.ToArray(), clone.TelemetryPresence.Entities.ToArray());
+            }
+            else
+            {
+                // A shallow record clone shares all fields, including presence when captured.
+                // These are the differential controls against accidentally using value equality.
+                Assert.AreSame(config.TelemetryPresence, clone.TelemetryPresence);
+                Assert.IsTrue(config == clone);
+                Assert.IsTrue(EqualityComparer<RuntimeConfig>.Default.Equals(config, clone));
+                Assert.AreEqual(config.GetHashCode(), clone.GetHashCode());
+            }
+
+            return (config, clone);
+        }
+
+        private static Mock<IMcpTool> CreateTool(Action? onMetadataRead = null)
+        {
+            Mock<IMcpTool> tool = new(MockBehavior.Strict);
+            tool.SetupGet(value => value.ToolType).Returns(ToolType.BuiltIn);
+            tool.Setup(value => value.GetToolMetadata())
+                .Callback(() => onMetadataRead?.Invoke())
+                .Returns(new Tool
+                {
+                    Name = "synthetic_tool",
+                    InputSchema = JsonSerializer.Deserialize<JsonElement>("{\"type\":\"object\"}")
+                });
+            tool.Setup(value => value.IsEnabled(It.IsAny<RuntimeConfig>())).Returns(true);
+            return tool;
+        }
+
+        private static McpToolRegistryRefreshService CreateRefreshService(
+            RuntimeConfigProvider provider, IMcpTool tool, McpToolRegistry registry) => new(
+                provider, [tool], registry,
+                new Mock<IMetadataProviderFactory>(MockBehavior.Strict).Object, [],
+                NullLogger<McpToolRegistryRefreshService>.Instance);
+
+        private static void AssertAcceptedGeneration(EngineTelemetrySession session, RuntimeConfig config, long epoch)
+        {
+            using EngineTelemetryRequestScope request = session.BeginRequest(
+                EngineTelemetryApi.Rest, EngineTelemetryTransport.Http, EngineTelemetryRole.Anonymous);
+            Assert.AreSame(config, request.Config);
+            Assert.AreEqual(epoch, request.Configuration.Epoch);
         }
 
         private sealed class DiscardingExporter : IEngineTelemetryExporter

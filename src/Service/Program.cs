@@ -118,7 +118,8 @@ namespace Azure.DataApiBuilder.Service
                 // MCP SDK uses Console.OpenStandardOutput() which gets the real stdout, unaffected by this redirect.
                 if (runMcpStdio)
                 {
-                    // When LogLevel.None, redirect to null stream for ZERO output.
+                    // LogLevel.None suppresses diagnostic console output. An explicitly enabled
+                    // product-telemetry notice still goes directly to stderr; it is not a log.
                     // Otherwise redirect to stderr so logs don't pollute JSON-RPC.
                     if (initialLogLevel == LogLevel.None)
                     {
@@ -166,6 +167,8 @@ namespace Azure.DataApiBuilder.Service
             }
             finally
             {
+                // Keep the synchronous public API: delivery awaits never capture the caller's
+                // SynchronizationContext, and graceful draining has a shared two-second budget.
                 productTelemetry.StopAsync().GetAwaiter().GetResult();
             }
         }

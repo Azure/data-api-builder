@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -140,19 +141,23 @@ public abstract class RuntimeConfigLoader
                 RaiseOrderedEvent(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED);
                 RaiseOrderedEvent(DOCUMENTOR_ON_CONFIG_CHANGED);
 
-                // Authorization depends on the refreshed metadata and current configuration.
+                // Order of event firing matters: Authorization rules can only be updated after the
+                // MetadataProviderFactory has been updated with latest database object metadata.
+                // RuntimeConfig must already be updated and is implied to have been updated by the time
+                // this function is called.
                 RaiseOrderedEvent(AUTHZ_RESOLVER_ON_CONFIG_CHANGED);
 
-                // Publish tools after metadata, query, mutation, and authorization dependencies.
+                // Custom MCP tool schemas depend on refreshed database metadata. Publish the new
+                // registry only after query, mutation, and authorization dependencies are ready.
                 RaiseOrderedEvent(MCP_TOOL_REGISTRY_ON_CONFIG_CHANGED);
 
-                // Evict before creating and refreshing the GraphQL schema.
+                // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
                 RaiseOrderedEvent(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED);
                 RaiseOrderedEvent(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED);
                 RaiseOrderedEvent(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED);
             }
 
-            // Logging can be updated in both development and production modes.
+            // Log Level Initializer is outside of if statement as it can be updated on both development and production mode.
             stage = TelemetryFailureStage.Serving;
             RaiseOrderedEvent(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE);
         }
@@ -497,22 +502,8 @@ public abstract class RuntimeConfigLoader
         // and connection strings already decorated by an earlier load or embedding host.
         if (ProductTelemetryPolicy.IsOptedOut())
         {
-            string? optedOutApplicationName = ApplicationNameTelemetry.RemoveApplicationNameSegments(connectionStringBuilder.ApplicationName);
-            if (string.Equals(optedOutApplicationName, connectionStringBuilder.ApplicationName, StringComparison.Ordinal))
-            {
-                return connectionString;
-            }
-
-            if (string.IsNullOrEmpty(optedOutApplicationName))
-            {
-                connectionStringBuilder.Remove("Application Name");
-            }
-            else
-            {
-                connectionStringBuilder.ApplicationName = optedOutApplicationName;
-            }
-
-            return connectionStringBuilder.ConnectionString;
+            return RemoveApplicationNameTelemetry(connectionString, connectionStringBuilder,
+                connectionStringBuilder.ApplicationName, value => connectionStringBuilder.ApplicationName = value);
         }
 
         // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a
@@ -594,22 +585,8 @@ public abstract class RuntimeConfigLoader
         // and connection strings already decorated by an earlier load or embedding host.
         if (ProductTelemetryPolicy.IsOptedOut())
         {
-            string? optedOutApplicationName = ApplicationNameTelemetry.RemoveApplicationNameSegments(connectionStringBuilder.ApplicationName);
-            if (string.Equals(optedOutApplicationName, connectionStringBuilder.ApplicationName, StringComparison.Ordinal))
-            {
-                return connectionString;
-            }
-
-            if (string.IsNullOrEmpty(optedOutApplicationName))
-            {
-                connectionStringBuilder.Remove("Application Name");
-            }
-            else
-            {
-                connectionStringBuilder.ApplicationName = optedOutApplicationName;
-            }
-
-            return connectionStringBuilder.ConnectionString;
+            return RemoveApplicationNameTelemetry(connectionString, connectionStringBuilder,
+                connectionStringBuilder.ApplicationName, value => connectionStringBuilder.ApplicationName = value);
         }
 
         // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a
@@ -645,6 +622,35 @@ public abstract class RuntimeConfigLoader
         }
 
         // Return the updated connection string.
+        return connectionStringBuilder.ConnectionString;
+    }
+
+    /// <summary>
+    /// Removes only recognized DAB suffixes, preserving the raw connection string when unchanged.
+    /// The caller supplies the provider's canonical property value (including its default) and
+    /// typed setter, rather than an indexer that can normalize nulls or wrap setter exceptions.
+    /// </summary>
+    private static string RemoveApplicationNameTelemetry(
+        string connectionString,
+        DbConnectionStringBuilder connectionStringBuilder,
+        string? canonicalApplicationName,
+        Action<string> setApplicationName)
+    {
+        string? optedOutApplicationName = ApplicationNameTelemetry.RemoveApplicationNameSegments(canonicalApplicationName);
+        if (string.Equals(optedOutApplicationName, canonicalApplicationName, StringComparison.Ordinal))
+        {
+            return connectionString;
+        }
+
+        if (string.IsNullOrEmpty(optedOutApplicationName))
+        {
+            connectionStringBuilder.Remove("Application Name");
+        }
+        else
+        {
+            setApplicationName(optedOutApplicationName);
+        }
+
         return connectionStringBuilder.ConnectionString;
     }
 

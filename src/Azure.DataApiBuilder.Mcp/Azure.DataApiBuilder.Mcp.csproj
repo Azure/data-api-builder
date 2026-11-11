@@ -40,6 +40,17 @@
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
   </ItemGroup>
 
+  <!-- Mcp uses internal APIs from Core and its bundled Config assembly. Pin the
+       Core package version resolved by pack, including PackageVersion overrides. -->
+  <Target Name="LockCorePackageDependencyVersion" AfterTargets="_GetProjectReferenceVersions">
+    <ItemGroup>
+      <_ProjectReferencesWithVersions Update="@(_ProjectReferencesWithVersions)"
+                                      Condition="'%(_ProjectReferencesWithVersions.Filename)' == 'Azure.DataApiBuilder.Core'">
+        <ProjectVersion>[%(_ProjectReferencesWithVersions.ProjectVersion)]</ProjectVersion>
+      </_ProjectReferencesWithVersions>
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <None Include="..\..\nuget\nuget_mcp\README.md" Pack="true" PackagePath="\" />
     <None Include="..\..\nuget\nuget_icon.png" Pack="true" PackagePath="\" />

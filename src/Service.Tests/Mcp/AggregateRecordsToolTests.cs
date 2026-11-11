@@ -397,8 +397,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                         AggregateRecordsTool.AggregateArguments args = CreateAggregateArguments(
                             function: function, field: field, isCountStar: field == "*",
                             distinct: distinct, orderby: direction,
+                            after: paginate ? Convert.ToBase64String(Encoding.UTF8.GetBytes("4")) : null,
                             first: paginate ? 9 : null, groupby: new() { "category" })
-                            with { UserProvidedOrderby = direction == "asc" };
+                            with
+                        { UserProvidedOrderby = direction == "asc" };
                         string alias = AggregateRecordsTool.ComputeAlias(function, field);
                         InvokePrivate<object?>("BuildAggregationStructure",
                             args, structure, view, "book_price", alias, "Book", metadata.Object);
@@ -417,6 +419,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                         StringAssert.Contains(sql, $" AS [{alias}]");
                         Assert.AreEqual(!paginate, sql.Contains("SELECT TOP 10"));
                         Assert.AreEqual(paginate ? 2 : 0, structure.Parameters.Count);
+                        if (paginate)
+                        {
+                            Assert.AreEqual(4, structure.Parameters["@param0"].Value);
+                            Assert.AreEqual(10, structure.Parameters["@param1"].Value);
+                        }
+
+                        if (useJsonFunctions)
+                        {
+                            Assert.IsFalse(sql.Contains("WITHIN GROUP"));
+                        }
+                        else
+                        {
+                            StringAssert.Contains(sql, $"WITHIN GROUP (ORDER BY [{alias}] {direction.ToUpperInvariant()})+']','[]') FROM (");
+                        }
                     }
                 }
             }

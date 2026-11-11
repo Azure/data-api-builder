@@ -20,6 +20,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -969,23 +970,26 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 structure.Parameters.Add(limitParam, new DbConnectionParam(fetchCount));
 
                 paginationClause = $" OFFSET {offsetParam} ROWS FETCH NEXT {limitParam} ROWS ONLY";
-
-                // Remove TOP N from the SELECT clause (TOP conflicts with OFFSET/FETCH)
-                sql = Regex.Replace(sql, @"SELECT TOP \d+", "SELECT");
             }
 
             int insertionIndex = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
             if (insertionIndex < 0 && queryBuilder is DwSqlQueryBuilder)
             {
-                // STRING_AGG wraps the grouped SELECT. Order and page inside that
-                // derived table, where the projected aggregation alias is in scope.
+                structure.OrderByColumns.Add(new OrderByColumn(
+                    tableSchema: string.Empty,
+                    tableName: string.Empty,
+                    columnName: ComputeAlias(args.Function, args.Field),
+                    direction: direction == "ASC" ? OrderBy.ASC : OrderBy.DESC));
+                sql = queryBuilder.Build(structure);
                 insertionIndex = sql.LastIndexOf($") AS {queryBuilder.QuoteIdentifier(structure.SourceAlias)}", StringComparison.Ordinal);
-                orderByClause = $" ORDER BY {queryBuilder.QuoteIdentifier(ComputeAlias(args.Function, args.Field))} {direction}";
+                orderByClause = string.Empty;
             }
 
-            return insertionIndex > 0
+            sql = insertionIndex > 0
                 ? sql.Insert(insertionIndex, orderByClause + paginationClause)
                 : sql + orderByClause + paginationClause;
+
+            return args.First.HasValue ? Regex.Replace(sql, @"SELECT TOP \d+", "SELECT") : sql;
         }
 
         #endregion

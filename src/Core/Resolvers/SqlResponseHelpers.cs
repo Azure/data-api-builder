@@ -4,8 +4,10 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -31,6 +33,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="sqlMetadataProvider">The metadataprovider.</param>
         /// <param name="runtimeConfig">Runtimeconfig object</param>
         /// <param name="httpContext">HTTP context associated with the API request</param>
+        /// <param name="authorizationResolver">Resolver used to authorize all fields included in pagination cursors.</param>
         /// <param name="isMcpRequest"><c>true</c> if invoked from the MCP endpoint (emit <c>after</c>); <c>false</c> or <c>null</c> for REST (emit <c>nextLink</c>).</param>
         /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
         public static OkObjectResult FormatFindResult(
@@ -39,6 +42,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             RuntimeConfig runtimeConfig,
             HttpContext httpContext,
+            IAuthorizationResolver authorizationResolver,
             bool? isMcpRequest = null)
         {
             // Empty result set: return the standard envelope { "value": [] } and skip extra-field/cursor work.
@@ -85,6 +89,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                element: rows[rows.Count - 1],
                                orderByColumns: context.OrderByClauseOfBackingColumns,
                                primaryKey: sqlMetadataProvider.GetSourceDefinition(context.EntityName).PrimaryKey,
+                               authorizationResolver: authorizationResolver,
+                               roleName: httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString(),
                                entityName: context.EntityName,
                                schemaName: context.DatabaseObject.SchemaName,
                                tableName: context.DatabaseObject.Name,

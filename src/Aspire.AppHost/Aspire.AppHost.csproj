@@ -20,6 +20,9 @@
     <PackageReference Include="MessagePack" />
     <!-- Aspire 13 requires the patched 10.x Pkcs; keep this override local to the development host. -->
     <PackageReference Include="System.Security.Cryptography.Pkcs" VersionOverride="10.0.14" />
+    <!-- Align SqlClient's IdentityModel family instead of allowing partial transitive upgrades. -->
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" VersionOverride="8.17.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" VersionOverride="8.17.0" />
   </ItemGroup>
 
   <ItemGroup>

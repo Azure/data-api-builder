@@ -51,14 +51,21 @@ public class OracleMetadataIntegrationTests
     }
 
     [DataTestMethod]
-    [DataRow(EntityActionOperation.Read, true, false)]
-    [DataRow(EntityActionOperation.Delete, true, false)]
-    [DataRow(EntityActionOperation.Create, true, true)]
-    [DataRow(EntityActionOperation.Update, true, true)]
-    [DataRow(EntityActionOperation.All, true, true)]
-    [DataRow(EntityActionOperation.Create, false, false)]
-    [DataRow(EntityActionOperation.Update, false, false)]
-    public async Task InsteadOfTriggerViewValidatesWritePermissionsAtStartup(EntityActionOperation action, bool triggerEnabled, bool rejected)
+    [DataRow(EntityActionOperation.Read, true, false, false)]
+    [DataRow(EntityActionOperation.Delete, true, false, false)]
+    [DataRow(EntityActionOperation.Create, true, true, false)]
+    [DataRow(EntityActionOperation.Update, true, true, false)]
+    [DataRow(EntityActionOperation.All, true, true, false)]
+    [DataRow(EntityActionOperation.Create, false, false, false)]
+    [DataRow(EntityActionOperation.Update, false, false, false)]
+    [DataRow(EntityActionOperation.Read, true, false, true)]
+    [DataRow(EntityActionOperation.Delete, true, false, true)]
+    [DataRow(EntityActionOperation.Create, true, true, true)]
+    [DataRow(EntityActionOperation.Update, true, true, true)]
+    [DataRow(EntityActionOperation.All, true, true, true)]
+    [DataRow(EntityActionOperation.Create, false, false, true)]
+    [DataRow(EntityActionOperation.Update, false, false, true)]
+    public async Task InsteadOfTriggerViewValidatesWritePermissionsAtStartup(EntityActionOperation action, bool triggerEnabled, bool rejected, bool compound)
     {
         string prefix = "DAB_META_" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
         string tableName = prefix + "_T";
@@ -72,13 +79,32 @@ public class OracleMetadataIntegrationTests
         {
             await ExecuteAsync(connection, $"CREATE VIEW {viewName} AS SELECT ID, TITLE FROM {tableName}");
             viewCreated = true;
-            await ExecuteAsync(connection, $"CREATE TRIGGER {triggerName} INSTEAD OF INSERT OR UPDATE OR DELETE ON {viewName} " +
-                $"FOR EACH ROW BEGIN IF INSERTING THEN INSERT INTO {tableName} (ID, TITLE) VALUES (:NEW.ID, :NEW.TITLE); " +
+            string body = $"IF INSERTING THEN INSERT INTO {tableName} (ID, TITLE) VALUES (:NEW.ID, :NEW.TITLE); " +
                 $"ELSIF UPDATING THEN UPDATE {tableName} SET TITLE = :NEW.TITLE WHERE ID = :OLD.ID; " +
-                $"ELSE DELETE FROM {tableName} WHERE ID = :OLD.ID; END IF; END;");
+                $"ELSE DELETE FROM {tableName} WHERE ID = :OLD.ID; END IF;";
+            string trigger = compound
+                ? $"CREATE TRIGGER {triggerName} FOR INSERT OR UPDATE OR DELETE ON {viewName} COMPOUND TRIGGER " +
+                    $"INSTEAD OF EACH ROW IS BEGIN {body} END INSTEAD OF EACH ROW; END;"
+                : $"CREATE TRIGGER {triggerName} INSTEAD OF INSERT OR UPDATE OR DELETE ON {viewName} FOR EACH ROW BEGIN {body} END;";
+            await ExecuteAsync(connection, trigger);
             if (!triggerEnabled)
             {
                 await ExecuteAsync(connection, $"ALTER TRIGGER {triggerName} DISABLE");
+            }
+
+            using (OracleCommand catalog = connection.CreateCommand())
+            {
+                catalog.CommandText = "SELECT TRIGGER_TYPE, INSTEAD_OF_ROW, STATUS FROM USER_TRIGGERS WHERE TRIGGER_NAME = :name";
+                catalog.Parameters.Add("name", OracleDbType.Varchar2).Value = triggerName;
+                using var reader = await catalog.ExecuteReaderAsync();
+                Assert.IsTrue(await reader.ReadAsync(), "The test trigger must exist in Oracle's catalog.");
+                Assert.AreEqual(compound ? "COMPOUND" : "INSTEAD OF", reader.GetString(0));
+                if (compound)
+                {
+                    Assert.AreEqual("YES", reader.GetString(1));
+                }
+
+                Assert.AreEqual(triggerEnabled ? "ENABLED" : "DISABLED", reader.GetString(2));
             }
 
             OracleMetadataProvider metadata = CreateProvider(viewName, EntitySourceType.View, action);

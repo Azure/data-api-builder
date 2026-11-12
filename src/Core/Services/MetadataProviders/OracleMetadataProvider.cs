@@ -94,8 +94,9 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
         await connection.OpenAsync(cancellationToken);
         using OracleCommand command = connection.CreateCommand();
         command.BindByName = true;
+        // Compound view triggers expose their INSTEAD OF section through INSTEAD_OF_ROW.
         command.CommandText = "SELECT COUNT(*) FROM ALL_TRIGGERS WHERE TABLE_OWNER = :owner AND TABLE_NAME = :table_name " +
-            "AND BASE_OBJECT_TYPE = 'VIEW' AND TRIGGER_TYPE = 'INSTEAD OF' AND STATUS = 'ENABLED'";
+            "AND BASE_OBJECT_TYPE = 'VIEW' AND (TRIGGER_TYPE = 'INSTEAD OF' OR INSTEAD_OF_ROW = 'YES') AND STATUS = 'ENABLED'";
         command.Parameters.Add("owner", OracleDbType.Varchar2).Value = schemaName;
         command.Parameters.Add("table_name", OracleDbType.Varchar2).Value = tableName;
         if (Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken)) > 0)

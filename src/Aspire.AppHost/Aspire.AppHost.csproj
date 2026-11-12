@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.2" />
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.6.5" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <NoWarn>NU1603;NU1605</NoWarn>
+    <NoWarn>NU1603</NoWarn>
     <Nullable>enable</Nullable>
     <UserSecretsId>f08719fd-267f-459e-9980-77b1c52c8755</UserSecretsId>
   </PropertyGroup>
@@ -18,8 +18,8 @@
     <!-- Force the transitive MessagePack (via Aspire.Hosting/KubernetesClient) up to a
          patched version to resolve NU1903 (GHSA-hv8m-jj95-wg3x). -->
     <PackageReference Include="MessagePack" />
-    <!-- Aspire.Hosting.SqlServer brings its own Microsoft.Data.SqlClient; force its transitive Pkcs to the patched version. -->
-    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+    <!-- Aspire 13 requires the patched 10.x Pkcs; keep this override local to the development host. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" VersionOverride="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>

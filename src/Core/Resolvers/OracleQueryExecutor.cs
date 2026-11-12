@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
 using System.Text;
+using System.Transactions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -20,6 +22,105 @@ namespace Azure.DataApiBuilder.Core.Resolvers;
 /// </summary>
 public class OracleQueryExecutor : QueryExecutor<OracleConnection>
 {
+    private readonly ConcurrentDictionary<(string Transaction, string Source), Lazy<TransactionConnection>> _transactionConnections = new();
+
+    protected override bool PreserveConnection => Transaction.Current is not null;
+
+    private TransactionConnection GetTransactionConnection(string dataSourceName)
+    {
+        Transaction transaction = Transaction.Current!;
+        if (transaction.TransactionInformation.Status != TransactionStatus.Active)
+        {
+            throw new TransactionException("The Oracle transaction is no longer active.");
+        }
+
+        var key = (transaction.TransactionInformation.LocalIdentifier, dataSourceName);
+        TransactionConnection result = _transactionConnections.GetOrAdd(key, unusedKey => new Lazy<TransactionConnection>(() =>
+        {
+            TransactionConnection state = new();
+            transaction.TransactionCompleted += (sender, args) =>
+            {
+                _transactionConnections.TryRemove(key, out _);
+                state.Dispose();
+            };
+            return state;
+        })).Value;
+        if (transaction.TransactionInformation.Status != TransactionStatus.Active)
+        {
+            _transactionConnections.TryRemove(key, out _);
+            result.Dispose();
+            throw new TransactionException("The Oracle transaction completed while acquiring its connection.");
+        }
+
+        return result;
+    }
+
+    protected override ConnectionLease AcquireConnection(string dataSourceName)
+    {
+        if (Transaction.Current is null)
+        {
+            return base.AcquireConnection(dataSourceName);
+        }
+
+        TransactionConnection state = GetTransactionConnection(dataSourceName);
+        state.Gate.Wait();
+        return LeaseTransactionConnection(state, dataSourceName);
+    }
+
+    protected override async ValueTask<ConnectionLease> AcquireConnectionAsync(string dataSourceName, CancellationToken cancellationToken)
+    {
+        if (Transaction.Current is null)
+        {
+            return await base.AcquireConnectionAsync(dataSourceName, cancellationToken);
+        }
+
+        TransactionConnection state = GetTransactionConnection(dataSourceName);
+        await state.Gate.WaitAsync(cancellationToken);
+        return LeaseTransactionConnection(state, dataSourceName);
+    }
+
+    private ConnectionLease LeaseTransactionConnection(TransactionConnection state, string dataSourceName)
+    {
+        try
+        {
+            if (state.Completed || Transaction.Current?.TransactionInformation.Status != TransactionStatus.Active)
+            {
+                throw new TransactionException("The Oracle transaction has already completed.");
+            }
+
+            state.Connection ??= CreateConnection(dataSourceName);
+            return new(state.Connection, () => state.Gate.Release());
+        }
+        catch
+        {
+            state.Gate.Release();
+            throw;
+        }
+    }
+
+    private sealed class TransactionConnection : IDisposable
+    {
+        public SemaphoreSlim Gate { get; } = new(1, 1);
+        public OracleConnection? Connection { get; set; }
+        public bool Completed { get; private set; }
+
+        public void Dispose()
+        {
+            Gate.Wait();
+            try
+            {
+                if (Completed)
+                {
+                    return;
+                }
+
+                Completed = true;
+                Connection?.Dispose();
+            }
+            finally { Gate.Release(); }
+        }
+    }
+
     public OracleQueryExecutor(
         RuntimeConfigProvider runtimeConfigProvider,
         DbExceptionParser dbExceptionParser,
@@ -102,6 +203,11 @@ public class OracleQueryExecutor : QueryExecutor<OracleConnection>
                 {
                     parameter.Value = Convert.FromBase64String(base64);
                 }
+            }
+
+            if (value.DatabaseTypeName is "CLOB" or "NCLOB")
+            {
+                parameter.OracleDbType = value.DatabaseTypeName == "NCLOB" ? OracleDbType.NClob : OracleDbType.Clob;
             }
 
             command.Parameters.Add(parameter);

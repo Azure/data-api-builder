@@ -18,6 +18,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -146,7 +147,8 @@ public class OracleProviderTests
         OracleTestFixture fixture = new();
         SqlInsertStructure insert = fixture.Insert(1, "blocked");
         insert.DbPolicyPredicatesForOperations[EntityActionOperation.Create] = "1 = 0";
-        Assert.ThrowsException<NotSupportedException>(() => fixture.Builder.Build(insert));
+        DataApiBuilderException error = Assert.ThrowsException<DataApiBuilderException>(() => fixture.Builder.Build(insert));
+        Assert.AreEqual(HttpStatusCode.BadRequest, error.StatusCode);
     }
 
     [TestMethod]

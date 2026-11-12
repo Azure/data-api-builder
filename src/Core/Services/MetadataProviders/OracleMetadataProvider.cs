@@ -18,6 +18,8 @@ namespace Azure.DataApiBuilder.Core.Services;
 /// </summary>
 public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, OracleDataAdapter, OracleCommand>
 {
+    private readonly RuntimeConfigProvider _oracleRuntimeConfigProvider;
+
     public OracleMetadataProvider(
         RuntimeConfigProvider runtimeConfigProvider,
         RuntimeConfigValidator runtimeConfigValidator,
@@ -27,6 +29,7 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
         bool isValidateOnly = false)
         : base(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory, logger, dataSourceName, isValidateOnly)
     {
+        _oracleRuntimeConfigProvider = runtimeConfigProvider;
     }
 
     /// <inheritdoc />
@@ -48,6 +51,7 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
 
     protected override async Task<DataTable> GetColumnsAsync(string schemaName, string tableName, CancellationToken cancellationToken)
     {
+        await ValidateViewMutationSupportAsync(schemaName, tableName, cancellationToken);
         using OracleConnection connection = CreateConnection();
         connection.ConnectionString = ConnectionString;
         await connection.OpenAsync(cancellationToken);
@@ -67,6 +71,38 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
         columns.Load(reader);
         cancellationToken.ThrowIfCancellationRequested();
         return columns;
+    }
+
+    private async Task ValidateViewMutationSupportAsync(string schemaName, string tableName, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        RuntimeConfig config = _oracleRuntimeConfigProvider.GetConfig();
+        string[] writableViews = EntityToDatabaseObject.Where(pair =>
+            pair.Value.SchemaName == schemaName && pair.Value.Name == tableName &&
+            config.Entities.TryGetValue(pair.Key, out Entity? entity) &&
+            entity.Source.Type == EntitySourceType.View &&
+            entity.Permissions.Any(permission => permission.Actions.Any(action =>
+                action.Action is EntityActionOperation.All or EntityActionOperation.Create or EntityActionOperation.Update)))
+            .Select(pair => pair.Key).ToArray();
+        if (writableViews.Length == 0)
+        {
+            return;
+        }
+
+        using OracleConnection connection = CreateConnection();
+        connection.ConnectionString = ConnectionString;
+        await connection.OpenAsync(cancellationToken);
+        using OracleCommand command = connection.CreateCommand();
+        command.BindByName = true;
+        command.CommandText = "SELECT COUNT(*) FROM ALL_TRIGGERS WHERE TABLE_OWNER = :owner AND TABLE_NAME = :table_name " +
+            "AND BASE_OBJECT_TYPE = 'VIEW' AND TRIGGER_TYPE = 'INSTEAD OF' AND STATUS = 'ENABLED'";
+        command.Parameters.Add("owner", OracleDbType.Varchar2).Value = schemaName;
+        command.Parameters.Add("table_name", OracleDbType.Varchar2).Value = tableName;
+        if (Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken)) > 0)
+        {
+            throw new NotSupportedException($"Oracle view '{schemaName}.{tableName}' has an enabled INSTEAD OF trigger and cannot support create/update permissions " +
+                $"for entities {string.Join(", ", writableViews)} because Oracle prohibits RETURNING on these views. Configure read/delete permissions only, or expose the base table for writes.");
+        }
     }
 
     protected override async Task<DataTable> FillSchemaForTableAsync(string schemaName, string tableName, CancellationToken cancellationToken)
@@ -107,9 +143,15 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
             if (sourceDefinition.Columns.TryGetValue((string)row["COLUMN_NAME"], out ColumnDefinition? column))
             {
                 string dataType = (string)row["DATA_TYPE"];
+                column.DatabaseTypeName = dataType;
                 if (dataType == "LONG RAW")
                 {
                     throw new NotSupportedException($"Oracle binary column '{row["COLUMN_NAME"]}' (LONG RAW) is not supported. Migrate it to BLOB or expose supported text through a view.");
+                }
+
+                if (dataType == "LONG")
+                {
+                    throw new NotSupportedException($"Oracle column '{row["COLUMN_NAME"]}' (LONG) is not supported by JSON queries or mutation RETURNING clauses. Migrate it to CLOB or expose a supported column through a view.");
                 }
 
                 if (dataType is "RAW" or "BLOB")
@@ -140,8 +182,8 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
         "BINARY_DOUBLE" => typeof(double),
         "DATE" or "TIMESTAMP" or "TIMESTAMP WITH LOCAL TIME ZONE" => typeof(DateTime),
         "TIMESTAMP WITH TIME ZONE" => typeof(DateTimeOffset),
-        "RAW" or "LONG RAW" or "BLOB" => typeof(byte[]),
-        "CHAR" or "NCHAR" or "VARCHAR2" or "NVARCHAR2" or "CLOB" or "NCLOB" or "LONG" => typeof(string),
+        "RAW" or "BLOB" => typeof(byte[]),
+        "CHAR" or "NCHAR" or "VARCHAR2" or "NVARCHAR2" or "CLOB" or "NCLOB" => typeof(string),
         _ => throw new NotSupportedException($"Oracle type '{sqlType}' is not supported.")
     };
 }

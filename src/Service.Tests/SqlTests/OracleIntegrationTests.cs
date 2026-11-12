@@ -42,6 +42,139 @@ public class OracleIntegrationTests : SqlTestBase
     private string _connectionString;
     private string _tableName;
 
+    [TestMethod]
+    public async Task UpdateOnlyPatchIgnoresCreatePolicyAndDoesNotInsertMissingRows()
+    {
+        await ExecuteSql("INSERT INTO DAB_ORACLE_BOOKS (ID, TITLE) VALUES (42, 'before')");
+        using HttpResponseMessage updated = await HttpClient.PatchAsJsonAsync("api/UpdateOnlyPolicySample/id/42", new { title = "not permitted for create" });
+        Assert.AreEqual(HttpStatusCode.OK, updated.StatusCode, await updated.Content.ReadAsStringAsync());
+        using JsonDocument result = JsonDocument.Parse(await updated.Content.ReadAsStringAsync());
+        Assert.AreEqual("not permitted for create", result.RootElement.GetProperty("value")[0].GetProperty("title").GetString());
+        using HttpResponseMessage missing = await HttpClient.PatchAsJsonAsync("api/UpdateOnlyPolicySample/id/43", new { title = "permitted" });
+        Assert.AreEqual(HttpStatusCode.NotFound, missing.StatusCode, await missing.Content.ReadAsStringAsync());
+        using JsonDocument count = JsonDocument.Parse(await GetDatabaseResultAsync("SELECT JSON_OBJECT('count' VALUE COUNT(*)) FROM DAB_ORACLE_BOOKS"));
+        Assert.AreEqual(1, count.RootElement.GetProperty("count").GetInt32());
+        using HttpResponseMessage deniedCreate = await HttpClient.PostAsJsonAsync("api/UpdateOnlyPolicySample", new { title = "permitted" });
+        Assert.AreEqual(HttpStatusCode.BadRequest, deniedCreate.StatusCode, await deniedCreate.Content.ReadAsStringAsync());
+    }
+
+    [DataTestMethod]
+    [DataRow("rest", "eq", 10)]
+    [DataRow("graphql", "eq", 10)]
+    [DataRow("rest", "ne", 11)]
+    [DataRow("graphql", "neq", 11)]
+    public async Task ClobFiltersCompareEntireValuesBeyondScalarLimits(string surface, string operation, int expectedId)
+    {
+        string value = new string('x', 5000) + "A";
+        using OracleConnection connection = new(_connectionString);
+        await connection.OpenAsync();
+        using OracleCommand insert = connection.CreateCommand();
+        insert.BindByName = true;
+        insert.CommandText = "INSERT INTO DAB_ORACLE_BOOKS (ID, TITLE) VALUES (:id, :title)";
+        insert.Parameters.Add("id", OracleDbType.Int32);
+        insert.Parameters.Add("title", OracleDbType.Clob);
+        foreach (int id in new[] { 10, 11, 12 })
+        {
+            insert.Parameters["id"].Value = id;
+            insert.Parameters["title"].Value = id == 12 ? DBNull.Value : value[..^1] + (id == 10 ? "A" : "B");
+            await insert.ExecuteNonQueryAsync();
+        }
+
+        JsonElement rows;
+        if (surface == "rest")
+        {
+            using HttpResponseMessage response = await HttpClient.GetAsync("api/ClobSample?$filter=" + Uri.EscapeDataString($"title {operation} '{value}'"));
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
+            using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            rows = document.RootElement.GetProperty("value").Clone();
+        }
+        else
+        {
+            JsonElement result = await ExecuteGraphQLRequestAsync(
+                $"query($value: String!) {{ clobSamples(filter: {{ title: {{ {operation}: $value }} }}) {{ items {{ id title }} }} }}",
+                "clobSamples", isAuthenticated: false, variables: new() { ["value"] = value });
+            rows = result.GetProperty("items");
+        }
+
+        Assert.AreEqual(1, rows.GetArrayLength());
+        Assert.AreEqual(expectedId, rows[0].GetProperty("id").GetInt32());
+        Assert.AreEqual(value[..^1] + (expectedId == 10 ? "A" : "B"), rows[0].GetProperty("title").GetString());
+    }
+
+    [DataTestMethod]
+    [DataRow("rest", "asc")]
+    [DataRow("rest", "desc")]
+    [DataRow("graphql", "ASC")]
+    [DataRow("graphql", "DESC")]
+    public async Task ClobSortingReturnsClearClientError(string surface, string direction)
+    {
+        using HttpResponseMessage response = surface == "rest"
+            ? await HttpClient.GetAsync($"api/ClobSample?$orderby=title%20{direction}")
+            : await HttpClient.PostAsJsonAsync("graphql", new { query = $"{{ clobSamples(orderBy: {{ title: {direction} }}) {{ items {{ id }} }} }}" });
+        string body = await response.Content.ReadAsStringAsync();
+        if (surface == "rest")
+        {
+            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode, body);
+        }
+        else
+        {
+            using JsonDocument document = JsonDocument.Parse(body);
+            Assert.IsTrue(document.RootElement.GetProperty("errors").GetArrayLength() > 0, body);
+        }
+
+        StringAssert.Contains(body, "CLOB");
+        StringAssert.Contains(body, "does not support");
+    }
+
+    [DataTestMethod]
+    [DataRow("gt")]
+    [DataRow("lt")]
+    [DataRow("ge")]
+    [DataRow("le")]
+    public async Task ClobRelationalFiltersReturnClientErrors(string operation)
+    {
+        using HttpResponseMessage response = await HttpClient.GetAsync("api/ClobSample?$filter=" + Uri.EscapeDataString($"title {operation} 'value'"));
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode, await response.Content.ReadAsStringAsync());
+    }
+
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task ClobNullAndLikeFiltersRemainSupported(bool nullFilter)
+    {
+        await ExecuteSql("INSERT INTO DAB_ORACLE_BOOKS (ID, TITLE) VALUES (10, 'needle')");
+        await ExecuteSql("INSERT INTO DAB_ORACLE_BOOKS (ID, TITLE) VALUES (11, NULL)");
+        string filter = nullFilter ? "isNull: true" : "contains: \"needle\"";
+        JsonElement result = await ExecuteGraphQLRequestAsync(
+            $"{{ clobSamples(filter: {{ title: {{ {filter} }} }}) {{ items {{ id }} }} }}", "clobSamples", isAuthenticated: false);
+        JsonElement rows = result.GetProperty("items");
+        Assert.AreEqual(1, rows.GetArrayLength());
+        Assert.AreEqual(nullFilter ? 11 : 10, rows[0].GetProperty("id").GetInt32());
+    }
+
+    [DataTestMethod]
+    [DataRow("CLOB", false)]
+    [DataRow("CLOB", true)]
+    [DataRow("NCLOB", false)]
+    [DataRow("NCLOB", true)]
+    public async Task NativeLobComparisonsPreserveUnicodeAndLongValueDifferences(string type, bool equal)
+    {
+        string left = new string('漢', 5000) + "A";
+        string right = equal ? left : left[..^1] + "B";
+        string comparison = OracleQueryBuilder.BuildLobComparison(":left_value", ":right_value", "=", type);
+        int result = await _fixture.Executor.ExecuteQueryAsync($"SELECT CASE WHEN {comparison} THEN 1 ELSE 0 END FROM DUAL",
+            new Dictionary<string, DbConnectionParam>
+            {
+                ["left_value"] = new(left, DbType.String) { DatabaseTypeName = type },
+                ["right_value"] = new(right, DbType.String) { DatabaseTypeName = type }
+            }, async (reader, _) =>
+            {
+                Assert.IsTrue(await reader.ReadAsync());
+                return reader.GetInt32(0);
+            }, _fixture.SourceName);
+        Assert.AreEqual(equal ? 1 : 0, result);
+    }
+
     [ClassInitialize]
     public static async Task SetupAsync(TestContext context)
     {
@@ -550,6 +683,67 @@ public class OracleIntegrationTests : SqlTestBase
         Assert.AreEqual(2, rows.GetArrayLength());
         CollectionAssert.AreEquivalent(new[] { "AAAAAAAAAAAAAAAAAAAAAg==", "AAAAAAAAAAAAAAAAAAAAAw==" },
             rows.EnumerateArray().Select(row => row.GetProperty("id").GetString()).ToArray());
+    }
+
+    [TestMethod]
+    public async Task RawPrimaryKeyPostLocationCanBeFollowed()
+    {
+        const string base64 = "ABEiM0RVZneImaq7zN3u/w==";
+        using HttpResponseMessage created = await HttpClient.PostAsJsonAsync("api/BinarySample", new { id = base64, raw_value = "AAH+/w==" });
+        Assert.AreEqual(HttpStatusCode.Created, created.StatusCode, await created.Content.ReadAsStringAsync());
+        Assert.IsNotNull(created.Headers.Location);
+        StringAssert.EndsWith(created.Headers.Location.OriginalString, "/id/ABEiM0RVZneImaq7zN3u%2Fw%3D%3D");
+
+        using HttpResponseMessage found = await HttpClient.GetAsync(created.Headers.Location);
+        Assert.AreEqual(HttpStatusCode.OK, found.StatusCode, await found.Content.ReadAsStringAsync());
+        using JsonDocument result = JsonDocument.Parse(await found.Content.ReadAsStringAsync());
+        JsonElement rows = result.RootElement.GetProperty("value");
+        Assert.AreEqual(1, rows.GetArrayLength());
+        Assert.AreEqual(base64, rows[0].GetProperty("id").GetString());
+        Assert.AreEqual("AAH+/w==", rows[0].GetProperty("raw_value").GetString());
+    }
+
+    [DataTestMethod]
+    [DataRow("POST", true)]
+    [DataRow("POST", false)]
+    [DataRow("PUT", true)]
+    [DataRow("PUT", false)]
+    [DataRow("PATCH", true)]
+    [DataRow("PATCH", false)]
+    public async Task RawKeyMutationsHonorReadPolicy(string method, bool satisfiesReadPolicy)
+    {
+        const string base64 = "ABEiM0RVZneImaq7zN3u/w==";
+        const string hex = "00112233445566778899AABBCCDDEEFF";
+        const string pointRoute = "api/BinaryPolicySample/id/ABEiM0RVZneImaq7zN3u%2Fw%3D%3D";
+        bool isPost = method == "POST";
+        for (int attempt = 0; attempt < (isPost ? 1 : 2); attempt++)
+        {
+            string? rawValue = satisfiesReadPolicy ? (attempt == 0 ? "AQID" : "BAUG") : null;
+            using HttpRequestMessage request = new(new HttpMethod(method), isPost ? "api/BinaryPolicySample" : pointRoute)
+            {
+                Content = isPost ? JsonContent.Create(new { id = base64, raw_value = rawValue, payload = "AQID" })
+                    : JsonContent.Create(new { raw_value = rawValue, payload = "AQID" })
+            };
+            using HttpResponseMessage response = await HttpClient.SendAsync(request);
+            Assert.AreEqual(attempt == 0 ? HttpStatusCode.Created : HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
+            using JsonDocument result = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            JsonElement rows = result.RootElement.GetProperty("value");
+            Assert.AreEqual(satisfiesReadPolicy ? 1 : 0, rows.GetArrayLength());
+            if (satisfiesReadPolicy)
+            {
+                Assert.AreEqual(base64, rows[0].GetProperty("id").GetString());
+                Assert.AreEqual(rawValue, rows[0].GetProperty("raw_value").GetString());
+                Assert.IsFalse(rows[0].TryGetProperty("payload", out _), "The follow-up read must honor excluded fields.");
+            }
+
+            // Verify the mutation committed even when its row is hidden by the read policy.
+            using JsonDocument persisted = JsonDocument.Parse(await GetDatabaseResultAsync(
+                $"SELECT JSON_OBJECT('id' VALUE RAWTOHEX(ID), 'raw_value' VALUE RAWTOHEX(RAW_VALUE), 'payload_length' VALUE DBMS_LOB.GETLENGTH(PAYLOAD) RETURNING CLOB) FROM DAB_ORACLE_BINARIES WHERE ID = HEXTORAW('{hex}')"));
+            Assert.AreEqual(hex, persisted.RootElement.GetProperty("id").GetString());
+            Assert.AreEqual(satisfiesReadPolicy ? (attempt == 0 ? "010203" : "040506") : null,
+                persisted.RootElement.GetProperty("raw_value").GetString());
+            Assert.AreEqual(3, persisted.RootElement.GetProperty("payload_length").GetInt32());
+        }
     }
 
     [TestMethod]

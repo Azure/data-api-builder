@@ -78,7 +78,7 @@ With Docker running in Linux-container mode and PowerShell 7 installed, run from
 
 This creates a disposable Oracle XE 21c database with generated temporary credentials, runs the `Oracle` integration and `OracleUnit` provider tests, and removes the container afterwards. Credentials are passed through process environment variables and are not written into configuration files. The Oracle SQL targets 19c-compatible features; this container run validates XE 21c, not a separate 19c installation.
 
-To use an existing Oracle database, set `DAB_ORACLE_TEST_CONNECTION_STRING` to a **dedicated test user/schema** with `CREATE SESSION`, `CREATE TABLE`, and a tablespace quota, then run:
+To use an existing Oracle database, set `DAB_ORACLE_TEST_CONNECTION_STRING` to a **dedicated test user/schema** with `CREATE SESSION`, `CREATE TABLE`, `CREATE VIEW`, `CREATE TRIGGER`, and a tablespace quota, then run:
 
 ```powershell
 dotnet test src/Service.Tests/Azure.DataApiBuilder.Service.Tests.csproj --filter 'TestCategory=Oracle'

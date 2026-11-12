@@ -13,12 +13,39 @@
     }
   },
   "entities": {
+    "ClobSample": {
+      "source": { "object": "DAB_ORACLE_BOOKS", "type": "table" },
+      "rest": { "path": "/ClobSample" },
+      "graphql": { "type": { "singular": "ClobSample", "plural": "ClobSamples" } },
+      "mappings": { "ID": "id", "TITLE": "title" },
+      "permissions": [ { "role": "anonymous", "actions": [ "*" ] } ]
+    },
+    "UpdateOnlyPolicySample": {
+      "source": { "object": "DAB_ORACLE_BOOKS", "type": "table" },
+      "rest": { "path": "/UpdateOnlyPolicySample" },
+      "graphql": false,
+      "mappings": { "ID": "id", "TITLE": "title" },
+      "permissions": [ { "role": "anonymous", "actions": [
+        "read", "update",
+        { "action": "create", "policy": { "database": "@item.title eq 'permitted'" } }
+      ] } ]
+    },
     "BinaryLink": {
       "source": { "object": "DAB_ORACLE_BINARY_LINKS", "type": "table" },
       "graphql": { "type": { "singular": "BinaryLink", "plural": "BinaryLinks" } },
       "mappings": { "ID": "id", "SAMPLE_ID": "sample_id" },
       "permissions": [ { "role": "anonymous", "actions": [ "read" ] } ],
       "relationships": { "sample": { "cardinality": "one", "target.entity": "BinarySample" } }
+    },
+    "BinaryPolicySample": {
+      "source": { "object": "DAB_ORACLE_BINARIES", "type": "table" },
+      "rest": { "path": "/BinaryPolicySample" },
+      "graphql": false,
+      "mappings": { "ID": "id", "RAW_VALUE": "raw_value", "PAYLOAD": "payload" },
+      "permissions": [ { "role": "anonymous", "actions": [
+        "create", "update",
+        { "action": "read", "fields": { "exclude": [ "PAYLOAD" ] }, "policy": { "database": "@item.raw_value ne null" } }
+      ] } ]
     },
     "BinarySample": {
       "source": { "object": "DAB_ORACLE_BINARIES", "type": "table" },

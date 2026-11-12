@@ -16,7 +16,21 @@ RAW keys support point reads and cursor pagination. Binary-field filters retain 
 
 Read conversion uses statement-local functions and the Oracle `DBMS_LOB`, `UTL_ENCODE`, and `UTL_RAW` packages. The database user must be allowed to execute these packages; no stored function installation or `CREATE FUNCTION` privilege is required.
 
-`LONG RAW` remains unsupported and is rejected during metadata initialization. Migrate it to `BLOB` or expose supported text through a view.
+`LONG RAW` and `LONG` remain unsupported and are rejected during metadata initialization. Migrate them to `BLOB` and `CLOB`, respectively, or expose supported types through a view.
+
+## CLOB and NCLOB fields
+
+Equality and inequality comparisons use `DBMS_LOB.COMPARE` and native LOB bind parameters, preserving the complete value rather than comparing a truncated prefix. Null checks and supported LIKE filters retain their existing behavior. Oracle does not support ordering or grouping these columns; requests for these operations return a client error. Relational comparisons and GraphQL IN filters on LOB columns are also rejected explicitly, because `DBMS_LOB.COMPARE` does not promise a signed lexical ordering.
+
+## Mutation transactions
+
+Oracle queries within the same ambient transaction and data source share one connection until the transaction completes. Commands on that connection are serialized, and cancelled waiters do not interrupt another command. This keeps mutation writes and follow-up reads atomic with `Pooling=false`, without requiring distributed transactions on Linux.
+
+Create database policies remain unsupported for operations that can insert. An update-only upsert ignores an unrelated create policy and still applies the update policy; a missing row is not inserted.
+
+## Views
+
+Views with INSTEAD OF triggers can be exposed for reads and deletes. Configurations granting create or update permissions are rejected during metadata initialization when Oracle cannot use RETURNING for the view. Use a writable table source for those operations.
 
 ## Identity columns
 

@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 
 namespace Azure.DataApiBuilder.Core.Resolvers;
@@ -32,6 +34,24 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
 
     protected override string Build(Predicate? predicate)
     {
+        string? leftType = predicate?.Left?.AsColumn()?.DatabaseTypeName;
+        string? rightType = predicate?.Right.AsColumn()?.DatabaseTypeName;
+        string? lobType = leftType == "NCLOB" || rightType == "NCLOB" ? "NCLOB"
+            : leftType == "CLOB" || rightType == "CLOB" ? "CLOB" : null;
+        if (lobType is "CLOB" or "NCLOB")
+        {
+            if (predicate!.Op is PredicateOperation.Equal or PredicateOperation.NotEqual or PredicateOperation.LessThan or
+                PredicateOperation.LessThanOrEqual or PredicateOperation.GreaterThan or PredicateOperation.GreaterThanOrEqual)
+            {
+                return BuildLobComparison(ResolveOperand(predicate.Left), ResolveOperand(predicate.Right), Build(predicate.Op), lobType);
+            }
+
+            if (predicate!.Op is PredicateOperation.IN)
+            {
+                throw UnsupportedLobOperation("IN filtering");
+            }
+        }
+
         if (predicate is { Op: PredicateOperation.LIKE or PredicateOperation.NOT_LIKE })
         {
             // Oracle has no implicit LIKE escape character. Render the clause as part
@@ -82,6 +102,7 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
 
     private string BuildQuery(SqlQueryStructure structure)
     {
+        ValidateLobOrderingAndGrouping(structure);
         string order = structure.OrderByColumns.Count > 0 ? Build(structure.OrderByColumns) : "NULL";
         return BuildReadQuery(structure, order, $" FETCH FIRST {structure.Limit()} ROWS ONLY");
     }
@@ -92,6 +113,7 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     /// </summary>
     public string BuildAggregation(SqlQueryStructure structure, bool descending, int? offset = null, long? limit = null)
     {
+        ValidateLobOrderingAndGrouping(structure);
         List<string> order = new();
         if (structure.GroupByMetadata.Fields.Count > 0)
         {
@@ -157,6 +179,34 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
             : $"SELECT {data} FROM ({query})";
     }
 
+    internal static string BuildLobComparison(string left, string right, string operation, string type)
+    {
+        // COMPARE promises zero/nonzero, not a lexical ordering for non-equal LOBs.
+        if (operation is not ("=" or "!=" or "<>"))
+        {
+            throw UnsupportedLobOperation("relational comparisons");
+        }
+
+        string convert = type == "NCLOB" ? "TO_NCLOB" : "TO_CLOB";
+        return $"(DBMS_LOB.COMPARE({convert}({left}), {convert}({right})) {operation} 0)";
+    }
+
+    private static void ValidateLobOrderingAndGrouping(SqlQueryStructure structure)
+    {
+        foreach (Column column in structure.OrderByColumns.Cast<Column>().Concat(structure.GroupByMetadata.Fields.Values))
+        {
+            if (structure.GetUnderlyingSourceDefinition().Columns.TryGetValue(column.ColumnName, out ColumnDefinition? definition) &&
+                definition.DatabaseTypeName is "CLOB" or "NCLOB")
+            {
+                throw UnsupportedLobOperation("sorting or grouping");
+            }
+        }
+    }
+
+    private static DataApiBuilderException UnsupportedLobOperation(string operation) => new(
+        $"Oracle does not support {operation} on CLOB or NCLOB columns. Use a VARCHAR2 projection with explicit application-defined semantics instead.",
+        HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.BadRequest);
+
     private static bool HasBinaryColumns(SqlQueryStructure structure) =>
         structure.Columns.Any(column => column.ColumnName != SqlQueryStructure.DATA_IDENT &&
             structure.GetColumnSystemType(column.ColumnName) == typeof(byte[])) ||
@@ -216,7 +266,11 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
 
     public string Build(SqlUpsertQueryStructure structure)
     {
-        RejectCreatePolicy(structure);
+        if (!structure.IsFallbackToUpdate)
+        {
+            RejectCreatePolicy(structure);
+        }
+
         string table = Table(structure.DatabaseObject);
         string keys = Build(structure.Predicates);
         string predicates = JoinPredicateStrings(keys, structure.GetDbPolicyForOperation(EntityActionOperation.Update));
@@ -247,7 +301,8 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
         if (!string.IsNullOrEmpty(structure.GetDbPolicyForOperation(EntityActionOperation.Create)))
         {
-            throw new NotSupportedException("Oracle does not support database policies for create actions.");
+            throw new DataApiBuilderException("Oracle does not support database policies for operations that can create rows.",
+                HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.BadRequest);
         }
     }
 

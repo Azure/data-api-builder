@@ -77,6 +77,10 @@ try {
     if ($NoRestore) { $testArguments += '--no-restore' }
     if ($ResultsDirectory) { $testArguments += @('--results-directory', $ResultsDirectory) }
     if ($BaseOutputPath) { $testArguments += "/p:BaseOutputPath=$BaseOutputPath" }
+    # Metadata regression tests create disposable views and INSTEAD OF triggers.
+    "WHENEVER SQLERROR EXIT FAILURE`nALTER SESSION SET CONTAINER = XEPDB1;`nGRANT CREATE VIEW, CREATE TRIGGER TO DAB_TESTS;`nEXIT;" |
+        docker exec --interactive $containerName sqlplus -s / as sysdba | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to grant privileges for disposable Oracle metadata tests.' }
     Write-Host 'Oracle is ready. Running provider and engine integration tests.'
     & dotnet @testArguments
     if ($LASTEXITCODE -ne 0) { throw "Oracle tests failed (exit code $LASTEXITCODE)." }

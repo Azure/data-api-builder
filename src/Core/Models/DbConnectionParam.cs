@@ -28,6 +28,7 @@ public class DbConnectionParam
     // identically and then implicit conversion cannot happen.
     // For more details refer: https://github.com/Azure/data-api-builder/pull/1442.
     public DbType? DbType { get; set; }
+    public string? DatabaseTypeName { get; set; }
 
     // This is being made nullable
     // because it's not populated for DB's other than MSSQL.

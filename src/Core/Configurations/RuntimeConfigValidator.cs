@@ -1415,7 +1415,10 @@ public class RuntimeConfigValidator : IConfigValidator
                         DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
 
                         // Create operation does not support defining a database policy for certain database types.
-                        if (!_databaseTypesSupportingCreatePolicy.Contains(entityDataSource.DatabaseType) && !IsValidDatabasePolicyForAction(action))
+                        // Oracle checks this at query generation: an update-only upsert cannot
+                        // insert and must not be blocked by an unrelated create policy.
+                        if (entityDataSource.DatabaseType != DatabaseType.Oracle &&
+                            !_databaseTypesSupportingCreatePolicy.Contains(entityDataSource.DatabaseType) && !IsValidDatabasePolicyForAction(action))
                         {
                             throw new DataApiBuilderException(
                                 message: $"The Create action does not support defining a database policy." +

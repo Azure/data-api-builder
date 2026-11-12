@@ -314,7 +314,8 @@ public class GQLFilterParser
                            tableAlias: sourceAlias,
                            processLiterals: queryStructure.MakeDbConnectionParam,
                            isListType: isListType,
-                           escapeBracketWildcards: metadataProvider.GetDatabaseType() != DatabaseType.Oracle)));
+                           escapeBracketWildcards: metadataProvider.GetDatabaseType() != DatabaseType.Oracle,
+                           databaseTypeName: sourceDefinition.Columns.TryGetValue(backingColumnName, out ColumnDefinition? definition) ? definition.DatabaseTypeName : null)));
                 }
             }
         }
@@ -561,9 +562,10 @@ public class GQLFilterParser
         string tableAlias,
         Func<object, string?, bool, string> processLiterals,
         bool isListType = false,
-        bool escapeBracketWildcards = true)
+        bool escapeBracketWildcards = true,
+        string? databaseTypeName = null)
     {
-        Column column = new(schemaName, tableName, columnName: fieldName, tableAlias);
+        Column column = new(schemaName, tableName, columnName: fieldName, tableAlias) { DatabaseTypeName = databaseTypeName };
 
         return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals, isListType, escapeBracketWildcards);
     }

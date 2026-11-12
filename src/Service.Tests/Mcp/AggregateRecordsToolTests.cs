@@ -451,12 +451,35 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"first\":1}", "InvalidArguments", DisplayName = "Page size requires group-by")]
         [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"after\":\"MA==\"}", "InvalidArguments", DisplayName = "Cursor requires page size")]
         [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"after\":\"MA==\"}", "InvalidArguments", DisplayName = "Grouped cursor still requires page size")]
+        [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"first\":null,\"after\":\"MA==\"}", "InvalidArguments", DisplayName = "Null page size cannot enable cursor pagination")]
         [DataRow("{\"entity\":\"Book\",\"function\":\"count\",\"groupby\":[\"title\"],\"having\":{\"in\":[]}}", "InvalidArguments", DisplayName = "Having in-list cannot be empty")]
         public async Task AggregateRecords_AdditionalArgumentEdges_ReturnExpectedError(string json, string expectedError)
         {
             CallToolResult result = await ExecuteToolAsync(CreateDefaultServiceProvider(), json);
 
             AssertErrorResult(result, expectedError);
+        }
+
+        [DataTestMethod]
+        [DataRow(false, false)]
+        [DataRow(false, true)]
+        [DataRow(true, false)]
+        [DataRow(true, true)]
+        public void AggregateRecords_NullOrOmittedFirst_DisablesPagination(bool explicitNull, bool grouped)
+        {
+            string firstProperty = explicitNull ? ",\"first\":null" : string.Empty;
+            string groupbyProperty = grouped ? ",\"groupby\":[\"title\"]" : string.Empty;
+            using JsonDocument arguments = JsonDocument.Parse(
+                $"{{\"entity\":\"Book\",\"function\":\"count\"{firstProperty}{groupbyProperty}}}");
+            object?[] parameters = { arguments, CreateConfig(), "aggregate_records", null, null };
+
+            CallToolResult? error = InvokePrivateWithMutableArguments<CallToolResult?>(
+                "TryParseAndValidateArguments", parameters);
+
+            Assert.IsNull(error);
+            AggregateRecordsTool.AggregateArguments parsed = (AggregateRecordsTool.AggregateArguments)parameters[3]!;
+            Assert.IsNull(parsed.First, "An omitted or null page size must leave pagination disabled.");
+            Assert.AreEqual(grouped ? 1 : 0, parsed.Groupby.Count);
         }
 
         [TestMethod]

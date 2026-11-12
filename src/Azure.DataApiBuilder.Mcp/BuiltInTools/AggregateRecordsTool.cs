@@ -453,7 +453,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             // Parse first
             int? first = null;
-            if (root.TryGetProperty("first", out JsonElement firstElement))
+            if (root.TryGetProperty("first", out JsonElement firstElement) && firstElement.ValueKind != JsonValueKind.Null)
             {
                 if (firstElement.ValueKind != JsonValueKind.Number || !firstElement.TryGetInt32(out int pageSize) || pageSize < 1)
                 {

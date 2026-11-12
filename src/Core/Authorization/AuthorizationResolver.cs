@@ -4,6 +4,8 @@
 using System.Globalization;
 using System.Net;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
@@ -16,6 +18,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.JsonWebTokens;
 
@@ -29,6 +32,7 @@ public class AuthorizationResolver : IAuthorizationResolver
 {
     private readonly RuntimeConfigProvider _runtimeConfigProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
+    private readonly ILogger<IAuthorizationResolver>? _logger;
     public const string WILDCARD = "*";
     public const string CLAIM_PREFIX = "@claims.";
     public const string FIELD_PREFIX = "@item.";
@@ -49,10 +53,12 @@ public class AuthorizationResolver : IAuthorizationResolver
     public AuthorizationResolver(
         RuntimeConfigProvider runtimeConfigProvider,
         IMetadataProviderFactory metadataProviderFactory,
-        HotReloadEventHandler<HotReloadEventArgs>? handler = null)
+        HotReloadEventHandler<HotReloadEventArgs>? handler = null,
+        ILogger<IAuthorizationResolver>? logger = null)
     {
         _metadataProviderFactory = metadataProviderFactory;
         _runtimeConfigProvider = runtimeConfigProvider;
+        _logger = logger;
         handler?.Subscribe(DabConfigEvents.AUTHZ_RESOLVER_ON_CONFIG_CHANGED, OnConfigChanged);
 
         if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
@@ -216,7 +222,17 @@ public class AuthorizationResolver : IAuthorizationResolver
             return ResolvedDatabasePolicy.Empty;
         }
 
-        return GetPolicyWithClaimValues(dBpolicyWithClaimTypes, GetAllAuthenticatedUserClaims(httpContext));
+        ResolvedDatabasePolicy resolvedPolicy = GetPolicyWithClaimValues(dBpolicyWithClaimTypes, GetAllAuthenticatedUserClaims(httpContext));
+
+        // A configured (non-empty) database policy that compiles to an empty predicate is a
+        // silent fail-open of row/column level authorization: the query would run unfiltered.
+        // Emit an audit signal and, outside development mode, fail the request.
+        if (string.IsNullOrWhiteSpace(resolvedPolicy.Policy))
+        {
+            AuditDatabasePolicyFailOpen(entityName, roleName, operation, dBpolicyWithClaimTypes);
+        }
+
+        return resolvedPolicy;
     }
 
     /// <inheritdoc />
@@ -792,6 +808,77 @@ public class AuthorizationResolver : IAuthorizationResolver
         // Remove occurrences of @item. directives
         processedPolicy = processedPolicy.Replace(FIELD_PREFIX, "");
         return new ResolvedDatabasePolicy(processedPolicy, claimValues);
+    }
+
+    /// <summary>
+    /// Emits a structured audit signal when a configured (non-empty) database authorization
+    /// policy resolves to an empty predicate, which silently removes the intended row/column
+    /// level filter (fail-open). In development mode this is logged as a warning so the request
+    /// can proceed for debugging; in all other host modes it is logged as an error and the
+    /// request is failed to prevent returning unfiltered data.
+    /// </summary>
+    /// <param name="entityName">Entity targeted by the request.</param>
+    /// <param name="roleName">Role resolved from the client role header.</param>
+    /// <param name="operation">Operation the policy applies to.</param>
+    /// <param name="configuredPolicy">The non-empty policy text configured in runtime config.</param>
+    /// <exception cref="DataApiBuilderException">Thrown outside development mode to fail the request.</exception>
+    public void AuditDatabasePolicyFailOpen(
+        string entityName,
+        string roleName,
+        EntityActionOperation operation,
+        string configuredPolicy)
+    {
+        const string reason = "Configured database authorization policy compiled to an empty predicate; " +
+            "the request would run without the intended row/column level filter (fail-open).";
+        string predicateHash = ComputePredicateHash(configuredPolicy);
+        bool isDevelopmentMode = _runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
+            && runtimeConfig.IsDevelopmentMode();
+
+        // Structured audit event: entity, role, operation, policy text, reason, predicateHash, dbPolicyApplied.
+        const string auditMessageTemplate = "Database authorization policy fail-open detected. " +
+            "Entity: {Entity}, Role: {Role}, Operation: {Operation}, PolicyText: {PolicyText}, " +
+            "Reason: {Reason}, PredicateHash: {PredicateHash}, DbPolicyApplied: {DbPolicyApplied}";
+
+        if (isDevelopmentMode)
+        {
+            _logger?.LogWarning(
+                auditMessageTemplate,
+                entityName,
+                roleName,
+                operation,
+                configuredPolicy,
+                reason,
+                predicateHash,
+                false);
+            return;
+        }
+
+        _logger?.LogError(
+            auditMessageTemplate,
+            entityName,
+            roleName,
+            operation,
+            configuredPolicy,
+            reason,
+            predicateHash,
+            false);
+
+        throw new DataApiBuilderException(
+            message: DataApiBuilderException.AUTHORIZATION_FAILURE,
+            statusCode: HttpStatusCode.Forbidden,
+            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+    }
+
+    /// <summary>
+    /// Produces a stable, non-reversible fingerprint of a policy's text so audit signals can be
+    /// correlated across requests without logging claim values or other sensitive data.
+    /// </summary>
+    /// <param name="policyText">Configured policy text to hash.</param>
+    /// <returns>Uppercase hexadecimal SHA-256 hash of the policy text.</returns>
+    private static string ComputePredicateHash(string policyText)
+    {
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(policyText));
+        return Convert.ToHexString(hash);
     }
 
     /// <summary>

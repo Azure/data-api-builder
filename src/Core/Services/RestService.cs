@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
 using System.Web;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -30,6 +31,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly IMutationEngineFactory _mutationEngineFactory;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
+        private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly RequestValidator _requestValidator;
@@ -41,13 +43,15 @@ namespace Azure.DataApiBuilder.Core.Services
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService,
             RuntimeConfigProvider runtimeConfigProvider,
-            RequestValidator requestValidator
+            RequestValidator requestValidator,
+            IAuthorizationResolver authorizationResolver
             )
         {
             _queryEngineFactory = queryEngineFactory;
             _mutationEngineFactory = mutationEngineFactory;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
+            _authorizationResolver = authorizationResolver;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
             _requestValidator = requestValidator;
@@ -236,8 +240,8 @@ namespace Azure.DataApiBuilder.Core.Services
             if (context is FindRequestContext findRequestContext)
             {
                 using JsonDocument? restApiResponse = await queryEngine.ExecuteAsync(findRequestContext);
-                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext())
-                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext());
+                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext(), _authorizationResolver)
+                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext(), _authorizationResolver);
             }
             else if (context is StoredProcedureRequestContext storedProcedureRequestContext)
             {

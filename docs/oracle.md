@@ -10,7 +10,13 @@ Query and metadata sessions identify DAB through Oracle's `MODULE` session attri
 
 ## Binary columns
 
-Oracle entities containing binary columns (`RAW`, `LONG RAW`, or `BLOB`) are rejected during metadata initialization. Expose a view that converts these columns to text before configuring the entity.
+`RAW` and `BLOB` columns use base64 strings in REST and GraphQL, including mutation responses and nested relationships. Input values must also be base64 strings. `RAW(16)` keys are exposed as the stored 16 bytes encoded in base64; they are not converted to formatted UUID strings.
+
+RAW keys support point reads and cursor pagination. Binary-field filters retain DAB's existing null checks; this support does not add binary equality or ordering filter operators. BLOB values are encoded in chunks so large values are not truncated by Oracle's scalar string limits. A null BLOB is JSON `null`; an empty BLOB is the empty string. Oracle treats an empty RAW value as null.
+
+Read conversion uses statement-local functions and the Oracle `DBMS_LOB`, `UTL_ENCODE`, and `UTL_RAW` packages. The database user must be allowed to execute these packages; no stored function installation or `CREATE FUNCTION` privilege is required.
+
+`LONG RAW` remains unsupported and is rejected during metadata initialization. Migrate it to `BLOB` or expose supported text through a view.
 
 ## Identity columns
 

@@ -54,7 +54,7 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
         using OracleCommand command = connection.CreateCommand();
         command.BindByName = true;
         // DATA_DEFAULT is LONG on 19c; keep it last for sequential readers.
-        command.CommandText = "SELECT c.COLUMN_NAME, c.DATA_TYPE, c.DATA_PRECISION, c.DATA_SCALE, c.IDENTITY_COLUMN, " +
+        command.CommandText = "SELECT c.COLUMN_NAME, c.DATA_TYPE, c.DATA_LENGTH, c.DATA_PRECISION, c.DATA_SCALE, c.IDENTITY_COLUMN, " +
             "i.GENERATION_TYPE, c.DATA_DEFAULT AS COLUMN_DEFAULT " +
             "FROM ALL_TAB_COLUMNS c LEFT JOIN ALL_TAB_IDENTITY_COLS i " +
             "ON i.OWNER = c.OWNER AND i.TABLE_NAME = c.TABLE_NAME AND i.COLUMN_NAME = c.COLUMN_NAME " +
@@ -106,9 +106,16 @@ public class OracleMetadataProvider : SqlMetadataProvider<OracleConnection, Orac
         {
             if (sourceDefinition.Columns.TryGetValue((string)row["COLUMN_NAME"], out ColumnDefinition? column))
             {
-                if (column.SystemType == typeof(byte[]))
+                string dataType = (string)row["DATA_TYPE"];
+                if (dataType == "LONG RAW")
                 {
-                    throw new NotSupportedException($"Oracle binary column '{row["COLUMN_NAME"]}' ({row["DATA_TYPE"]}) is not supported. Expose a view that converts it to text.");
+                    throw new NotSupportedException($"Oracle binary column '{row["COLUMN_NAME"]}' (LONG RAW) is not supported. Migrate it to BLOB or expose supported text through a view.");
+                }
+
+                if (dataType is "RAW" or "BLOB")
+                {
+                    // The standard unbounded-length marker distinguishes LOB binds from RAW binds.
+                    column.Length = dataType == "BLOB" ? -1 : Convert.ToInt32(row["DATA_LENGTH"]);
                 }
 
                 if (string.Equals(row["IDENTITY_COLUMN"].ToString(), "YES", StringComparison.Ordinal))

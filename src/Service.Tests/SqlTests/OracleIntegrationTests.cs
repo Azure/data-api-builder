@@ -379,8 +379,6 @@ public class OracleIntegrationTests : SqlTestBase
     }
 
     [DataTestMethod]
-    [DataRow("RAW(16)")]
-    [DataRow("BLOB")]
     [DataRow("LONG RAW")]
     public async Task BinaryColumnsAreRejectedDuringMetadataInitialization(string sqlType)
     {
@@ -391,6 +389,340 @@ public class OracleIntegrationTests : SqlTestBase
         StringAssert.Contains(error.Message, "PAYLOAD");
         StringAssert.Contains(error.Message, "binary");
         StringAssert.Contains(error.Message, "view");
+    }
+
+    [DataTestMethod]
+    [DataRow("sql-json")]
+    [DataRow("rest")]
+    [DataRow("graphql")]
+    public async Task BinaryReadsPreserveBase64NullAndEmptyBlob(string surface)
+    {
+        JsonElement rows = await ReadBinarySamplesAsync(surface);
+        Assert.AreEqual(3, rows.GetArrayLength());
+        Assert.AreEqual("AAAAAAAAAAAAAAAAAAAAAQ==", rows[0].GetProperty("id").GetString());
+        Assert.AreEqual("AAH+/w==", rows[0].GetProperty("raw_value").GetString());
+        Assert.AreEqual("AAH+/w==", rows[0].GetProperty("payload").GetString());
+        Assert.AreEqual(JsonValueKind.Null, rows[1].GetProperty("raw_value").ValueKind);
+        Assert.AreEqual("", rows[1].GetProperty("payload").GetString());
+        Assert.AreEqual(JsonValueKind.Null, rows[2].GetProperty("payload").ValueKind);
+    }
+
+    [DataTestMethod]
+    [DataRow("rest", 0)]
+    [DataRow("rest", 1)]
+    [DataRow("rest", 2)]
+    [DataRow("rest", 3)]
+    [DataRow("rest", 11999)]
+    [DataRow("rest", 12000)]
+    [DataRow("rest", 12001)]
+    [DataRow("rest", 65537)]
+    [DataRow("graphql", 0)]
+    [DataRow("graphql", 65537)]
+    [DataRow("graphql", 1048576)]
+    public async Task BinaryWritesRoundTripBlobAcrossEncodingBoundaries(string surface, int length)
+    {
+        byte[] bytes = Enumerable.Range(0, length).Select(i => (byte)(i % 256)).ToArray();
+        string expected = Convert.ToBase64String(bytes);
+        if (surface == "rest")
+        {
+            using HttpResponseMessage response = await HttpClient.PatchAsJsonAsync("api/BinarySample/id/AAAAAAAAAAAAAAAAAAAAAQ==", new { payload = expected });
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
+            using JsonDocument result = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            Assert.AreEqual(expected, result.RootElement.GetProperty("value")[0].GetProperty("payload").GetString());
+        }
+        else
+        {
+            JsonElement result = await ExecuteGraphQLRequestAsync(
+                $"mutation {{ updateBinarySample(id: \"AAAAAAAAAAAAAAAAAAAAAQ==\", item: {{ payload: \"{expected}\" }}) {{ id payload }} }}",
+                "updateBinarySample", isAuthenticated: false);
+            Assert.AreEqual(expected, result.GetProperty("payload").GetString());
+        }
+
+        Assert.AreEqual(expected, (await ReadBinarySamplesAsync(surface))[0].GetProperty("payload").GetString());
+        using OracleConnection connection = new(_connectionString);
+        await connection.OpenAsync();
+        using OracleCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT PAYLOAD FROM DAB_ORACLE_BINARIES WHERE ID = HEXTORAW('00000000000000000000000000000001')";
+        byte[] actual = (byte[])await command.ExecuteScalarAsync();
+        CollectionAssert.AreEqual(bytes, actual);
+    }
+
+    private async Task<JsonElement> ReadBinarySamplesAsync(string surface)
+    {
+        if (surface == "graphql")
+        {
+            JsonElement result = await ExecuteGraphQLRequestAsync(
+                "{ binarySamples(orderBy: { id: ASC }) { items { id raw_value payload } } }", "binarySamples", isAuthenticated: false);
+            return result.GetProperty("items");
+        }
+
+        if (surface == "rest")
+        {
+            using JsonDocument result = JsonDocument.Parse(await HttpClient.GetStringAsync("api/BinarySample?$orderby=id"));
+            return result.RootElement.GetProperty("value").Clone();
+        }
+
+        FindRequestContext context = new("BinarySample", _sqlMetadataProvider.EntityToDatabaseObject["BinarySample"], true)
+        {
+            First = 10,
+            FieldsToBeReturned = new() { "id", "raw_value", "payload" }
+        };
+        SqlQueryStructure query = new(context, _sqlMetadataProvider, _fixture.Authorization.Object, _fixture.Config, _fixture.Filter, _fixture.Http.HttpContext);
+        using JsonDocument json = await _fixture.Executor.ExecuteQueryAsync(_fixture.Builder.Build(query), query.Parameters,
+            _fixture.Executor.GetJsonResultAsync<JsonDocument>, dataSourceName: _fixture.SourceName);
+        return json.RootElement.Clone();
+    }
+
+    [TestMethod]
+    public async Task RawKeysSupportRestCrudAndCursorPagination()
+    {
+        const string id = "AAAAAAAAAAAAAAAAAAAABA==";
+        byte[] raw = Enumerable.Range(0, 2000).Select(i => (byte)(i % 256)).ToArray();
+        string rawBase64 = Convert.ToBase64String(raw);
+        using HttpResponseMessage created = await HttpClient.PostAsJsonAsync("api/BinarySample", new { id, raw_value = rawBase64, payload = "AAH+/w==" });
+        Assert.AreEqual(HttpStatusCode.Created, created.StatusCode, await created.Content.ReadAsStringAsync());
+        using JsonDocument createdBody = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Assert.AreEqual(id, createdBody.RootElement.GetProperty("value")[0].GetProperty("id").GetString());
+        Assert.AreEqual(rawBase64, createdBody.RootElement.GetProperty("value")[0].GetProperty("raw_value").GetString());
+
+        using HttpResponseMessage patched = await HttpClient.PatchAsJsonAsync($"api/BinarySample/id/{id}", new { raw_value = (string)null, payload = (string)null });
+        Assert.AreEqual(HttpStatusCode.OK, patched.StatusCode, await patched.Content.ReadAsStringAsync());
+        using JsonDocument point = JsonDocument.Parse(await HttpClient.GetStringAsync($"api/BinarySample/id/{id}"));
+        Assert.AreEqual(JsonValueKind.Null, point.RootElement.GetProperty("value")[0].GetProperty("raw_value").ValueKind);
+        Assert.AreEqual(JsonValueKind.Null, point.RootElement.GetProperty("value")[0].GetProperty("payload").ValueKind);
+
+        using JsonDocument first = JsonDocument.Parse(await HttpClient.GetStringAsync("api/BinarySample?$first=2&$orderby=id"));
+        Assert.AreEqual(2, first.RootElement.GetProperty("value").GetArrayLength());
+        using JsonDocument second = JsonDocument.Parse(await HttpClient.GetStringAsync(first.RootElement.GetProperty("nextLink").GetString()));
+        CollectionAssert.AreEqual(new[] { "AAAAAAAAAAAAAAAAAAAAAw==", id },
+            second.RootElement.GetProperty("value").EnumerateArray().Select(row => row.GetProperty("id").GetString()).ToArray());
+
+        using HttpResponseMessage deleted = await HttpClient.DeleteAsync($"api/BinarySample/id/{id}");
+        Assert.AreEqual(HttpStatusCode.NoContent, deleted.StatusCode);
+        Assert.AreEqual(3, (await ReadBinarySamplesAsync("rest")).GetArrayLength());
+    }
+
+    [TestMethod]
+    public async Task RawKeysSupportGraphQLNullFiltersAndPagination()
+    {
+        JsonElement point = await ExecuteGraphQLRequestAsync(
+            "{ binarySample_by_pk(id: \"AAAAAAAAAAAAAAAAAAAAAQ==\") { id raw_value payload } }", "binarySample_by_pk", isAuthenticated: false);
+        Assert.AreEqual("AAH+/w==", point.GetProperty("raw_value").GetString());
+        Assert.AreEqual("AAH+/w==", point.GetProperty("payload").GetString());
+
+        JsonElement filtered = await ExecuteGraphQLRequestAsync(
+            "{ binarySamples(filter: { payload: { isNull: true } }) { items { id payload } } }",
+            "binarySamples", isAuthenticated: false);
+        Assert.AreEqual(1, filtered.GetProperty("items").GetArrayLength());
+        Assert.AreEqual("AAAAAAAAAAAAAAAAAAAAAw==", filtered.GetProperty("items")[0].GetProperty("id").GetString());
+
+        JsonElement first = await ExecuteGraphQLRequestAsync(
+            "{ binarySamples(first: 2, orderBy: { id: ASC }) { items { id } endCursor hasNextPage } }", "binarySamples", isAuthenticated: false);
+        Assert.IsTrue(first.GetProperty("hasNextPage").GetBoolean());
+        JsonElement second = await ExecuteGraphQLRequestAsync(
+            $"{{ binarySamples(first: 2, after: \"{first.GetProperty("endCursor").GetString()}\", orderBy: {{ id: ASC }}) {{ items {{ id }} hasNextPage }} }}",
+            "binarySamples", isAuthenticated: false);
+        Assert.AreEqual(1, second.GetProperty("items").GetArrayLength());
+        Assert.AreEqual("AAAAAAAAAAAAAAAAAAAAAw==", second.GetProperty("items")[0].GetProperty("id").GetString());
+        Assert.IsFalse(second.GetProperty("hasNextPage").GetBoolean());
+    }
+
+    [TestMethod]
+    public async Task BinaryRelationshipsPreserveBase64InNestedJson()
+    {
+        JsonElement result = await ExecuteGraphQLRequestAsync(
+            "{ binaryLinks { items { id sample_id sample { id raw_value payload } } } }", "binaryLinks", isAuthenticated: false);
+        JsonElement row = result.GetProperty("items")[0];
+        Assert.AreEqual("AAAAAAAAAAAAAAAAAAAAAQ==", row.GetProperty("sample_id").GetString());
+        Assert.AreEqual("AAAAAAAAAAAAAAAAAAAAAQ==", row.GetProperty("sample").GetProperty("id").GetString());
+        Assert.AreEqual("AAH+/w==", row.GetProperty("sample").GetProperty("raw_value").GetString());
+        Assert.AreEqual("AAH+/w==", row.GetProperty("sample").GetProperty("payload").GetString());
+    }
+
+    [TestMethod]
+    public async Task RawValuesSupportRestNullFilter()
+    {
+        string filter = Uri.EscapeDataString("raw_value eq null");
+        using HttpResponseMessage response = await HttpClient.GetAsync($"api/BinarySample?$filter={filter}");
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
+        using JsonDocument result = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        JsonElement rows = result.RootElement.GetProperty("value");
+        Assert.AreEqual(2, rows.GetArrayLength());
+        CollectionAssert.AreEquivalent(new[] { "AAAAAAAAAAAAAAAAAAAAAg==", "AAAAAAAAAAAAAAAAAAAAAw==" },
+            rows.EnumerateArray().Select(row => row.GetProperty("id").GetString()).ToArray());
+    }
+
+    [TestMethod]
+    public async Task RawKeysSupportBinaryUpsert()
+    {
+        const string route = "api/BinarySample/id/AAAAAAAAAAAAAAAAAAAABQ==";
+        using HttpResponseMessage inserted = await HttpClient.PutAsJsonAsync(route, new { raw_value = "AAH+/w==", payload = "AAH+/w==" });
+        Assert.AreEqual(HttpStatusCode.Created, inserted.StatusCode, await inserted.Content.ReadAsStringAsync());
+        using HttpResponseMessage updated = await HttpClient.PutAsJsonAsync(route, new { raw_value = "AQID", payload = "AQID" });
+        Assert.AreEqual(HttpStatusCode.OK, updated.StatusCode, await updated.Content.ReadAsStringAsync());
+        using JsonDocument result = JsonDocument.Parse(await HttpClient.GetStringAsync(route));
+        JsonElement row = result.RootElement.GetProperty("value")[0];
+        Assert.AreEqual("AQID", row.GetProperty("raw_value").GetString());
+        Assert.AreEqual("AQID", row.GetProperty("payload").GetString());
+    }
+
+    [DataTestMethod]
+    [DataRow("rest", null)]
+    [DataRow("rest", "")]
+    [DataRow("graphql", null)]
+    [DataRow("graphql", "")]
+    public async Task NullAndEmptyRawWritesRemainNull(string surface, string value)
+    {
+        if (surface == "rest")
+        {
+            using HttpResponseMessage response = await HttpClient.PatchAsJsonAsync("api/BinarySample/id/AAAAAAAAAAAAAAAAAAAAAQ==", new { raw_value = value });
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
+        }
+        else
+        {
+            JsonElement result = await ExecuteGraphQLRequestAsync(
+                $"mutation {{ updateBinarySample(id: \"AAAAAAAAAAAAAAAAAAAAAQ==\", item: {{ raw_value: {JsonSerializer.Serialize(value)} }}) {{ raw_value }} }}",
+                "updateBinarySample", isAuthenticated: false);
+            Assert.AreEqual(JsonValueKind.Null, result.GetProperty("raw_value").ValueKind);
+        }
+
+        Assert.AreEqual(JsonValueKind.Null, (await ReadBinarySamplesAsync(surface))[0].GetProperty("raw_value").ValueKind);
+    }
+
+    [TestMethod]
+    public async Task OversizedRawWriteFailsWithoutTruncation()
+    {
+        using HttpResponseMessage response = await HttpClient.PatchAsJsonAsync("api/BinarySample/id/AAAAAAAAAAAAAAAAAAAAAQ==",
+            new { raw_value = Convert.ToBase64String(new byte[2001]) });
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode, await response.Content.ReadAsStringAsync());
+        Assert.AreEqual("AAH+/w==", (await ReadBinarySamplesAsync("rest"))[0].GetProperty("raw_value").GetString());
+    }
+
+    [DataTestMethod]
+    [DataRow("rest", false, "00112233445566778899AABBCCDDEEFF", "ABEiM0RVZneImaq7zN3u/w==")]
+    [DataRow("graphql", false, "00112233445566778899AABBCCDDEEFF", "ABEiM0RVZneImaq7zN3u/w==")]
+    [DataRow("rest", true, "33221100554477668899AABBCCDDEEFF", "MyIRAFVEd2aImaq7zN3u/w==")]
+    [DataRow("graphql", true, "33221100554477668899AABBCCDDEEFF", "MyIRAFVEd2aImaq7zN3u/w==")]
+    public async Task GuidRaw16ReadsPreserveOracleAndDotNetByteOrder(string surface, bool dotNetByteOrder, string hex, string expectedBase64)
+    {
+        // The same GUID has two common RAW layouts. Seed independently with HEXTORAW
+        // so an accidental byte swap in the provider cannot be hidden by the write path.
+        await ExecuteSql($"INSERT INTO DAB_ORACLE_BINARIES (ID, RAW_VALUE) VALUES (HEXTORAW('{hex}'), HEXTORAW('{hex}'))");
+        JsonElement row = await ReadGuidSampleAsync(surface, expectedBase64);
+        Assert.AreEqual(expectedBase64, row.GetProperty("id").GetString());
+        Assert.AreEqual(expectedBase64, row.GetProperty("raw_value").GetString());
+        byte[] actual = Convert.FromBase64String(row.GetProperty("id").GetString());
+        Assert.AreEqual(16, actual.Length);
+        Assert.AreEqual(hex, Convert.ToHexString(actual));
+        Assert.AreEqual(Guid.Parse("00112233-4455-6677-8899-aabbccddeeff"),
+            new Guid(actual, bigEndian: !dotNetByteOrder));
+    }
+
+    [DataTestMethod]
+    [DataRow("rest", "00112233-4455-6677-8899-aabbccddeeff", "33221100554477668899AABBCCDDEEFF")]
+    [DataRow("graphql", "00112233-4455-6677-8899-aabbccddeeff", "33221100554477668899AABBCCDDEEFF")]
+    [DataRow("rest", "00000000-0000-0000-0000-000000000000", "00000000000000000000000000000000")]
+    [DataRow("graphql", "00000000-0000-0000-0000-000000000000", "00000000000000000000000000000000")]
+    [DataRow("rest", "ffffffff-ffff-ffff-ffff-ffffffffffff", "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")]
+    [DataRow("graphql", "ffffffff-ffff-ffff-ffff-ffffffffffff", "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")]
+    public async Task GuidRaw16WritesRoundTripWithoutChangingBytes(string surface, string guidText, string expectedHex)
+    {
+        Guid guid = Guid.Parse(guidText);
+        byte[] bytes = guid.ToByteArray();
+        string base64 = Convert.ToBase64String(bytes);
+        JsonElement created;
+        if (surface == "rest")
+        {
+            using HttpResponseMessage response = await HttpClient.PostAsJsonAsync("api/BinarySample", new { id = base64, raw_value = base64 });
+            Assert.AreEqual(HttpStatusCode.Created, response.StatusCode, await response.Content.ReadAsStringAsync());
+            using JsonDocument body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            created = body.RootElement.GetProperty("value")[0].Clone();
+        }
+        else
+        {
+            created = await ExecuteGraphQLRequestAsync(
+                $"mutation {{ createBinarySample(item: {{ id: \"{base64}\", raw_value: \"{base64}\" }}) {{ id raw_value }} }}",
+                "createBinarySample", isAuthenticated: false);
+        }
+
+        Assert.AreEqual(base64, created.GetProperty("id").GetString());
+        Assert.AreEqual(base64, created.GetProperty("raw_value").GetString());
+        JsonElement fetched = await ReadGuidSampleAsync(surface, base64);
+        Assert.AreEqual(base64, fetched.GetProperty("id").GetString());
+        Assert.AreEqual(guid, new Guid(Convert.FromBase64String(fetched.GetProperty("raw_value").GetString())));
+
+        using OracleConnection connection = new(_connectionString);
+        await connection.OpenAsync();
+        using OracleCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT RAWTOHEX(ID), RAWTOHEX(RAW_VALUE), UTL_RAW.LENGTH(ID) FROM DAB_ORACLE_BINARIES WHERE ID = :id";
+        command.Parameters.Add("id", OracleDbType.Raw).Value = bytes;
+        using OracleDataReader reader = await command.ExecuteReaderAsync();
+        Assert.IsTrue(await reader.ReadAsync());
+        Assert.AreEqual(expectedHex, reader.GetString(0));
+        Assert.AreEqual(expectedHex, reader.GetString(1));
+        Assert.AreEqual(16, reader.GetInt32(2));
+        Assert.IsFalse(await reader.ReadAsync());
+    }
+
+    [DataTestMethod]
+    [DataRow("rest")]
+    [DataRow("graphql")]
+    public async Task GuidRaw16PaginationUsesStoredBinaryOrder(string surface)
+    {
+        await ExecuteSql("DELETE FROM DAB_ORACLE_BINARY_LINKS");
+        await ExecuteSql("DELETE FROM DAB_ORACLE_BINARIES");
+        // Guid.CompareTo orders these numerically; RAW ordering uses their stored bytes.
+        string[] inputGuids = { "00000001-0000-0000-0000-000000000000", "00000100-0000-0000-0000-000000000000", "01000000-0000-0000-0000-000000000000" };
+        foreach (string guid in inputGuids)
+        {
+            string hex = Convert.ToHexString(Guid.Parse(guid).ToByteArray());
+            await ExecuteSql($"INSERT INTO DAB_ORACLE_BINARIES (ID) VALUES (HEXTORAW('{hex}'))");
+        }
+
+        string[] expectedGuids = { inputGuids[2], inputGuids[1], inputGuids[0] };
+        string next = "api/BinarySample?$first=1&$orderby=id";
+        string cursor = null;
+        for (int page = 0; page < expectedGuids.Length; page++)
+        {
+            JsonElement rows;
+            if (surface == "rest")
+            {
+                using JsonDocument body = JsonDocument.Parse(await HttpClient.GetStringAsync(next));
+                rows = body.RootElement.GetProperty("value").Clone();
+                bool hasNext = body.RootElement.TryGetProperty("nextLink", out JsonElement link);
+                Assert.AreEqual(page < 2, hasNext);
+                next = hasNext ? link.GetString() : null;
+            }
+            else
+            {
+                string after = cursor is null ? "" : $", after: \"{cursor}\"";
+                JsonElement result = await ExecuteGraphQLRequestAsync(
+                    $"{{ binarySamples(first: 1, orderBy: {{ id: ASC }}{after}) {{ items {{ id }} endCursor hasNextPage }} }}",
+                    "binarySamples", isAuthenticated: false);
+                rows = result.GetProperty("items");
+                Assert.AreEqual(page < 2, result.GetProperty("hasNextPage").GetBoolean());
+                cursor = result.GetProperty("endCursor").GetString();
+            }
+
+            Assert.AreEqual(1, rows.GetArrayLength());
+            Assert.AreEqual(Guid.Parse(expectedGuids[page]), new Guid(Convert.FromBase64String(rows[0].GetProperty("id").GetString())));
+        }
+    }
+
+    private async Task<JsonElement> ReadGuidSampleAsync(string surface, string base64)
+    {
+        if (surface == "rest")
+        {
+            // Standard base64 GUID keys can contain '/', '+', and '='.
+            using HttpResponseMessage response = await HttpClient.GetAsync($"api/BinarySample/id/{Uri.EscapeDataString(base64)}");
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
+            using JsonDocument body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            return body.RootElement.GetProperty("value")[0].Clone();
+        }
+
+        return await ExecuteGraphQLRequestAsync(
+            "query($id: Base64String!) { binarySample_by_pk(id: $id) { id raw_value } }", "binarySample_by_pk",
+            isAuthenticated: false, variables: new Dictionary<string, object> { ["id"] = base64 });
     }
 
     [DataTestMethod]

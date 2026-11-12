@@ -78,6 +78,9 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
         $"WHERE {JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Read), Build(structure.Predicates))}";
 
     public string Build(SqlQueryStructure structure)
+        => WithBinaryConversion(structure, BuildQuery(structure));
+
+    private string BuildQuery(SqlQueryStructure structure)
     {
         string order = structure.OrderByColumns.Count > 0 ? Build(structure.OrderByColumns) : "NULL";
         return BuildReadQuery(structure, order, $" FETCH FIRST {structure.Limit()} ROWS ONLY");
@@ -109,7 +112,7 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
             pagination = $" OFFSET {offsetParameter} ROWS FETCH NEXT {limitParameter} ROWS ONLY";
         }
 
-        return BuildReadQuery(structure, order.Count > 0 ? string.Join(", ", order) : "NULL", pagination);
+        return WithBinaryConversion(structure, BuildReadQuery(structure, order.Count > 0 ? string.Join(", ", order) : "NULL", pagination));
     }
 
     private string BuildReadQuery(SqlQueryStructure structure, string order, string pagination)
@@ -120,11 +123,15 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
             string value;
             if (column.ColumnName == SqlQueryStructure.DATA_IDENT && column.TableAlias is not null && structure.JoinQueries.TryGetValue(column.TableAlias, out SqlQueryStructure? nested))
             {
-                value = $"({Build(nested)}) FORMAT JSON";
+                value = $"({BuildQuery(nested)}) FORMAT JSON";
             }
             else
             {
                 value = Build((Column)column);
+                if (structure.GetColumnSystemType(column.ColumnName) == typeof(byte[]))
+                {
+                    value = $"dab_base64({value})";
+                }
             }
 
             members.Add($"'{EscapeLiteral(column.Label)}' VALUE {value}");
@@ -149,6 +156,44 @@ public class OracleQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
             ? $"SELECT COALESCE(JSON_ARRAYAGG({data} FORMAT JSON ORDER BY dab_order RETURNING CLOB), JSON_ARRAY(RETURNING CLOB)) AS {data} FROM ({query})"
             : $"SELECT {data} FROM ({query})";
     }
+
+    private static bool HasBinaryColumns(SqlQueryStructure structure) =>
+        structure.Columns.Any(column => column.ColumnName != SqlQueryStructure.DATA_IDENT &&
+            structure.GetColumnSystemType(column.ColumnName) == typeof(byte[])) ||
+        structure.JoinQueries.Values.Any(HasBinaryColumns);
+
+    private static string WithBinaryConversion(SqlQueryStructure structure, string sql) =>
+        HasBinaryColumns(structure) ? BINARY_CONVERSION_FUNCTIONS + sql : sql;
+
+    // Statement-local functions require no schema objects or CREATE FUNCTION privilege.
+    // Chunks are divisible by three, so padding occurs only at the end of the BLOB.
+    // Keep each encoded chunk below PL/SQL's 32767-byte RAW/VARCHAR2 limit.
+    private const string BINARY_CONVERSION_FUNCTIONS = """
+        WITH
+        FUNCTION dab_base64(value BLOB) RETURN CLOB IS
+            result CLOB;
+            position PLS_INTEGER := 1;
+            chunk VARCHAR2(32767);
+        BEGIN
+            IF value IS NULL THEN RETURN NULL; END IF;
+            DBMS_LOB.CREATETEMPORARY(result, TRUE, DBMS_LOB.CALL);
+            WHILE position <= DBMS_LOB.GETLENGTH(value) LOOP
+                chunk := UTL_RAW.CAST_TO_VARCHAR2(UTL_ENCODE.BASE64_ENCODE(DBMS_LOB.SUBSTR(value, 12000, position)));
+                chunk := REPLACE(REPLACE(chunk, CHR(13)), CHR(10));
+                DBMS_LOB.WRITEAPPEND(result, LENGTH(chunk), chunk);
+                position := position + 12000;
+            END LOOP;
+            RETURN result;
+        EXCEPTION WHEN OTHERS THEN
+            IF DBMS_LOB.ISTEMPORARY(result) = 1 THEN DBMS_LOB.FREETEMPORARY(result); END IF;
+            RAISE;
+        END;
+        FUNCTION dab_base64(value RAW) RETURN CLOB IS
+        BEGIN
+            RETURN dab_base64(TO_BLOB(value));
+        END;
+
+        """;
 
     public string Build(SqlInsertStructure structure)
     {

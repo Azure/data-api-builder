@@ -13,6 +13,20 @@
     }
   },
   "entities": {
+    "BinaryLink": {
+      "source": { "object": "DAB_ORACLE_BINARY_LINKS", "type": "table" },
+      "graphql": { "type": { "singular": "BinaryLink", "plural": "BinaryLinks" } },
+      "mappings": { "ID": "id", "SAMPLE_ID": "sample_id" },
+      "permissions": [ { "role": "anonymous", "actions": [ "read" ] } ],
+      "relationships": { "sample": { "cardinality": "one", "target.entity": "BinarySample" } }
+    },
+    "BinarySample": {
+      "source": { "object": "DAB_ORACLE_BINARIES", "type": "table" },
+      "rest": { "path": "/BinarySample" },
+      "graphql": { "type": { "singular": "BinarySample", "plural": "BinarySamples" } },
+      "mappings": { "ID": "id", "RAW_VALUE": "raw_value", "PAYLOAD": "payload" },
+      "permissions": [ { "role": "anonymous", "actions": [ "*" ] } ]
+    },
     "ScalarSample": {
       "source": { "object": "DAB_ORACLE_SCALARS", "type": "table" },
       "rest": { "path": "/ScalarSample" },

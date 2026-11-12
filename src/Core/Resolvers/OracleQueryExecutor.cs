@@ -93,6 +93,17 @@ public class OracleQueryExecutor : QueryExecutor<OracleConnection>
                 parameter.DbType = dbType;
             }
 
+            if (value.DbType == DbType.Binary)
+            {
+                parameter.OracleDbType = value.Length == -1 ? OracleDbType.Blob : OracleDbType.Raw;
+                // GraphQL primary-key arguments can reach the executor as base64 strings,
+                // while mutations and cursor predicates already contain decoded byte arrays.
+                if (value.Value is string base64)
+                {
+                    parameter.Value = Convert.FromBase64String(base64);
+                }
+            }
+
             command.Parameters.Add(parameter);
         }
 

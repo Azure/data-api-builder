@@ -7,3 +7,8 @@ update Book --config "dab-config.Oracle.json" --relationship publisher --cardina
 update Publisher --config "dab-config.Oracle.json" --relationship books --cardinality many --target.entity Book
 add ScalarSample --config "dab-config.Oracle.json" --source DAB_ORACLE_SCALARS --source.type table --permissions "anonymous:create,read,update,delete" --rest ScalarSample --graphql "ScalarSample:ScalarSamples"
 update ScalarSample --config "dab-config.Oracle.json" --map "ID:id,DATE_VALUE:date_value,TIMESTAMP_VALUE:timestamp_value,OFFSET_VALUE:offset_value,DOUBLE_VALUE:double_value,CHAR_VALUE:char_value,FLAG_VALUE:flag_value"
+add BinarySample --config "dab-config.Oracle.json" --source DAB_ORACLE_BINARIES --source.type table --permissions "anonymous:create,read,update,delete" --rest BinarySample --graphql "BinarySample:BinarySamples"
+update BinarySample --config "dab-config.Oracle.json" --map "ID:id,RAW_VALUE:raw_value,PAYLOAD:payload"
+add BinaryLink --config "dab-config.Oracle.json" --source DAB_ORACLE_BINARY_LINKS --source.type table --permissions "anonymous:read" --graphql "BinaryLink:BinaryLinks"
+update BinaryLink --config "dab-config.Oracle.json" --map "ID:id,SAMPLE_ID:sample_id"
+update BinaryLink --config "dab-config.Oracle.json" --relationship sample --cardinality one --target.entity BinarySample

@@ -277,8 +277,7 @@ CREATE TABLE geometry_type_table(
     geom geometry NULL
 );
 
--- The period columns are HIDDEN, so SELECT * does not return them. An explicit projection built
--- from the catalog would, which is what this fixture guards against.
+-- The period columns are HIDDEN, so SELECT * doesn't return them and they must stay out of the exposed columns.
 CREATE TABLE temporal_geometry_type_table(
     id int NOT NULL PRIMARY KEY,
     name varchar(100) NOT NULL,
@@ -289,8 +288,7 @@ CREATE TABLE temporal_geometry_type_table(
 )
 WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo.temporal_geometry_type_table_history));
 
--- The database primary key is itself of an unsupported type, so no projection can expose the
--- object: the engine needs the key it cannot read.
+-- The primary key has an unsupported type, so the object needs source.key-fields to be exposed.
 CREATE TABLE hierarchyid_pk_table(
     node hierarchyid NOT NULL PRIMARY KEY,
     name varchar(100) NOT NULL
@@ -304,9 +302,7 @@ CREATE TABLE hierarchyid_composite_pk_table(
     CONSTRAINT PK_hierarchyid_composite_pk_table PRIMARY KEY (tenant_id, node)
 );
 
--- No database primary key, and the unsupported column carries a unique index. This object is
--- expected to load, with the key supplied through source.key-fields: the data adapter's own key
--- discovery would otherwise pull the unique column back in as a hidden reader column.
+-- No primary key, and the only unique key has an unsupported type, so the object needs source.key-fields.
 CREATE TABLE hierarchyid_unique_table(
     id int NOT NULL,
     node hierarchyid NOT NULL,
@@ -314,9 +310,7 @@ CREATE TABLE hierarchyid_unique_table(
     CONSTRAINT UQ_hierarchyid_unique_table_node UNIQUE (node)
 );
 
--- No database primary key, and the unique index covers a supported non-null column. The data
--- adapter promotes such a key to DataTable.PrimaryKey on the unnarrowed path, so the narrowed path
--- has to infer it too instead of demanding source.key-fields.
+-- No primary key, but a unique key over a supported non-null column, which is inferred as the key.
 CREATE TABLE unique_key_geometry_table(
     code varchar(20) NOT NULL,
     name varchar(100) NOT NULL,
@@ -324,9 +318,7 @@ CREATE TABLE unique_key_geometry_table(
     CONSTRAINT UQ_unique_key_geometry_table_code UNIQUE (code)
 );
 
--- A primary key and a separate non-null unique key. A view over this table that does not select the
--- primary key is still keyable through the unique one, which is ordinary design rather than a key
--- the object cannot express.
+-- A primary key and a separate unique key, for a view that selects only the unique one.
 CREATE TABLE pk_and_unique_geometry_table(
     id int IDENTITY(1, 1) NOT NULL PRIMARY KEY,
     code varchar(20) NOT NULL,
@@ -335,8 +327,7 @@ CREATE TABLE pk_and_unique_geometry_table(
     CONSTRAINT UQ_pk_and_unique_geometry_table_code UNIQUE (code)
 );
 
--- A decimal identity column. DataColumn.AutoIncrement would coerce its CLR type to Int32, which is
--- why identity is carried from the catalog instead; this fixture is what proves the type survives.
+-- A decimal identity column, whose type and identity must survive skipping the geometry column.
 CREATE TABLE decimal_identity_geometry_table(
     id decimal(18, 0) IDENTITY(1, 1) NOT NULL PRIMARY KEY,
     name varchar(100) NOT NULL,
@@ -882,23 +873,15 @@ EXEC('CREATE VIEW books_publishers_view_composite_insertable as SELECT
       FROM dbo.books,dbo.publishers
       where publishers.id = books.publisher_id');
 EXEC('CREATE VIEW geometry_only_view AS SELECT geom FROM dbo.geometry_type_table');
--- A view has no index of its own, so its key can only be resolved through the underlying table.
+-- A view's key is inferred from the underlying table.
 EXEC('CREATE VIEW geometry_all_view AS SELECT id, name, geom FROM dbo.geometry_type_table');
--- The underlying key is composite and one of its members is of an unsupported type, so no key the
--- projection can express identifies a row. Reporting the readable member alone would be a partial
--- key, which silently matches more than one row on an update or a delete.
+-- One member of the underlying composite key has an unsupported type, and the other alone isn't a key.
 EXEC('CREATE VIEW hierarchyid_composite_view AS SELECT tenant_id, name, node FROM dbo.hierarchyid_composite_pk_table');
--- Omits the primary key of the underlying table and carries its unique key whole.
+-- Omits the underlying primary key, so no key is inferred even though the unique key is selected.
 EXEC('CREATE VIEW unique_without_pk_view AS SELECT code, name, geom FROM dbo.pk_and_unique_geometry_table');
--- A join whose second object contributes only the unsupported column. Once that column is dropped
--- from the projection, every column the projection selects resolves to the first object, and only
--- the hidden key column browse mode reports for the second one reveals that this is a join at all.
--- A key inferred from the first object alone would not identify a row, since the join can duplicate
--- its rows.
+-- A join whose second table contributes only the unsupported column.
 EXEC('CREATE VIEW join_geometry_view AS SELECT a.id, a.name, b.geom FROM dbo.geometry_type_table a JOIN dbo.unique_key_geometry_table b ON b.name = a.name');
--- A self-join, where browse mode reports the same physical table for both instances and so cannot
--- be told apart from a single one by source lineage alone. What does give it away is the primary
--- key column being reported twice, once for each instance.
+-- A self-join, which selects the key of only one of the two instances.
 EXEC('CREATE VIEW self_join_geometry_view AS SELECT a.id, a.name, b.geom FROM dbo.geometry_type_table a JOIN dbo.geometry_type_table b ON b.name = a.name');
 EXEC('CREATE PROCEDURE get_book_by_id @id int AS
       SELECT * FROM dbo.books

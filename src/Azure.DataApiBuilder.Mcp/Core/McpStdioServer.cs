@@ -6,6 +6,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Telemetry;
@@ -28,8 +29,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly McpToolRegistry _toolRegistry;
         private readonly IServiceProvider _serviceProvider;
         private readonly McpStdoutWriter _stdoutWriter;
+        private readonly IMcpStdioToolListChangedNotifier? _toolListChangedNotifier;
         private readonly TextReader? _inputReader;
         private readonly string _protocolVersion;
+        private readonly object _initializationLock = new();
+        private Task? _initializationTask;
 
         private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
 
@@ -50,6 +54,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // notifications/message frames are serialized through one lock.
             // Falls back to a fresh instance if DI didn't register one (defensive).
             _stdoutWriter = _serviceProvider.GetService<McpStdoutWriter>() ?? new McpStdoutWriter();
+            _toolListChangedNotifier = _serviceProvider.GetService<IMcpStdioToolListChangedNotifier>();
 
             // Allow protocol version to be configured via IConfiguration, using centralized defaults.
             IConfiguration? configuration = _serviceProvider.GetService<IConfiguration>();
@@ -66,6 +71,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // By default read via Console.In so the loop honors the configured
             // Console.InputEncoding in stdio mode.
             TextReader reader = _inputReader ?? Console.In;
+            bool initializeResponseWritten = false;
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -128,13 +134,24 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         {
                             case "initialize":
                                 HandleInitialize(id, root);
+                                // This assignment is reached only after WriteResult succeeds.
+                                initializeResponseWritten = true;
                                 break;
 
                             case "notifications/initialized":
+                                // This notification completes the MCP handshake only after the
+                                // server successfully wrote its initialize response. Ignore an
+                                // out-of-order notification rather than enabling capabilities the
+                                // client has not negotiated.
+                                if (initializeResponseWritten)
+                                {
+                                    _toolListChangedNotifier?.MarkInitialized();
+                                }
+
                                 break;
 
                             case "tools/list":
-                                HandleListTools(id);
+                                await HandleListToolsAsync(id, cancellationToken);
                                 break;
 
                             case "tools/call":
@@ -183,6 +200,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             string? clientRequestedProtocolVersion = GetClientProtocolVersion(root);
             string negotiatedProtocolVersion =
                 McpProtocolDefaults.ResolveInitializeResponseProtocolVersion(_protocolVersion, clientRequestedProtocolVersion);
+            bool supportsToolListChanged = _toolListChangedNotifier is not null;
 
             // Get the description from runtime config if available
             string? description = null;
@@ -212,7 +230,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
-                        tools = new { listChanged = true },
+                        tools = new { listChanged = supportsToolListChanged },
                         logging = new { }
                     },
                     serverInfo = new
@@ -230,7 +248,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
-                        tools = new { listChanged = true },
+                        tools = new { listChanged = supportsToolListChanged },
                         logging = new { }
                     },
                     serverInfo = new
@@ -248,7 +266,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     protocolVersion = negotiatedProtocolVersion,
                     capabilities = new
                     {
-                        tools = new { listChanged = true },
+                        tools = new { listChanged = supportsToolListChanged },
                         logging = new { }
                     },
                     serverInfo = new
@@ -284,19 +302,15 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="id">
         /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
         /// </param>
-        private void HandleListTools(JsonElement? id)
+        /// <param name="cancellationToken">Token used to cancel deferred tool initialization.</param>
+        private async Task HandleListToolsAsync(JsonElement? id, CancellationToken cancellationToken)
         {
+            await EnsureToolsInitializedAsync(cancellationToken);
+
             List<object> toolsWire = new();
-            int count = 0;
 
-            // Resolve runtime config to filter out disabled tools.
-            RuntimeConfigProvider runtimeConfigProvider = _serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            IEnumerable<Tool> tools = _toolRegistry.GetEnabledTools(runtimeConfig);
-
-            foreach (Tool tool in tools)
+            foreach (Tool tool in _toolRegistry.GetAdvertisedTools())
             {
-                count++;
                 toolsWire.Add(new
                 {
                     name = tool.Name,
@@ -306,6 +320,36 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             WriteResult(id, new { tools = toolsWire });
+        }
+
+        /// <summary>
+        /// Starts deferred MCP tool initialization once and returns the cached initialization task.
+        /// </summary>
+        /// <param name="cancellationToken">Token used to cancel initialization before it starts.</param>
+        /// <returns>The task representing the in-flight or completed tool initialization.</returns>
+        private Task EnsureToolsInitializedAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            lock (_initializationLock)
+            {
+                return _initializationTask ??= InitializeToolsAsync(cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// Initializes database metadata providers and publishes the initial MCP tool registry snapshot.
+        /// </summary>
+        /// <param name="cancellationToken">Token used to cancel metadata inference and registry refresh.</param>
+        private async Task InitializeToolsAsync(CancellationToken cancellationToken)
+        {
+            IMetadataProviderFactory metadataProviderFactory =
+                _serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+            await metadataProviderFactory.InitializeAsync(cancellationToken);
+
+            IMcpToolRegistryRefreshService? registryRefreshService =
+                _serviceProvider.GetService<IMcpToolRegistryRefreshService>();
+            registryRefreshService?.EnsureInitialized(cancellationToken);
         }
 
         /// <summary>
@@ -454,6 +498,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing tool name");
                 return;
             }
+
+            await EnsureToolsInitializedAsync(ct);
 
             if (!_toolRegistry.TryGetTool(toolName!, out IMcpTool? tool) || tool is null)
             {
@@ -696,14 +742,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// Extracts the value of a JSON-RPC request identifier.
         /// </summary>
         /// <param name="id">The JSON element representing the request identifier.</param>
-        /// <returns>The extracted identifier value as an object, or null if the identifier is not a primitive type.</returns>
+        /// <returns>The string value or a cloned numeric element, or null if the identifier is not a supported primitive type.</returns>
         private static object? GetIdValue(JsonElement id)
         {
             return id.ValueKind switch
             {
                 JsonValueKind.String => id.GetString(),
-                JsonValueKind.Number => id.TryGetInt64(out long l) ? l :
-                                        id.TryGetDouble(out double d) ? d : null,
+                JsonValueKind.Number => id.Clone(),
                 _ => null
             };
         }

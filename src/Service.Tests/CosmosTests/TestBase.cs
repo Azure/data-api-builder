@@ -184,7 +184,26 @@ type PlanetAgain @model {
     [TestCleanup]
     public void CleanupAfterEachTest()
     {
-        TestHelper.UnsetAllDABEnvironmentVariables();
+        try
+        {
+            _client.Dispose();
+            DisposeApplicationFactory(_application);
+        }
+        finally
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+    }
+
+    protected static void DisposeApplicationFactory(WebApplicationFactory<Startup> application)
+    {
+        CosmosClientProvider cosmosClientProvider = application.Services.GetService<CosmosClientProvider>();
+        foreach (CosmosClient? cosmosClient in cosmosClientProvider.Clients.Values)
+        {
+            cosmosClient?.Dispose();
+        }
+
+        application.Dispose();
     }
 
     /// <summary>

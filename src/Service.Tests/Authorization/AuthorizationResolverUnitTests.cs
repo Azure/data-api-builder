@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
@@ -17,6 +18,7 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authentication.Helpers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -33,6 +35,98 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         private const EntityActionOperation TEST_OPERATION = EntityActionOperation.Create;
         private const string TEST_AUTHENTICATION_TYPE = "TestAuth";
         private const string TEST_CLAIMTYPE_NAME = "TestName";
+
+        /// <summary>Verifies empty resolved policies emit an audit log and fail closed only in production.</summary>
+        [DataTestMethod]
+        [DataRow(HostMode.Development, EntityActionOperation.Read, "@item.", DisplayName = "Empty Predicate in Development read logs a warning")]
+        [DataRow(HostMode.Development, EntityActionOperation.Update, "@item.", DisplayName = "Empty Predicate in Development update logs a warning")]
+        [DataRow(HostMode.Development, EntityActionOperation.Delete, "@item.", DisplayName = "Empty Predicate in Development delete logs a warning")]
+        [DataRow(HostMode.Production, EntityActionOperation.Read, "@item.", DisplayName = "Empty Predicate in Production read logs an error and fails")]
+        [DataRow(HostMode.Production, EntityActionOperation.Update, "@item.", DisplayName = "Empty Predicate in Production update logs an error and fails")]
+        [DataRow(HostMode.Production, EntityActionOperation.Delete, "@item.", DisplayName = "Empty Predicate in Production delete logs an error and fails")]
+        [DataRow(HostMode.Development, EntityActionOperation.Read, "@item. @item.", DisplayName = "Empty Predicate in Development whitespace predicate logs a warning")]
+        [DataRow(HostMode.Production, EntityActionOperation.Read, "@item. @item.", DisplayName = "Empty Predicate in Production whitespace predicate logs an error and fails")]
+        public void ResolveDBPolicy_EmptyPredicate_AuditsAccordingToHostMode(
+            HostMode hostMode, EntityActionOperation operation, string configuredPolicy)
+        {
+            RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
+                roleName: TEST_ROLE, operation: operation, databasePolicy: configuredPolicy);
+            config = config with
+            {
+                Runtime = config.Runtime! with { Host = config.Runtime.Host! with { Mode = hostMode } }
+            };
+            Mock<ILogger<IAuthorizationResolver>> logger = new();
+            AuthorizationResolver resolver = AuthorizationHelpers.InitAuthorizationResolver(config, logger.Object);
+            DefaultHttpContext context = new();
+            context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = TEST_ROLE;
+
+            if (hostMode == HostMode.Development)
+            {
+                ResolvedDatabasePolicy resolved = resolver.ResolveDBPolicy(TEST_ENTITY, TEST_ROLE, operation, context);
+                Assert.IsTrue(string.IsNullOrWhiteSpace(resolved.Policy));
+                Assert.AreEqual(0, resolved.ClaimValues.Count);
+            }
+            else
+            {
+                DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                    resolver.ResolveDBPolicy(TEST_ENTITY, TEST_ROLE, operation, context));
+                Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure, exception.SubStatusCode);
+                Assert.AreEqual(DataApiBuilderException.AUTHORIZATION_FAILURE, exception.Message);
+            }
+
+            var log = logger.Invocations.Single(invocation => invocation.Method.Name == nameof(ILogger.Log));
+            Assert.AreEqual(hostMode == HostMode.Development ? LogLevel.Warning : LogLevel.Error, log.Arguments[0]);
+            Dictionary<string, object?> audit = ((IEnumerable<KeyValuePair<string, object?>>)log.Arguments[2])
+                .ToDictionary(property => property.Key, property => property.Value);
+            Assert.AreEqual(TEST_ENTITY, audit["Entity"]);
+            Assert.AreEqual(TEST_ROLE, audit["Role"]);
+            Assert.AreEqual(operation, audit["Operation"]);
+            Assert.AreEqual(configuredPolicy, audit["PolicyText"]);
+            Assert.AreEqual(false, audit["DbPolicyApplied"]);
+            Assert.AreEqual(
+                Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(configuredPolicy))),
+                audit["PredicateHash"]);
+            StringAssert.Contains((string)audit["Reason"]!, "compiled to an empty predicate");
+        }
+
+        /// <summary>Verifies valid or unconfigured policies do not produce false fail-open audit logs.</summary>
+        [DataTestMethod]
+        [DataRow(HostMode.Development, null, "", DisplayName = "ResolveDBPolicy Development missing policy does not log")]
+        [DataRow(HostMode.Production, null, "", DisplayName = "ResolveDBPolicy Production missing policy does not log")]
+        [DataRow(HostMode.Development, "", "", DisplayName = "ResolveDBPolicy Development empty policy does not log")]
+        [DataRow(HostMode.Production, "", "", DisplayName = "ResolveDBPolicy Production empty policy does not log")]
+        [DataRow(HostMode.Development, "   ", "", DisplayName = "ResolveDBPolicy Development whitespace configuration does not log")]
+        [DataRow(HostMode.Production, "   ", "", DisplayName = "ResolveDBPolicy Production whitespace configuration does not log")]
+        [DataRow(HostMode.Development, "@item.col1 eq 1", "col1 eq 1", DisplayName = "ResolveDBPolicy Development valid policy does not log")]
+        [DataRow(HostMode.Production, "@item.col1 eq 1", "col1 eq 1", DisplayName = "ResolveDBPolicy Production valid policy does not log")]
+        public void ResolveDBPolicy_ValidOrUnconfiguredPolicy_DoesNotAudit(
+            HostMode hostMode, string? configuredPolicy, string expectedPolicy)
+        {
+            RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
+                roleName: TEST_ROLE, operation: EntityActionOperation.Read, databasePolicy: configuredPolicy);
+            config = config with
+            {
+                Runtime = config.Runtime! with { Host = config.Runtime.Host! with { Mode = hostMode } }
+            };
+            Mock<ILogger<IAuthorizationResolver>> logger = new();
+            AuthorizationResolver resolver = AuthorizationHelpers.InitAuthorizationResolver(config, logger.Object);
+            DefaultHttpContext context = new();
+            context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = TEST_ROLE;
+
+            ResolvedDatabasePolicy resolved = resolver.ResolveDBPolicy(TEST_ENTITY, TEST_ROLE, EntityActionOperation.Read, context);
+
+            Assert.AreEqual(expectedPolicy, resolved.Policy);
+            Assert.AreEqual(0, resolved.ClaimValues.Count);
+            logger.VerifyNoOtherCalls();
+        }
+
+        [TestMethod]
+        public void GetRolesForOperation_NullEntityNameThrows()
+        {
+            Assert.ThrowsException<ArgumentNullException>(() =>
+                IAuthorizationResolver.GetRolesForOperation(null!, EntityActionOperation.Read, null));
+        }
 
         #region Role Context Tests
         /// <summary>
@@ -1735,6 +1829,53 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.AreEqual(expected: @"{""src1"":{""endpoint"":""https://graph.microsoft.com/v1.0/users/{userID}/getMemberObjects""}}", actual: claimsInRequestContext["_claim_sources"]);
             Assert.AreEqual(expected: "1706816426", actual: claimsInRequestContext["iat"]);
             Assert.AreEqual(expected: "", actual: claimsInRequestContext["nullValuedClaim"]);
+        }
+
+        [TestMethod]
+        public void GetProcessedUserClaims_MultipleClaimsPreserveArrayValueTypes()
+        {
+            List<Claim> claims = new()
+            {
+                new("booleans", "true", ClaimValueTypes.Boolean),
+                new("booleans", "false", ClaimValueTypes.Boolean),
+                new("integers", "-1", ClaimValueTypes.Integer),
+                new("integers", "2", ClaimValueTypes.Integer),
+                new("integer32s", "-3", ClaimValueTypes.Integer32),
+                new("integer32s", "4", ClaimValueTypes.Integer32),
+                new("uinteger32s", "5", ClaimValueTypes.UInteger32),
+                new("uinteger32s", "6", ClaimValueTypes.UInteger32),
+                new("integer64s", "-7", ClaimValueTypes.Integer64),
+                new("integer64s", "8", ClaimValueTypes.Integer64),
+                new("uinteger64s", "9", ClaimValueTypes.UInteger64),
+                new("uinteger64s", "10", ClaimValueTypes.UInteger64),
+                new("doubles", "11", ClaimValueTypes.Double),
+                new("doubles", "12", ClaimValueTypes.Double),
+                new("strings", "first", ClaimValueTypes.String),
+                new("strings", "second", ClaimValueTypes.String),
+                new("jsonNulls", "null", JsonClaimValueTypes.JsonNull),
+                new("jsonNulls", "null", JsonClaimValueTypes.JsonNull),
+                new("jsonObjects", "{\"id\":1}", JsonClaimValueTypes.Json),
+                new("jsonObjects", "{\"id\":2}", JsonClaimValueTypes.Json),
+                new("customs", "alpha", ClaimValueTypes.DateTime),
+                new("customs", "beta", ClaimValueTypes.DateTime)
+            };
+            ClaimsIdentity identity = new(claims, TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            DefaultHttpContext context = new() { User = new ClaimsPrincipal(identity) };
+
+            Dictionary<string, string> processedClaims = AuthorizationResolver.GetProcessedUserClaims(context);
+
+            Assert.AreEqual("[true,false]", processedClaims["booleans"]);
+            Assert.AreEqual("[-1,2]", processedClaims["integers"]);
+            Assert.AreEqual("[-3,4]", processedClaims["integer32s"]);
+            Assert.AreEqual("[5,6]", processedClaims["uinteger32s"]);
+            Assert.AreEqual("[-7,8]", processedClaims["integer64s"]);
+            Assert.AreEqual("[9,10]", processedClaims["uinteger64s"]);
+            Assert.AreEqual("[11,12]", processedClaims["doubles"]);
+            Assert.AreEqual("[\"first\",\"second\"]", processedClaims["strings"]);
+            Assert.AreEqual("[\"null\",\"null\"]", processedClaims["jsonNulls"]);
+            Assert.AreEqual("[\"{\\u0022id\\u0022:1}\",\"{\\u0022id\\u0022:2}\"]", processedClaims["jsonObjects"]);
+            Assert.AreEqual("[\"alpha\",\"beta\"]", processedClaims["customs"]);
+            Assert.AreEqual(0, AuthorizationResolver.GetProcessedUserClaims(null).Count);
         }
 
         /// <summary>

@@ -29,6 +29,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
     public class ReadRecordsTool : IMcpTool
     {
+        private const string INVALID_ORDERBY_MESSAGE =
+            "Argument 'orderby' must be an array of non-empty strings specifying fields and optional directions, " +
+            "for example [\"name asc\", \"year desc\"].";
+
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
         public bool IsEnabled(RuntimeConfig config) => config.McpDmlTools?.ReadRecords ?? true;
@@ -100,7 +104,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 string? select = null;
                 string? filter = null;
                 int? first = null;
-                IEnumerable<string>? orderby = null;
+                List<string>? orderby = null;
                 string? after = null;
 
                 // Extract arguments
@@ -140,7 +144,23 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (root.TryGetProperty("orderby", out JsonElement orderbyElement))
                 {
-                    orderby = (IEnumerable<string>?)orderbyElement.EnumerateArray().Select(e => e.GetString());
+                    if (orderbyElement.ValueKind != JsonValueKind.Array)
+                    {
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", INVALID_ORDERBY_MESSAGE, logger);
+                    }
+
+                    // Validate and materialize every item before metadata resolution or query parsing.
+                    orderby = new List<string>();
+                    foreach (JsonElement item in orderbyElement.EnumerateArray())
+                    {
+                        string? sort = item.ValueKind == JsonValueKind.String ? item.GetString() : null;
+                        if (string.IsNullOrWhiteSpace(sort))
+                        {
+                            return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", INVALID_ORDERBY_MESSAGE, logger);
+                        }
+
+                        orderby.Add(sort);
+                    }
                 }
 
                 if (root.TryGetProperty("after", out JsonElement afterElement))
@@ -216,20 +236,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
                 }
 
-                if (orderby is not null && orderby.Count() != 0)
+                if (orderby is not null && orderby.Count != 0)
                 {
-                    string sortQueryString = $"?{RequestParser.SORT_URL}=";
-                    foreach (string param in orderby)
-                    {
-                        if (string.IsNullOrWhiteSpace(param))
-                        {
-                            return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Parameters inside 'orderby' argument cannot be empty or null.", logger);
-                        }
-
-                        sortQueryString += $"{param}, ";
-                    }
-
-                    sortQueryString = sortQueryString.Substring(0, sortQueryString.Length - 2);
+                    string sortQueryString = $"?{RequestParser.SORT_URL}={string.Join(", ", orderby)}";
                     (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = RequestParser.GenerateOrderByLists(context, sqlMetadataProvider, sortQueryString);
                 }
 
@@ -254,8 +263,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 JsonDocument? queryResult = await queryEngine.ExecuteAsync(context);
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 IActionResult actionResult = queryResult is null
-                    ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), context, sqlMetadataProvider, runtimeConfig, httpContext, true)
-                    : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, sqlMetadataProvider, runtimeConfig, httpContext, true);
+                    ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), context, sqlMetadataProvider, runtimeConfig, httpContext, authResolver, true)
+                    : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, sqlMetadataProvider, runtimeConfig, httpContext, authResolver, true);
 
                 // Normalize response
                 string rawPayloadJson = McpResponseBuilder.ExtractResultJson(actionResult);
@@ -283,6 +292,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             catch (ArgumentException argEx)
             {
                 return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argEx.Message, logger);
+            }
+            catch (DataApiBuilderException argEx) when (argEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed)
+            {
+                return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", argEx.Message, logger);
             }
             catch (DataApiBuilderException argEx)
             {

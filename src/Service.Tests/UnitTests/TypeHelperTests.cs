@@ -32,6 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(typeof(bool), EdmPrimitiveTypeKind.Boolean)]
         [DataRow(typeof(DateTime), EdmPrimitiveTypeKind.DateTimeOffset)]
         [DataRow(typeof(DateTimeOffset), EdmPrimitiveTypeKind.DateTimeOffset)]
+        [DataRow(typeof(Date), EdmPrimitiveTypeKind.Date)]
         [DataRow(typeof(TimeOnly), EdmPrimitiveTypeKind.TimeOfDay)]
         [DataRow(typeof(TimeSpan), EdmPrimitiveTypeKind.TimeOfDay)]
         public void GetEdmPrimitiveTypeFromSystemType_MapsExpectedKind(Type systemType, EdmPrimitiveTypeKind expected)
@@ -56,6 +57,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             Assert.ThrowsException<ArgumentException>(
                 () => TypeHelper.GetEdmPrimitiveTypeFromSystemType(typeof(System.Text.StringBuilder)));
+        }
+
+        [DataTestMethod]
+        [DataRow("Boolean", EdmPrimitiveTypeKind.Boolean)]
+        [DataRow("Date", EdmPrimitiveTypeKind.Date)]
+        public void GetEdmPrimitiveTypeFromITypeNode_MapsExpectedKind(string graphQlType, EdmPrimitiveTypeKind expected)
+        {
+            Assert.AreEqual(expected, TypeHelper.GetEdmPrimitiveTypeFromITypeNode(new NamedTypeNode(graphQlType)));
         }
 
         [DataTestMethod]
@@ -140,6 +149,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(true, TypeHelper.GetValue(new BooleanValueNode(true)));
             Assert.AreEqual("hi", TypeHelper.GetValue(new StringValueNode("hi")));
             Assert.IsNull(TypeHelper.GetValue(NullValueNode.Default));
+            Assert.AreEqual("VALUE", TypeHelper.GetValue(new EnumValueNode("VALUE")));
         }
 
         [DataTestMethod]

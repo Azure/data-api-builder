@@ -165,7 +165,7 @@ public class LabelledColumn : Column
     /// <inheritdoc/>
     public override int GetHashCode()
     {
-        return base.GetHashCode() ^ Label.GetHashCode(StringComparison.Ordinal);
+        return HashCode.Combine(TableSchema, TableName, ColumnName, Label);
     }
 }
 

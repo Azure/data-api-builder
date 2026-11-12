@@ -81,6 +81,25 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         }
 
         [TestMethod]
+        public void CreateValueNodeFromDbObjectMetadata_RemainingScalarTypes_WrapInObjectFieldNode()
+        {
+            object[] values =
+            {
+                Guid.Parse("d2719f98-e062-4ae8-a786-4ea9c3524d7c"),
+                1.5m,
+                new DateTimeOffset(2025, 1, 2, 3, 4, 5, TimeSpan.Zero),
+                new DateTime(2025, 1, 2, 3, 4, 5, DateTimeKind.Unspecified),
+                new DateTime(2025, 1, 2, 3, 4, 5, DateTimeKind.Utc),
+                new byte[] { 1, 2, 3 }
+            };
+
+            foreach (object value in values)
+            {
+                Assert.IsInstanceOfType<ObjectValueNode>(SchemaConverter.CreateValueNodeFromDbObjectMetadata(value));
+            }
+        }
+
+        [TestMethod]
         public void CreateValueNodeFromDbObjectMetadata_UnsupportedType_Throws()
         {
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(

@@ -164,6 +164,33 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
+        /// Verifies every supplied sampling dimension must be positive, both alone and in combination with other dimensions.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(0, null, null, DisplayName = "Days cannot be zero")]
+        [DataRow(null, 0, null, DisplayName = "Group count cannot be zero")]
+        [DataRow(null, null, 0, DisplayName = "Sample count cannot be zero")]
+        [DataRow(1, 0, 0, DisplayName = "Valid days do not permit zero group and sample counts")]
+        [DataRow(1, 1, 0, DisplayName = "Valid days and groups do not permit zero sample count")]
+        public async Task Create_InvalidSamplingCountsThrow(int? days, int? groupCount, int? sampleCount)
+        {
+            RuntimeConfig runtimeConfig = new(
+                Schema: "schema",
+                DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, "noop", new Dictionary<string, object>()),
+                Entities: new(new Dictionary<string, Entity>()));
+
+            await Assert.ThrowsExceptionAsync<System.ArgumentException>(() => SchemaGeneratorFactory.Create(
+                runtimeConfig,
+                SamplingModes.TopNExtractor.ToString(),
+                sampleCount,
+                partitionKeyPath: null,
+                days,
+                groupCount,
+                Mock.Of<ILogger>(),
+                Mock.Of<Container>()));
+        }
+
+        /// <summary>
         /// Creates a mock response message containing JSON documents.
         /// </summary>
         /// <returns>A mock response message with sample JSON content.</returns>

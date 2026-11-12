@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -122,6 +123,48 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 nameof(InvalidOperationException) => new InvalidOperationException(),
                 _ => new Exception()
             };
+        }
+
+        #endregion
+
+        #region General Telemetry Trace Helpers
+
+        [TestMethod]
+        public void TrackQueryActivityStarted_SetsDatabaseTags()
+        {
+            using Activity activity = CreateActivity();
+
+            activity.TrackQueryActivityStarted(DatabaseType.MSSQL, "default");
+
+            Activity recorded = StopAndGetRecordedActivity(activity);
+            Assert.AreEqual(DatabaseType.MSSQL, recorded.GetTagItem("data-source.type"));
+            Assert.AreEqual("default", recorded.GetTagItem("data-source.name"));
+        }
+
+        [TestMethod]
+        public void TrackMainControllerActivityFinished_SetsStatusCodeTag()
+        {
+            using Activity activity = CreateActivity();
+
+            activity.TrackMainControllerActivityFinished(HttpStatusCode.Accepted);
+
+            Activity recorded = StopAndGetRecordedActivity(activity);
+            Assert.AreEqual(HttpStatusCode.Accepted, recorded.GetTagItem("status.code"));
+        }
+
+        [TestMethod]
+        public void TrackMainControllerActivityFinishedWithException_SetsErrorDetails()
+        {
+            using Activity activity = CreateActivity();
+            InvalidOperationException exception = new("failed");
+
+            activity.TrackMainControllerActivityFinishedWithException(exception, HttpStatusCode.InternalServerError);
+
+            Activity recorded = StopAndGetRecordedActivity(activity);
+            Assert.AreEqual(ActivityStatusCode.Error, recorded.Status);
+            Assert.AreEqual(nameof(InvalidOperationException), recorded.GetTagItem("error.type"));
+            Assert.AreEqual("failed", recorded.GetTagItem("error.message"));
+            Assert.AreEqual(HttpStatusCode.InternalServerError, recorded.GetTagItem("status.code"));
         }
 
         #endregion

@@ -16,7 +16,7 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
     /// Reads DmlToolsConfig from JSON which can be either:
     /// - A boolean: all tools are enabled/disabled
     /// - An object: individual tool settings (unspecified tools default to true)
-    /// - Null/undefined: defaults to all tools enabled (true)
+    /// - Null: defaults to all tools enabled (true)
     /// </summary>
     public override DmlToolsConfig? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
@@ -163,8 +163,7 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                 aggregateRecordsQueryTimeout: aggregateRecordsQueryTimeout);
         }
 
-        // For any other unexpected token type, return default (all enabled)
-        return DmlToolsConfig.Default;
+        throw new JsonException("The MCP dml-tools configuration must be a boolean or object value.");
     }
 
     /// <summary>

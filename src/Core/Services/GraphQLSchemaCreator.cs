@@ -85,6 +85,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         protected void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            args.CancellationToken.ThrowIfCancellationRequested();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
             _isAggregationEnabled = runtimeConfig.EnableAggregation;

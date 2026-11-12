@@ -391,6 +391,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return Task.CompletedTask;
         }
 
+        public Task InitializeAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.CompletedTask;
+        }
+
         private string GraphQLSchema()
         {
             if (_cosmosDb.GraphQLSchema is not null)

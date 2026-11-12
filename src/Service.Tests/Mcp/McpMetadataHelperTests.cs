@@ -1,14 +1,18 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Utils;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -25,16 +29,46 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         private const string ENTITY_NAME = "Book";
 
         [DataTestMethod]
+        [DataRow(null, DisplayName = "Null entity name")]
+        [DataRow("", DisplayName = "Empty entity name")]
+        [DataRow("   ", DisplayName = "Whitespace entity name")]
+        public void TryResolveMetadata_ExplicitFactory_InvalidEntityNameReturnsFalse(string? entityName)
+        {
+            RuntimeConfig config = new(
+                Schema: "test-schema",
+                DataSource: null,
+                Runtime: null,
+                Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+
+            bool resolved = McpMetadataHelper.TryResolveMetadata(
+                entityName!,
+                config,
+                metadataProviderFactory.Object,
+                out ISqlMetadataProvider _,
+                out DatabaseObject _,
+                out string dataSourceName,
+                out string error);
+
+            Assert.IsFalse(resolved);
+            Assert.AreEqual(string.Empty, dataSourceName);
+            Assert.AreEqual("Entity name cannot be null or empty.", error);
+            metadataProviderFactory.Verify(
+                factory => factory.GetMetadataProvider(It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [DataTestMethod]
         [DataRow(null)]
         [DataRow("")]
         [DataRow("   ")]
-        public void TryResolveMetadata_NullOrEmptyEntityName_ReturnsFalse(string entityName)
+        public void TryResolveMetadata_NullOrEmptyEntityName_ReturnsFalse(string? entityName)
         {
             RuntimeConfig config = CreateConfig(includeBookEntity: true);
             IServiceProvider serviceProvider = CreateServiceProvider(registerFactory: true, includeBookMetadata: true);
 
             bool result = McpMetadataHelper.TryResolveMetadata(
-                entityName, config, serviceProvider, out _, out _, out _, out string error);
+                entityName!, config, serviceProvider, out _, out _, out _, out string error);
 
             Assert.IsFalse(result);
             Assert.AreEqual("Entity name cannot be null or empty.", error);
@@ -77,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 ENTITY_NAME, config, serviceProvider, out _, out _, out _, out string error);
 
             Assert.IsFalse(result);
-            StringAssert.Contains(error, "is not defined in the configuration");
+            StringAssert.Contains(error, "Database metadata for entity 'Book' was not available");
         }
 
         [TestMethod]
@@ -132,7 +166,31 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 ENTITY_NAME, config, serviceProvider, out string error);
 
             Assert.IsNull(dbObject);
-            StringAssert.Contains(error, "is not defined in the configuration");
+            StringAssert.Contains(error, "Database metadata for entity 'Book' was not available");
+        }
+
+        /// <summary>
+        /// Verifies missing data sources receive the configuration-safe error while unexpected factory failures retain their message.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(DataApiBuilderException.SubStatusCodes.DataSourceNotFound, "is not defined in the configuration", DisplayName = "Missing data source uses configuration error")]
+        [DataRow(DataApiBuilderException.SubStatusCodes.UnexpectedError, "factory failure", DisplayName = "Unexpected factory failure retains its message")]
+        public void TryResolveMetadata_FactoryExceptionReturnsError(
+            DataApiBuilderException.SubStatusCodes subStatusCode,
+            string expectedError)
+        {
+            RuntimeConfig config = CreateConfig(includeBookEntity: true);
+            Mock<IMetadataProviderFactory> factory = new();
+            factory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Throws(
+                new DataApiBuilderException("factory failure", HttpStatusCode.InternalServerError, subStatusCode));
+            ServiceCollection services = new();
+            services.AddSingleton(factory.Object);
+
+            bool result = McpMetadataHelper.TryResolveMetadata(
+                ENTITY_NAME, config, services.BuildServiceProvider(), out _, out _, out _, out string error);
+
+            Assert.IsFalse(result);
+            StringAssert.Contains(error, expectedError);
         }
 
         #region Helpers

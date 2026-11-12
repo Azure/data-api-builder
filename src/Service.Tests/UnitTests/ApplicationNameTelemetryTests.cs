@@ -416,6 +416,87 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(lines.Any(l => l.StartsWith("Version:", StringComparison.Ordinal)));
         }
 
+        [TestMethod]
+        public void Decode_TruncatedBeforeRuntimeAndEntity_SkipsMissingSections()
+        {
+            IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode("dab_oss_1.2.3+RTSN+");
+
+            Assert.IsTrue(lines.Any(l => l.Contains("Protocol: R (REST)", StringComparison.Ordinal)));
+            Assert.IsFalse(lines.Any(l => l.StartsWith("Runtime >", StringComparison.Ordinal)));
+            Assert.IsFalse(lines.Any(l => l.StartsWith("Entity >", StringComparison.Ordinal)));
+        }
+
+        [TestMethod]
+        public void Decode_NewerPayloadFlag_IsReportedAsUnrecognizedPosition()
+        {
+            IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode("dab_oss_1.2.3+XXXXZ|||+");
+
+            Assert.IsTrue(lines.Any(l => l.Contains("Context > [position 5]: Z", StringComparison.Ordinal)));
+        }
+
+        [DataTestMethod]
+        [DataRow("RTSN", "Protocol: R (REST)", "Object: T (Table)", "Source: S (SQL)", "Role: N (Anonymous)")]
+        [DataRow("GVDA", "Protocol: G (GraphQL)", "Object: V (View)", "Source: D (DWSQL)", "Role: A (Authenticated)")]
+        [DataRow("MSPC", "Protocol: M (MCP)", "Object: S (Stored Procedure)", "Source: P (PostgreSQL)", "Role: C (Custom)")]
+        [DataRow("ZPMZ", "Protocol: Z (unrecognized)", "Object: P (Persisted Document)", "Source: M (MySQL)", "Role: Z (unrecognized)")]
+        [DataRow("XXXZ", "Protocol: X (not applicable)", "Object: X (not applicable)", "Source: X (not applicable)", "Role: Z (unrecognized)")]
+        [DataRow("ZZCZ", "Protocol: Z (unrecognized)", "Object: Z (unrecognized)", "Source: C (CosmosDB)", "Role: Z (unrecognized)")]
+        public void Decode_ContextAlphabet_DescribesEveryValue(
+            string context,
+            string expectedProtocol,
+            string expectedObject,
+            string expectedSource,
+            string expectedRole)
+        {
+            IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode($"dab_oss_1.2.3+{context}|||+");
+            string decoded = string.Join('\n', lines);
+
+            StringAssert.Contains(decoded, expectedProtocol);
+            StringAssert.Contains(decoded, expectedObject);
+            StringAssert.Contains(decoded, expectedSource);
+            StringAssert.Contains(decoded, expectedRole);
+        }
+
+        [DataTestMethod]
+        [DataRow('U', "Unauthenticated")]
+        [DataRow('E', "EntraId")]
+        [DataRow('C', "Custom")]
+        [DataRow('S', "Simulator")]
+        [DataRow('A', "AppService")]
+        [DataRow('W', "StaticWebApps")]
+        [DataRow('Z', "unrecognized")]
+        public void Decode_RuntimeAlphabet_DescribesAuthProvider(char authProvider, string expectedDescription)
+        {
+            char[] runtime = new string('M', 20).ToCharArray();
+            runtime[3] = 'Z';
+            runtime[17] = authProvider;
+
+            IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode(
+                $"dab_oss_1.2.3+XXXX||{new string(runtime)}|+");
+            string decoded = string.Join('\n', lines);
+
+            StringAssert.Contains(decoded, $"auth.provider: {authProvider} ({expectedDescription})");
+            StringAssert.Contains(decoded, "runtime.host.mode: Z (unrecognized)");
+        }
+
+        [TestMethod]
+        public void Decode_UnknownFlagValue_IsReportedAsUnrecognized()
+        {
+            IReadOnlyList<string> lines = ApplicationNameTelemetry.Decode("dab_oss_1.2.3+XXXX||Z|+");
+
+            Assert.IsTrue(lines.Any(l => l.Contains("runtime.rest.enabled: Z (unrecognized)", StringComparison.Ordinal)));
+        }
+
+        [TestMethod]
+        public void EncodeTelemetryString_CosmosPostgreSql_UsesCosmosSourceCode()
+        {
+            string telemetry = ApplicationNameTelemetry.EncodeTelemetryString(
+                BuildConfig(),
+                Source(DatabaseType.CosmosDB_PostgreSQL));
+
+            Assert.AreEqual('C', Sections(telemetry).context[2]);
+        }
+
         /// <summary>Verifies the friendly response when no supported telemetry marker is present.</summary>
         [TestMethod]
         public void Decode_NoMarker_ReturnsFriendlyMessage()

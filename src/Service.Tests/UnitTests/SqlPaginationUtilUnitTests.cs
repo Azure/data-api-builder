@@ -1,10 +1,22 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
+using System.Net;
 using System.Text.Json;
+using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
+using Azure.DataApiBuilder.Service.Tests.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -132,6 +144,207 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             StringAssert.StartsWith(nextLink, "/api/Book");
             Assert.IsFalse(nextLink.Contains("localhost"), "Relative link should not contain the host.");
+        }
+
+        /// <summary>
+        /// Verifies string, number, null, and Boolean cursor values resolve while object and array values are rejected.
+        /// </summary>
+        [TestMethod]
+        public void TryResolveJsonElementToScalarVariable_HandlesEveryJsonKind()
+        {
+            using JsonDocument document = JsonDocument.Parse("[\"text\",12.5,null,true,false,{},[]]");
+            JsonElement.ArrayEnumerator elements = document.RootElement.EnumerateArray();
+
+            elements.MoveNext();
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out object? text));
+            Assert.AreEqual("text", text);
+            elements.MoveNext();
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out object? number));
+            Assert.AreEqual(12.5, number);
+            elements.MoveNext();
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out object? nullValue));
+            Assert.IsNull(nullValue);
+            elements.MoveNext();
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out object? trueValue));
+            Assert.AreEqual(true, trueValue);
+            elements.MoveNext();
+            Assert.IsTrue(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out object? falseValue));
+            Assert.AreEqual(false, falseValue);
+            elements.MoveNext();
+            Assert.IsFalse(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out _));
+            elements.MoveNext();
+            Assert.IsFalse(SqlPaginationUtil.TryResolveJsonElementToScalarVariable(elements.Current, out _));
+        }
+
+        [TestMethod]
+        public void MakeCursorFromJsonElement_IncludesOrderByAndRemainingPrimaryKey()
+        {
+            using JsonDocument document = JsonDocument.Parse("{\"name\":\"Ada\",\"id\":7}");
+
+            string cursor = SqlPaginationUtil.MakeCursorFromJsonElement(
+                document.RootElement,
+                new List<string> { "id" },
+                new List<OrderByColumn> { new("dbo", "authors", "name", "a", OrderBy.DESC) },
+                CreateAuthorizationResolver(),
+                "reader",
+                entityName: "Author");
+            string decoded = SqlPaginationUtil.Base64Decode(cursor);
+
+            StringAssert.Contains(decoded, "name");
+            StringAssert.Contains(decoded, "Ada");
+            StringAssert.Contains(decoded, "id");
+            StringAssert.Contains(decoded, "\"Direction\":1");
+        }
+
+        [TestMethod]
+        public void MakeCursorFromJsonElement_GroupByOmitsPrimaryKeys()
+        {
+            using JsonDocument document = JsonDocument.Parse("{\"total\":12}");
+
+            string decoded = SqlPaginationUtil.Base64Decode(SqlPaginationUtil.MakeCursorFromJsonElement(
+                document.RootElement,
+                new List<string> { "missing" },
+                new List<OrderByColumn> { new("", "", "total", "", OrderBy.ASC) },
+                CreateAuthorizationResolver(),
+                "reader",
+                isGroupByQuery: true));
+
+            StringAssert.Contains(decoded, "total");
+            Assert.IsFalse(decoded.Contains("missing"));
+        }
+
+        [TestMethod]
+        public void MakeCursorFromJsonElement_RejectsNonScalarCursorValue()
+        {
+            using JsonDocument document = JsonDocument.Parse("{\"id\":{}}");
+
+            Assert.ThrowsException<DataApiBuilderException>(() => SqlPaginationUtil.MakeCursorFromJsonElement(
+                document.RootElement,
+                new List<string> { "id" },
+                orderByColumns: null,
+                authorizationResolver: CreateAuthorizationResolver(),
+                roleName: "reader"));
+        }
+
+        [DataTestMethod]
+        [DataRow("id", false)]
+        [DataRow("tenant", false)]
+        [DataRow("name", false)]
+        [DataRow("name", true)]
+        public void MakeCursorFromJsonElement_RejectsEveryUnauthorizedCursorField(string deniedField, bool isGroupByQuery)
+        {
+            using JsonDocument document = JsonDocument.Parse("{\"id\":\"secret\",\"tenant\":\"private\",\"name\":\"Ada\"}");
+            Mock<IAuthorizationResolver> resolver = new(MockBehavior.Strict);
+            resolver.Setup(r => r.AreColumnsAllowedForOperation(
+                "Author", "restricted", EntityActionOperation.Read,
+                It.Is<IEnumerable<string>>(columns => columns.Contains(deniedField))))
+                .Returns(false);
+
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                SqlPaginationUtil.MakeCursorFromJsonElement(document.RootElement,
+                    new List<string> { "id", "tenant" },
+                    new List<OrderByColumn> { new("dbo", "authors", "name", "a", OrderBy.ASC) },
+                    resolver.Object, "restricted", entityName: "Author", isGroupByQuery: isGroupByQuery));
+            Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed, exception.SubStatusCode);
+            Assert.AreEqual(DataApiBuilderException.PAGINATION_FIELD_AUTHZ_FAILURE, exception.Message);
+            resolver.VerifyAll();
+        }
+
+        [TestMethod]
+        public void MakeCursorFromJsonElement_AuthorizesExposedMappedKey()
+        {
+            using JsonDocument document = JsonDocument.Parse("{\"OwnerToken\":\"secret\"}");
+            Mock<ISqlMetadataProvider> metadata = new();
+            string exposedName = "OwnerToken";
+            metadata.Setup(m => m.TryGetExposedColumnName("Author", "owner_token", out exposedName)).Returns(true);
+            Mock<IAuthorizationResolver> resolver = new(MockBehavior.Strict);
+            resolver.Setup(r => r.AreColumnsAllowedForOperation(
+                "Author", "restricted", EntityActionOperation.Read,
+                It.Is<IEnumerable<string>>(columns => columns.SequenceEqual(new[] { "OwnerToken" }))))
+                .Returns(false);
+
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                SqlPaginationUtil.MakeCursorFromJsonElement(document.RootElement,
+                    new List<string> { "owner_token" }, orderByColumns: null,
+                    resolver.Object, "restricted", entityName: "Author", sqlMetadataProvider: metadata.Object));
+            Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
+            resolver.VerifyAll();
+        }
+
+        private static IAuthorizationResolver CreateAuthorizationResolver()
+        {
+            Mock<IAuthorizationResolver> resolver = new();
+            resolver.Setup(r => r.AreColumnsAllowedForOperation(
+                It.IsAny<string>(), It.IsAny<string>(), EntityActionOperation.Read, It.IsAny<IEnumerable<string>>()))
+                .Returns(true);
+            return resolver.Object;
+        }
+
+        [DataTestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        public void MakeCursorFromJsonElement_EnforcesConfiguredIncludeAndExcludePermissions(bool explicitExclude)
+        {
+            RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
+                operation: EntityActionOperation.Read,
+                includedCols: explicitExclude ? new HashSet<string> { "*" } : new HashSet<string> { "col2" },
+                excludedCols: explicitExclude ? new HashSet<string> { "col1" } : new HashSet<string>());
+            IAuthorizationResolver resolver = AuthorizationHelpers.InitAuthorizationResolver(config);
+            using JsonDocument document = JsonDocument.Parse("{\"col1\":\"protected\",\"col2\":\"public\"}");
+
+            Assert.IsTrue(resolver.AreColumnsAllowedForOperation(AuthorizationHelpers.TEST_ENTITY, "Reader",
+                EntityActionOperation.Read, new[] { "col2" }));
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(() =>
+                SqlPaginationUtil.MakeCursorFromJsonElement(document.RootElement,
+                    new List<string> { "col1" }, orderByColumns: null,
+                    resolver, "Reader", entityName: AuthorizationHelpers.TEST_ENTITY));
+            Assert.AreEqual(HttpStatusCode.Forbidden, exception.StatusCode);
+        }
+
+        [TestMethod]
+        public void ConstructBaseUriForPagination_UsesValidForwardedHeadersAndBaseRoute()
+        {
+            DefaultHttpContext context = new();
+            context.Request.Scheme = "http";
+            context.Request.Host = new HostString("internal:5000");
+            context.Request.Path = "/api/books";
+            context.Request.Headers["X-Forwarded-Proto"] = " HTTPS ";
+            context.Request.Headers["X-Forwarded-Host"] = " example.com:8443 ";
+
+            string result = SqlPaginationUtil.ConstructBaseUriForPagination(context, "/gateway");
+
+            Assert.AreEqual("https://example.com:8443/gateway/api/books", result);
+        }
+
+        [TestMethod]
+        public void ConstructBaseUriForPagination_InvalidForwardedHeadersFallBackToRequest()
+        {
+            DefaultHttpContext context = new();
+            context.Request.Scheme = "http";
+            context.Request.Host = new HostString("localhost:5000");
+            context.Request.Path = "/api/books";
+            context.Request.Headers["X-Forwarded-Proto"] = "ftp";
+            context.Request.Headers["X-Forwarded-Host"] = "bad host@value";
+
+            Assert.AreEqual("http://localhost:5000/api/books", SqlPaginationUtil.ConstructBaseUriForPagination(context));
+        }
+
+        [TestMethod]
+        public void FormatQueryString_IgnoresBlankKeysAndValues()
+        {
+            NameValueCollection parameters = new()
+            {
+                { " ", "ignored" },
+                { "$filter", " " },
+                { "$first", "10" }
+            };
+
+            string result = SqlPaginationUtil.FormatQueryString(parameters);
+
+            StringAssert.Contains(result, "$first=10");
+            Assert.IsFalse(result.Contains("ignored"));
+            Assert.IsFalse(result.Contains("filter"));
         }
     }
 }

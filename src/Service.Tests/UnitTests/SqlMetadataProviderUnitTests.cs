@@ -8,6 +8,7 @@ using System.IO;
 using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -1562,6 +1563,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     It.IsAny<IDictionary<string, DbConnectionParam>>(),
                     It.IsAny<Func<DbDataReader, List<string>, Task<JsonArray>>>(),
                     It.IsAny<string>(),
+                    It.IsAny<CancellationToken>(),
                     It.IsAny<HttpContext>(),
                     It.IsAny<List<string>>()))
                     .ReturnsAsync(invalidFieldJsonArray);
@@ -1589,7 +1591,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
-                Assert.IsTrue(ex.Message.Contains("returns a column without a name"));
+                Assert.IsTrue(
+                    ex.Message.Contains("returns a column without a name"),
+                    $"Unexpected validation exception: {ex.Message}");
             }
 
             TestHelper.UnsetAllDABEnvironmentVariables();

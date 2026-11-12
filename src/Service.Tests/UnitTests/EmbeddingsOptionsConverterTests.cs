@@ -205,5 +205,56 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(original.Endpoint.Enabled, result.Endpoint.Enabled);
             CollectionAssert.AreEqual(original.Endpoint.Roles, result.Endpoint.Roles);
         }
+
+        [DataTestMethod]
+        [DataRow(@"{ ""provider"":""openai"", ""base-url"":""u"", ""api-key"":""k"", ""endpoint"": true }")]
+        [DataRow(@"{ ""provider"":""openai"", ""base-url"":""u"", ""api-key"":""k"", ""health"": [] }")]
+        [DataRow(@"{ ""provider"":""openai"", ""base-url"":""u"", ""api-key"":""k"", ""chunking"": ""bad"" }")]
+        public void Deserialize_InvalidNestedObjectType_Throws(string json)
+        {
+            Assert.ThrowsException<JsonException>(() =>
+                JsonSerializer.Deserialize<EmbeddingsOptions>(json, GetOptions()));
+        }
+
+        [TestMethod]
+        public void Serialize_AllOptionalObjects_WritesEachSection()
+        {
+            string json = @"{
+                ""provider"": ""openai"",
+                ""base-url"": ""https://api.openai.com"",
+                ""api-key"": ""key"",
+                ""model"": ""model"",
+                ""api-version"": ""v1"",
+                ""dimensions"": 256,
+                ""timeout-ms"": 1000,
+                ""endpoint"": { ""enabled"": true, ""roles"": [""reader""] },
+                ""health"": { ""enabled"": true, ""threshold-ms"": 50 },
+                ""chunking"": { ""enabled"": true, ""size-chars"": 100, ""overlap-chars"": 5 },
+                ""cache"": { ""enabled"": true, ""ttl-hours"": 1 }
+            }";
+            EmbeddingsOptions options = JsonSerializer.Deserialize<EmbeddingsOptions>(json, GetOptions());
+
+            JObject serialized = JObject.Parse(JsonSerializer.Serialize(options, GetOptions()));
+
+            Assert.IsNotNull(serialized["endpoint"]);
+            Assert.IsNotNull(serialized["health"]);
+            Assert.IsNotNull(serialized["chunking"]);
+            Assert.IsNotNull(serialized["cache"]);
+            Assert.AreEqual("model", serialized["model"]!.Value<string>());
+            Assert.AreEqual("v1", serialized["api-version"]!.Value<string>());
+            Assert.AreEqual(256, serialized["dimensions"]!.Value<int>());
+            Assert.AreEqual(1000, serialized["timeout-ms"]!.Value<int>());
+        }
+
+        [TestMethod]
+        public void Serialize_UnknownProvider_Throws()
+        {
+            EmbeddingsOptions options = new(
+                Provider: (EmbeddingProviderType)999,
+                BaseUrl: "https://example.test",
+                ApiKey: "key");
+
+            Assert.ThrowsException<JsonException>(() => JsonSerializer.Serialize(options, GetOptions()));
+        }
     }
 }

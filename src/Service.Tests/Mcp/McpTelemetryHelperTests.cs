@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
@@ -26,6 +25,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
     [TestClass]
     public class McpTelemetryHelperTests
     {
+        /// <summary>
+        /// Verifies built-in tool names map to telemetry operations and unknown names use the execute fallback.
+        /// </summary>
         [DataTestMethod]
         [DataRow("read_records", "read")]
         [DataRow("create_record", "create")]
@@ -34,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [DataRow("describe_entities", "describe")]
         [DataRow("execute_entity", "execute")]
         [DataRow("aggregate_records", "aggregate")]
-        [DataRow("some_unknown_tool", "execute")]
+        [DataRow("some_unknown_tool", "execute", DisplayName = "Unknown built-in tool defaults to execute")]
         public void InferOperationFromTool_BuiltIn_MapsToolNameToOperation(string toolName, string expected)
         {
             FakeTool tool = new(ToolType.BuiltIn);
@@ -61,6 +63,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.AreEqual(McpTelemetryErrorCodes.EXECUTION_FAILED, McpTelemetryHelper.MapExceptionToErrorCode(new InvalidOperationException()));
         }
 
+        /// <summary>
+        /// Verifies authentication and authorization substatus codes retain their distinct telemetry classifications.
+        /// </summary>
         [TestMethod]
         public void MapExceptionToErrorCode_MapsDataApiBuilderSubStatusCodes()
         {
@@ -158,21 +163,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 }
 
                 return Task.FromResult(_result ?? new CallToolResult());
-            }
-        }
-
-        private sealed class FakeDbException : DbException
-        {
-            public FakeDbException() : base("fake db error")
-            {
-            }
-
-            public FakeDbException(string message) : base(message)
-            {
-            }
-
-            public FakeDbException(string message, Exception innerException) : base(message, innerException)
-            {
             }
         }
     }

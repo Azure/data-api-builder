@@ -811,6 +811,62 @@ public class AuthorizationResolver : IAuthorizationResolver
     }
 
     /// <summary>
+    /// Returns the field names a database policy references through "@item.", skipping single-quoted
+    /// literals, in which a doubled quote is an escaped quote.
+    /// </summary>
+    internal static IEnumerable<string> GetFieldReferencesInDatabasePolicy(string? policy)
+    {
+        if (string.IsNullOrEmpty(policy))
+        {
+            yield break;
+        }
+
+        int index = 0;
+        while (index < policy.Length)
+        {
+            if (policy[index] == '\'')
+            {
+                index++;
+                while (index < policy.Length)
+                {
+                    if (policy[index++] != '\'')
+                    {
+                        continue;
+                    }
+
+                    if (index < policy.Length && policy[index] == '\'')
+                    {
+                        index++;
+                        continue;
+                    }
+
+                    break;
+                }
+
+                continue;
+            }
+
+            if (string.CompareOrdinal(policy, index, FIELD_PREFIX, 0, FIELD_PREFIX.Length) != 0)
+            {
+                index++;
+                continue;
+            }
+
+            int fieldStart = index + FIELD_PREFIX.Length;
+            index = fieldStart;
+            while (index < policy.Length && (char.IsAsciiLetterOrDigit(policy[index]) || policy[index] == '_'))
+            {
+                index++;
+            }
+
+            if (index > fieldStart)
+            {
+                yield return policy[fieldStart..index];
+            }
+        }
+    }
+
+    /// <summary>
     /// Emits a structured audit signal when a configured (non-empty) database authorization
     /// policy resolves to an empty predicate, which silently removes the intended row/column
     /// level filter (fail-open). In development mode this is logged as a warning so the request

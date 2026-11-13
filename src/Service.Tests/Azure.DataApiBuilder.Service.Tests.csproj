@@ -104,6 +104,9 @@
     <Content Include="DatabaseSchema-MySql.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="DatabaseSchema-Oracle.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

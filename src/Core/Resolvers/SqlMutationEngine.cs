@@ -857,7 +857,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // It returns false if the primary key does not exist.
                 if (sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, primarykey, out string? exposedColumnName))
                 {
-                    findRequestContext.PrimaryKeyValuePairs.Add(exposedColumnName, mutationResultRow.Columns[exposedColumnName]!);
+                    object primaryKeyValue = mutationResultRow.Columns[exposedColumnName]!;
+                    // Follow-up reads use the same base64 key representation as REST requests.
+                    findRequestContext.PrimaryKeyValuePairs.Add(exposedColumnName,
+                        primaryKeyValue is byte[] bytes ? Convert.ToBase64String(bytes) : primaryKeyValue);
                 }
                 else
                 {

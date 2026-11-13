@@ -269,6 +269,8 @@ public class RelationshipMetadata
 
 public class ColumnDefinition
 {
+    /// <summary>The native SQL type name, when supplied by the provider.</summary>
+    public string? DatabaseTypeName { get; set; }
     /// <summary>
     /// The database type of this column mapped to the SystemType.
     /// </summary>

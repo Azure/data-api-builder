@@ -1,0 +1,85 @@
+{
+  "$schema": "../../schemas/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "oracle",
+    "connection-string": "@env('DAB_ORACLE_TEST_CONNECTION_STRING')"
+  },
+  "runtime": {
+    "rest": { "enabled": true, "path": "/api" },
+    "graphql": { "enabled": true, "path": "/graphql" },
+    "host": {
+      "mode": "development",
+      "authentication": { "provider": "AppService" }
+    }
+  },
+  "entities": {
+    "ClobSample": {
+      "source": { "object": "DAB_ORACLE_BOOKS", "type": "table" },
+      "rest": { "path": "/ClobSample" },
+      "graphql": { "type": { "singular": "ClobSample", "plural": "ClobSamples" } },
+      "mappings": { "ID": "id", "TITLE": "title" },
+      "permissions": [ { "role": "anonymous", "actions": [ "*" ] } ]
+    },
+    "UpdateOnlyPolicySample": {
+      "source": { "object": "DAB_ORACLE_BOOKS", "type": "table" },
+      "rest": { "path": "/UpdateOnlyPolicySample" },
+      "graphql": false,
+      "mappings": { "ID": "id", "TITLE": "title" },
+      "permissions": [ { "role": "anonymous", "actions": [
+        "read", "update",
+        { "action": "create", "policy": { "database": "@item.title eq 'permitted'" } }
+      ] } ]
+    },
+    "BinaryLink": {
+      "source": { "object": "DAB_ORACLE_BINARY_LINKS", "type": "table" },
+      "graphql": { "type": { "singular": "BinaryLink", "plural": "BinaryLinks" } },
+      "mappings": { "ID": "id", "SAMPLE_ID": "sample_id" },
+      "permissions": [ { "role": "anonymous", "actions": [ "read" ] } ],
+      "relationships": { "sample": { "cardinality": "one", "target.entity": "BinarySample" } }
+    },
+    "BinaryPolicySample": {
+      "source": { "object": "DAB_ORACLE_BINARIES", "type": "table" },
+      "rest": { "path": "/BinaryPolicySample" },
+      "graphql": false,
+      "mappings": { "ID": "id", "RAW_VALUE": "raw_value", "PAYLOAD": "payload" },
+      "permissions": [ { "role": "anonymous", "actions": [
+        "create", "update",
+        { "action": "read", "fields": { "exclude": [ "PAYLOAD" ] }, "policy": { "database": "@item.raw_value ne null" } }
+      ] } ]
+    },
+    "BinarySample": {
+      "source": { "object": "DAB_ORACLE_BINARIES", "type": "table" },
+      "rest": { "path": "/BinarySample" },
+      "graphql": { "type": { "singular": "BinarySample", "plural": "BinarySamples" } },
+      "mappings": { "ID": "id", "RAW_VALUE": "raw_value", "PAYLOAD": "payload" },
+      "permissions": [ { "role": "anonymous", "actions": [ "*" ] } ]
+    },
+    "ScalarSample": {
+      "source": { "object": "DAB_ORACLE_SCALARS", "type": "table" },
+      "rest": { "path": "/ScalarSample" },
+      "graphql": { "type": { "singular": "ScalarSample", "plural": "ScalarSamples" } },
+      "mappings": { "ID": "id", "DATE_VALUE": "date_value", "TIMESTAMP_VALUE": "timestamp_value", "OFFSET_VALUE": "offset_value", "DOUBLE_VALUE": "double_value", "CHAR_VALUE": "char_value", "FLAG_VALUE": "flag_value" },
+      "permissions": [ { "role": "anonymous", "actions": [ "*" ] } ]
+    },
+    "Book": {
+      "source": { "object": "BOOKS", "type": "table" },
+      "rest": { "path": "/Book" },
+      "graphql": { "type": { "singular": "Book", "plural": "Books" } },
+      "mappings": { "ID": "id", "TITLE": "title", "PUBLISHER_ID": "publisher_id" },
+      "permissions": [ { "role": "anonymous", "actions": [ "*" ] } ],
+      "relationships": {
+        "publisher": { "cardinality": "one", "target.entity": "Publisher" }
+      }
+    },
+    "Publisher": {
+      "source": { "object": "PUBLISHERS", "type": "table" },
+      "rest": { "path": "/Publisher" },
+      "graphql": { "type": { "singular": "Publisher", "plural": "Publishers" } },
+      "mappings": { "ID": "id", "NAME": "name" },
+      "permissions": [ { "role": "anonymous", "actions": [ "read" ] } ],
+      "relationships": {
+        "books": { "cardinality": "many", "target.entity": "Book" }
+      }
+    }
+  }
+}

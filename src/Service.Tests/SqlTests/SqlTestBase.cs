@@ -37,6 +37,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
 using Npgsql;
+using Oracle.ManagedDataAccess.Client;
 using ZiggyCreatures.Caching.Fusion;
 using static Azure.DataApiBuilder.Core.AuthenticationHelpers.AppServiceAuthentication;
 
@@ -123,6 +124,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Add magazines entity to the config
             runtimeConfig = DatabaseEngine switch
             {
+                // Oracle fixtures use the objects in DatabaseSchema-Oracle.sql in the test user's schema.
+                TestCategory.ORACLE => runtimeConfig,
                 TestCategory.MYSQL => TestHelper.AddMissingEntitiesToConfig(
                     config: runtimeConfig,
                     entityKey: "magazine",
@@ -142,7 +145,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             runtimeConfig = DatabaseEngine switch
             {
                 // MySql does not handle schema the same as other DB, so this testing entity is not needed
-                TestCategory.MYSQL => runtimeConfig,
+                TestCategory.MYSQL or TestCategory.ORACLE => runtimeConfig,
                 _ => TestHelper.AddMissingEntitiesToConfig(
                     config: runtimeConfig,
                     entityKey: "bar_magazine",
@@ -278,6 +281,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         {
             switch (DatabaseEngine)
             {
+                case TestCategory.ORACLE:
+                    DatabaseName = new OracleConnectionStringBuilder(connectionString).DataSource;
+                    break;
                 case TestCategory.MSSQL:
                     // use master as default name for MsSql
                     string sqlDbName = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
@@ -309,6 +315,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             switch (DatabaseEngine)
             {
+                case TestCategory.ORACLE:
+                    _queryBuilder = new OracleQueryBuilder();
+                    _dbExceptionParser = new OracleDbExceptionParser(runtimeConfigProvider);
+                    _queryExecutor = new OracleQueryExecutor(
+                        runtimeConfigProvider,
+                        _dbExceptionParser,
+                        new Mock<ILogger<IQueryExecutor>>().Object,
+                        httpContextAccessor.Object);
+                    _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+                    _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+                    _sqlMetadataProvider = new OracleMetadataProvider(
+                        runtimeConfigProvider,
+                        runtimeConfigValidator,
+                        _queryManagerFactory.Object,
+                        _sqlMetadataLogger,
+                        dataSourceName);
+                    _defaultSchemaName = _sqlMetadataProvider.GetDefaultSchemaName();
+                    break;
                 case TestCategory.POSTGRESQL:
                     Mock<ILogger<PostgreSqlQueryExecutor>> pgQueryExecutorLogger = new();
                     _queryBuilder = new PostgresQueryBuilder();

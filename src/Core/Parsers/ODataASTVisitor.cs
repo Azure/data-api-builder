@@ -46,7 +46,38 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 PopulateDbTypeForProperty(nodeIn);
             }
 
+            if (_metadataProvider.GetDatabaseType() == DatabaseType.Oracle && left != "NULL" && right != "NULL" &&
+                nodeIn.OperatorKind is BinaryOperatorKind.Equal or BinaryOperatorKind.NotEqual or BinaryOperatorKind.LessThan or
+                    BinaryOperatorKind.LessThanOrEqual or BinaryOperatorKind.GreaterThan or BinaryOperatorKind.GreaterThanOrEqual)
+            {
+                string? leftType = GetLobType(nodeIn.Left);
+                string? rightType = GetLobType(nodeIn.Right);
+                string? type = leftType == "NCLOB" || rightType == "NCLOB" ? "NCLOB" : leftType ?? rightType;
+                if (type is not null)
+                {
+                    return OracleQueryBuilder.BuildLobComparison(left, right, GetFilterPredicateOperator(nodeIn.OperatorKind), type);
+                }
+            }
+
             return CreateResult(nodeIn.OperatorKind, left, right);
+        }
+
+        private string? GetLobType(SingleValueNode node)
+        {
+            if (node is ConvertNode converted)
+            {
+                return GetLobType(converted.Source);
+            }
+
+            if (node is SingleValuePropertyAccessNode property &&
+                _metadataProvider.TryGetBackingColumn(_struct.EntityName, property.Property.Name, out string? name) &&
+                _struct.GetUnderlyingSourceDefinition().Columns.TryGetValue(name!, out var definition) &&
+                definition.DatabaseTypeName is "CLOB" or "NCLOB")
+            {
+                return definition.DatabaseTypeName;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -278,6 +309,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
             _metadataProvider.TryGetBackingColumn(_struct.EntityName, propertyNode.Property.Name, out string? backingColumnName);
             _struct.Parameters[paramName].DbType = _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].DbType;
             _struct.Parameters[paramName].SqlDbType = _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].SqlDbType;
+            _struct.Parameters[paramName].DatabaseTypeName = _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].DatabaseTypeName;
         }
 
         /// <summary>

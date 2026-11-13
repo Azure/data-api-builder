@@ -99,7 +99,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
-            using TConnection conn = CreateConnection(dataSourceName);
+            using ConnectionLease connectionLease = AcquireConnection(dataSourceName);
+            TConnection conn = connectionLease.Connection;
 
             // Check if connection creation succeeded
             if (conn == null)
@@ -232,7 +233,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
-            using TConnection conn = CreateConnection(dataSourceName);
+            using ConnectionLease connectionLease = await AcquireConnectionAsync(dataSourceName, operationCancellationToken);
+            TConnection conn = connectionLease.Connection;
 
             // Check if connection creation succeeded
             if (conn == null)
@@ -318,6 +320,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return result;
         }
+
+        /// <summary>Owns a query connection or releases a provider-managed connection lease.</summary>
+        public sealed class ConnectionLease(TConnection connection, Action? release = null) : IDisposable
+        {
+            private Action? _release = release ?? (() => connection?.Dispose());
+            public TConnection Connection { get; } = connection;
+            public void Dispose() => Interlocked.Exchange(ref _release, null)?.Invoke();
+        }
+
+        protected virtual ConnectionLease AcquireConnection(string dataSourceName) => new(CreateConnection(dataSourceName));
+
+        protected virtual ValueTask<ConnectionLease> AcquireConnectionAsync(string dataSourceName, CancellationToken cancellationToken)
+            => ValueTask.FromResult(AcquireConnection(dataSourceName));
+
+        protected virtual bool PreserveConnection => false;
 
         /// <summary>
         /// Creates and setups a TConnection to the data source of given name
@@ -409,12 +426,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             queryExecutionTimer.Start();
             try
             {
-                await conn.OpenAsync(cancellationToken);
-                DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
+                if (!PreserveConnection || conn.State != ConnectionState.Open)
+                {
+                    await conn.OpenAsync(cancellationToken);
+                }
+
+                using DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
                 TResult? result = default(TResult);
                 try
                 {
                     CommandBehavior commandBehavior = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ? CommandBehavior.SequentialAccess : CommandBehavior.CloseConnection;
+                    if (PreserveConnection)
+                    {
+                        commandBehavior &= ~CommandBehavior.CloseConnection;
+                    }
                     // CancellationToken is passed to ExecuteReaderAsync to ensure that if the client times out while the query is executing, the execution will be cancelled and resources will be freed up.
                     using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(commandBehavior, cancellationToken);
 
@@ -500,13 +525,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             queryExecutionTimer.Start();
             try
             {
-                conn.Open();
-                DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
+                if (!PreserveConnection || conn.State != ConnectionState.Open)
+                {
+                    conn.Open();
+                }
+
+                using DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
 
                 try
                 {
-                    using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
-                        cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                    CommandBehavior commandBehavior = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ? CommandBehavior.SequentialAccess : CommandBehavior.CloseConnection;
+                    if (PreserveConnection)
+                    {
+                        commandBehavior &= ~CommandBehavior.CloseConnection;
+                    }
+
+                    using DbDataReader dbDataReader = cmd.ExecuteReader(commandBehavior);
                     if (dataReaderHandler is not null && dbDataReader is not null)
                     {
                         return dataReaderHandler(dbDataReader, args);

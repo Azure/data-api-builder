@@ -5,7 +5,6 @@ using System.Data.Common;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -244,10 +243,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 // 5. Validate database type support
                 DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
-                if (databaseType != DatabaseType.MSSQL && databaseType != DatabaseType.DWSQL)
+                if (databaseType is not (DatabaseType.MSSQL or DatabaseType.DWSQL or DatabaseType.Oracle))
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "UnsupportedDatabase",
-                        $"Aggregation is not supported for database type '{databaseType}'. Aggregation is only available for Azure SQL, SQL Server, and SQL Data Warehouse.", logger);
+                        $"Aggregation is not supported for database type '{databaseType}'. Aggregation is only available for Azure SQL, SQL Server, SQL Data Warehouse, and Oracle.", logger);
                 }
 
                 // 6. Build SQL query structure with aggregation, groupby, having
@@ -270,11 +269,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IQueryBuilder queryBuilder = queryManagerFactory.GetQueryBuilder(databaseType);
                 IQueryExecutor queryExecutor = queryManagerFactory.GetQueryExecutor(databaseType);
 
-                string sql = queryBuilder.Build(structure);
-                if (args.Groupby.Count > 0)
-                {
-                    sql = ApplyOrderByAndPagination(sql, args, structure, queryBuilder, backingField!);
-                }
+                string sql = queryBuilder.BuildAggregation(
+                    structure,
+                    descending: args.Orderby.Equals("desc", StringComparison.OrdinalIgnoreCase),
+                    offset: args.First.HasValue ? DecodeCursorOffset(args.After) : null,
+                    limit: args.First.HasValue ? (long)args.First.Value + 1 : null);
 
                 // 8. Execute query and return results
                 timeoutCts.Token.ThrowIfCancellationRequested();
@@ -454,13 +453,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             // Parse first
             int? first = null;
-            if (root.TryGetProperty("first", out JsonElement firstElement) && firstElement.ValueKind == JsonValueKind.Number)
+            if (root.TryGetProperty("first", out JsonElement firstElement) && firstElement.ValueKind != JsonValueKind.Null)
             {
-                first = firstElement.GetInt32();
-                if (first < 1)
+                if (firstElement.ValueKind != JsonValueKind.Number || !firstElement.TryGetInt32(out int pageSize) || pageSize < 1)
                 {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Argument 'first' must be at least 1.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", $"Argument 'first' must be an integer between 1 and {int.MaxValue}.", logger);
                 }
+
+                first = pageSize;
             }
 
             // Parse after
@@ -936,68 +936,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
 
             return combinedHaving;
-        }
-
-        /// <summary>
-        /// Post-processes the generated SQL to add ORDER BY and OFFSET/FETCH pagination
-        /// for grouped aggregation queries.
-        /// </summary>
-        private static string ApplyOrderByAndPagination(
-            string sql,
-            AggregateArguments args,
-            SqlQueryStructure structure,
-            IQueryBuilder queryBuilder,
-            string backingField)
-        {
-            string direction = args.Orderby.Equals("asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
-            string quotedCol = $"{queryBuilder.QuoteIdentifier(structure.SourceAlias)}.{queryBuilder.QuoteIdentifier(backingField)}";
-            string orderByAggExpr = args.Distinct
-                ? $"{args.Function.ToUpperInvariant()}(DISTINCT {quotedCol})"
-                : $"{args.Function.ToUpperInvariant()}({quotedCol})";
-            string orderByClause = $" ORDER BY {orderByAggExpr} {direction}";
-
-            if (args.First.HasValue)
-            {
-                // With pagination: SQL Server requires ORDER BY for OFFSET/FETCH and
-                // does not allow both TOP and OFFSET/FETCH. Remove TOP and add ORDER BY + OFFSET/FETCH.
-                int offset = DecodeCursorOffset(args.After);
-                int fetchCount = args.First.Value + 1;
-                string offsetParam = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
-                structure.Parameters.Add(offsetParam, new DbConnectionParam(offset));
-                string limitParam = BaseQueryStructure.GetEncodedParamName(structure.Counter.Next());
-                structure.Parameters.Add(limitParam, new DbConnectionParam(fetchCount));
-
-                string paginationClause = $" OFFSET {offsetParam} ROWS FETCH NEXT {limitParam} ROWS ONLY";
-
-                // Remove TOP N from the SELECT clause (TOP conflicts with OFFSET/FETCH)
-                sql = Regex.Replace(sql, @"SELECT TOP \d+", "SELECT");
-
-                // Insert ORDER BY + pagination before FOR JSON PATH
-                int jsonPathIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
-                if (jsonPathIdx > 0)
-                {
-                    sql = sql.Insert(jsonPathIdx, orderByClause + paginationClause);
-                }
-                else
-                {
-                    sql += orderByClause + paginationClause;
-                }
-            }
-            else
-            {
-                // Without pagination: insert ORDER BY before FOR JSON PATH
-                int jsonPathIdx = sql.IndexOf(" FOR JSON PATH", StringComparison.OrdinalIgnoreCase);
-                if (jsonPathIdx > 0)
-                {
-                    sql = sql.Insert(jsonPathIdx, orderByClause);
-                }
-                else
-                {
-                    sql += orderByClause;
-                }
-            }
-
-            return sql;
         }
 
         #endregion

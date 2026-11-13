@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="structure">Sql query structure to build query on</param>
         /// <returns>Generated sql queries based on the SqlQueryStructure</returns>
-        public string Build(SqlQueryStructure structure)
+        public override string Build(SqlQueryStructure structure)
         {
             if (this._enableNto1JoinOpt && HasToOneOrNoRelation(structure, false))
             {

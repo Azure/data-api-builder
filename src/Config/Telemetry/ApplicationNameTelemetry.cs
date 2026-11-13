@@ -383,6 +383,7 @@ public static class ApplicationNameTelemetry
         DatabaseType.DWSQL => 'D',
         DatabaseType.PostgreSQL => 'P',
         DatabaseType.MySQL => 'M',
+        DatabaseType.Oracle => 'O',
         DatabaseType.CosmosDB_NoSQL => 'C',
         DatabaseType.CosmosDB_PostgreSQL => 'C',
         _ => NOT_APPLICABLE,

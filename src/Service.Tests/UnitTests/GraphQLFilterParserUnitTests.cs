@@ -209,6 +209,37 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsNotNull(result);
         }
 
+        [DataTestMethod]
+        [DataRow("contains", true, @"%\%\_\[\]\\%")]
+        [DataRow("notContains", true, @"%\%\_\[\]\\%")]
+        [DataRow("startsWith", true, @"\%\_\[\]\\%")]
+        [DataRow("endsWith", true, @"%\%\_\[\]\\")]
+        [DataRow("contains", false, @"%\%\_[]\\%")]
+        [DataRow("notContains", false, @"%\%\_[]\\%")]
+        [DataRow("startsWith", false, @"\%\_[]\\%")]
+        [DataRow("endsWith", false, @"%\%\_[]\\")]
+        public void FieldFilterParser_Parse_BindsPatternsWithProviderSpecificBracketEscaping(
+            string operation, bool escapeBracketWildcards, string expectedPattern)
+        {
+            object boundValue = null;
+            Predicate result = FieldFilterParser.Parse(
+                CreateMiddlewareContext(),
+                CreateFilterArgumentSchema(),
+                new Column("dbo", "books", "title"),
+                new List<ObjectFieldNode> { new(operation, new StringValueNode(@"%_[]\")) },
+                (literal, columnName, lengthOverride) =>
+                {
+                    Assert.AreEqual("title", columnName);
+                    Assert.IsTrue(lengthOverride);
+                    boundValue = literal;
+                    return "@filter";
+                },
+                escapeBracketWildcards: escapeBracketWildcards);
+
+            Assert.AreEqual(expectedPattern, boundValue);
+            Assert.AreEqual("@filter", result.Right.AsString());
+        }
+
         [TestMethod]
         public void FieldFilterParser_Parse_UnsupportedOperatorThrows()
         {

@@ -583,6 +583,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [TestMethod]
         public async Task ConcurrentCreatorsReadOneImmutableWinnerAndCleanTheirOwnTemporaryFiles()
         {
+            // Repeat independent native publication races while retaining the platform-specific
+            // fail-closed read semantics and the immutable winner's schema/privacy assertions.
+            for (int iteration = 0; iteration < 20; iteration++)
+            {
+                await AssertConcurrentCreatorsAsync();
+            }
+        }
+
+        private static async Task AssertConcurrentCreatorsAsync()
+        {
             using TemporaryConfig files = new();
             using Barrier start = new(12);
             Task<EngineTelemetryIdentity>[] creators = Enumerable.Range(0, 12).Select(_ =>

@@ -651,6 +651,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry.Product
 
         private static void ShowNotice()
         {
+            // Consent disclosure is not diagnostic logging: it must remain visible on stderr
+            // even when MCP LogLevel.None redirects Console.Error. Never use protocol stdout.
             using StreamWriter writer = new(Console.OpenStandardError(), new System.Text.UTF8Encoding(false), leaveOpen: true);
             writer.WriteLine(ProductTelemetryPolicy.NOTICE_TEXT);
         }

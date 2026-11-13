@@ -29,23 +29,23 @@ namespace Azure.DataApiBuilder.Service.Utilities
         {
             ArgumentNullException.ThrowIfNull(serviceProvider);
 
-            FileSystemRuntimeConfigLoader configLoader =
-                serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>();
-            RuntimeConfig? initializedConfig = null;
-
-            await configLoader.ExecuteWithHotReloadSerializationAsync(async cancellationToken =>
+            TelemetryFailureStage stage = TelemetryFailureStage.Configuration;
+            try
             {
-                TelemetryFailureStage stage = TelemetryFailureStage.Configuration;
-                try
+                FileSystemRuntimeConfigLoader configLoader =
+                    serviceProvider.GetRequiredService<FileSystemRuntimeConfigLoader>();
+                RuntimeConfig? initializedConfig = null;
+
+                await configLoader.ExecuteWithHotReloadSerializationAsync(async cancellationToken =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     RuntimeConfigProvider runtimeConfigProvider =
                         serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                     initializedConfig = runtimeConfigProvider.GetConfig();
 
+                    stage = TelemetryFailureStage.Validation;
                     RuntimeConfigValidator runtimeConfigValidator =
                         serviceProvider.GetRequiredService<RuntimeConfigValidator>();
-                    stage = TelemetryFailureStage.Validation;
                     runtimeConfigValidator.ValidateConfigProperties();
 
                     stage = TelemetryFailureStage.Metadata;
@@ -61,16 +61,17 @@ namespace Azure.DataApiBuilder.Service.Utilities
                     IMcpToolRegistryRefreshService? mcpToolRegistryRefreshService =
                         serviceProvider.GetService<IMcpToolRegistryRefreshService>();
                     mcpToolRegistryRefreshService?.EnsureInitialized(cancellationToken);
-                }
-                catch
-                {
-                    TelemetryFailureContext.Current?.RecordFailure(stage);
-                    throw;
-                }
-            }).ConfigureAwait(false);
+                }).ConfigureAwait(false);
 
-            return initializedConfig ?? throw new InvalidOperationException(
-                "Runtime dependency initialization did not run.");
+                return initializedConfig ?? throw new InvalidOperationException(
+                    "Runtime dependency initialization did not run.");
+            }
+            catch (Exception)
+            {
+                // The caller owns this attempt and its event; preserve the original exception.
+                TelemetryFailureContext.Current?.RecordFailure(stage);
+                throw;
+            }
         }
     }
 }

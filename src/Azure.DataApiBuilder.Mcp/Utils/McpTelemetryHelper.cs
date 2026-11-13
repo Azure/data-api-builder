@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -14,6 +15,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
@@ -34,7 +36,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         /// <param name="arguments">The parsed JSON arguments for the tool (may be null).</param>
         /// <param name="serviceProvider">The service provider for resolving dependencies.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
-        /// <param name="writeStdioResponse">For stdio, writes and flushes the response before product request completion.</param>
+        /// <param name="stdioCompletion">For stdio, the caller-owned scope completed after the server writes and flushes its response.</param>
         /// <param name="sdkResponseItems">SDK-owned nonserialized context for per-message HTTP response completion.</param>
         /// <returns>The result of the tool execution.</returns>
         public static async Task<CallToolResult> ExecuteWithTelemetryAsync(
@@ -43,17 +45,24 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             JsonDocument? arguments,
             IServiceProvider serviceProvider,
             CancellationToken cancellationToken,
-            Func<CallToolResult, Task>? writeStdioResponse = null,
+            ProductRequestCompletion? stdioCompletion = null,
             IDictionary<string, object?>? sdkResponseItems = null)
         {
-            using EngineTelemetryRequestScope? request = BeginProductRequest(
-                tool, toolName, serviceProvider, writeStdioResponse is not null,
-                out EngineTelemetrySession? session, out HttpContext? httpContext, out bool isStdio);
-            ProductRequestCompletion? completion = request is null ? null : new(request, sdkResponseItems is null ? httpContext : null);
+            EngineTelemetrySession? session = stdioCompletion?.Session;
+            HttpContext? httpContext = null;
+            bool isStdio = stdioCompletion is not null;
+            // A stdio request belongs to the server, including its ambient scope. Do not
+            // dispose it when tool execution returns: serialization/write/flush is still ahead.
+            using EngineTelemetryRequestScope? ownedRequest = stdioCompletion is null
+                ? BeginProductRequest(tool, toolName, serviceProvider, isStdioInvocation: false,
+                    out session, out httpContext, out isStdio)
+                : null;
+            EngineTelemetryRequestScope? request = stdioCompletion?.Request ?? ownedRequest;
+            ProductRequestCompletion? completion = ownedRequest is null ? null : new(ownedRequest, sdkResponseItems is null ? httpContext : null);
             McpProductResponseCompletion? sdkCompletion = null;
-            if (request is not null && sdkResponseItems is not null)
+            if (ownedRequest is not null && sdkResponseItems is not null)
             {
-                sdkCompletion = McpProductResponseCompletion.Attach(sdkResponseItems, request, cancellationToken);
+                sdkCompletion = McpProductResponseCompletion.Attach(sdkResponseItems, ownedRequest, cancellationToken);
             }
 
             try
@@ -81,19 +90,14 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 // Logical operation completion precedes transport completion. A failed write
                 // must not retroactively turn a successfully executed operation into a failure.
 
-                if (writeStdioResponse is not null)
-                {
-                    await writeStdioResponse(result);
-                    completion?.Complete();
-                }
-                else if (!isStdio && httpContext is null && sdkResponseItems is null)
+                if (!isStdio && httpContext is null && sdkResponseItems is null)
                 {
                     // An embedded call has no response transport to wait for.
                     completion?.Complete();
                 }
 
                 // SDK HTTP completes per message after write/flush; other HTTP callers use
-                // OnCompleted. A stdio invocation without its writer must
+                // OnCompleted. The stdio server owns writing and completion; a bare invocation must
                 // not be counted as served just because tool execution returned a value.
                 return result;
             }
@@ -111,6 +115,19 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                     : EngineTelemetryOutcome.Failure);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Begins a stdio request in the caller's execution context. The server retains this
+        /// scope through response write/flush and reports transport success or failure itself.
+        /// A disabled/ineligible request still returns a no-op completion, never a write delegate.
+        /// </summary>
+        internal static ProductRequestCompletion BeginStdioRequest(IMcpTool tool, string toolName, IServiceProvider services)
+        {
+            EngineTelemetryRequestScope? request = BeginProductRequest(
+                tool, toolName, services, isStdioInvocation: true,
+                out EngineTelemetrySession? session, out _, out _);
+            return new(request, httpContext: null, session: session);
         }
 
         private static async Task<CallToolResult> ExecuteWithCustomerTelemetryAsync(
@@ -248,14 +265,14 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             IMcpTool tool,
             string toolName,
             IServiceProvider services,
-            bool hasStdioWriter,
+            bool isStdioInvocation,
             out EngineTelemetrySession? session,
             out HttpContext? httpContext,
             out bool isStdio)
         {
             try
             {
-                return BeginProductRequestCore(tool, toolName, services, hasStdioWriter,
+                return BeginProductRequestCore(tool, toolName, services, isStdioInvocation,
                     out session, out httpContext, out isStdio);
             }
             catch (Exception)
@@ -264,7 +281,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 // or emit failures to the customer's existing telemetry pipeline.
                 session = null;
                 httpContext = null;
-                isStdio = hasStdioWriter;
+                isStdio = isStdioInvocation;
                 return null;
             }
         }
@@ -273,14 +290,14 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             IMcpTool tool,
             string toolName,
             IServiceProvider services,
-            bool hasStdioWriter,
+            bool isStdioInvocation,
             out EngineTelemetrySession? session,
             out HttpContext? httpContext,
             out bool isStdio)
         {
             session = null;
             httpContext = null;
-            isStdio = hasStdioWriter;
+            isStdio = isStdioInvocation;
             if (!IsProductDataTool(tool, toolName))
             {
                 return null;
@@ -302,11 +319,15 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 httpContext = services.GetService<IHttpContextAccessor>()?.HttpContext;
             }
 
+            // Preserve HTTP header cardinality: joining multiple values would invent a
+            // custom role instead of marking the ambiguous input as unknown.
+            StringValues roleHeader = httpContext?.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] ?? StringValues.Empty;
             string? role = isStdio
                 ? configuration?.GetValue<string>("MCP:Role")
-                : httpContext?.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
-            EngineTelemetryRole roleClass = EngineTelemetrySession.ClassifyRole(
-                role, httpContext?.User.Identity?.IsAuthenticated == true);
+                : roleHeader.Count == 1 ? roleHeader[0] : null;
+            EngineTelemetryRole roleClass = roleHeader.Count > 1
+                ? EngineTelemetryRole.Unknown
+                : EngineTelemetrySession.ClassifyRole(role, httpContext?.User.Identity?.IsAuthenticated == true);
             EngineTelemetryTransport transport = EngineTelemetryTransport.InProcess;
             if (isStdio)
             {
@@ -324,20 +345,26 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         /// Owns one request's transport completion, without a per-request event queue or any
         /// names, arguments, error messages or serialized tool results in product telemetry.
         /// </summary>
-        private sealed class ProductRequestCompletion
+        internal sealed class ProductRequestCompletion : IDisposable
         {
-            private readonly EngineTelemetryRequestScope _request;
+            private static readonly ConditionalWeakTable<HttpContext, object> _registrationGates = new();
             private readonly HttpContext? _httpContext;
             private CancellationTokenRegistration _abortRegistration;
             private int _completed;
 
-            internal ProductRequestCompletion(EngineTelemetryRequestScope request, HttpContext? httpContext)
+            internal EngineTelemetryRequestScope? Request { get; }
+            internal EngineTelemetrySession? Session { get; }
+
+            internal ProductRequestCompletion(EngineTelemetryRequestScope? request, HttpContext? httpContext, EngineTelemetrySession? session = null)
             {
-                _request = request;
+                Request = request;
                 _httpContext = httpContext;
-                if (httpContext is not null)
+                Session = session;
+                if (request is not null && httpContext is not null)
                 {
-                    lock (httpContext)
+                    // Batch callers can register concurrently. Never lock the public context
+                    // or use unsynchronized Items initialization for our registration gate.
+                    lock (_registrationGates.GetValue(httpContext, static _ => new object()))
                     {
                         httpContext.Response.OnCompleted(static state => ((ProductRequestCompletion)state).ResponseCompletedAsync(), this);
                     }
@@ -351,9 +378,11 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 }
             }
 
-            internal void Complete() => Complete(_request.Outcome, httpStatusCode: null);
+            internal void Complete() => Complete(Request?.Outcome ?? EngineTelemetryOutcome.Unknown, httpStatusCode: null);
 
             internal void Fail(EngineTelemetryOutcome outcome) => Complete(outcome, httpStatusCode: null);
+
+            public void Dispose() => Request?.Dispose();
 
             private Task ResponseCompletedAsync()
             {
@@ -369,7 +398,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 else
                 {
                     int status = _httpContext.Response.StatusCode;
-                    EngineTelemetryOutcome outcome = _request.Outcome;
+                    EngineTelemetryOutcome outcome = Request!.Outcome;
                     if (outcome is EngineTelemetryOutcome.Success or EngineTelemetryOutcome.Unknown)
                     {
                         if (status >= StatusCodes.Status400BadRequest)
@@ -395,7 +424,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                     _abortRegistration.Unregister();
                     try
                     {
-                        _request.Complete(outcome, httpStatusCode);
+                        Request?.Complete(outcome, httpStatusCode);
                     }
                     catch (Exception)
                     {

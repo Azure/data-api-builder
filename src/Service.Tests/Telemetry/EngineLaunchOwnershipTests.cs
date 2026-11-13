@@ -211,9 +211,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual(0, host.StopCalls);
             Assert.IsFalse(loader.ShutdownResourcesDisposed, "The failure must occur before the loader drain.");
             Assert.IsFalse(host.LoaderDrainedAtDispose);
-            Assert.IsFalse(host.TelemetryStoppedAtDispose,
-                "Host disposal must not depend on reaching the helper's telemetry shutdown.");
-            Assert.AreEqual(0, host.StoppedEventsAtDispose);
+            Assert.IsTrue(host.TelemetryStoppedAtDispose,
+                "A failed loader drain must not skip the telemetry drain or host disposal.");
+            Assert.AreEqual(1, host.StoppedEventsAtDispose);
+            Assert.IsTrue(telemetry.HasStartupFailed);
+            EngineTelemetryEvent failure = exporter.Events.Single(record => record.Name == "dab/engine.startup_failed");
+            Assert.AreEqual("serving", failure.Properties["failure_stage"]);
+            Assert.IsTrue(failure.Sequence < exporter.Events.Single(record => record.Name == "dab/engine.stopped").Sequence);
             Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab/engine.ready"));
         }
 

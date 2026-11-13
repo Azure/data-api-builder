@@ -22,6 +22,8 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
+using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.AspNetCore.Hosting;
@@ -36,6 +38,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ModelContextProtocol.Protocol;
 using Moq;
 using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
@@ -81,6 +84,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataRow("validation", "validation")]
         [DataRow("metadata", "metadata")]
         [DataRow("serving", "serving")]
+        [DataRow("registry", "serving")]
         public async Task InitialWebStartupReportsTheActualFailureStage(string boundary, string expectedStage)
         {
             string directory = Path.Combine(Path.GetTempPath(), "dab-telemetry-stage-" + Guid.NewGuid().ToString("N"));
@@ -128,6 +132,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                             if (boundary == "serving")
                             {
                                 services.Replace(ServiceDescriptor.Singleton<GraphQLSchemaCreator>(_ => throw new InvalidOperationException(SENTINEL)));
+                            }
+                            else if (boundary == "registry")
+                            {
+                                services.AddSingleton<IMcpToolRegistryRefreshService>(_ => throw new InvalidOperationException(SENTINEL));
                             }
                         })).Build();
                 using CancellationTokenSource timeout = new(_timeout);
@@ -290,6 +298,66 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             EngineTelemetryEvent[] records = await DrainAsync(fixture.Session, fixture.Exporter);
             CollectionAssert.AreEqual(new[] { PROCESS_STARTED, READY, invalidJson ? REJECTED : CHANGED, STOPPED },
                 records.Select(record => record.Name).ToArray());
+        }
+
+        [TestMethod]
+        public async Task RejectedMcpRegistryKeepsTelemetryEpochAndRecoversDespiteNotificationFailure()
+        {
+            using ReloadFixture fixture = new();
+            Mock<RuntimeConfigLoader> loader = new(null, null);
+            Mock<RuntimeConfigProvider> provider = new(loader.Object);
+            provider.Setup(value => value.GetConfig()).Returns(() => fixture.Loader.RuntimeConfig!);
+            provider.Object.ProductTelemetry = fixture.Session;
+            bool duplicate = false;
+            string description = "original";
+            Mock<IMcpTool> first = new();
+            Mock<IMcpTool> second = new();
+            first.Setup(value => value.IsEnabled(It.IsAny<RuntimeConfig>())).Returns(true);
+            second.Setup(value => value.IsEnabled(It.IsAny<RuntimeConfig>())).Returns(true);
+            first.Setup(value => value.GetToolMetadata()).Returns(() => new Tool
+            {
+                Name = "first_tool",
+                Description = description,
+                InputSchema = JsonSerializer.SerializeToElement(new { type = "object" })
+            });
+            second.Setup(value => value.GetToolMetadata()).Returns(() => new Tool
+            {
+                Name = duplicate ? "first_tool" : "second_tool",
+                InputSchema = JsonSerializer.SerializeToElement(new { type = "object" })
+            });
+            Mock<IMcpToolListChangedNotifier> notifier = new(MockBehavior.Strict);
+            notifier.Setup(value => value.NotifyToolsListChanged()).Throws(new InvalidOperationException(SENTINEL));
+            McpToolRegistry registry = new();
+            McpToolRegistryRefreshService refresh = new(provider.Object, [first.Object, second.Object], registry,
+                Mock.Of<IMetadataProviderFactory>(), [notifier.Object], NullLogger<McpToolRegistryRefreshService>.Instance, fixture.Handler);
+            refresh.EnsureInitialized();
+            Assert.AreEqual(2, registry.GetAdvertisedTools().Count);
+
+            duplicate = true;
+            fixture.Reload(CreateConfigJson(graphQl: true));
+            Assert.IsFalse(fixture.Completions.Single().Accepted);
+            AssertConfiguration(fixture.Session, fixture.InitialConfig, epoch: 1);
+            Assert.AreEqual(2, registry.GetAdvertisedTools().Count, "Failed publication must preserve the complete previous registry.");
+            Assert.IsTrue(registry.TryGetTool("second_tool", out IMcpTool? retained));
+            Assert.AreSame(second.Object, retained);
+            CollectionAssert.AreEqual(new[] { "change_token" }.Concat(_reloadEvents).Append("rejected").ToArray(), fixture.Trace,
+                "A caught MCP registry failure must not interrupt main's later ordered reload handlers.");
+            notifier.Verify(value => value.NotifyToolsListChanged(), Times.Never);
+
+            duplicate = false;
+            description = "replacement";
+            fixture.Reload(CreateConfigJson(graphQl: true));
+            Assert.IsTrue(fixture.Completions[1].Accepted);
+            AssertConfiguration(fixture.Session, fixture.Loader.RuntimeConfig, epoch: 2);
+            Assert.AreEqual(description, registry.GetAdvertisedTools().Single(tool => tool.Name == "first_tool").Description);
+            notifier.Verify(value => value.NotifyToolsListChanged(), Times.Once,
+                "Transport notification failure is not a rejected registry generation.");
+
+            EngineTelemetryEvent[] records = await DrainAsync(fixture.Session, fixture.Exporter);
+            EngineTelemetryEvent failure = records.Single(record => record.Name == REJECTED);
+            Assert.AreEqual("serving", failure.Properties["failure_stage"]);
+            Assert.AreEqual(1L, failure.ConfigurationEpoch);
+            Assert.AreEqual(2L, records.Single(record => record.Name == CHANGED).ConfigurationEpoch);
         }
 
         [DataTestMethod]

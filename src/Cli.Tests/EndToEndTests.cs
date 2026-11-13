@@ -393,14 +393,19 @@ public class EndToEndTests
 
     /// <summary>
     /// The `appname` command is a design-time inspection tool: it always shows the full telemetry
-    /// encoding so users can see what would be collected, independent of the runtime opt-out switch
-    /// (DAB_TELEMETRY_APPNAME_OPT_OUT). This pins that intentional behavior.
+    /// encoding so users can see what would be collected, independent of either runtime opt-out
+    /// switch. This pins that intentional behavior without configuring the engine.
     /// </summary>
-    [TestMethod]
-    public void TestAppNameEncodeIsIndependentOfOptOut()
+    [DataTestMethod]
+    [DataRow("1", null)]
+    [DataRow(null, "true")]
+    [DataRow("1", "1")]
+    public void TestAppNameEncodeIsIndependentOfOptOut(string? legacyOptOut, string? productOptOut)
     {
         string? originalOptOut = Environment.GetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR);
-        Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, "1");
+        string? originalProductOptOut = Environment.GetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR);
+        Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, legacyOptOut);
+        Environment.SetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, productOptOut);
         try
         {
             string configJson = @"{
@@ -420,10 +425,15 @@ public class EndToEndTests
             Assert.IsTrue(
                 telemetry.StartsWith("dab_oss_") && telemetry.EndsWith("+"),
                 $"appname should show the full telemetry encoding regardless of opt-out, but was '{telemetry}'.");
+            string[] sections = telemetry[(telemetry.IndexOf('+') + 1)..^1].Split('|');
+            Assert.AreEqual(4, sections.Length);
+            Assert.AreEqual(6, sections[1].Length);
+            Assert.IsNull(_runtimeConfigLoader!.RuntimeConfig, "Offline inspection must not initialize engine collection.");
         }
         finally
         {
             Environment.SetEnvironmentVariable(ApplicationNameTelemetry.OPT_OUT_ENV_VAR, originalOptOut);
+            Environment.SetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, originalProductOptOut);
         }
     }
 

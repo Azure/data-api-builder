@@ -39,6 +39,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             string mcpPath = mcpOptions.Path ?? McpRuntimeOptions.DEFAULT_PATH;
+            EngineTelemetrySession? telemetry = endpoints.ServiceProvider.GetService<EngineTelemetrySession>();
 
             // Map the MCP endpoint
             endpoints.MapMcp(mcpPath).Add(builder =>
@@ -51,7 +52,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 builder.RequestDelegate = async context =>
                 {
-                    if (context.RequestServices.GetService<EngineTelemetrySession>()?.IsEnabled != true)
+                    if (telemetry?.IsEnabled != true)
                     {
                         await next(context);
                         return;

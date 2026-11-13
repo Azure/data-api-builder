@@ -392,8 +392,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
             }
             catch (Exception ex)
             {
-                // Dispatch/validation boundaries record more specific failures first. Otherwise
-                // the failure occurred while reading or parsing the replacement input.
+                // Ordered boundaries record a more specific failure first. Otherwise the
+                // attempt failed while reading or parsing its replacement configuration.
                 failure?.RecordFailure(TelemetryFailureStage.Parsing);
                 NotifyTelemetryReload(accepted: false, failure?.FailureStage ?? TelemetryFailureStage.Unknown);
                 SendLogToBufferOrLogger(
@@ -746,11 +746,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader, IDisposable
         IsNewConfigValidated = false;
         SignalConfigChanged(message: string.Empty, cancellationToken);
 
-        // A dependency may deliberately retain its old snapshot and swallow its failure.
-        // Preserve that application behavior without reporting a fully accepted telemetry epoch.
+        // A subscriber may retain its previous serving generation without rethrowing.
+        // Preserve that behavior, but do not claim the candidate was accepted by telemetry.
         TelemetryFailureContext? failure = TelemetryFailureContext.Current;
-        NotifyTelemetryReload(accepted: failure?.HasFailure != true,
-            stage: failure?.FailureStage ?? TelemetryFailureStage.Unknown);
+        NotifyTelemetryReload(accepted: failure?.HasFailure != true, failure?.FailureStage ?? TelemetryFailureStage.Unknown);
 
         // Telemetry (and any other) logs buffered during the reload parse are otherwise only
         // drained once at startup. Flush them now so hot-reload logs are actually emitted and the

@@ -488,11 +488,148 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 exporter.Events.Select(record => record.Name).ToArray());
         }
 
+        [DataTestMethod]
+        [TestCategory("EngineTelemetry")]
+        [DoNotParallelize]
+        [DataRow(true, false, "metadata")]
+        [DataRow(false, false, "serving")]
+        [DataRow(true, true, "metadata")]
+        [DataRow(false, true, "serving")]
+        public void StdioReportsDeferredMetadataAndServingFailuresSeparately(bool metadataFails, bool canceled, string expectedStage)
+        {
+            CapturingProductExporter exporter = new();
+            using EngineTelemetrySession telemetry = EngineTelemetrySession.Create(() => exporter, enableSyntheticCollection: true,
+                readEnvironmentVariable: _ => null, showNotice: () => { }, startTimer: false);
+            Exception exception = canceled ? new TaskCanceledException() : new InvalidOperationException("synthetic private failure");
+            TestMetadataProviderFactory metadata = new() { InitializeAsyncException = metadataFails ? exception : null };
+            TestMcpStdioServer stdio = new();
+            using StringReader input = new("""
+                {"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+                {"jsonrpc":"2.0","id":2,"method":"tools/list"}
+                {"jsonrpc":"2.0","id":3,"method":"tools/list"}
+                {"jsonrpc":"2.0","id":4,"method":"ping"}
+                {"jsonrpc":"2.0","id":5,"method":"shutdown"}
+                """);
+            using StringWriter output = new();
+            using ServiceProvider services = BuildServices(stdio, metadata, out _, telemetry,
+                registryFailure: metadataFails ? null : exception, input: input, output: output);
+            TextWriter originalError = Console.Error;
+            using StringWriter capture = new();
+            try
+            {
+                Console.SetError(capture);
+                Assert.IsTrue(McpStdioHelper.RunMcpStdioHost(new TestHost(services)),
+                    "Deferred failures are reported as JSON-RPC errors; the control loop can still shut down normally.");
+            }
+            finally
+            {
+                Console.SetError(originalError);
+            }
+
+            EngineTelemetryEvent failure = exporter.Events.Single(record => record.Name == "dab/engine.startup_failed");
+            Assert.AreEqual(expectedStage, failure.Properties["failure_stage"]);
+            Assert.AreEqual("initialization", failure.Properties["failure_category"]);
+            Assert.AreEqual(1, metadata.InitializeAsyncCallCount);
+            string[] responses = output.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+            Assert.AreEqual(5, responses.Length);
+            StringAssert.Contains(responses[0], "protocolVersion");
+            StringAssert.Contains(responses[1], "Internal error");
+            StringAssert.Contains(responses[2], "Internal error");
+            StringAssert.Contains(responses[3], "\"ok\":true");
+            Assert.AreEqual(string.Empty, capture.ToString());
+            Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab/engine.ready"));
+            Assert.IsFalse(failure.Properties.Values.Any(value => value.Contains("synthetic private failure", StringComparison.Ordinal)));
+        }
+
+        [TestMethod]
+        [TestCategory("EngineTelemetry")]
+        public void ControlOnlyStdioSessionDoesNotInitializeToolsOrReportReady()
+        {
+            CapturingProductExporter exporter = new();
+            using EngineTelemetrySession telemetry = EngineTelemetrySession.Create(() => exporter, enableSyntheticCollection: true,
+                readEnvironmentVariable: _ => null, showNotice: () => { }, startTimer: false);
+            TestMetadataProviderFactory metadata = new() { InitializeAsyncException = InferenceFailure() };
+            using StringReader input = new("""
+                {"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+                {"jsonrpc":"2.0","method":"notifications/initialized"}
+                {"jsonrpc":"2.0","id":2,"method":"ping"}
+                {"jsonrpc":"2.0","id":3,"method":"shutdown"}
+                """);
+            using StringWriter output = new();
+            using ServiceProvider services = BuildServices(new(), metadata, out _, telemetry, input: input, output: output);
+            TestHost host = new(services);
+
+            Assert.IsTrue(McpStdioHelper.RunMcpStdioHost(host));
+
+            Assert.AreEqual(0, metadata.InitializeAsyncCallCount);
+            Assert.AreEqual(0, ((TestMcpToolRegistryRefreshService)services.GetRequiredService<IMcpToolRegistryRefreshService>()).EnsureInitializedCallCount);
+            Assert.AreEqual(3, output.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Length);
+            CollectionAssert.AreEqual(new[] { "dab/engine.process_started", "dab/engine.stopped" },
+                exporter.Events.Select(record => record.Name).ToArray());
+            Assert.AreEqual(0, host.StartAsyncCallCount);
+            Assert.AreEqual(1, host.DisposeCallCount);
+        }
+
+        [TestMethod]
+        [TestCategory("EngineTelemetry")]
+        [DoNotParallelize]
+        public void DisabledMcpCannotReportReadyBeforeStdioServiceResolution()
+        {
+            CapturingProductExporter exporter = new();
+            using EngineTelemetrySession telemetry = EngineTelemetrySession.Create(() => exporter,
+                enableSyntheticCollection: true, readEnvironmentVariable: _ => null, showNotice: () => { },
+                resolveIdentity: _ => new(Guid.NewGuid(), "ephemeral"), startTimer: false);
+            MockFileSystem files = new(new Dictionary<string, MockFileData>
+            {
+                [FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME] = new(TestHelper.INITIAL_CONFIG)
+            });
+            using FileSystemRuntimeConfigLoader loader = new(files, isCliLoader: true);
+            using RuntimeConfigProvider provider = new(loader) { ProductTelemetry = telemetry };
+            RuntimeConfig config = provider.GetConfig();
+            loader.RuntimeConfig = config with { Runtime = config.Runtime! with { Mcp = new(Enabled: false) } };
+            Assert.IsTrue(loader.RuntimeConfig.IsRestEnabled);
+            Assert.IsFalse(loader.RuntimeConfig.IsMcpEnabled);
+            TestMetadataProviderFactory metadata = new();
+            ServiceCollection registrations = new();
+            registrations.AddSingleton(telemetry);
+            registrations.AddSingleton(loader);
+            registrations.AddSingleton(provider);
+            registrations.AddSingleton(new RuntimeConfigValidator(provider, files, NullLogger<RuntimeConfigValidator>.Instance));
+            registrations.AddSingleton<IMetadataProviderFactory>(metadata);
+            registrations.AddSingleton<IHostApplicationLifetime>(new TestApplicationLifetime());
+            registrations.AddDabMcpServer(provider);
+            registrations.AddSingleton<IMcpStdioServer, McpStdioServer>();
+            using ServiceProvider services = registrations.BuildServiceProvider();
+            Assert.IsNull(services.GetService<McpToolRegistry>());
+            TestHost host = new(services);
+            TextWriter originalError = Console.Error;
+            using StringWriter capturedError = new();
+            try
+            {
+                Console.SetError(capturedError);
+                Assert.IsFalse(McpStdioHelper.RunMcpStdioHost(host));
+            }
+            finally
+            {
+                Console.SetError(originalError);
+            }
+
+            Assert.AreEqual(0, metadata.InitializeAsyncCallCount);
+            Assert.AreEqual(1, host.DisposeCallCount);
+            Assert.IsFalse(exporter.Events.Any(record => record.Name == "dab/engine.ready"));
+            EngineTelemetryEvent failure = exporter.Events.Single(record => record.Name == "dab/engine.startup_failed");
+            Assert.AreEqual("serving", failure.Properties["failure_stage"]);
+            Assert.IsTrue(loader.ShutdownResourcesDisposed);
+        }
+
         private static ServiceProvider BuildServices(
             TestMcpStdioServer stdioServer,
             TestMetadataProviderFactory metadataProviderFactory,
             out TestApplicationLifetime lifetime,
-            EngineTelemetrySession? telemetry = null)
+            EngineTelemetrySession? telemetry = null,
+            Exception? registryFailure = null,
+            TextReader? input = null,
+            TextWriter? output = null)
         {
             lifetime = new TestApplicationLifetime();
 
@@ -507,7 +644,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 runtimeConfigProvider,
                 fileSystem,
                 NullLogger<RuntimeConfigValidator>.Instance);
-            TestMcpToolRegistryRefreshService refreshService = new(metadataProviderFactory.InitializationOrder);
+            TestMcpToolRegistryRefreshService refreshService = new(metadataProviderFactory.InitializationOrder)
+            {
+                EnsureInitializedException = registryFailure
+            };
 
             ServiceCollection services = new();
             services.AddSingleton(configLoader);
@@ -515,7 +655,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             services.AddSingleton(runtimeConfigValidator);
             services.AddSingleton<IMcpToolRegistryRefreshService>(refreshService);
             services.AddSingleton<IHostApplicationLifetime>(lifetime);
-            services.AddSingleton<IMcpStdioServer>(stdioServer);
+            if (input is null)
+            {
+                services.AddSingleton<IMcpStdioServer>(stdioServer);
+            }
+            else
+            {
+                services.AddSingleton<McpToolRegistry>();
+                services.AddSingleton(new McpStdoutWriter(output!));
+                services.AddSingleton<IMcpStdioServer>(provider => new McpStdioServer(
+                    provider.GetRequiredService<McpToolRegistry>(), provider, input));
+            }
+
             services.AddSingleton<IMetadataProviderFactory>(metadataProviderFactory);
             if (telemetry is not null)
             {

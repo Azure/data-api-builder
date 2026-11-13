@@ -217,6 +217,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 catch (Exception)
                 {
                     // Rethrow to avoid masking configuration errors
+                    ObserveToolInitialization(TelemetryFailureStage.Configuration);
                     throw;
                 }
             }
@@ -345,7 +346,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="cancellationToken">Token used to cancel metadata inference and registry refresh.</param>
         private async Task InitializeToolsAsync(CancellationToken cancellationToken)
         {
-            EngineTelemetrySession? productTelemetry = _serviceProvider.GetService<EngineTelemetrySession>();
             TelemetryFailureStage stage = TelemetryFailureStage.Metadata;
             try
             {
@@ -360,31 +360,43 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
             catch (Exception)
             {
-                // The cached initialization task can fault after initialize has already been
-                // acknowledged. Record the actual boundary before RunAsync translates it to a
-                // protocol error, retaining main's task, retry and exception semantics.
-                productTelemetry?.StartupFailed(stage);
+                // RunAsync converts failures into protocol errors and can keep handling control
+                // messages. Record the failed startup here, before that exception is consumed.
+                ObserveToolInitialization(stage);
                 throw;
             }
 
-            if (productTelemetry?.IsEnabled == true)
+            ObserveToolInitialization();
+        }
+
+        private void ObserveToolInitialization(TelemetryFailureStage? failureStage = null)
+        {
+            try
             {
-                try
+                EngineTelemetrySession? telemetry = _serviceProvider.GetService<EngineTelemetrySession>()
+                    ?? _serviceProvider.GetService<RuntimeConfigProvider>()?.ProductTelemetry;
+                if (telemetry?.IsEnabled != true)
                 {
-                    RuntimeConfigProvider? configuration = _serviceProvider.GetService<RuntimeConfigProvider>();
-                    if (configuration?.TryGetLoadedConfig(out RuntimeConfig? config) == true)
+                    return;
+                }
+
+                if (failureStage.HasValue)
+                {
+                    telemetry.StartupFailed(failureStage.Value);
+                }
+                else
+                {
+                    RuntimeConfigProvider? provider = _serviceProvider.GetService<RuntimeConfigProvider>();
+                    if (provider?.TryGetLoadedConfig(out RuntimeConfig? config) == true)
                     {
-                        // Metadata can expand autoentities. Observe the final loaded model only
-                        // after registry publication, before the first list/call is allowed through.
-                        productTelemetry.AcceptConfiguration(config, "startup", configuration.ConfigFilePath);
-                        productTelemetry.MarkHostReady();
+                        telemetry.AcceptConfiguration(config, "startup", provider.ConfigFilePath, onlyIfUnconfigured: true);
+                        telemetry.MarkHostReady();
                     }
                 }
-                catch (Exception)
-                {
-                    // Optional observation is not a tool-initialization dependency.
-                    productTelemetry.Disable();
-                }
+            }
+            catch (Exception)
+            {
+                // Optional telemetry must not affect initialization, tool execution or JSON-RPC.
             }
         }
 
@@ -585,10 +597,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     try
                     {
                         // Execute the tool with the scoped service provider so any scoped services resolve correctly.
-                        // Product completion must follow the successful stdout write, not just tool execution.
-                        await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                            tool, toolName!, argsDoc, scopedProvider, ct,
-                            writeStdioResponse: result => HandleCallToolAsync(id ?? default, result));
+                        await ExecuteAndWriteToolResponseAsync(id, tool, toolName!, argsDoc, scopedProvider, ct);
                     }
                     finally
                     {
@@ -601,14 +610,39 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
                 else
                 {
-                    await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                        tool, toolName!, argsDoc, _serviceProvider, ct,
-                        writeStdioResponse: result => HandleCallToolAsync(id ?? default, result));
+                    await ExecuteAndWriteToolResponseAsync(id, tool, toolName!, argsDoc, _serviceProvider, ct);
                 }
             }
             finally
             {
                 argsDoc?.Dispose();
+            }
+        }
+
+        private async Task ExecuteAndWriteToolResponseAsync(JsonElement? id, IMcpTool tool, string toolName,
+            JsonDocument? arguments, IServiceProvider services, CancellationToken cancellationToken)
+        {
+            using McpTelemetryHelper.ProductRequestCompletion completion = McpTelemetryHelper.BeginStdioRequest(tool, toolName, services);
+            try
+            {
+                CallToolResult result = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                    tool, toolName, arguments, services, cancellationToken, stdioCompletion: completion);
+
+                // Protocol ownership stays here regardless of telemetry enablement/eligibility.
+                // Keep the request and DI scopes alive until stdout serialization/write/flush returns.
+                await HandleCallToolAsync(id ?? default, result);
+                completion.Complete();
+            }
+            catch (OperationCanceledException)
+            {
+                completion.Fail(EngineTelemetryOutcome.Canceled);
+                throw;
+            }
+            catch (Exception)
+            {
+                completion.Fail(cancellationToken.IsCancellationRequested
+                    ? EngineTelemetryOutcome.Canceled : EngineTelemetryOutcome.Failure);
+                throw;
             }
         }
 

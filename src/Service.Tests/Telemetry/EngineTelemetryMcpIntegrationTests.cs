@@ -6,10 +6,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
@@ -18,6 +20,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
@@ -36,8 +39,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
     /// <summary>
     /// Exercises the real MCP wrapper, stdio server, DI scopes and enabled product session.
     /// Tool execution, config files, output, exporter, clock and identity are in-memory fakes.
-    /// A strict no-op metadata factory serves the pre-registered tools and already-ready session;
-    /// these are serving/telemetry tests, not coverage of metadata inference or bootstrap readiness.
     /// Mocked built-in names do not execute ReadRecordsTool or SQL; database-attempt scopes below
     /// are synthetic observations, not evidence of actual commands or database retries.
     /// </summary>
@@ -146,6 +147,210 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             AssertNoRequestTelemetry(records);
             AssertCounts(Summaries(records, "operation"), success: 1);
             AssertFamilies(records, "operation");
+        }
+
+        [DataTestMethod]
+        [DataRow(true, true)]
+        [DataRow(true, false)]
+        [DataRow(false, true)]
+        [DataRow(false, false)]
+        public async Task StdioServerRetainsScopesUntilActualStdoutFlushReturns(bool telemetryEnabled, bool withRole)
+        {
+            ActivitySource source = TelemetryTracesHelper.DABActivitySource;
+            using ActivityListener listener = new()
+            {
+                ShouldListenTo = candidate => ReferenceEquals(candidate, source),
+                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded
+            };
+            ActivitySource.AddActivityListener(listener);
+            using Activity parentActivity = new Activity("synthetic caller").Start();
+            using ObservingFlushStream output = new();
+            using StreamWriter writer = new(output, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
+            await using Fixture fixture = new(telemetryEnabled, withRole ? "anonymous" : null, writer);
+            TaskCompletionSource flushEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource releaseFlush = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            EngineTelemetryRequestScope? observed = null;
+            ScopeMarker? servicesScope = null;
+            Activity? toolActivity = null;
+            Mock<IMcpTool> tool = fixture.RegisterTool("read_records", ToolType.BuiltIn, async (_, services, _) =>
+            {
+                await Task.Yield();
+                observed = fixture.Session.CurrentRequest;
+                toolActivity = Activity.Current;
+                if (withRole)
+                {
+                    servicesScope = services.GetRequiredService<ScopeMarker>();
+                    Assert.IsNotNull(services.GetRequiredService<IHttpContextAccessor>().HttpContext);
+                }
+
+                return ToolResult();
+            });
+            int flushes = 0;
+            output.BeforeFlush = () =>
+            {
+                if (Interlocked.Increment(ref flushes) != 1)
+                {
+                    return;
+                }
+
+                Assert.IsNotNull(toolActivity);
+                Assert.IsTrue(toolActivity.IsStopped, "Transport I/O must not extend the customer's tool activity.");
+                Assert.AreSame(parentActivity, Activity.Current);
+                Assert.AreEqual(telemetryEnabled, observed is not null);
+                if (observed is not null)
+                {
+                    Assert.AreSame(observed, fixture.Session.CurrentRequest);
+                    Assert.IsFalse(observed.IsCompleted);
+                    Assert.IsFalse(observed.IsDisposed, "The caller-owned request must survive the actual stdout flush.");
+                }
+
+                Assert.IsFalse(servicesScope?.IsDisposed ?? false);
+                flushEntered.TrySetResult();
+                releaseFlush.Task.WaitAsync(_timeout).GetAwaiter().GetResult();
+            };
+
+            using (EngineTelemetryRequestScope? previous = telemetryEnabled
+                ? fixture.Session.BeginRequest(EngineTelemetryApi.Rest, EngineTelemetryTransport.InProcess, EngineTelemetryRole.Anonymous, eligible: false)
+                : null)
+            {
+                Task running = Task.Run(() => fixture.RunAsync(ToolCall(1)));
+                try
+                {
+                    await flushEntered.Task.WaitAsync(_timeout);
+                    Assert.IsFalse(running.IsCompleted);
+                    if (telemetryEnabled)
+                    {
+                        EngineTelemetryEvent[] beforeFlush = await fixture.CheckpointAsync();
+                        AssertNoRequestTelemetry(beforeFlush);
+                        AssertCounts(Summaries(beforeFlush, "operation"), success: 1);
+                    }
+                }
+                finally
+                {
+                    releaseFlush.TrySetResult();
+                    await running.WaitAsync(_timeout);
+                }
+
+                Assert.AreSame(previous, fixture.Session.CurrentRequest, "The server must restore its caller's ambient request.");
+                Assert.AreSame(parentActivity, Activity.Current);
+            }
+
+            using JsonDocument response = JsonDocument.Parse(output.ToArray());
+            AssertToolResponse(response.RootElement, 1, isError: false);
+            Assert.AreEqual(withRole, servicesScope is not null);
+            Assert.IsTrue(servicesScope?.IsDisposed ?? !withRole);
+            Assert.AreEqual(telemetryEnabled, observed?.IsCompleted ?? false);
+            Assert.AreEqual(telemetryEnabled, observed?.IsDisposed ?? false);
+            VerifyExecutions(tool, 1);
+            AssertAmbientCleared(fixture);
+            if (telemetryEnabled)
+            {
+                EngineTelemetryEvent[] records = await fixture.StopAsync();
+                AssertRequests(records, success: 1);
+                AssertCounts(Summaries(records, "operation"), success: 1);
+            }
+            else
+            {
+                await fixture.Session.StopAsync();
+                Assert.AreEqual(0, fixture.Exporter.Records.Count);
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow("success", true)]
+        [DataRow("success", false)]
+        [DataRow("tool_error", true)]
+        [DataRow("tool_error", false)]
+        [DataRow("tool_throw", true)]
+        [DataRow("tool_throw", false)]
+        [DataRow("tool_canceled", true)]
+        [DataRow("tool_canceled", false)]
+        [DataRow("write_failure", true)]
+        [DataRow("write_failure", false)]
+        [DataRow("write_canceled", true)]
+        [DataRow("write_canceled", false)]
+        public async Task StdioProtocolIsIdenticalWithProductTelemetryEnabledOrDisabled(string behavior, bool withRole)
+        {
+            string? disabledOutput = null;
+            foreach (bool enabled in new[] { false, true })
+            {
+                await using Fixture fixture = new(enabled, withRole ? "anonymous" : null);
+                EngineTelemetryRequestScope? observed = null;
+                Mock<IMcpTool> tool = fixture.RegisterTool("read_records", ToolType.BuiltIn, (_, _, _) =>
+                {
+                    observed = fixture.Session.CurrentRequest;
+                    return behavior switch
+                    {
+                        "tool_throw" => Task.FromException<CallToolResult>(new InvalidOperationException(SENTINEL)),
+                        "tool_canceled" => Task.FromException<CallToolResult>(new OperationCanceledException(SENTINEL)),
+                        _ => Task.FromResult(ToolResult(isError: behavior == "tool_error"))
+                    };
+                });
+                int writes = 0;
+                fixture.Output.BeforeWrite = _ =>
+                {
+                    if (Interlocked.Increment(ref writes) == 1)
+                    {
+                        if (behavior == "write_failure")
+                        {
+                            throw new IOException(SENTINEL);
+                        }
+
+                        if (behavior == "write_canceled")
+                        {
+                            throw new OperationCanceledException(SENTINEL);
+                        }
+                    }
+                };
+
+                await fixture.RunAsync(ToolCall(1), Rpc(2, "ping"), ToolCall(3, "missing_tool"), Rpc(4, "tools/call", new { })).WaitAsync(_timeout);
+
+                JsonElement[] responses = fixture.ReadResponses();
+                Assert.AreEqual(4, responses.Length);
+                if (behavior is "success" or "tool_error")
+                {
+                    AssertToolResponse(responses[0], 1, isError: behavior == "tool_error");
+                }
+                else
+                {
+                    Assert.AreEqual(1, responses[0].GetProperty("id").GetInt32());
+                    Assert.AreEqual(-32603, responses[0].GetProperty("error").GetProperty("code").GetInt32());
+                    Assert.AreEqual("Internal error", responses[0].GetProperty("error").GetProperty("message").GetString());
+                    Assert.IsFalse(responses[0].TryGetProperty("result", out _));
+                }
+
+                Assert.IsTrue(responses[1].GetProperty("result").GetProperty("ok").GetBoolean());
+                Assert.AreEqual(-32602, responses[2].GetProperty("error").GetProperty("code").GetInt32());
+                Assert.AreEqual(-32602, responses[3].GetProperty("error").GetProperty("code").GetInt32());
+                VerifyExecutions(tool, 1);
+                AssertAmbientCleared(fixture);
+                if (enabled)
+                {
+                    Assert.AreEqual(disabledOutput, fixture.Output.ToString(), "Product collection must not change any JSON-RPC bytes.");
+                    Assert.IsNotNull(observed);
+                    Assert.IsTrue(observed.IsCompleted);
+                    Assert.IsTrue(observed.IsDisposed);
+                    EngineTelemetryEvent[] records = await fixture.StopAsync();
+                    AssertRequests(records, success: behavior == "success" ? 1 : 0,
+                        failure: behavior is "tool_error" or "tool_throw" or "write_failure" ? 1 : 0,
+                        canceled: behavior is "tool_canceled" or "write_canceled" ? 1 : 0);
+                    if (behavior is "write_failure" or "write_canceled")
+                    {
+                        AssertCounts(Summaries(records, "operation"), success: 1);
+                    }
+                    else if (behavior == "tool_canceled")
+                    {
+                        AssertCounts(Summaries(records, "operation"), canceled: 1);
+                    }
+                }
+                else
+                {
+                    disabledOutput = fixture.Output.ToString();
+                    Assert.IsNull(observed);
+                    await fixture.Session.StopAsync();
+                    Assert.AreEqual(0, fixture.Exporter.Records.Count);
+                }
+            }
         }
 
         [TestMethod]
@@ -331,19 +536,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             using JsonDocument arguments = ToolArguments();
             int writes = 0;
 
-            CallToolResult actual = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                tool.Object, name, arguments, scope.ServiceProvider, CancellationToken.None,
-                result =>
-                {
-                    Assert.AreSame(expected, result);
-                    Assert.IsFalse(observed?.IsCompleted ?? false);
-                    fixture.Stdout.WriteLine(JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 1, result = new { content = result.Content } }));
-                    writes++;
-                    return Task.CompletedTask;
-                });
+            CallToolResult actual;
+            using (McpTelemetryHelper.ProductRequestCompletion completion = McpTelemetryHelper.BeginStdioRequest(tool.Object, name, scope.ServiceProvider))
+            {
+                actual = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                    tool.Object, name, arguments, scope.ServiceProvider, CancellationToken.None, stdioCompletion: completion);
+                Assert.AreSame(expected, actual);
+                Assert.IsFalse(observed?.IsCompleted ?? false);
+                Assert.IsFalse(observed?.IsDisposed ?? false);
+                fixture.Stdout.WriteLine(JsonSerializer.Serialize(new { jsonrpc = "2.0", id = 1, result = new { content = actual.Content } }));
+                writes++;
+                completion.Complete();
+            }
 
             Assert.AreSame(expected, actual);
-            Assert.AreEqual(1, writes, "Product eligibility must not suppress execution or the actual response callback.");
+            Assert.AreEqual(1, writes, "Product eligibility must not suppress execution or the caller's response write.");
             AssertToolResponse(fixture.ReadResponses().Single(), 1, isError: false);
             VerifyExecutions(tool, 1);
             AssertAmbientCleared(fixture);
@@ -545,21 +752,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private static long Counter(EngineTelemetryEvent record, string name)
             => long.Parse(record.Properties[name], CultureInfo.InvariantCulture);
 
-        private static void AssertCounts(EngineTelemetryEvent[] summaries, long success = 0, long failure = 0)
+        private static void AssertCounts(EngineTelemetryEvent[] summaries, long success = 0, long failure = 0, long canceled = 0)
         {
-            Assert.AreEqual(success + failure, summaries.Sum(record => Counter(record, "count")));
+            Assert.AreEqual(success + failure + canceled, summaries.Sum(record => Counter(record, "count")));
             Assert.AreEqual(success, summaries.Sum(record => Counter(record, "success")));
             Assert.AreEqual(failure, summaries.Sum(record => Counter(record, "failure")));
             Assert.AreEqual(0L, summaries.Sum(record => Counter(record, "unknown")));
             Assert.AreEqual(0L, summaries.Sum(record => Counter(record, "partial_failure")));
-            Assert.AreEqual(0L, summaries.Sum(record => Counter(record, "canceled")));
+            Assert.AreEqual(canceled, summaries.Sum(record => Counter(record, "canceled")));
         }
 
-        private static void AssertRequests(EngineTelemetryEvent[] records, long success = 0, long failure = 0, long? epoch = null)
+        private static void AssertRequests(EngineTelemetryEvent[] records, long success = 0, long failure = 0, long? epoch = null, long canceled = 0)
         {
             EngineTelemetryEvent[] requests = Summaries(records, "request", epoch);
-            AssertCounts(requests, success, failure);
-            Assert.AreEqual(success + failure, requests.Sum(record => Counter(record, "timed_count")));
+            AssertCounts(requests, success, failure, canceled);
+            Assert.AreEqual(success + failure + canceled, requests.Sum(record => Counter(record, "timed_count")));
             Assert.IsTrue(requests.All(record => record.Properties["api"] == "mcp"
                 && record.Properties["transport"] == "stdio" && record.Properties["role_class"] == "anonymous"));
             Assert.AreEqual(0, Summaries(records, "http_outcome").Length, "The stdio authorization shim must never create an HTTP count family.");
@@ -600,11 +807,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         private sealed class Fixture : IAsyncDisposable
         {
             private readonly MockFileSystem _files = new();
-            private readonly List<IMcpTool> _tools = new();
-            private readonly Mock<IMetadataProviderFactory> _metadataProviderFactory = new(MockBehavior.Strict);
             private readonly string _configPath = Path.Combine(Path.GetTempPath(), SENTINEL, "dab-config.json");
             private readonly FileSystemRuntimeConfigLoader _loader;
             private readonly IConfigurationRoot _configuration;
+            private readonly List<IMcpTool> _tools = new();
             private int _identityResolutions;
             internal CapturingExporter Exporter { get; } = new();
             internal ManualClock Clock { get; } = new();
@@ -616,7 +822,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             internal McpToolRegistry Registry { get; } = new();
             internal ServiceProvider Services { get; }
 
-            internal Fixture()
+            internal Fixture(bool telemetryEnabled = true, string? stdioRole = "anonymous", TextWriter? stdout = null)
             {
                 _files.AddFile(_configPath, new MockFileData(ConfigurationJson()));
                 // Load real config without environment expansion, connection-string injection,
@@ -626,7 +832,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 Assert.IsTrue(_loader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: false));
                 Assert.IsNotNull(config);
                 InitialConfiguration = config;
-                Session = EngineTelemetrySession.Create(() => Exporter, enableSyntheticCollection: true,
+                Session = EngineTelemetrySession.Create(() => Exporter, enableSyntheticCollection: telemetryEnabled,
                     configPath: _configPath, executionMode: "mcp_stdio", clock: Clock,
                     readEnvironmentVariable: _ => null, showNotice: () => { },
                     resolveIdentity: _ =>
@@ -638,18 +844,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 _configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["MCP:StdioMode"] = "true",
-                    ["MCP:Role"] = "anonymous"
+                    ["MCP:Role"] = stdioRole
                 }).Build();
-                Stdout = new(Output);
-                // The real server now requires lazy metadata initialization even when tools
-                // are pre-registered. Only that dependency is faked; keep the fixture's existing
-                // accepted config and ready epoch, and reject any other metadata operation.
-                _metadataProviderFactory.Setup(factory => factory.InitializeAsync(CancellationToken.None))
-                    .Returns(Task.CompletedTask);
+                Stdout = new(stdout ?? Output);
                 Services = new ServiceCollection()
                     .AddSingleton(Session)
                     .AddSingleton(ConfigProvider)
-                    .AddSingleton<IMetadataProviderFactory>(_metadataProviderFactory.Object)
+                    .AddSingleton(Mock.Of<IMetadataProviderFactory>())
                     .AddSingleton<IConfiguration>(_configuration)
                     .AddSingleton(Stdout)
                     .AddHttpContextAccessor()
@@ -657,8 +858,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
                 Session.AcceptConfiguration(ConfigProvider.GetConfig());
                 Session.MarkHostReady();
-                Assert.IsTrue(Session.IsEnabled);
-                Assert.IsTrue(Session.IsReady);
+                Assert.AreEqual(telemetryEnabled, Session.IsEnabled);
+                Assert.AreEqual(telemetryEnabled, Session.IsReady);
                 Assert.AreSame(InitialConfiguration, ConfigProvider.GetConfig());
             }
 
@@ -686,8 +887,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 using StringReader input = new(string.Join(Environment.NewLine, requests));
                 McpStdioServer server = new(Registry, Services, input);
                 await server.RunAsync(CancellationToken.None);
-                _metadataProviderFactory.Verify(factory => factory.InitializeAsync(CancellationToken.None), Times.Once);
-                _metadataProviderFactory.VerifyNoOtherCalls();
             }
 
             internal JsonElement[] ReadResponses() => Output.ToString()
@@ -810,6 +1009,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             }
         }
 
-        private sealed class ScopeMarker { }
+        private sealed class ObservingFlushStream : MemoryStream
+        {
+            internal Action? BeforeFlush { get; set; }
+
+            public override void Flush()
+            {
+                BeforeFlush?.Invoke();
+                base.Flush();
+            }
+        }
+
+        private sealed class ScopeMarker : IDisposable
+        {
+            internal bool IsDisposed { get; private set; }
+
+            public void Dispose() => IsDisposed = true;
+        }
     }
 }

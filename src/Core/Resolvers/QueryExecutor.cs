@@ -421,7 +421,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 using EngineTelemetryMeasurementScope? databaseAttempt = BeginDatabaseAttempt(dataSourceName);
                 try
                 {
-                    // CancellationToken is passed to ExecuteReaderAsync to ensure that if the client times out while the query is executing, the execution will be cancelled and resources will be freed up.
+                    // Preserve the caller's linked cancellation through actual provider execution.
                     using (DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(commandBehavior, cancellationToken))
                     {
                         if (dataReaderHandler is not null && dbDataReader is not null)

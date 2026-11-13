@@ -6,12 +6,14 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
+using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Telemetry;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Product;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -150,10 +152,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
 
             Assert.AreEqual(string.Empty, ApplicationNameTelemetry.BuildApplicationNameSegment(config, source));
             Assert.AreEqual(encoded, ApplicationNameTelemetry.EncodeTelemetryString(config, source));
+            Assert.IsTrue(encoded.EndsWith('+'));
             string[] sections = encoded[(encoded.IndexOf('+') + 1)..^1].Split('|');
             Assert.AreEqual(4, sections.Length);
             Assert.AreEqual("XXSX", sections[0]);
-            Assert.AreEqual(6, sections[1].Length, "Offline inspection retains the new General flags regardless of either opt-out.");
+            Assert.AreEqual(6, sections[1].Length, "Main now populates the previously reserved General section.");
             Assert.AreEqual(20, sections[2].Length);
             Assert.AreEqual(14, sections[3].Length);
         }
@@ -198,11 +201,139 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataTestMethod]
         [DataRow(DatabaseType.MSSQL, " Server = localhost ; Initial Catalog = synthetic ; Integrated Security = true ; App = \" my_dab_app ; + \" ; ")]
         [DataRow(DatabaseType.PostgreSQL, " Host = localhost ; Database = synthetic ; Application Name = \" my_dab_app ; + \" ; ")]
+        [DataRow(DatabaseType.MSSQL, " Server = localhost ; Initial Catalog = synthetic ; ")]
+        [DataRow(DatabaseType.DWSQL, " Server = localhost ; Initial Catalog = synthetic ; ")]
+        [DataRow(DatabaseType.PostgreSQL, " Host = localhost ; Database = synthetic ; ")]
+        [DataRow(DatabaseType.MSSQL, " Server = localhost ; App = \"\" ; ")]
+        [DataRow(DatabaseType.DWSQL, " Server = localhost ; App = \"\" ; ")]
+        [DataRow(DatabaseType.PostgreSQL, " Host = localhost ; ApplicationName = \"\" ; ")]
+        [DataRow(DatabaseType.MSSQL, " Server = localhost ; App = dab_oss_1.2.3 ; Application Name = Customer ; ")]
+        [DataRow(DatabaseType.PostgreSQL, " Host = localhost ; Application Name = dab_oss_1.2.3 ; ApplicationName = Customer ; ")]
         public void GlobalOptOut_DoesNotNormalizeUndecoratedRawConnectionString(DatabaseType databaseType, string connectionString)
         {
             Environment.SetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, "1");
             Assert.AreEqual(connectionString, Rewrite(databaseType, connectionString, withConfig: true));
             Assert.AreEqual(connectionString, Rewrite(databaseType, connectionString, withConfig: false));
+        }
+
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL, "Application Name = ignored ; App = Customer,dab_oss_1.2.3 ; ", "Customer")]
+        [DataRow(DatabaseType.DWSQL, "Application Name = ignored ; App = Customer,dab_oss_1.2.3 ; ", "Customer")]
+        [DataRow(DatabaseType.PostgreSQL, "Application Name = ignored ; ApplicationName = Customer,dab_oss_1.2.3 ; ", "Customer")]
+        [DataRow(DatabaseType.MSSQL, "Application Name = ignored ; App = dab_oss_1.2.3 ; ", null)]
+        [DataRow(DatabaseType.DWSQL, "Application Name = ignored ; App = dab_oss_1.2.3 ; ", null)]
+        [DataRow(DatabaseType.PostgreSQL, "Application Name = ignored ; ApplicationName = dab_oss_1.2.3 ; ", null)]
+        public void GlobalOptOut_AliasesAndDuplicateKeysMatchTypedProviderRewrites(
+            DatabaseType databaseType, string applicationNameProperties, string? customerPrefix)
+        {
+            Environment.SetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, "1");
+            string connectionString = (databaseType == DatabaseType.PostgreSQL
+                ? " Host = localhost ; Database = synthetic ; "
+                : " Server = localhost ; Initial Catalog = synthetic ; ") + applicationNameProperties;
+
+            // Compare the shared path to the original typed-provider mutation boundary. Do not
+            // obtain the expected value from the removal helper or a generic builder indexer.
+            string expected;
+            if (databaseType == DatabaseType.PostgreSQL)
+            {
+                NpgsqlConnectionStringBuilder provider = new(connectionString);
+                if (customerPrefix is null)
+                {
+                    provider.Remove("Application Name");
+                }
+                else
+                {
+                    provider.ApplicationName = customerPrefix;
+                }
+
+                expected = provider.ConnectionString;
+            }
+            else
+            {
+                SqlConnectionStringBuilder provider = new(connectionString);
+                if (customerPrefix is null)
+                {
+                    provider.Remove("Application Name");
+                }
+                else
+                {
+                    provider.ApplicationName = customerPrefix;
+                }
+
+                expected = provider.ConnectionString;
+            }
+
+            foreach (bool withConfig in new[] { false, true })
+            {
+                string actual = Rewrite(databaseType, connectionString, withConfig);
+                Assert.AreEqual(expected, actual);
+                Assert.AreEqual(customerPrefix ?? GetApplicationName(databaseType, string.Empty), GetApplicationName(databaseType, actual));
+                Assert.AreEqual(actual, Rewrite(databaseType, actual, withConfig));
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL)]
+        [DataRow(DatabaseType.DWSQL)]
+        [DataRow(DatabaseType.PostgreSQL)]
+        public void ProviderParsingAndExceptionWrappingAreUnchangedByOptOut(DatabaseType databaseType)
+        {
+            foreach (string? productOptOut in new string?[] { null, "1" })
+            {
+                Environment.SetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, productOptOut);
+                foreach (bool withConfig in new[] { false, true })
+                {
+                    foreach (string? blank in new string?[] { null, string.Empty, " \t\r\n " })
+                    {
+                        Assert.AreEqual(blank, Rewrite(databaseType, blank!, withConfig));
+                    }
+
+                    foreach (string invalid in new[]
+                    {
+                        "not-a-connection-string",
+                        "UnknownSyntheticKeyword=synthetic",
+                        databaseType == DatabaseType.PostgreSQL ? "Port=0" : "Connect Timeout=-1"
+                    })
+                    {
+                        ArgumentException providerFailure = Assert.ThrowsException<ArgumentException>(() =>
+                        {
+                            if (databaseType == DatabaseType.PostgreSQL)
+                            {
+                                _ = new NpgsqlConnectionStringBuilder(invalid);
+                            }
+                            else
+                            {
+                                _ = new SqlConnectionStringBuilder(invalid);
+                            }
+                        });
+                        DataApiBuilderException actual = Assert.ThrowsException<DataApiBuilderException>(() =>
+                            Rewrite(databaseType, invalid, withConfig));
+
+                        Assert.AreEqual(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE, actual.Message);
+                        Assert.AreEqual(HttpStatusCode.ServiceUnavailable, actual.StatusCode);
+                        Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, actual.SubStatusCode);
+                        Assert.IsNotNull(actual.InnerException);
+                        Assert.AreEqual(providerFailure.GetType(), actual.InnerException.GetType());
+                        Assert.AreEqual(providerFailure.Message, actual.InnerException.Message);
+                    }
+                }
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(DatabaseType.MySQL)]
+        [DataRow(DatabaseType.CosmosDB_NoSQL)]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL)]
+        public void DispatcherDoesNotParseOrStripUnsupportedProviderStrings(DatabaseType databaseType)
+        {
+            const string connectionString = "not-a-connection-string; Application Name=dab_oss_1.2.3";
+            DataSource source = new(databaseType, connectionString);
+            RuntimeConfig config = CreateConfig(source);
+            foreach (string? productOptOut in new string?[] { null, "1" })
+            {
+                Environment.SetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, productOptOut);
+                Assert.AreEqual(connectionString, RuntimeConfigLoader.GetConnectionStringWithApplicationName(connectionString, config, source));
+            }
         }
 
         [DataTestMethod]
@@ -236,6 +367,46 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                         Assert.AreEqual(actual, Rewrite(databaseType, actual, withConfig), "Repeated opted-out embedding is stable.");
                     }
                 }
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL, false, 32)]
+        [DataRow(DatabaseType.MSSQL, false, 64)]
+        [DataRow(DatabaseType.MSSQL, false, 65)]
+        [DataRow(DatabaseType.MSSQL, false, 66)]
+        [DataRow(DatabaseType.MSSQL, false, 70)]
+        [DataRow(DatabaseType.MSSQL, false, 127)]
+        [DataRow(DatabaseType.MSSQL, false, 128)]
+        [DataRow(DatabaseType.MSSQL, true, 32)]
+        [DataRow(DatabaseType.MSSQL, true, 70)]
+        [DataRow(DatabaseType.DWSQL, false, 32)]
+        [DataRow(DatabaseType.DWSQL, false, 70)]
+        public void GlobalOptOut_PreservesSqlLengthAndConservativeOwnershipBoundaries(DatabaseType databaseType, bool hosted, int prefixLength)
+        {
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, hosted ? "dab_hosted" : null);
+            string prefix = new('a', prefixLength);
+            string original = CreateConnectionStringBuilder(databaseType, prefix).ConnectionString;
+            DataSource source = new(databaseType, original);
+            string fullSegment = ApplicationNameTelemetry.EncodeTelemetryString(CreateConfig(source), source);
+            string decorated = Rewrite(databaseType, original, withConfig: true);
+            using SqlConnection validConnection = new(decorated);
+            string actualName = new SqlConnectionStringBuilder(decorated).ApplicationName;
+            int available = 128 - prefixLength - 1;
+            string expectedName = available > 0 ? prefix + "," + fullSegment[..Math.Min(available, fullSegment.Length)] : prefix;
+            Assert.AreEqual(expectedName, actualName);
+            Assert.IsTrue(actualName.Length <= 128);
+            Assert.AreEqual(decorated, Rewrite(databaseType, decorated, withConfig: true));
+
+            Environment.SetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, "true");
+            foreach (bool withConfig in new[] { false, true })
+            {
+                Assert.AreEqual(original, Rewrite(databaseType, original, withConfig), "Opt-out never adds a new segment to the original connection string.");
+                bool completeSegment = available >= fullSegment.Length;
+                // Preserve both contracts: main fits only the DAB suffix to the provider limit;
+                // opt-out never guesses ownership of a truncated value supplied by a caller.
+                // Reuse the undecorated input to opt out when a previous value was truncated.
+                Assert.AreEqual(completeSegment ? original : decorated, Rewrite(databaseType, decorated, withConfig));
             }
         }
 
@@ -302,6 +473,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         [DataRow("Customer,dab_oss_1.2.3,dab_hosted_2.3.4" + PAYLOAD, "Customer")]
         [DataRow("Customer,dab_oss_1.2.3+XXSX|W0LN00|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?+", "Customer")]
         [DataRow("Customer,dab_hosted_9.8.7+XXPXQ|10|MMMM00MMM00MMMMMMMMM9|MMM?MMMMMMMMM?9+", "Customer")]
+        [DataRow("Customer,dab_oss_1.2.3+XXSX|L1AC01|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?+", "Customer")]
+        [DataRow("hash==|Customer,dab_hosted_1.2.3+XXPX|W0LN10|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?+", "hash==|Customer")]
+        [DataRow("Customer,dab_oss_1.2.3+XXSX|L1AC019|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?+", "Customer")]
+        [DataRow("Customer,dab_oss_1.2.3+XXSX|L1AC01|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?", "Customer,dab_oss_1.2.3+XXSX|L1AC01|MMMM00MMM00MMMMMMMMM|MMM?MMMMMMMMM?")]
+        [DataRow("Customer,dab_oss_1.2.3+XXSX|L1AC01|MMM|MM+", "Customer,dab_oss_1.2.3+XXSX|L1AC01|MMM|MM+")]
         [DataRow("my_dab_app", "my_dab_app")]
         [DataRow("my_dab_oss_1.2.3", "my_dab_oss_1.2.3")]
         [DataRow("Customer,dab_custom_1.2.3" + PAYLOAD, "Customer,dab_custom_1.2.3" + PAYLOAD)]
@@ -404,6 +580,38 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 Assert.IsTrue(parsed);
                 Assert.IsNotNull(result.DataSource);
                 Assert.AreEqual(original, result.DataSource.ConnectionString);
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL)]
+        [DataRow(DatabaseType.DWSQL)]
+        [DataRow(DatabaseType.PostgreSQL)]
+        public void ConfigParsing_DoesNotParseOrStripWhenApplicationNameInjectionIsSkipped(DatabaseType databaseType)
+        {
+            Environment.SetEnvironmentVariable(ProductTelemetryPolicy.OPT_OUT_ENV_VAR, "1");
+            string decorated = CreateConnectionStringBuilder(databaseType, "Customer,dab_oss_1.2.3").ConnectionString;
+            foreach (DeserializationVariableReplacementSettings? settings in new DeserializationVariableReplacementSettings?[]
+            {
+                null,
+                new(doReplaceEnvVar: false),
+                new(doReplaceEnvVar: true) { SkipApplicationNameInjection = true }
+            })
+            {
+                foreach (string input in new[] { decorated, "not-a-connection-string" })
+                {
+                    foreach (string? connectionOverride in new string?[] { null, "synthetic-unparsed-override" })
+                    {
+                        RuntimeConfig config = CreateConfig(new DataSource(databaseType, input));
+                        Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                            config.ToJson(), out RuntimeConfig result,
+                            replacementSettings: settings, connectionString: connectionOverride));
+                        Assert.IsNotNull(result.DataSource);
+                        Assert.AreEqual(connectionOverride ?? input, result.DataSource.ConnectionString);
+                        Assert.AreEqual(result.DataSource.ConnectionString,
+                            result.GetDataSourceFromDataSourceName(result.DefaultDataSourceName).ConnectionString);
+                    }
+                }
             }
         }
 

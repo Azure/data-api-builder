@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -122,7 +123,6 @@ public abstract class RuntimeConfigLoader
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
         TelemetryFailureStage stage = TelemetryFailureStage.Validation;
         try
         {
@@ -506,22 +506,8 @@ public abstract class RuntimeConfigLoader
         // and connection strings already decorated by an earlier load or embedding host.
         if (ProductTelemetryPolicy.IsOptedOut())
         {
-            string? optedOutApplicationName = ApplicationNameTelemetry.RemoveApplicationNameSegments(connectionStringBuilder.ApplicationName);
-            if (string.Equals(optedOutApplicationName, connectionStringBuilder.ApplicationName, StringComparison.Ordinal))
-            {
-                return connectionString;
-            }
-
-            if (string.IsNullOrEmpty(optedOutApplicationName))
-            {
-                connectionStringBuilder.Remove("Application Name");
-            }
-            else
-            {
-                connectionStringBuilder.ApplicationName = optedOutApplicationName;
-            }
-
-            return connectionStringBuilder.ConnectionString;
+            return RemoveApplicationNameTelemetry(connectionString, connectionStringBuilder,
+                connectionStringBuilder.ApplicationName, value => connectionStringBuilder.ApplicationName = value);
         }
 
         // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a
@@ -628,22 +614,8 @@ public abstract class RuntimeConfigLoader
         // and connection strings already decorated by an earlier load or embedding host.
         if (ProductTelemetryPolicy.IsOptedOut())
         {
-            string? optedOutApplicationName = ApplicationNameTelemetry.RemoveApplicationNameSegments(connectionStringBuilder.ApplicationName);
-            if (string.Equals(optedOutApplicationName, connectionStringBuilder.ApplicationName, StringComparison.Ordinal))
-            {
-                return connectionString;
-            }
-
-            if (string.IsNullOrEmpty(optedOutApplicationName))
-            {
-                connectionStringBuilder.Remove("Application Name");
-            }
-            else
-            {
-                connectionStringBuilder.ApplicationName = optedOutApplicationName;
-            }
-
-            return connectionStringBuilder.ConnectionString;
+            return RemoveApplicationNameTelemetry(connectionString, connectionStringBuilder,
+                connectionStringBuilder.ApplicationName, value => connectionStringBuilder.ApplicationName = value);
         }
 
         // Idempotency guard: both OSS and hosted telemetry share the dab_ prefix, so do not append a
@@ -679,6 +651,35 @@ public abstract class RuntimeConfigLoader
         }
 
         // Return the updated connection string.
+        return connectionStringBuilder.ConnectionString;
+    }
+
+    /// <summary>
+    /// Removes only recognized DAB suffixes, preserving the raw connection string when unchanged.
+    /// The caller supplies the provider's canonical property value (including its default) and
+    /// typed setter, rather than an indexer that can normalize nulls or wrap setter exceptions.
+    /// </summary>
+    private static string RemoveApplicationNameTelemetry(
+        string connectionString,
+        DbConnectionStringBuilder connectionStringBuilder,
+        string? canonicalApplicationName,
+        Action<string> setApplicationName)
+    {
+        string? optedOutApplicationName = ApplicationNameTelemetry.RemoveApplicationNameSegments(canonicalApplicationName);
+        if (string.Equals(optedOutApplicationName, canonicalApplicationName, StringComparison.Ordinal))
+        {
+            return connectionString;
+        }
+
+        if (string.IsNullOrEmpty(optedOutApplicationName))
+        {
+            connectionStringBuilder.Remove("Application Name");
+        }
+        else
+        {
+            setApplicationName(optedOutApplicationName);
+        }
+
         return connectionStringBuilder.ConnectionString;
     }
 

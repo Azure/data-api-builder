@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
@@ -16,6 +17,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
     /// </summary>
     internal sealed class EngineTelemetryHttpCompletion
     {
+        private static readonly ConditionalWeakTable<HttpContext, object> _registrationGates = new();
         private readonly HttpContext _context;
         private readonly Action<EngineTelemetryOutcome, int?> _complete;
         private readonly Func<EngineTelemetryOutcome> _outcome;
@@ -34,8 +36,9 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             _outcome = outcome;
             _inferSuccessFromHttp = inferSuccessFromHttp;
             // Batch executions can finish concurrently. ASP.NET's response callback collection
-            // is not a concurrent collection; serialize our registrations on this response.
-            lock (context)
+            // is not a concurrent collection. Share a private weakly keyed gate rather than
+            // locking a publicly reachable context or racing on its non-concurrent Items map.
+            lock (_registrationGates.GetValue(context, static _ => new object()))
             {
                 context.Response.OnCompleted(static state => ((EngineTelemetryHttpCompletion)state).ResponseCompletedAsync(), this);
             }

@@ -38,6 +38,9 @@ dab-config*.json
 .env
 /docs/design/McpToolRegistryHotReload.md
 
+# Generated telemetry identity sidecars
+*.dab-telemetry.json
+
 # Local-only, unreviewed telemetry requirements/design drafts (not for publication)
 # Intentionally published maintainer implementation notes are not covered by these exclusions.
 /docs/design/engine-telemetry-functional-spec.md

@@ -2,6 +2,8 @@
 
 Engine and CLI product telemetry are **off by default in every build**. This implementation is for explicit synthetic validation; production enablement requires explicit privacy/security and CELA review, including identity linkability. Customer-configured logs, traces, metrics and telemetry destinations are separate.
 
+The [engine validation guide](testing-guide/engine-telemetry.md#local-validation) provides offline checks and testhost settings. Its [engine field reference](testing-guide/engine-telemetry.md#collected-fields) complements the combined CLI/engine contract below. Live-batch validation remains deferred.
+
 ## What "synthetic" means
 
 Synthetic means **deliberately generated test activity**, not real customer usage. A live smoke test creates made-up rows in a temporary database, starts the actual DAB engine, makes real requests and checks the resulting events in Azure. The database calls, measured timings and delivery are real; the workload is artificial. Runtime and OS categories still describe the actual test process.
@@ -54,6 +56,8 @@ Start the validation process without `APPLICATIONINSIGHTS_CLOUD_ROLE_NAME`, `APP
 - Hosts can resolve `IProductTelemetryControl` from the engine service provider and call `Disable()` to discard counters and pending delivery without a final send. Already transmitted data cannot be retracted. Environment changes apply to newly initialized collection lifetimes; SDK prerequisites must be set before process startup.
 - The umbrella opt-out also prevents the DAB-added database Application Name segment, including its version marker. Recognizable existing DAB segments are removed at configuration load while customer prefixes are retained. Ambiguous/truncated customer text is not destructively guessed. The legacy `DAB_TELEMETRY_APPNAME_OPT_OUT` used alone retains its previous version-only behavior.
 - Cosmos DB clients also omit DAB's additional Application Name/user-agent suffix under the umbrella opt-out; the Cosmos SDK's own identification is unchanged.
+
+**Exclude `*.dab-telemetry.json` from Git, build artifacts and container images.** Do not copy a sidecar across independent deployments: the same API identity would be reused. This repository's [.gitignore](../.gitignore) covers Git only; DAB does not modify customer repositories or artifact/image exclusions. Delete only telemetry state you own when resetting identity.
 
 The shared engine/CLI notice below is unchanged and remains a **draft pending CELA review**. Its text does not change the synthetic-only gate or the per-invocation/direct-engine notice requirement above:
 

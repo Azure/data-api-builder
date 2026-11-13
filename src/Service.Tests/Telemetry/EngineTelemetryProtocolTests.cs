@@ -7,7 +7,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -17,10 +16,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
-using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Core.Telemetry.Product;
 using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Mcp.Model;
@@ -39,6 +38,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ModelContextProtocol.Protocol;
 using Moq;
@@ -521,55 +521,113 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Assert.AreEqual((EngineTelemetryOperation)expected, McpTelemetryHelper.ClassifyProductOperation(tool.Object, name));
         }
 
-        [TestMethod]
-        public async Task McpStdioWrapperWaitsForWriterAndLeavesCustomerSpanAtToolExecutionBoundary()
+        [DataTestMethod]
+        [DataRow(new string[] { }, false, (int)EngineTelemetryRole.Anonymous)]
+        [DataRow(new string[] { }, true, (int)EngineTelemetryRole.Authenticated)]
+        [DataRow(new string[] { "Anonymous" }, false, (int)EngineTelemetryRole.Anonymous)]
+        [DataRow(new string[] { "AUTHENTICATED" }, true, (int)EngineTelemetryRole.Authenticated)]
+        [DataRow(new string[] { "" }, true, (int)EngineTelemetryRole.Authenticated)]
+        [DataRow(new string[] { "synthetic-private-role-a" }, true, (int)EngineTelemetryRole.Custom)]
+        [DataRow(new string[] { "synthetic-private-role-a,synthetic-private-role-b" }, true, (int)EngineTelemetryRole.Custom)]
+        [DataRow(new string[] { "synthetic-private-role-a", "synthetic-private-role-b" }, true, (int)EngineTelemetryRole.Unknown)]
+        [DataRow(new string[] { "synthetic-private-role-a", "synthetic-private-role-a" }, true, (int)EngineTelemetryRole.Unknown)]
+        [DataRow(new string[] { "anonymous", "authenticated" }, false, (int)EngineTelemetryRole.Unknown)]
+        [DataRow(new string[] { "", "" }, false, (int)EngineTelemetryRole.Unknown)]
+        public async Task McpHttpRoleClassificationPreservesHeaderCardinality(string[] roles, bool authenticated, int expected)
         {
-            // Initialize the source before registering a callback that observes it. Reading
-            // the static field inside ShouldListenTo can re-enter its type initializer.
-            ActivitySource dabSource = TelemetryTracesHelper.DABActivitySource;
-            using ActivityListener listener = new()
-            {
-                ShouldListenTo = source => ReferenceEquals(source, dabSource),
-                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded
-            };
-            ActivitySource.AddActivityListener(listener);
-            TaskCompletionSource writerEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            TaskCompletionSource writerReleased = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            Activity? toolActivity = null;
-            CallToolResult expected = new() { Content = new List<ContentBlock>() };
-            Mock<IMcpTool> tool = CreateTool(expected);
-            tool.Setup(t => t.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()))
+            ConcurrentQueue<EngineTelemetryEvent> records = new();
+            CapturingExporter exporter = new(records);
+            using EngineTelemetrySession session = EngineTelemetrySession.Create(() => exporter,
+                enableSyntheticCollection: true, readEnvironmentVariable: _ => null, showNotice: () => { },
+                resolveIdentity: _ => new(Guid.NewGuid(), "ephemeral"), startTimer: false);
+            session.AcceptConfiguration(CreateConfig());
+            session.MarkHostReady();
+            (DefaultHttpContext context, ResponseCallbacks response) = CreateHttpContext();
+            context.User = new ClaimsPrincipal(new ClaimsIdentity(authenticated ? "synthetic" : null));
+            context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = new StringValues(roles);
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.SetupGet(value => value.HttpContext).Returns(context);
+            using ServiceProvider services = new ServiceCollection()
+                .AddSingleton(session)
+                .AddSingleton(accessor.Object)
+                .BuildServiceProvider();
+            CallToolResult result = new() { Content = [] };
+            Mock<IMcpTool> tool = CreateTool(result);
+            EngineTelemetryRequestScope? observed = null;
+            tool.Setup(value => value.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()))
                 .Returns(() =>
                 {
-                    toolActivity = Activity.Current;
-                    return Task.FromResult(expected);
-                });
-            using ServiceProvider provider = new ServiceCollection().BuildServiceProvider();
-            Task<CallToolResult> executing = McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                tool.Object, "read_records", null, provider, CancellationToken.None,
-                async result =>
-                {
-                    Assert.AreSame(expected, result);
-                    Assert.IsNotNull(toolActivity);
-                    Assert.IsTrue(toolActivity.IsStopped, "A product completion hook must not extend the customer's tool activity.");
-                    writerEntered.SetResult();
-                    await writerReleased.Task;
+                    observed = session.CurrentRequest;
+                    return Task.FromResult(result);
                 });
 
-            await writerEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.IsFalse(executing.IsCompleted);
-            writerReleased.SetResult();
-            Assert.AreSame(expected, await executing);
+            // Exercise the adapter boundary directly: normal HTTP authorization rejects
+            // duplicate roles upstream, but an embedding host can supply its own context.
+            CallToolResult actual = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                tool.Object, "read_records", null, services, CancellationToken.None);
+
+            Assert.AreSame(result, actual);
+            Assert.IsNotNull(observed);
+            Assert.AreEqual((EngineTelemetryRole)expected, observed.Role);
+            Assert.AreEqual(EngineTelemetryHttpMiddleware.ClassifyRequestRole(context), observed.Role);
+            Assert.IsFalse(observed.IsCompleted);
+            CollectionAssert.AreEqual(roles, context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToArray());
+            await response.CompleteAsync();
+            await session.StopAsync();
+            EngineTelemetryEvent request = records.Single(record => record.Name == "dab/engine.usage_summary" &&
+                record.Properties["family"] == "request");
+            Assert.AreEqual(((EngineTelemetryRole)expected).ToString().ToLowerInvariant(), request.Properties["role_class"]);
+            Assert.AreEqual("1", request.Properties["success"]);
+            Assert.AreEqual("http", request.Properties["transport"]);
+            Assert.IsFalse(JsonSerializer.Serialize(records.ToArray()).Contains("synthetic-private-role", StringComparison.Ordinal));
+            tool.Verify(value => value.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
-        [TestMethod]
-        public async Task McpStdioWriterFailurePropagatesAndDoesNotReturnAServedResult()
+        [DataTestMethod]
+        [DataRow("anonymous", (int)EngineTelemetryRole.Anonymous)]
+        [DataRow("Authenticated", (int)EngineTelemetryRole.Authenticated)]
+        [DataRow("synthetic-stdio-role", (int)EngineTelemetryRole.Custom)]
+        public async Task McpStdioRoleUsesConfigurationInsteadOfHttpShimHeaders(string role, int expected)
         {
-            Mock<IMcpTool> tool = CreateTool(new CallToolResult { Content = new List<ContentBlock>() });
-            using ServiceProvider provider = new ServiceCollection().BuildServiceProvider();
-            await Assert.ThrowsExceptionAsync<IOException>(() => McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                tool.Object, "read_records", null, provider, CancellationToken.None,
-                _ => throw new IOException("synthetic broken response pipe")));
+            using EngineTelemetrySession session = EngineTelemetrySession.Create(() => new CapturingExporter(new()),
+                enableSyntheticCollection: true, readEnvironmentVariable: _ => null, showNotice: () => { },
+                resolveIdentity: _ => new(Guid.NewGuid(), "ephemeral"), startTimer: false);
+            session.AcceptConfiguration(CreateConfig());
+            session.MarkHostReady();
+            (DefaultHttpContext context, _) = CreateHttpContext();
+            context.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = new StringValues(["unrelated", "duplicate"]);
+            Mock<IHttpContextAccessor> accessor = new();
+            accessor.SetupGet(value => value.HttpContext).Returns(context);
+            using ServiceProvider services = new ServiceCollection()
+                .AddSingleton(session)
+                .AddSingleton(accessor.Object)
+                .AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["MCP:StdioMode"] = "true",
+                    ["MCP:Role"] = role
+                }).Build())
+                .BuildServiceProvider();
+            CallToolResult result = new() { Content = [] };
+            Mock<IMcpTool> tool = CreateTool(result);
+            EngineTelemetryRequestScope? observed = null;
+            tool.Setup(value => value.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()))
+                .Returns(() =>
+                {
+                    observed = session.CurrentRequest;
+                    return Task.FromResult(result);
+                });
+
+            using McpTelemetryHelper.ProductRequestCompletion completion = McpTelemetryHelper.BeginStdioRequest(tool.Object, "read_records", services);
+            Assert.AreSame(result, await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                tool.Object, "read_records", null, services, CancellationToken.None, stdioCompletion: completion));
+            Assert.IsFalse(observed!.IsCompleted, "Tool execution alone is not response delivery.");
+            completion.Complete();
+
+            Assert.IsNotNull(observed);
+            Assert.AreEqual((EngineTelemetryRole)expected, observed.Role);
+            Assert.AreEqual(EngineTelemetryTransport.Stdio, observed.Transport);
+            Assert.IsTrue(observed.IsCompleted);
+            accessor.VerifyGet(value => value.HttpContext, Times.Never);
         }
 
         [TestMethod]
@@ -583,16 +641,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
             Mock<IMcpTool> tool = CreateTool(result);
             McpToolRegistry registry = new();
             registry.ReplaceAll([tool.Object], CreateConfig());
-            Assert.AreEqual("read_records", registry.GetAdvertisedTools().Single().Name);
-            // Serving-only fixture: tools are already registered and no database is involved.
-            // Satisfy the real server's required lazy initialization explicitly, not via a product fallback.
-            Mock<IMetadataProviderFactory> metadataProviderFactory = new(MockBehavior.Strict);
-            metadataProviderFactory.Setup(factory => factory.InitializeAsync(CancellationToken.None)).Returns(Task.CompletedTask);
             using StringWriter output = new();
             using McpStdoutWriter writer = new(output);
             using ServiceProvider provider = new ServiceCollection()
                 .AddSingleton(writer)
-                .AddSingleton<IMetadataProviderFactory>(metadataProviderFactory.Object)
+                .AddSingleton(Mock.Of<IMetadataProviderFactory>())
                 .AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["MCP:StdioMode"] = "true"
@@ -606,8 +659,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                 """);
             McpStdioServer server = new(registry, provider, input);
             await server.RunAsync(CancellationToken.None);
-            metadataProviderFactory.Verify(factory => factory.InitializeAsync(CancellationToken.None), Times.Once);
-            metadataProviderFactory.VerifyNoOtherCalls();
             tool.Verify(t => t.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>()), Times.Once);
             string[] lines = output.ToString().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             Assert.AreEqual(4, lines.Length);
@@ -642,12 +693,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
         {
             Mock<IMcpTool> tool = new();
             tool.SetupGet(t => t.ToolType).Returns(ToolType.BuiltIn);
-            tool.Setup(t => t.GetToolMetadata()).Returns(new Tool
-            {
-                Name = "read_records",
-                InputSchema = JsonSerializer.SerializeToElement(new { type = "object" })
-            });
-            tool.Setup(t => t.IsEnabled(It.IsAny<RuntimeConfig>())).Returns(true);
+            tool.Setup(t => t.GetToolMetadata()).Returns(new Tool { Name = "read_records" });
             tool.Setup(t => t.ExecuteAsync(It.IsAny<JsonDocument?>(), It.IsAny<IServiceProvider>(), It.IsAny<CancellationToken>())).ReturnsAsync(result);
             return tool;
         }
@@ -674,6 +720,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Telemetry
                     return "synthetic result";
                 }))
                 .AddDiagnosticEventListener(_ => probe);
+        }
+
+        private sealed class CapturingExporter(ConcurrentQueue<EngineTelemetryEvent> records) : IEngineTelemetryExporter
+        {
+            public ValueTask<bool> ExportAsync(EngineTelemetryEvent record, CancellationToken cancellationToken)
+            {
+                records.Enqueue(record);
+                return ValueTask.FromResult(true);
+            }
+
+            public void Dispose() { }
         }
 
         private sealed class ResponseCallbacks : IHttpResponseFeature

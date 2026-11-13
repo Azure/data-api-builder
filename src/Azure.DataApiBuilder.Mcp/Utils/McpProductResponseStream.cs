@@ -60,6 +60,37 @@ internal sealed class McpProductResponseStream(Stream inner) : Stream
         }
     }
 
+    public override void Write(ReadOnlySpan<byte> buffer)
+    {
+        try
+        {
+            inner.Write(buffer);
+            if (!buffer.IsEmpty)
+            {
+                McpProductResponseCompletion.Wrote();
+            }
+        }
+        catch (Exception exception)
+        {
+            McpProductResponseCompletion.WriteFailed(exception is OperationCanceledException);
+            throw;
+        }
+    }
+
+    public override void WriteByte(byte value)
+    {
+        try
+        {
+            inner.WriteByte(value);
+            McpProductResponseCompletion.Wrote();
+        }
+        catch (Exception exception)
+        {
+            McpProductResponseCompletion.WriteFailed(exception is OperationCanceledException);
+            throw;
+        }
+    }
+
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         => WriteAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
 

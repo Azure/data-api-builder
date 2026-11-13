@@ -136,12 +136,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
             catch (OperationCanceledException) when (args.CancellationToken.IsCancellationRequested)
             {
                 // Host shutdown canceled this generation before publication.
-                TelemetryFailureContext.Current?.RecordFailure(TelemetryFailureStage.Serving);
             }
             catch (Exception ex)
             {
-                // Retain the serving snapshot and continue the ordered reload as before, but
-                // do not let its outer telemetry observer accept this failed generation.
+                // Keep serving the previous registry, while preserving the failed attempt's
+                // telemetry epoch rather than accepting a partially refreshed generation.
                 TelemetryFailureContext.Current?.RecordFailure(TelemetryFailureStage.Serving);
                 _logger.LogError(
                     ex,

@@ -274,7 +274,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 string sql = queryBuilder.Build(structure);
                 if (args.Groupby.Count > 0)
                 {
-                    sql = ApplyOrderByAndPagination(sql, args, structure, queryBuilder, backingField!);
+                    sql = ApplyOrderByAndPagination(sql, args, structure, queryBuilder, backingField!, alias);
                 }
 
                 // 8. Execute query and return results
@@ -948,7 +948,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             AggregateArguments args,
             SqlQueryStructure structure,
             IQueryBuilder queryBuilder,
-            string backingField)
+            string backingField,
+            string alias)
         {
             string direction = args.Orderby.Equals("asc", StringComparison.OrdinalIgnoreCase) ? "ASC" : "DESC";
             string quotedCol = $"{queryBuilder.QuoteIdentifier(structure.SourceAlias)}.{queryBuilder.QuoteIdentifier(backingField)}";
@@ -978,10 +979,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 structure.OrderByColumns.Add(new OrderByColumn(
                     tableSchema: string.Empty,
                     tableName: string.Empty,
-                    columnName: ComputeAlias(args.Function, args.Field),
+                    columnName: alias,
                     direction: direction == "ASC" ? OrderBy.ASC : OrderBy.DESC));
                 sql = queryBuilder.Build(structure);
-                insertionIndex = sql.LastIndexOf($") AS {queryBuilder.QuoteIdentifier(structure.SourceAlias)}", StringComparison.Ordinal);
+                string suffix = $") AS {queryBuilder.QuoteIdentifier(structure.SourceAlias)}";
+                if (!sql.EndsWith(suffix, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("The DWSQL grouped aggregate query does not end with the expected derived-table alias.");
+                }
+
+                insertionIndex = sql.Length - suffix.Length;
                 orderByClause = string.Empty;
             }
 
